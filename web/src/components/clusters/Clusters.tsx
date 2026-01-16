@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Pencil, X, Check, Loader2, Globe, User, Hourglass } from 'lucide-react'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes } from '../../hooks/useMCP'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
@@ -16,6 +16,18 @@ function RenameModal({ clusterName, currentDisplayName, onClose, onRename }: Ren
   const [newName, setNewName] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // ESC to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const handleRename = async () => {
     if (!newName.trim()) {
@@ -99,6 +111,18 @@ function ClusterDetail({ clusterName, onClose }: ClusterDetailProps) {
   const { issues: podIssues } = usePodIssues(clusterName)
   const { issues: deploymentIssues } = useDeploymentIssues()
   const { nodes: gpuNodes } = useGPUNodes()
+
+  // ESC to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   const clusterGPUs = gpuNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0]))
   const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))

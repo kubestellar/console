@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, LayoutDashboard, Server, Activity, AlertTriangle, GitBranch, Shield, Box, Gauge, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
@@ -47,6 +47,21 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
     config: Record<string, unknown>
     explanation: string
   } | null>(null)
+
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   if (!isOpen || !card) return null
 

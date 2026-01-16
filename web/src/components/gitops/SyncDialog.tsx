@@ -106,6 +106,27 @@ export function SyncDialog({
     }
   }, [isOpen])
 
+  // Keyboard shortcuts: ESC to close, Space to go back (in plan phase)
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      } else if (e.key === ' ' && phase === 'plan') {
+        // Space cancels/closes in plan phase
+        e.preventDefault()
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, phase, onClose])
+
   const addLog = useCallback((message: string, status: SyncLogEntry['status'] = 'pending') => {
     const entry: SyncLogEntry = {
       timestamp: new Date().toLocaleTimeString(),
