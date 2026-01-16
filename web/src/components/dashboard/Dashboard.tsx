@@ -179,7 +179,7 @@ export function Dashboard() {
   const loadDashboard = async () => {
     try {
       const { data: dashboards } = await api.get<DashboardData[]>('/api/dashboards')
-      if (dashboards.length > 0) {
+      if (dashboards && dashboards.length > 0) {
         const defaultDashboard = dashboards.find((d) => d.is_default) || dashboards[0]
         const { data } = await api.get<DashboardData>(`/api/dashboards/${defaultDashboard.id}`)
         setDashboard(data)

@@ -18,7 +18,7 @@ export function useDashboards() {
     try {
       setIsLoading(true)
       const { data } = await api.get<Dashboard[]>('/api/dashboards')
-      setDashboards(data)
+      setDashboards(data || [])
       setError(null)
     } catch (err) {
       console.error('Failed to load dashboards:', err)
