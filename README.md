@@ -191,31 +191,44 @@ DATABASE_PATH=./data/console.db
 
 **Important**: The `.env` file is gitignored. Never commit credentials.
 
-5. **Start the backend**
+5. **Start with production mode (recommended)**
 
-The backend reads `.env` automatically, or you can pass environment variables inline:
+Use the `prod.sh` script for real GitHub OAuth:
 
 ```bash
-# Option A: Use .env file (recommended)
-go build -o console ./cmd/console
-./console
-
-# Option B: Inline environment variables
-GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy DEV_MODE=false ./console
-
-# Option C: Run directly with go
-go run ./cmd/console
+./scripts/prod.sh
 ```
 
-6. **Start the frontend**
+This script:
+- Loads credentials from `.env`
+- Builds the backend
+- Starts backend and frontend together
+- Exits with error if `GITHUB_CLIENT_ID` or `GITHUB_CLIENT_SECRET` are missing
+
+6. **Or start manually**
 
 ```bash
+# Start backend
+go build -o console-server ./cmd/console
+GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy FRONTEND_URL=http://localhost:5174 ./console-server
+
+# Start frontend (in another terminal)
 cd web
 npm install
 npm run dev
 ```
 
-7. **Access the console**
+7. **Development mode (skip OAuth)**
+
+For quick testing without GitHub OAuth:
+
+```bash
+./scripts/dev.sh
+```
+
+This uses a mock `dev-user` account.
+
+8. **Access the console**
 
 Open http://localhost:5174 and sign in with GitHub.
 
