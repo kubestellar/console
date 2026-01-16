@@ -3,8 +3,24 @@ name: Build and Deploy KKC
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/build-deploy.yml'
+      - 'LICENSE'
+      - 'OWNERS'
+      - '.gitignore'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/build-deploy.yml'
+      - 'LICENSE'
+      - 'OWNERS'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       deploy_target:
