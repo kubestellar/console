@@ -87,6 +87,7 @@ export function PodIssues() {
             return (
               <div
                 key={`${issue.name}-${idx}`}
+                data-tour={idx === 0 ? 'drilldown' : undefined}
                 className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/15 transition-colors"
                 onClick={() => drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
                   status: issue.status,

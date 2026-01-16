@@ -120,7 +120,7 @@ export function Navbar() {
       </div>
 
       {/* Search */}
-      <div className="flex-1 max-w-md mx-8" ref={searchRef}>
+      <div data-tour="search" className="flex-1 max-w-md mx-8" ref={searchRef}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
