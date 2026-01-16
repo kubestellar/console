@@ -1,8 +1,8 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react'
-import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, Bot } from 'lucide-react'
+import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
-import { CardChat, ChatMessage } from './CardChat'
+import { ChatMessage } from './CardChat'
 
 interface PendingSwap {
   newType: string
@@ -69,7 +69,7 @@ export function CardWrapper({
   const [showSummary, setShowSummary] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [_timeRemaining, setTimeRemaining] = useState<number | null>(null)
-  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [_isChatOpen, _setIsChatOpen] = useState(false)
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
   const { snoozeSwap } = useSnoozedCards()
 
@@ -123,8 +123,8 @@ export function CardWrapper({
     }
   }, [pendingSwap, onSwap])
 
-  // Handle sending chat messages
-  const handleSendMessage = useCallback(async (message: string): Promise<ChatMessage> => {
+  // Handle sending chat messages (reserved for future use)
+  const _handleSendMessage = useCallback(async (message: string): Promise<ChatMessage> => {
     // Create user message
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -171,9 +171,8 @@ export function CardWrapper({
     return aiResponse
   }, [messages, onChatMessage, onChatMessagesChange, title])
 
-  // Format countdown for swap timer (used in pendingSwap display)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const formatCountdown = (seconds: number): string => {
+  // Format countdown for swap timer (reserved for future use)
+  const _formatCountdown = (seconds: number): string => {
     if (seconds >= 60) {
       const mins = Math.floor(seconds / 60)
       const secs = seconds % 60

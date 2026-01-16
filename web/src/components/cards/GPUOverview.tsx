@@ -1,11 +1,11 @@
-import { RefreshCw, Cpu, Zap } from 'lucide-react'
+import { RefreshCw, Zap } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
 }
 
-export function GPUOverview({ config }: GPUOverviewProps) {
+export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const { nodes, isLoading, refetch } = useGPUNodes()
 
   if (isLoading) {

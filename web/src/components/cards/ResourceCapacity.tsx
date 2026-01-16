@@ -5,7 +5,7 @@ interface ResourceCapacityProps {
   config?: Record<string, unknown>
 }
 
-export function ResourceCapacity({ config }: ResourceCapacityProps) {
+export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { clusters, isLoading, refetch } = useClusters()
 
   if (isLoading) {

@@ -110,8 +110,7 @@ function ClusterDetail({ clusterName, onClose }: ClusterDetailProps) {
                       <Gauge
                         value={node.gpuAllocated}
                         max={node.gpuCount}
-                        size={40}
-                        color={node.gpuAllocated === node.gpuCount ? '#ef4444' : node.gpuAllocated > 0 ? '#f59e0b' : '#22c55e'}
+                        size="sm"
                       />
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -281,7 +280,7 @@ export function Clusters() {
                     </p>
                   </div>
                 </div>
-                {cluster.isCurrent && (
+                {(cluster as Record<string, unknown>).isCurrent && (
                   <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">
                     Current
                   </span>

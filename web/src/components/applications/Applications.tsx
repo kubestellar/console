@@ -63,7 +63,7 @@ export function Applications() {
 
     return Array.from(appMap.values()).sort((a, b) => {
       // Sort by status (critical first), then by issue count
-      const statusOrder = { critical: 0, warning: 1, healthy: 2 }
+      const statusOrder: Record<string, number> = { error: 0, critical: 0, warning: 1, healthy: 2 }
       if (statusOrder[a.status] !== statusOrder[b.status]) {
         return statusOrder[a.status] - statusOrder[b.status]
       }

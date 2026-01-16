@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ClusterDrillDown } from './views/ClusterDrillDown'
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
@@ -11,6 +12,37 @@ import { YAMLDrillDown } from './views/YAMLDrillDown'
 
 export function DrillDownModal() {
   const { state, pop, goTo, close } = useDrillDown()
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!state.isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      switch (e.key) {
+        case 'Escape':
+          e.preventDefault()
+          close()
+          break
+        case 'Backspace':
+        case ' ': // Space
+          e.preventDefault()
+          if (state.stack.length > 1) {
+            pop()
+          } else {
+            close()
+          }
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [state.isOpen, state.stack.length, close, pop])
 
   if (!state.isOpen || !state.currentView) return null
 
@@ -114,15 +146,15 @@ export function DrillDownModal() {
           {renderView()}
         </div>
 
-        {/* Footer with depth indicator */}
+        {/* Footer with keyboard hints */}
         <div className="px-4 py-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
           <span>Depth: {state.stack.length}</span>
           <div className="flex items-center gap-2">
-            <span>Press</span>
             <kbd className="px-2 py-0.5 rounded bg-card border border-border">Esc</kbd>
-            <span>to close or</span>
-            <kbd className="px-2 py-0.5 rounded bg-card border border-border">Backspace</kbd>
-            <span>to go back</span>
+            <span>close</span>
+            <span className="mx-1">•</span>
+            <kbd className="px-2 py-0.5 rounded bg-card border border-border">Space</kbd>
+            <span>back</span>
           </div>
         </div>
       </div>

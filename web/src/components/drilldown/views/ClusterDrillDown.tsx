@@ -10,7 +10,7 @@ interface Props {
 
 export function ClusterDrillDown({ data }: Props) {
   const clusterName = data.cluster as string
-  const { drillToNamespace, drillToNode, drillToGPUNode, drillToEvents } = useDrillDownActions()
+  const { drillToNamespace, drillToNode: _drillToNode, drillToGPUNode, drillToEvents } = useDrillDownActions()
 
   const { health, isLoading } = useClusterHealth(clusterName)
   const { issues: podIssues } = usePodIssues(clusterName)

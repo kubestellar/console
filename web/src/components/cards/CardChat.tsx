@@ -65,7 +65,7 @@ const QUICK_PROMPTS: Record<string, string[]> = {
 
 export function CardChat({
   isOpen,
-  cardId,
+  cardId: _cardId,
   cardType,
   cardTitle,
   messages,

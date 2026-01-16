@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 
@@ -7,8 +7,13 @@ export function AuthCallback() {
   const [searchParams] = useSearchParams()
   const { setToken, refreshUser } = useAuth()
   const [status, setStatus] = useState('Signing you in...')
+  const hasProcessed = useRef(false)
 
   useEffect(() => {
+    // Prevent running multiple times
+    if (hasProcessed.current) return
+    hasProcessed.current = true
+
     const token = searchParams.get('token')
     const onboarded = searchParams.get('onboarded') === 'true'
     const error = searchParams.get('error')

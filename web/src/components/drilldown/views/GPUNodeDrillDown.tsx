@@ -14,7 +14,7 @@ export function GPUNodeDrillDown({ data }: Props) {
   const { drillToEvents } = useDrillDownActions()
 
   const utilizationPercent = gpuCount > 0 ? Math.round((gpuAllocated / gpuCount) * 100) : 0
-  const utilizationColor = utilizationPercent >= 90 ? '#ef4444' : utilizationPercent >= 50 ? '#f59e0b' : '#22c55e'
+  const _utilizationColor = utilizationPercent >= 90 ? '#ef4444' : utilizationPercent >= 50 ? '#f59e0b' : '#22c55e'
 
   return (
     <div className="space-y-6">

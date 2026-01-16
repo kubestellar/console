@@ -5,7 +5,7 @@ interface UpgradeStatusProps {
   config?: Record<string, unknown>
 }
 
-export function UpgradeStatus({ config }: UpgradeStatusProps) {
+export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const { clusters, isLoading, refetch } = useClusters()
 
   if (isLoading) {

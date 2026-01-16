@@ -12,8 +12,8 @@ export interface CardRecommendation {
   config?: Record<string, unknown>
 }
 
-// Card priority based on cluster activity (reserved for future use)
-const _CARD_PRIORITIES: Record<string, number> = {
+/* Card priority based on cluster activity (reserved for future use)
+const CARD_PRIORITIES: Record<string, number> = {
   pod_issues: 90,
   deployment_issues: 85,
   security_issues: 80,
@@ -23,6 +23,7 @@ const _CARD_PRIORITIES: Record<string, number> = {
   resource_capacity: 40,
   gpu_inventory: 35,
 }
+*/
 
 export function useCardRecommendations(currentCardTypes: string[]) {
   const [recommendations, setRecommendations] = useState<CardRecommendation[]>([])
