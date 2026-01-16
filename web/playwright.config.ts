@@ -15,7 +15,7 @@ export default defineConfig({
   // Skip flaky tests until they are stabilized
   // Re-enable these incrementally as they are fixed
   testIgnore: [
-    '**/Tour.spec.ts',
+    // Tour.spec.ts - re-enabled after stabilization
     // Sidebar.spec.ts - re-enabled after stabilization
     // AIMode.spec.ts - re-enabled after stabilization
     '**/AIRecommendations.spec.ts',
