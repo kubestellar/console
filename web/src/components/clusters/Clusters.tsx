@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Pencil, X, Check, Loader2 } from 'lucide-react'
+import { Pencil, X, Check, Loader2, Globe, User } from 'lucide-react'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes } from '../../hooks/useMCP'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -388,12 +388,30 @@ export function Clusters() {
                         </button>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                      {cluster.server}
-                    </p>
+                    {/* Server and User with icons */}
+                    <div className="flex flex-col gap-1 mt-1">
+                      {cluster.server && (
+                        <span
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-default truncate max-w-[220px]"
+                          title={`Server: ${cluster.server}`}
+                        >
+                          <Globe className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{cluster.server.replace(/^https?:\/\//, '')}</span>
+                        </span>
+                      )}
+                      {cluster.user && (
+                        <span
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-default truncate max-w-[220px]"
+                          title={`User: ${cluster.user}`}
+                        >
+                          <User className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{cluster.user}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {(cluster as unknown as { isCurrent?: boolean }).isCurrent && (
+                {cluster.isCurrent && (
                   <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">
                     Current
                   </span>

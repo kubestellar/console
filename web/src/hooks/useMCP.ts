@@ -6,10 +6,12 @@ export interface ClusterInfo {
   name: string
   context: string
   server?: string
+  user?: string
   healthy: boolean
   source?: string
   nodeCount?: number
   podCount?: number
+  isCurrent?: boolean
 }
 
 export interface ClusterHealth {
@@ -127,7 +129,7 @@ export function useMCPStatus() {
   return { status, isLoading, error }
 }
 
-// Hook to list clusters
+// Hook to list clusters with WebSocket support for real-time updates
 export function useClusters() {
   const [clusters, setClusters] = useState<ClusterInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -150,6 +152,49 @@ export function useClusters() {
 
   useEffect(() => {
     refetch()
+
+    // Connect to WebSocket for real-time kubeconfig change notifications
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//localhost:8080/ws`
+    let ws: WebSocket | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout>
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl)
+
+      ws.onopen = () => {
+        console.log('WebSocket connected for cluster updates')
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
+          if (message.type === 'kubeconfig_changed') {
+            console.log('Kubeconfig changed, refetching clusters...')
+            refetch()
+          }
+        } catch (e) {
+          // Ignore non-JSON messages
+        }
+      }
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting in 5s...')
+        reconnectTimeout = setTimeout(connect, 5000)
+      }
+
+      ws.onerror = (err) => {
+        console.error('WebSocket error:', err)
+        ws?.close()
+      }
+    }
+
+    connect()
+
+    return () => {
+      clearTimeout(reconnectTimeout)
+      ws?.close()
+    }
   }, [refetch])
 
   return { clusters, isLoading, error, refetch }

@@ -39,6 +39,7 @@ type ClusterInfo struct {
 	Name      string `json:"name"`
 	Context   string `json:"context"`
 	Server    string `json:"server,omitempty"`
+	User      string `json:"user,omitempty"`
 	Healthy   bool   `json:"healthy"`
 	Source    string `json:"source,omitempty"`
 	NodeCount int    `json:"nodeCount,omitempty"`
@@ -295,10 +296,14 @@ func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, e
 			server = clusterInfo.Server
 		}
 
+		// Get the user name from the AuthInfo reference
+		user := contextInfo.AuthInfo
+
 		clusters = append(clusters, ClusterInfo{
 			Name:      contextName,
 			Context:   contextName,
 			Server:    server,
+			User:      user,
 			Source:    "kubeconfig",
 			IsCurrent: contextName == currentContext,
 		})
