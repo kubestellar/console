@@ -5,37 +5,40 @@
 #   GITHUB_CLIENT_ID=your-client-id
 #   GITHUB_CLIENT_SECRET=your-client-secret
 #
-# Or export them before running:
-#   export GITHUB_CLIENT_ID="your-client-id"
-#   export GITHUB_CLIENT_SECRET="your-client-secret"
-#   ./start-dev.sh
-#
-# Without GitHub OAuth (uses dev-user):
-#   ./start-dev.sh
+# The .env file takes precedence over shell environment variables.
+# Without .env or credentials, uses dev mode login (no GitHub OAuth).
 
 cd "$(dirname "$0")"
 
-# Load .env file if it exists
+# Load .env file if it exists (overrides any existing env vars)
 if [ -f .env ]; then
     echo "Loading .env file..."
-    set -a
-    source .env
-    set +a
+    # Unset existing GitHub vars to ensure .env takes precedence
+    unset GITHUB_CLIENT_ID
+    unset GITHUB_CLIENT_SECRET
+    unset FRONTEND_URL
+    unset DEV_MODE
+
+    # Read .env and export each variable
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ $key =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        # Remove surrounding quotes from value
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        export "$key=$value"
+    done < .env
 fi
 
-export DEV_MODE=true
+export DEV_MODE=${DEV_MODE:-true}
 export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 
-if [ -z "$GITHUB_CLIENT_ID" ]; then
-    echo "⚠️  No GITHUB_CLIENT_ID set - using dev mode login"
-    echo "   To use GitHub SSO, set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET"
-    echo ""
-else
-    echo "✅ GitHub OAuth configured"
-fi
-
-echo "Starting KubeStellar Console backend on port 8080..."
-echo "Frontend URL: $FRONTEND_URL"
-echo ""
+echo "Starting KubeStellar Klaude Console..."
+echo "  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:0:10}..."
+echo "  Frontend: $FRONTEND_URL"
+echo "  Backend: http://localhost:8080"
 
 go run ./cmd/console/main.go --dev
