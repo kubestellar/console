@@ -136,7 +136,7 @@ test.describe('Tour/Onboarding', () => {
     })
 
     test('shows progress dots', async ({ page }) => {
-      // Should show progress dots (6 steps total)
+      // Should show progress dots (9 steps total)
       // Use more specific selector to target only tour progress dots
       const tourTooltip = page.locator('.fixed.inset-0 .glass')
       await expect(tourTooltip).toBeVisible()
@@ -144,7 +144,7 @@ test.describe('Tour/Onboarding', () => {
       // Progress dots are inside the tour tooltip, look for gap-1 container
       const progressDots = tourTooltip.locator('.flex.gap-1 .w-2.h-2.rounded-full')
       const count = await progressDots.count()
-      expect(count).toBe(6) // TOUR_STEPS has 6 steps
+      expect(count).toBe(9) // TOUR_STEPS has 9 steps
     })
 
     test('Next button advances to next step', async ({ page }) => {
@@ -256,8 +256,8 @@ test.describe('Tour/Onboarding', () => {
       await startTourButton.click()
       await page.waitForTimeout(500)
 
-      // Navigate through all 6 steps using keyboard
-      for (let i = 0; i < 5; i++) {
+      // Navigate through all 9 steps using keyboard (8 presses to get from step 0 to step 8)
+      for (let i = 0; i < 8; i++) {
         await page.keyboard.press('ArrowRight')
         await page.waitForTimeout(300)
       }
@@ -295,8 +295,8 @@ test.describe('Tour/Onboarding', () => {
       await startTourButton.click()
       await page.waitForTimeout(500)
 
-      // Navigate to last step (6 steps, navigate 5 times)
-      for (let i = 0; i < 5; i++) {
+      // Navigate to last step (9 steps, navigate 8 times)
+      for (let i = 0; i < 8; i++) {
         await page.keyboard.press('ArrowRight')
         await page.waitForTimeout(200)
       }
