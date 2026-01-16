@@ -9,7 +9,7 @@ export function Settings() {
   const { theme, setTheme } = useTheme()
   const { usage, updateSettings, resetUsage } = useTokenUsage()
   const { mode, setMode, description } = useAIMode()
-  const { status, health, isConnected, refresh } = useLocalAgent()
+  const { health, isConnected, refresh } = useLocalAgent()
 
   const [tokenLimit, setTokenLimit] = useState(usage.limit)
   const [warningThreshold, setWarningThreshold] = useState(usage.warningThreshold * 100)

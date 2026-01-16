@@ -3,7 +3,7 @@
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 
 export function AgentStatus() {
-  const { status, health, error, isDemoMode, installInstructions } = useLocalAgent()
+  const { status, health, error, isDemoMode } = useLocalAgent()
 
   if (status === 'connecting') {
     return (
