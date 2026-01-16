@@ -21,7 +21,7 @@ export type AgentConnectionStatus = 'connected' | 'disconnected' | 'connecting'
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 5000 // Check every 5 seconds
-const CONNECTION_TIMEOUT = 3000 // 3 second timeout
+const CONNECTION_TIMEOUT = 10000 // 10 second timeout (allow for slow connections)
 
 // Demo data for when agent is not connected
 const DEMO_DATA: AgentHealth = {
