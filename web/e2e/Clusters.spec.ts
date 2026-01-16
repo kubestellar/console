@@ -53,11 +53,10 @@ test.describe('Clusters Page', () => {
       // Wait for clusters to load
       await page.waitForTimeout(1500)
 
-      // Should show cluster items
-      const clusters = page.locator(
-        '[data-testid*="cluster"], [class*="cluster"], tr, [role="row"]'
-      )
-      const clusterCount = await clusters.count()
+      // Should show cluster cards - the component renders them as glass cards with cursor-pointer
+      // Also look for cluster name text like prod-east, prod-west, staging from our mock
+      const clusterCards = page.locator('.glass.cursor-pointer, div:has-text("prod-east"), div:has-text("prod-west")')
+      const clusterCount = await clusterCards.count()
       expect(clusterCount).toBeGreaterThan(0)
     })
 

@@ -16,8 +16,8 @@ export function DashboardDropZone({
   isDragging,
   onCreateDashboard,
 }: DashboardDropZoneProps) {
-  // Filter out current dashboard
-  const otherDashboards = dashboards.filter((d) => d.id !== currentDashboardId)
+  // Filter out current dashboard (handle null/undefined dashboards)
+  const otherDashboards = (dashboards || []).filter((d) => d.id !== currentDashboardId)
 
   if (!isDragging) return null
 
