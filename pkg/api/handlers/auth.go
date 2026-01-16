@@ -44,11 +44,18 @@ type AuthHandler struct {
 
 // NewAuthHandler creates a new auth handler
 func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
+	// Build OAuth redirect URL from frontend URL
+	redirectURL := ""
+	if cfg.FrontendURL != "" {
+		redirectURL = cfg.FrontendURL + "/auth/github/callback"
+	}
+
 	return &AuthHandler{
 		store: s,
 		oauthConfig: &oauth2.Config{
 			ClientID:     cfg.GitHubClientID,
 			ClientSecret: cfg.GitHubSecret,
+			RedirectURL:  redirectURL,
 			Scopes:       []string{"user:email", "read:user"},
 			Endpoint:     github.Endpoint,
 		},
