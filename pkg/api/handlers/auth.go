@@ -18,26 +18,46 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
+// AuthConfig holds authentication configuration
+type AuthConfig struct {
+	GitHubClientID   string
+	GitHubSecret     string
+	JWTSecret        string
+	FrontendURL      string
+	DevUserLogin     string
+	DevUserEmail     string
+	DevUserAvatar    string
+	GitHubToken      string // Personal access token for dev mode profile lookup
+}
+
 // AuthHandler handles authentication
 type AuthHandler struct {
-	store       store.Store
-	oauthConfig *oauth2.Config
-	jwtSecret   string
-	frontendURL string
+	store         store.Store
+	oauthConfig   *oauth2.Config
+	jwtSecret     string
+	frontendURL   string
+	devUserLogin  string
+	devUserEmail  string
+	devUserAvatar string
+	githubToken   string
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(s store.Store, clientID, clientSecret, jwtSecret, frontendURL string) *AuthHandler {
+func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	return &AuthHandler{
 		store: s,
 		oauthConfig: &oauth2.Config{
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
+			ClientID:     cfg.GitHubClientID,
+			ClientSecret: cfg.GitHubSecret,
 			Scopes:       []string{"user:email", "read:user"},
 			Endpoint:     github.Endpoint,
 		},
-		jwtSecret:   jwtSecret,
-		frontendURL: frontendURL,
+		jwtSecret:     cfg.JWTSecret,
+		frontendURL:   cfg.FrontendURL,
+		devUserLogin:  cfg.DevUserLogin,
+		devUserEmail:  cfg.DevUserEmail,
+		devUserAvatar: cfg.DevUserAvatar,
+		githubToken:   cfg.GitHubToken,
 	}
 }
 
@@ -56,8 +76,27 @@ func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 
 // devModeLogin creates a test user without GitHub OAuth
 func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
-	// Use a fixed dev user ID
-	devGitHubID := "dev-user-12345"
+	var devLogin, devEmail, avatarURL, devGitHubID string
+
+	// If we have a GitHub token, fetch real user info
+	if h.githubToken != "" {
+		ghUser, err := h.getGitHubUser(h.githubToken)
+		if err == nil && ghUser != nil {
+			devLogin = ghUser.Login
+			devEmail = ghUser.Email
+			avatarURL = ghUser.AvatarURL
+			devGitHubID = fmt.Sprintf("%d", ghUser.ID)
+		}
+	}
+
+	// Fall back to configured or default values
+	if devLogin == "" {
+		devLogin = h.devUserLogin
+		if devLogin == "" {
+			devLogin = "dev-user"
+		}
+		devGitHubID = "dev-" + devLogin
+	}
 
 	// Find or create dev user
 	user, err := h.store.GetUserByGitHubID(devGitHubID)
@@ -65,18 +104,43 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
 	}
 
+	// Build avatar URL if not set from GitHub API
+	if avatarURL == "" {
+		avatarURL = h.devUserAvatar
+		if avatarURL == "" && devLogin != "dev-user" {
+			// Try to use GitHub avatar for the configured username
+			avatarURL = "https://github.com/" + devLogin + ".png"
+		}
+		if avatarURL == "" {
+			avatarURL = "https://github.com/identicons/dev.png"
+		}
+	}
+
+	if devEmail == "" {
+		devEmail = h.devUserEmail
+		if devEmail == "" {
+			devEmail = "dev@localhost"
+		}
+	}
+
 	if user == nil {
 		// Create dev user
 		user = &models.User{
 			GitHubID:    devGitHubID,
-			GitHubLogin: "dev-user",
-			Email:       "dev@localhost",
-			AvatarURL:   "https://github.com/identicons/dev.png",
+			GitHubLogin: devLogin,
+			Email:       devEmail,
+			AvatarURL:   avatarURL,
 			Onboarded:   true, // Skip onboarding in dev mode
 		}
 		if err := h.store.CreateUser(user); err != nil {
 			return c.Redirect(h.frontendURL+"/login?error=create_user_failed", fiber.StatusTemporaryRedirect)
 		}
+	} else {
+		// Update existing user info to match config
+		user.GitHubLogin = devLogin
+		user.Email = devEmail
+		user.AvatarURL = avatarURL
+		h.store.UpdateUser(user)
 	}
 
 	// Update last login
