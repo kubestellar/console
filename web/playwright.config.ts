@@ -20,7 +20,7 @@ export default defineConfig({
     // AIMode.spec.ts - re-enabled after stabilization
     // AIRecommendations.spec.ts - re-enabled after stabilization
     // CardChat.spec.ts - re-enabled after stabilization
-    '**/CardSharing.spec.ts',
+    // CardSharing.spec.ts - re-enabled after stabilization
     '**/DrillDown.spec.ts',
     // Clusters.spec.ts - re-enabled after stabilization
     // Events.spec.ts - re-enabled after stabilization
