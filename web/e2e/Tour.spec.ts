@@ -136,10 +136,15 @@ test.describe('Tour/Onboarding', () => {
     })
 
     test('shows progress dots', async ({ page }) => {
-      // Should show progress dots (9 steps total)
-      const progressDots = page.locator('.w-2.h-2.rounded-full')
+      // Should show progress dots (6 steps total)
+      // Use more specific selector to target only tour progress dots
+      const tourTooltip = page.locator('.fixed.inset-0 .glass')
+      await expect(tourTooltip).toBeVisible()
+
+      // Progress dots are inside the tour tooltip, look for gap-1 container
+      const progressDots = tourTooltip.locator('.flex.gap-1 .w-2.h-2.rounded-full')
       const count = await progressDots.count()
-      expect(count).toBe(9) // TOUR_STEPS has 9 steps
+      expect(count).toBe(6) // TOUR_STEPS has 6 steps
     })
 
     test('Next button advances to next step', async ({ page }) => {
@@ -167,8 +172,8 @@ test.describe('Tour/Onboarding', () => {
       const secondTitle = page.locator('h3:has-text("Navigation Sidebar")')
       await expect(secondTitle).toBeVisible()
 
-      // Click Previous (ChevronLeft button)
-      const prevButton = page.locator('button').filter({ has: page.locator('svg.lucide-chevron-left') })
+      // Click Previous (ChevronLeft button) - use first() to avoid ambiguity with sidebar collapse button
+      const prevButton = page.locator('.fixed.inset-0 button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
       await prevButton.click()
       await page.waitForTimeout(500)
 
@@ -251,8 +256,8 @@ test.describe('Tour/Onboarding', () => {
       await startTourButton.click()
       await page.waitForTimeout(500)
 
-      // Navigate through all 9 steps using keyboard
-      for (let i = 0; i < 8; i++) {
+      // Navigate through all 6 steps using keyboard
+      for (let i = 0; i < 5; i++) {
         await page.keyboard.press('ArrowRight')
         await page.waitForTimeout(300)
       }
@@ -290,8 +295,8 @@ test.describe('Tour/Onboarding', () => {
       await startTourButton.click()
       await page.waitForTimeout(500)
 
-      // Navigate to last step
-      for (let i = 0; i < 8; i++) {
+      // Navigate to last step (6 steps, navigate 5 times)
+      for (let i = 0; i < 5; i++) {
         await page.keyboard.press('ArrowRight')
         await page.waitForTimeout(200)
       }
@@ -406,13 +411,10 @@ test.describe('Tour/Onboarding', () => {
       const expectedSteps = [
         'Welcome to KubeStellar',
         'Navigation Sidebar',
-        'Dashboard Cards',
-        'AI Card Chat',
-        'Configure with AI',
-        'AI-Powered Recommendations',
-        'Snoozed Suggestions',
-        'AI Drill-Down',
-        'AI-Powered Search',
+        'Your Dashboard',
+        'AI Recommendations',
+        'Card Actions',
+        'Snoozed Recommendations',
       ]
 
       for (let i = 0; i < expectedSteps.length; i++) {
