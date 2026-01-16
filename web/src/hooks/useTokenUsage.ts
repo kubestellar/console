@@ -40,7 +40,7 @@ export function useTokenUsage() {
     }
   })
 
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Poll local agent for real-time token usage
   const fetchTokenUsage = useCallback(async () => {

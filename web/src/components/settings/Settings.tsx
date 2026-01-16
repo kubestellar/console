@@ -1,18 +1,29 @@
 import { useState } from 'react'
-import { Save, Coins, Cpu, Moon, Sun, Monitor, Gauge, RefreshCw } from 'lucide-react'
+import { Save, Coins, Cpu, Moon, Sun, Monitor, Gauge, RefreshCw, Plug, Check, X, Copy } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { useAIMode, AIMode } from '../../hooks/useAIMode'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
 
 export function Settings() {
   const { theme, setTheme } = useTheme()
   const { usage, updateSettings, resetUsage } = useTokenUsage()
   const { mode, setMode, description } = useAIMode()
+  const { status, health, isConnected, refresh } = useLocalAgent()
 
   const [tokenLimit, setTokenLimit] = useState(usage.limit)
   const [warningThreshold, setWarningThreshold] = useState(usage.warningThreshold * 100)
   const [criticalThreshold, setCriticalThreshold] = useState(usage.criticalThreshold * 100)
   const [saved, setSaved] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const installCommand = 'brew install kubestellar/tap/kkc-agent && kkc-agent'
+
+  const copyInstallCommand = async () => {
+    await navigator.clipboard.writeText(installCommand)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const handleSaveTokenSettings = () => {
     updateSettings({
@@ -92,6 +103,79 @@ export function Settings() {
 
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
+        </div>
+
+        {/* Local Agent */}
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${isConnected ? 'bg-green-500/20' : 'bg-orange-500/20'}`}>
+                <Plug className={`w-5 h-5 ${isConnected ? 'text-green-400' : 'text-orange-400'}`} />
+              </div>
+              <div>
+                <h2 className="text-lg font-medium text-foreground">Local Agent</h2>
+                <p className="text-sm text-muted-foreground">Connect to your local kubeconfig and Claude Code</p>
+              </div>
+            </div>
+            <button
+              onClick={refresh}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+
+          {/* Connection Status */}
+          <div className={`p-4 rounded-lg mb-4 ${isConnected ? 'bg-green-500/10 border border-green-500/20' : 'bg-orange-500/10 border border-orange-500/20'}`}>
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <>
+                  <Check className="w-5 h-5 text-green-400" />
+                  <span className="font-medium text-green-400">Connected</span>
+                  <span className="text-muted-foreground">- Agent v{health?.version}</span>
+                </>
+              ) : (
+                <>
+                  <X className="w-5 h-5 text-orange-400" />
+                  <span className="font-medium text-orange-400">Not Connected</span>
+                  <span className="text-muted-foreground">- Using demo data</span>
+                </>
+              )}
+            </div>
+            {isConnected && health && (
+              <div className="mt-2 flex gap-4 text-sm text-muted-foreground">
+                <span>{health.clusters} clusters</span>
+                {health.hasClaude && <span>Claude Code available</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Install Instructions (when not connected) */}
+          {!isConnected && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Install the local agent to access your kubeconfig clusters and Claude Code:
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-4 py-3 rounded-lg bg-secondary font-mono text-sm select-all overflow-x-auto">
+                  {installCommand}
+                </code>
+                <button
+                  onClick={copyInstallCommand}
+                  className="shrink-0 flex items-center gap-2 px-4 py-3 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+                >
+                  <Copy className="w-4 h-4" />
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span>✓ Access all your clusters</span>
+                <span>✓ Real-time token tracking</span>
+                <span>✓ Runs locally (secure)</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Token Usage */}

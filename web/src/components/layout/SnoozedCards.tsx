@@ -23,7 +23,27 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation }: SnoozedCard
   const hasSwaps = snoozedSwaps.length > 0
   const hasRecs = snoozedRecommendations.length > 0
 
-  if (!hasSwaps && !hasRecs) return null
+  // Show placeholder when nothing is snoozed
+  if (!hasSwaps && !hasRecs) {
+    return (
+      <div className="mt-4">
+        <div className="flex items-center gap-2 px-3 mb-2">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Snoozed Items
+          </h4>
+        </div>
+        <div className="mx-2 p-3 rounded-lg border border-dashed border-border/50 text-center">
+          <p className="text-xs text-muted-foreground">
+            No snoozed items
+          </p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            Snooze cards or recommendations to see them here
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const handleApplySwap = (swap: SnoozedSwap) => {
     unsnoozeSwap(swap.id)

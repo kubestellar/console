@@ -43,7 +43,7 @@ export function useLocalAgent() {
   const [status, setStatus] = useState<AgentConnectionStatus>('connecting')
   const [health, setHealth] = useState<AgentHealth | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const checkAgent = useCallback(async () => {
     try {
