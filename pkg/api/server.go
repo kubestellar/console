@@ -37,6 +37,8 @@ type Config struct {
 	DevUserLogin  string
 	DevUserEmail  string
 	DevUserAvatar string
+	// GitHub personal access token for dev mode profile lookup
+	GitHubToken   string
 }
 
 // Server represents the API server
@@ -150,6 +152,7 @@ func (s *Server) setupRoutes() {
 		DevUserLogin:     s.config.DevUserLogin,
 		DevUserEmail:     s.config.DevUserEmail,
 		DevUserAvatar:    s.config.DevUserAvatar,
+		GitHubToken:      s.config.GitHubToken,
 	})
 	s.app.Get("/auth/github", auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", auth.GitHubCallback)
@@ -322,6 +325,8 @@ func LoadConfigFromEnv() Config {
 		DevUserLogin:  getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
 		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
 		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
+		// GitHub token for dev mode profile fetching
+		GitHubToken:   os.Getenv("GITHUB_TOKEN"),
 	}
 }
 
