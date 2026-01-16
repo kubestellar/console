@@ -79,6 +79,20 @@ func NewServer(cfg Config) (*Server, error) {
 		} else {
 			log.Println("Kubernetes client initialized successfully")
 		}
+
+		// Set callback to notify frontend when kubeconfig changes
+		k8sClient.SetOnReload(func() {
+			hub.BroadcastAll(handlers.Message{
+				Type: "kubeconfig_changed",
+				Data: map[string]string{"message": "Kubeconfig updated"},
+			})
+			log.Println("Broadcasted kubeconfig change to all clients")
+		})
+
+		// Start watching kubeconfig for changes
+		if err := k8sClient.StartWatching(); err != nil {
+			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
+		}
 	}
 
 	// Initialize MCP bridge (optional - starts in background)
