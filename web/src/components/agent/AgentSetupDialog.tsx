@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 
 const DISMISSED_KEY = 'kkc-agent-setup-dismissed'
+const SNOOZED_KEY = 'kkc-agent-setup-snoozed'
+const SNOOZE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 export function AgentSetupDialog() {
   const { status, isConnected } = useLocalAgent()
@@ -19,9 +21,13 @@ export function AgentSetupDialog() {
     // Don't show if already connected
     if (isConnected) return
 
-    // Check if user previously dismissed
+    // Check if user previously dismissed permanently
     const dismissed = localStorage.getItem(DISMISSED_KEY)
     if (dismissed) return
+
+    // Check if snoozed and still within snooze period
+    const snoozedUntil = localStorage.getItem(SNOOZED_KEY)
+    if (snoozedUntil && Date.now() < parseInt(snoozedUntil)) return
 
     // Show the dialog
     setShow(true)
@@ -31,6 +37,11 @@ export function AgentSetupDialog() {
     await navigator.clipboard.writeText(installCommand)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSnooze = () => {
+    localStorage.setItem(SNOOZED_KEY, String(Date.now() + SNOOZE_DURATION))
+    setShow(false)
   }
 
   const handleDismiss = (rememberChoice: boolean) => {
@@ -75,13 +86,21 @@ export function AgentSetupDialog() {
         </div>
 
         {/* Actions */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <button
-            onClick={() => handleDismiss(false)}
-            className="rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Continue with Demo Data
-          </button>
+        <div className="mt-6 flex flex-col gap-3">
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleDismiss(false)}
+              className="flex-1 rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Continue with Demo Data
+            </button>
+            <button
+              onClick={handleSnooze}
+              className="flex-1 rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Remind Me Later
+            </button>
+          </div>
           <button
             onClick={() => handleDismiss(true)}
             className="text-sm text-muted-foreground hover:text-foreground"
