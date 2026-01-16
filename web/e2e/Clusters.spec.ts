@@ -292,12 +292,11 @@ test.describe('Clusters Page', () => {
     test('clusters have proper ARIA labels', async ({ page }) => {
       await page.waitForTimeout(2000)
 
-      // Check for ARIA attributes
-      const ariaElements = page.locator('[aria-label], [role]')
-      const count = await ariaElements.count()
-
-      // Page may or may not have ARIA elements
-      expect(count >= 0).toBeTruthy()
+      // Check for ARIA attributes or common accessibility patterns
+      // Include buttons (implicit role), links, and elements with explicit roles
+      const accessibleElements = page.locator('button, a[href], [role], [aria-label], nav, main, header')
+      const count = await accessibleElements.count()
+      expect(count).toBeGreaterThan(0)
     })
   })
 })
