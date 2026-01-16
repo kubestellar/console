@@ -1,0 +1,24 @@
+{{- if .Values.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.route.host }}
+  host: {{ .Values.route.host | quote }}
+  {{- end }}
+  port:
+    targetPort: http
+  {{- if .Values.route.tls }}
+  tls:
+    termination: {{ .Values.route.tls.termination }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "kubestellar-console.fullname" . }}
+    weight: 100
+  wildcardPolicy: None
+{{- end }}

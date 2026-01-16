@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+web/node_modules/
+
+# Build outputs
+web/dist/
+console
+*.exe
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Temp directories
+a2a-rebase/
+a2a-temp/
+kubeflex-rebase/
+kubestellar-rebase/
+data/
+
+# SQLite database
+*.db
+*.sqlite
+
+# Go
+vendor/
+
+# Coordination file (local only)
+.claude-coord.md

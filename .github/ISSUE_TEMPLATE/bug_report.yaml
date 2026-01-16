@@ -1,0 +1,81 @@
+name: Bug Report
+description: Create a report to help us improve KubeStellar Klaude Console
+title: "bug: "
+labels:
+  - kind/bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+        Before opening a new issue, look for an overlapping issue that
+        you could contribute to.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: Please provide a clear and concise description of the bug.
+      placeholder: |
+        What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please provide details about your environment:
+      placeholder: |
+        - Browser: (e.g., Chrome 120, Firefox 121)
+        - OS: (e.g., macOS 14.0, Windows 11)
+        - KKC Version: (e.g., 0.1.0)
+        - Kubernetes cluster type: (e.g., OpenShift 4.14, kind, EKS)
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducing
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See the error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Browser Console / Backend Logs
+      description: |
+        If applicable, paste any relevant errors from:
+        - Browser developer console (F12)
+        - Backend logs (`kubectl logs -n kkc deployment/kkc`)
+      render: shell
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Want to contribute?
+      options:
+        - label: I would like to work on this issue.
+          required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here, including screenshots.

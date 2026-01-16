@@ -1,0 +1,118 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/kubestellar/console
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to chart appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: console.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# OpenShift Route (alternative to Ingress)
+route:
+  enabled: false
+  host: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# GitHub OAuth configuration
+github:
+  clientId: ""
+  clientSecret: ""
+  # Alternatively, use existing secret
+  existingSecret: ""
+  existingSecretKeys:
+    clientId: github-client-id
+    clientSecret: github-client-secret
+
+# Claude AI configuration (optional)
+claude:
+  apiKey: ""
+  model: "claude-sonnet-4-20250514"
+  existingSecret: ""
+  existingSecretKey: claude-api-key
+
+# AI Mode configuration
+# Controls how aggressively the AI suggests card changes and analyzes data
+# low: Minimal token usage, AI only for explicit requests
+# medium: Balanced - AI for analysis/summaries on request
+# high: Full AI assistance with proactive suggestions
+ai:
+  defaultMode: "medium"  # low | medium | high
+  # Token usage limits (per user per month)
+  tokenLimits:
+    enabled: true
+    monthlyLimit: 100000  # Max tokens per user per month
+    warningThreshold: 80  # Percentage at which to show warning
+    criticalThreshold: 95 # Percentage at which to restrict AI features
+
+# JWT configuration
+jwt:
+  secret: ""  # Auto-generated if empty
+  existingSecret: ""
+  existingSecretKey: jwt-secret
+
+# Database configuration
+database:
+  type: sqlite
+  sqlitePath: /app/data/console.db
+
+# Persistence for SQLite
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+
+# klaude binaries configuration
+klaude:
+  opsPath: /usr/local/bin/klaude-ops
+  deployPath: /usr/local/bin/klaude-deploy
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Additional environment variables
+extraEnv: []

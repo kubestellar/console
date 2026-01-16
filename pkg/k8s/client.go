@@ -1,0 +1,621 @@
+package k8s
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"sync"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
+)
+
+// MultiClusterClient manages connections to multiple Kubernetes clusters
+type MultiClusterClient struct {
+	mu          sync.RWMutex
+	kubeconfig  string
+	clients     map[string]*kubernetes.Clientset
+	configs     map[string]*rest.Config
+	rawConfig   *api.Config
+	healthCache map[string]*ClusterHealth
+	cacheTTL    time.Duration
+	cacheTime   map[string]time.Time
+}
+
+// ClusterInfo represents basic cluster information
+type ClusterInfo struct {
+	Name      string `json:"name"`
+	Context   string `json:"context"`
+	Server    string `json:"server,omitempty"`
+	Healthy   bool   `json:"healthy"`
+	Source    string `json:"source,omitempty"`
+	NodeCount int    `json:"nodeCount,omitempty"`
+	PodCount  int    `json:"podCount,omitempty"`
+	IsCurrent bool   `json:"isCurrent,omitempty"`
+}
+
+// ClusterHealth represents cluster health status
+type ClusterHealth struct {
+	Cluster    string   `json:"cluster"`
+	Healthy    bool     `json:"healthy"`
+	APIServer  string   `json:"apiServer,omitempty"`
+	NodeCount  int      `json:"nodeCount"`
+	ReadyNodes int      `json:"readyNodes"`
+	PodCount   int      `json:"podCount,omitempty"`
+	Issues     []string `json:"issues,omitempty"`
+	CheckedAt  string   `json:"checkedAt,omitempty"`
+}
+
+// PodInfo represents pod information
+type PodInfo struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster,omitempty"`
+	Status    string `json:"status"`
+	Ready     string `json:"ready"`
+	Restarts  int    `json:"restarts"`
+	Age       string `json:"age"`
+	Node      string `json:"node,omitempty"`
+}
+
+// PodIssue represents a pod with issues
+type PodIssue struct {
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace"`
+	Cluster   string   `json:"cluster,omitempty"`
+	Status    string   `json:"status"`
+	Reason    string   `json:"reason,omitempty"`
+	Issues    []string `json:"issues"`
+	Restarts  int      `json:"restarts"`
+}
+
+// Event represents a Kubernetes event
+type Event struct {
+	Type      string `json:"type"`
+	Reason    string `json:"reason"`
+	Message   string `json:"message"`
+	Object    string `json:"object"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster,omitempty"`
+	Count     int32  `json:"count"`
+	Age       string `json:"age,omitempty"`
+}
+
+// DeploymentIssue represents a deployment with issues
+type DeploymentIssue struct {
+	Name          string `json:"name"`
+	Namespace     string `json:"namespace"`
+	Cluster       string `json:"cluster,omitempty"`
+	Replicas      int32  `json:"replicas"`
+	ReadyReplicas int32  `json:"readyReplicas"`
+	Reason        string `json:"reason,omitempty"`
+	Message       string `json:"message,omitempty"`
+}
+
+// GPUNode represents a node with GPU resources
+type GPUNode struct {
+	Name         string `json:"name"`
+	Cluster      string `json:"cluster"`
+	GPUType      string `json:"gpuType"`
+	GPUCount     int    `json:"gpuCount"`
+	GPUAllocated int    `json:"gpuAllocated"`
+}
+
+// NewMultiClusterClient creates a new multi-cluster client
+func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
+	if kubeconfig == "" {
+		kubeconfig = os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			home, _ := os.UserHomeDir()
+			kubeconfig = filepath.Join(home, ".kube", "config")
+		}
+	}
+
+	return &MultiClusterClient{
+		kubeconfig:  kubeconfig,
+		clients:     make(map[string]*kubernetes.Clientset),
+		configs:     make(map[string]*rest.Config),
+		healthCache: make(map[string]*ClusterHealth),
+		cacheTTL:    30 * time.Second,
+		cacheTime:   make(map[string]time.Time),
+	}, nil
+}
+
+// LoadConfig loads the kubeconfig
+func (m *MultiClusterClient) LoadConfig() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	config, err := clientcmd.LoadFromFile(m.kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed to load kubeconfig: %w", err)
+	}
+
+	m.rawConfig = config
+	return nil
+}
+
+// ListClusters returns all clusters from kubeconfig
+func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, error) {
+	m.mu.RLock()
+	rawConfig := m.rawConfig
+	m.mu.RUnlock()
+
+	if rawConfig == nil {
+		if err := m.LoadConfig(); err != nil {
+			return nil, err
+		}
+		m.mu.RLock()
+		rawConfig = m.rawConfig
+		m.mu.RUnlock()
+	}
+
+	var clusters []ClusterInfo
+	currentContext := rawConfig.CurrentContext
+
+	for contextName, contextInfo := range rawConfig.Contexts {
+		clusterInfo, exists := rawConfig.Clusters[contextInfo.Cluster]
+		server := ""
+		if exists {
+			server = clusterInfo.Server
+		}
+
+		clusters = append(clusters, ClusterInfo{
+			Name:      contextName,
+			Context:   contextName,
+			Server:    server,
+			Source:    "kubeconfig",
+			IsCurrent: contextName == currentContext,
+		})
+	}
+
+	// Sort by name
+	sort.Slice(clusters, func(i, j int) bool {
+		return clusters[i].Name < clusters[j].Name
+	})
+
+	return clusters, nil
+}
+
+// GetClient returns a kubernetes client for the specified context
+func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientset, error) {
+	m.mu.RLock()
+	if client, ok := m.clients[contextName]; ok {
+		m.mu.RUnlock()
+		return client, nil
+	}
+	m.mu.RUnlock()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if client, ok := m.clients[contextName]; ok {
+		return client, nil
+	}
+
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: m.kubeconfig},
+		&clientcmd.ConfigOverrides{CurrentContext: contextName},
+	).ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config for context %s: %w", contextName, err)
+	}
+
+	// Set reasonable timeouts
+	config.Timeout = 10 * time.Second
+
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client for context %s: %w", contextName, err)
+	}
+
+	m.clients[contextName] = client
+	m.configs[contextName] = config
+	return client, nil
+}
+
+// GetClusterHealth returns health status for a cluster
+func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName string) (*ClusterHealth, error) {
+	// Check cache
+	m.mu.RLock()
+	if health, ok := m.healthCache[contextName]; ok {
+		if time.Since(m.cacheTime[contextName]) < m.cacheTTL {
+			m.mu.RUnlock()
+			return health, nil
+		}
+	}
+	m.mu.RUnlock()
+
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return &ClusterHealth{
+			Cluster: contextName,
+			Healthy: false,
+			Issues:  []string{fmt.Sprintf("Failed to connect: %v", err)},
+		}, nil
+	}
+
+	health := &ClusterHealth{
+		Cluster:   contextName,
+		Healthy:   true,
+		CheckedAt: time.Now().Format(time.RFC3339),
+	}
+
+	// Get nodes
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		health.Healthy = false
+		health.Issues = append(health.Issues, fmt.Sprintf("Failed to list nodes: %v", err))
+	} else {
+		health.NodeCount = len(nodes.Items)
+		for _, node := range nodes.Items {
+			for _, condition := range node.Status.Conditions {
+				if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+					health.ReadyNodes++
+					break
+				}
+			}
+		}
+		if health.ReadyNodes < health.NodeCount {
+			health.Issues = append(health.Issues, fmt.Sprintf("%d/%d nodes not ready", health.NodeCount-health.ReadyNodes, health.NodeCount))
+		}
+	}
+
+	// Get pod count
+	pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		health.PodCount = len(pods.Items)
+	}
+
+	// Cache the result
+	m.mu.Lock()
+	m.healthCache[contextName] = health
+	m.cacheTime[contextName] = time.Now()
+	m.mu.Unlock()
+
+	return health, nil
+}
+
+// GetPods returns pods for a namespace/cluster
+func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace string) ([]PodInfo, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []PodInfo
+	for _, pod := range pods.Items {
+		ready := 0
+		total := len(pod.Spec.Containers)
+		restarts := 0
+
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Ready {
+				ready++
+			}
+			restarts += int(cs.RestartCount)
+		}
+
+		result = append(result, PodInfo{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+			Cluster:   contextName,
+			Status:    string(pod.Status.Phase),
+			Ready:     fmt.Sprintf("%d/%d", ready, total),
+			Restarts:  restarts,
+			Age:       formatDuration(time.Since(pod.CreationTimestamp.Time)),
+			Node:      pod.Spec.NodeName,
+		})
+	}
+
+	return result, nil
+}
+
+// FindPodIssues returns pods with issues
+func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, namespace string) ([]PodIssue, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var issues []PodIssue
+	for _, pod := range pods.Items {
+		var podIssues []string
+		restarts := 0
+
+		// Check container statuses
+		for _, cs := range pod.Status.ContainerStatuses {
+			restarts += int(cs.RestartCount)
+
+			if cs.State.Waiting != nil {
+				reason := cs.State.Waiting.Reason
+				if reason == "CrashLoopBackOff" || reason == "ImagePullBackOff" || reason == "ErrImagePull" {
+					podIssues = append(podIssues, reason)
+				}
+			}
+
+			if cs.LastTerminationState.Terminated != nil {
+				if cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
+					podIssues = append(podIssues, "OOMKilled")
+				}
+			}
+
+			if cs.RestartCount > 5 {
+				podIssues = append(podIssues, fmt.Sprintf("High restarts (%d)", cs.RestartCount))
+			}
+		}
+
+		// Check pod phase
+		if pod.Status.Phase == corev1.PodPending {
+			podIssues = append(podIssues, "Pending")
+		}
+		if pod.Status.Phase == corev1.PodFailed {
+			podIssues = append(podIssues, "Failed")
+		}
+
+		if len(podIssues) > 0 {
+			issues = append(issues, PodIssue{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				Cluster:   contextName,
+				Status:    string(pod.Status.Phase),
+				Restarts:  restarts,
+				Issues:    podIssues,
+			})
+		}
+	}
+
+	return issues, nil
+}
+
+// GetEvents returns events from a cluster
+func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespace string, limit int) ([]Event, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+		Limit: int64(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Sort by last timestamp descending
+	sort.Slice(events.Items, func(i, j int) bool {
+		return events.Items[i].LastTimestamp.After(events.Items[j].LastTimestamp.Time)
+	})
+
+	var result []Event
+	for i, event := range events.Items {
+		if limit > 0 && i >= limit {
+			break
+		}
+		result = append(result, Event{
+			Type:      event.Type,
+			Reason:    event.Reason,
+			Message:   event.Message,
+			Object:    fmt.Sprintf("%s/%s", event.InvolvedObject.Kind, event.InvolvedObject.Name),
+			Namespace: event.Namespace,
+			Cluster:   contextName,
+			Count:     event.Count,
+			Age:       formatDuration(time.Since(event.LastTimestamp.Time)),
+		})
+	}
+
+	return result, nil
+}
+
+// GetWarningEvents returns warning events from a cluster
+func (m *MultiClusterClient) GetWarningEvents(ctx context.Context, contextName, namespace string, limit int) ([]Event, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	events, err := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+		FieldSelector: "type=Warning",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Sort by last timestamp descending
+	sort.Slice(events.Items, func(i, j int) bool {
+		return events.Items[i].LastTimestamp.After(events.Items[j].LastTimestamp.Time)
+	})
+
+	var result []Event
+	for i, event := range events.Items {
+		if limit > 0 && i >= limit {
+			break
+		}
+		result = append(result, Event{
+			Type:      event.Type,
+			Reason:    event.Reason,
+			Message:   event.Message,
+			Object:    fmt.Sprintf("%s/%s", event.InvolvedObject.Kind, event.InvolvedObject.Name),
+			Namespace: event.Namespace,
+			Cluster:   contextName,
+			Count:     event.Count,
+			Age:       formatDuration(time.Since(event.LastTimestamp.Time)),
+		})
+	}
+
+	return result, nil
+}
+
+// GetGPUNodes returns nodes with GPU resources
+func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string) ([]GPUNode, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var gpuNodes []GPUNode
+	for _, node := range nodes.Items {
+		// Check for nvidia.com/gpu in allocatable resources
+		gpuQuantity, hasGPU := node.Status.Allocatable["nvidia.com/gpu"]
+		if !hasGPU {
+			continue
+		}
+
+		gpuCount := int(gpuQuantity.Value())
+		if gpuCount == 0 {
+			continue
+		}
+
+		// Determine GPU type from labels
+		gpuType := "GPU"
+		if label, ok := node.Labels["nvidia.com/gpu.product"]; ok {
+			gpuType = label
+		} else if label, ok := node.Labels["accelerator"]; ok {
+			gpuType = label
+		}
+
+		// Get allocated GPUs by checking pods on this node
+		pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("spec.nodeName=%s", node.Name),
+		})
+
+		allocated := 0
+		if err == nil {
+			for _, pod := range pods.Items {
+				for _, container := range pod.Spec.Containers {
+					if gpuReq, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
+						allocated += int(gpuReq.Value())
+					}
+				}
+			}
+		}
+
+		gpuNodes = append(gpuNodes, GPUNode{
+			Name:         node.Name,
+			Cluster:      contextName,
+			GPUType:      gpuType,
+			GPUCount:     gpuCount,
+			GPUAllocated: allocated,
+		})
+	}
+
+	return gpuNodes, nil
+}
+
+// FindDeploymentIssues returns deployments with issues
+func (m *MultiClusterClient) FindDeploymentIssues(ctx context.Context, contextName, namespace string) ([]DeploymentIssue, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	deployments, err := client.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var issues []DeploymentIssue
+	for _, deploy := range deployments.Items {
+		// Check for issues
+		var reason, message string
+
+		// Check if not all replicas are ready
+		if deploy.Status.ReadyReplicas < *deploy.Spec.Replicas {
+			// Check conditions for more details
+			for _, condition := range deploy.Status.Conditions {
+				if condition.Type == "Available" && condition.Status == "False" {
+					reason = "Unavailable"
+					message = condition.Message
+					break
+				}
+				if condition.Type == "Progressing" && condition.Status == "False" {
+					reason = "ProgressDeadlineExceeded"
+					message = condition.Message
+					break
+				}
+			}
+
+			// If we found no condition, use generic
+			if reason == "" {
+				reason = "Unavailable"
+				message = fmt.Sprintf("%d/%d replicas ready", deploy.Status.ReadyReplicas, *deploy.Spec.Replicas)
+			}
+
+			issues = append(issues, DeploymentIssue{
+				Name:          deploy.Name,
+				Namespace:     deploy.Namespace,
+				Cluster:       contextName,
+				Replicas:      *deploy.Spec.Replicas,
+				ReadyReplicas: deploy.Status.ReadyReplicas,
+				Reason:        reason,
+				Message:       message,
+			})
+		}
+	}
+
+	return issues, nil
+}
+
+// GetAllClusterHealth returns health status for all clusters
+func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]ClusterHealth, error) {
+	clusters, err := m.ListClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	results := make([]ClusterHealth, 0, len(clusters))
+
+	for _, cluster := range clusters {
+		wg.Add(1)
+		go func(c ClusterInfo) {
+			defer wg.Done()
+			health, _ := m.GetClusterHealth(ctx, c.Name)
+			if health != nil {
+				mu.Lock()
+				results = append(results, *health)
+				mu.Unlock()
+			}
+		}(cluster)
+	}
+
+	wg.Wait()
+	return results, nil
+}
+
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
+}
