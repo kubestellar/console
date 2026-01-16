@@ -79,6 +79,20 @@ func NewServer(cfg Config) (*Server, error) {
 		} else {
 			log.Println("Kubernetes client initialized successfully")
 		}
+
+		// Set callback to notify frontend when kubeconfig changes
+		k8sClient.SetOnReload(func() {
+			hub.BroadcastAll(handlers.Message{
+				Type: "kubeconfig_changed",
+				Data: map[string]string{"message": "Kubeconfig updated"},
+			})
+			log.Println("Broadcasted kubeconfig change to all clients")
+		})
+
+		// Start watching kubeconfig for changes
+		if err := k8sClient.StartWatching(); err != nil {
+			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
+		}
 	}
 
 	// Initialize MCP bridge (optional - starts in background)
@@ -176,6 +190,7 @@ func (s *Server) setupRoutes() {
 		s.app.Get("/api/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
 		s.app.Get("/api/mcp/events", mcpHandlers.GetEvents)
 		s.app.Get("/api/mcp/events/warnings", mcpHandlers.GetWarningEvents)
+		s.app.Get("/api/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
 		s.app.Post("/api/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
 		s.app.Post("/api/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
 	}
@@ -242,6 +257,7 @@ func (s *Server) setupRoutes() {
 		api.Get("/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
 		api.Get("/mcp/events", mcpHandlers.GetEvents)
 		api.Get("/mcp/events/warnings", mcpHandlers.GetWarningEvents)
+		api.Get("/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
 		api.Post("/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
 		api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
 	}

@@ -139,12 +139,13 @@ func (h *Hub) BroadcastAll(msg Message) {
 // HandleConnection handles a new WebSocket connection
 func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	// Get user ID from query param (set during WebSocket upgrade)
+	// Anonymous connections are allowed for broadcast-only (e.g., kubeconfig changes)
 	userIDStr := conn.Query("user_id")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		log.Printf("Invalid user ID in WebSocket connection: %s", userIDStr)
-		conn.Close()
-		return
+		// Use nil UUID for anonymous connections
+		userID = uuid.Nil
+		log.Printf("Anonymous WebSocket connection (will receive broadcasts)")
 	}
 
 	client := &Client{
