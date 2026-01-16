@@ -24,6 +24,7 @@ type Server struct {
 	config     Config
 	upgrader   websocket.Upgrader
 	kubectl    *KubectlProxy
+	claude     *ClaudeDetector
 	clients    map[*websocket.Conn]bool
 	clientsMux sync.RWMutex
 }
@@ -44,6 +45,7 @@ func NewServer(cfg Config) (*Server, error) {
 			},
 		},
 		kubectl: kubectl,
+		claude:  NewClaudeDetector(),
 		clients: make(map[*websocket.Conn]bool),
 	}, nil
 }
@@ -107,6 +109,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		Version:   Version,
 		Clusters:  len(clusters),
 		HasClaude: hasClaude,
+		Claude:    s.getClaudeInfo(),
 	}
 
 	json.NewEncoder(w).Encode(payload)
@@ -244,6 +247,7 @@ func (s *Server) handleHealthMessage(msg protocol.Message) protocol.Message {
 			Version:   Version,
 			Clusters:  len(clusters),
 			HasClaude: s.checkClaudeAvailable(),
+			Claude:    s.getClaudeInfo(),
 		},
 	}
 }
@@ -298,6 +302,32 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 }
 
 func (s *Server) checkClaudeAvailable() bool {
-	// TODO: Check if Claude Code is installed and running
-	return false
+	return s.claude.IsInstalled()
+}
+
+// getClaudeInfo returns full Claude Code info including token usage
+func (s *Server) getClaudeInfo() *protocol.ClaudeInfo {
+	info := s.claude.Detect()
+	if !info.Installed {
+		return nil
+	}
+	return &protocol.ClaudeInfo{
+		Installed: info.Installed,
+		Path:      info.Path,
+		Version:   info.Version,
+		TokenUsage: protocol.TokenUsage{
+			Session: protocol.TokenCount{
+				Input:  info.TokenUsage.Session.Input,
+				Output: info.TokenUsage.Session.Output,
+			},
+			Today: protocol.TokenCount{
+				Input:  info.TokenUsage.Today.Input,
+				Output: info.TokenUsage.Today.Output,
+			},
+			ThisMonth: protocol.TokenCount{
+				Input:  info.TokenUsage.ThisMonth.Input,
+				Output: info.TokenUsage.ThisMonth.Output,
+			},
+		},
+	}
 }
