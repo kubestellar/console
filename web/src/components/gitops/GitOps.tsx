@@ -59,7 +59,7 @@ function getMockGitOpsData(): GitOpsApp[] {
       repoUrl: 'https://github.com/NVIDIA/gpu-operator',
       path: 'deployments/gpu-operator/',
       syncStatus: 'out-of-sync',
-      healthStatus: 'warning',
+      healthStatus: 'degraded',
       lastSyncTime: new Date(Date.now() - 1 * 3600000).toISOString(),
       driftDetails: ['Driver version mismatch'],
     },
