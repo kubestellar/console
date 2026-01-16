@@ -65,6 +65,20 @@ export interface DeploymentIssue {
   message?: string
 }
 
+export interface Deployment {
+  name: string
+  namespace: string
+  cluster?: string
+  status: 'running' | 'deploying' | 'failed'
+  replicas: number
+  readyReplicas: number
+  updatedReplicas: number
+  availableReplicas: number
+  progress: number
+  image?: string
+  age?: string
+}
+
 export interface GPUNode {
   name: string
   cluster: string
@@ -261,6 +275,39 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   }, [refetch])
 
   return { issues, isLoading, error, refetch }
+}
+
+// Hook to get deployments with rollout status
+export function useDeployments(cluster?: string, namespace?: string) {
+  const [deployments, setDeployments] = useState<Deployment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ deployments: Deployment[] }>(`/api/mcp/deployments?${params}`)
+      setDeployments(data.deployments || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch deployments')
+      setDeployments(getDemoDeployments())
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace])
+
+  useEffect(() => {
+    refetch()
+    // Poll every 10 seconds for deployment updates
+    const interval = setInterval(refetch, 10000)
+    return () => clearInterval(interval)
+  }, [refetch])
+
+  return { deployments, isLoading, error, refetch }
 }
 
 // Hook to get warning events
@@ -476,6 +523,63 @@ function getDemoDeploymentIssues(): DeploymentIssue[] {
       readyReplicas: 3,
       reason: 'Progressing',
       message: 'ReplicaSet is progressing',
+    },
+  ]
+}
+
+function getDemoDeployments(): Deployment[] {
+  return [
+    {
+      name: 'api-gateway',
+      namespace: 'production',
+      cluster: 'prod-east',
+      status: 'running',
+      replicas: 3,
+      readyReplicas: 3,
+      updatedReplicas: 3,
+      availableReplicas: 3,
+      progress: 100,
+      image: 'api-gateway:v2.4.1',
+      age: '5d',
+    },
+    {
+      name: 'worker-service',
+      namespace: 'batch',
+      cluster: 'vllm-d',
+      status: 'deploying',
+      replicas: 3,
+      readyReplicas: 2,
+      updatedReplicas: 3,
+      availableReplicas: 2,
+      progress: 67,
+      image: 'worker:v1.8.0',
+      age: '2h',
+    },
+    {
+      name: 'frontend',
+      namespace: 'web',
+      cluster: 'prod-west',
+      status: 'failed',
+      replicas: 3,
+      readyReplicas: 1,
+      updatedReplicas: 3,
+      availableReplicas: 1,
+      progress: 33,
+      image: 'frontend:v3.0.0',
+      age: '30m',
+    },
+    {
+      name: 'cache-redis',
+      namespace: 'data',
+      cluster: 'staging',
+      status: 'running',
+      replicas: 1,
+      readyReplicas: 1,
+      updatedReplicas: 1,
+      availableReplicas: 1,
+      progress: 100,
+      image: 'redis:7.2.0',
+      age: '14d',
     },
   ]
 }

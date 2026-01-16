@@ -270,6 +270,38 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
 }
 
+// GetDeployments returns deployments with rollout status
+func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		// If no cluster specified, query all clusters
+		if cluster == "" {
+			clusters, err := h.k8sClient.ListClusters(c.Context())
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+			var allDeployments []k8s.Deployment
+			for _, cl := range clusters {
+				deployments, err := h.k8sClient.GetDeployments(c.Context(), cl.Name, namespace)
+				if err == nil {
+					allDeployments = append(allDeployments, deployments...)
+				}
+			}
+			return c.JSON(fiber.Map{"deployments": allDeployments, "source": "k8s"})
+		}
+
+		deployments, err := h.k8sClient.GetDeployments(c.Context(), cluster, namespace)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"deployments": deployments, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
 // GetEvents returns events from a cluster
 func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
