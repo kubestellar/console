@@ -78,6 +78,18 @@ func NewServer(cfg Config) (*Server, error) {
 			log.Printf("Warning: Failed to load kubeconfig: %v", err)
 		} else {
 			log.Println("Kubernetes client initialized successfully")
+			// Set callback to notify frontend when kubeconfig changes
+			k8sClient.SetOnReload(func() {
+				hub.BroadcastAll(handlers.Message{
+					Type: "kubeconfig_changed",
+					Data: map[string]string{"message": "Kubeconfig updated"},
+				})
+				log.Println("Broadcasted kubeconfig change to all clients")
+			})
+			// Start watching kubeconfig for changes
+			if err := k8sClient.StartWatching(); err != nil {
+				log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
+			}
 		}
 
 		// Set callback to notify frontend when kubeconfig changes
@@ -140,15 +152,14 @@ func (s *Server) setupMiddleware() {
 		TimeFormat: "15:04:05",
 	}))
 
-	// CORS for dev mode
-	if s.config.DevMode {
-		s.app.Use(cors.New(cors.Config{
-			AllowOrigins:     s.config.FrontendURL,
-			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-			AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
-			AllowCredentials: true,
-		}))
-	}
+	// CORS - always enable when frontend URL is configured
+	// Required for local testing where frontend (5174) differs from backend (8080)
+	s.app.Use(cors.New(cors.Config{
+		AllowOrigins:     s.config.FrontendURL,
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowCredentials: true,
+	}))
 }
 
 func (s *Server) setupRoutes() {
@@ -299,6 +310,9 @@ func (s *Server) Start() error {
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown() error {
 	s.hub.Close()
+	if s.k8sClient != nil {
+		s.k8sClient.StopWatching()
+	}
 	if s.bridge != nil {
 		if err := s.bridge.Stop(); err != nil {
 			log.Printf("Warning: MCP bridge shutdown error: %v", err)

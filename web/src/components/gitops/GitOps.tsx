@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, GitBranch, FolderGit, Box } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
 
 // Mock GitOps data - in production would come from ArgoCD/Flux APIs
@@ -259,11 +259,25 @@ export function GitOps() {
                         {app.syncStatus === 'synced' ? 'Synced' : 'Out of Sync'}
                       </span>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {app.namespace} • {app.cluster}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <span className="flex items-center gap-1" title="Kubernetes Namespace">
+                        <Box className="w-3 h-3" />
+                        <span>{app.namespace}</span>
+                      </span>
+                      {app.cluster && (
+                        <span className="flex items-center gap-1" title="Target Cluster">
+                          <span className="text-muted-foreground/50">→</span>
+                          <span>{app.cluster}</span>
+                        </span>
+                      )}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1 font-mono">
-                      {app.repoUrl.replace('https://github.com/', '')}:{app.path}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1" title="Git Repository Source">
+                      <GitBranch className="w-3 h-3 text-purple-400" />
+                      <span className="font-mono">github.com/{app.repoUrl.replace('https://github.com/', '')}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Path in Repository">
+                      <FolderGit className="w-3 h-3 text-blue-400" />
+                      <span className="font-mono">{app.path}</span>
                     </div>
                   </div>
                 </div>

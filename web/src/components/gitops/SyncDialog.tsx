@@ -1,8 +1,39 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Check, AlertTriangle, Play, Loader2, ChevronRight, FileCode, GitBranch } from 'lucide-react'
+import { X, Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle } from 'lucide-react'
 
 // Sync phases
 type SyncPhase = 'detection' | 'plan' | 'execution' | 'complete'
+
+// Get icon for Kubernetes resource kind
+function getResourceIcon(kind: string) {
+  const k = kind?.toLowerCase() || ''
+  if (k.includes('deployment')) return <Box className="w-4 h-4 text-blue-400" />
+  if (k.includes('service')) return <Network className="w-4 h-4 text-green-400" />
+  if (k.includes('pod')) return <Container className="w-4 h-4 text-cyan-400" />
+  if (k.includes('configmap')) return <Settings className="w-4 h-4 text-purple-400" />
+  if (k.includes('secret')) return <Shield className="w-4 h-4 text-red-400" />
+  if (k.includes('serviceaccount')) return <Server className="w-4 h-4 text-orange-400" />
+  if (k.includes('role') || k.includes('clusterrole')) return <Shield className="w-4 h-4 text-yellow-400" />
+  if (k.includes('customresourcedefinition') || k.includes('crd')) return <Puzzle className="w-4 h-4 text-pink-400" />
+  if (k.includes('namespace')) return <Layers className="w-4 h-4 text-indigo-400" />
+  if (k.includes('persistentvolume') || k.includes('pvc')) return <Database className="w-4 h-4 text-teal-400" />
+  if (k.includes('ingress')) return <Network className="w-4 h-4 text-emerald-400" />
+  if (k.includes('statefulset') || k.includes('daemonset') || k.includes('replicaset')) return <Layers className="w-4 h-4 text-blue-400" />
+  if (k.includes('job') || k.includes('cronjob')) return <Settings className="w-4 h-4 text-amber-400" />
+  if (k.includes('webhook')) return <Network className="w-4 h-4 text-violet-400" />
+  return <FileText className="w-4 h-4 text-yellow-500" />
+}
+
+// Format resource kind for display
+function formatResourceKind(kind: string): string {
+  if (!kind) return 'Resource'
+  // Common abbreviations
+  if (kind.toLowerCase() === 'customresourcedefinition') return 'CRD'
+  if (kind.toLowerCase() === 'serviceaccount') return 'ServiceAccount'
+  if (kind.toLowerCase() === 'clusterrole') return 'ClusterRole'
+  if (kind.toLowerCase() === 'clusterrolebinding') return 'ClusterRoleBinding'
+  return kind
+}
 
 interface DriftedResource {
   kind: string
@@ -322,35 +353,49 @@ export function SyncDialog({
                   <AlertTriangle className="w-4 h-4 text-yellow-500" />
                   Drift Detected ({driftedResources.length} resources)
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[250px] overflow-y-auto">
                   {driftedResources.map((r, i) => (
                     <div key={i} className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <FileCode className="w-4 h-4 text-yellow-500" />
-                        {r.kind}/{r.name}
+                      <div className="flex items-center gap-2 text-sm">
+                        {getResourceIcon(r.kind)}
+                        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-card text-muted-foreground">
+                          {formatResourceKind(r.kind)}
+                        </span>
+                        <span className="font-medium text-foreground truncate">{r.name}</span>
                       </div>
-                      <div className="mt-2 text-xs font-mono">
-                        <span className="text-muted-foreground">{r.field}: </span>
-                        <span className="text-red-400 line-through">{r.clusterValue}</span>
-                        <span className="text-muted-foreground"> → </span>
-                        <span className="text-green-400">{r.gitValue}</span>
-                      </div>
+                      {(r.field || r.clusterValue || r.gitValue) && (
+                        <div className="mt-2 text-xs font-mono pl-6">
+                          {r.field && <span className="text-muted-foreground">{r.field}: </span>}
+                          {r.clusterValue && <span className="text-red-400 line-through">{r.clusterValue}</span>}
+                          {r.clusterValue && r.gitValue && <span className="text-muted-foreground"> → </span>}
+                          {r.gitValue && <span className="text-green-400">{r.gitValue}</span>}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-foreground mb-3">Sync Plan</h3>
-                <div className="space-y-1">
-                  {syncPlan.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
-                        {item.action.toUpperCase()}
-                      </span>
-                      <span className="text-foreground">{item.resource}</span>
-                    </div>
-                  ))}
+                <h3 className="text-sm font-medium text-foreground mb-3">Sync Plan ({syncPlan.length} changes)</h3>
+                <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                  {syncPlan.map((item, i) => {
+                    const [kind, name] = item.resource.includes('/') ? item.resource.split('/') : ['Resource', item.resource]
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-sm py-1">
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                          item.action === 'create' ? 'bg-green-500/20 text-green-400' :
+                          item.action === 'delete' ? 'bg-red-500/20 text-red-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {item.action.toUpperCase()}
+                        </span>
+                        {getResourceIcon(kind)}
+                        <span className="text-muted-foreground text-xs">{formatResourceKind(kind)}</span>
+                        <span className="text-foreground truncate">{name}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>

@@ -396,6 +396,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
+	// Fall back to direct k8s client
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters
 		if cluster == "" {
