@@ -33,6 +33,10 @@ type Config struct {
 	KlaudeOpsPath    string
 	KlaudeDeployPath string
 	Kubeconfig       string
+	// Dev mode user settings (used when GitHub OAuth not configured)
+	DevUserLogin  string
+	DevUserEmail  string
+	DevUserAvatar string
 }
 
 // Server represents the API server
@@ -55,7 +59,8 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
-		ErrorHandler: customErrorHandler,
+		ErrorHandler:   customErrorHandler,
+		ReadBufferSize: 16384, // Increase from default 4096 to handle larger headers (OAuth tokens)
 	})
 
 	// WebSocket hub for real-time updates
@@ -137,7 +142,15 @@ func (s *Server) setupRoutes() {
 	})
 
 	// Auth routes (public)
-	auth := handlers.NewAuthHandler(s.store, s.config.GitHubClientID, s.config.GitHubSecret, s.config.JWTSecret, s.config.FrontendURL)
+	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
+		GitHubClientID:   s.config.GitHubClientID,
+		GitHubSecret:     s.config.GitHubSecret,
+		JWTSecret:        s.config.JWTSecret,
+		FrontendURL:      s.config.FrontendURL,
+		DevUserLogin:     s.config.DevUserLogin,
+		DevUserEmail:     s.config.DevUserEmail,
+		DevUserAvatar:    s.config.DevUserAvatar,
+	})
 	s.app.Get("/auth/github", auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", auth.GitHubCallback)
 	s.app.Post("/auth/refresh", auth.RefreshToken)
@@ -305,6 +318,10 @@ func LoadConfigFromEnv() Config {
 		KlaudeOpsPath:    getEnvOrDefault("KLAUDE_OPS_PATH", "klaude-ops"),
 		KlaudeDeployPath: getEnvOrDefault("KLAUDE_DEPLOY_PATH", "klaude-deploy"),
 		Kubeconfig:       os.Getenv("KUBECONFIG"),
+		// Dev mode user settings
+		DevUserLogin:  getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
+		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
+		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
 	}
 }
 
