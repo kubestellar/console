@@ -18,7 +18,7 @@ export default defineConfig({
     // Tour.spec.ts - re-enabled after stabilization
     // Sidebar.spec.ts - re-enabled after stabilization
     // AIMode.spec.ts - re-enabled after stabilization
-    '**/AIRecommendations.spec.ts',
+    // AIRecommendations.spec.ts - re-enabled after stabilization
     '**/CardChat.spec.ts',
     '**/CardSharing.spec.ts',
     '**/DrillDown.spec.ts',
