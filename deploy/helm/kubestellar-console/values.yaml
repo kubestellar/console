@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: quay.io/kubestellar/console
+  repository: ghcr.io/kubestellar/console
   pullPolicy: IfNotPresent
   tag: ""  # Defaults to chart appVersion
 
