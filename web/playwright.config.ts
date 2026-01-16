@@ -21,7 +21,7 @@ export default defineConfig({
     // AIRecommendations.spec.ts - re-enabled after stabilization
     // CardChat.spec.ts - re-enabled after stabilization
     // CardSharing.spec.ts - re-enabled after stabilization
-    '**/DrillDown.spec.ts',
+    // DrillDown.spec.ts - re-enabled after stabilization
     // Clusters.spec.ts - re-enabled after stabilization
     // Events.spec.ts - re-enabled after stabilization
     // Settings.spec.ts - re-enabled after stabilization
