@@ -63,7 +63,7 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="snoozed"]',
     title: 'Snoozed Suggestions',
     content: 'Not ready for a suggestion? Snooze it! Snoozed items appear here with elapsed time. Click to apply when you\'re ready.',
-    placement: 'left',
+    placement: 'right',
     highlight: true,
   },
   {
