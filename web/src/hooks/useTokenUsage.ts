@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 export interface TokenUsage {
   used: number
@@ -11,11 +11,12 @@ export interface TokenUsage {
 
 export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
 
-const STORAGE_KEY = 'kubestellar-token-usage'
 const SETTINGS_KEY = 'kubestellar-token-settings'
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+const POLL_INTERVAL = 2000 // Poll every 2 seconds for real-time updates
 
 const DEFAULT_SETTINGS = {
-  limit: 100000, // 100k tokens
+  limit: 5000000, // 5M tokens (realistic for Claude usage)
   warningThreshold: 0.7, // 70%
   criticalThreshold: 0.9, // 90%
   stopThreshold: 1.0, // 100%
@@ -24,34 +25,8 @@ const DEFAULT_SETTINGS = {
 export function useTokenUsage() {
   const [usage, setUsage] = useState<TokenUsage>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY)
       const settings = localStorage.getItem(SETTINGS_KEY)
       const parsedSettings = settings ? JSON.parse(settings) : DEFAULT_SETTINGS
-
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          // Check if reset date has passed
-          const resetDate = new Date(parsed.resetDate)
-          if (new Date() > resetDate) {
-            // Reset usage for new month
-            const newUsage = {
-              used: 0,
-              ...parsedSettings,
-              resetDate: getNextResetDate(),
-            }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newUsage))
-            return newUsage
-          }
-          return { ...parsed, ...parsedSettings }
-        } catch {
-          return {
-            used: 0,
-            ...parsedSettings,
-            resetDate: getNextResetDate(),
-          }
-        }
-      }
       return {
         used: 0,
         ...parsedSettings,
@@ -65,10 +40,46 @@ export function useTokenUsage() {
     }
   })
 
-  // Persist usage changes
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Poll local agent for real-time token usage
+  const fetchTokenUsage = useCallback(async () => {
+    try {
+      const response = await fetch(`${LOCAL_AGENT_URL}/health`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.claude?.tokenUsage?.today) {
+          // Use today's output tokens - stable and increases throughout the day
+          const todayTokens = data.claude.tokenUsage.today
+          // Output tokens are the primary metric (what Claude generates)
+          setUsage(prev => ({
+            ...prev,
+            used: todayTokens.output,
+          }))
+        }
+      }
+    } catch {
+      // Local agent not available, keep current usage
+    }
+  }, [])
+
+  // Start polling on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(usage))
-  }, [usage])
+    // Initial fetch
+    fetchTokenUsage()
+
+    // Set up polling interval
+    pollIntervalRef.current = setInterval(fetchTokenUsage, POLL_INTERVAL)
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+      }
+    }
+  }, [fetchTokenUsage])
 
   // Calculate alert level
   const getAlertLevel = useCallback((): TokenAlertLevel => {

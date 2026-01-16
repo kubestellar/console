@@ -28,6 +28,7 @@ type AuthConfig struct {
 	DevUserEmail     string
 	DevUserAvatar    string
 	GitHubToken      string // Personal access token for dev mode profile lookup
+	DevMode          bool   // Force dev mode bypass even if OAuth credentials present
 }
 
 // AuthHandler handles authentication
@@ -40,6 +41,7 @@ type AuthHandler struct {
 	devUserEmail  string
 	devUserAvatar string
 	githubToken   string
+	devMode       bool
 }
 
 // NewAuthHandler creates a new auth handler
@@ -65,13 +67,14 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		devUserEmail:  cfg.DevUserEmail,
 		devUserAvatar: cfg.DevUserAvatar,
 		githubToken:   cfg.GitHubToken,
+		devMode:       cfg.DevMode,
 	}
 }
 
 // GitHubLogin initiates GitHub OAuth flow
 func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
-	// Dev mode: bypass GitHub OAuth if no client ID configured
-	if h.oauthConfig.ClientID == "" {
+	// Dev mode: bypass GitHub OAuth if dev mode is enabled or no client ID configured
+	if h.devMode || h.oauthConfig.ClientID == "" {
 		return h.devModeLogin(c)
 	}
 

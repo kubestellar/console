@@ -153,6 +153,7 @@ func (s *Server) setupRoutes() {
 		DevUserEmail:     s.config.DevUserEmail,
 		DevUserAvatar:    s.config.DevUserAvatar,
 		GitHubToken:      s.config.GitHubToken,
+		DevMode:          s.config.DevMode,
 	})
 	s.app.Get("/auth/github", auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", auth.GitHubCallback)

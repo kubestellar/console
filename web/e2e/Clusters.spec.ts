@@ -16,7 +16,7 @@ test.describe('Clusters Page', () => {
       })
     )
 
-    // Mock MCP endpoints - handle different endpoints in one handler
+    // Mock MCP endpoints - consolidated handler to avoid route conflicts
     await page.route('**/api/mcp/**', (route) => {
       const url = route.request().url()
       if (url.includes('/clusters')) {
@@ -54,19 +54,11 @@ test.describe('Clusters Page', () => {
       // Wait for clusters to load
       await page.waitForTimeout(1500)
 
-      // The Clusters component renders cards with .glass.cursor-pointer class
-      // Or look for specific cluster names from our mock data
-      const clusterCards = page.locator('.grid .glass.cursor-pointer')
+      // Should show cluster cards - the component renders them as glass cards with cursor-pointer
+      // Also look for cluster name text like prod-east, prod-west, staging from our mock
+      const clusterCards = page.locator('.glass.cursor-pointer, div:has-text("prod-east"), div:has-text("prod-west")')
       const clusterCount = await clusterCards.count()
-
-      // Alternatively check for cluster names
-      if (clusterCount === 0) {
-        const prodEast = page.locator('text=prod-east')
-        const hasProdEast = await prodEast.isVisible().catch(() => false)
-        expect(hasProdEast).toBeTruthy()
-      } else {
-        expect(clusterCount).toBeGreaterThan(0)
-      }
+      expect(clusterCount).toBeGreaterThan(0)
     })
 
     test('shows cluster health status', async ({ page }) => {

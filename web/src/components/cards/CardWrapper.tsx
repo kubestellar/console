@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react'
-import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2 } from 'lucide-react'
+import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { ChatMessage } from './CardChat'
@@ -135,6 +135,7 @@ export function CardWrapper({
     <>
       {/* Main card */}
       <div
+        data-tour="card"
         className={cn(
           'glass rounded-xl h-full overflow-hidden card-hover',
           'flex flex-col'
@@ -146,12 +147,20 @@ export function CardWrapper({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             {dragHandle}
-            <h3 className="text-sm font-medium text-white">{title}</h3>
+            <h3 className="text-sm font-medium text-foreground">{title}</h3>
           </div>
           <div className="flex items-center gap-1">
             <button
+              data-tour="card-chat"
+              onClick={() => console.log('Open chat for card:', cardType)}
+              className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+              title="Ask AI about this card"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => setIsExpanded(true)}
-              className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"
+              className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Maximize2 className="w-4 h-4" />
             </button>

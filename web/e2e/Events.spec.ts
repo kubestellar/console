@@ -16,27 +16,26 @@ test.describe('Events Page', () => {
       })
     )
 
-    // Mock MCP endpoints with sample event data
-    await page.route('**/api/mcp/**', (route) => {
-      const url = route.request().url()
-      if (url.includes('/events')) {
-        route.fulfill({
-          status: 200,
-          json: {
-            events: [
-              { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', namespace: 'default', involvedObject: 'pod-1', cluster: 'prod-east', age: '5m' },
-              { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node', namespace: 'default', involvedObject: 'pod-2', cluster: 'prod-west', age: '10m' },
-              { type: 'Warning', reason: 'FailedScheduling', message: 'Insufficient memory', namespace: 'kube-system', involvedObject: 'pod-3', cluster: 'staging', age: '1h' },
-            ],
-          },
-        })
-      } else {
-        route.fulfill({
-          status: 200,
-          json: { clusters: [], issues: [], nodes: [] },
-        })
-      }
-    })
+    // Mock MCP events endpoint with sample data
+    await page.route('**/api/mcp/events', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          events: [
+            { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', namespace: 'default', involvedObject: 'pod-1', cluster: 'prod-east', age: '5m' },
+            { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node', namespace: 'default', involvedObject: 'pod-2', cluster: 'prod-west', age: '10m' },
+            { type: 'Warning', reason: 'FailedScheduling', message: 'Insufficient memory', namespace: 'kube-system', involvedObject: 'pod-3', cluster: 'staging', age: '1h' },
+          ],
+        },
+      })
+    )
+
+    await page.route('**/api/mcp/**', (route) =>
+      route.fulfill({
+        status: 200,
+        json: { clusters: [], issues: [], nodes: [] },
+      })
+    )
 
     // Set auth token
     await page.goto('/login')
