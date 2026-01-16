@@ -24,7 +24,7 @@ export default defineConfig({
     '**/DrillDown.spec.ts',
     '**/Clusters.spec.ts',
     '**/Events.spec.ts',
-    '**/Settings.spec.ts',
+    // Settings.spec.ts - re-enabled after stabilization
     '**/auth.setup.ts',
   ],
 
