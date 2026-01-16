@@ -107,6 +107,14 @@ func (k *KubectlProxy) validateArgs(args []string) bool {
 
 func (k *KubectlProxy) GetCurrentContext() string { return k.config.CurrentContext }
 
+// Reload reloads the kubeconfig from disk
+func (k *KubectlProxy) Reload() {
+	config, err := clientcmd.LoadFromFile(k.kubeconfig)
+	if err == nil {
+		k.config = config
+	}
+}
+
 // RenameContext renames a kubeconfig context
 func (k *KubectlProxy) RenameContext(oldName, newName string) error {
 	cmdArgs := []string{"config", "rename-context", oldName, newName}
