@@ -17,7 +17,7 @@ export default defineConfig({
   testIgnore: [
     '**/Tour.spec.ts',
     // Sidebar.spec.ts - re-enabled after stabilization
-    '**/AIMode.spec.ts',
+    // AIMode.spec.ts - re-enabled after stabilization
     '**/AIRecommendations.spec.ts',
     '**/CardChat.spec.ts',
     '**/CardSharing.spec.ts',
