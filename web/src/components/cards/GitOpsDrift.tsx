@@ -1,0 +1,163 @@
+import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2 } from 'lucide-react'
+import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+
+interface GitOpsDriftProps {
+  config?: {
+    cluster?: string
+    namespace?: string
+  }
+}
+
+const driftTypeConfig = {
+  modified: {
+    icon: RefreshCw,
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-500/20',
+    label: 'Modified',
+  },
+  deleted: {
+    icon: Minus,
+    color: 'text-red-400',
+    bg: 'bg-red-500/20',
+    label: 'Missing in Cluster',
+  },
+  added: {
+    icon: Plus,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/20',
+    label: 'Not in Git',
+  },
+}
+
+const severityColors = {
+  high: 'border-l-red-500',
+  medium: 'border-l-yellow-500',
+  low: 'border-l-blue-500',
+}
+
+export function GitOpsDrift({ config }: GitOpsDriftProps) {
+  const cluster = config?.cluster
+  const namespace = config?.namespace
+
+  const { drifts, isLoading, error, refetch } = useGitOpsDrifts(cluster, namespace)
+
+  if (isLoading && drifts.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error && drifts.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+        {error}
+      </div>
+    )
+  }
+
+  const highSeverityCount = drifts.filter(d => d.severity === 'high').length
+  const totalDrifts = drifts.length
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <GitBranch className="w-4 h-4 text-purple-400" />
+          <span className="text-sm font-medium text-muted-foreground">
+            GitOps Drift
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {highSeverityCount > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              {highSeverityCount} critical
+            </span>
+          )}
+          {totalDrifts > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+              {totalDrifts} drift{totalDrifts !== 1 ? 's' : ''}
+            </span>
+          )}
+          <button
+            onClick={() => refetch()}
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Drifts list */}
+      {drifts.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
+            <GitBranch className="w-6 h-6 text-green-400" />
+          </div>
+          <p className="text-sm font-medium text-green-400">No Drift Detected</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            All clusters are in sync with Git
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-2 overflow-y-auto">
+          {drifts.map((drift, index) => (
+            <DriftItem key={`${drift.cluster}-${drift.namespace}-${drift.resource}-${index}`} drift={drift} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DriftItem({ drift }: { drift: GitOpsDriftType }) {
+  const typeConfig = driftTypeConfig[drift.driftType]
+  const TypeIcon = typeConfig.icon
+
+  return (
+    <div
+      className={`p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]}`}
+    >
+      <div className="flex items-start justify-between mb-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className={`p-1 rounded ${typeConfig.bg}`}>
+            <TypeIcon className={`w-3 h-3 ${typeConfig.color}`} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="text-sm font-medium text-white truncate block" title={drift.resource}>
+              {drift.resource}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {drift.kind}
+            </span>
+          </div>
+        </div>
+        <span className={`text-xs px-2 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
+          {typeConfig.label}
+        </span>
+      </div>
+
+      <div className="text-xs text-muted-foreground mt-2">
+        <span className="truncate block" title={`${drift.cluster} / ${drift.namespace}`}>
+          {drift.cluster} / {drift.namespace}
+        </span>
+        {drift.details && (
+          <p className="mt-1 text-xs text-muted-foreground/80">
+            {drift.details}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 mt-2 text-xs">
+        <span className="text-muted-foreground">Git:</span>
+        <code className="px-1.5 py-0.5 rounded bg-secondary text-purple-400 font-mono text-[10px]">
+          {drift.gitVersion}
+        </code>
+      </div>
+    </div>
+  )
+}

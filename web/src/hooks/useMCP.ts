@@ -457,6 +457,86 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
   return { issues, isLoading, error, refetch }
 }
 
+// GitOps drift types
+export interface GitOpsDrift {
+  resource: string
+  namespace: string
+  cluster: string
+  kind: string
+  driftType: 'modified' | 'deleted' | 'added'
+  gitVersion: string
+  details?: string
+  severity: 'high' | 'medium' | 'low'
+}
+
+// Hook to get GitOps drifts
+export function useGitOpsDrifts(cluster?: string, namespace?: string) {
+  const [drifts, setDrifts] = useState<GitOpsDrift[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ drifts: GitOpsDrift[] }>(`/api/gitops/drifts?${params}`)
+      setDrifts(data.drifts || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch GitOps drifts')
+      setDrifts(getDemoGitOpsDrifts())
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace])
+
+  useEffect(() => {
+    refetch()
+    // Poll every 30 seconds
+    const interval = setInterval(refetch, 30000)
+    return () => clearInterval(interval)
+  }, [refetch])
+
+  return { drifts, isLoading, error, refetch }
+}
+
+function getDemoGitOpsDrifts(): GitOpsDrift[] {
+  return [
+    {
+      resource: 'api-gateway',
+      namespace: 'production',
+      cluster: 'prod-east',
+      kind: 'Deployment',
+      driftType: 'modified',
+      gitVersion: 'v2.4.0',
+      details: 'Image tag changed from v2.4.0 to v2.4.1-hotfix',
+      severity: 'medium',
+    },
+    {
+      resource: 'config-secret',
+      namespace: 'production',
+      cluster: 'prod-east',
+      kind: 'Secret',
+      driftType: 'modified',
+      gitVersion: 'abc123',
+      details: 'Secret data modified manually',
+      severity: 'high',
+    },
+    {
+      resource: 'debug-pod',
+      namespace: 'default',
+      cluster: 'staging',
+      kind: 'Pod',
+      driftType: 'added',
+      gitVersion: '-',
+      details: 'Resource exists in cluster but not in Git',
+      severity: 'low',
+    },
+  ]
+}
+
 function getDemoSecurityIssues(): SecurityIssue[] {
   return [
     {

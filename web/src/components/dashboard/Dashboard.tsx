@@ -35,6 +35,7 @@ import { ClusterMetrics } from '../cards/ClusterMetrics'
 import { DeploymentStatus } from '../cards/DeploymentStatus'
 import { DeploymentProgress } from '../cards/DeploymentProgress'
 import { DeploymentIssues } from '../cards/DeploymentIssues'
+import { GitOpsDrift } from '../cards/GitOpsDrift'
 import { UpgradeStatus } from '../cards/UpgradeStatus'
 import { ResourceCapacity } from '../cards/ResourceCapacity'
 import { GPUInventory } from '../cards/GPUInventory'
@@ -73,6 +74,7 @@ const CARD_COMPONENTS: Record<string, React.ComponentType<{ config?: Record<stri
   deployment_status: DeploymentStatus,
   deployment_progress: DeploymentProgress,
   deployment_issues: DeploymentIssues,
+  gitops_drift: GitOpsDrift,
   upgrade_status: UpgradeStatus,
   resource_capacity: ResourceCapacity,
   gpu_inventory: GPUInventory,

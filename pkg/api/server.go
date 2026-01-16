@@ -105,6 +105,20 @@ func NewServer(cfg Config) (*Server, error) {
 		if err := k8sClient.StartWatching(); err != nil {
 			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
 		}
+
+		// Set callback to notify frontend when kubeconfig changes
+		k8sClient.SetOnReload(func() {
+			hub.BroadcastAll(handlers.Message{
+				Type: "kubeconfig_changed",
+				Data: map[string]string{"message": "Kubeconfig updated"},
+			})
+			log.Println("Broadcasted kubeconfig change to all clients")
+		})
+
+		// Start watching kubeconfig for changes
+		if err := k8sClient.StartWatching(); err != nil {
+			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
+		}
 	}
 
 	// Initialize MCP bridge (optional - starts in background)
@@ -277,10 +291,12 @@ func (s *Server) setupRoutes() {
 	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient)
 	if s.config.DevMode {
 		// Dev mode: unprotected for testing
+		s.app.Get("/api/gitops/drifts", gitopsHandlers.DetectDrift)
 		s.app.Post("/api/gitops/detect-drift", gitopsHandlers.DetectDrift)
 		s.app.Post("/api/gitops/sync", gitopsHandlers.Sync)
 	} else {
 		// Production: protected
+		api.Get("/gitops/drifts", gitopsHandlers.DetectDrift)
 		api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 		api.Post("/gitops/sync", gitopsHandlers.Sync)
 	}
