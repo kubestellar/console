@@ -28,6 +28,7 @@ import { CardWrapper } from '../cards/CardWrapper'
 import { ClusterHealth } from '../cards/ClusterHealth'
 import { EventStream } from '../cards/EventStream'
 import { PodIssues } from '../cards/PodIssues'
+import { TopPods } from '../cards/TopPods'
 import { AppStatus } from '../cards/AppStatus'
 import { ResourceUsage } from '../cards/ResourceUsage'
 import { ClusterMetrics } from '../cards/ClusterMetrics'
@@ -64,6 +65,7 @@ const CARD_COMPONENTS: Record<string, React.ComponentType<{ config?: Record<stri
   cluster_health: ClusterHealth,
   event_stream: EventStream,
   pod_issues: PodIssues,
+  top_pods: TopPods,
   app_status: AppStatus,
   resource_usage: ResourceUsage,
   cluster_metrics: ClusterMetrics,

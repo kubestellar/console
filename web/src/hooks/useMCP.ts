@@ -183,6 +183,49 @@ export function useClusterHealth(cluster?: string) {
   return { health, isLoading, error, refetch }
 }
 
+// Hook to get pods
+export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts' | 'name' = 'restarts', limit = 10) {
+  const [pods, setPods] = useState<PodInfo[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?${params}`)
+      let sortedPods = data.pods || []
+
+      // Sort by restarts (descending) or name
+      if (sortBy === 'restarts') {
+        sortedPods = sortedPods.sort((a, b) => b.restarts - a.restarts)
+      } else {
+        sortedPods = sortedPods.sort((a, b) => a.name.localeCompare(b.name))
+      }
+
+      // Limit results
+      setPods(sortedPods.slice(0, limit))
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch pods')
+      setPods(getDemoPods())
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace, sortBy, limit])
+
+  useEffect(() => {
+    refetch()
+    // Poll every 15 seconds for pod updates
+    const interval = setInterval(refetch, 15000)
+    return () => clearInterval(interval)
+  }, [refetch])
+
+  return { pods, isLoading, error, refetch }
+}
+
 // Hook to get pod issues
 export function usePodIssues(cluster?: string, namespace?: string) {
   const [issues, setIssues] = useState<PodIssue[]>([])
@@ -501,6 +544,21 @@ function getDemoPodIssues(): PodIssue[] {
       issues: ['Insufficient memory'],
       restarts: 0,
     },
+  ]
+}
+
+function getDemoPods(): PodInfo[] {
+  return [
+    { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', status: 'Running', ready: '1/1', restarts: 15, age: '2d', node: 'node-1' },
+    { name: 'worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-d', status: 'Running', ready: '1/1', restarts: 8, age: '5h', node: 'gpu-node-2' },
+    { name: 'cache-redis-0', namespace: 'data', cluster: 'staging', status: 'Running', ready: '1/1', restarts: 5, age: '14d', node: 'node-3' },
+    { name: 'frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'prod-west', status: 'Running', ready: '1/1', restarts: 3, age: '1d', node: 'node-2' },
+    { name: 'nginx-ingress-abc123', namespace: 'ingress', cluster: 'prod-east', status: 'Running', ready: '1/1', restarts: 2, age: '7d', node: 'node-1' },
+    { name: 'monitoring-agent-xyz', namespace: 'monitoring', cluster: 'staging', status: 'Running', ready: '1/1', restarts: 1, age: '30d', node: 'node-4' },
+    { name: 'api-gateway-pod-1', namespace: 'production', cluster: 'prod-east', status: 'Running', ready: '1/1', restarts: 0, age: '3d', node: 'node-2' },
+    { name: 'worker-processor-1', namespace: 'batch', cluster: 'vllm-d', status: 'Running', ready: '1/1', restarts: 0, age: '12h', node: 'gpu-node-1' },
+    { name: 'database-primary-0', namespace: 'data', cluster: 'staging', status: 'Running', ready: '1/1', restarts: 0, age: '60d', node: 'node-5' },
+    { name: 'scheduler-job-xyz', namespace: 'system', cluster: 'prod-east', status: 'Running', ready: '1/1', restarts: 0, age: '4h', node: 'node-1' },
   ]
 }
 
