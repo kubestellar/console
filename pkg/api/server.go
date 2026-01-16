@@ -207,6 +207,7 @@ func (s *Server) setupRoutes() {
 	api.Put("/cards/:id", cards.UpdateCard)
 	api.Delete("/cards/:id", cards.DeleteCard)
 	api.Post("/cards/:id/focus", cards.RecordFocus)
+	api.Post("/cards/:id/move", cards.MoveCard)
 	api.Get("/card-types", cards.GetCardTypes)
 
 	// Card history

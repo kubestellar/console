@@ -115,12 +115,15 @@ export default defineConfig({
   ],
 
   // Web server config - starts dev server before tests
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  // Skip webServer if PLAYWRIGHT_BASE_URL is set (using existing server)
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev',
+        url: 'http://localhost:5173',
+        reuseExistingServer: true,
+        timeout: 120000,
+      },
 
   // Output directory
   outputDir: 'test-results',

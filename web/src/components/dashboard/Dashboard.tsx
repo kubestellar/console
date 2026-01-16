@@ -10,6 +10,7 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  DragOverEvent,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -20,6 +21,9 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { api } from '../../lib/api'
+import { useDashboards } from '../../hooks/useDashboards'
+import { DashboardDropZone } from './DashboardDropZone'
+import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
 import { ClusterHealth } from '../cards/ClusterHealth'
 import { EventStream } from '../cards/EventStream'
@@ -80,6 +84,12 @@ export function Dashboard() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
+
+  // Get all dashboards for cross-dashboard dragging
+  const { dashboards, moveCardToDashboard, createDashboard } = useDashboards()
+  const { showToast } = useToast()
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -95,18 +105,70 @@ export function Dashboard() {
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
+    setIsDragging(true)
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event
+    if (over && String(over.id).startsWith('dashboard-drop-')) {
+      const dashboardId = over.data?.current?.dashboardId
+      setDragOverDashboard(dashboardId || null)
+    } else {
+      setDragOverDashboard(null)
+    }
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     setActiveId(null)
+    setIsDragging(false)
+    setDragOverDashboard(null)
 
-    if (over && active.id !== over.id) {
+    if (!over) return
+
+    // Check if dropped on another dashboard
+    if (String(over.id).startsWith('dashboard-drop-')) {
+      const targetDashboardId = over.data?.current?.dashboardId
+      const targetDashboardName = over.data?.current?.dashboardName
+      if (targetDashboardId && active.id) {
+        try {
+          await moveCardToDashboard(active.id as string, targetDashboardId)
+          // Remove card from local state
+          setLocalCards((items) => items.filter((item) => item.id !== active.id))
+          // Show success toast
+          showToast(`Card moved to "${targetDashboardName}"`, 'success')
+        } catch (error) {
+          console.error('Failed to move card:', error)
+          showToast('Failed to move card', 'error')
+        }
+      }
+      return
+    }
+
+    // Normal reorder within same dashboard
+    if (active.id !== over.id) {
       setLocalCards((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id)
         const newIndex = items.findIndex((item) => item.id === over.id)
         return arrayMove(items, oldIndex, newIndex)
       })
+    }
+  }
+
+  const handleDragCancel = () => {
+    setActiveId(null)
+    setIsDragging(false)
+    setDragOverDashboard(null)
+  }
+
+  const handleCreateDashboard = async () => {
+    try {
+      const name = `Dashboard ${dashboards.length + 1}`
+      const newDashboard = await createDashboard(name)
+      showToast(`Created "${newDashboard.name}"`, 'success')
+    } catch (error) {
+      console.error('Failed to create dashboard:', error)
+      showToast('Failed to create dashboard', 'error')
     }
   }
 
@@ -250,9 +312,19 @@ export function Dashboard() {
       </div>
 
       {/* AI Recommendations */}
-      <CardRecommendations
-        currentCardTypes={currentCardTypes}
-        onAddCard={handleAddRecommendedCard}
+      <div data-tour="recommendations">
+        <CardRecommendations
+          currentCardTypes={currentCardTypes}
+          onAddCard={handleAddRecommendedCard}
+        />
+      </div>
+
+      {/* Dashboard drop zone (shows when dragging) */}
+      <DashboardDropZone
+        dashboards={dashboards}
+        currentDashboardId={dashboard?.id}
+        isDragging={isDragging}
+        onCreateDashboard={handleCreateDashboard}
       />
 
       {/* Card grid with drag and drop */}
@@ -260,10 +332,12 @@ export function Dashboard() {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <SortableContext items={localCards.map(c => c.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+          <div data-tour="dashboard" className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
             {localCards.map((card) => (
               <SortableCard
                 key={card.id}

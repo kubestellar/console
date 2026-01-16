@@ -155,7 +155,7 @@ export function CardWrapper({
             >
               <Maximize2 className="w-4 h-4" />
             </button>
-            <div className="relative">
+            <div className="relative" data-tour="card-menu">
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"

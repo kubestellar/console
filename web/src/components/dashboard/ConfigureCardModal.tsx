@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Sparkles, Loader2 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { cn } from '../../lib/cn'
 
 interface Card {
@@ -136,6 +137,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const [aiChanges, setAiChanges] = useState<string[]>([])
   const [aiError, setAiError] = useState<string | null>(null)
   const { clusters } = useClusters()
+  const { addTokens } = useTokenUsage()
 
   useEffect(() => {
     if (card) {
@@ -265,6 +267,9 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
 
       onCreateCard(detectedCardType, newConfig, newTitle)
 
+      // Track token usage for AI card creation (estimate ~500 tokens for parsing + generation)
+      addTokens(500 + Math.ceil(prompt.length / 4))
+
       setAiChanges([
         `Created new "${detectedCardType.replace(/_/g, ' ')}" card`,
         ...Object.entries(extractedConfig).map(([k, v]) => `• ${k}: ${v}`),
@@ -315,6 +320,8 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
         `• "Track deployments in production"`
       )
     } else {
+      // Track token usage for AI config modification (estimate ~300 tokens for parsing)
+      addTokens(300 + Math.ceil(prompt.length / 4))
       setAiChanges(changes)
     }
 

@@ -236,3 +236,68 @@ func (h *CardHandler) GetHistory(c *fiber.Ctx) error {
 	}
 	return c.JSON(history)
 }
+
+// MoveCard moves a card to a different dashboard
+func (h *CardHandler) MoveCard(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	cardID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid card ID")
+	}
+
+	var input struct {
+		TargetDashboardID string `json:"target_dashboard_id"`
+	}
+	if err := c.BodyParser(&input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	targetDashboardID, err := uuid.Parse(input.TargetDashboardID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid target dashboard ID")
+	}
+
+	// Get the card
+	card, err := h.store.GetCard(cardID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get card")
+	}
+	if card == nil {
+		return fiber.NewError(fiber.StatusNotFound, "Card not found")
+	}
+
+	// Verify ownership of source dashboard
+	sourceDashboard, err := h.store.GetDashboard(card.DashboardID)
+	if err != nil || sourceDashboard == nil || sourceDashboard.UserID != userID {
+		return fiber.NewError(fiber.StatusForbidden, "Access denied to source dashboard")
+	}
+
+	// Verify ownership of target dashboard
+	targetDashboard, err := h.store.GetDashboard(targetDashboardID)
+	if err != nil || targetDashboard == nil || targetDashboard.UserID != userID {
+		return fiber.NewError(fiber.StatusForbidden, "Access denied to target dashboard")
+	}
+
+	// Update the card's dashboard ID
+	card.DashboardID = targetDashboardID
+	if err := h.store.UpdateCard(card); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to move card")
+	}
+
+	// Notify via WebSocket
+	h.hub.Broadcast(userID, Message{
+		Type: "card_moved",
+		Data: fiber.Map{
+			"card_id":             cardID,
+			"source_dashboard_id": sourceDashboard.ID,
+			"target_dashboard_id": targetDashboardID,
+		},
+	})
+
+	return c.JSON(fiber.Map{
+		"status":              "ok",
+		"card":                card,
+		"source_dashboard_id": sourceDashboard.ID,
+		"target_dashboard_id": targetDashboardID,
+	})
+}

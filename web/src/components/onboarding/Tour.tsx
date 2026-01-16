@@ -1,7 +1,21 @@
 import { useEffect, useState, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, Sparkles, HelpCircle } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, HelpCircle, Sparkles } from 'lucide-react'
 import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
+
+// KubeStellar logo with AI sparkle effect
+function KubeStellarAIIcon({ className }: { className?: string }) {
+  return (
+    <div className={cn('relative', className)}>
+      <img
+        src="/kubestellar-logo.svg"
+        alt=""
+        className="w-full h-full"
+      />
+      <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-purple-400 animate-pulse" />
+    </div>
+  )
+}
 
 interface TooltipPosition {
   top?: number
@@ -63,18 +77,28 @@ export function TourOverlay() {
   useEffect(() => {
     if (!isActive || !currentStep) return
 
-    const target = document.querySelector(currentStep.target)
-    if (target) {
-      const rect = target.getBoundingClientRect()
-      setTargetRect(rect)
-      setTooltipPosition(getTooltipPosition(rect, currentStep.placement))
+    // Small delay to allow DOM to render
+    const timeoutId = setTimeout(() => {
+      const target = document.querySelector(currentStep.target)
+      if (target) {
+        const rect = target.getBoundingClientRect()
+        setTargetRect(rect)
+        setTooltipPosition(getTooltipPosition(rect, currentStep.placement))
 
-      // Scroll target into view if needed
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    } else {
-      setTargetRect(null)
-    }
-  }, [isActive, currentStep])
+        // Scroll target into view if needed
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else {
+        // Center the tooltip when target not found
+        setTargetRect(null)
+        setTooltipPosition({
+          top: window.innerHeight / 2 - 100,
+          left: window.innerWidth / 2,
+        })
+      }
+    }, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [isActive, currentStep, currentStepIndex])
 
   // Handle escape key
   useEffect(() => {
@@ -118,10 +142,8 @@ export function TourOverlay() {
         ref={tooltipRef}
         className={cn(
           'absolute z-10 w-80 p-4 rounded-lg glass border border-purple-500/30 shadow-xl animate-fade-in-up',
-          currentStep.placement === 'top' && '-translate-x-1/2',
-          currentStep.placement === 'bottom' && '-translate-x-1/2',
-          currentStep.placement === 'left' && '-translate-y-1/2',
-          currentStep.placement === 'right' && '-translate-y-1/2'
+          '-translate-x-1/2',
+          (currentStep.placement === 'left' || currentStep.placement === 'right') && '-translate-y-1/2'
         )}
         style={{
           top: tooltipPosition.top,
@@ -134,7 +156,7 @@ export function TourOverlay() {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-purple-500/20">
-              <Sparkles className="w-4 h-4 text-purple-400" />
+              <KubeStellarAIIcon className="w-5 h-5" />
             </div>
             <h3 className="font-semibold text-white">{currentStep.title}</h3>
           </div>
@@ -222,7 +244,7 @@ export function TourTrigger() {
       )}
       title="Take a tour"
     >
-      <HelpCircle className="w-4 h-4" />
+      <KubeStellarAIIcon className="w-5 h-5" />
       {!hasCompletedTour && <span>Take the tour</span>}
     </button>
   )
@@ -240,7 +262,7 @@ export function TourPrompt() {
     <div className="fixed bottom-4 right-4 z-50 w-80 p-4 glass rounded-lg border border-purple-500/30 shadow-xl animate-fade-in-up">
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-purple-500/20 flex-shrink-0">
-          <Sparkles className="w-5 h-5 text-purple-400" />
+          <KubeStellarAIIcon className="w-6 h-6" />
         </div>
         <div className="flex-1">
           <h3 className="font-semibold text-white mb-1">Welcome!</h3>

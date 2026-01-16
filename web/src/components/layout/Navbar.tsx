@@ -4,6 +4,7 @@ import { Bell, Search, User, LogOut, Server, Box, Activity, Command, Sun, Moon, 
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
+import { TourTrigger } from '../onboarding/Tour'
 
 interface SearchResult {
   type: 'cluster' | 'app' | 'pod' | 'page'
@@ -107,21 +108,14 @@ export function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 glass z-50 px-6 flex items-center justify-between">
+    <nav data-tour="navbar" className="fixed top-0 left-0 right-0 h-16 glass z-50 px-6 flex items-center justify-between">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-gradient-ks flex items-center justify-center">
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5 text-white"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-          </svg>
-        </div>
+        <img
+          src="/kubestellar-logo.svg"
+          alt="KubeStellar"
+          className="w-9 h-9"
+        />
         <span className="text-lg font-semibold text-white">KubeStellar Klaude Console</span>
       </div>
 
@@ -294,6 +288,9 @@ export function Navbar() {
             <Monitor className="w-5 h-5 text-muted-foreground" />
           )}
         </button>
+
+        {/* Tour trigger */}
+        <TourTrigger />
 
         {/* Notifications */}
         <button className="relative p-2 hover:bg-secondary rounded-lg transition-colors">

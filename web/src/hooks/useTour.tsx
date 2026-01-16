@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 
 export interface TourStep {
   id: string
@@ -13,22 +13,24 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
     target: '[data-tour="navbar"]',
-    title: 'Welcome to KubeStellar Console',
+    title: 'Welcome to KubeStellar Klaude Console',
     content: 'This is your AI-powered multi-cluster Kubernetes dashboard. Let me show you around!',
     placement: 'bottom',
+    highlight: true,
   },
   {
     id: 'sidebar',
     target: '[data-tour="sidebar"]',
     title: 'Navigation Sidebar',
-    content: 'Access different views like Clusters, Applications, Security, and GitOps from here.',
+    content: 'Access different views like Clusters, Applications, Events, Security, and GitOps. The sidebar adapts based on your usage patterns.',
     placement: 'right',
+    highlight: true,
   },
   {
     id: 'dashboard',
     target: '[data-tour="dashboard"]',
     title: 'Your Dashboard',
-    content: 'Cards show real-time data from your clusters. You can drag to reorder, configure, or replace them.',
+    content: 'Cards show real-time data from your clusters. Drag to reorder them, or drag to another dashboard using the panel that appears on the right.',
     placement: 'top',
     highlight: true,
   },
@@ -36,7 +38,7 @@ const TOUR_STEPS: TourStep[] = [
     id: 'recommendations',
     target: '[data-tour="recommendations"]',
     title: 'AI Recommendations',
-    content: 'The AI analyzes your cluster activity and suggests relevant cards. Click to add, or snooze for later.',
+    content: 'The AI analyzes your cluster activity and suggests relevant cards. Click to add them to your dashboard, or snooze for later.',
     placement: 'bottom',
     highlight: true,
   },
@@ -44,35 +46,39 @@ const TOUR_STEPS: TourStep[] = [
     id: 'card-menu',
     target: '[data-tour="card-menu"]',
     title: 'Card Actions',
-    content: 'Each card has a menu to configure it, replace it, or remove it. Drag the handle to reorder.',
+    content: 'Each card has a menu to configure it with natural language, replace it with a different card, or remove it. Drag the grip handle to reorder.',
     placement: 'left',
-  },
-  {
-    id: 'ai-mode',
-    target: '[data-tour="ai-mode"]',
-    title: 'AI Mode Control',
-    content: 'Control how proactive the AI is. High mode suggests more, Low mode only shows critical items.',
-    placement: 'bottom',
-  },
-  {
-    id: 'drilldown',
-    target: '[data-tour="drilldown"]',
-    title: 'Drill Down Navigation',
-    content: 'Click on any item in a card to drill down for more details. Navigate through clusters, namespaces, and resources.',
-    placement: 'top',
+    highlight: true,
   },
   {
     id: 'snoozed',
     target: '[data-tour="snoozed"]',
-    title: 'Snoozed Items',
-    content: 'Snoozed recommendations appear here with elapsed time. Apply them when ready.',
+    title: 'Snoozed Recommendations',
+    content: 'Snoozed recommendations appear here with elapsed time. Click to apply them when you\'re ready.',
     placement: 'right',
+    highlight: true,
   },
 ]
 
 const TOUR_STORAGE_KEY = 'kubestellar-console-tour-completed'
 
-export function useTour() {
+interface TourContextValue {
+  isActive: boolean
+  currentStep: TourStep | null
+  currentStepIndex: number
+  totalSteps: number
+  hasCompletedTour: boolean
+  startTour: () => void
+  nextStep: () => void
+  prevStep: () => void
+  skipTour: () => void
+  resetTour: () => void
+  goToStep: (stepId: string) => void
+}
+
+const TourContext = createContext<TourContextValue | null>(null)
+
+export function TourProvider({ children }: { children: ReactNode }) {
   const [isActive, setIsActive] = useState(false)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [hasCompletedTour, setHasCompletedTour] = useState(true) // Default to true until we check
@@ -125,17 +131,31 @@ export function useTour() {
     }
   }, [])
 
-  return {
-    isActive,
-    currentStep,
-    currentStepIndex,
-    totalSteps: TOUR_STEPS.length,
-    hasCompletedTour,
-    startTour,
-    nextStep,
-    prevStep,
-    skipTour,
-    resetTour,
-    goToStep,
+  return (
+    <TourContext.Provider
+      value={{
+        isActive,
+        currentStep,
+        currentStepIndex,
+        totalSteps: TOUR_STEPS.length,
+        hasCompletedTour,
+        startTour,
+        nextStep,
+        prevStep,
+        skipTour,
+        resetTour,
+        goToStep,
+      }}
+    >
+      {children}
+    </TourContext.Provider>
+  )
+}
+
+export function useTour() {
+  const context = useContext(TourContext)
+  if (!context) {
+    throw new Error('useTour must be used within a TourProvider')
   }
+  return context
 }

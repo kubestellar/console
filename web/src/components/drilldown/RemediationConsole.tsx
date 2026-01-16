@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useTokenUsage } from '../../hooks/useTokenUsage'
 
 interface LogEntry {
   id: string
@@ -90,6 +91,7 @@ export function RemediationConsole({
   const logsEndRef = useRef<HTMLDivElement>(null)
   const shellInputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef(false)
+  const { addTokens } = useTokenUsage()
 
   // Auto-scroll to bottom when new logs appear
   useEffect(() => {
@@ -151,6 +153,8 @@ export function RemediationConsole({
         type: 'info',
         message: 'Remediation analysis complete',
       })
+      // Track token usage for AI remediation (~1000 tokens for analysis)
+      addTokens(1000 + flow.length * 100)
     }
 
     setIsRunning(false)

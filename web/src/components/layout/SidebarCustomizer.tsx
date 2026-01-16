@@ -10,6 +10,7 @@ import {
   EyeOff,
   ChevronDown,
   ChevronRight,
+  Loader2,
 } from 'lucide-react'
 import { useSidebarConfig, AVAILABLE_ICONS, SidebarItem } from '../../hooks/useSidebarConfig'
 import { cn } from '../../lib/cn'
@@ -27,9 +28,12 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     removeItem,
     toggleClusterStatus,
     resetToDefault,
+    generateFromBehavior,
   } = useSidebarConfig()
 
   const [newItemName, setNewItemName] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationResult, setGenerationResult] = useState<string | null>(null)
   const [newItemIcon, setNewItemIcon] = useState('Zap')
   const [newItemHref, setNewItemHref] = useState('')
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
@@ -54,6 +58,38 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     setNewItemName('')
     setNewItemHref('')
     setShowAddForm(false)
+  }
+
+  const handleGenerateFromBehavior = async () => {
+    setIsGenerating(true)
+    setGenerationResult(null)
+
+    // Simulate analyzing behavior
+    await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // Get navigation history from localStorage
+    const navHistory = JSON.parse(localStorage.getItem('kubestellar-nav-history') || '[]')
+
+    // Count page visits
+    const visitCounts: Record<string, number> = {}
+    navHistory.forEach((path: string) => {
+      visitCounts[path] = (visitCounts[path] || 0) + 1
+    })
+
+    // Sort by frequency
+    const sortedPaths = Object.entries(visitCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([path]) => path)
+
+    if (sortedPaths.length > 0) {
+      generateFromBehavior(sortedPaths)
+      setGenerationResult(`Analyzed ${navHistory.length} page visits. Sidebar updated based on your most visited pages.`)
+    } else {
+      setGenerationResult('Not enough navigation data yet. Keep using the console and try again later!')
+    }
+
+    setIsGenerating(false)
   }
 
   const renderIcon = (iconName: string, className?: string) => {
@@ -124,12 +160,30 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               Reset
             </button>
             <button
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-white"
+              onClick={handleGenerateFromBehavior}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-white disabled:opacity-50"
             >
-              <Sparkles className="w-4 h-4" />
-              Generate from Behavior
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {isGenerating ? 'Analyzing...' : 'Generate from Behavior'}
             </button>
           </div>
+
+          {/* Generation Result */}
+          {generationResult && (
+            <div className={cn(
+              'mb-4 p-3 rounded-lg text-sm',
+              generationResult.includes('Not enough')
+                ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-300'
+                : 'bg-green-500/10 border border-green-500/20 text-green-300'
+            )}>
+              {generationResult}
+            </div>
+          )}
 
           {/* Add Item Form */}
           {showAddForm && (

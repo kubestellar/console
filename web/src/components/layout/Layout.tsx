@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { Navbar } from './Navbar'
 import { Sidebar } from './Sidebar'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
+import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { cn } from '../../lib/cn'
 
 interface LayoutProps {
@@ -10,6 +11,9 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { config } = useSidebarConfig()
+
+  // Track navigation for behavior analysis
+  useNavigationHistory()
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">

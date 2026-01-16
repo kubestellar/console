@@ -133,21 +133,44 @@ export function useSidebarConfig() {
     setConfig(DEFAULT_CONFIG)
   }, [])
 
-  const generateFromBehavior = useCallback((frequentlyUsed: string[]) => {
-    // This would be called by the behavior tracking system
-    // to suggest sidebar items based on user patterns
+  const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {
+    // Reorder items based on user's frequently visited paths
     setConfig((prev) => {
-      const suggestions: SidebarItem[] = []
+      const allItems = [...prev.primaryNav, ...prev.secondaryNav]
 
-      // Add frequently used items to the top of primary nav
-      frequentlyUsed.forEach((itemId, index) => {
-        const existing = [...prev.primaryNav, ...prev.secondaryNav].find((i) => i.id === itemId)
-        if (existing && !prev.primaryNav.find((i) => i.id === itemId)) {
-          suggestions.push({ ...existing, order: index })
+      // Find matching items for frequently used paths
+      const reorderedPrimary: SidebarItem[] = []
+      const usedIds = new Set<string>()
+
+      // First, add items that match frequently used paths (in order of frequency)
+      frequentlyUsedPaths.forEach((path) => {
+        const matchingItem = allItems.find(
+          (item) => item.href === path || path.startsWith(item.href + '/') || path.startsWith(item.href + '?')
+        )
+        if (matchingItem && !usedIds.has(matchingItem.id)) {
+          reorderedPrimary.push({ ...matchingItem, order: reorderedPrimary.length })
+          usedIds.add(matchingItem.id)
         }
       })
 
-      return prev // For now, just return existing config
+      // Then add remaining primary nav items
+      prev.primaryNav.forEach((item) => {
+        if (!usedIds.has(item.id)) {
+          reorderedPrimary.push({ ...item, order: reorderedPrimary.length })
+        }
+      })
+
+      // Keep secondary nav as-is but update order
+      const reorderedSecondary = prev.secondaryNav.map((item, index) => ({
+        ...item,
+        order: index,
+      }))
+
+      return {
+        ...prev,
+        primaryNav: reorderedPrimary,
+        secondaryNav: reorderedSecondary,
+      }
     })
   }, [])
 
