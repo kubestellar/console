@@ -280,7 +280,7 @@ export function Clusters() {
                     </p>
                   </div>
                 </div>
-                {(cluster as Record<string, unknown>).isCurrent && (
+                {(cluster as unknown as { isCurrent?: boolean }).isCurrent && (
                   <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">
                     Current
                   </span>

@@ -69,7 +69,8 @@ export function CardWrapper({
   const [showSummary, setShowSummary] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [_timeRemaining, setTimeRemaining] = useState<number | null>(null)
-  const [_isChatOpen, _setIsChatOpen] = useState(false)
+  // Chat state reserved for future use
+  // const [isChatOpen, setIsChatOpen] = useState(false)
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
   const { snoozeSwap } = useSnoozedCards()
 
@@ -123,63 +124,12 @@ export function CardWrapper({
     }
   }, [pendingSwap, onSwap])
 
-  // Handle sending chat messages (reserved for future use)
-  const _handleSendMessage = useCallback(async (message: string): Promise<ChatMessage> => {
-    // Create user message
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: message,
-      timestamp: new Date().toISOString(),
-    }
-
-    // Add user message to history
-    const newMessages = [...messages, userMessage]
-    if (onChatMessagesChange) {
-      onChatMessagesChange(newMessages)
-    } else {
-      setLocalMessages(newMessages)
-    }
-
-    // If external handler provided, use it
-    if (onChatMessage) {
-      const response = await onChatMessage(message)
-      const finalMessages = [...newMessages, response]
-      if (onChatMessagesChange) {
-        onChatMessagesChange(finalMessages)
-      } else {
-        setLocalMessages(finalMessages)
-      }
-      return response
-    }
-
-    // Default AI response (simulated)
-    const aiResponse: ChatMessage = {
-      id: `ai-${Date.now()}`,
-      role: 'assistant',
-      content: `I understand you want to "${message}". This would modify how the ${title} card behaves. In a full implementation, this would:\n\n1. Parse your natural language request\n2. Determine the appropriate card configuration changes\n3. Apply the changes to the card\n\nFor now, this is a demo of the chat interface. The full AI integration will be available soon.`,
-      timestamp: new Date().toISOString(),
-    }
-
-    const finalMessages = [...newMessages, aiResponse]
-    if (onChatMessagesChange) {
-      onChatMessagesChange(finalMessages)
-    } else {
-      setLocalMessages(finalMessages)
-    }
-
-    return aiResponse
-  }, [messages, onChatMessage, onChatMessagesChange, title])
-
-  // Format countdown for swap timer (reserved for future use)
-  const _formatCountdown = (seconds: number): string => {
-    if (seconds >= 60) {
-      const mins = Math.floor(seconds / 60)
-      const secs = seconds % 60
-      return `${mins}:${secs.toString().padStart(2, '0')}`
-    }
-    return `${seconds}s`
-  }
+  // Silence unused variable warnings for future chat implementation
+  void messages
+  void onChatMessage
+  void onChatMessagesChange
+  void title
+  void setLocalMessages
 
   return (
     <>

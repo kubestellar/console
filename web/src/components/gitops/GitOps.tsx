@@ -76,7 +76,7 @@ function getTimeAgo(timestamp: string | undefined): string {
 }
 
 export function GitOps() {
-  const { clusters, isLoading: clustersLoading } = useClusters()
+  const { clusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 

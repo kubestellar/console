@@ -131,6 +131,6 @@ function getUpgradeStatus(name: string): 'current' | 'upgrading' | 'available' |
   return 'current'
 }
 
-function getUpgradeProgress(name: string): number {
+function getUpgradeProgress(_name: string): number {
   return 0
 }

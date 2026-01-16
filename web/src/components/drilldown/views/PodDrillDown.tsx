@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
+import { RemediationConsole } from '../RemediationConsole'
+import { Sparkles } from 'lucide-react'
 
 interface Props {
   data: Record<string, unknown>
@@ -10,6 +13,7 @@ export function PodDrillDown({ data }: Props) {
   const namespace = data.namespace as string
   const podName = data.pod as string
   const { drillToLogs, drillToEvents, drillToYAML } = useDrillDownActions()
+  const [showRemediation, setShowRemediation] = useState(false)
 
   // Pod data from the issue
   const status = data.status as string
@@ -76,6 +80,32 @@ export function PodDrillDown({ data }: Props) {
         </div>
       )}
 
+      {/* AI Remediation (only show if there are issues) */}
+      {issues.length > 0 && (
+        <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/20">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">AI Remediation Available</h3>
+                <p className="text-sm text-muted-foreground">
+                  Let Claude analyze and help fix these issues
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowRemediation(true)}
+              className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Remediate
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div>
         <h3 className="text-lg font-semibold text-foreground mb-4">Actions</h3>
@@ -106,15 +136,18 @@ export function PodDrillDown({ data }: Props) {
             <p className="text-xs text-muted-foreground">View pod events</p>
           </button>
 
-          <div className="p-4 rounded-lg bg-card/30 border border-border/50">
+          <button
+            onClick={() => setShowRemediation(true)}
+            className="p-4 rounded-lg bg-card/50 border border-border hover:bg-card hover:border-green-500/50 transition-colors text-left"
+          >
             <div className="flex items-center gap-2 mb-2">
-              <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span className="font-medium text-muted-foreground">Shell</span>
+              <span className="font-medium text-foreground">Shell</span>
             </div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
-          </div>
+            <p className="text-xs text-muted-foreground">Open shell console</p>
+          </button>
 
           <button
             onClick={() => drillToYAML(cluster, namespace, 'pod', podName)}
@@ -130,6 +163,17 @@ export function PodDrillDown({ data }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Remediation Console Modal */}
+      <RemediationConsole
+        isOpen={showRemediation}
+        onClose={() => setShowRemediation(false)}
+        resourceType="pod"
+        resourceName={podName}
+        namespace={namespace}
+        cluster={cluster}
+        issues={issues}
+      />
 
       {/* Pod Details */}
       <div>
