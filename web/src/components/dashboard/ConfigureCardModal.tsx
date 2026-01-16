@@ -153,6 +153,21 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     }
   }, [card])
 
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen || !card) return null
 
   const fields = CARD_CONFIG_FIELDS[card.card_type] || []

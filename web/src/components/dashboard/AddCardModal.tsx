@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Sparkles, Plus, Loader2 } from 'lucide-react'
 
 interface CardSuggestion {
@@ -188,6 +188,21 @@ export function AddCardModal({ isOpen, onClose, onAddCards }: AddCardModalProps)
   const [suggestions, setSuggestions] = useState<CardSuggestion[]>([])
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   const handleGenerate = async () => {
     if (!query.trim()) return

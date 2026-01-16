@@ -33,6 +33,20 @@ export function AgentSetupDialog() {
     setShow(true)
   }, [status, isConnected])
 
+  // ESC to dismiss
+  useEffect(() => {
+    if (!show) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleDismiss(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [show])
+
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(installCommand)
     setCopied(true)
