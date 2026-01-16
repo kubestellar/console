@@ -61,20 +61,15 @@ export default defineConfig({
   },
 
   // Projects for different browsers
+  // Note: Each test handles its own auth mocking in beforeEach,
+  // so we don't need a global setup project
   projects: [
-    // Setup project for auth
-    {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
-    },
-
     // Chromium tests
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
       },
-      dependencies: ['setup'],
     },
 
     // Firefox tests
@@ -83,7 +78,6 @@ export default defineConfig({
       use: {
         ...devices['Desktop Firefox'],
       },
-      dependencies: ['setup'],
     },
 
     // Webkit tests
@@ -92,7 +86,6 @@ export default defineConfig({
       use: {
         ...devices['Desktop Safari'],
       },
-      dependencies: ['setup'],
     },
 
     // Mobile Chrome
@@ -101,7 +94,6 @@ export default defineConfig({
       use: {
         ...devices['Pixel 5'],
       },
-      dependencies: ['setup'],
     },
 
     // Mobile Safari
@@ -110,7 +102,6 @@ export default defineConfig({
       use: {
         ...devices['iPhone 12'],
       },
-      dependencies: ['setup'],
     },
   ],
 
