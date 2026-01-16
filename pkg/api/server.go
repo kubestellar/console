@@ -244,6 +244,18 @@ func (s *Server) setupRoutes() {
 		api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
 	}
 
+	// GitOps routes (drift detection and sync)
+	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient)
+	if s.config.DevMode {
+		// Dev mode: unprotected for testing
+		s.app.Post("/api/gitops/detect-drift", gitopsHandlers.DetectDrift)
+		s.app.Post("/api/gitops/sync", gitopsHandlers.Sync)
+	} else {
+		// Production: protected
+		api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
+		api.Post("/gitops/sync", gitopsHandlers.Sync)
+	}
+
 	// WebSocket for real-time updates
 	s.app.Use("/ws", middleware.WebSocketUpgrade())
 	s.app.Get("/ws", websocket.New(func(c *websocket.Conn) {

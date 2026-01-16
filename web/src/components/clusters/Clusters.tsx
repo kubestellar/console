@@ -1,7 +1,110 @@
 import { useState, useMemo } from 'react'
+import { Pencil, X, Check, Loader2 } from 'lucide-react'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes } from '../../hooks/useMCP'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { Gauge } from '../charts/Gauge'
+
+interface RenameModalProps {
+  clusterName: string
+  currentDisplayName: string
+  onClose: () => void
+  onRename: (oldName: string, newName: string) => Promise<void>
+}
+
+function RenameModal({ clusterName, currentDisplayName, onClose, onRename }: RenameModalProps) {
+  const [newName, setNewName] = useState('')
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleRename = async () => {
+    if (!newName.trim()) {
+      setError('Name cannot be empty')
+      return
+    }
+    if (newName.includes(' ')) {
+      setError('Name cannot contain spaces')
+      return
+    }
+
+    setIsRenaming(true)
+    setError(null)
+
+    try {
+      await onRename(clusterName, newName.trim())
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to rename context')
+    } finally {
+      setIsRenaming(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="glass p-6 rounded-lg w-[400px]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-foreground">Rename Context</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-4">
+          Current name: <span className="text-foreground font-mono text-xs break-all">{currentDisplayName}</span>
+        </p>
+
+        <div className="mb-4">
+          <label htmlFor="new-context-name" className="block text-sm text-muted-foreground mb-1">New name</label>
+          <input
+            id="new-context-name"
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="e.g., vllm-d, prod-east"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-400 mb-4">{error}</p>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleRename}
+            disabled={isRenaming || !newName.trim()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
+          >
+            {isRenaming ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Renaming...
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                Rename
+              </>
+            )}
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground mt-4">
+          This will update your kubeconfig file via the local agent.
+        </p>
+      </div>
+    </div>
+  )
+}
 
 interface ClusterDetailProps {
   clusterName: string
@@ -128,10 +231,33 @@ function ClusterDetail({ clusterName, onClose }: ClusterDetailProps) {
 }
 
 export function Clusters() {
-  const { clusters, isLoading, error } = useClusters()
+  const { clusters, isLoading, error, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
+  const { isConnected } = useLocalAgent()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'healthy' | 'unhealthy'>('all')
+  const [renamingCluster, setRenamingCluster] = useState<string | null>(null)
+
+  // Handle context rename via local agent
+  const handleRenameContext = async (oldName: string, newName: string) => {
+    if (!isConnected) {
+      throw new Error('Local agent not connected')
+    }
+
+    const response = await fetch('http://127.0.0.1:8585/rename-context', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldName, newName }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.message || 'Failed to rename context')
+    }
+
+    // Refresh the clusters list
+    refetch()
+  }
 
   const filteredClusters = useMemo(() => {
     return clusters.filter(c => {
@@ -266,15 +392,34 @@ export function Clusters() {
             <div
               key={cluster.name}
               onClick={() => setSelectedCluster(cluster.name)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Cluster ${cluster.context || cluster.name.split('/').pop()}, ${cluster.healthy ? 'healthy' : 'unhealthy'}, ${cluster.nodeCount || 0} nodes, ${cluster.podCount || 0} pods`}
+              onKeyDown={(e) => e.key === 'Enter' && setSelectedCluster(cluster.name)}
               className="glass p-5 rounded-lg cursor-pointer transition-all hover:scale-[1.02] hover:border-primary/50 border border-transparent"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <StatusIndicator status={cluster.healthy ? 'healthy' : 'error'} size="lg" />
                   <div>
-                    <h3 className="font-semibold text-foreground">
-                      {cluster.context || cluster.name.split('/').pop()}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground">
+                        {cluster.context || cluster.name.split('/').pop()}
+                      </h3>
+                      {isConnected && cluster.source === 'kubeconfig' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setRenamingCluster(cluster.name)
+                          }}
+                          className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Rename context"
+                          aria-label="Rename context"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                       {cluster.server}
                     </p>
@@ -323,6 +468,15 @@ export function Clusters() {
         <ClusterDetail
           clusterName={selectedCluster}
           onClose={() => setSelectedCluster(null)}
+        />
+      )}
+
+      {renamingCluster && (
+        <RenameModal
+          clusterName={renamingCluster}
+          currentDisplayName={clusters.find(c => c.name === renamingCluster)?.context || renamingCluster}
+          onClose={() => setRenamingCluster(null)}
+          onRename={handleRenameContext}
         />
       )}
     </div>

@@ -57,7 +57,7 @@ export function Settings() {
 
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground w-20">Low AI</span>
+              <span id="ai-mode-low" className="text-sm text-muted-foreground w-20">Low AI</span>
               <input
                 type="range"
                 min="0"
@@ -67,6 +67,9 @@ export function Settings() {
                   const val = parseInt(e.target.value)
                   setMode(val === 0 ? 'low' : val === 1 ? 'medium' : 'high')
                 }}
+                aria-label="AI usage mode"
+                aria-valuetext={`${mode} AI mode`}
+                aria-describedby="ai-mode-low ai-mode-high"
                 className="flex-1 h-2 bg-secondary rounded-full appearance-none cursor-pointer
                   [&::-webkit-slider-thumb]:appearance-none
                   [&::-webkit-slider-thumb]:w-4
@@ -75,7 +78,7 @@ export function Settings() {
                   [&::-webkit-slider-thumb]:rounded-full
                   [&::-webkit-slider-thumb]:cursor-pointer"
               />
-              <span className="text-sm text-muted-foreground w-20 text-right">High AI</span>
+              <span id="ai-mode-high" className="text-sm text-muted-foreground w-20 text-right">High AI</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -219,33 +222,39 @@ export function Settings() {
             {/* Settings */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-muted-foreground mb-1">Monthly Limit</label>
+                <label htmlFor="token-limit" className="block text-sm text-muted-foreground mb-1">Monthly Limit</label>
                 <input
+                  id="token-limit"
                   type="number"
                   value={tokenLimit}
                   onChange={(e) => setTokenLimit(parseInt(e.target.value) || 0)}
+                  aria-label="Monthly token limit"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm text-muted-foreground mb-1">Warning at (%)</label>
+                <label htmlFor="warning-threshold" className="block text-sm text-muted-foreground mb-1">Warning at (%)</label>
                 <input
+                  id="warning-threshold"
                   type="number"
                   value={warningThreshold}
                   onChange={(e) => setWarningThreshold(parseInt(e.target.value) || 0)}
                   min="0"
                   max="100"
+                  aria-label="Warning threshold percentage"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm text-muted-foreground mb-1">Critical at (%)</label>
+                <label htmlFor="critical-threshold" className="block text-sm text-muted-foreground mb-1">Critical at (%)</label>
                 <input
+                  id="critical-threshold"
                   type="number"
                   value={criticalThreshold}
                   onChange={(e) => setCriticalThreshold(parseInt(e.target.value) || 0)}
                   min="0"
                   max="100"
+                  aria-label="Critical threshold percentage"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
               </div>

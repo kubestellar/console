@@ -71,7 +71,6 @@ export function Events() {
   const { events: allEvents, isLoading: loadingAll, refetch: refetchAll } = useEvents(selectedCluster || undefined)
   const { events: warningEvents, isLoading: loadingWarnings, refetch: refetchWarnings } = useWarningEvents(selectedCluster || undefined)
 
-  const events = filter === 'warning' ? warningEvents : allEvents
   const isLoading = filter === 'warning' ? loadingWarnings : loadingAll
 
   // Auto-refresh every 30 seconds
@@ -89,18 +88,22 @@ export function Events() {
     return () => clearInterval(interval)
   }, [autoRefresh, filter, refetchAll, refetchWarnings])
 
-  // Filter events by search query
+  // Select events based on filter and apply search query
   const filteredEvents = useMemo(() => {
-    if (!searchQuery) return events
+    // First select events based on filter type
+    const baseEvents = filter === 'warning' ? warningEvents : allEvents
+
+    // Then apply search filter if any
+    if (!searchQuery) return baseEvents
 
     const query = searchQuery.toLowerCase()
-    return events.filter(e =>
+    return baseEvents.filter(e =>
       e.reason.toLowerCase().includes(query) ||
       e.message.toLowerCase().includes(query) ||
       e.object.toLowerCase().includes(query) ||
       e.namespace.toLowerCase().includes(query)
     )
-  }, [events, searchQuery])
+  }, [filter, allEvents, warningEvents, searchQuery])
 
   // Stats
   const stats = useMemo(() => ({

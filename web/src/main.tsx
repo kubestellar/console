@@ -6,7 +6,11 @@ import './index.css'
 
 // Enable MSW mock service worker in demo mode (Netlify previews)
 const enableMocking = async () => {
-  if (import.meta.env.VITE_DEMO_MODE !== 'true') {
+  // Check env var OR detect Netlify domain (more reliable)
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
+    window.location.hostname.includes('netlify.app')
+
+  if (!isDemoMode) {
     return
   }
 

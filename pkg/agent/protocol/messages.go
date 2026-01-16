@@ -5,15 +5,16 @@ type MessageType string
 
 const (
 	// Request types
-	TypeHealth    MessageType = "health"
-	TypeClusters  MessageType = "clusters"
-	TypeKubectl   MessageType = "kubectl"
-	TypeClaude    MessageType = "claude"
+	TypeHealth        MessageType = "health"
+	TypeClusters      MessageType = "clusters"
+	TypeKubectl       MessageType = "kubectl"
+	TypeClaude        MessageType = "claude"
+	TypeRenameContext MessageType = "rename_context"
 
 	// Response types
-	TypeResult    MessageType = "result"
-	TypeError     MessageType = "error"
-	TypeStream    MessageType = "stream"
+	TypeResult MessageType = "result"
+	TypeError  MessageType = "error"
+	TypeStream MessageType = "stream"
 )
 
 // Message is the base message structure for WebSocket communication
@@ -25,10 +26,32 @@ type Message struct {
 
 // HealthPayload is the response for health checks
 type HealthPayload struct {
-	Status    string `json:"status"`
-	Version   string `json:"version"`
-	Clusters  int    `json:"clusters"`
-	HasClaude bool   `json:"hasClaude"`
+	Status    string      `json:"status"`
+	Version   string      `json:"version"`
+	Clusters  int         `json:"clusters"`
+	HasClaude bool        `json:"hasClaude"`
+	Claude    *ClaudeInfo `json:"claude,omitempty"`
+}
+
+// ClaudeInfo contains information about the local Claude Code installation
+type ClaudeInfo struct {
+	Installed  bool       `json:"installed"`
+	Path       string     `json:"path,omitempty"`
+	Version    string     `json:"version,omitempty"`
+	TokenUsage TokenUsage `json:"tokenUsage"`
+}
+
+// TokenUsage contains token consumption statistics
+type TokenUsage struct {
+	Session   TokenCount `json:"session"`
+	Today     TokenCount `json:"today"`
+	ThisMonth TokenCount `json:"thisMonth"`
+}
+
+// TokenCount represents input/output token counts
+type TokenCount struct {
+	Input  int64 `json:"input"`
+	Output int64 `json:"output"`
 }
 
 // ClustersPayload is the response for cluster listing
@@ -77,4 +100,17 @@ type ClaudeResponse struct {
 type ErrorPayload struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+// RenameContextRequest is the payload for renaming a kubeconfig context
+type RenameContextRequest struct {
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+
+// RenameContextResponse is the response from renaming a context
+type RenameContextResponse struct {
+	Success bool   `json:"success"`
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
 }

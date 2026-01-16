@@ -3,6 +3,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { RefreshCw } from 'lucide-react'
+import { SyncDialog } from './SyncDialog'
 
 // Mock GitOps data - in production would come from ArgoCD/Flux APIs
 interface GitOpsApp {
@@ -20,46 +21,47 @@ interface GitOpsApp {
 function getMockGitOpsData(): GitOpsApp[] {
   return [
     {
-      name: 'vllm-inference',
-      namespace: 'vllm',
-      cluster: 'vllm-d',
-      repoUrl: 'https://github.com/kubestellar/vllm-d',
-      path: 'deploy/helm',
-      syncStatus: 'synced',
-      healthStatus: 'healthy',
+      name: 'gatekeeper',
+      namespace: 'gatekeeper-system',
+      cluster: '',  // Uses current context
+      repoUrl: 'https://github.com/open-policy-agent/gatekeeper',
+      path: 'deploy/',
+      syncStatus: 'out-of-sync',
+      healthStatus: 'progressing',
       lastSyncTime: new Date(Date.now() - 5 * 60000).toISOString(),
+      driftDetails: ['Webhook configuration may differ', 'Constraint templates updated'],
     },
     {
-      name: 'monitoring-stack',
-      namespace: 'monitoring',
-      cluster: 'ops',
-      repoUrl: 'https://github.com/kubestellar/platform',
-      path: 'monitoring/',
+      name: 'kuberay-operator',
+      namespace: 'ray-system',
+      cluster: '',
+      repoUrl: 'https://github.com/ray-project/kuberay',
+      path: 'ray-operator/config/default/',
       syncStatus: 'out-of-sync',
       healthStatus: 'degraded',
       lastSyncTime: new Date(Date.now() - 2 * 3600000).toISOString(),
-      driftDetails: ['Deployment replicas changed from 3 to 2', 'ConfigMap values modified'],
+      driftDetails: ['Ray cluster CRD version changed', 'Operator deployment modified'],
     },
     {
-      name: 'cert-manager',
-      namespace: 'cert-manager',
-      cluster: 'vllm-d',
-      repoUrl: 'https://github.com/kubestellar/platform',
-      path: 'cert-manager/',
+      name: 'kserve',
+      namespace: 'kserve',
+      cluster: '',
+      repoUrl: 'https://github.com/kserve/kserve',
+      path: 'config/default/',
       syncStatus: 'synced',
       healthStatus: 'healthy',
       lastSyncTime: new Date(Date.now() - 30 * 60000).toISOString(),
     },
     {
-      name: 'istio-system',
-      namespace: 'istio-system',
-      cluster: 'ops',
-      repoUrl: 'https://github.com/kubestellar/platform',
-      path: 'istio/',
+      name: 'gpu-operator',
+      namespace: 'gpu-operator',
+      cluster: '',
+      repoUrl: 'https://github.com/NVIDIA/gpu-operator',
+      path: 'deployments/gpu-operator/',
       syncStatus: 'out-of-sync',
-      healthStatus: 'progressing',
-      lastSyncTime: new Date(Date.now() - 10 * 60000).toISOString(),
-      driftDetails: ['Service mesh upgrade in progress'],
+      healthStatus: 'warning',
+      lastSyncTime: new Date(Date.now() - 1 * 3600000).toISOString(),
+      driftDetails: ['Driver version mismatch'],
     },
   ]
 }
@@ -82,26 +84,21 @@ export function GitOps() {
   const { showToast } = useToast()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [syncingApps, setSyncingApps] = useState<Set<string>>(new Set())
   const [syncedApps, setSyncedApps] = useState<Set<string>>(new Set())
+  const [syncDialogApp, setSyncDialogApp] = useState<GitOpsApp | null>(null)
 
-  // Handle sync action for an app
-  const handleSync = useCallback((appName: string) => {
-    // Add to syncing set
-    setSyncingApps(prev => new Set(prev).add(appName))
-    showToast(`Syncing ${appName}...`, 'info')
+  // Handle sync action - open the sync dialog
+  const handleSync = useCallback((app: GitOpsApp) => {
+    setSyncDialogApp(app)
+  }, [])
 
-    // Simulate sync operation (in production, call ArgoCD/Flux API)
-    setTimeout(() => {
-      setSyncingApps(prev => {
-        const next = new Set(prev)
-        next.delete(appName)
-        return next
-      })
-      setSyncedApps(prev => new Set(prev).add(appName))
-      showToast(`${appName} synced successfully!`, 'success')
-    }, 2000)
-  }, [showToast])
+  // Handle sync complete - mark app as synced
+  const handleSyncComplete = useCallback(() => {
+    if (syncDialogApp) {
+      setSyncedApps(prev => new Set(prev).add(syncDialogApp.name))
+      showToast(`${syncDialogApp.name} synced successfully!`, 'success')
+    }
+  }, [syncDialogApp, showToast])
 
   // In production, fetch from ArgoCD/Flux API
   // Always initialize with mock data to ensure something is displayed
@@ -289,12 +286,11 @@ export function GitOps() {
                     ))}
                   </ul>
                   <button
-                    onClick={() => handleSync(app.name)}
-                    disabled={syncingApps.has(app.name)}
-                    className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                    onClick={() => handleSync(app)}
+                    className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors flex items-center gap-1.5"
                   >
-                    <RefreshCw className={`w-3 h-3 ${syncingApps.has(app.name) ? 'animate-spin' : ''}`} />
-                    {syncingApps.has(app.name) ? 'Syncing...' : 'Sync Now'}
+                    <RefreshCw className="w-3 h-3" />
+                    Sync Now
                   </button>
                 </div>
               )}
@@ -319,6 +315,20 @@ export function GitOps() {
           </button>
         </div>
       </div>
+
+      {/* Sync Dialog */}
+      {syncDialogApp && (
+        <SyncDialog
+          isOpen={!!syncDialogApp}
+          onClose={() => setSyncDialogApp(null)}
+          appName={syncDialogApp.name}
+          namespace={syncDialogApp.namespace}
+          cluster={syncDialogApp.cluster}
+          repoUrl={syncDialogApp.repoUrl}
+          path={syncDialogApp.path}
+          onSyncComplete={handleSyncComplete}
+        />
+      )}
     </div>
   )
 }

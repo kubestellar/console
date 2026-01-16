@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -21,11 +22,12 @@ type Config struct {
 
 // Server is the local agent WebSocket server
 type Server struct {
-	config     Config
-	upgrader   websocket.Upgrader
-	kubectl    *KubectlProxy
-	clients    map[*websocket.Conn]bool
-	clientsMux sync.RWMutex
+	config         Config
+	upgrader       websocket.Upgrader
+	kubectl        *KubectlProxy
+	claudeDetector *ClaudeDetector
+	clients        map[*websocket.Conn]bool
+	clientsMux     sync.RWMutex
 }
 
 // NewServer creates a new agent server
@@ -43,8 +45,9 @@ func NewServer(cfg Config) (*Server, error) {
 				return true
 			},
 		},
-		kubectl: kubectl,
-		clients: make(map[*websocket.Conn]bool),
+		kubectl:        kubectl,
+		claudeDetector: NewClaudeDetector(),
+		clients:        make(map[*websocket.Conn]bool),
 	}, nil
 }
 
@@ -54,6 +57,9 @@ func (s *Server) Start() error {
 
 	// Health endpoint (HTTP for easy browser detection)
 	mux.HandleFunc("/health", s.handleHealth)
+
+	// Rename context endpoint
+	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
 
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
@@ -79,6 +85,50 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(addr, mux)
 }
 
+// handleRenameContextHTTP handles HTTP rename context requests
+func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request) {
+	// CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "Only POST allowed"})
+		return
+	}
+
+	var req protocol.RenameContextRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		return
+	}
+
+	if req.OldName == "" || req.NewName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_names", Message: "Both oldName and newName are required"})
+		return
+	}
+
+	if err := s.kubectl.RenameContext(req.OldName, req.NewName); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "rename_failed", Message: err.Error()})
+		return
+	}
+
+	log.Printf("Renamed context: %s -> %s", req.OldName, req.NewName)
+	json.NewEncoder(w).Encode(protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
+}
+
 // handleHealth handles HTTP health checks
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	// CORS headers including Private Network Access for browser security
@@ -94,13 +144,32 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clusters, _ := s.kubectl.ListContexts()
-	hasClaude := s.checkClaudeAvailable()
+	claudeInfo := s.claudeDetector.Detect()
 
 	payload := protocol.HealthPayload{
 		Status:    "ok",
 		Version:   Version,
 		Clusters:  len(clusters),
-		HasClaude: hasClaude,
+		HasClaude: claudeInfo.Installed,
+		Claude: &protocol.ClaudeInfo{
+			Installed: claudeInfo.Installed,
+			Path:      claudeInfo.Path,
+			Version:   claudeInfo.Version,
+			TokenUsage: protocol.TokenUsage{
+				Session: protocol.TokenCount{
+					Input:  claudeInfo.TokenUsage.Session.Input,
+					Output: claudeInfo.TokenUsage.Session.Output,
+				},
+				Today: protocol.TokenCount{
+					Input:  claudeInfo.TokenUsage.Today.Input,
+					Output: claudeInfo.TokenUsage.Today.Output,
+				},
+				ThisMonth: protocol.TokenCount{
+					Input:  claudeInfo.TokenUsage.ThisMonth.Input,
+					Output: claudeInfo.TokenUsage.ThisMonth.Output,
+				},
+			},
+		},
 	}
 
 	json.NewEncoder(w).Encode(payload)
@@ -157,6 +226,8 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 		return s.handleKubectlMessage(msg)
 	case protocol.TypeClaude:
 		return s.handleClaudeMessage(msg)
+	case protocol.TypeRenameContext:
+		return s.handleRenameContextMessage(msg)
 	default:
 		return protocol.Message{
 			ID:   msg.ID,
@@ -171,6 +242,8 @@ func (s *Server) handleMessage(msg protocol.Message) protocol.Message {
 
 func (s *Server) handleHealthMessage(msg protocol.Message) protocol.Message {
 	clusters, _ := s.kubectl.ListContexts()
+	claudeInfo := s.claudeDetector.Detect()
+
 	return protocol.Message{
 		ID:   msg.ID,
 		Type: protocol.TypeResult,
@@ -178,7 +251,26 @@ func (s *Server) handleHealthMessage(msg protocol.Message) protocol.Message {
 			Status:    "ok",
 			Version:   Version,
 			Clusters:  len(clusters),
-			HasClaude: s.checkClaudeAvailable(),
+			HasClaude: claudeInfo.Installed,
+			Claude: &protocol.ClaudeInfo{
+				Installed: claudeInfo.Installed,
+				Path:      claudeInfo.Path,
+				Version:   claudeInfo.Version,
+				TokenUsage: protocol.TokenUsage{
+					Session: protocol.TokenCount{
+						Input:  claudeInfo.TokenUsage.Session.Input,
+						Output: claudeInfo.TokenUsage.Session.Output,
+					},
+					Today: protocol.TokenCount{
+						Input:  claudeInfo.TokenUsage.Today.Input,
+						Output: claudeInfo.TokenUsage.Today.Output,
+					},
+					ThisMonth: protocol.TokenCount{
+						Input:  claudeInfo.TokenUsage.ThisMonth.Input,
+						Output: claudeInfo.TokenUsage.ThisMonth.Output,
+					},
+				},
+			},
 		},
 	}
 }
@@ -217,8 +309,62 @@ func (s *Server) handleKubectlMessage(msg protocol.Message) protocol.Message {
 }
 
 func (s *Server) handleClaudeMessage(msg protocol.Message) protocol.Message {
-	// TODO: Implement Claude Code integration
-	return s.errorResponse(msg.ID, "not_implemented", "Claude Code integration not yet implemented")
+	// Check if Claude is installed
+	if !s.claudeDetector.IsInstalled() {
+		return s.errorResponse(msg.ID, "claude_not_installed", "Claude Code is not installed. Install it from https://claude.ai/code")
+	}
+
+	// Parse payload
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Failed to parse Claude request")
+	}
+
+	var req protocol.ClaudeRequest
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Invalid Claude request format")
+	}
+
+	if req.Prompt == "" {
+		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
+	}
+
+	// Execute Claude Code with the prompt
+	result, err := s.executeClaudePrompt(req.Prompt)
+	if err != nil {
+		return s.errorResponse(msg.ID, "claude_error", err.Error())
+	}
+
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.ClaudeResponse{
+			Content:   result,
+			SessionID: req.SessionID,
+			Done:      true,
+		},
+	}
+}
+
+// executeClaudePrompt runs a prompt through Claude Code CLI
+func (s *Server) executeClaudePrompt(prompt string) (string, error) {
+	claudeInfo := s.claudeDetector.Detect()
+	if !claudeInfo.Installed {
+		return "", fmt.Errorf("Claude Code not found")
+	}
+
+	// Use claude CLI with --print flag for non-interactive output
+	// The --print flag outputs the response without the interactive UI
+	cmd := exec.Command(claudeInfo.Path, "--print", prompt)
+	output, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("claude error: %s", string(exitErr.Stderr))
+		}
+		return "", fmt.Errorf("failed to execute claude: %w", err)
+	}
+
+	return string(output), nil
 }
 
 func (s *Server) errorResponse(id, code, message string) protocol.Message {
@@ -232,7 +378,38 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 	}
 }
 
+func (s *Server) handleRenameContextMessage(msg protocol.Message) protocol.Message {
+	// Parse payload
+	payloadBytes, err := json.Marshal(msg.Payload)
+	if err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Failed to parse rename request")
+	}
+
+	var req protocol.RenameContextRequest
+	if err := json.Unmarshal(payloadBytes, &req); err != nil {
+		return s.errorResponse(msg.ID, "invalid_payload", "Invalid rename request format")
+	}
+
+	if req.OldName == "" || req.NewName == "" {
+		return s.errorResponse(msg.ID, "invalid_names", "Both old and new names are required")
+	}
+
+	// Rename the context
+	if err := s.kubectl.RenameContext(req.OldName, req.NewName); err != nil {
+		return s.errorResponse(msg.ID, "rename_failed", fmt.Sprintf("Failed to rename context: %v", err))
+	}
+
+	return protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeResult,
+		Payload: protocol.RenameContextResponse{
+			Success: true,
+			OldName: req.OldName,
+			NewName: req.NewName,
+		},
+	}
+}
+
 func (s *Server) checkClaudeAvailable() bool {
-	// TODO: Check if Claude Code is installed and running
-	return false
+	return s.claudeDetector.IsInstalled()
 }

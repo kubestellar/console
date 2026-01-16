@@ -52,7 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(() => {
     // In demo mode, bypass OAuth and set mock credentials directly
-    if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    // Check env var OR detect Netlify domain (for when env var isn't set)
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
+      window.location.hostname.includes('netlify.app')
+
+    if (isDemoMode) {
       localStorage.setItem('token', 'demo-token')
       setTokenState('demo-token')
       setUser({
