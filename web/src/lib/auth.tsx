@@ -51,6 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout])
 
   const login = useCallback(() => {
+    // In demo mode, bypass OAuth and set mock credentials directly
+    if (import.meta.env.VITE_DEMO_MODE === 'true') {
+      localStorage.setItem('token', 'demo-token')
+      setTokenState('demo-token')
+      setUser({
+        id: 'demo-user',
+        github_id: '12345',
+        github_login: 'demo-user',
+        email: 'demo@example.com',
+        avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+        onboarded: true,
+      })
+      return
+    }
     window.location.href = '/auth/github'
   }, [])
 
