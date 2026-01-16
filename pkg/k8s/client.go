@@ -113,21 +113,21 @@ type GPUNode struct {
 	GPUAllocated int    `json:"gpuAllocated"`
 }
 
-<<<<<<< HEAD
 // Deployment represents a Kubernetes deployment with rollout status
 type Deployment struct {
-	Name             string `json:"name"`
-	Namespace        string `json:"namespace"`
-	Cluster          string `json:"cluster,omitempty"`
-	Status           string `json:"status"` // running, deploying, failed
-	Replicas         int32  `json:"replicas"`
-	ReadyReplicas    int32  `json:"readyReplicas"`
-	UpdatedReplicas  int32  `json:"updatedReplicas"`
+	Name              string `json:"name"`
+	Namespace         string `json:"namespace"`
+	Cluster           string `json:"cluster,omitempty"`
+	Status            string `json:"status"` // running, deploying, failed
+	Replicas          int32  `json:"replicas"`
+	ReadyReplicas     int32  `json:"readyReplicas"`
+	UpdatedReplicas   int32  `json:"updatedReplicas"`
 	AvailableReplicas int32  `json:"availableReplicas"`
-	Progress         int    `json:"progress"` // 0-100
-	Image            string `json:"image,omitempty"`
-	Age              string `json:"age,omitempty"`
-=======
+	Progress          int    `json:"progress"` // 0-100
+	Image             string `json:"image,omitempty"`
+	Age               string `json:"age,omitempty"`
+}
+
 // SecurityIssue represents a security misconfiguration
 type SecurityIssue struct {
 	Name      string `json:"name"`
@@ -136,7 +136,6 @@ type SecurityIssue struct {
 	Issue     string `json:"issue"`
 	Severity  string `json:"severity"` // high, medium, low
 	Details   string `json:"details,omitempty"`
->>>>>>> d107d99 (✨ Add Security Issues card with real K8s security checks)
 }
 
 // NewMultiClusterClient creates a new multi-cluster client
