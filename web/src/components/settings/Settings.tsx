@@ -179,6 +179,40 @@ export function Settings() {
               </div>
             </div>
           )}
+
+          {/* Claude Code Details (when connected and Claude available) */}
+          {isConnected && health?.hasClaude && health.claude && (
+            <div className="mt-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <div className="flex items-center gap-2 mb-3">
+                <Cpu className="w-5 h-5 text-purple-400" />
+                <span className="font-medium text-purple-400">Claude Code</span>
+                <span className="text-muted-foreground text-sm">v{health.claude.version}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 rounded-lg bg-secondary/30">
+                  <p className="text-xs text-muted-foreground mb-1">This Session</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {((health.claude.tokenUsage.session.input + health.claude.tokenUsage.session.output) / 1000).toFixed(1)}k
+                  </p>
+                  <p className="text-xs text-muted-foreground">tokens</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-secondary/30">
+                  <p className="text-xs text-muted-foreground mb-1">Today</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {((health.claude.tokenUsage.today.input + health.claude.tokenUsage.today.output) / 1000).toFixed(1)}k
+                  </p>
+                  <p className="text-xs text-muted-foreground">tokens</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-secondary/30">
+                  <p className="text-xs text-muted-foreground mb-1">This Month</p>
+                  <p className="text-sm font-mono text-foreground">
+                    {((health.claude.tokenUsage.thisMonth.input + health.claude.tokenUsage.thisMonth.output) / 1000000).toFixed(2)}M
+                  </p>
+                  <p className="text-xs text-muted-foreground">tokens</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Token Usage */}
