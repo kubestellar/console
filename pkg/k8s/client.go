@@ -3,12 +3,14 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -27,6 +29,9 @@ type MultiClusterClient struct {
 	healthCache map[string]*ClusterHealth
 	cacheTTL    time.Duration
 	cacheTime   map[string]time.Time
+	watcher     *fsnotify.Watcher
+	stopWatch   chan struct{}
+	onReload    func() // Callback when config is reloaded
 }
 
 // ClusterInfo represents basic cluster information
@@ -108,6 +113,7 @@ type GPUNode struct {
 	GPUAllocated int    `json:"gpuAllocated"`
 }
 
+<<<<<<< HEAD
 // Deployment represents a Kubernetes deployment with rollout status
 type Deployment struct {
 	Name             string `json:"name"`
@@ -121,6 +127,16 @@ type Deployment struct {
 	Progress         int    `json:"progress"` // 0-100
 	Image            string `json:"image,omitempty"`
 	Age              string `json:"age,omitempty"`
+=======
+// SecurityIssue represents a security misconfiguration
+type SecurityIssue struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster,omitempty"`
+	Issue     string `json:"issue"`
+	Severity  string `json:"severity"` // high, medium, low
+	Details   string `json:"details,omitempty"`
+>>>>>>> d107d99 (✨ Add Security Issues card with real K8s security checks)
 }
 
 // NewMultiClusterClient creates a new multi-cluster client
@@ -141,6 +157,76 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		cacheTTL:    30 * time.Second,
 		cacheTime:   make(map[string]time.Time),
 	}, nil
+}
+
+// SetOnReload sets a callback function to be called when kubeconfig is reloaded
+func (m *MultiClusterClient) SetOnReload(callback func()) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onReload = callback
+}
+
+// StartWatching starts watching the kubeconfig file for changes
+func (m *MultiClusterClient) StartWatching() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create watcher: %w", err)
+	}
+
+	m.watcher = watcher
+	m.stopWatch = make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
+					log.Println("Kubeconfig changed, reloading...")
+					time.Sleep(100 * time.Millisecond)
+					if err := m.LoadConfig(); err != nil {
+						log.Printf("Failed to reload kubeconfig: %v", err)
+					} else {
+						m.mu.Lock()
+						m.clients = make(map[string]*kubernetes.Clientset)
+						m.configs = make(map[string]*rest.Config)
+						callback := m.onReload
+						m.mu.Unlock()
+						if callback != nil {
+							callback()
+						}
+						log.Println("Kubeconfig reloaded successfully")
+					}
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Printf("Watcher error: %v", err)
+			case <-m.stopWatch:
+				return
+			}
+		}
+	}()
+
+	if err := watcher.Add(m.kubeconfig); err != nil {
+		return fmt.Errorf("failed to watch kubeconfig: %w", err)
+	}
+
+	log.Printf("Watching kubeconfig: %s", m.kubeconfig)
+	return nil
+}
+
+// StopWatching stops watching the kubeconfig file
+func (m *MultiClusterClient) StopWatching() {
+	if m.stopWatch != nil {
+		close(m.stopWatch)
+	}
+	if m.watcher != nil {
+		m.watcher.Close()
+	}
 }
 
 // LoadConfig loads the kubeconfig
@@ -696,6 +782,95 @@ func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]Cluster
 
 	wg.Wait()
 	return results, nil
+}
+
+// CheckSecurityIssues finds pods with security misconfigurations
+func (m *MultiClusterClient) CheckSecurityIssues(ctx context.Context, contextName, namespace string) ([]SecurityIssue, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var issues []SecurityIssue
+	for _, pod := range pods.Items {
+		for _, container := range pod.Spec.Containers {
+			sc := container.SecurityContext
+			podSC := pod.Spec.SecurityContext
+
+			// Check for privileged containers
+			if sc != nil && sc.Privileged != nil && *sc.Privileged {
+				issues = append(issues, SecurityIssue{
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+					Cluster:   contextName,
+					Issue:     "Privileged container",
+					Severity:  "high",
+					Details:   fmt.Sprintf("Container '%s' running in privileged mode", container.Name),
+				})
+			}
+
+			// Check for running as root
+			runAsRoot := false
+			if sc != nil && sc.RunAsUser != nil && *sc.RunAsUser == 0 {
+				runAsRoot = true
+			} else if sc == nil && podSC != nil && podSC.RunAsUser != nil && *podSC.RunAsUser == 0 {
+				runAsRoot = true
+			}
+			if runAsRoot {
+				issues = append(issues, SecurityIssue{
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+					Cluster:   contextName,
+					Issue:     "Running as root",
+					Severity:  "high",
+					Details:   fmt.Sprintf("Container '%s' running as root user (UID 0)", container.Name),
+				})
+			}
+
+			// Check for missing security context
+			if sc == nil && podSC == nil {
+				issues = append(issues, SecurityIssue{
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+					Cluster:   contextName,
+					Issue:     "Missing security context",
+					Severity:  "low",
+					Details:   fmt.Sprintf("Container '%s' has no security context defined", container.Name),
+				})
+			}
+		}
+
+		// Check for host network
+		if pod.Spec.HostNetwork {
+			issues = append(issues, SecurityIssue{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				Cluster:   contextName,
+				Issue:     "Host network enabled",
+				Severity:  "medium",
+				Details:   "Pod using host network namespace",
+			})
+		}
+
+		// Check for host PID
+		if pod.Spec.HostPID {
+			issues = append(issues, SecurityIssue{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				Cluster:   contextName,
+				Issue:     "Host PID enabled",
+				Severity:  "medium",
+				Details:   "Pod sharing host PID namespace",
+			})
+		}
+	}
+
+	return issues, nil
 }
 
 func formatDuration(d time.Duration) string {

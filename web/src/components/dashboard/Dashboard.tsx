@@ -40,6 +40,7 @@ import { ResourceCapacity } from '../cards/ResourceCapacity'
 import { GPUInventory } from '../cards/GPUInventory'
 import { GPUStatus } from '../cards/GPUStatus'
 import { GPUOverview } from '../cards/GPUOverview'
+import { SecurityIssues } from '../cards/SecurityIssues'
 import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
@@ -77,6 +78,7 @@ const CARD_COMPONENTS: Record<string, React.ComponentType<{ config?: Record<stri
   gpu_inventory: GPUInventory,
   gpu_status: GPUStatus,
   gpu_overview: GPUOverview,
+  security_issues: SecurityIssues,
 }
 
 export function Dashboard() {

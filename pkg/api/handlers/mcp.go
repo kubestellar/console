@@ -391,6 +391,38 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
 }
 
+// CheckSecurityIssues returns security misconfigurations
+func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		// If no cluster specified, query all clusters
+		if cluster == "" {
+			clusters, err := h.k8sClient.ListClusters(c.Context())
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+			var allIssues []k8s.SecurityIssue
+			for _, cl := range clusters {
+				issues, err := h.k8sClient.CheckSecurityIssues(c.Context(), cl.Name, namespace)
+				if err == nil {
+					allIssues = append(allIssues, issues...)
+				}
+			}
+			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
+		}
+
+		issues, err := h.k8sClient.CheckSecurityIssues(c.Context(), cluster, namespace)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
 // CallToolRequest represents a request to call an MCP tool
 type CallToolRequest struct {
 	Name      string                 `json:"name"`
