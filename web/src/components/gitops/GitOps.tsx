@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
+import { useToast } from '../ui/Toast'
+import { RefreshCw } from 'lucide-react'
 
 // Mock GitOps data - in production would come from ArgoCD/Flux APIs
 interface GitOpsApp {
@@ -77,8 +79,29 @@ function getTimeAgo(timestamp: string | undefined): string {
 
 export function GitOps() {
   const { clusters } = useClusters()
+  const { showToast } = useToast()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [syncingApps, setSyncingApps] = useState<Set<string>>(new Set())
+  const [syncedApps, setSyncedApps] = useState<Set<string>>(new Set())
+
+  // Handle sync action for an app
+  const handleSync = useCallback((appName: string) => {
+    // Add to syncing set
+    setSyncingApps(prev => new Set(prev).add(appName))
+    showToast(`Syncing ${appName}...`, 'info')
+
+    // Simulate sync operation (in production, call ArgoCD/Flux API)
+    setTimeout(() => {
+      setSyncingApps(prev => {
+        const next = new Set(prev)
+        next.delete(appName)
+        return next
+      })
+      setSyncedApps(prev => new Set(prev).add(appName))
+      showToast(`${appName} synced successfully!`, 'success')
+    }, 2000)
+  }, [showToast])
 
   // In production, fetch from ArgoCD/Flux API
   // Always initialize with mock data to ensure something is displayed
@@ -90,7 +113,19 @@ export function GitOps() {
 
   const filteredApps = useMemo(() => {
     console.log('Filtering with:', { selectedCluster, statusFilter, appsCount: apps.length })
-    const filtered = apps.filter(app => {
+    const filtered = apps.map(app => {
+      // If app was manually synced, update its status
+      if (syncedApps.has(app.name)) {
+        return {
+          ...app,
+          syncStatus: 'synced' as const,
+          healthStatus: 'healthy' as const,
+          driftDetails: undefined,
+          lastSyncTime: new Date().toISOString(),
+        }
+      }
+      return app
+    }).filter(app => {
       // Only filter by cluster if one is selected
       if (selectedCluster && app.cluster !== selectedCluster) return false
       // Only filter by status if not 'all'
@@ -100,7 +135,7 @@ export function GitOps() {
     })
     console.log('Filtered apps:', filtered.length)
     return filtered
-  }, [apps, selectedCluster, statusFilter])
+  }, [apps, selectedCluster, statusFilter, syncedApps])
 
   const stats = useMemo(() => ({
     total: apps.length,
@@ -253,8 +288,13 @@ export function GitOps() {
                       </li>
                     ))}
                   </ul>
-                  <button className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors">
-                    Sync Now
+                  <button
+                    onClick={() => handleSync(app.name)}
+                    disabled={syncingApps.has(app.name)}
+                    className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${syncingApps.has(app.name) ? 'animate-spin' : ''}`} />
+                    {syncingApps.has(app.name) ? 'Syncing...' : 'Sync Now'}
                   </button>
                 </div>
               )}

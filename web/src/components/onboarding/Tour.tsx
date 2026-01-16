@@ -124,6 +124,7 @@ export function TourOverlay() {
     <div className="fixed inset-0 z-[100]">
       {/* Overlay with cutout for target */}
       {targetRect && currentStep.highlight ? (
+        // Use box-shadow trick to create cutout - the highlighted area stays clear
         <div
           className="absolute border-4 border-purple-500 rounded-lg animate-pulse pointer-events-none"
           style={{
@@ -135,6 +136,7 @@ export function TourOverlay() {
           }}
         />
       ) : (
+        // No target found - show full overlay
         <div className="absolute inset-0 bg-black/75" />
       )}
 

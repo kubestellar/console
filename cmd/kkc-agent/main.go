@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-	// Parse flags
 	port := flag.Int("port", 8585, "Port to listen on")
 	kubeconfig := flag.String("kubeconfig", "", "Path to kubeconfig file")
 	version := flag.Bool("version", false, "Print version and exit")
@@ -23,7 +22,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Print banner
 	fmt.Println(`
  _    _                                    _
 | | _| | _____       __ _  __ _  ___ _ __ | |_
@@ -34,28 +32,19 @@ func main() {
 KubeStellar Klaude Console - Local Agent
 `)
 
-	// Create server
-	cfg := agent.Config{
-		Port:       *port,
-		Kubeconfig: *kubeconfig,
-	}
-
-	server, err := agent.NewServer(cfg)
+	server, err := agent.NewServer(agent.Config{Port: *port, Kubeconfig: *kubeconfig})
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	// Handle shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
 	go func() {
 		<-sigChan
 		fmt.Println("\nShutting down...")
 		os.Exit(0)
 	}()
 
-	// Start server
 	if err := server.Start(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
