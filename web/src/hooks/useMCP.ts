@@ -133,10 +133,12 @@ export function useMCPStatus() {
 export function useClusters() {
   const [clusters, setClusters] = useState<ClusterInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false) // True when change detected, pending refresh
   const [error, setError] = useState<string | null>(null)
 
   // Silent fetch - updates data without showing loading state (for WebSocket updates)
   const silentFetch = useCallback(async () => {
+    setIsUpdating(true)
     try {
       const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
       setClusters(data.clusters || [])
@@ -144,6 +146,8 @@ export function useClusters() {
     } catch (err) {
       // On silent fetch, don't replace with demo data - keep existing
       console.error('Silent fetch failed:', err)
+    } finally {
+      setIsUpdating(false)
     }
   }, [])
 
@@ -211,7 +215,7 @@ export function useClusters() {
     }
   }, [refetch, silentFetch])
 
-  return { clusters, isLoading, error, refetch }
+  return { clusters, isLoading, isUpdating, error, refetch }
 }
 
 // Hook to get cluster health

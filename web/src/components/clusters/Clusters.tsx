@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Pencil, X, Check, Loader2, Globe, User } from 'lucide-react'
+import { Pencil, X, Check, Loader2, Globe, User, Hourglass } from 'lucide-react'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes } from '../../hooks/useMCP'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -214,7 +214,7 @@ function ClusterDetail({ clusterName, onClose }: ClusterDetailProps) {
 }
 
 export function Clusters() {
-  const { clusters, isLoading, error, refetch } = useClusters()
+  const { clusters, isLoading, isUpdating, error, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { isConnected } = useLocalAgent()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
@@ -296,7 +296,15 @@ export function Clusters() {
   return (
     <div className="pt-16">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Clusters</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-foreground">Clusters</h1>
+          {isUpdating && (
+            <span className="flex items-center gap-1.5 text-sm text-amber-400 animate-pulse" title="Updating cluster list...">
+              <Hourglass className="w-4 h-4" />
+              <span>Updating...</span>
+            </span>
+          )}
+        </div>
         <p className="text-muted-foreground">Manage your Kubernetes clusters</p>
       </div>
 
