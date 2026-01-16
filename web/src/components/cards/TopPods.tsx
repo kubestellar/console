@@ -110,7 +110,7 @@ export function TopPods({ config }: TopPodsProps) {
 
               {/* Cluster and namespace - prominent */}
               <div className="flex items-center gap-2 mt-1 mb-1">
-                <ClusterBadge cluster={pod.cluster} />
+                <ClusterBadge cluster={pod.cluster || 'default'} />
                 <span className="text-xs text-muted-foreground truncate">{pod.namespace}</span>
               </div>
 

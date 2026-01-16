@@ -105,7 +105,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <ClusterBadge cluster={deployment.cluster} />
+                    <ClusterBadge cluster={deployment.cluster || 'default'} />
                     <span className="text-xs text-muted-foreground">{deployment.namespace}</span>
                     <StatusIcon className={`w-4 h-4 ${config.color}`} />
                   </div>
