@@ -21,6 +21,9 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
+# Build arg for commit hash
+ARG COMMIT_HASH=unknown
+
 # Copy package files
 COPY web/package*.json ./
 RUN npm ci
@@ -28,7 +31,8 @@ RUN npm ci
 # Copy source
 COPY web/ ./
 
-# Build
+# Build with commit hash
+ENV VITE_COMMIT_HASH=${COMMIT_HASH}
 RUN npm run build
 
 # Final stage
