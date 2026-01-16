@@ -32,6 +32,7 @@ import { AppStatus } from '../cards/AppStatus'
 import { ResourceUsage } from '../cards/ResourceUsage'
 import { ClusterMetrics } from '../cards/ClusterMetrics'
 import { DeploymentStatus } from '../cards/DeploymentStatus'
+import { DeploymentProgress } from '../cards/DeploymentProgress'
 import { DeploymentIssues } from '../cards/DeploymentIssues'
 import { UpgradeStatus } from '../cards/UpgradeStatus'
 import { ResourceCapacity } from '../cards/ResourceCapacity'
@@ -67,6 +68,7 @@ const CARD_COMPONENTS: Record<string, React.ComponentType<{ config?: Record<stri
   resource_usage: ResourceUsage,
   cluster_metrics: ClusterMetrics,
   deployment_status: DeploymentStatus,
+  deployment_progress: DeploymentProgress,
   deployment_issues: DeploymentIssues,
   upgrade_status: UpgradeStatus,
   resource_capacity: ResourceCapacity,

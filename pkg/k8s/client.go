@@ -108,6 +108,21 @@ type GPUNode struct {
 	GPUAllocated int    `json:"gpuAllocated"`
 }
 
+// Deployment represents a Kubernetes deployment with rollout status
+type Deployment struct {
+	Name             string `json:"name"`
+	Namespace        string `json:"namespace"`
+	Cluster          string `json:"cluster,omitempty"`
+	Status           string `json:"status"` // running, deploying, failed
+	Replicas         int32  `json:"replicas"`
+	ReadyReplicas    int32  `json:"readyReplicas"`
+	UpdatedReplicas  int32  `json:"updatedReplicas"`
+	AvailableReplicas int32  `json:"availableReplicas"`
+	Progress         int    `json:"progress"` // 0-100
+	Image            string `json:"image,omitempty"`
+	Age              string `json:"age,omitempty"`
+}
+
 // NewMultiClusterClient creates a new multi-cluster client
 func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 	if kubeconfig == "" {
@@ -577,6 +592,82 @@ func (m *MultiClusterClient) FindDeploymentIssues(ctx context.Context, contextNa
 	}
 
 	return issues, nil
+}
+
+// GetDeployments returns all deployments with rollout status
+func (m *MultiClusterClient) GetDeployments(ctx context.Context, contextName, namespace string) ([]Deployment, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	deployments, err := client.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []Deployment
+	for _, deploy := range deployments.Items {
+		// Determine status
+		status := "running"
+		if deploy.Status.ReadyReplicas < *deploy.Spec.Replicas {
+			status = "deploying"
+			// Check if stuck/failed
+			for _, condition := range deploy.Status.Conditions {
+				if condition.Type == "Progressing" && condition.Status == "False" {
+					status = "failed"
+					break
+				}
+				if condition.Type == "Available" && condition.Status == "False" &&
+					deploy.Status.ObservedGeneration >= deploy.Generation {
+					status = "failed"
+					break
+				}
+			}
+		}
+
+		// Calculate progress
+		desired := *deploy.Spec.Replicas
+		progress := 100
+		if desired > 0 {
+			progress = int((float64(deploy.Status.ReadyReplicas) / float64(desired)) * 100)
+		}
+
+		// Get primary container image
+		image := ""
+		if len(deploy.Spec.Template.Spec.Containers) > 0 {
+			image = deploy.Spec.Template.Spec.Containers[0].Image
+		}
+
+		// Calculate age
+		age := ""
+		if !deploy.CreationTimestamp.IsZero() {
+			duration := time.Since(deploy.CreationTimestamp.Time)
+			if duration.Hours() > 24 {
+				age = fmt.Sprintf("%dd", int(duration.Hours()/24))
+			} else if duration.Hours() > 1 {
+				age = fmt.Sprintf("%dh", int(duration.Hours()))
+			} else {
+				age = fmt.Sprintf("%dm", int(duration.Minutes()))
+			}
+		}
+
+		result = append(result, Deployment{
+			Name:              deploy.Name,
+			Namespace:         deploy.Namespace,
+			Cluster:           contextName,
+			Status:            status,
+			Replicas:          *deploy.Spec.Replicas,
+			ReadyReplicas:     deploy.Status.ReadyReplicas,
+			UpdatedReplicas:   deploy.Status.UpdatedReplicas,
+			AvailableReplicas: deploy.Status.AvailableReplicas,
+			Progress:          progress,
+			Image:             image,
+			Age:               age,
+		})
+	}
+
+	return result, nil
 }
 
 // GetAllClusterHealth returns health status for all clusters
