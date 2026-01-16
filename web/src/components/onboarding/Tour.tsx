@@ -123,19 +123,22 @@ export function TourOverlay() {
   return (
     <div className="fixed inset-0 z-[100]">
       {/* Overlay with cutout for target */}
-      <div className="absolute inset-0 bg-black/70">
-        {targetRect && currentStep.highlight && (
-          <div
-            className="absolute bg-transparent border-4 border-purple-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] animate-pulse"
-            style={{
-              top: targetRect.top - 8,
-              left: targetRect.left - 8,
-              width: targetRect.width + 16,
-              height: targetRect.height + 16,
-            }}
-          />
-        )}
-      </div>
+      {targetRect && currentStep.highlight ? (
+        // Use box-shadow trick to create cutout - the highlighted area stays clear
+        <div
+          className="absolute border-4 border-purple-500 rounded-lg animate-pulse pointer-events-none"
+          style={{
+            top: targetRect.top - 8,
+            left: targetRect.left - 8,
+            width: targetRect.width + 16,
+            height: targetRect.height + 16,
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
+          }}
+        />
+      ) : (
+        // No target found - show full overlay
+        <div className="absolute inset-0 bg-black/75" />
+      )}
 
       {/* Tooltip */}
       <div
