@@ -22,7 +22,7 @@ export default defineConfig({
     '**/CardChat.spec.ts',
     '**/CardSharing.spec.ts',
     '**/DrillDown.spec.ts',
-    '**/Clusters.spec.ts',
+    // Clusters.spec.ts - re-enabled after stabilization
     // Events.spec.ts - re-enabled after stabilization
     // Settings.spec.ts - re-enabled after stabilization
     '**/auth.setup.ts',
