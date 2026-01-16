@@ -1,6 +1,7 @@
 import { AlertTriangle, Info, XCircle, RefreshCw, ChevronRight } from 'lucide-react'
 import { useEvents } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 export function EventStream() {
   const { events, isLoading, error, refetch } = useEvents(undefined, undefined, 10)
@@ -76,9 +77,13 @@ export function EventStream() {
                   <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <ClusterBadge cluster={event.cluster || 'default'} />
+                    <span className="text-xs text-muted-foreground truncate">{event.namespace}</span>
+                  </div>
                   <p className="text-sm text-white truncate">{event.message}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {event.object} · {event.cluster || event.namespace}
+                    {event.object}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

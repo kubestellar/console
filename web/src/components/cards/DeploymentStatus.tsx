@@ -1,4 +1,5 @@
 import { CheckCircle, Clock, XCircle, ArrowRight } from 'lucide-react'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 // Demo deployment data
 const deployments = [
@@ -97,14 +98,12 @@ export function DeploymentStatus() {
             >
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">
-                      {deployment.name}
-                    </span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClusterBadge cluster={deployment.cluster} />
                     <StatusIcon className={`w-4 h-4 ${config.color}`} />
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {deployment.cluster}
+                  <span className="text-sm font-medium text-white">
+                    {deployment.name}
                   </span>
                 </div>
                 <div className="text-right">
