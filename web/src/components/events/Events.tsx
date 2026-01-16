@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useEvents, useWarningEvents, useClusters } from '../../hooks/useMCP'
-import { StatusIndicator } from '../charts/StatusIndicator'
 
 type EventFilter = 'all' | 'warning' | 'normal'
 

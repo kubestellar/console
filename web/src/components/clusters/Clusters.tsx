@@ -32,7 +32,7 @@ function ClusterDetail({ clusterName, onClose }: ClusterDetailProps) {
       <div className="glass p-6 rounded-lg w-[800px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <StatusIndicator status={health?.healthy ? 'healthy' : 'critical'} />
+            <StatusIndicator status={health?.healthy ? 'healthy' : 'error'} />
             <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -271,7 +271,7 @@ export function Clusters() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <StatusIndicator status={cluster.healthy ? 'healthy' : 'critical'} size="lg" />
+                  <StatusIndicator status={cluster.healthy ? 'healthy' : 'error'} size="lg" />
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {cluster.context || cluster.name.split('/').pop()}

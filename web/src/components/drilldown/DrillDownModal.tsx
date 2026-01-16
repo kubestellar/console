@@ -7,16 +7,18 @@ import { LogsDrillDown } from './views/LogsDrillDown'
 import { EventsDrillDown } from './views/EventsDrillDown'
 import { NodeDrillDown } from './views/NodeDrillDown'
 import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
+import { YAMLDrillDown } from './views/YAMLDrillDown'
 
 export function DrillDownModal() {
   const { state, pop, goTo, close } = useDrillDown()
 
   if (!state.isOpen || !state.currentView) return null
 
-  const renderView = () => {
-    const { currentView } = state
-    const { type, data } = currentView
+  // Get current view - we've already checked it's not null above
+  const currentView = state.currentView
+  const { type, data } = currentView
 
+  const renderView = () => {
     switch (type) {
       case 'cluster':
         return <ClusterDrillDown data={data} />
@@ -34,8 +36,10 @@ export function DrillDownModal() {
         return <NodeDrillDown data={data} />
       case 'gpu-node':
         return <GPUNodeDrillDown data={data} />
+      case 'yaml':
+        return <YAMLDrillDown data={data} />
       case 'custom':
-        return currentView.customComponent || <div>Custom view</div>
+        return state.currentView?.customComponent || <div>Custom view</div>
       default:
         return <div>Unknown view type</div>
     }

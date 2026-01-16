@@ -34,7 +34,7 @@ export function DeploymentDrillDown({ data }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Gauge value={readyReplicas} max={replicas} size={60} color={isHealthy ? '#22c55e' : '#f59e0b'} />
+            <Gauge value={readyReplicas} max={replicas} size="sm" />
             <div className="text-right">
               <div className="text-2xl font-bold text-foreground">{readyReplicas}/{replicas}</div>
               <div className="text-xs text-muted-foreground">Replicas Ready</div>

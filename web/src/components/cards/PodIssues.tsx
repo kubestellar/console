@@ -1,6 +1,7 @@
-import { AlertTriangle, RefreshCw, MemoryStick, ImageOff, Clock } from 'lucide-react'
+import { AlertTriangle, RefreshCw, MemoryStick, ImageOff, Clock, ChevronRight } from 'lucide-react'
 import { usePodIssues, PodIssue } from '../../hooks/useMCP'
 import { PaginatedList } from '../ui/PaginatedList'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 const getIssueIcon = (status: string) => {
   if (status.includes('OOM')) return MemoryStick
@@ -11,6 +12,7 @@ const getIssueIcon = (status: string) => {
 
 export function PodIssues() {
   const { issues, isLoading, error, refetch } = usePodIssues()
+  const { drillToPod } = useDrillDownActions()
 
   if (isLoading) {
     return (
@@ -85,7 +87,12 @@ export function PodIssues() {
             return (
               <div
                 key={`${issue.name}-${idx}`}
-                className="p-3 rounded-lg bg-red-500/10 border border-red-500/20"
+                className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/15 transition-colors"
+                onClick={() => drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
+                  status: issue.status,
+                  restarts: issue.restarts,
+                  issues: issue.issues,
+                })}
               >
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0">
@@ -112,6 +119,7 @@ export function PodIssues() {
                       </p>
                     )}
                   </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
                 </div>
               </div>
             )

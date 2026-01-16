@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { usePodIssues, useDeploymentIssues, useWarningEvents, useGPUNodes, useClusters } from './useMCP'
+import { usePodIssues, useDeploymentIssues, useWarningEvents, useGPUNodes, useClusters, useSecurityIssues } from './useMCP'
 import { useAIMode } from './useAIMode'
 
 export interface CardRecommendation {
@@ -12,8 +12,8 @@ export interface CardRecommendation {
   config?: Record<string, unknown>
 }
 
-// Card priority based on cluster activity
-const CARD_PRIORITIES: Record<string, number> = {
+// Card priority based on cluster activity (reserved for future use)
+const _CARD_PRIORITIES: Record<string, number> = {
   pod_issues: 90,
   deployment_issues: 85,
   security_issues: 80,
@@ -34,14 +34,11 @@ export function useCardRecommendations(currentCardTypes: string[]) {
   const { events: warningEvents } = useWarningEvents()
   const { nodes: gpuNodes } = useGPUNodes()
   const { clusters } = useClusters()
+  const { issues: securityIssues } = useSecurityIssues()
 
   // Analyze cluster state and generate recommendations
+  // Always show critical recommendations (high priority), even if AI mode doesn't allow proactive suggestions
   const analyzeAndRecommend = useCallback(() => {
-    if (!shouldProactivelySuggest) {
-      setRecommendations([])
-      return
-    }
-
     const newRecommendations: CardRecommendation[] = []
 
     // Check for pod issues
@@ -115,13 +112,34 @@ export function useCardRecommendations(currentCardTypes: string[]) {
       })
     }
 
+    // Check for security issues
+    const highSeveritySecurityIssues = securityIssues.filter(i => i.severity === 'high')
+    if (securityIssues.length > 0) {
+      newRecommendations.push({
+        id: 'rec-security',
+        cardType: 'security_issues',
+        title: 'Security Issues',
+        reason: `${highSeveritySecurityIssues.length} high severity and ${securityIssues.length - highSeveritySecurityIssues.length} other security issues found`,
+        priority: highSeveritySecurityIssues.length > 0 ? 'high' : 'medium',
+      })
+    }
+
     // Sort by priority
     newRecommendations.sort((a, b) => {
       const priorityOrder = { high: 0, medium: 1, low: 2 }
       return priorityOrder[a.priority] - priorityOrder[b.priority]
     })
 
-    setRecommendations(newRecommendations.slice(0, 3)) // Top 3 recommendations
+    // Filter based on AI mode:
+    // - High mode: show all recommendations
+    // - Medium mode: show high priority only
+    // - Low mode: show high priority only if there are many issues
+    let filteredRecs = newRecommendations
+    if (!shouldProactivelySuggest) {
+      filteredRecs = newRecommendations.filter(r => r.priority === 'high')
+    }
+
+    setRecommendations(filteredRecs.slice(0, 3)) // Top 3 recommendations
   }, [
     shouldProactivelySuggest,
     currentCardTypes,
@@ -130,6 +148,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     warningEvents,
     gpuNodes,
     clusters,
+    securityIssues,
   ])
 
   // Re-analyze when data changes

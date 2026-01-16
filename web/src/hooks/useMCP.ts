@@ -326,6 +326,84 @@ export function useGPUNodes(cluster?: string) {
   return { nodes, isLoading, error, refetch }
 }
 
+// Security issue types
+export interface SecurityIssue {
+  name: string
+  namespace: string
+  cluster?: string
+  issue: string
+  severity: 'high' | 'medium' | 'low'
+  details?: string
+}
+
+// Hook to get security issues
+export function useSecurityIssues(cluster?: string, namespace?: string) {
+  const [issues, setIssues] = useState<SecurityIssue[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ issues: SecurityIssue[] }>(`/api/mcp/security-issues?${params}`)
+      setIssues(data.issues || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch security issues')
+      // Return demo security issues
+      setIssues(getDemoSecurityIssues())
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { issues, isLoading, error, refetch }
+}
+
+function getDemoSecurityIssues(): SecurityIssue[] {
+  return [
+    {
+      name: 'api-server-7d8f9c6b5-x2k4m',
+      namespace: 'production',
+      cluster: 'prod-east',
+      issue: 'Privileged container',
+      severity: 'high',
+      details: 'Container running in privileged mode',
+    },
+    {
+      name: 'worker-deployment',
+      namespace: 'batch',
+      cluster: 'vllm-d',
+      issue: 'Running as root',
+      severity: 'high',
+      details: 'Container running as root user',
+    },
+    {
+      name: 'nginx-ingress',
+      namespace: 'ingress',
+      cluster: 'prod-east',
+      issue: 'Host network enabled',
+      severity: 'medium',
+      details: 'Pod using host network namespace',
+    },
+    {
+      name: 'monitoring-agent',
+      namespace: 'monitoring',
+      cluster: 'staging',
+      issue: 'Missing security context',
+      severity: 'low',
+      details: 'No security context defined',
+    },
+  ]
+}
+
 // Demo data fallbacks
 function getDemoClusters(): ClusterInfo[] {
   return [

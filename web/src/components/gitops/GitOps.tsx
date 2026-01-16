@@ -76,20 +76,30 @@ function getTimeAgo(timestamp: string | undefined): string {
 }
 
 export function GitOps() {
-  const { clusters } = useClusters()
+  const { clusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
   // In production, fetch from ArgoCD/Flux API
-  const apps = useMemo(() => getMockGitOpsData(), [])
+  // Always initialize with mock data to ensure something is displayed
+  const apps = useMemo(() => {
+    const mockData = getMockGitOpsData()
+    console.log('GitOps apps:', mockData.length) // Debug log
+    return mockData
+  }, [])
 
   const filteredApps = useMemo(() => {
-    return apps.filter(app => {
+    console.log('Filtering with:', { selectedCluster, statusFilter, appsCount: apps.length })
+    const filtered = apps.filter(app => {
+      // Only filter by cluster if one is selected
       if (selectedCluster && app.cluster !== selectedCluster) return false
+      // Only filter by status if not 'all'
       if (statusFilter === 'synced' && app.syncStatus !== 'synced') return false
       if (statusFilter === 'drifted' && app.syncStatus !== 'out-of-sync') return false
       return true
     })
+    console.log('Filtered apps:', filtered.length)
+    return filtered
   }, [apps, selectedCluster, statusFilter])
 
   const stats = useMemo(() => ({
@@ -107,11 +117,11 @@ export function GitOps() {
     }
   }
 
-  const healthStatusIndicator = (status: string): 'healthy' | 'warning' | 'critical' => {
+  const healthStatusIndicator = (status: string): 'healthy' | 'warning' | 'error' => {
     switch (status) {
       case 'healthy': return 'healthy'
       case 'progressing': return 'warning'
-      default: return 'critical'
+      default: return 'error'
     }
   }
 

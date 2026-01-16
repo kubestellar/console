@@ -1,5 +1,6 @@
-import { AlertTriangle, RefreshCw, AlertCircle, Clock, Scale } from 'lucide-react'
-import { useDeploymentIssues } from '../../hooks/useMCP'
+import { AlertTriangle, RefreshCw, AlertCircle, Clock, Scale, ChevronRight } from 'lucide-react'
+import { useDeploymentIssues, DeploymentIssue } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 interface DeploymentIssuesProps {
   config?: Record<string, unknown>
@@ -16,6 +17,16 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   const cluster = config?.cluster as string | undefined
   const namespace = config?.namespace as string | undefined
   const { issues, isLoading, error, refetch } = useDeploymentIssues(cluster, namespace)
+  const { drillToDeployment } = useDrillDownActions()
+
+  const handleDeploymentClick = (issue: DeploymentIssue) => {
+    drillToDeployment(issue.cluster || 'default', issue.namespace, issue.name, {
+      replicas: issue.replicas,
+      readyReplicas: issue.readyReplicas,
+      reason: issue.reason,
+      message: issue.message,
+    })
+  }
 
   if (isLoading) {
     return (
@@ -86,7 +97,8 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
           return (
             <div
               key={`${issue.name}-${idx}`}
-              className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20"
+              className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/15 transition-colors"
+              onClick={() => handleDeploymentClick(issue)}
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-orange-500/20 flex-shrink-0">
@@ -111,6 +123,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
                     </p>
                   )}
                 </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
               </div>
             </div>
           )

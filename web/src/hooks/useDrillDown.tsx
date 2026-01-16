@@ -11,6 +11,7 @@ export type DrillDownViewType =
   | 'events'
   | 'logs'
   | 'gpu-node'
+  | 'yaml'
   | 'custom'
 
 export interface DrillDownView {
@@ -127,79 +128,103 @@ export function useDrillDown() {
 
 // Helper hook to create drill-down actions
 export function useDrillDownActions() {
-  const { open, push } = useDrillDown()
+  const { state, open, push } = useDrillDown()
+
+  // Helper to either open a new drill-down or push onto existing stack
+  const openOrPush = useCallback((view: DrillDownView) => {
+    if (state.isOpen) {
+      push(view)
+    } else {
+      open(view)
+    }
+  }, [state.isOpen, open, push])
 
   const drillToCluster = useCallback((cluster: string, clusterData?: Record<string, unknown>) => {
-    open({
+    openOrPush({
       type: 'cluster',
       title: cluster.split('/').pop() || cluster,
       subtitle: 'Cluster Overview',
       data: { cluster, ...clusterData },
     })
-  }, [open])
+  }, [openOrPush])
 
   const drillToNamespace = useCallback((cluster: string, namespace: string) => {
-    push({
+    openOrPush({
       type: 'namespace',
       title: namespace,
       subtitle: `Namespace in ${cluster.split('/').pop()}`,
       data: { cluster, namespace },
     })
-  }, [push])
+  }, [openOrPush])
 
   const drillToDeployment = useCallback((cluster: string, namespace: string, deployment: string, deploymentData?: Record<string, unknown>) => {
-    push({
+    openOrPush({
       type: 'deployment',
       title: deployment,
       subtitle: `Deployment in ${namespace}`,
       data: { cluster, namespace, deployment, ...deploymentData },
     })
-  }, [push])
+  }, [openOrPush])
 
   const drillToPod = useCallback((cluster: string, namespace: string, pod: string, podData?: Record<string, unknown>) => {
-    push({
+    openOrPush({
       type: 'pod',
       title: pod,
       subtitle: `Pod in ${namespace}`,
       data: { cluster, namespace, pod, ...podData },
     })
-  }, [push])
+  }, [openOrPush])
 
   const drillToLogs = useCallback((cluster: string, namespace: string, pod: string, container?: string) => {
-    push({
+    openOrPush({
       type: 'logs',
       title: `Logs: ${pod}`,
       subtitle: container ? `Container: ${container}` : 'All containers',
       data: { cluster, namespace, pod, container },
     })
-  }, [push])
+  }, [openOrPush])
 
   const drillToEvents = useCallback((cluster: string, namespace?: string, objectName?: string) => {
-    push({
+    openOrPush({
       type: 'events',
       title: objectName ? `Events: ${objectName}` : 'Events',
       subtitle: namespace || cluster.split('/').pop(),
       data: { cluster, namespace, objectName },
     })
-  }, [push])
+  }, [openOrPush])
 
   const drillToNode = useCallback((cluster: string, node: string, nodeData?: Record<string, unknown>) => {
-    push({
+    openOrPush({
       type: 'node',
       title: node,
       subtitle: `Node in ${cluster.split('/').pop()}`,
       data: { cluster, node, ...nodeData },
     })
-  }, [push])
+  }, [openOrPush])
 
   const drillToGPUNode = useCallback((cluster: string, node: string, gpuData?: Record<string, unknown>) => {
-    push({
+    openOrPush({
       type: 'gpu-node',
       title: node,
       subtitle: 'GPU Node',
       data: { cluster, node, ...gpuData },
     })
-  }, [push])
+  }, [openOrPush])
+
+  const drillToYAML = useCallback((
+    cluster: string,
+    namespace: string,
+    resourceType: string,
+    resourceName: string,
+    resourceData?: Record<string, unknown>
+  ) => {
+    openOrPush({
+      type: 'yaml',
+      title: `${resourceType}: ${resourceName}`,
+      subtitle: `YAML definition`,
+      data: { cluster, namespace, resourceType, resourceName, ...resourceData },
+    })
+  }, [openOrPush])
 
   return {
     drillToCluster,
@@ -210,5 +235,6 @@ export function useDrillDownActions() {
     drillToEvents,
     drillToNode,
     drillToGPUNode,
+    drillToYAML,
   }
 }

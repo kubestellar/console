@@ -15,7 +15,25 @@ interface ConfigureCardModalProps {
   card: Card | null
   onClose: () => void
   onSave: (cardId: string, config: Record<string, unknown>, title?: string) => void
+  onCreateCard?: (cardType: string, config: Record<string, unknown>, title?: string) => void
 }
+
+// Card type detection patterns
+const CARD_TYPE_PATTERNS: Array<{ patterns: string[]; cardType: string; defaultConfig?: Record<string, unknown> }> = [
+  { patterns: ['event', 'events', 'warning', 'error', 'log'], cardType: 'event_stream' },
+  { patterns: ['pod', 'pods', 'crash', 'crashloop', 'oom', 'restart'], cardType: 'pod_issues' },
+  { patterns: ['deploy', 'deployment', 'rollout', 'rolling'], cardType: 'deployment_status' },
+  { patterns: ['deployment issue', 'stuck deployment', 'failed deployment'], cardType: 'deployment_issues' },
+  { patterns: ['cluster health', 'cluster status', 'health'], cardType: 'cluster_health' },
+  { patterns: ['resource', 'cpu', 'memory', 'usage'], cardType: 'resource_usage' },
+  { patterns: ['metric', 'metrics', 'chart', 'graph'], cardType: 'cluster_metrics' },
+  { patterns: ['gpu', 'nvidia', 'cuda', 'accelerator'], cardType: 'gpu_status' },
+  { patterns: ['gpu inventory', 'gpu nodes', 'gpu capacity'], cardType: 'gpu_inventory' },
+  { patterns: ['app', 'application', 'service'], cardType: 'app_status' },
+  { patterns: ['upgrade', 'version', 'kubernetes version'], cardType: 'upgrade_status' },
+  { patterns: ['capacity', 'quota', 'limit'], cardType: 'resource_capacity' },
+  { patterns: ['security', 'privileged', 'root', 'host'], cardType: 'security_issues' },
+]
 
 // Card behaviors that can be enabled/disabled
 const CARD_BEHAVIORS: Record<string, Array<{ key: string; label: string; description: string; default: boolean }>> = {
@@ -108,13 +126,15 @@ const CARD_CONFIG_FIELDS: Record<string, Array<{ key: string; label: string; typ
   ],
 }
 
-export function ConfigureCardModal({ isOpen, card, onClose, onSave }: ConfigureCardModalProps) {
+export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard }: ConfigureCardModalProps) {
   const [config, setConfig] = useState<Record<string, unknown>>({})
   const [behaviors, setBehaviors] = useState<Record<string, boolean>>({})
   const [title, setTitle] = useState('')
   const [nlPrompt, setNlPrompt] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [activeTab, setActiveTab] = useState<'settings' | 'behaviors' | 'ai'>('settings')
+  const [aiChanges, setAiChanges] = useState<string[]>([])
+  const [aiError, setAiError] = useState<string | null>(null)
   const { clusters } = useClusters()
 
   useEffect(() => {
@@ -149,34 +169,198 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave }: ConfigureC
     setBehaviors((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
+  // Detect what card type the user is asking for
+  const detectCardType = (prompt: string): string | null => {
+    const lowerPrompt = prompt.toLowerCase()
+
+    for (const { patterns, cardType } of CARD_TYPE_PATTERNS) {
+      for (const pattern of patterns) {
+        if (lowerPrompt.includes(pattern)) {
+          return cardType
+        }
+      }
+    }
+    return null
+  }
+
+  // Extract configuration from prompt
+  const extractConfigFromPrompt = (prompt: string): { config: Record<string, unknown>; behaviors: Record<string, boolean>; title?: string } => {
+    const lowerPrompt = prompt.toLowerCase()
+    const newConfig: Record<string, unknown> = {}
+    const newBehaviors: Record<string, boolean> = {}
+    let extractedTitle: string | undefined
+
+    // Cluster extraction
+    const clusterMatch = prompt.match(/(?:from|in|for|on|cluster[:\s]+)([a-z0-9-_]+)(?:\s+cluster)?/i)
+    if (clusterMatch && clusterMatch[1]) {
+      const clusterName = clusterMatch[1]
+      const matchedCluster = clusters.find(c =>
+        c.name.toLowerCase().includes(clusterName.toLowerCase()) ||
+        clusterName.toLowerCase().includes(c.name.toLowerCase())
+      )
+      if (matchedCluster) {
+        newConfig.cluster = matchedCluster.name
+      } else {
+        // Still set it even if not found - might be valid
+        newConfig.cluster = clusterName
+      }
+    }
+
+    // Namespace extraction
+    const namespaceMatch = prompt.match(/(?:namespace[:\s]+|ns[:\s]+|in\s+)([a-z0-9-_]+)/i)
+    if (namespaceMatch && namespaceMatch[1] && !['the', 'a', 'an', 'from', 'cluster'].includes(namespaceMatch[1].toLowerCase())) {
+      newConfig.namespace = namespaceMatch[1]
+    }
+
+    // Limit extraction
+    const limitMatch = prompt.match(/(?:show|display|limit|max|top)\s*(\d+)/i)
+    if (limitMatch && limitMatch[1]) {
+      newConfig.limit = parseInt(limitMatch[1])
+    }
+
+    // Behaviors based on keywords
+    if (lowerPrompt.includes('warning') || lowerPrompt.includes('error')) {
+      newBehaviors.warningsOnly = true
+    }
+    if (lowerPrompt.includes('alert') || lowerPrompt.includes('notify')) {
+      newBehaviors.alertOnNew = true
+      newBehaviors.alertOnCritical = true
+    }
+    if (lowerPrompt.includes('sound') && !lowerPrompt.includes('no sound')) {
+      newBehaviors.soundOnWarning = true
+    }
+    if (lowerPrompt.includes('group') && lowerPrompt.includes('cluster')) {
+      newBehaviors.groupByCluster = true
+    }
+    if (lowerPrompt.includes('unhealthy') && (lowerPrompt.includes('first') || lowerPrompt.includes('priority'))) {
+      newBehaviors.showUnhealthyFirst = true
+    }
+
+    // Title extraction
+    const titleMatch = prompt.match(/(?:title|name|call it|called)[:\s]+["']?([^"']+)["']?$/i)
+    if (titleMatch && titleMatch[1]) {
+      extractedTitle = titleMatch[1].trim()
+    }
+
+    return { config: newConfig, behaviors: newBehaviors, title: extractedTitle }
+  }
+
   const handleNLSubmit = async () => {
     if (!nlPrompt.trim()) return
     setIsProcessing(true)
+    setAiChanges([])
+    setAiError(null)
 
-    // Simulate AI processing - in real implementation this would call Claude API
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // Small delay for UX feedback
+    await new Promise((resolve) => setTimeout(resolve, 800))
 
-    // Parse natural language and update config/behaviors
-    const prompt = nlPrompt.toLowerCase()
+    const prompt = nlPrompt.trim()
+    const detectedCardType = detectCardType(prompt)
+    const { config: extractedConfig, behaviors: extractedBehaviors, title: extractedTitle } = extractConfigFromPrompt(prompt)
 
-    if (prompt.includes('refresh') && prompt.includes('faster')) {
-      setBehaviors((prev) => ({ ...prev, autoRefresh: true }))
+    // If detected a different card type than current, create a new card
+    if (detectedCardType && detectedCardType !== card?.card_type && onCreateCard) {
+      const newConfig = { ...extractedConfig, ...extractedBehaviors }
+      const newTitle = extractedTitle || generateCardTitle(detectedCardType, extractedConfig)
+
+      onCreateCard(detectedCardType, newConfig, newTitle)
+
+      setAiChanges([
+        `Created new "${detectedCardType.replace(/_/g, ' ')}" card`,
+        ...Object.entries(extractedConfig).map(([k, v]) => `• ${k}: ${v}`),
+        ...Object.entries(extractedBehaviors).filter(([, v]) => v).map(([k]) => `• ${k} enabled`),
+      ])
+
+      setNlPrompt('')
+      setIsProcessing(false)
+
+      // Close modal after showing success briefly
+      setTimeout(() => {
+        onClose()
+      }, 1500)
+      return
     }
-    if (prompt.includes('warning') || prompt.includes('error')) {
-      setBehaviors((prev) => ({ ...prev, warningsOnly: true }))
+
+    // Otherwise, modify the current card
+    const changes: string[] = []
+
+    // Apply extracted config
+    if (Object.keys(extractedConfig).length > 0) {
+      setConfig((prev) => ({ ...prev, ...extractedConfig }))
+      Object.entries(extractedConfig).forEach(([k, v]) => {
+        changes.push(`Set ${k} to ${v}`)
+      })
     }
-    if (prompt.includes('alert') || prompt.includes('notify')) {
-      setBehaviors((prev) => ({ ...prev, alertOnChange: true, alertOnNew: true, alertOnCritical: true }))
+
+    // Apply extracted behaviors
+    if (Object.keys(extractedBehaviors).length > 0) {
+      setBehaviors((prev) => ({ ...prev, ...extractedBehaviors }))
+      Object.entries(extractedBehaviors).filter(([, v]) => v).forEach(([k]) => {
+        changes.push(`Enabled ${k.replace(/([A-Z])/g, ' $1').toLowerCase()}`)
+      })
     }
-    if (prompt.includes('unhealthy') && prompt.includes('first')) {
-      setBehaviors((prev) => ({ ...prev, showUnhealthyFirst: true }))
+
+    // Apply title
+    if (extractedTitle) {
+      setTitle(extractedTitle)
+      changes.push(`Set title to "${extractedTitle}"`)
     }
-    if (prompt.includes('sound')) {
-      setBehaviors((prev) => ({ ...prev, soundOnWarning: true }))
+
+    if (changes.length === 0) {
+      // Couldn't understand - suggest creating a new card
+      setAiError(
+        `I couldn't understand that request. Try describing what you want to see, like:\n` +
+        `• "Show warning events from vllm-d cluster"\n` +
+        `• "Show pods with issues in kube-system"\n` +
+        `• "Track deployments in production"`
+      )
+    } else {
+      setAiChanges(changes)
     }
 
     setNlPrompt('')
     setIsProcessing(false)
+  }
+
+  // Generate a descriptive title for a new card
+  const generateCardTitle = (cardType: string, config: Record<string, unknown>): string => {
+    const parts: string[] = []
+
+    switch (cardType) {
+      case 'event_stream':
+        parts.push('Events')
+        break
+      case 'pod_issues':
+        parts.push('Pod Issues')
+        break
+      case 'deployment_status':
+        parts.push('Deployments')
+        break
+      case 'deployment_issues':
+        parts.push('Deployment Issues')
+        break
+      case 'cluster_health':
+        parts.push('Cluster Health')
+        break
+      case 'resource_usage':
+        parts.push('Resource Usage')
+        break
+      case 'gpu_status':
+        parts.push('GPU Status')
+        break
+      default:
+        parts.push(cardType.replace(/_/g, ' '))
+    }
+
+    if (config.cluster) {
+      const clusterName = String(config.cluster).split('/').pop()
+      parts.push(`(${clusterName})`)
+    }
+    if (config.namespace) {
+      parts.push(`- ${config.namespace}`)
+    }
+
+    return parts.join(' ')
   }
 
   return (
@@ -355,17 +539,59 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave }: ConfigureC
                 </p>
               </div>
 
+              {/* Applied changes feedback */}
+              {aiChanges.length > 0 && (
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm font-medium text-green-300">Applied changes:</span>
+                  </div>
+                  <ul className="text-xs text-green-200 space-y-1">
+                    {aiChanges.map((change, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="text-green-400">•</span>
+                        {change}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Error feedback */}
+              {aiError && (
+                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-sm text-yellow-300">{aiError}</span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm text-muted-foreground mb-1">
                   Describe your preferences
                 </label>
                 <textarea
                   value={nlPrompt}
-                  onChange={(e) => setNlPrompt(e.target.value)}
+                  onChange={(e) => {
+                    setNlPrompt(e.target.value)
+                    setAiError(null) // Clear error on new input
+                  }}
                   placeholder="e.g., 'Show me only warning events from the vllm-d cluster and play a sound when new ones appear'"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm h-24 resize-none"
                   disabled={isProcessing}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && nlPrompt.trim()) {
+                      e.preventDefault()
+                      handleNLSubmit()
+                    }
+                  }}
                 />
+                <p className="text-xs text-muted-foreground mt-1">Press Enter to apply, Shift+Enter for new line</p>
               </div>
 
               <button
@@ -394,11 +620,12 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave }: ConfigureC
               <div className="text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Example prompts:</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>"Refresh this card every 10 seconds"</li>
-                  <li>"Only show critical and warning events"</li>
-                  <li>"Alert me when cluster health changes"</li>
-                  <li>"Show unhealthy clusters first"</li>
-                  <li>"Focus on the production namespace"</li>
+                  <li>"Show only warnings from the vllm-d cluster"</li>
+                  <li>"Alert me when critical issues appear"</li>
+                  <li>"Prioritize unhealthy clusters and enable sounds"</li>
+                  <li>"Filter to namespace: production, show max 20 items"</li>
+                  <li>"Group events by cluster and enable pagination"</li>
+                  <li>"Title: Production Alerts"</li>
                 </ul>
               </div>
             </div>

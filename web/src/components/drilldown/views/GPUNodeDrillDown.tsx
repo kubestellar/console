@@ -26,7 +26,7 @@ export function GPUNodeDrillDown({ data }: Props) {
             <p className="text-sm text-muted-foreground">{nodeName}</p>
           </div>
           <div className="flex items-center gap-6">
-            <Gauge value={gpuAllocated} max={gpuCount} size={100} color={utilizationColor} showLabel />
+            <Gauge value={gpuAllocated} max={gpuCount} size="md" />
             <div className="text-right">
               <div className="text-3xl font-bold text-foreground">{gpuAllocated}/{gpuCount}</div>
               <div className="text-sm text-muted-foreground">GPUs Allocated</div>

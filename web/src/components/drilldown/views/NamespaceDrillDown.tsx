@@ -68,7 +68,7 @@ export function NamespaceDrillDown({ data }: Props) {
             {deploymentIssues.map((issue, i) => (
               <div
                 key={i}
-                onClick={() => drillToDeployment(cluster, namespace, issue.name, issue)}
+                onClick={() => drillToDeployment(cluster, namespace, issue.name, { ...issue })}
                 className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
@@ -98,7 +98,7 @@ export function NamespaceDrillDown({ data }: Props) {
             {podIssues.map((issue, i) => (
               <div
                 key={i}
-                onClick={() => drillToPod(cluster, namespace, issue.name, issue)}
+                onClick={() => drillToPod(cluster, namespace, issue.name, { ...issue })}
                 className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">

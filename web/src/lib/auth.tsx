@@ -18,7 +18,7 @@ interface AuthContextType {
   login: () => void
   logout: () => void
   setToken: (token: string, onboarded: boolean) => void
-  refreshUser: () => Promise<void>
+  refreshUser: (overrideToken?: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -38,10 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const refreshUser = async () => {
-    if (!token) return
+  const refreshUser = async (overrideToken?: string) => {
+    const effectiveToken = overrideToken || token || localStorage.getItem('token')
+    if (!effectiveToken) return
     try {
-      const response = await api.get('/api/me')
+      const response = await api.get('/api/me', {
+        headers: { Authorization: `Bearer ${effectiveToken}` }
+      })
       setUser(response.data)
     } catch (error) {
       console.error('Failed to fetch user:', error)

@@ -30,6 +30,12 @@ npm-debug.log*
 # Test coverage
 coverage/
 
+# Playwright
+web/playwright-report/
+web/test-results/
+web/blob-report/
+web/playwright/.auth/
+
 # Temp directories
 a2a-rebase/
 a2a-temp/

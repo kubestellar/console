@@ -12,8 +12,8 @@ class ApiClient {
     return headers
   }
 
-  async get<T = any>(path: string): Promise<{ data: T }> {
-    const headers = this.getHeaders()
+  async get<T = any>(path: string, options?: { headers?: Record<string, string> }): Promise<{ data: T }> {
+    const headers = { ...this.getHeaders(), ...options?.headers }
     console.log(`[API] GET ${path}`, { hasAuth: !!headers['Authorization'] })
     const response = await fetch(`${API_BASE}${path}`, {
       method: 'GET',

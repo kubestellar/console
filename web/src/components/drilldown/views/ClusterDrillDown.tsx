@@ -53,7 +53,7 @@ export function ClusterDrillDown({ data }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-lg bg-card/50 border border-border">
           <div className="flex items-center gap-2 mb-2">
-            <StatusIndicator status={health?.healthy ? 'healthy' : 'critical'} />
+            <StatusIndicator status={health?.healthy ? 'healthy' : 'error'} />
             <span className="text-sm text-muted-foreground">Status</span>
           </div>
           <div className="text-2xl font-bold text-foreground">
@@ -187,7 +187,7 @@ export function ClusterDrillDown({ data }: Props) {
             {clusterGPUNodes.map((node, i) => (
               <div
                 key={i}
-                onClick={() => drillToGPUNode(clusterName, node.name, node)}
+                onClick={() => drillToGPUNode(clusterName, node.name, { ...node })}
                 className="p-4 rounded-lg bg-card/50 border border-border flex items-center justify-between cursor-pointer hover:bg-card hover:border-primary/50 transition-colors"
               >
                 <div className="min-w-0 flex-1">
@@ -198,8 +198,7 @@ export function ClusterDrillDown({ data }: Props) {
                   <Gauge
                     value={node.gpuAllocated}
                     max={node.gpuCount}
-                    size={50}
-                    color={node.gpuAllocated === node.gpuCount ? '#ef4444' : node.gpuAllocated > 0 ? '#f59e0b' : '#22c55e'}
+                    size="sm"
                   />
                   <div className="text-sm text-muted-foreground whitespace-nowrap">
                     {node.gpuAllocated}/{node.gpuCount} GPUs

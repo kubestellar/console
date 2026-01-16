@@ -31,7 +31,7 @@ const searchableItems: SearchResult[] = [
 export function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { theme, toggleTheme, isDark } = useTheme()
+  const { theme, toggleTheme } = useTheme()
   const { usage, alertLevel, percentage, remaining } = useTokenUsage()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)

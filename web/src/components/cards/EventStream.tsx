@@ -1,8 +1,25 @@
-import { AlertTriangle, Info, XCircle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Info, XCircle, RefreshCw, ChevronRight } from 'lucide-react'
 import { useEvents } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 export function EventStream() {
   const { events, isLoading, error, refetch } = useEvents(undefined, undefined, 10)
+  const { drillToEvents, drillToPod, drillToDeployment } = useDrillDownActions()
+
+  const handleEventClick = (event: typeof events[0]) => {
+    // Parse object to get resource type and name
+    const [resourceType, resourceName] = event.object.split('/')
+    const cluster = event.cluster || 'default'
+
+    if (resourceType.toLowerCase() === 'pod') {
+      drillToPod(cluster, event.namespace, resourceName, { fromEvent: true })
+    } else if (resourceType.toLowerCase() === 'deployment' || resourceType.toLowerCase() === 'replicaset') {
+      drillToDeployment(cluster, event.namespace, resourceName, { fromEvent: true })
+    } else {
+      // Generic events view for other resources
+      drillToEvents(cluster, event.namespace, event.object)
+    }
+  }
 
   const getEventStyle = (type: string) => {
     if (type === 'Warning') {
@@ -52,7 +69,8 @@ export function EventStream() {
             return (
               <div
                 key={`${event.object}-${idx}`}
-                className="flex items-start gap-3 p-2 rounded-lg hover:bg-secondary/30 transition-colors"
+                className="flex items-start gap-3 p-2 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer group"
+                onClick={() => handleEventClick(event)}
               >
                 <div className={`p-1.5 rounded ${style.bg} flex-shrink-0`}>
                   <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
@@ -63,11 +81,14 @@ export function EventStream() {
                     {event.object} · {event.cluster || event.namespace}
                   </p>
                 </div>
-                {event.count > 1 && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                    x{event.count}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {event.count > 1 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                      x{event.count}
+                    </span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </div>
             )
           })

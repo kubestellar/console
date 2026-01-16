@@ -1,5 +1,24 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, GripVertical } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { api } from '../../lib/api'
 import { CardWrapper } from '../cards/CardWrapper'
 import { ClusterHealth } from '../cards/ClusterHealth'
@@ -60,6 +79,36 @@ export function Dashboard() {
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Need to drag 8px before starting
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (over && active.id !== over.id) {
+      setLocalCards((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
 
   useEffect(() => {
     loadDashboard()
@@ -139,14 +188,31 @@ export function Dashboard() {
     setSelectedCard(null)
   }, [])
 
-  const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>) => {
+  const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
     const newCard: Card = {
       id: `rec-${Date.now()}`,
       card_type: cardType,
       config: config || {},
       position: { x: 0, y: 0, w: 4, h: 3 },
+      title,
     }
-    setLocalCards((prev) => [...prev, newCard])
+    // Add card at the TOP of the dashboard
+    setLocalCards((prev) => [newCard, ...prev])
+  }, [])
+
+  // Create a new card from AI configuration
+  const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
+    const newCard: Card = {
+      id: `ai-${Date.now()}`,
+      card_type: cardType,
+      config: config || {},
+      position: { x: 0, y: 0, w: 4, h: 3 },
+      title,
+    }
+    // Add at TOP and close the configure modal
+    setLocalCards((prev) => [newCard, ...prev])
+    setIsConfigureCardOpen(false)
+    setSelectedCard(null)
   }, [])
 
   const currentCardTypes = localCards.map(c => c.card_type)
@@ -189,59 +255,37 @@ export function Dashboard() {
         onAddCard={handleAddRecommendedCard}
       />
 
-      {/* Card grid */}
-      <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-        {localCards.map((card) => {
-          const CardComponent = CARD_COMPONENTS[card.card_type]
-          if (!CardComponent) {
-            // Render a placeholder for unknown card types
-            return (
-              <div
+      {/* Card grid with drag and drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={localCards.map(c => c.id)} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+            {localCards.map((card) => (
+              <SortableCard
                 key={card.id}
-                style={{
-                  gridColumn: `span ${card.position.w}`,
-                  gridRow: `span ${card.position.h}`,
-                }}
-              >
-                <CardWrapper
-                  cardId={card.id}
-                  cardType={card.card_type}
-                  title={card.title}
-                  onConfigure={() => handleConfigureCard(card)}
-                  onReplace={() => handleReplaceCard(card)}
-                  onRemove={() => handleRemoveCard(card.id)}
-                >
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p>Card type: {card.card_type}</p>
-                  </div>
-                </CardWrapper>
-              </div>
-            )
-          }
-
-          return (
-            <div
-              key={card.id}
-              style={{
-                gridColumn: `span ${card.position.w}`,
-                gridRow: `span ${card.position.h}`,
-              }}
-            >
-              <CardWrapper
-                cardId={card.id}
-                cardType={card.card_type}
-                lastSummary={card.last_summary}
-                title={card.title}
+                card={card}
                 onConfigure={() => handleConfigureCard(card)}
                 onReplace={() => handleReplaceCard(card)}
                 onRemove={() => handleRemoveCard(card.id)}
-              >
-                <CardComponent config={card.config} />
-              </CardWrapper>
+                isDragging={activeId === card.id}
+              />
+            ))}
+          </div>
+        </SortableContext>
+
+        {/* Drag overlay for visual feedback */}
+        <DragOverlay>
+          {activeId ? (
+            <div className="opacity-80 rotate-3 scale-105">
+              <DragPreviewCard card={localCards.find(c => c.id === activeId)!} />
             </div>
-          )
-        })}
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Add Card Modal */}
       <AddCardModal
@@ -270,7 +314,92 @@ export function Dashboard() {
           setSelectedCard(null)
         }}
         onSave={handleCardConfigured}
+        onCreateCard={handleCreateCardFromAI}
       />
+    </div>
+  )
+}
+
+// Sortable card component with drag handle
+interface SortableCardProps {
+  card: Card
+  onConfigure: () => void
+  onReplace: () => void
+  onRemove: () => void
+  isDragging: boolean
+}
+
+function SortableCard({ card, onConfigure, onReplace, onRemove, isDragging }: SortableCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: card.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    gridColumn: `span ${card.position.w}`,
+    gridRow: `span ${card.position.h}`,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const CardComponent = CARD_COMPONENTS[card.card_type]
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <CardWrapper
+        cardId={card.id}
+        cardType={card.card_type}
+        lastSummary={card.last_summary}
+        title={card.title}
+        onConfigure={onConfigure}
+        onReplace={onReplace}
+        onRemove={onRemove}
+        dragHandle={
+          <button
+            {...attributes}
+            {...listeners}
+            className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
+            title="Drag to reorder"
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </button>
+        }
+      >
+        {CardComponent ? (
+          <CardComponent config={card.config} />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <p>Card type: {card.card_type}</p>
+          </div>
+        )}
+      </CardWrapper>
+    </div>
+  )
+}
+
+// Preview card shown during drag
+function DragPreviewCard({ card }: { card: Card }) {
+  const CardComponent = CARD_COMPONENTS[card.card_type]
+
+  return (
+    <div
+      className="rounded-lg glass border border-purple-500/50 p-4 shadow-xl"
+      style={{
+        width: `${card.position.w * 100}px`,
+        minWidth: '200px',
+        maxWidth: '400px',
+      }}
+    >
+      <div className="text-sm font-medium text-white mb-2">
+        {card.title || card.card_type.replace(/_/g, ' ')}
+      </div>
+      <div className="h-24 flex items-center justify-center text-muted-foreground">
+        {CardComponent ? 'Moving card...' : `Card type: ${card.card_type}`}
+      </div>
     </div>
   )
 }

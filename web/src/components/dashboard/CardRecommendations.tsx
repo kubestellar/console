@@ -1,4 +1,7 @@
+import { useState } from 'react'
+import { Clock } from 'lucide-react'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
+import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
 
 interface Props {
   currentCardTypes: string[]
@@ -7,8 +10,28 @@ interface Props {
 
 export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
   const { recommendations, hasRecommendations, highPriorityCount } = useCardRecommendations(currentCardTypes)
+  const { snoozeRecommendation, isSnoozed } = useSnoozedRecommendations()
+  const [expandedRec, setExpandedRec] = useState<string | null>(null)
+  const [addingCard, setAddingCard] = useState<string | null>(null)
 
-  if (!hasRecommendations) return null
+  const handleAddCard = async (rec: CardRecommendation) => {
+    setAddingCard(rec.id)
+    // Simulate a brief delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 300))
+    onAddCard(rec.cardType, rec.config)
+    setAddingCard(null)
+    setExpandedRec(null)
+  }
+
+  const handleSnooze = (rec: CardRecommendation) => {
+    snoozeRecommendation(rec)
+    setExpandedRec(null)
+  }
+
+  // Filter out snoozed recommendations
+  const visibleRecommendations = recommendations.filter(rec => !isSnoozed(rec.id))
+
+  if (!hasRecommendations || visibleRecommendations.length === 0) return null
 
   const priorityColor = (priority: string) => {
     switch (priority) {
@@ -56,18 +79,79 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        {recommendations.map((rec) => (
+        {visibleRecommendations.map((rec) => (
           <div
             key={rec.id}
-            className={`p-3 rounded-lg border ${priorityColor(rec.priority)} cursor-pointer hover:scale-105 transition-transform`}
-            onClick={() => onAddCard(rec.cardType, rec.config)}
+            className={`rounded-lg border ${priorityColor(rec.priority)} transition-all ${
+              expandedRec === rec.id ? 'w-full md:w-96' : 'w-auto'
+            }`}
           >
-            <div className="flex items-center gap-2 mb-1">
-              {priorityIcon(rec.priority)}
-              <span className="font-medium text-sm">{rec.title}</span>
+            {/* Collapsed view */}
+            <div
+              className={`p-3 cursor-pointer ${expandedRec === rec.id ? '' : 'hover:scale-105'} transition-transform`}
+              onClick={() => setExpandedRec(expandedRec === rec.id ? null : rec.id)}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                {priorityIcon(rec.priority)}
+                <span className="font-medium text-sm">{rec.title}</span>
+                {addingCard === rec.id && (
+                  <div className="ml-auto spinner w-4 h-4" />
+                )}
+              </div>
+              <p className="text-xs opacity-80">{rec.reason}</p>
+              {expandedRec !== rec.id && (
+                <div className="mt-2 text-xs opacity-60">Click to expand</div>
+              )}
             </div>
-            <p className="text-xs opacity-80">{rec.reason}</p>
-            <div className="mt-2 text-xs opacity-60">Click to add card</div>
+
+            {/* Expanded view with actions */}
+            {expandedRec === rec.id && (
+              <div className="px-3 pb-3 border-t border-current/20 mt-2 pt-3">
+                <div className="text-xs opacity-80 mb-3">
+                  <strong>What this will do:</strong>
+                  <ul className="mt-1 ml-4 list-disc space-y-1">
+                    <li>Add a new "{rec.title}" card to your dashboard</li>
+                    <li>Show real-time data from your clusters</li>
+                    {rec.priority === 'high' && <li>Help you address critical issues faster</li>}
+                  </ul>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAddCard(rec)}
+                    disabled={addingCard === rec.id}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      rec.priority === 'high'
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : rec.priority === 'medium'
+                        ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {addingCard === rec.id ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="spinner w-4 h-4" /> Adding...
+                      </span>
+                    ) : (
+                      'Add to Dashboard'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleSnooze(rec)}
+                    className="px-3 py-2 rounded-lg text-sm font-medium bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                    title="Snooze this recommendation"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Snooze
+                  </button>
+                  <button
+                    onClick={() => setExpandedRec(null)}
+                    className="px-3 py-2 rounded-lg text-sm font-medium bg-card/30 hover:bg-card/50 transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

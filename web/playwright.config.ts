@@ -1,0 +1,127 @@
+import { defineConfig, devices } from '@playwright/test'
+
+/**
+ * Playwright configuration for KubeStellar Klaude Console (kkc)
+ *
+ * Comprehensive E2E testing with focus on:
+ * - AI interactivity features
+ * - Card/dashboard management
+ * - Sharing and export functionality
+ * - Multi-cluster operations
+ */
+export default defineConfig({
+  testDir: './e2e',
+
+  // Run tests in parallel
+  fullyParallel: true,
+
+  // Fail the build on CI if test.only is left in
+  forbidOnly: !!process.env.CI,
+
+  // Retry failed tests (more in CI)
+  retries: process.env.CI ? 2 : 0,
+
+  // Workers - limit in CI for stability
+  workers: process.env.CI ? 2 : '50%',
+
+  // Reporter configuration
+  reporter: process.env.CI
+    ? [
+        ['html', { outputFolder: 'playwright-report' }],
+        ['json', { outputFile: 'test-results/results.json' }],
+        ['junit', { outputFile: 'test-results/junit.xml' }],
+        ['github'],
+      ]
+    : [['html', { open: 'never' }]],
+
+  // Global timeout per test
+  timeout: 60000,
+
+  // Expect timeout
+  expect: {
+    timeout: 10000,
+  },
+
+  // Shared settings for all projects
+  use: {
+    // Base URL for all tests
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
+
+    // Collect trace on first retry
+    trace: 'on-first-retry',
+
+    // Screenshot on failure
+    screenshot: 'only-on-failure',
+
+    // Video on failure
+    video: 'retain-on-failure',
+
+    // Default viewport
+    viewport: { width: 1280, height: 720 },
+  },
+
+  // Projects for different browsers
+  projects: [
+    // Setup project for auth
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Chromium tests
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+      dependencies: ['setup'],
+    },
+
+    // Firefox tests
+    {
+      name: 'firefox',
+      use: {
+        ...devices['Desktop Firefox'],
+      },
+      dependencies: ['setup'],
+    },
+
+    // Webkit tests
+    {
+      name: 'webkit',
+      use: {
+        ...devices['Desktop Safari'],
+      },
+      dependencies: ['setup'],
+    },
+
+    // Mobile Chrome
+    {
+      name: 'mobile-chrome',
+      use: {
+        ...devices['Pixel 5'],
+      },
+      dependencies: ['setup'],
+    },
+
+    // Mobile Safari
+    {
+      name: 'mobile-safari',
+      use: {
+        ...devices['iPhone 12'],
+      },
+      dependencies: ['setup'],
+    },
+  ],
+
+  // Web server config - starts dev server before tests
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
+
+  // Output directory
+  outputDir: 'test-results',
+})

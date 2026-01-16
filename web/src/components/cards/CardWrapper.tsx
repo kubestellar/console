@@ -18,6 +18,7 @@ interface CardWrapperProps {
   lastSummary?: string
   pendingSwap?: PendingSwap
   chatMessages?: ChatMessage[]
+  dragHandle?: ReactNode
   onSwap?: (newType: string) => void
   onSwapCancel?: () => void
   onConfigure?: () => void
@@ -54,6 +55,7 @@ export function CardWrapper({
   lastSummary,
   pendingSwap,
   chatMessages: externalMessages,
+  dragHandle,
   onSwap,
   onSwapCancel,
   onConfigure,
@@ -193,7 +195,10 @@ export function CardWrapper({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <h3 className="text-sm font-medium text-white">{title}</h3>
+          <div className="flex items-center gap-2">
+            {dragHandle}
+            <h3 className="text-sm font-medium text-white">{title}</h3>
+          </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsExpanded(true)}

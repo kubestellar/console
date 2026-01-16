@@ -9,7 +9,7 @@ interface AppSummary {
   deploymentCount: number
   podIssues: number
   deploymentIssues: number
-  status: 'healthy' | 'warning' | 'critical'
+  status: 'healthy' | 'warning' | 'error'
 }
 
 export function Applications() {
@@ -37,7 +37,7 @@ export function Applications() {
       }
       const app = appMap.get(key)!
       app.podIssues++
-      app.status = app.podIssues > 3 ? 'critical' : 'warning'
+      app.status = app.podIssues > 3 ? 'error' : 'warning'
     })
 
     // Group deployment issues by namespace
@@ -56,7 +56,7 @@ export function Applications() {
       const app = appMap.get(key)!
       app.deploymentCount++
       app.deploymentIssues++
-      if (app.status !== 'critical') {
+      if (app.status !== 'error') {
         app.status = 'warning'
       }
     })
@@ -75,7 +75,7 @@ export function Applications() {
     total: apps.length,
     healthy: apps.filter(a => a.status === 'healthy').length,
     warning: apps.filter(a => a.status === 'warning').length,
-    critical: apps.filter(a => a.status === 'critical').length,
+    critical: apps.filter(a => a.status === 'error').length,
     totalPodIssues: podIssues.length,
     totalDeploymentIssues: deploymentIssues.length,
   }), [apps, podIssues, deploymentIssues])
@@ -121,7 +121,7 @@ export function Applications() {
               key={i}
               onClick={() => drillToNamespace(app.cluster, app.namespace)}
               className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${
-                app.status === 'critical' ? 'border-l-red-500' :
+                app.status === 'error' ? 'border-l-red-500' :
                 app.status === 'warning' ? 'border-l-yellow-500' :
                 'border-l-green-500'
               }`}
@@ -167,7 +167,7 @@ export function Applications() {
           {clusters.map((cluster) => (
             <div key={cluster.name} className="glass p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <StatusIndicator status={cluster.healthy ? 'healthy' : 'critical'} size="sm" />
+                <StatusIndicator status={cluster.healthy ? 'healthy' : 'error'} size="sm" />
                 <span className="font-medium text-foreground text-sm truncate">
                   {cluster.context || cluster.name.split('/').pop()}
                 </span>

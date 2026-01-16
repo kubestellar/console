@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useEvents, useWarningEvents } from '../../../hooks/useMCP'
+import { useEvents } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 
 interface Props {

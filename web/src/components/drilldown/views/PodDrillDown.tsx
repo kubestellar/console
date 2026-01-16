@@ -9,7 +9,7 @@ export function PodDrillDown({ data }: Props) {
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const podName = data.pod as string
-  const { drillToLogs, drillToEvents } = useDrillDownActions()
+  const { drillToLogs, drillToEvents, drillToYAML } = useDrillDownActions()
 
   // Pod data from the issue
   const status = data.status as string
@@ -18,7 +18,7 @@ export function PodDrillDown({ data }: Props) {
   const issues = (data.issues as string[]) || []
 
   const statusColor = status === 'Running' ? 'healthy' :
-    status === 'Pending' ? 'warning' : 'critical'
+    status === 'Pending' ? 'warning' : 'error'
 
   return (
     <div className="space-y-6">
@@ -116,15 +116,18 @@ export function PodDrillDown({ data }: Props) {
             <p className="text-xs text-muted-foreground">Coming soon</p>
           </div>
 
-          <div className="p-4 rounded-lg bg-card/30 border border-border/50">
+          <button
+            onClick={() => drillToYAML(cluster, namespace, 'pod', podName)}
+            className="p-4 rounded-lg bg-card/50 border border-border hover:bg-card hover:border-primary/50 transition-colors text-left"
+          >
             <div className="flex items-center gap-2 mb-2">
-              <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
-              <span className="font-medium text-muted-foreground">YAML</span>
+              <span className="font-medium text-foreground">YAML</span>
             </div>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
-          </div>
+            <p className="text-xs text-muted-foreground">View resource definition</p>
+          </button>
         </div>
       </div>
 
