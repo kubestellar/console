@@ -82,6 +82,11 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+
       - name: Run Playwright tests
         run: |
           npx playwright test \
@@ -187,6 +192,11 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium webkit
 
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+
       - name: Run mobile tests
         run: |
           npx playwright test \
@@ -234,6 +244,11 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+
       - name: Run accessibility tests
         run: |
           npx playwright test \
@@ -274,6 +289,11 @@ jobs:
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
 
       - name: Run visual tests
         run: |

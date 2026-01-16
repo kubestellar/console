@@ -85,7 +85,7 @@ export function Dashboard() {
   const [localCards, setLocalCards] = useState<Card[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
+  const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
 
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard } = useDashboards()
@@ -179,7 +179,7 @@ export function Dashboard() {
   const loadDashboard = async () => {
     try {
       const { data: dashboards } = await api.get<DashboardData[]>('/api/dashboards')
-      if (dashboards.length > 0) {
+      if (dashboards && dashboards.length > 0) {
         const defaultDashboard = dashboards.find((d) => d.is_default) || dashboards[0]
         const { data } = await api.get<DashboardData>(`/api/dashboards/${defaultDashboard.id}`)
         setDashboard(data)

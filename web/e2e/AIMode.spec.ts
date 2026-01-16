@@ -2,21 +2,51 @@ import { test, expect } from '@playwright/test'
 
 test.describe('AI Mode Settings', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock authentication
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          id: '1',
+          github_id: '12345',
+          github_login: 'testuser',
+          email: 'test@example.com',
+          onboarded: true,
+        },
+      })
+    )
+
+    // Mock MCP endpoints
+    await page.route('**/api/mcp/**', (route) =>
+      route.fulfill({
+        status: 200,
+        json: { clusters: [], issues: [], events: [], nodes: [] },
+      })
+    )
+
+    // Set auth token
+    await page.goto('/login')
+    await page.evaluate(() => {
+      localStorage.setItem('token', 'test-token')
+    })
+
     await page.goto('/settings')
     await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(500)
   })
 
   test.describe('AI Mode Slider', () => {
     test('displays AI mode settings section', async ({ page }) => {
-      // Look for AI mode section
-      const aiSection = page.locator('text=/ai.*mode|intelligence.*level/i').first()
+      // Look for AI Usage Mode section header
+      const aiSection = page.locator('text=AI Usage Mode').first()
       await expect(aiSection).toBeVisible({ timeout: 5000 })
     })
 
     test('shows current AI mode selection', async ({ page }) => {
-      // Should show one of: low, medium, high
-      const modeIndicator = page.locator('text=/low|medium|high/i').first()
-      await expect(modeIndicator).toBeVisible()
+      // Should show mode buttons (low, medium, high)
+      const modeButtons = page.locator('button:has-text("low"), button:has-text("medium"), button:has-text("high")')
+      const buttonCount = await modeButtons.count()
+      expect(buttonCount).toBeGreaterThan(0)
     })
 
     test('can change AI mode to low', async ({ page }) => {
@@ -80,7 +110,8 @@ test.describe('AI Mode Settings', () => {
   test.describe('Mode Descriptions', () => {
     test('shows description for each mode', async ({ page }) => {
       // Should show descriptions explaining each mode
-      const descriptions = page.locator('text=/token|proactive|kubectl|analysis/i')
+      // Actual text: "Direct kubectl, minimal tokens", "AI for analysis, kubectl for data", "Full AI assistance"
+      const descriptions = page.locator('text=/Direct kubectl|AI for analysis|Full AI assistance/i')
       const descCount = await descriptions.count()
       expect(descCount).toBeGreaterThan(0)
     })

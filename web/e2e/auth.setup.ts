@@ -5,45 +5,48 @@ const authFile = 'playwright/.auth/user.json'
 /**
  * Setup test that handles authentication
  * Runs once before all tests and saves auth state
+ *
+ * Uses mocking to bypass real OAuth flow
  */
 setup('authenticate', async ({ page }) => {
-  // Navigate to login page
-  await page.goto('/login')
+  // Mock the /api/me endpoint to return authenticated user
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      },
+    })
+  )
 
-  // Wait for page to load
+  // Mock MCP endpoints
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      json: { clusters: [], issues: [], events: [], nodes: [] },
+    })
+  )
+
+  // Navigate to login page first to set up localStorage
+  await page.goto('/login')
   await page.waitForLoadState('domcontentloaded')
 
-  // In dev mode, click the dev login button (bypasses GitHub OAuth)
-  const devLoginButton = page.getByRole('button', { name: /dev.*login|continue.*demo/i })
-  const hasDevLogin = await devLoginButton.isVisible().catch(() => false)
+  // Set token in localStorage (simulates authenticated state)
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token')
+  })
 
-  if (hasDevLogin) {
-    await devLoginButton.click()
-  } else {
-    // Fall back to regular login if available
-    const loginButton = page.getByRole('button', { name: /sign in|login|continue/i }).first()
-    await loginButton.click()
-  }
+  // Navigate to dashboard - should not redirect to login now
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
 
-  // Wait for authentication to complete
-  await page.waitForURL(/\/$|\/onboarding/, { timeout: 15000 })
-
-  // Handle onboarding if needed
-  const currentUrl = page.url()
-  if (currentUrl.includes('/onboarding')) {
-    // Complete onboarding steps
-    const skipButton = page.getByRole('button', { name: /skip|continue|finish/i }).first()
-    const hasSkip = await skipButton.isVisible().catch(() => false)
-
-    if (hasSkip) {
-      await skipButton.click()
-      await page.waitForURL('/', { timeout: 10000 })
-    }
-  }
-
-  // Verify we're authenticated and on the dashboard
+  // Verify we're on the dashboard
   await expect(page).toHaveURL('/')
 
-  // Save authentication state
+  // Save authentication state (localStorage + cookies)
   await page.context().storageState({ path: authFile })
 })

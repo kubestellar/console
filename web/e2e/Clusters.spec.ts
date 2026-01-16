@@ -2,8 +2,51 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Clusters Page', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock authentication
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          id: '1',
+          github_id: '12345',
+          github_login: 'testuser',
+          email: 'test@example.com',
+          onboarded: true,
+        },
+      })
+    )
+
+    // Mock MCP endpoints - handle different endpoints in one handler
+    await page.route('**/api/mcp/**', (route) => {
+      const url = route.request().url()
+      if (url.includes('/clusters')) {
+        route.fulfill({
+          status: 200,
+          json: {
+            clusters: [
+              { name: 'prod-east', healthy: true, nodeCount: 5, version: '1.28.0', server: 'https://prod-east.k8s.example.com' },
+              { name: 'prod-west', healthy: true, nodeCount: 3, version: '1.27.0', server: 'https://prod-west.k8s.example.com' },
+              { name: 'staging', healthy: false, nodeCount: 2, version: '1.28.0', server: 'https://staging.k8s.example.com' },
+            ],
+          },
+        })
+      } else {
+        route.fulfill({
+          status: 200,
+          json: { issues: [], events: [], nodes: [] },
+        })
+      }
+    })
+
+    // Set auth token
+    await page.goto('/login')
+    await page.evaluate(() => {
+      localStorage.setItem('token', 'test-token')
+    })
+
     await page.goto('/clusters')
     await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(500)
   })
 
   test.describe('Cluster List', () => {
@@ -11,12 +54,19 @@ test.describe('Clusters Page', () => {
       // Wait for clusters to load
       await page.waitForTimeout(1500)
 
-      // Should show cluster items
-      const clusters = page.locator(
-        '[data-testid*="cluster"], [class*="cluster"], tr, [role="row"]'
-      )
-      const clusterCount = await clusters.count()
-      expect(clusterCount).toBeGreaterThan(0)
+      // The Clusters component renders cards with .glass.cursor-pointer class
+      // Or look for specific cluster names from our mock data
+      const clusterCards = page.locator('.grid .glass.cursor-pointer')
+      const clusterCount = await clusterCards.count()
+
+      // Alternatively check for cluster names
+      if (clusterCount === 0) {
+        const prodEast = page.locator('text=prod-east')
+        const hasProdEast = await prodEast.isVisible().catch(() => false)
+        expect(hasProdEast).toBeTruthy()
+      } else {
+        expect(clusterCount).toBeGreaterThan(0)
+      }
     })
 
     test('shows cluster health status', async ({ page }) => {

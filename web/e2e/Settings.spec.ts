@@ -2,8 +2,37 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock authentication
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          id: '1',
+          github_id: '12345',
+          github_login: 'testuser',
+          email: 'test@example.com',
+          onboarded: true,
+        },
+      })
+    )
+
+    // Mock MCP endpoints
+    await page.route('**/api/mcp/**', (route) =>
+      route.fulfill({
+        status: 200,
+        json: { clusters: [], issues: [], events: [], nodes: [] },
+      })
+    )
+
+    // Set auth token
+    await page.goto('/login')
+    await page.evaluate(() => {
+      localStorage.setItem('token', 'test-token')
+    })
+
     await page.goto('/settings')
     await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(500)
   })
 
   test.describe('Page Layout', () => {
