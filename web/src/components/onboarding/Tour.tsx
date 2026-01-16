@@ -145,7 +145,9 @@ export function TourOverlay() {
         ref={tooltipRef}
         className={cn(
           'absolute z-10 w-80 p-4 rounded-lg glass border border-purple-500/30 shadow-xl animate-fade-in-up',
-          '-translate-x-1/2',
+          // Center horizontally only for top/bottom placements (which use left positioning)
+          (currentStep.placement === 'top' || currentStep.placement === 'bottom' || !currentStep.placement) && '-translate-x-1/2',
+          // Center vertically for left/right placements (which use top positioning)
           (currentStep.placement === 'left' || currentStep.placement === 'right') && '-translate-y-1/2'
         )}
         style={{
