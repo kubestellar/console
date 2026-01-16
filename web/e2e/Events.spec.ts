@@ -261,10 +261,11 @@ test.describe('Events Page', () => {
         await warningsToggle.click()
         await page.waitForTimeout(500)
 
-        // Should only show warning events
-        const normalEvents = page.locator('[data-type="Normal"], text=/^Normal$/i')
+        // Should only show warning events - check that "Normal" type events are filtered
+        const normalEvents = page.locator('[data-type="Normal"]')
         const normalCount = await normalEvents.count()
-        // Should be filtered out
+        // Should be filtered out or reduced
+        expect(normalCount).toBeLessThanOrEqual(0)
       }
     })
   })
