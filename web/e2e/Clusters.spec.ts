@@ -16,26 +16,27 @@ test.describe('Clusters Page', () => {
       })
     )
 
-    // Mock MCP endpoints with cluster data
-    await page.route('**/api/mcp/clusters', (route) =>
-      route.fulfill({
-        status: 200,
-        json: {
-          clusters: [
-            { name: 'prod-east', healthy: true, nodeCount: 5, version: '1.28.0' },
-            { name: 'prod-west', healthy: true, nodeCount: 3, version: '1.27.0' },
-            { name: 'staging', healthy: false, nodeCount: 2, version: '1.28.0' },
-          ],
-        },
-      })
-    )
-
-    await page.route('**/api/mcp/**', (route) =>
-      route.fulfill({
-        status: 200,
-        json: { issues: [], events: [], nodes: [] },
-      })
-    )
+    // Mock MCP endpoints - consolidated handler to avoid route conflicts
+    await page.route('**/api/mcp/**', (route) => {
+      const url = route.request().url()
+      if (url.includes('/clusters')) {
+        route.fulfill({
+          status: 200,
+          json: {
+            clusters: [
+              { name: 'prod-east', healthy: true, nodeCount: 5, version: '1.28.0', server: 'https://prod-east.k8s.example.com' },
+              { name: 'prod-west', healthy: true, nodeCount: 3, version: '1.27.0', server: 'https://prod-west.k8s.example.com' },
+              { name: 'staging', healthy: false, nodeCount: 2, version: '1.28.0', server: 'https://staging.k8s.example.com' },
+            ],
+          },
+        })
+      } else {
+        route.fulfill({
+          status: 200,
+          json: { issues: [], events: [], nodes: [] },
+        })
+      }
+    })
 
     // Set auth token
     await page.goto('/login')
