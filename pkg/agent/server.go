@@ -58,11 +58,12 @@ func (s *Server) Start() error {
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
-	// CORS preflight
+	// CORS preflight - includes Private Network Access header for browser security
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -80,8 +81,17 @@ func (s *Server) Start() error {
 
 // handleHealth handles HTTP health checks
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	// CORS headers including Private Network Access for browser security
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight
+	if r.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 	clusters, _ := s.kubectl.ListContexts()
 	hasClaude := s.checkClaudeAvailable()
