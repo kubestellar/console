@@ -2,9 +2,51 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Events Page', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock authentication
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          id: '1',
+          github_id: '12345',
+          github_login: 'testuser',
+          email: 'test@example.com',
+          onboarded: true,
+        },
+      })
+    )
+
+    // Mock MCP endpoints with sample event data
+    await page.route('**/api/mcp/**', (route) => {
+      const url = route.request().url()
+      if (url.includes('/events')) {
+        route.fulfill({
+          status: 200,
+          json: {
+            events: [
+              { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', namespace: 'default', involvedObject: 'pod-1', cluster: 'prod-east', age: '5m' },
+              { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node', namespace: 'default', involvedObject: 'pod-2', cluster: 'prod-west', age: '10m' },
+              { type: 'Warning', reason: 'FailedScheduling', message: 'Insufficient memory', namespace: 'kube-system', involvedObject: 'pod-3', cluster: 'staging', age: '1h' },
+            ],
+          },
+        })
+      } else {
+        route.fulfill({
+          status: 200,
+          json: { clusters: [], issues: [], nodes: [] },
+        })
+      }
+    })
+
+    // Set auth token
+    await page.goto('/login')
+    await page.evaluate(() => {
+      localStorage.setItem('token', 'test-token')
+    })
+
     await page.goto('/events')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(500)
   })
 
   test.describe('Event List', () => {
