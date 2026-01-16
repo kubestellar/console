@@ -135,6 +135,19 @@ export function useClusters() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Silent fetch - updates data without showing loading state (for WebSocket updates)
+  const silentFetch = useCallback(async () => {
+    try {
+      const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
+      setClusters(data.clusters || [])
+      setError(null)
+    } catch (err) {
+      // On silent fetch, don't replace with demo data - keep existing
+      console.error('Silent fetch failed:', err)
+    }
+  }, [])
+
+  // Full refetch - shows loading state (for initial load or manual refresh)
   const refetch = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -170,8 +183,9 @@ export function useClusters() {
         try {
           const message = JSON.parse(event.data)
           if (message.type === 'kubeconfig_changed') {
-            console.log('Kubeconfig changed, refetching clusters...')
-            refetch()
+            console.log('Kubeconfig changed, updating clusters...')
+            // Use silent fetch to update without loading flash
+            silentFetch()
           }
         } catch (e) {
           // Ignore non-JSON messages
@@ -195,7 +209,7 @@ export function useClusters() {
       clearTimeout(reconnectTimeout)
       ws?.close()
     }
-  }, [refetch])
+  }, [refetch, silentFetch])
 
   return { clusters, isLoading, error, refetch }
 }
