@@ -12,6 +12,7 @@ export interface TokenUsage {
 export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
 
 const SETTINGS_KEY = 'kubestellar-token-settings'
+const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 2000 // Poll every 2 seconds for real-time updates
 
@@ -81,6 +82,24 @@ export function useTokenUsage() {
     }
   }, [fetchTokenUsage])
 
+  // Listen for settings changes from other components
+  useEffect(() => {
+    const handleSettingsChange = () => {
+      const settings = localStorage.getItem(SETTINGS_KEY)
+      if (settings) {
+        const parsedSettings = JSON.parse(settings)
+        setUsage(prev => ({ ...prev, ...parsedSettings }))
+      }
+    }
+    window.addEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChange)
+    const handleStorage = (e: StorageEvent) => { if (e.key === SETTINGS_KEY) handleSettingsChange() }
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChange)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
   // Calculate alert level
   const getAlertLevel = useCallback((): TokenAlertLevel => {
     const percentage = usage.used / usage.limit
@@ -114,6 +133,7 @@ export function useTokenUsage() {
           stopThreshold: settings.stopThreshold ?? usage.stopThreshold,
         })
       )
+      window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
     },
     [usage]
   )
