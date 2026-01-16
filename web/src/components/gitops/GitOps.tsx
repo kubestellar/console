@@ -1,35 +1,51 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
-import { RefreshCw, GitBranch, FolderGit, Box } from 'lucide-react'
+import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
+import { api } from '../../lib/api'
 
-// Mock GitOps data - in production would come from ArgoCD/Flux APIs
-interface GitOpsApp {
+// GitOps app configuration (repos to monitor)
+interface GitOpsAppConfig {
   name: string
   namespace: string
   cluster: string
   repoUrl: string
   path: string
-  syncStatus: 'synced' | 'out-of-sync' | 'unknown'
+}
+
+// GitOps app with detected status
+interface GitOpsApp extends GitOpsAppConfig {
+  syncStatus: 'synced' | 'out-of-sync' | 'unknown' | 'checking'
   healthStatus: 'healthy' | 'degraded' | 'progressing' | 'missing'
   lastSyncTime?: string
   driftDetails?: string[]
 }
 
-function getMockGitOpsData(): GitOpsApp[] {
+// Drift detection result from API
+interface DriftResult {
+  drifted: boolean
+  resources: Array<{
+    kind: string
+    name: string
+    namespace: string
+    field: string
+    gitValue: string
+    clusterValue: string
+  }>
+  error?: string
+}
+
+// Apps to monitor - these could come from a config file or API
+function getGitOpsAppConfigs(): GitOpsAppConfig[] {
   return [
     {
       name: 'gatekeeper',
       namespace: 'gatekeeper-system',
-      cluster: '',  // Uses current context
+      cluster: '',
       repoUrl: 'https://github.com/open-policy-agent/gatekeeper',
       path: 'deploy/',
-      syncStatus: 'out-of-sync',
-      healthStatus: 'progressing',
-      lastSyncTime: new Date(Date.now() - 5 * 60000).toISOString(),
-      driftDetails: ['Webhook configuration may differ', 'Constraint templates updated'],
     },
     {
       name: 'kuberay-operator',
@@ -37,10 +53,6 @@ function getMockGitOpsData(): GitOpsApp[] {
       cluster: '',
       repoUrl: 'https://github.com/ray-project/kuberay',
       path: 'ray-operator/config/default/',
-      syncStatus: 'out-of-sync',
-      healthStatus: 'degraded',
-      lastSyncTime: new Date(Date.now() - 2 * 3600000).toISOString(),
-      driftDetails: ['Ray cluster CRD version changed', 'Operator deployment modified'],
     },
     {
       name: 'kserve',
@@ -48,9 +60,6 @@ function getMockGitOpsData(): GitOpsApp[] {
       cluster: '',
       repoUrl: 'https://github.com/kserve/kserve',
       path: 'config/default/',
-      syncStatus: 'synced',
-      healthStatus: 'healthy',
-      lastSyncTime: new Date(Date.now() - 30 * 60000).toISOString(),
     },
     {
       name: 'gpu-operator',
@@ -58,10 +67,6 @@ function getMockGitOpsData(): GitOpsApp[] {
       cluster: '',
       repoUrl: 'https://github.com/NVIDIA/gpu-operator',
       path: 'deployments/gpu-operator/',
-      syncStatus: 'out-of-sync',
-      healthStatus: 'degraded',
-      lastSyncTime: new Date(Date.now() - 1 * 3600000).toISOString(),
-      driftDetails: ['Driver version mismatch'],
     },
   ]
 }
@@ -86,27 +91,124 @@ export function GitOps() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [syncedApps, setSyncedApps] = useState<Set<string>>(new Set())
   const [syncDialogApp, setSyncDialogApp] = useState<GitOpsApp | null>(null)
+  const [driftResults, setDriftResults] = useState<Map<string, DriftResult>>(new Map())
+  const [isDetecting, setIsDetecting] = useState(true)
+
+  // Detect drift for all apps on mount
+  useEffect(() => {
+    async function detectAllDrift() {
+      setIsDetecting(true)
+      const results = new Map<string, DriftResult>()
+      const configs = getGitOpsAppConfigs()
+
+      for (const appConfig of configs) {
+        try {
+          const response = await api.post<{
+            drifted: boolean
+            resources: DriftResult['resources']
+            rawDiff?: string
+          }>('/api/gitops/detect-drift', {
+            repoUrl: appConfig.repoUrl,
+            path: appConfig.path,
+            namespace: appConfig.namespace,
+            cluster: appConfig.cluster || undefined,
+          })
+
+          results.set(appConfig.name, {
+            drifted: response.data.drifted,
+            resources: response.data.resources || [],
+          })
+        } catch (err) {
+          // On error, mark as unknown (not drifted)
+          console.error(`Failed to detect drift for ${appConfig.name}:`, err)
+          results.set(appConfig.name, {
+            drifted: false,
+            resources: [],
+            error: 'Failed to detect drift',
+          })
+        }
+      }
+
+      setDriftResults(results)
+      setIsDetecting(false)
+    }
+
+    detectAllDrift()
+  }, [])
 
   // Handle sync action - open the sync dialog
   const handleSync = useCallback((app: GitOpsApp) => {
     setSyncDialogApp(app)
   }, [])
 
-  // Handle sync complete - mark app as synced
+  // Handle sync complete - mark app as synced and refresh drift status
   const handleSyncComplete = useCallback(() => {
     if (syncDialogApp) {
       setSyncedApps(prev => new Set(prev).add(syncDialogApp.name))
+      // Also update drift results to show synced
+      setDriftResults(prev => {
+        const updated = new Map(prev)
+        updated.set(syncDialogApp.name, { drifted: false, resources: [] })
+        return updated
+      })
       showToast(`${syncDialogApp.name} synced successfully!`, 'success')
     }
   }, [syncDialogApp, showToast])
 
-  // In production, fetch from ArgoCD/Flux API
-  // Always initialize with mock data to ensure something is displayed
+  // Build apps list with real drift status
   const apps = useMemo(() => {
-    const mockData = getMockGitOpsData()
-    console.log('GitOps apps:', mockData.length) // Debug log
-    return mockData
-  }, [])
+    const configs = getGitOpsAppConfigs()
+    return configs.map((config): GitOpsApp => {
+      // If manually synced, show as synced
+      if (syncedApps.has(config.name)) {
+        return {
+          ...config,
+          syncStatus: 'synced',
+          healthStatus: 'healthy',
+          lastSyncTime: new Date().toISOString(),
+          driftDetails: undefined,
+        }
+      }
+
+      // If still detecting, show checking state
+      if (isDetecting) {
+        return {
+          ...config,
+          syncStatus: 'checking',
+          healthStatus: 'progressing',
+          lastSyncTime: undefined,
+          driftDetails: undefined,
+        }
+      }
+
+      // Use real drift detection results
+      const drift = driftResults.get(config.name)
+      if (drift) {
+        const driftDetails = drift.resources.length > 0
+          ? drift.resources.map(r => `${r.kind}/${r.name}: ${r.field || 'modified'}`)
+          : drift.error
+            ? [drift.error]
+            : undefined
+
+        return {
+          ...config,
+          syncStatus: drift.drifted ? 'out-of-sync' : 'synced',
+          healthStatus: drift.drifted ? 'progressing' : 'healthy',
+          lastSyncTime: new Date().toISOString(),
+          driftDetails,
+        }
+      }
+
+      // Default to unknown if no results
+      return {
+        ...config,
+        syncStatus: 'unknown',
+        healthStatus: 'missing',
+        lastSyncTime: undefined,
+        driftDetails: undefined,
+      }
+    })
+  }, [driftResults, isDetecting, syncedApps])
 
   const filteredApps = useMemo(() => {
     console.log('Filtering with:', { selectedCluster, statusFilter, appsCount: apps.length })
@@ -139,13 +241,24 @@ export function GitOps() {
     synced: apps.filter(a => a.syncStatus === 'synced').length,
     drifted: apps.filter(a => a.syncStatus === 'out-of-sync').length,
     healthy: apps.filter(a => a.healthStatus === 'healthy').length,
+    checking: apps.filter(a => a.syncStatus === 'checking').length,
   }), [apps])
 
   const syncStatusColor = (status: string) => {
     switch (status) {
       case 'synced': return 'text-green-400 bg-green-500/20'
       case 'out-of-sync': return 'text-yellow-400 bg-yellow-500/20'
+      case 'checking': return 'text-blue-400 bg-blue-500/20'
       default: return 'text-muted-foreground bg-card'
+    }
+  }
+
+  const syncStatusLabel = (status: string) => {
+    switch (status) {
+      case 'synced': return 'Synced'
+      case 'out-of-sync': return 'Out of Sync'
+      case 'checking': return 'Checking...'
+      default: return 'Unknown'
     }
   }
 
@@ -246,7 +359,10 @@ export function GitOps() {
             <div
               key={i}
               className={`glass p-4 rounded-lg border-l-4 ${
-                app.syncStatus === 'synced' ? 'border-l-green-500' : 'border-l-yellow-500'
+                app.syncStatus === 'synced' ? 'border-l-green-500' :
+                app.syncStatus === 'checking' ? 'border-l-blue-500' :
+                app.syncStatus === 'out-of-sync' ? 'border-l-yellow-500' :
+                'border-l-gray-500'
               }`}
             >
               <div className="flex items-start justify-between">
@@ -255,8 +371,9 @@ export function GitOps() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-foreground">{app.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${syncStatusColor(app.syncStatus)}`}>
-                        {app.syncStatus === 'synced' ? 'Synced' : 'Out of Sync'}
+                      <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${syncStatusColor(app.syncStatus)}`}>
+                        {app.syncStatus === 'checking' && <Loader2 className="w-3 h-3 animate-spin" />}
+                        {syncStatusLabel(app.syncStatus)}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
@@ -317,8 +434,8 @@ export function GitOps() {
       <div className="mt-8 p-4 rounded-lg bg-card/30 border border-border">
         <h3 className="text-lg font-semibold text-foreground mb-3">GitOps Integration</h3>
         <p className="text-sm text-muted-foreground mb-3">
-          GitOps integration detects drift between your Git repository and live cluster state.
-          Currently showing mock data - connect ArgoCD or Flux for real sync status.
+          GitOps integration detects drift between your Git repository and live cluster state
+          using kubectl diff. Connect ArgoCD or Flux for enhanced sync capabilities.
         </p>
         <div className="flex gap-2">
           <button className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
