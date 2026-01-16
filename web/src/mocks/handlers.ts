@@ -166,6 +166,12 @@ export const handlers = [
     return HttpResponse.json({ user: currentUser })
   }),
 
+  // Also handle /api/me (used by auth.tsx)
+  http.get('/api/me', async () => {
+    await delay(100)
+    return HttpResponse.json(currentUser)
+  }),
+
   http.post('/api/auth/login', async () => {
     await delay(200)
     return HttpResponse.json({
