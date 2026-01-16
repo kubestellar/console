@@ -1,9 +1,15 @@
 import { Github } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { GlobeAnimation } from '../animations/globe'
 
 export function Login() {
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
+
+  // Redirect to dashboard if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />
+  }
 
   return (
     <div className="min-h-screen flex bg-[#0a0a0a] relative overflow-hidden">
