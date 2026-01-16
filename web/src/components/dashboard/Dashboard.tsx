@@ -85,7 +85,7 @@ export function Dashboard() {
   const [localCards, setLocalCards] = useState<Card[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
+  const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
 
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard } = useDashboards()

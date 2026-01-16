@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, HelpCircle, Sparkles } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { useTour, TourStep } from '../../hooks/useTour'
 import { cn } from '../../lib/cn'
 
