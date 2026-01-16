@@ -94,6 +94,13 @@ export function Login() {
           className="absolute inset-0"
         />
       </div>
+
+      {/* Version info - bottom right */}
+      <div className="absolute bottom-4 right-4 text-xs text-gray-600 font-mono z-10">
+        <span title={`Built: ${__BUILD_TIME__}`}>
+          v{__APP_VERSION__} ({__COMMIT_HASH__.substring(0, 7)})
+        </span>
+      </div>
     </div>
   )
 }

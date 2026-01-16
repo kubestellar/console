@@ -57,6 +57,13 @@ spec:
               value: "8080"
             - name: DATABASE_PATH
               value: {{ .Values.database.sqlitePath | quote }}
+            {{- if .Values.route.enabled }}
+            - name: FRONTEND_URL
+              value: "https://{{ .Values.route.host }}"
+            {{- else if .Values.ingress.enabled }}
+            - name: FRONTEND_URL
+              value: "https://{{ (index .Values.ingress.hosts 0).host }}"
+            {{- end }}
             {{- if .Values.github.existingSecret }}
             - name: GITHUB_CLIENT_ID
               valueFrom:
