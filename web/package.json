@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:coverage": "VITE_COVERAGE=true vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -15,7 +16,10 @@
     "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:firefox": "playwright test --project=firefox",
     "test:e2e:webkit": "playwright test --project=webkit",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",
+    "coverage:report": "nyc report --reporter=text --reporter=html --reporter=lcov",
+    "coverage:clean": "rimraf .nyc_output coverage"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -35,6 +39,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@playwright/test": "^1.57.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
@@ -46,16 +51,40 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "msw": "^2.12.7",
+    "nyc": "^17.1.0",
     "postcss": "^8.4.49",
+    "rimraf": "^6.1.2",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.5",
+    "vite-plugin-istanbul": "^7.2.1",
     "wait-on": "^9.0.3"
   },
   "msw": {
     "workerDirectory": [
       "public"
     ]
+  },
+  "nyc": {
+    "extends": "@istanbuljs/nyc-config-typescript",
+    "all": true,
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ],
+    "exclude": [
+      "src/**/*.d.ts",
+      "src/**/*.test.ts",
+      "src/**/*.spec.ts",
+      "src/test/**",
+      "src/mocks/**"
+    ],
+    "reporter": [
+      "text",
+      "html",
+      "lcov"
+    ],
+    "report-dir": "coverage"
   }
 }

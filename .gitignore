@@ -29,6 +29,7 @@ npm-debug.log*
 
 # Test coverage
 coverage/
+.nyc_output/
 
 # Playwright
 web/playwright-report/
