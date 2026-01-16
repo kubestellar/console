@@ -2,8 +2,50 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Clusters Page', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock authentication
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          id: '1',
+          github_id: '12345',
+          github_login: 'testuser',
+          email: 'test@example.com',
+          onboarded: true,
+        },
+      })
+    )
+
+    // Mock MCP endpoints with cluster data
+    await page.route('**/api/mcp/clusters', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          clusters: [
+            { name: 'prod-east', healthy: true, nodeCount: 5, version: '1.28.0' },
+            { name: 'prod-west', healthy: true, nodeCount: 3, version: '1.27.0' },
+            { name: 'staging', healthy: false, nodeCount: 2, version: '1.28.0' },
+          ],
+        },
+      })
+    )
+
+    await page.route('**/api/mcp/**', (route) =>
+      route.fulfill({
+        status: 200,
+        json: { issues: [], events: [], nodes: [] },
+      })
+    )
+
+    // Set auth token
+    await page.goto('/login')
+    await page.evaluate(() => {
+      localStorage.setItem('token', 'test-token')
+    })
+
     await page.goto('/clusters')
     await page.waitForLoadState('domcontentloaded')
+    await page.waitForTimeout(500)
   })
 
   test.describe('Cluster List', () => {
