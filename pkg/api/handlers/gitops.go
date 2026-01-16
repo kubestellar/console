@@ -15,6 +15,18 @@ import (
 	"github.com/kubestellar/console/pkg/mcp"
 )
 
+// GitOpsDrift represents a configuration drift between Git and cluster
+type GitOpsDrift struct {
+	Resource   string `json:"resource"`
+	Namespace  string `json:"namespace"`
+	Cluster    string `json:"cluster"`
+	Kind       string `json:"kind"`
+	DriftType  string `json:"driftType"`  // modified, deleted, added
+	GitVersion string `json:"gitVersion"` // Git commit/tag
+	Details    string `json:"details,omitempty"`
+	Severity   string `json:"severity"` // low, medium, high
+}
+
 // GitOpsHandlers handles GitOps-related API endpoints
 type GitOpsHandlers struct {
 	bridge    *mcp.Bridge
@@ -51,11 +63,11 @@ type DetectDriftRequest struct {
 
 // DetectDriftResponse is the response from drift detection
 type DetectDriftResponse struct {
-	Drifted   bool              `json:"drifted"`
-	Resources []DriftedResource `json:"resources"`
-	Source    string            `json:"source"` // "mcp" or "kubectl"
-	RawDiff   string            `json:"rawDiff,omitempty"`
-	TokensUsed int              `json:"tokensUsed,omitempty"`
+	Drifted    bool              `json:"drifted"`
+	Resources  []DriftedResource `json:"resources"`
+	Source     string            `json:"source"` // "mcp" or "kubectl"
+	RawDiff    string            `json:"rawDiff,omitempty"`
+	TokensUsed int               `json:"tokensUsed,omitempty"`
 }
 
 // SyncRequest is the request body for sync operation
@@ -414,7 +426,6 @@ func parseDiffOutput(output, namespace string) []DriftedResource {
 
 	lines := strings.Split(output, "\n")
 	var currentKind, currentName string
-	var lastChange string
 
 	for _, line := range lines {
 		// Strip diff prefix (+/-) for parsing YAML content
@@ -456,7 +467,7 @@ func parseDiffOutput(output, namespace string) []DriftedResource {
 			key := currentKind + "/" + currentName
 			if r, exists := resourceMap[key]; exists {
 				if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
-					lastChange = strings.TrimSpace(strings.TrimPrefix(line, "-"))
+					lastChange := strings.TrimSpace(strings.TrimPrefix(line, "-"))
 					if r.ClusterValue == "" && lastChange != "" {
 						r.ClusterValue = truncateValue(lastChange)
 					}
@@ -506,4 +517,73 @@ func parseApplyOutput(output string) []string {
 		}
 	}
 	return applied
+}
+
+// getDemoDrifts returns demo drift data for testing
+func getDemoDrifts(cluster, namespace string) []GitOpsDrift {
+	allDrifts := []GitOpsDrift{
+		{
+			Resource:   "api-gateway",
+			Namespace:  "production",
+			Cluster:    "prod-east",
+			Kind:       "Deployment",
+			DriftType:  "modified",
+			GitVersion: "v2.4.0",
+			Details:    "Image tag changed from v2.4.0 to v2.4.1-hotfix",
+			Severity:   "medium",
+		},
+		{
+			Resource:   "config-secret",
+			Namespace:  "production",
+			Cluster:    "prod-east",
+			Kind:       "Secret",
+			DriftType:  "modified",
+			GitVersion: "abc123",
+			Details:    "Secret data modified manually",
+			Severity:   "high",
+		},
+		{
+			Resource:   "debug-pod",
+			Namespace:  "default",
+			Cluster:    "staging",
+			Kind:       "Pod",
+			DriftType:  "added",
+			GitVersion: "-",
+			Details:    "Resource exists in cluster but not in Git",
+			Severity:   "low",
+		},
+		{
+			Resource:   "legacy-service",
+			Namespace:  "production",
+			Cluster:    "prod-west",
+			Kind:       "Service",
+			DriftType:  "deleted",
+			GitVersion: "def456",
+			Details:    "Resource in Git but missing from cluster",
+			Severity:   "high",
+		},
+		{
+			Resource:   "worker-hpa",
+			Namespace:  "batch",
+			Cluster:    "vllm-d",
+			Kind:       "HorizontalPodAutoscaler",
+			DriftType:  "modified",
+			GitVersion: "main",
+			Details:    "MinReplicas changed from 2 to 5",
+			Severity:   "medium",
+		},
+	}
+
+	// Filter by cluster and namespace if provided
+	if cluster == "" && namespace == "" {
+		return allDrifts
+	}
+
+	var filtered []GitOpsDrift
+	for _, d := range allDrifts {
+		if (cluster == "" || d.Cluster == cluster) && (namespace == "" || d.Namespace == namespace) {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
 }
