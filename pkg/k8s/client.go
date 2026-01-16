@@ -113,21 +113,21 @@ type GPUNode struct {
 	GPUAllocated int    `json:"gpuAllocated"`
 }
 
-<<<<<<< HEAD
 // Deployment represents a Kubernetes deployment with rollout status
 type Deployment struct {
-	Name             string `json:"name"`
-	Namespace        string `json:"namespace"`
-	Cluster          string `json:"cluster,omitempty"`
-	Status           string `json:"status"` // running, deploying, failed
-	Replicas         int32  `json:"replicas"`
-	ReadyReplicas    int32  `json:"readyReplicas"`
-	UpdatedReplicas  int32  `json:"updatedReplicas"`
+	Name              string `json:"name"`
+	Namespace         string `json:"namespace"`
+	Cluster           string `json:"cluster,omitempty"`
+	Status            string `json:"status"` // running, deploying, failed
+	Replicas          int32  `json:"replicas"`
+	ReadyReplicas     int32  `json:"readyReplicas"`
+	UpdatedReplicas   int32  `json:"updatedReplicas"`
 	AvailableReplicas int32  `json:"availableReplicas"`
-	Progress         int    `json:"progress"` // 0-100
-	Image            string `json:"image,omitempty"`
-	Age              string `json:"age,omitempty"`
-=======
+	Progress          int    `json:"progress"` // 0-100
+	Image             string `json:"image,omitempty"`
+	Age               string `json:"age,omitempty"`
+}
+
 // SecurityIssue represents a security misconfiguration
 type SecurityIssue struct {
 	Name      string `json:"name"`
@@ -136,7 +136,6 @@ type SecurityIssue struct {
 	Issue     string `json:"issue"`
 	Severity  string `json:"severity"` // high, medium, low
 	Details   string `json:"details,omitempty"`
->>>>>>> d107d99 (✨ Add Security Issues card with real K8s security checks)
 }
 
 // NewMultiClusterClient creates a new multi-cluster client
@@ -240,7 +239,105 @@ func (m *MultiClusterClient) LoadConfig() error {
 	}
 
 	m.rawConfig = config
+	// Clear cached clients when config reloads
+	m.clients = make(map[string]*kubernetes.Clientset)
+	m.configs = make(map[string]*rest.Config)
+	m.healthCache = make(map[string]*ClusterHealth)
+	m.cacheTime = make(map[string]time.Time)
 	return nil
+}
+
+// StartWatching starts watching the kubeconfig file for changes
+func (m *MultiClusterClient) StartWatching() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create watcher: %w", err)
+	}
+
+	m.watcher = watcher
+	m.stopWatch = make(chan struct{})
+
+	// Watch the kubeconfig file
+	if err := watcher.Add(m.kubeconfig); err != nil {
+		watcher.Close()
+		return fmt.Errorf("failed to watch kubeconfig: %w", err)
+	}
+
+	// Also watch the directory (for editors that do atomic saves)
+	dir := filepath.Dir(m.kubeconfig)
+	if err := watcher.Add(dir); err != nil {
+		log.Printf("Warning: could not watch kubeconfig directory: %v", err)
+	}
+
+	go m.watchLoop()
+	log.Printf("Watching kubeconfig for changes: %s", m.kubeconfig)
+	return nil
+}
+
+func (m *MultiClusterClient) watchLoop() {
+	// Debounce timer to avoid reloading multiple times for rapid changes
+	var debounceTimer *time.Timer
+	debounceDelay := 500 * time.Millisecond
+
+	for {
+		select {
+		case <-m.stopWatch:
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			return
+		case event, ok := <-m.watcher.Events:
+			if !ok {
+				return
+			}
+			// Check if this event is for our kubeconfig file
+			if event.Name == m.kubeconfig || filepath.Base(event.Name) == filepath.Base(m.kubeconfig) {
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
+					// Debounce: reset timer on each event
+					if debounceTimer != nil {
+						debounceTimer.Stop()
+					}
+					debounceTimer = time.AfterFunc(debounceDelay, func() {
+						log.Printf("Kubeconfig changed, reloading...")
+						if err := m.LoadConfig(); err != nil {
+							log.Printf("Error reloading kubeconfig: %v", err)
+						} else {
+							log.Printf("Kubeconfig reloaded successfully")
+							// Notify listeners
+							m.mu.RLock()
+							callback := m.onReload
+							m.mu.RUnlock()
+							if callback != nil {
+								callback()
+							}
+						}
+					})
+				}
+			}
+		case err, ok := <-m.watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Printf("Kubeconfig watcher error: %v", err)
+		}
+	}
+}
+
+// StopWatching stops watching the kubeconfig file
+func (m *MultiClusterClient) StopWatching() {
+	if m.stopWatch != nil {
+		close(m.stopWatch)
+	}
+	if m.watcher != nil {
+		m.watcher.Close()
+	}
+}
+
+// SetOnReload sets a callback to be called when kubeconfig is reloaded
+func (m *MultiClusterClient) SetOnReload(callback func()) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.onReload = callback
 }
 
 // ListClusters returns all clusters from kubeconfig
