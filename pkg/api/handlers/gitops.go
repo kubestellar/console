@@ -203,8 +203,14 @@ func (h *GitOpsHandlers) detectDriftViaKubectl(ctx context.Context, req DetectDr
 		manifestPath = fmt.Sprintf("%s/%s", tempDir, strings.TrimPrefix(req.Path, "/"))
 	}
 
+	// Check if this is a kustomize directory - use -k instead of -f
+	fileFlag := "-f"
+	if isKustomizeDir(manifestPath) {
+		fileFlag = "-k"
+	}
+
 	// Build kubectl diff command
-	args := []string{"diff", "-f", manifestPath}
+	args := []string{"diff", fileFlag, manifestPath}
 	if req.Namespace != "" {
 		args = append(args, "-n", req.Namespace)
 	}
@@ -348,8 +354,14 @@ func (h *GitOpsHandlers) syncViaKubectl(ctx context.Context, req SyncRequest) (*
 		manifestPath = fmt.Sprintf("%s/%s", tempDir, strings.TrimPrefix(req.Path, "/"))
 	}
 
+	// Check if this is a kustomize directory - use -k instead of -f
+	fileFlag := "-f"
+	if isKustomizeDir(manifestPath) {
+		fileFlag = "-k"
+	}
+
 	// Build kubectl apply command
-	args := []string{"apply", "-f", manifestPath}
+	args := []string{"apply", fileFlag, manifestPath}
 	if req.Namespace != "" {
 		args = append(args, "-n", req.Namespace)
 	}
@@ -414,6 +426,16 @@ func cloneRepo(ctx context.Context, repoURL, branch string) (string, error) {
 	}
 
 	return tempDir, nil
+}
+
+// isKustomizeDir checks if a directory contains kustomization.yaml or kustomization.yml
+func isKustomizeDir(path string) bool {
+	cmd := exec.Command("test", "-f", path+"/kustomization.yaml")
+	if cmd.Run() == nil {
+		return true
+	}
+	cmd = exec.Command("test", "-f", path+"/kustomization.yml")
+	return cmd.Run() == nil
 }
 
 func cleanupTempDir(dir string) {
