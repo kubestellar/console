@@ -1,0 +1,41 @@
+---
+# Secret for GitHub API credentials
+# You need to create this with a PAT that has 'repo' scope
+# kubectl create secret generic arc-github-secret-kubestellar \
+#   --namespace arc-systems \
+#   --from-literal=github_token=ghp_xxxxxxxxxxxx
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arc-github-secret-kubestellar
+  namespace: arc-systems
+type: Opaque
+stringData:
+  github_token: "REPLACE_WITH_PAT"  # PAT with 'repo' scope
+
+---
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: kubestellar-console-runners
+  namespace: arc-systems
+spec:
+  replicas: 2
+  template:
+    spec:
+      repository: kubestellar/console
+      githubAPICredentialsFrom:
+        secretRef:
+          name: arc-github-secret-kubestellar
+      labels:
+        - self-hosted
+        - linux
+        - openshift
+        - kkc
+      resources:
+        limits:
+          cpu: "2"
+          memory: "4Gi"
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
