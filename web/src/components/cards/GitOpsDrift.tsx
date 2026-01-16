@@ -1,5 +1,6 @@
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2 } from 'lucide-react'
 import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface GitOpsDriftProps {
   config?: {
@@ -141,16 +142,15 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
         </span>
       </div>
 
-      <div className="text-xs text-muted-foreground mt-2">
-        <span className="truncate block" title={`${drift.cluster} / ${drift.namespace}`}>
-          {drift.cluster} / {drift.namespace}
-        </span>
-        {drift.details && (
-          <p className="mt-1 text-xs text-muted-foreground/80">
-            {drift.details}
-          </p>
-        )}
+      <div className="flex items-center gap-2 mt-2">
+        <ClusterBadge cluster={drift.cluster} />
+        <span className="text-xs text-muted-foreground truncate">{drift.namespace}</span>
       </div>
+      {drift.details && (
+        <p className="mt-1 text-xs text-muted-foreground/80">
+          {drift.details}
+        </p>
+      )}
 
       <div className="flex items-center gap-2 mt-2 text-xs">
         <span className="text-muted-foreground">Git:</span>

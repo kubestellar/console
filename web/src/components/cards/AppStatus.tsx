@@ -1,4 +1,5 @@
 import { Box, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface AppStatusProps {
   config?: any
@@ -66,15 +67,10 @@ export function AppStatus(_props: AppStatusProps) {
               )}
             </div>
 
-            {/* Cluster chips */}
+            {/* Cluster badges */}
             <div className="flex flex-wrap gap-1 mt-2">
               {app.clusters.map((cluster) => (
-                <span
-                  key={cluster}
-                  className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground"
-                >
-                  {cluster}
-                </span>
+                <ClusterBadge key={cluster} cluster={cluster} showIcon={false} />
               ))}
             </div>
           </div>

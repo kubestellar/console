@@ -2,6 +2,7 @@ import { AlertTriangle, RefreshCw, MemoryStick, ImageOff, Clock, ChevronRight } 
 import { usePodIssues, PodIssue } from '../../hooks/useMCP'
 import { PaginatedList } from '../ui/PaginatedList'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 const getIssueIcon = (status: string) => {
   if (status.includes('OOM')) return MemoryStick
@@ -100,10 +101,11 @@ export function PodIssues() {
                     <Icon className="w-4 h-4 text-red-400" />
                   </div>
                   <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <ClusterBadge cluster={issue.cluster || 'default'} />
+                      <span className="text-xs text-muted-foreground">{issue.namespace}</span>
+                    </div>
                     <p className="text-sm font-medium text-white truncate">{issue.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {issue.namespace} · {issue.cluster || 'default'}
-                    </p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
                         {issue.status}

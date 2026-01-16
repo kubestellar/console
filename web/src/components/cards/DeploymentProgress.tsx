@@ -1,5 +1,6 @@
 import { CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react'
 import { useDeployments } from '../../hooks/useMCP'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 const statusConfig = {
   running: {
@@ -103,14 +104,13 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
             >
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">
-                      {deployment.name}
-                    </span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClusterBadge cluster={deployment.cluster || 'default'} />
+                    <span className="text-xs text-muted-foreground">{deployment.namespace}</span>
                     <StatusIcon className={`w-4 h-4 ${config.color}`} />
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {deployment.cluster} / {deployment.namespace}
+                  <span className="text-sm font-medium text-white">
+                    {deployment.name}
                   </span>
                 </div>
                 <div className="text-right">

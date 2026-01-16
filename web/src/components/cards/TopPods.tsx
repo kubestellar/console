@@ -1,5 +1,6 @@
 import { RefreshCw, Loader2, AlertTriangle } from 'lucide-react'
 import { usePods } from '../../hooks/useMCP'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface TopPodsProps {
   config?: {
@@ -107,11 +108,14 @@ export function TopPods({ config }: TopPodsProps) {
                 </div>
               )}
 
+              {/* Cluster and namespace - prominent */}
+              <div className="flex items-center gap-2 mt-1 mb-1">
+                <ClusterBadge cluster={pod.cluster || 'default'} />
+                <span className="text-xs text-muted-foreground truncate">{pod.namespace}</span>
+              </div>
+
               {/* Details row */}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                <span className="truncate" title={`${pod.cluster} / ${pod.namespace}`}>
-                  {pod.cluster} / {pod.namespace}
-                </span>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex-shrink-0">{pod.status}</span>
                 <span className="flex-shrink-0">{pod.ready}</span>
                 <span className="flex-shrink-0">{pod.age}</span>

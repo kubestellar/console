@@ -1,6 +1,7 @@
 import { AlertTriangle, RefreshCw, AlertCircle, Clock, Scale, ChevronRight } from 'lucide-react'
 import { useDeploymentIssues, DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface DeploymentIssuesProps {
   config?: Record<string, unknown>
@@ -105,10 +106,11 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
                   <Icon className="w-4 h-4 text-orange-400" />
                 </div>
                 <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClusterBadge cluster={issue.cluster || 'default'} />
+                    <span className="text-xs text-muted-foreground">{issue.namespace}</span>
+                  </div>
                   <p className="text-sm font-medium text-white truncate">{issue.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {issue.namespace} · {issue.cluster || 'default'}
-                  </p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-400">
                       {issue.reason || 'Issue'}
