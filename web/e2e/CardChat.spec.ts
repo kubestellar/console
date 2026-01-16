@@ -2,8 +2,32 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Card Chat AI Interaction', () => {
   test.beforeEach(async ({ page }) => {
-    // Set AI mode to medium or high to enable chat
+    // Mock authentication
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          id: '1',
+          github_id: '12345',
+          github_login: 'testuser',
+          email: 'test@example.com',
+          onboarded: true,
+        },
+      })
+    )
+
+    // Mock MCP endpoints
+    await page.route('**/api/mcp/**', (route) =>
+      route.fulfill({
+        status: 200,
+        json: { clusters: [], issues: [], events: [], nodes: [] },
+      })
+    )
+
+    // Navigate to login first to set localStorage (cannot access localStorage before navigation)
+    await page.goto('/login')
     await page.evaluate(() => {
+      localStorage.setItem('token', 'test-token')
       localStorage.setItem('kubestellar-ai-mode', 'high')
     })
 
