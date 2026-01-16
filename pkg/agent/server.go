@@ -22,8 +22,17 @@ type Server struct {
 	config     Config
 	upgrader   websocket.Upgrader
 	kubectl    *KubectlProxy
+	claude     *ClaudeDetector
 	clients    map[*websocket.Conn]bool
 	clientsMux sync.RWMutex
+}
+
+// HealthResponse is the full health check response with token usage
+type HealthResponse struct {
+	Status     string     `json:"status"`
+	Version    string     `json:"version"`
+	Clusters   int        `json:"clusters"`
+	Claude     ClaudeInfo `json:"claude"`
 }
 
 func NewServer(cfg Config) (*Server, error) {
@@ -35,6 +44,7 @@ func NewServer(cfg Config) (*Server, error) {
 		config:   cfg,
 		upgrader: websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
 		kubectl:  kubectl,
+		claude:   NewClaudeDetector(),
 		clients:  make(map[*websocket.Conn]bool),
 	}, nil
 }
@@ -55,8 +65,12 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	clusters, _ := s.kubectl.ListContexts()
-	json.NewEncoder(w).Encode(protocol.HealthPayload{
-		Status: "ok", Version: Version, Clusters: len(clusters), HasClaude: false,
+	claudeInfo := s.claude.Detect()
+	json.NewEncoder(w).Encode(HealthResponse{
+		Status:   "ok",
+		Version:  Version,
+		Clusters: len(clusters),
+		Claude:   claudeInfo,
 	})
 }
 
