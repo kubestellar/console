@@ -121,8 +121,35 @@ Console uses the `klaude-ops` and `klaude-deploy` MCP servers to fetch data from
 - Go 1.23+
 - Node.js 20+
 - Docker (for containerized deployment)
-- `klaude-ops` and `klaude-deploy` installed (from [klaude](https://github.com/kubestellar/klaude))
 - GitHub OAuth App (for authentication)
+- [Claude Code](https://claude.ai/claude-code) CLI installed
+- Klaude plugins from the [Claude Code Marketplace](https://marketplace.claude.ai) (source: [claude-plugins](https://github.com/kubestellar/claude-plugins)):
+  - `klaude-ops` - Kubernetes operations tools
+  - `klaude-deploy` - Multi-cluster deployment tools
+
+### Quick Start
+
+**1. Install Claude Code** (if not already installed)
+
+Follow the installation instructions at [claude.ai/claude-code](https://claude.ai/claude-code)
+
+**2. Install Klaude Plugins from Marketplace**
+
+```bash
+# Install from Claude Code Marketplace
+claude plugins install klaude-ops
+claude plugins install klaude-deploy
+```
+
+**3. Or Install via Homebrew** (alternative method, source: [homebrew-tap](https://github.com/kubestellar/homebrew-tap))
+
+```bash
+# Add the KubeStellar tap
+brew tap kubestellar/tap
+
+# Install klaude tools
+brew install klaude-ops klaude-deploy
+```
 
 ### Local Development
 
@@ -133,7 +160,14 @@ git clone https://github.com/kubestellar/console.git
 cd console
 ```
 
-2. **Create a GitHub OAuth App**
+2. **Install klaude tools** (if not already installed via brew)
+
+```bash
+brew tap kubestellar/tap
+brew install klaude-ops klaude-deploy
+```
+
+3. **Create a GitHub OAuth App**
 
 Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
 
@@ -141,27 +175,39 @@ Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth Ap
 - Homepage URL: `http://localhost:5174`
 - Authorization callback URL: `http://localhost:8080/auth/github/callback`
 
-3. **Set environment variables**
+4. **Configure environment variables**
+
+Create a `.env` file in the project root:
 
 ```bash
-export GITHUB_CLIENT_ID=your_client_id
-export GITHUB_CLIENT_SECRET=your_client_secret
-export DEV_MODE=true
-export FRONTEND_URL=http://localhost:5174
+# .env file (copy from .env.example)
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+DEV_MODE=false
+FRONTEND_URL=http://localhost:5174
+JWT_SECRET=your-secret-key-here
+DATABASE_PATH=./data/console.db
 ```
 
-4. **Start the backend**
+**Important**: The `.env` file is gitignored. Never commit credentials.
+
+5. **Start the backend**
+
+The backend reads `.env` automatically, or you can pass environment variables inline:
 
 ```bash
-# Build and run
+# Option A: Use .env file (recommended)
 go build -o console ./cmd/console
-./console --dev
+./console
 
-# Or run directly
-go run ./cmd/console --dev
+# Option B: Inline environment variables
+GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy DEV_MODE=false ./console
+
+# Option C: Run directly with go
+go run ./cmd/console
 ```
 
-5. **Start the frontend**
+6. **Start the frontend**
 
 ```bash
 cd web
@@ -169,7 +215,7 @@ npm install
 npm run dev
 ```
 
-6. **Access the console**
+7. **Access the console**
 
 Open http://localhost:5174 and sign in with GitHub.
 
@@ -299,6 +345,160 @@ go build -o console ./cmd/console
 cd web && npm run build
 ```
 
+## GitHub OAuth Setup
+
+GitHub OAuth is **required** for authentication. Follow these steps carefully:
+
+### Creating a GitHub OAuth App
+
+1. Go to **GitHub** → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**
+
+2. Fill in the application details:
+   - **Application name**: `KubeStellar Console` (or your preferred name)
+   - **Homepage URL**: `http://localhost:5174` (for development)
+   - **Authorization callback URL**: `http://localhost:8080/auth/github/callback`
+
+3. Click **Register application**
+
+4. Copy the **Client ID** (shown immediately)
+
+5. Click **Generate a new client secret** and copy it immediately (you won't see it again)
+
+### Callback URL Reference
+
+| Environment | Homepage URL | Callback URL |
+|-------------|--------------|--------------|
+| Local dev | `http://localhost:5174` | `http://localhost:8080/auth/github/callback` |
+| Docker | Your host URL | `http://your-host:8080/auth/github/callback` |
+| Kubernetes | Your ingress URL | `https://console.your-domain.com/auth/github/callback` |
+| OpenShift | Your route URL | `https://console-namespace.apps.cluster.com/auth/github/callback` |
+
+### Using with Helm
+
+When deploying with Helm, provide GitHub credentials via values or secrets:
+
+```bash
+# Option 1: Via --set flags
+helm install kubestellar-console kubestellar/console \
+  --namespace kubestellar-console \
+  --set github.clientId=$GITHUB_CLIENT_ID \
+  --set github.clientSecret=$GITHUB_CLIENT_SECRET
+
+# Option 2: Via values file
+cat > my-values.yaml <<EOF
+github:
+  clientId: "your-client-id"
+  clientSecret: "your-client-secret"
+EOF
+
+helm install kubestellar-console kubestellar/console \
+  --namespace kubestellar-console \
+  -f my-values.yaml
+
+# Option 3: Via existing secret
+kubectl create secret generic github-oauth \
+  --namespace kubestellar-console \
+  --from-literal=client-id=$GITHUB_CLIENT_ID \
+  --from-literal=client-secret=$GITHUB_CLIENT_SECRET
+
+helm install kubestellar-console kubestellar/console \
+  --namespace kubestellar-console \
+  --set github.existingSecret=github-oauth
+```
+
+## Troubleshooting
+
+### GitHub OAuth Issues
+
+#### 404 Error or Blank Page on Login
+
+**Symptom**: Clicking "Sign in with GitHub" shows a 404 or blank page.
+
+**Cause**: The GitHub OAuth Client ID is not configured or not being read by the backend.
+
+**Solutions**:
+1. Verify environment variables are set:
+   ```bash
+   echo $GITHUB_CLIENT_ID  # Should show your client ID
+   ```
+
+2. Pass environment variables inline when starting:
+   ```bash
+   GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy ./console
+   ```
+
+3. Check the backend logs for OAuth configuration errors
+
+#### "dev-user" Instead of GitHub Username
+
+**Symptom**: After login, you see "dev-user" instead of your actual GitHub username.
+
+**Cause**: `DEV_MODE=true` bypasses OAuth and uses a mock user.
+
+**Solution**: Set `DEV_MODE=false` for real GitHub authentication:
+```bash
+DEV_MODE=false GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy ./console
+```
+
+#### Callback URL Mismatch
+
+**Symptom**: GitHub shows "The redirect_uri does not match" error.
+
+**Solution**: Ensure the callback URL in your GitHub OAuth App **exactly** matches:
+- Development: `http://localhost:8080/auth/github/callback`
+- Production: `https://your-domain.com/auth/github/callback`
+
+### MCP Bridge Issues
+
+#### "MCP bridge failed to start"
+
+**Symptom**: Log shows `MCP bridge failed to start: failed to start MCP clients`
+
+**Cause**: `klaude-ops` or `klaude-deploy` plugins are not installed.
+
+**Solution**:
+```bash
+# Option 1: Install from Claude Code Marketplace (recommended)
+claude plugins install klaude-ops
+claude plugins install klaude-deploy
+
+# Option 2: Install via Homebrew
+brew tap kubestellar/tap
+brew install klaude-ops klaude-deploy
+
+# Verify installation
+which klaude-ops klaude-deploy
+```
+
+**Note**: The console will still function without MCP tools, but cluster data will not be available.
+
+### Frontend Issues
+
+#### CORS Errors
+
+**Symptom**: Browser console shows CORS errors.
+
+**Solution**: Ensure `FRONTEND_URL` is correctly configured in your environment:
+```bash
+FRONTEND_URL=http://localhost:5174 ./console
+```
+
+#### Vite Dependency Errors
+
+**Symptom**: "Failed to resolve import" or "Outdated Optimize Dep"
+
+**Solution**:
+```bash
+cd web
+rm -rf node_modules/.vite
+npm run dev
+```
+
+### Getting Help
+
+- Check the [GitHub Issues](https://github.com/kubestellar/console/issues) for known problems
+- Join the [KubeStellar Slack](https://kubestellar.io/community) for community support
+
 ## Roadmap
 
 - [ ] Phase 1: Foundation - Backend, auth, basic dashboard
@@ -317,6 +517,8 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-- [klaude](https://github.com/kubestellar/klaude) - AI-powered kubectl plugins
+- [klaude](https://github.com/kubestellar/klaude) - AI-powered kubectl plugins (MCP servers)
+- [claude-plugins](https://github.com/kubestellar/claude-plugins) - Claude Code marketplace plugins for Kubernetes
+- [homebrew-tap](https://github.com/kubestellar/homebrew-tap) - Homebrew formulae for KubeStellar tools
 - [KubeStellar](https://kubestellar.io) - Multi-cluster configuration management
 - [KubeFlex](https://github.com/kubestellar/kubeflex) - Lightweight Kubernetes control planes
