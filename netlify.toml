@@ -1,0 +1,48 @@
+# Netlify configuration for KubeStellar Klaude Console
+# Enables PR preview deployments with mock data (no backend required)
+
+[build]
+  # Frontend is in web/ subdirectory
+  base = "web"
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Enable demo mode with mock data for Netlify previews
+  VITE_DEMO_MODE = "true"
+  NODE_VERSION = "20"
+
+# SPA routing - redirect all routes to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security and caching
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Context-specific settings
+[context.production]
+  # Production builds (main branch) - still use demo mode for now
+  [context.production.environment]
+    VITE_DEMO_MODE = "true"
+
+[context.deploy-preview]
+  # PR preview deployments - always use demo mode
+  [context.deploy-preview.environment]
+    VITE_DEMO_MODE = "true"
+
+[context.branch-deploy]
+  # Branch deploys - use demo mode
+  [context.branch-deploy.environment]
+    VITE_DEMO_MODE = "true"
