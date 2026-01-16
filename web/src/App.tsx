@@ -14,8 +14,6 @@ import { DrillDownModal } from './components/drilldown/DrillDownModal'
 import { AuthProvider, useAuth } from './lib/auth'
 import { DrillDownProvider } from './hooks/useDrillDown'
 import { ToastProvider } from './components/ui/Toast'
-import { TourOverlay, TourPrompt } from './components/onboarding/Tour'
-import { TourProvider } from './hooks/useTour'
 
 function PlaceholderPage({ title, description }: { title: string; description: string }) {
   return (
@@ -63,11 +61,8 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-      <TourProvider>
       <DrillDownProvider>
       <DrillDownModal />
-      <TourOverlay />
-      <TourPrompt />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -178,7 +173,6 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </DrillDownProvider>
-      </TourProvider>
       </ToastProvider>
     </AuthProvider>
   )
