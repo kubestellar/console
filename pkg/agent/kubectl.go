@@ -138,3 +138,75 @@ func (k *KubectlProxy) RenameContext(oldName, newName string) error {
 
 	return nil
 }
+
+// HelmDeploy executes a helm upgrade --install command
+func (k *KubectlProxy) HelmDeploy(req protocol.DeployRequest) protocol.DeployResponse {
+	cmdArgs := []string{"upgrade", "--install", req.ReleaseName, req.ChartPath}
+
+	// Add kubeconfig if specified
+	if k.kubeconfig != "" {
+		cmdArgs = append(cmdArgs, "--kubeconfig", k.kubeconfig)
+	}
+
+	// Add context if specified
+	if req.Context != "" {
+		cmdArgs = append(cmdArgs, "--kube-context", req.Context)
+	}
+
+	// Add namespace
+	cmdArgs = append(cmdArgs, "--namespace", req.Namespace)
+
+	// Create namespace if it doesn't exist
+	cmdArgs = append(cmdArgs, "--create-namespace")
+
+	// Add image settings if specified
+	if req.ImageRepo != "" {
+		cmdArgs = append(cmdArgs, "--set", "image.repository="+req.ImageRepo)
+	}
+	if req.ImageTag != "" {
+		cmdArgs = append(cmdArgs, "--set", "image.tag="+req.ImageTag)
+	}
+
+	// Add additional values
+	for key, value := range req.Values {
+		cmdArgs = append(cmdArgs, "--set", key+"="+value)
+	}
+
+	// Add wait flag
+	if req.Wait {
+		cmdArgs = append(cmdArgs, "--wait")
+	}
+
+	// Add timeout
+	if req.Timeout != "" {
+		cmdArgs = append(cmdArgs, "--timeout", req.Timeout)
+	}
+
+	cmd := exec.Command("helm", cmdArgs...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	output := stdout.String()
+	if stderr.String() != "" && output == "" {
+		output = stderr.String()
+	}
+
+	if err != nil {
+		return protocol.DeployResponse{
+			Success:     false,
+			ReleaseName: req.ReleaseName,
+			Namespace:   req.Namespace,
+			Output:      output,
+			Error:       stderr.String(),
+		}
+	}
+
+	return protocol.DeployResponse{
+		Success:     true,
+		ReleaseName: req.ReleaseName,
+		Namespace:   req.Namespace,
+		Output:      output,
+	}
+}

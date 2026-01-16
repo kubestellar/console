@@ -15,8 +15,9 @@ const Version = "0.1.0"
 
 // Config holds agent configuration
 type Config struct {
-	Port       int
-	Kubeconfig string
+	Port        int
+	Kubeconfig  string
+	DeployToken string // Authorization token for deploy endpoint
 }
 
 // Server is the local agent WebSocket server
@@ -62,6 +63,9 @@ func (s *Server) Start() error {
 
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
+
+	// Deploy endpoint - requires authentication
+	mux.HandleFunc("/deploy", s.handleDeployHTTP)
 
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
@@ -172,6 +176,58 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("Renamed context: %s -> %s", req.OldName, req.NewName)
 	json.NewEncoder(w).Encode(protocol.RenameContextResponse{Success: true, OldName: req.OldName, NewName: req.NewName})
+}
+
+// handleDeployHTTP handles helm deployment requests
+func (s *Server) handleDeployHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		return
+	}
+
+	// Check authorization if token is configured
+	if s.config.DeployToken != "" {
+		authHeader := r.Header.Get("Authorization")
+		expectedAuth := "Bearer " + s.config.DeployToken
+		if authHeader != expectedAuth {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "unauthorized", Message: "Invalid or missing authorization token"})
+			return
+		}
+	}
+
+	var req protocol.DeployRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
+		return
+	}
+
+	if req.Namespace == "" || req.ReleaseName == "" || req.ChartPath == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_fields", Message: "namespace, releaseName, and chartPath are required"})
+		return
+	}
+
+	log.Printf("Deploy request: %s/%s from chart %s", req.Namespace, req.ReleaseName, req.ChartPath)
+	result := s.kubectl.HelmDeploy(req)
+
+	if !result.Success {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	json.NewEncoder(w).Encode(result)
 }
 
 // handleWebSocket handles WebSocket connections

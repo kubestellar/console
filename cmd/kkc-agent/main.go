@@ -14,6 +14,7 @@ import (
 func main() {
 	port := flag.Int("port", 8585, "Port to listen on")
 	kubeconfig := flag.String("kubeconfig", "", "Path to kubeconfig file")
+	deployToken := flag.String("deploy-token", os.Getenv("KKC_DEPLOY_TOKEN"), "Authorization token for deploy endpoint (or KKC_DEPLOY_TOKEN env)")
 	version := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
 
@@ -32,7 +33,7 @@ func main() {
 KubeStellar Klaude Console - Local Agent
 `)
 
-	server, err := agent.NewServer(agent.Config{Port: *port, Kubeconfig: *kubeconfig})
+	server, err := agent.NewServer(agent.Config{Port: *port, Kubeconfig: *kubeconfig, DeployToken: *deployToken})
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}

@@ -10,6 +10,7 @@ const (
 	TypeKubectl       MessageType = "kubectl"
 	TypeClaude        MessageType = "claude"
 	TypeRenameContext MessageType = "rename_context"
+	TypeDeploy        MessageType = "deploy"
 
 	// Response types
 	TypeResult MessageType = "result"
@@ -113,4 +114,27 @@ type RenameContextResponse struct {
 	Success bool   `json:"success"`
 	OldName string `json:"oldName"`
 	NewName string `json:"newName"`
+}
+
+// DeployRequest is the payload for helm deploy commands
+type DeployRequest struct {
+	Context     string            `json:"context,omitempty"`     // kubeconfig context to use
+	Namespace   string            `json:"namespace"`             // target namespace
+	ReleaseName string            `json:"releaseName"`           // helm release name
+	ChartPath   string            `json:"chartPath"`             // path to helm chart
+	ImageRepo   string            `json:"imageRepo,omitempty"`   // image repository
+	ImageTag    string            `json:"imageTag,omitempty"`    // image tag
+	Values      map[string]string `json:"values,omitempty"`      // additional --set values
+	Wait        bool              `json:"wait,omitempty"`        // wait for deployment
+	Timeout     string            `json:"timeout,omitempty"`     // timeout duration
+	AuthToken   string            `json:"authToken,omitempty"`   // authorization token
+}
+
+// DeployResponse is the response from a helm deploy command
+type DeployResponse struct {
+	Success     bool   `json:"success"`
+	ReleaseName string `json:"releaseName"`
+	Namespace   string `json:"namespace"`
+	Output      string `json:"output"`
+	Error       string `json:"error,omitempty"`
 }
