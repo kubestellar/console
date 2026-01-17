@@ -10,6 +10,7 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0'),
     __COMMIT_HASH__: JSON.stringify(process.env.VITE_COMMIT_HASH || 'dev'),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __DEV_MODE__: JSON.stringify(process.env.VITE_DEV_MODE === 'true'),
   },
   plugins: [
     react(),

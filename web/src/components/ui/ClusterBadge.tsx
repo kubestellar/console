@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 
 interface ClusterBadgeProps {
   cluster: string
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   className?: string
   showIcon?: boolean
 }
@@ -118,12 +118,12 @@ export function ClusterBadge({ cluster, size = 'sm', className, showIcon = true 
         info.colors.bg,
         info.colors.text,
         info.colors.border,
-        size === 'sm' ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5',
+        size === 'sm' ? 'text-[10px] px-1.5 py-0.5' : size === 'lg' ? 'text-sm px-2.5 py-1' : 'text-xs px-2 py-0.5',
         className
       )}
       title={tooltip}
     >
-      {showIcon && <Server className={size === 'sm' ? 'w-2.5 h-2.5' : 'w-3 h-3'} />}
+      {showIcon && <Server className={size === 'sm' ? 'w-2.5 h-2.5' : size === 'lg' ? 'w-3.5 h-3.5' : 'w-3 h-3'} />}
       {cluster}
     </span>
   )

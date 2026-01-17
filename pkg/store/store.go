@@ -15,6 +15,10 @@ type Store interface {
 	CreateUser(user *models.User) error
 	UpdateUser(user *models.User) error
 	UpdateLastLogin(userID uuid.UUID) error
+	ListUsers() ([]models.User, error)
+	DeleteUser(id uuid.UUID) error
+	UpdateUserRole(userID uuid.UUID, role string) error
+	CountUsersByRole() (admins, editors, viewers int, err error)
 
 	// Onboarding
 	SaveOnboardingResponse(response *models.OnboardingResponse) error

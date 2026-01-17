@@ -1,8 +1,20 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react'
-import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle } from 'lucide-react'
+import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { ChatMessage } from './CardChat'
+
+// Format relative time (e.g., "2m ago", "1h ago")
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 60) return 'now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  return `${days}d`
+}
 
 interface PendingSwap {
   newType: string
@@ -19,11 +31,16 @@ interface CardWrapperProps {
   pendingSwap?: PendingSwap
   chatMessages?: ChatMessage[]
   dragHandle?: ReactNode
+  /** Whether the card is currently refreshing data */
+  isRefreshing?: boolean
+  /** Last time the card data was updated */
+  lastUpdated?: Date | null
   onSwap?: (newType: string) => void
   onSwapCancel?: () => void
   onConfigure?: () => void
   onReplace?: () => void
   onRemove?: () => void
+  onRefresh?: () => void
   onChatMessage?: (message: string) => Promise<ChatMessage>
   onChatMessagesChange?: (messages: ChatMessage[]) => void
   children: ReactNode
@@ -36,6 +53,7 @@ const CARD_TITLES: Record<string, string> = {
   pod_issues: 'Pod Issues',
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
+  deployment_issues: 'Deployment Issues',
   top_pods: 'Top Pods',
   resource_capacity: 'Resource Capacity',
   resource_usage: 'Resource Usage',
@@ -46,6 +64,7 @@ const CARD_TITLES: Record<string, string> = {
   policy_violations: 'Policy Violations',
   upgrade_status: 'Upgrade Status',
   namespace_analysis: 'Namespace Analysis',
+  user_management: 'User Management',
 }
 
 export function CardWrapper({
@@ -56,11 +75,14 @@ export function CardWrapper({
   pendingSwap,
   chatMessages: externalMessages,
   dragHandle,
+  isRefreshing,
+  lastUpdated,
   onSwap,
   onSwapCancel,
   onConfigure,
   onReplace,
   onRemove,
+  onRefresh,
   onChatMessage,
   onChatMessagesChange,
   children,
@@ -148,8 +170,34 @@ export function CardWrapper({
           <div className="flex items-center gap-2">
             {dragHandle}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
+            {/* Refresh indicator */}
+            {isRefreshing && (
+              <RefreshCw className="w-3 h-3 text-purple-400 animate-spin" />
+            )}
+            {/* Last updated indicator */}
+            {!isRefreshing && lastUpdated && (
+              <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
+                {formatTimeAgo(lastUpdated)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Manual refresh button */}
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors',
+                  isRefreshing
+                    ? 'text-purple-400 cursor-not-allowed'
+                    : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                )}
+                title="Refresh data"
+              >
+                <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+              </button>
+            )}
             <button
               data-tour="card-chat"
               onClick={() => console.log('Open chat for card:', cardType)}
@@ -161,6 +209,7 @@ export function CardWrapper({
             <button
               onClick={() => setIsExpanded(true)}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+              title="Expand card to full screen"
             >
               <Maximize2 className="w-4 h-4" />
             </button>
@@ -168,6 +217,7 @@ export function CardWrapper({
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"
+                title="Card menu - configure, replace, or remove"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
@@ -179,6 +229,7 @@ export function CardWrapper({
                       onConfigure?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-white hover:bg-secondary/50 flex items-center gap-2"
+                    title="Configure card settings like cluster and namespace filters"
                   >
                     <Settings className="w-4 h-4" />
                     Configure
@@ -189,6 +240,7 @@ export function CardWrapper({
                       onReplace?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-white hover:bg-secondary/50 flex items-center gap-2"
+                    title="Replace this card with a different card type"
                   >
                     <Replace className="w-4 h-4" />
                     Replace Card
@@ -199,6 +251,7 @@ export function CardWrapper({
                       onRemove?.()
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+                    title="Remove this card from the dashboard"
                   >
                     <Trash2 className="w-4 h-4" />
                     Remove
@@ -216,7 +269,7 @@ export function CardWrapper({
         {pendingSwap && (
           <div className="px-4 py-3 bg-purple-500/10 border-t border-purple-500/20">
             <div className="flex items-center gap-2 text-sm">
-              <Clock className="w-4 h-4 text-purple-400 animate-pulse" />
+              <span title="Card swap pending"><Clock className="w-4 h-4 text-purple-400 animate-pulse" /></span>
               <span className="text-purple-300">
                 Swapping to "{newTitle}" in 30s
               </span>
@@ -226,18 +279,21 @@ export function CardWrapper({
               <button
                 onClick={() => handleSnooze(3600000)}
                 className="text-xs px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-white"
+                title="Delay this swap for 1 hour"
               >
                 Snooze 1hr
               </button>
               <button
                 onClick={handleSwapNow}
                 className="text-xs px-2 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300"
+                title="Swap to the new card immediately"
               >
                 Swap Now
               </button>
               <button
                 onClick={() => onSwapCancel?.()}
                 className="text-xs px-2 py-1 rounded hover:bg-secondary/50 text-muted-foreground"
+                title="Cancel the swap and keep this card"
               >
                 Keep This
               </button>

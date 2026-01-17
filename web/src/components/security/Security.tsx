@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 // Mock security data - in production would come from klaude-ops check_security_issues
 interface SecurityIssue {
@@ -181,7 +182,8 @@ export function Security() {
               <div className="flex items-start gap-4">
                 <div className="mt-1">{typeIcon(issue.type)}</div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <ClusterBadge cluster={issue.cluster} size="sm" />
                     <span className="font-semibold text-foreground">{issue.resource}</span>
                     <span className={`text-xs px-2 py-0.5 rounded ${severityColor(issue.severity)}`}>
                       {issue.severity}
@@ -192,7 +194,7 @@ export function Security() {
                   </div>
                   <p className="text-sm text-foreground">{issue.message}</p>
                   <div className="text-xs text-muted-foreground mt-2">
-                    {issue.namespace} • {issue.cluster}
+                    {issue.namespace}
                   </div>
                 </div>
               </div>

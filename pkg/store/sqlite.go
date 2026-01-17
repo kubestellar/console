@@ -41,7 +41,9 @@ func (s *SQLiteStore) migrate() error {
 		github_id TEXT UNIQUE NOT NULL,
 		github_login TEXT NOT NULL,
 		email TEXT,
+		slack_id TEXT,
 		avatar_url TEXT,
+		role TEXT DEFAULT 'viewer',
 		onboarded INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		last_login DATETIME
@@ -125,12 +127,12 @@ func (s *SQLiteStore) Close() error {
 // User methods
 
 func (s *SQLiteStore) GetUser(id uuid.UUID) (*models.User, error) {
-	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, avatar_url, onboarded, created_at, last_login FROM users WHERE id = ?`, id.String())
+	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE id = ?`, id.String())
 	return s.scanUser(row)
 }
 
 func (s *SQLiteStore) GetUserByGitHubID(githubID string) (*models.User, error) {
-	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, avatar_url, onboarded, created_at, last_login FROM users WHERE github_id = ?`, githubID)
+	row := s.db.QueryRow(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users WHERE github_id = ?`, githubID)
 	return s.scanUser(row)
 }
 
@@ -138,10 +140,10 @@ func (s *SQLiteStore) scanUser(row *sql.Row) (*models.User, error) {
 	var u models.User
 	var idStr string
 	var onboarded int
-	var email, avatar sql.NullString
+	var email, slackID, avatar, role sql.NullString
 	var lastLogin sql.NullTime
 
-	err := row.Scan(&idStr, &u.GitHubID, &u.GitHubLogin, &email, &avatar, &onboarded, &u.CreatedAt, &lastLogin)
+	err := row.Scan(&idStr, &u.GitHubID, &u.GitHubLogin, &email, &slackID, &avatar, &role, &onboarded, &u.CreatedAt, &lastLogin)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -154,8 +156,16 @@ func (s *SQLiteStore) scanUser(row *sql.Row) (*models.User, error) {
 	if email.Valid {
 		u.Email = email.String
 	}
+	if slackID.Valid {
+		u.SlackID = slackID.String
+	}
 	if avatar.Valid {
 		u.AvatarURL = avatar.String
+	}
+	if role.Valid {
+		u.Role = role.String
+	} else {
+		u.Role = "viewer" // default role
 	}
 	if lastLogin.Valid {
 		u.LastLogin = &lastLogin.Time
@@ -168,21 +178,106 @@ func (s *SQLiteStore) CreateUser(user *models.User) error {
 		user.ID = uuid.New()
 	}
 	user.CreatedAt = time.Now()
+	if user.Role == "" {
+		user.Role = "viewer" // default role
+	}
 
-	_, err := s.db.Exec(`INSERT INTO users (id, github_id, github_login, email, avatar_url, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		user.ID.String(), user.GitHubID, user.GitHubLogin, nullString(user.Email), nullString(user.AvatarURL), boolToInt(user.Onboarded), user.CreatedAt)
+	_, err := s.db.Exec(`INSERT INTO users (id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		user.ID.String(), user.GitHubID, user.GitHubLogin, nullString(user.Email), nullString(user.SlackID), nullString(user.AvatarURL), user.Role, boolToInt(user.Onboarded), user.CreatedAt)
 	return err
 }
 
 func (s *SQLiteStore) UpdateUser(user *models.User) error {
-	_, err := s.db.Exec(`UPDATE users SET github_login = ?, email = ?, avatar_url = ?, onboarded = ? WHERE id = ?`,
-		user.GitHubLogin, nullString(user.Email), nullString(user.AvatarURL), boolToInt(user.Onboarded), user.ID.String())
+	_, err := s.db.Exec(`UPDATE users SET github_login = ?, email = ?, slack_id = ?, avatar_url = ?, role = ?, onboarded = ? WHERE id = ?`,
+		user.GitHubLogin, nullString(user.Email), nullString(user.SlackID), nullString(user.AvatarURL), user.Role, boolToInt(user.Onboarded), user.ID.String())
 	return err
 }
 
 func (s *SQLiteStore) UpdateLastLogin(userID uuid.UUID) error {
 	_, err := s.db.Exec(`UPDATE users SET last_login = ? WHERE id = ?`, time.Now(), userID.String())
 	return err
+}
+
+// ListUsers returns all users
+func (s *SQLiteStore) ListUsers() ([]models.User, error) {
+	rows, err := s.db.Query(`SELECT id, github_id, github_login, email, slack_id, avatar_url, role, onboarded, created_at, last_login FROM users ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		var idStr string
+		var onboarded int
+		var email, slackID, avatar, role sql.NullString
+		var lastLogin sql.NullTime
+
+		if err := rows.Scan(&idStr, &u.GitHubID, &u.GitHubLogin, &email, &slackID, &avatar, &role, &onboarded, &u.CreatedAt, &lastLogin); err != nil {
+			return nil, err
+		}
+
+		u.ID, _ = uuid.Parse(idStr)
+		u.Onboarded = onboarded == 1
+		if email.Valid {
+			u.Email = email.String
+		}
+		if slackID.Valid {
+			u.SlackID = slackID.String
+		}
+		if avatar.Valid {
+			u.AvatarURL = avatar.String
+		}
+		if role.Valid {
+			u.Role = role.String
+		} else {
+			u.Role = "viewer"
+		}
+		if lastLogin.Valid {
+			u.LastLogin = &lastLogin.Time
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+// DeleteUser removes a user by ID
+func (s *SQLiteStore) DeleteUser(id uuid.UUID) error {
+	_, err := s.db.Exec(`DELETE FROM users WHERE id = ?`, id.String())
+	return err
+}
+
+// UpdateUserRole updates only the user's role
+func (s *SQLiteStore) UpdateUserRole(userID uuid.UUID, role string) error {
+	_, err := s.db.Exec(`UPDATE users SET role = ? WHERE id = ?`, role, userID.String())
+	return err
+}
+
+// CountUsersByRole returns the count of users by role
+func (s *SQLiteStore) CountUsersByRole() (admins, editors, viewers int, err error) {
+	rows, err := s.db.Query(`SELECT role, COUNT(*) FROM users GROUP BY role`)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var role string
+		var count int
+		if err := rows.Scan(&role, &count); err != nil {
+			return 0, 0, 0, err
+		}
+		switch role {
+		case "admin":
+			admins = count
+		case "editor":
+			editors = count
+		default:
+			viewers += count
+		}
+	}
+	return admins, editors, viewers, rows.Err()
 }
 
 // Onboarding methods

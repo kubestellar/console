@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,14 +51,18 @@ type ClusterInfo struct {
 
 // ClusterHealth represents cluster health status
 type ClusterHealth struct {
-	Cluster    string   `json:"cluster"`
-	Healthy    bool     `json:"healthy"`
-	APIServer  string   `json:"apiServer,omitempty"`
-	NodeCount  int      `json:"nodeCount"`
-	ReadyNodes int      `json:"readyNodes"`
-	PodCount   int      `json:"podCount,omitempty"`
-	Issues     []string `json:"issues,omitempty"`
-	CheckedAt  string   `json:"checkedAt,omitempty"`
+	Cluster      string   `json:"cluster"`
+	Healthy      bool     `json:"healthy"`
+	Reachable    bool     `json:"reachable"`
+	LastSeen     string   `json:"lastSeen,omitempty"`
+	ErrorType    string   `json:"errorType,omitempty"` // timeout, auth, network, certificate, unknown
+	ErrorMessage string   `json:"errorMessage,omitempty"`
+	APIServer    string   `json:"apiServer,omitempty"`
+	NodeCount    int      `json:"nodeCount"`
+	ReadyNodes   int      `json:"readyNodes"`
+	PodCount     int      `json:"podCount,omitempty"`
+	Issues       []string `json:"issues,omitempty"`
+	CheckedAt    string   `json:"checkedAt,omitempty"`
 }
 
 // PodInfo represents pod information
@@ -406,6 +411,50 @@ func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientse
 	return client, nil
 }
 
+// classifyError determines the error type from an error message
+func classifyError(errMsg string) string {
+	lowerMsg := strings.ToLower(errMsg)
+
+	// Timeout errors
+	if strings.Contains(lowerMsg, "timeout") ||
+		strings.Contains(lowerMsg, "deadline exceeded") ||
+		strings.Contains(lowerMsg, "context deadline") ||
+		strings.Contains(lowerMsg, "i/o timeout") {
+		return "timeout"
+	}
+
+	// Auth errors
+	if strings.Contains(lowerMsg, "401") ||
+		strings.Contains(lowerMsg, "403") ||
+		strings.Contains(lowerMsg, "unauthorized") ||
+		strings.Contains(lowerMsg, "forbidden") ||
+		strings.Contains(lowerMsg, "authentication") ||
+		strings.Contains(lowerMsg, "invalid token") ||
+		strings.Contains(lowerMsg, "token expired") {
+		return "auth"
+	}
+
+	// Network errors
+	if strings.Contains(lowerMsg, "connection refused") ||
+		strings.Contains(lowerMsg, "no route to host") ||
+		strings.Contains(lowerMsg, "network unreachable") ||
+		strings.Contains(lowerMsg, "dial tcp") ||
+		strings.Contains(lowerMsg, "no such host") ||
+		strings.Contains(lowerMsg, "lookup") {
+		return "network"
+	}
+
+	// Certificate errors
+	if strings.Contains(lowerMsg, "x509") ||
+		strings.Contains(lowerMsg, "tls") ||
+		strings.Contains(lowerMsg, "certificate") ||
+		strings.Contains(lowerMsg, "ssl") {
+		return "certificate"
+	}
+
+	return "unknown"
+}
+
 // GetClusterHealth returns health status for a cluster
 func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName string) (*ClusterHealth, error) {
 	// Check cache
@@ -418,25 +467,38 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	}
 	m.mu.RUnlock()
 
+	now := time.Now().Format(time.RFC3339)
+
 	client, err := m.GetClient(contextName)
 	if err != nil {
+		errMsg := err.Error()
 		return &ClusterHealth{
-			Cluster: contextName,
-			Healthy: false,
-			Issues:  []string{fmt.Sprintf("Failed to connect: %v", err)},
+			Cluster:      contextName,
+			Healthy:      false,
+			Reachable:    false,
+			ErrorType:    classifyError(errMsg),
+			ErrorMessage: errMsg,
+			Issues:       []string{fmt.Sprintf("Failed to connect: %v", err)},
+			CheckedAt:    now,
 		}, nil
 	}
 
 	health := &ClusterHealth{
 		Cluster:   contextName,
 		Healthy:   true,
-		CheckedAt: time.Now().Format(time.RFC3339),
+		Reachable: true,
+		LastSeen:  now,
+		CheckedAt: now,
 	}
 
 	// Get nodes
 	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
+		errMsg := err.Error()
 		health.Healthy = false
+		health.Reachable = false
+		health.ErrorType = classifyError(errMsg)
+		health.ErrorMessage = errMsg
 		health.Issues = append(health.Issues, fmt.Sprintf("Failed to list nodes: %v", err))
 	} else {
 		health.NodeCount = len(nodes.Items)

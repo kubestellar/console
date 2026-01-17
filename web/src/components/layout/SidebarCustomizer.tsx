@@ -11,10 +11,38 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  LayoutDashboard,
+  Square,
 } from 'lucide-react'
 import { useSidebarConfig, AVAILABLE_ICONS, SidebarItem } from '../../hooks/useSidebarConfig'
+import { useDashboards, Dashboard } from '../../hooks/useDashboards'
+import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES } from '../dashboard/templates'
 import { cn } from '../../lib/cn'
 import * as Icons from 'lucide-react'
+
+const CARD_TYPE_LABELS: Record<string, string> = {
+  cluster_health: 'Cluster Health',
+  event_stream: 'Event Stream',
+  pod_issues: 'Pod Issues',
+  top_pods: 'Top Pods',
+  app_status: 'App Status',
+  resource_usage: 'Resource Usage',
+  cluster_metrics: 'Cluster Metrics',
+  deployment_status: 'Deployment Status',
+  deployment_progress: 'Deployment Progress',
+  deployment_issues: 'Deployment Issues',
+  gitops_drift: 'GitOps Drift',
+  upgrade_status: 'Upgrade Status',
+  resource_capacity: 'Resource Capacity',
+  gpu_inventory: 'GPU Inventory',
+  gpu_status: 'GPU Status',
+  gpu_overview: 'GPU Overview',
+  security_issues: 'Security Issues',
+}
+
+function formatCardType(type: string): string {
+  return CARD_TYPE_LABELS[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
 interface SidebarCustomizerProps {
   isOpen: boolean
@@ -31,6 +59,8 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     generateFromBehavior,
   } = useSidebarConfig()
 
+  const { getAllDashboardsWithCards } = useDashboards()
+
   const [newItemName, setNewItemName] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationResult, setGenerationResult] = useState<string | null>(null)
@@ -39,6 +69,18 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
   const [expandedSection, setExpandedSection] = useState<string | null>('primary')
+  const [dashboardsWithCards, setDashboardsWithCards] = useState<Dashboard[]>([])
+  const [isLoadingDashboards, setIsLoadingDashboards] = useState(false)
+
+  // Load dashboards with cards when customizer opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsLoadingDashboards(true)
+      getAllDashboardsWithCards()
+        .then(setDashboardsWithCards)
+        .finally(() => setIsLoadingDashboards(false))
+    }
+  }, [isOpen, getAllDashboardsWithCards])
 
   // ESC to close
   useEffect(() => {
@@ -298,6 +340,146 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               <span className="text-xs text-muted-foreground">({config.secondaryNav.length} items)</span>
             </button>
             {expandedSection === 'secondary' && renderItemList(config.secondaryNav)}
+          </div>
+
+          {/* Dashboard Cards */}
+          <div className="mb-4">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'dashboards' ? null : 'dashboards')}
+              className="flex items-center gap-2 w-full text-left mb-2"
+            >
+              {expandedSection === 'dashboards' ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
+              <LayoutDashboard className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium text-white">Dashboard Cards</span>
+              <span className="text-xs text-muted-foreground">
+                ({dashboardsWithCards.reduce((sum, d) => sum + (d.cards?.length || 0), 0)} cards)
+              </span>
+            </button>
+            {expandedSection === 'dashboards' && (
+              <div className="space-y-3 pl-2">
+                {isLoadingDashboards ? (
+                  <div className="flex items-center gap-2 p-3 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Loading dashboards...</span>
+                  </div>
+                ) : dashboardsWithCards.length === 0 ? (
+                  <div className="p-3 text-sm text-muted-foreground">
+                    No dashboards found
+                  </div>
+                ) : (
+                  dashboardsWithCards.map((dashboard) => (
+                    <div key={dashboard.id} className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-white/80 font-medium">
+                        <LayoutDashboard className="w-3.5 h-3.5 text-muted-foreground" />
+                        {dashboard.name}
+                        {dashboard.is_default && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      {dashboard.cards && dashboard.cards.length > 0 ? (
+                        <div className="space-y-1 pl-5">
+                          {dashboard.cards.map((card) => (
+                            <div
+                              key={card.id}
+                              className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20 text-sm"
+                            >
+                              <Square className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-white/70">
+                                {card.title || formatCardType(card.card_type)}
+                              </span>
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {formatCardType(card.card_type)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="pl-5 text-xs text-muted-foreground">
+                          No cards in this dashboard
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Available Dashboard Templates */}
+          <div className="mb-4">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'templates' ? null : 'templates')}
+              className="flex items-center gap-2 w-full text-left mb-2"
+            >
+              {expandedSection === 'templates' ? (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              )}
+              <Sparkles className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium text-white">Available Templates</span>
+              <span className="text-xs text-muted-foreground">({DASHBOARD_TEMPLATES.length} templates)</span>
+            </button>
+            {expandedSection === 'templates' && (
+              <div className="space-y-2 pl-2">
+                {TEMPLATE_CATEGORIES.map((category) => {
+                  const templatesInCategory = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
+                  if (templatesInCategory.length === 0) return null
+
+                  return (
+                    <div key={category.id} className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wider py-1">
+                        <span>{category.icon}</span>
+                        <span>{category.name}</span>
+                      </div>
+                      {templatesInCategory.map((template) => {
+                        const isInSidebar = config.primaryNav.some(item =>
+                          item.href === `/dashboard/${template.id}` || item.id === template.id
+                        )
+
+                        return (
+                          <div
+                            key={template.id}
+                            className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20"
+                          >
+                            <span className="text-lg">{template.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm text-white truncate">{template.name}</div>
+                              <div className="text-xs text-muted-foreground truncate">{template.description}</div>
+                            </div>
+                            {isInSidebar ? (
+                              <span className="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 whitespace-nowrap">
+                                Added
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  addItem({
+                                    name: template.name,
+                                    icon: 'LayoutDashboard',
+                                    href: `/dashboard/${template.id}`,
+                                    type: 'link',
+                                  }, 'primary')
+                                }}
+                                className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 whitespace-nowrap"
+                              >
+                                Add
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Cluster Status Toggle */}

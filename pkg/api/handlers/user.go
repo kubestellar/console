@@ -43,7 +43,8 @@ func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 
 	// Only allow updating certain fields
 	var updates struct {
-		Email string `json:"email"`
+		Email   string `json:"email"`
+		SlackID string `json:"slackId"`
 	}
 	if err := c.BodyParser(&updates); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
@@ -51,6 +52,9 @@ func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 
 	if updates.Email != "" {
 		user.Email = updates.Email
+	}
+	if updates.SlackID != "" {
+		user.SlackID = updates.SlackID
 	}
 
 	if err := h.store.UpdateUser(user); err != nil {

@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 
+export interface DashboardCard {
+  id: string
+  card_type: string
+  title?: string
+  config: Record<string, unknown>
+  position: { x: number; y: number; w: number; h: number }
+}
+
 export interface Dashboard {
   id: string
   name: string
   is_default?: boolean
   created_at?: string
   updated_at?: string
+  cards?: DashboardCard[]
 }
 
 export function useDashboards() {
@@ -76,6 +85,35 @@ export function useDashboards() {
     }
   }, [])
 
+  const getDashboardWithCards = useCallback(async (dashboardId: string): Promise<Dashboard | null> => {
+    try {
+      const { data } = await api.get<Dashboard>(`/api/dashboards/${dashboardId}`)
+      return data
+    } catch (err) {
+      console.error('Failed to get dashboard with cards:', err)
+      return null
+    }
+  }, [])
+
+  const getAllDashboardsWithCards = useCallback(async (): Promise<Dashboard[]> => {
+    try {
+      const { data: dashboardList } = await api.get<Dashboard[]>('/api/dashboards')
+      if (!dashboardList || dashboardList.length === 0) return []
+
+      // Fetch cards for each dashboard
+      const dashboardsWithCards = await Promise.all(
+        dashboardList.map(async (d) => {
+          const details = await getDashboardWithCards(d.id)
+          return details || d
+        })
+      )
+      return dashboardsWithCards
+    } catch (err) {
+      console.error('Failed to get all dashboards with cards:', err)
+      return []
+    }
+  }, [getDashboardWithCards])
+
   return {
     dashboards,
     isLoading,
@@ -85,5 +123,7 @@ export function useDashboards() {
     updateDashboard,
     deleteDashboard,
     moveCardToDashboard,
+    getDashboardWithCards,
+    getAllDashboardsWithCards,
   }
 }

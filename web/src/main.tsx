@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
+// Initialize i18n before rendering
+import './lib/i18n'
 
 // Enable MSW mock service worker in demo mode (Netlify previews)
 const enableMocking = async () => {

@@ -13,6 +13,7 @@ interface AddCardModalProps {
   isOpen: boolean
   onClose: () => void
   onAddCards: (cards: CardSuggestion[]) => void
+  existingCardTypes?: string[]
 }
 
 // Simulated AI response - in production this would call Claude API
@@ -131,11 +132,187 @@ function generateCardSuggestions(query: string): CardSuggestion[] {
         config: {},
       },
       {
-        type: 'cluster_resources',
-        title: 'Cluster Resources',
-        description: 'Resource usage by cluster',
+        type: 'cluster_focus',
+        title: 'Cluster Focus',
+        description: 'Single cluster detailed view',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'cluster_comparison',
+        title: 'Cluster Comparison',
+        description: 'Side-by-side cluster metrics',
         visualization: 'bar',
-        config: { groupBy: 'cluster' },
+        config: {},
+      },
+      {
+        type: 'cluster_network',
+        title: 'Cluster Network',
+        description: 'API server and network info',
+        visualization: 'status',
+        config: {},
+      },
+    ]
+  }
+
+  // Namespace-related queries
+  if (lowerQuery.includes('namespace') || lowerQuery.includes('quota') || lowerQuery.includes('rbac')) {
+    return [
+      {
+        type: 'namespace_overview',
+        title: 'Namespace Overview',
+        description: 'Namespace resources and health',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'namespace_quotas',
+        title: 'Namespace Quotas',
+        description: 'Resource quota usage',
+        visualization: 'gauge',
+        config: {},
+      },
+      {
+        type: 'namespace_rbac',
+        title: 'Namespace RBAC',
+        description: 'Roles, bindings, service accounts',
+        visualization: 'table',
+        config: {},
+      },
+      {
+        type: 'namespace_events',
+        title: 'Namespace Events',
+        description: 'Events in namespace',
+        visualization: 'events',
+        config: {},
+      },
+    ]
+  }
+
+  // Operator/OLM-related queries
+  if (lowerQuery.includes('operator') || lowerQuery.includes('olm') || lowerQuery.includes('crd')) {
+    return [
+      {
+        type: 'operator_status',
+        title: 'Operator Status',
+        description: 'OLM operator health',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'operator_subscriptions',
+        title: 'Operator Subscriptions',
+        description: 'Subscriptions and pending upgrades',
+        visualization: 'table',
+        config: {},
+      },
+      {
+        type: 'crd_health',
+        title: 'CRD Health',
+        description: 'Custom resource definitions status',
+        visualization: 'status',
+        config: {},
+      },
+    ]
+  }
+
+  // Helm-related queries
+  if (lowerQuery.includes('helm') || lowerQuery.includes('chart') || lowerQuery.includes('release')) {
+    return [
+      {
+        type: 'helm_release_status',
+        title: 'Helm Releases',
+        description: 'Release status and versions',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'helm_values_diff',
+        title: 'Helm Values Diff',
+        description: 'Compare values vs defaults',
+        visualization: 'table',
+        config: {},
+      },
+      {
+        type: 'helm_history',
+        title: 'Helm History',
+        description: 'Release revision history',
+        visualization: 'events',
+        config: {},
+      },
+      {
+        type: 'chart_versions',
+        title: 'Chart Versions',
+        description: 'Available chart upgrades',
+        visualization: 'table',
+        config: {},
+      },
+    ]
+  }
+
+  // Kustomize/GitOps-related queries
+  if (lowerQuery.includes('kustomize') || lowerQuery.includes('flux') || lowerQuery.includes('overlay')) {
+    return [
+      {
+        type: 'kustomization_status',
+        title: 'Kustomization Status',
+        description: 'Flux kustomizations health',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'overlay_comparison',
+        title: 'Overlay Comparison',
+        description: 'Compare kustomize overlays',
+        visualization: 'table',
+        config: {},
+      },
+      {
+        type: 'gitops_drift',
+        title: 'GitOps Drift',
+        description: 'Detect configuration drift',
+        visualization: 'status',
+        config: {},
+      },
+    ]
+  }
+
+  // Cost-related queries
+  if (lowerQuery.includes('cost') || lowerQuery.includes('price') || lowerQuery.includes('expense')) {
+    return [
+      {
+        type: 'cluster_costs',
+        title: 'Cluster Costs',
+        description: 'Resource cost estimation',
+        visualization: 'bar',
+        config: {},
+      },
+      {
+        type: 'resource_usage',
+        title: 'Resource Usage',
+        description: 'CPU and memory consumption',
+        visualization: 'gauge',
+        config: {},
+      },
+    ]
+  }
+
+  // User management queries
+  if (lowerQuery.includes('user') || lowerQuery.includes('service account') || lowerQuery.includes('access') || lowerQuery.includes('permission')) {
+    return [
+      {
+        type: 'user_management',
+        title: 'User Management',
+        description: 'Console users and Kubernetes RBAC',
+        visualization: 'table',
+        config: {},
+      },
+      {
+        type: 'namespace_rbac',
+        title: 'Namespace RBAC',
+        description: 'Roles, bindings, service accounts',
+        visualization: 'table',
+        config: {},
       },
     ]
   }
@@ -183,7 +360,7 @@ const visualizationIcons: Record<string, string> = {
   sparkline: '〰️',
 }
 
-export function AddCardModal({ isOpen, onClose, onAddCards }: AddCardModalProps) {
+export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [] }: AddCardModalProps) {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<CardSuggestion[]>([])
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
@@ -216,8 +393,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards }: AddCardModalProps)
 
     const results = generateCardSuggestions(query)
     setSuggestions(results)
-    // Select all by default
-    setSelectedCards(new Set(results.map((_, i) => i)))
+    // Select all non-duplicate by default
+    setSelectedCards(new Set(results.map((card, i) => existingCardTypes.includes(card.type) ? -1 : i).filter(i => i !== -1)))
     setIsGenerating(false)
   }
 
@@ -310,8 +487,10 @@ export function AddCardModal({ isOpen, onClose, onAddCards }: AddCardModalProps)
                 {[
                   'Show me GPU utilization and availability',
                   'What pods are having issues?',
-                  'CPU and memory usage trends',
-                  'Cluster health overview',
+                  'Helm releases and chart versions',
+                  'Namespace quotas and RBAC',
+                  'Operator status and CRDs',
+                  'Kustomize and GitOps status',
                 ].map((example) => (
                   <button
                     key={example}
@@ -332,30 +511,39 @@ export function AddCardModal({ isOpen, onClose, onAddCards }: AddCardModalProps)
                 Suggested cards ({selectedCards.size} selected):
               </p>
               <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                {suggestions.map((card, index) => (
-                  <button
-                    key={index}
-                    onClick={() => toggleCard(index)}
-                    className={`p-3 rounded-lg text-left transition-all ${
-                      selectedCards.has(index)
-                        ? 'bg-purple-500/20 border-2 border-purple-500'
-                        : 'bg-secondary/50 border-2 border-transparent hover:border-purple-500/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span>{visualizationIcons[card.visualization]}</span>
-                      <span className="text-sm font-medium text-white">
-                        {card.title}
+                {suggestions.map((card, index) => {
+                  const isAlreadyAdded = existingCardTypes.includes(card.type)
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => !isAlreadyAdded && toggleCard(index)}
+                      disabled={isAlreadyAdded}
+                      className={`p-3 rounded-lg text-left transition-all ${
+                        isAlreadyAdded
+                          ? 'bg-secondary/30 border-2 border-transparent opacity-50 cursor-not-allowed'
+                          : selectedCards.has(index)
+                            ? 'bg-purple-500/20 border-2 border-purple-500'
+                            : 'bg-secondary/50 border-2 border-transparent hover:border-purple-500/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span>{visualizationIcons[card.visualization]}</span>
+                        <span className="text-sm font-medium text-white">
+                          {card.title}
+                        </span>
+                        {isAlreadyAdded && (
+                          <span className="text-xs text-muted-foreground">(Already added)</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {card.description}
+                      </p>
+                      <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground capitalize">
+                        {card.visualization}
                       </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {card.description}
-                    </p>
-                    <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground capitalize">
-                      {card.visualization}
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}

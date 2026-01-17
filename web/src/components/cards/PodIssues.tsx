@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { AlertTriangle, RefreshCw, MemoryStick, ImageOff, Clock, ChevronRight } from 'lucide-react'
 import { usePodIssues, PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 
@@ -14,11 +15,11 @@ const SORT_OPTIONS = [
   { value: 'cluster' as const, label: 'Cluster' },
 ]
 
-const getIssueIcon = (status: string) => {
-  if (status.includes('OOM')) return MemoryStick
-  if (status.includes('Image')) return ImageOff
-  if (status.includes('Pending')) return Clock
-  return RefreshCw
+const getIssueIcon = (status: string): { icon: typeof MemoryStick; tooltip: string } => {
+  if (status.includes('OOM')) return { icon: MemoryStick, tooltip: 'Out of Memory - Pod exceeded memory limits' }
+  if (status.includes('Image')) return { icon: ImageOff, tooltip: 'Image Pull Error - Failed to pull container image' }
+  if (status.includes('Pending')) return { icon: Clock, tooltip: 'Pending - Pod is waiting to be scheduled' }
+  return { icon: RefreshCw, tooltip: 'Restart Loop - Pod is repeatedly crashing' }
 }
 
 const getStatusColors = (status: string) => {
@@ -39,12 +40,15 @@ const getStatusColors = (status: string) => {
 export function PodIssues() {
   const { issues: rawIssues, isLoading, error, refetch } = usePodIssues()
   const { drillToPod } = useDrillDownActions()
+  const { filterByCluster } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
   const issues = useMemo(() => {
-    const sorted = [...rawIssues].sort((a, b) => {
+    // Apply global cluster filter first
+    const filtered = filterByCluster(rawIssues)
+    const sorted = [...filtered].sort((a, b) => {
       let result = 0
       if (sortBy === 'status') result = a.status.localeCompare(b.status)
       else if (sortBy === 'name') result = a.name.localeCompare(b.name)
@@ -54,7 +58,7 @@ export function PodIssues() {
     })
     if (limit === 'unlimited') return sorted
     return sorted.slice(0, limit)
-  }, [rawIssues, sortBy, sortDirection, limit])
+  }, [rawIssues, sortBy, sortDirection, limit, filterByCluster])
 
   if (isLoading) {
     return (
@@ -72,12 +76,13 @@ export function PodIssues() {
           <button
             onClick={() => refetch()}
             className="p-1 hover:bg-secondary rounded transition-colors"
+            title="Refresh pod issues"
           >
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title="All pods are healthy">
             <svg
               className="w-6 h-6 text-green-400"
               fill="none"
@@ -105,7 +110,7 @@ export function PodIssues() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">Pod Issues</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${rawIssues.length} pods with issues`}>
             {rawIssues.length}
           </span>
         </div>
@@ -122,6 +127,7 @@ export function PodIssues() {
           <button
             onClick={() => refetch()}
             className="p-1 hover:bg-secondary rounded transition-colors"
+            title="Refresh pod issues"
           >
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -131,7 +137,7 @@ export function PodIssues() {
       {/* Issues list */}
       <div className="flex-1 space-y-2 overflow-y-auto">
         {issues.map((issue: PodIssue, idx: number) => {
-          const Icon = getIssueIcon(issue.status)
+          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.status)
           const colors = getStatusColors(issue.status)
           return (
             <div
@@ -143,34 +149,35 @@ export function PodIssues() {
                 restarts: issue.restarts,
                 issues: issue.issues,
               })}
+              title={`Click to view details for ${issue.name}`}
             >
               <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`}>
+                <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <ClusterBadge cluster={issue.cluster || 'default'} />
-                    <span className="text-xs text-muted-foreground">{issue.namespace}</span>
+                    <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
                   </div>
-                  <p className="text-sm font-medium text-white truncate">{issue.name}</p>
+                  <p className="text-sm font-medium text-white truncate" title={issue.name}>{issue.name}</p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span className={`text-xs px-2 py-0.5 rounded ${colors.bg} ${colors.text}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded ${colors.bg} ${colors.text}`} title={`Status: ${issue.status}`}>
                       {issue.status}
                     </span>
                     {issue.restarts > 0 && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground" title={`Pod has restarted ${issue.restarts} times`}>
                         {issue.restarts} restarts
                       </span>
                     )}
                   </div>
                   {issue.issues.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                    <p className="text-xs text-muted-foreground mt-1 truncate" title={issue.issues.join(', ')}>
                       {issue.issues.join(', ')}
                     </p>
                   )}
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+                <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
               </div>
             </div>
           )
@@ -178,7 +185,7 @@ export function PodIssues() {
       </div>
 
       {error && (
-        <div className="mt-2 text-xs text-yellow-400 flex items-center gap-1">
+        <div className="mt-2 text-xs text-yellow-400 flex items-center gap-1" title="Unable to fetch live data - displaying sample data">
           <AlertTriangle className="w-3 h-3" />
           Using demo data
         </div>

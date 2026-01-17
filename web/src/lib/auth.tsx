@@ -6,7 +6,9 @@ interface User {
   github_id: string
   github_login: string
   email?: string
+  slackId?: string
   avatar_url?: string
+  role?: 'admin' | 'editor' | 'viewer'
   onboarded: boolean
 }
 
@@ -65,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         github_login: 'demo-user',
         email: 'demo@example.com',
         avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+        role: 'admin',
         onboarded: true,
       })
       return

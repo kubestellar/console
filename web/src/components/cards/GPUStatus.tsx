@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { RefreshCw, Cpu, Activity } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface GPUStatusProps {
   config?: Record<string, unknown>
@@ -7,7 +10,14 @@ interface GPUStatusProps {
 
 export function GPUStatus({ config }: GPUStatusProps) {
   const cluster = config?.cluster as string | undefined
-  const { nodes, isLoading, refetch } = useGPUNodes(cluster)
+  const { nodes: rawNodes, isLoading, refetch } = useGPUNodes(cluster)
+  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Filter nodes by global cluster selection
+  const nodes = useMemo(() => {
+    if (isAllClustersSelected) return rawNodes
+    return rawNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+  }, [rawNodes, selectedClusters, isAllClustersSelected])
 
   if (isLoading) {
     return (
@@ -79,7 +89,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
               className="p-3 rounded-lg bg-secondary/30"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-white">{clusterName}</span>
+                <ClusterBadge cluster={clusterName} size="sm" />
                 <span className={`text-xs px-1.5 py-0.5 rounded ${
                   utilization > 80 ? 'bg-red-500/20 text-red-400' :
                   utilization > 50 ? 'bg-yellow-500/20 text-yellow-400' :

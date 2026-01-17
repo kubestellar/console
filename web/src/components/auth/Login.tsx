@@ -105,9 +105,12 @@ export function Login() {
       </div>
 
       {/* Version info - bottom right */}
-      <div className="absolute bottom-4 right-4 text-xs text-gray-600 font-mono z-10">
+      <div className="absolute bottom-4 right-4 text-xs text-gray-600 font-mono z-10 flex items-center gap-2">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${__DEV_MODE__ ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>
+          {__DEV_MODE__ ? 'dev' : 'prod'}
+        </span>
         <span title={`Built: ${__BUILD_TIME__}`}>
-          v{__APP_VERSION__} ({__COMMIT_HASH__.substring(0, 7)})
+          v{__APP_VERSION__} · {__COMMIT_HASH__.substring(0, 7)}
         </span>
       </div>
     </div>

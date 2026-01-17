@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, GripVertical } from 'lucide-react'
+import { Plus, GripVertical, Layout } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -22,6 +22,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { api } from '../../lib/api'
 import { useDashboards } from '../../hooks/useDashboards'
+import { useCardHistory } from '../../hooks/useCardHistory'
+import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -42,10 +44,40 @@ import { GPUInventory } from '../cards/GPUInventory'
 import { GPUStatus } from '../cards/GPUStatus'
 import { GPUOverview } from '../cards/GPUOverview'
 import { SecurityIssues } from '../cards/SecurityIssues'
+// Cluster-scoped cards
+import { ClusterFocus } from '../cards/ClusterFocus'
+import { ClusterComparison } from '../cards/ClusterComparison'
+import { ClusterCosts } from '../cards/ClusterCosts'
+import { ClusterNetwork } from '../cards/ClusterNetwork'
+// Namespace-scoped cards
+import { NamespaceOverview } from '../cards/NamespaceOverview'
+import { NamespaceQuotas } from '../cards/NamespaceQuotas'
+import { NamespaceRBAC } from '../cards/NamespaceRBAC'
+import { NamespaceEvents } from '../cards/NamespaceEvents'
+// Operator-scoped cards
+import { OperatorStatus } from '../cards/OperatorStatus'
+import { OperatorSubscriptions } from '../cards/OperatorSubscriptions'
+import { CRDHealth } from '../cards/CRDHealth'
+// Helm-scoped cards
+import { HelmReleaseStatus } from '../cards/HelmReleaseStatus'
+import { HelmValuesDiff } from '../cards/HelmValuesDiff'
+import { HelmHistory } from '../cards/HelmHistory'
+import { ChartVersions } from '../cards/ChartVersions'
+// Kustomize-scoped cards
+import { KustomizationStatus } from '../cards/KustomizationStatus'
+import { OverlayComparison } from '../cards/OverlayComparison'
+// ArgoCD cards
+import { ArgoCDApplications } from '../cards/ArgoCDApplications'
+import { ArgoCDSyncStatus } from '../cards/ArgoCDSyncStatus'
+import { ArgoCDHealth } from '../cards/ArgoCDHealth'
+// User management card
+import { UserManagement } from '../cards/UserManagement'
 import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
+import { TemplatesModal } from './TemplatesModal'
+import { DashboardTemplate } from './templates'
 
 interface Card {
   id: string
@@ -64,6 +96,7 @@ interface DashboardData {
 }
 
 const CARD_COMPONENTS: Record<string, React.ComponentType<{ config?: Record<string, unknown> }>> = {
+  // Core cards
   cluster_health: ClusterHealth,
   event_stream: EventStream,
   pod_issues: PodIssues,
@@ -81,12 +114,39 @@ const CARD_COMPONENTS: Record<string, React.ComponentType<{ config?: Record<stri
   gpu_status: GPUStatus,
   gpu_overview: GPUOverview,
   security_issues: SecurityIssues,
+  // Cluster-scoped cards
+  cluster_focus: ClusterFocus,
+  cluster_comparison: ClusterComparison,
+  cluster_costs: ClusterCosts,
+  cluster_network: ClusterNetwork,
+  // Namespace-scoped cards
+  namespace_overview: NamespaceOverview,
+  namespace_quotas: NamespaceQuotas,
+  namespace_rbac: NamespaceRBAC,
+  namespace_events: NamespaceEvents,
+  // Operator-scoped cards
+  operator_status: OperatorStatus,
+  operator_subscriptions: OperatorSubscriptions,
+  crd_health: CRDHealth,
+  // Helm-scoped cards
+  helm_release_status: HelmReleaseStatus,
+  helm_values_diff: HelmValuesDiff,
+  helm_history: HelmHistory,
+  chart_versions: ChartVersions,
+  // Kustomize-scoped cards
+  kustomization_status: KustomizationStatus,
+  overlay_comparison: OverlayComparison,
+  // ArgoCD cards
+  argocd_applications: ArgoCDApplications,
+  argocd_sync_status: ArgoCDSyncStatus,
+  argocd_health: ArgoCDHealth,
+  // User management
+  user_management: UserManagement,
 }
 
 export function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isAddCardOpen, setIsAddCardOpen] = useState(false)
   const [isReplaceCardOpen, setIsReplaceCardOpen] = useState(false)
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
@@ -95,9 +155,20 @@ export function Dashboard() {
   const [isDragging, setIsDragging] = useState(false)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
 
+  // Get context for modals that can be triggered from sidebar
+  const {
+    isAddCardModalOpen,
+    closeAddCardModal,
+    openAddCardModal,
+    isTemplatesModalOpen,
+    closeTemplatesModal,
+    openTemplatesModal,
+  } = useDashboardContext()
+
   // Get all dashboards for cross-dashboard dragging
   const { dashboards, moveCardToDashboard, createDashboard } = useDashboards()
   const { showToast } = useToast()
+  const { recordCardRemoved, recordCardAdded, recordCardReplaced, recordCardConfigured } = useCardHistory()
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -216,13 +287,29 @@ export function Dashboard() {
       position: { x: 0, y: 0, w: 4, h: 3 },
       title: s.title,
     }))
+    // Record each card addition in history
+    newCards.forEach((card) => {
+      recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
+    })
     setLocalCards((prev) => [...prev, ...newCards])
   }
 
   const handleRemoveCard = useCallback((cardId: string) => {
+    // Find the card to get its details before removing
+    const cardToRemove = localCards.find((c) => c.id === cardId)
+    if (cardToRemove) {
+      recordCardRemoved(
+        cardToRemove.id,
+        cardToRemove.card_type,
+        cardToRemove.title,
+        cardToRemove.config,
+        dashboard?.id,
+        dashboard?.name
+      )
+    }
     setLocalCards((prev) => prev.filter((c) => c.id !== cardId))
     // TODO: Persist to backend if dashboard exists
-  }, [])
+  }, [localCards, dashboard, recordCardRemoved])
 
   const handleConfigureCard = useCallback((card: Card) => {
     setSelectedCard(card)
@@ -235,6 +322,19 @@ export function Dashboard() {
   }, [])
 
   const handleCardReplaced = useCallback((oldCardId: string, newCardType: string, newTitle?: string, newConfig?: Record<string, unknown>) => {
+    // Find the old card to get its previous type
+    const oldCard = localCards.find((c) => c.id === oldCardId)
+    if (oldCard) {
+      recordCardReplaced(
+        oldCardId,
+        newCardType,
+        oldCard.card_type,
+        newTitle,
+        newConfig,
+        dashboard?.id,
+        dashboard?.name
+      )
+    }
     setLocalCards((prev) =>
       prev.map((c) =>
         c.id === oldCardId
@@ -244,9 +344,20 @@ export function Dashboard() {
     )
     setIsReplaceCardOpen(false)
     setSelectedCard(null)
-  }, [])
+  }, [localCards, dashboard, recordCardReplaced])
 
   const handleCardConfigured = useCallback((cardId: string, newConfig: Record<string, unknown>, newTitle?: string) => {
+    const card = localCards.find((c) => c.id === cardId)
+    if (card) {
+      recordCardConfigured(
+        cardId,
+        card.card_type,
+        newTitle || card.title,
+        newConfig,
+        dashboard?.id,
+        dashboard?.name
+      )
+    }
     setLocalCards((prev) =>
       prev.map((c) =>
         c.id === cardId
@@ -256,7 +367,7 @@ export function Dashboard() {
     )
     setIsConfigureCardOpen(false)
     setSelectedCard(null)
-  }, [])
+  }, [localCards, dashboard, recordCardConfigured])
 
   const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>, title?: string) => {
     const newCard: Card = {
@@ -266,9 +377,11 @@ export function Dashboard() {
       position: { x: 0, y: 0, w: 4, h: 3 },
       title,
     }
+    // Record in history
+    recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
     // Add card at the TOP of the dashboard
     setLocalCards((prev) => [newCard, ...prev])
-  }, [])
+  }, [dashboard, recordCardAdded])
 
   // Create a new card from AI configuration
   const handleCreateCardFromAI = useCallback((cardType: string, config: Record<string, unknown>, title?: string) => {
@@ -279,11 +392,31 @@ export function Dashboard() {
       position: { x: 0, y: 0, w: 4, h: 3 },
       title,
     }
+    // Record in history
+    recordCardAdded(newCard.id, cardType, title, config, dashboard?.id, dashboard?.name)
     // Add at TOP and close the configure modal
     setLocalCards((prev) => [newCard, ...prev])
     setIsConfigureCardOpen(false)
     setSelectedCard(null)
-  }, [])
+  }, [dashboard, recordCardAdded])
+
+  // Apply template - add all template cards to dashboard
+  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
+    const newCards: Card[] = template.cards.map((tc, index) => ({
+      id: `template-${Date.now()}-${index}`,
+      card_type: tc.card_type,
+      config: tc.config || {},
+      position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h },
+      title: tc.title,
+    }))
+    // Record each card addition in history
+    newCards.forEach((card) => {
+      recordCardAdded(card.id, card.card_type, card.title, card.config, dashboard?.id, dashboard?.name)
+    })
+    // Add template cards at the top
+    setLocalCards((prev) => [...newCards, ...prev])
+    showToast(`Applied "${template.name}" template with ${newCards.length} cards`, 'success')
+  }, [dashboard, recordCardAdded, showToast])
 
   const currentCardTypes = localCards.map(c => c.card_type)
 
@@ -310,13 +443,22 @@ export function Dashboard() {
             Your personalized multi-cluster overview
           </p>
         </div>
-        <button
-          onClick={() => setIsAddCardOpen(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Card
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openTemplatesModal}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Layout className="w-4 h-4" />
+            Templates
+          </button>
+          <button
+            onClick={openAddCardModal}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Card
+          </button>
+        </div>
       </div>
 
       {/* AI Recommendations */}
@@ -371,9 +513,10 @@ export function Dashboard() {
 
       {/* Add Card Modal */}
       <AddCardModal
-        isOpen={isAddCardOpen}
-        onClose={() => setIsAddCardOpen(false)}
+        isOpen={isAddCardModalOpen}
+        onClose={closeAddCardModal}
         onAddCards={handleAddCards}
+        existingCardTypes={currentCardTypes}
       />
 
       {/* Replace Card Modal */}
@@ -397,6 +540,13 @@ export function Dashboard() {
         }}
         onSave={handleCardConfigured}
         onCreateCard={handleCreateCardFromAI}
+      />
+
+      {/* Templates Modal */}
+      <TemplatesModal
+        isOpen={isTemplatesModalOpen}
+        onClose={closeTemplatesModal}
+        onApplyTemplate={handleApplyTemplate}
       />
     </div>
   )

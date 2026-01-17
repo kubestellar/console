@@ -9,25 +9,15 @@ import { Events } from './components/events/Events'
 import { Applications } from './components/applications/Applications'
 import { Security } from './components/security/Security'
 import { GitOps } from './components/gitops/GitOps'
+import { CardHistory } from './components/history/CardHistory'
+import { UserManagementPage } from './pages/UserManagement'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
 import { AuthProvider, useAuth } from './lib/auth'
 import { DrillDownProvider } from './hooks/useDrillDown'
+import { DashboardProvider } from './hooks/useDashboardContext'
+import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
 import { ToastProvider } from './components/ui/Toast'
-
-function PlaceholderPage({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="pt-16">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">{title}</h1>
-        <p className="text-muted-foreground">{description}</p>
-      </div>
-      <div className="flex items-center justify-center h-64 rounded-lg border border-dashed border-border">
-        <p className="text-muted-foreground">Coming soon</p>
-      </div>
-    </div>
-  )
-}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -61,6 +51,8 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+      <GlobalFiltersProvider>
+      <DashboardProvider>
       <DrillDownProvider>
       <DrillDownModal />
       <Routes>
@@ -152,7 +144,7 @@ function App() {
             <ProtectedRoute>
               <OnboardedRoute>
                 <Layout>
-                  <PlaceholderPage title="Card History" description="Previously swapped dashboard cards" />
+                  <CardHistory />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>
@@ -170,9 +162,23 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <UserManagementPage />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </DrillDownProvider>
+      </DashboardProvider>
+      </GlobalFiltersProvider>
       </ToastProvider>
     </AuthProvider>
   )

@@ -1,0 +1,85 @@
+{
+  "cluster": {
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "error": "Error",
+    "critical": "Critical",
+    "degraded": "Degraded",
+    "unknown": "Unknown",
+    "unreachable": "Unreachable",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "pod": {
+    "running": "Running",
+    "pending": "Pending",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "unknown": "Unknown",
+    "crashLoopBackOff": "CrashLoopBackOff",
+    "imagePullBackOff": "ImagePullBackOff",
+    "evicted": "Evicted",
+    "oomKilled": "OOMKilled",
+    "containerCreating": "ContainerCreating",
+    "terminated": "Terminated"
+  },
+  "deployment": {
+    "available": "Available",
+    "progressing": "Progressing",
+    "replicaFailure": "ReplicaFailure",
+    "stalled": "Stalled",
+    "complete": "Complete"
+  },
+  "node": {
+    "ready": "Ready",
+    "notReady": "NotReady",
+    "schedulingDisabled": "SchedulingDisabled",
+    "memoryPressure": "MemoryPressure",
+    "diskPressure": "DiskPressure",
+    "pidPressure": "PIDPressure",
+    "networkUnavailable": "NetworkUnavailable"
+  },
+  "event": {
+    "normal": "Normal",
+    "warning": "Warning",
+    "error": "Error"
+  },
+  "security": {
+    "privileged": "Privileged",
+    "hostNetwork": "HostNetwork",
+    "hostPID": "HostPID",
+    "hostIPC": "HostIPC",
+    "runAsRoot": "RunAsRoot",
+    "noSecurityContext": "NoSecurityContext"
+  },
+  "gitops": {
+    "synced": "Synced",
+    "drifted": "Drifted",
+    "outOfSync": "Out of Sync",
+    "applying": "Applying",
+    "pruning": "Pruning"
+  },
+  "general": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "failed": "Failed",
+    "skipped": "Skipped"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "info": "Info"
+  },
+  "user": {
+    "admin": "Admin",
+    "editor": "Editor",
+    "viewer": "Viewer"
+  }
+}

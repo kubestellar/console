@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { Plus, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
 import { SidebarCustomizer } from './SidebarCustomizer'
 import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useClusters } from '../../hooks/useMCP'
+import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
 export function Sidebar() {
   const { config, toggleCollapsed } = useSidebarConfig()
   const { clusters } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
+  const dashboardContext = useDashboardContextOptional()
 
   const healthyClusters = clusters.filter((c) => c.healthy).length
   const unhealthyClusters = clusters.filter((c) => !c.healthy).length
@@ -29,7 +31,7 @@ export function Sidebar() {
         'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
         isActive
           ? 'bg-purple-500/20 text-purple-400'
-          : 'text-muted-foreground hover:text-white hover:bg-secondary/50',
+          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
         config.collapsed ? 'justify-center p-3' : 'px-3 py-2'
       )}
       title={config.collapsed ? item.name : undefined}
@@ -48,7 +50,7 @@ export function Sidebar() {
         {/* Collapse toggle */}
         <button
           onClick={toggleCollapsed}
-          className="absolute -right-3 top-6 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-white z-10"
+          className="absolute -right-3 top-6 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground z-10"
         >
           {config.collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -72,7 +74,10 @@ export function Sidebar() {
         {/* Add card button */}
         {!config.collapsed && (
           <div className="mt-6">
-            <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:text-white hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-200">
+            <button
+              onClick={() => dashboardContext?.openAddCardModal()}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-200"
+            >
               <Plus className="w-4 h-4" />
               <span className="text-sm">Add Card</span>
             </button>
@@ -87,15 +92,24 @@ export function Sidebar() {
             </h4>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white">Healthy</span>
+                <span className="flex items-center gap-1.5 text-sm text-foreground">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  Healthy
+                </span>
                 <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white">Warning</span>
+                <span className="flex items-center gap-1.5 text-sm text-foreground">
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+                  Warning
+                </span>
                 <span className="text-sm font-medium text-yellow-400">0</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white">Critical</span>
+                <span className="flex items-center gap-1.5 text-sm text-foreground">
+                  <XCircle className="w-3.5 h-3.5 text-red-400" />
+                  Critical
+                </span>
                 <span className="text-sm font-medium text-red-400">{unhealthyClusters}</span>
               </div>
             </div>
@@ -107,7 +121,7 @@ export function Sidebar() {
           <button
             onClick={() => setIsCustomizerOpen(true)}
             className={cn(
-              'flex items-center gap-2 rounded-lg text-muted-foreground hover:text-white hover:bg-secondary/50 transition-colors',
+              'flex items-center gap-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',
               config.collapsed ? 'justify-center w-full p-3' : 'px-3 py-2 text-xs'
             )}
             title={config.collapsed ? 'Customize sidebar' : undefined}

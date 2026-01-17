@@ -266,6 +266,20 @@ func (s *Server) setupRoutes() {
 	events := handlers.NewEventHandler(s.store)
 	api.Post("/events", events.RecordEvent)
 
+	// RBAC and User Management routes
+	rbac := handlers.NewRBACHandler(s.store, s.k8sClient)
+	api.Get("/users", rbac.ListConsoleUsers)
+	api.Put("/users/:id/role", rbac.UpdateUserRole)
+	api.Delete("/users/:id", rbac.DeleteConsoleUser)
+	api.Get("/users/summary", rbac.GetUserManagementSummary)
+	api.Get("/rbac/users", rbac.ListK8sUsers)
+	api.Get("/rbac/service-accounts", rbac.ListK8sServiceAccounts)
+	api.Get("/rbac/roles", rbac.ListK8sRoles)
+	api.Get("/rbac/bindings", rbac.ListK8sRoleBindings)
+	api.Get("/rbac/permissions", rbac.GetClusterPermissions)
+	api.Post("/rbac/service-accounts", rbac.CreateServiceAccount)
+	api.Post("/rbac/bindings", rbac.CreateRoleBinding)
+
 	// MCP routes (cluster operations via klaude and direct k8s)
 	// In production, these are protected (dev mode routes registered above)
 	if !s.config.DevMode {

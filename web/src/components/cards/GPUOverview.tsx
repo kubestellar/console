@@ -1,12 +1,21 @@
+import { useMemo } from 'react'
 import { RefreshCw, Zap } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
 }
 
 export function GPUOverview({ config: _config }: GPUOverviewProps) {
-  const { nodes, isLoading, refetch } = useGPUNodes()
+  const { nodes: rawNodes, isLoading, refetch } = useGPUNodes()
+  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Filter nodes by global cluster selection
+  const nodes = useMemo(() => {
+    if (isAllClustersSelected) return rawNodes
+    return rawNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+  }, [rawNodes, selectedClusters, isAllClustersSelected])
 
   if (isLoading) {
     return (

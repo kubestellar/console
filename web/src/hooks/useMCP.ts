@@ -13,6 +13,11 @@ export interface ClusterInfo {
   podCount?: number
   cpuCores?: number
   isCurrent?: boolean
+  // Reachability fields (from health check)
+  reachable?: boolean
+  lastSeen?: string
+  errorType?: 'timeout' | 'auth' | 'network' | 'certificate' | 'unknown'
+  errorMessage?: string
 }
 
 export interface ClusterHealth {
@@ -24,6 +29,11 @@ export interface ClusterHealth {
   podCount?: number
   cpuCores?: number
   issues?: string[]
+  // New fields for reachability
+  reachable?: boolean
+  lastSeen?: string
+  errorType?: 'timeout' | 'auth' | 'network' | 'certificate' | 'unknown'
+  errorMessage?: string
 }
 
 export interface PodInfo {
@@ -204,29 +214,36 @@ export function useClusters() {
   const [clusters, setClusters] = useState<ClusterInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false) // True when change detected, pending refresh
+  const [isRefreshing, setIsRefreshing] = useState(false) // True during background refresh
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Silent fetch - updates data without showing loading state (for WebSocket updates)
   const silentFetch = useCallback(async () => {
     setIsUpdating(true)
+    setIsRefreshing(true)
     try {
       // Try local agent first
       const agentClusters = await fetchClustersFromAgent()
       if (agentClusters) {
         setClusters(agentClusters)
         setError(null)
+        setLastUpdated(new Date())
         setIsUpdating(false)
+        setIsRefreshing(false)
         return
       }
       // Fall back to backend API
       const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
       setClusters(data.clusters || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       // On silent fetch, don't replace with demo data - keep existing
       console.error('Silent fetch failed:', err)
     } finally {
       setIsUpdating(false)
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -239,6 +256,7 @@ export function useClusters() {
       if (agentClusters) {
         setClusters(agentClusters)
         setError(null)
+        setLastUpdated(new Date())
         setIsLoading(false)
         return
       }
@@ -246,6 +264,7 @@ export function useClusters() {
       const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
       setClusters(data.clusters || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch clusters')
       // Return demo data if MCP not available
@@ -310,7 +329,7 @@ export function useClusters() {
     }
   }, [refetch, silentFetch])
 
-  return { clusters, isLoading, isUpdating, error, refetch }
+  return { clusters, isLoading, isUpdating, isRefreshing, lastUpdated, error, refetch }
 }
 
 // Hook to get cluster health
@@ -341,14 +360,23 @@ export function useClusterHealth(cluster?: string) {
   return { health, isLoading, error, refetch }
 }
 
+// Standard refresh interval for all polling hooks (30 seconds)
+const REFRESH_INTERVAL_MS = 30000
+
 // Hook to get pods
 export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts' | 'name' = 'restarts', limit = 10) {
   const [pods, setPods] = useState<PodInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
+  const refetch = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -366,22 +394,27 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       // Limit results
       setPods(sortedPods.slice(0, limit))
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch pods')
-      setPods(getDemoPods())
+      // Keep existing data on silent refresh (stale-while-revalidate)
+      if (!silent) {
+        setPods(getDemoPods())
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace, sortBy, limit])
 
   useEffect(() => {
-    refetch()
-    // Poll every 15 seconds for pod updates
-    const interval = setInterval(refetch, 15000)
+    refetch(false)
+    // Poll every 30 seconds for pod updates
+    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { pods, isLoading, error, refetch }
+  return { pods, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
 // Hook to get pod issues
@@ -418,10 +451,16 @@ export function usePodIssues(cluster?: string, namespace?: string) {
 export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [events, setEvents] = useState<ClusterEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
+  const refetch = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -430,22 +469,26 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       const { data } = await api.get<{ events: ClusterEvent[] }>(`/api/mcp/events?${params}`)
       setEvents(data.events || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch events')
-      setEvents(getDemoEvents())
+      if (!silent) {
+        setEvents(getDemoEvents())
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace, limit])
 
   useEffect(() => {
-    refetch()
-    // Poll every 10 seconds for events
-    const interval = setInterval(refetch, 10000)
+    refetch(false)
+    // Poll every 30 seconds for events
+    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { events, isLoading, error, refetch }
+  return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
 // Hook to get deployment issues
@@ -482,10 +525,16 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
 export function useDeployments(cluster?: string, namespace?: string) {
   const [deployments, setDeployments] = useState<Deployment[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
+  const refetch = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -493,32 +542,42 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ deployments: Deployment[] }>(`/api/mcp/deployments?${params}`)
       setDeployments(data.deployments || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch deployments')
-      setDeployments(getDemoDeployments())
+      if (!silent) {
+        setDeployments(getDemoDeployments())
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => {
-    refetch()
-    // Poll every 10 seconds for deployment updates
-    const interval = setInterval(refetch, 10000)
+    refetch(false)
+    // Poll every 30 seconds for deployment updates
+    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { deployments, isLoading, error, refetch }
+  return { deployments, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
 // Hook to get warning events
 export function useWarningEvents(cluster?: string, namespace?: string, limit = 20) {
   const [events, setEvents] = useState<ClusterEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
+  const refetch = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -527,21 +586,25 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       const { data } = await api.get<{ events: ClusterEvent[] }>(`/api/mcp/events/warnings?${params}`)
       setEvents(data.events || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch warning events')
-      setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
+      if (!silent) {
+        setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace, limit])
 
   useEffect(() => {
-    refetch()
-    const interval = setInterval(refetch, 10000)
+    refetch(false)
+    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { events, isLoading, error, refetch }
+  return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
 // Hook to get GPU nodes
@@ -588,10 +651,17 @@ export interface SecurityIssue {
 export function useSecurityIssues(cluster?: string, namespace?: string) {
   const [issues, setIssues] = useState<SecurityIssue[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
+  const refetch = useCallback(async (silent = false) => {
+    // If we have data, show refreshing instead of loading (stale-while-revalidate)
+    if (silent || issues.length > 0) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -599,20 +669,24 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ issues: SecurityIssue[] }>(`/api/mcp/security-issues?${params}`)
       setIssues(data.issues || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch security issues')
-      // Return demo security issues
-      setIssues(getDemoSecurityIssues())
+      // Only set demo data if we don't have existing data
+      if (issues.length === 0) {
+        setIssues(getDemoSecurityIssues())
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }, [cluster, namespace])
+  }, [cluster, namespace, issues.length])
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+  }, [cluster, namespace]) // Only refetch on parameter changes, not on refetch function change
 
-  return { issues, isLoading, error, refetch }
+  return { issues, isLoading, isRefreshing, lastUpdated, error, refetch }
 }
 
 // GitOps drift types
@@ -631,10 +705,16 @@ export interface GitOpsDrift {
 export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   const [drifts, setDrifts] = useState<GitOpsDrift[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
+  const refetch = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -642,22 +722,26 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ drifts: GitOpsDrift[] }>(`/api/gitops/drifts?${params}`)
       setDrifts(data.drifts || [])
       setError(null)
+      setLastUpdated(new Date())
     } catch (err) {
       setError('Failed to fetch GitOps drifts')
-      setDrifts(getDemoGitOpsDrifts())
+      if (!silent) {
+        setDrifts(getDemoGitOpsDrifts())
+      }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => {
-    refetch()
+    refetch(false)
     // Poll every 30 seconds
-    const interval = setInterval(refetch, 30000)
+    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { drifts, isLoading, error, refetch }
+  return { drifts, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
 function getDemoGitOpsDrifts(): GitOpsDrift[] {

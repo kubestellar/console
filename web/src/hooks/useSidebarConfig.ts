@@ -31,7 +31,8 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
   { id: 'history', name: 'Card History', icon: 'History', href: '/history', type: 'link', order: 0 },
-  { id: 'settings', name: 'Settings', icon: 'Settings', href: '/settings', type: 'link', order: 1 },
+  { id: 'users', name: 'User Management', icon: 'Users', href: '/users', type: 'link', order: 1 },
+  { id: 'settings', name: 'Settings', icon: 'Settings', href: '/settings', type: 'link', order: 2 },
 ]
 
 const DEFAULT_CONFIG: SidebarConfig = {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -177,18 +178,21 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	// Exchange code for token
 	token, err := h.oauthConfig.Exchange(context.Background(), code)
 	if err != nil {
+		log.Printf("[Auth] Token exchange failed: %v", err)
 		return c.Redirect(h.frontendURL+"/login?error=exchange_failed", fiber.StatusTemporaryRedirect)
 	}
 
 	// Get user info from GitHub
 	ghUser, err := h.getGitHubUser(token.AccessToken)
 	if err != nil {
+		log.Printf("[Auth] Failed to get GitHub user: %v", err)
 		return c.Redirect(h.frontendURL+"/login?error=user_fetch_failed", fiber.StatusTemporaryRedirect)
 	}
 
 	// Find or create user
 	user, err := h.store.GetUserByGitHubID(fmt.Sprintf("%d", ghUser.ID))
 	if err != nil {
+		log.Printf("[Auth] Database error getting user: %v", err)
 		return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
 	}
 

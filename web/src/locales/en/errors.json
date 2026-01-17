@@ -1,0 +1,43 @@
+{
+  "types": {
+    "timeout": "Connection Timeout",
+    "auth": "Authentication Error",
+    "network": "Network Error",
+    "certificate": "Certificate Error",
+    "unknown": "Unknown Error"
+  },
+  "suggestions": {
+    "timeout": "Check VPN connection or network connectivity",
+    "auth": "Re-authenticate with the cluster",
+    "network": "Check network connectivity and firewall settings",
+    "certificate": "Check certificate validity or trust settings",
+    "unknown": "Check cluster connectivity and configuration"
+  },
+  "messages": {
+    "unknownError": "Unknown error",
+    "connectionFailed": "Connection failed",
+    "loadFailed": "Failed to load data",
+    "saveFailed": "Failed to save changes",
+    "deleteFailed": "Failed to delete",
+    "refreshFailed": "Failed to refresh",
+    "noPermission": "You don't have permission for this action",
+    "sessionExpired": "Your session has expired. Please log in again.",
+    "clusterUnreachable": "Cluster is unreachable"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidFormat": "Invalid format",
+    "minLength": "Must be at least {{count}} characters",
+    "maxLength": "Must be no more than {{count}} characters",
+    "invalidEmail": "Invalid email address",
+    "invalidUrl": "Invalid URL",
+    "nameTaken": "This name is already taken"
+  },
+  "recovery": {
+    "tryAgain": "Try again",
+    "contactAdmin": "Contact your administrator",
+    "checkConnection": "Check your network connection",
+    "refreshPage": "Refresh the page",
+    "logInAgain": "Log in again"
+  }
+}

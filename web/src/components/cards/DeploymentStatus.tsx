@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, ArrowRight, ChevronRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -13,7 +14,7 @@ const SORT_OPTIONS = [
 ]
 
 // Demo deployment data
-const rawDeployments = [
+const allDeployments = [
   {
     name: 'api-gateway',
     cluster: 'prod-east',
@@ -73,11 +74,18 @@ const statusConfig = {
 
 export function DeploymentStatus() {
   const { drillToDeployment } = useDrillDownActions()
+  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
   const statusOrder: Record<string, number> = { failed: 0, deploying: 1, running: 2 }
+
+  // Filter by global cluster selection
+  const rawDeployments = useMemo(() => {
+    if (isAllClustersSelected) return allDeployments
+    return allDeployments.filter(d => selectedClusters.includes(d.cluster))
+  }, [selectedClusters, isAllClustersSelected])
 
   const deployments = useMemo(() => {
     const sorted = [...rawDeployments].sort((a, b) => {
@@ -89,12 +97,12 @@ export function DeploymentStatus() {
     })
     if (limit === 'unlimited') return sorted
     return sorted.slice(0, limit)
-  }, [sortBy, sortDirection, limit])
+  }, [rawDeployments, sortBy, sortDirection, limit])
 
   const activeDeployments = rawDeployments.filter((d) => d.status === 'deploying').length
   const failedDeployments = rawDeployments.filter((d) => d.status === 'failed').length
 
-  const handleDeploymentClick = (deployment: typeof rawDeployments[0]) => {
+  const handleDeploymentClick = (deployment: typeof allDeployments[0]) => {
     drillToDeployment(deployment.cluster, 'default', deployment.name, {
       status: deployment.status,
       version: deployment.version,

@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { RefreshCw, Cpu, Server } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -7,7 +10,14 @@ interface GPUInventoryProps {
 
 export function GPUInventory({ config }: GPUInventoryProps) {
   const cluster = config?.cluster as string | undefined
-  const { nodes, isLoading, error, refetch } = useGPUNodes(cluster)
+  const { nodes: rawNodes, isLoading, error, refetch } = useGPUNodes(cluster)
+  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Filter nodes by global cluster selection
+  const nodes = useMemo(() => {
+    if (isAllClustersSelected) return rawNodes
+    return rawNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+  }, [rawNodes, selectedClusters, isAllClustersSelected])
 
   if (isLoading) {
     return (
@@ -90,7 +100,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
               <span className="text-sm font-medium text-white truncate">{node.name}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{node.cluster}</span>
+              <ClusterBadge cluster={node.cluster} size="sm" />
               <div className="flex items-center gap-2">
                 <span className="text-purple-400">{node.gpuType}</span>
                 <span className="font-mono">

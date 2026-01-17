@@ -1,0 +1,133 @@
+{
+  "navigation": {
+    "dashboard": "Dashboard",
+    "clusters": "Clusters",
+    "applications": "Applications",
+    "events": "Events",
+    "security": "Security",
+    "gitops": "GitOps",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "actions": {
+    "add": "Add",
+    "remove": "Remove",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "refresh": "Refresh",
+    "configure": "Configure",
+    "replace": "Replace",
+    "delete": "Delete",
+    "copy": "Copy",
+    "apply": "Apply",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "buttons": {
+    "addCard": "Add Card",
+    "templates": "Templates",
+    "customize": "Customize",
+    "snoozeHour": "Snooze 1hr",
+    "swapNow": "Swap Now",
+    "keepThis": "Keep This",
+    "replaceCard": "Replace Card",
+    "askAI": "Ask AI about this card"
+  },
+  "labels": {
+    "loading": "Loading...",
+    "loadingDashboard": "Loading dashboard...",
+    "noData": "No data available",
+    "sinceFocus": "Since last focus:",
+    "clusterStatus": "Cluster Status",
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "critical": "Critical",
+    "swappingTo": "Swapping to \"{{cardName}}\" in 30s"
+  },
+  "time": {
+    "justNow": "just now",
+    "minuteAgo": "1m ago",
+    "minutesAgo": "{{count}}m ago",
+    "hourAgo": "1h ago",
+    "hoursAgo": "{{count}}h ago",
+    "dayAgo": "1d ago",
+    "daysAgo": "{{count}}d ago",
+    "never": "never"
+  },
+  "sidebar": {
+    "snoozedCards": "Snoozed Cards",
+    "noSnoozedCards": "No snoozed card swaps",
+    "snoozeExpires": "Expires {{time}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure console preferences and AI usage",
+    "aiMode": {
+      "title": "AI Usage Mode",
+      "subtitle": "Balance between AI assistance and direct kubectl",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "lowDesc": "Direct kubectl, minimal tokens",
+      "mediumDesc": "AI for analysis, kubectl for data",
+      "highDesc": "Full AI assistance"
+    },
+    "localAgent": {
+      "title": "Local Agent",
+      "subtitle": "Connect to your local kubeconfig and Claude Code",
+      "connected": "Connected",
+      "notConnected": "Not Connected",
+      "usingDemo": "Using demo data",
+      "installInstructions": "Install the local agent to access your kubeconfig clusters and Claude Code:",
+      "features": {
+        "clusters": "Access all your clusters",
+        "tokens": "Real-time token tracking",
+        "secure": "Runs locally (secure)"
+      }
+    },
+    "tokens": {
+      "title": "Token Usage",
+      "subtitle": "Configure AI token limits and alerts",
+      "currentUsage": "Current Usage",
+      "monthlyLimit": "Monthly Limit",
+      "warningAt": "Warning at (%)",
+      "criticalAt": "Critical at (%)",
+      "resetUsage": "Reset Usage",
+      "saveSettings": "Save Token Settings",
+      "saved": "Saved!"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Customize the console look and feel",
+      "theme": "Theme",
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "accessibility": {
+      "title": "Accessibility",
+      "subtitle": "Customize accessibility features",
+      "colorBlindMode": "Color Blind Mode",
+      "colorBlindModeDesc": "Use icons and patterns instead of colors alone"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Your personalized multi-cluster overview"
+  },
+  "filters": {
+    "allClusters": "All Clusters",
+    "clusterFilter": "Cluster Filter",
+    "clusterFilterHint": "Filter all cards by cluster",
+    "selectAll": "Select All",
+    "noClusters": "No clusters available"
+  },
+  "language": {
+    "select": "Select Language"
+  }
+}

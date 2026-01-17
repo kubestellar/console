@@ -240,3 +240,123 @@
 .spinner {
   @apply animate-spin rounded-full border-2 border-muted border-t-primary;
 }
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.light .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.05) 25%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.05) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Smooth value transitions */
+.value-transition {
+  @apply transition-all duration-200 ease-out;
+}
+
+/* Prevent layout shift with min-heights */
+.min-h-card {
+  min-height: 180px;
+}
+
+.min-h-card-lg {
+  min-height: 280px;
+}
+
+/* Accessibility - Color Blind Mode Patterns */
+.bg-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    currentColor 3px,
+    currentColor 4px
+  );
+  background-size: 8px 8px;
+  opacity: 0.15;
+}
+
+.bg-dots {
+  background-image: radial-gradient(
+    circle,
+    currentColor 1px,
+    transparent 1px
+  );
+  background-size: 6px 6px;
+  opacity: 0.2;
+}
+
+.bg-dashes {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    currentColor 2px,
+    currentColor 4px
+  );
+  background-size: 100% 6px;
+  opacity: 0.15;
+}
+
+/* Color blind mode - add pattern overlays to status elements */
+.color-blind-mode .status-healthy::after,
+.color-blind-mode .status-warning::after,
+.color-blind-mode .status-error::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Reduce motion preference */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* High contrast mode */
+.high-contrast {
+  --border: 0 0% 100%;
+}
+
+.high-contrast .glass {
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid white;
+}
+
+.light.high-contrast .glass {
+  background: rgba(255, 255, 255, 0.98);
+  border: 2px solid black;
+}
+
+/* Smooth content fade-in */
+@keyframes content-fade-in {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+.content-loaded {
+  animation: content-fade-in 0.2s ease-out;
+}

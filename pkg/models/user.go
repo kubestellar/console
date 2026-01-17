@@ -12,7 +12,9 @@ type User struct {
 	GitHubID    string     `json:"github_id"`
 	GitHubLogin string     `json:"github_login"`
 	Email       string     `json:"email,omitempty"`
+	SlackID     string     `json:"slackId,omitempty"`
 	AvatarURL   string     `json:"avatar_url,omitempty"`
+	Role        string     `json:"role"` // admin, editor, viewer
 	Onboarded   bool       `json:"onboarded"`
 	CreatedAt   time.Time  `json:"created_at"`
 	LastLogin   *time.Time `json:"last_login,omitempty"`
