@@ -291,12 +291,12 @@ func (s *Server) setupRoutes() {
 	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient)
 	if s.config.DevMode {
 		// Dev mode: unprotected for testing
-		s.app.Get("/api/gitops/drifts", gitopsHandlers.DetectDrift)
+		s.app.Get("/api/gitops/drifts", gitopsHandlers.ListDrifts)
 		s.app.Post("/api/gitops/detect-drift", gitopsHandlers.DetectDrift)
 		s.app.Post("/api/gitops/sync", gitopsHandlers.Sync)
 	} else {
 		// Production: protected
-		api.Get("/gitops/drifts", gitopsHandlers.DetectDrift)
+		api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
 		api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 		api.Post("/gitops/sync", gitopsHandlers.Sync)
 	}

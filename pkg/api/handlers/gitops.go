@@ -90,6 +90,19 @@ type SyncResponse struct {
 	TokensUsed int      `json:"tokensUsed,omitempty"`
 }
 
+// ListDrifts returns a list of detected drifts (for GET endpoint)
+func (h *GitOpsHandlers) ListDrifts(c *fiber.Ctx) error {
+	// Optional query params for filtering
+	// cluster := c.Query("cluster")
+	// namespace := c.Query("namespace")
+
+	// Return empty list - actual drift detection requires specific repo/path
+	// which should be done via POST /api/gitops/detect-drift
+	return c.JSON(fiber.Map{
+		"drifts": []GitOpsDrift{},
+	})
+}
+
 // DetectDrift detects drift between git and cluster state
 func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	var req DetectDriftRequest
