@@ -77,6 +77,7 @@ class AgentManager {
       this.pollInterval = null
     }
     this.isStarted = false
+    this.isChecking = false // Reset so next start can check immediately
     console.log('[AgentManager] Stopped polling')
   }
 
