@@ -136,7 +136,8 @@ const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 async function fetchClustersFromAgent(): Promise<ClusterInfo[] | null> {
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    // 5 second timeout - agent may be slow to respond
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
     const response = await fetch(`${LOCAL_AGENT_URL}/clusters`, {
       signal: controller.signal,
     })
