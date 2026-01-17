@@ -126,6 +126,8 @@ export function Security() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <select
+          id="security-cluster-filter"
+          name="security-cluster-filter"
           value={selectedCluster}
           onChange={(e) => setSelectedCluster(e.target.value)}
           className="px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm"

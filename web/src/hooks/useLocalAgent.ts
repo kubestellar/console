@@ -190,15 +190,11 @@ export function useLocalAgent() {
     steps: [
       {
         title: 'Install via Homebrew (macOS)',
-        command: 'brew install kubestellar/tap/kkc-agent',
+        command: 'brew install kubestellar/tap/kkc-agent && kkc-agent',
       },
       {
-        title: 'Or download binary',
-        command: 'curl -sSL https://kubestellar.io/kkc-agent/install.sh | bash',
-      },
-      {
-        title: 'Start the agent',
-        command: 'kkc-agent',
+        title: 'Or build from source',
+        command: 'go install github.com/kubestellar/console/cmd/kkc-agent@latest && kkc-agent',
       },
     ],
     benefits: [

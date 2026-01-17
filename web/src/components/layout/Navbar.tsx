@@ -126,6 +126,9 @@ export function Navbar() {
           <input
             ref={inputRef}
             type="text"
+            id="global-search"
+            name="global-search"
+            autoComplete="off"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)

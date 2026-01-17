@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useEvents, useWarningEvents, useClusters } from '../../hooks/useMCP'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 type EventFilter = 'all' | 'warning' | 'normal'
 
@@ -63,6 +64,8 @@ function getEventIcon(type: string, reason: string): React.ReactNode {
 export function Events() {
   const { clusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
+  const [selectedNamespace, setSelectedNamespace] = useState<string>('')
+  const [selectedReason, setSelectedReason] = useState<string>('')
   const [filter, setFilter] = useState<EventFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -88,10 +91,34 @@ export function Events() {
     return () => clearInterval(interval)
   }, [autoRefresh, filter, refetchAll, refetchWarnings])
 
+  // Extract unique namespaces and reasons from events for filter dropdowns
+  const { namespaces, reasons } = useMemo(() => {
+    const nsSet = new Set<string>()
+    const reasonSet = new Set<string>()
+    allEvents.forEach(e => {
+      if (e.namespace) nsSet.add(e.namespace)
+      if (e.reason) reasonSet.add(e.reason)
+    })
+    return {
+      namespaces: Array.from(nsSet).sort(),
+      reasons: Array.from(reasonSet).sort(),
+    }
+  }, [allEvents])
+
   // Select events based on filter and apply search query
   const filteredEvents = useMemo(() => {
     // First select events based on filter type
-    const baseEvents = filter === 'warning' ? warningEvents : allEvents
+    let baseEvents = filter === 'warning' ? warningEvents : allEvents
+
+    // Apply namespace filter
+    if (selectedNamespace) {
+      baseEvents = baseEvents.filter(e => e.namespace === selectedNamespace)
+    }
+
+    // Apply reason filter
+    if (selectedReason) {
+      baseEvents = baseEvents.filter(e => e.reason === selectedReason)
+    }
 
     // Then apply search filter if any
     if (!searchQuery) return baseEvents
@@ -103,7 +130,7 @@ export function Events() {
       e.object.toLowerCase().includes(query) ||
       e.namespace.toLowerCase().includes(query)
     )
-  }, [filter, allEvents, warningEvents, searchQuery])
+  }, [filter, allEvents, warningEvents, searchQuery, selectedNamespace, selectedReason])
 
   // Stats
   const stats = useMemo(() => ({
@@ -139,6 +166,17 @@ export function Events() {
     return groups
   }, [filteredEvents])
 
+  // Clear filters
+  const clearFilters = () => {
+    setSelectedCluster('')
+    setSelectedNamespace('')
+    setSelectedReason('')
+    setFilter('all')
+    setSearchQuery('')
+  }
+
+  const hasActiveFilters = selectedCluster || selectedNamespace || selectedReason || filter !== 'all' || searchQuery
+
   return (
     <div className="pt-16">
       <div className="mb-6">
@@ -163,66 +201,149 @@ export function Events() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
-        {/* Cluster Selector */}
-        <select
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className="px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          <option value="">All Clusters</option>
-          {clusters.map((cluster) => (
-            <option key={cluster.name} value={cluster.name}>
-              {cluster.context || cluster.name.split('/').pop()}
-            </option>
-          ))}
-        </select>
+      <div className="glass p-4 rounded-lg mb-6">
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Cluster Selector */}
+          <div>
+            <label htmlFor="events-cluster-filter" className="block text-xs text-muted-foreground mb-1">Cluster</label>
+            <select
+              id="events-cluster-filter"
+              name="events-cluster-filter"
+              value={selectedCluster}
+              onChange={(e) => setSelectedCluster(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">All Clusters</option>
+              {clusters.map((cluster) => (
+                <option key={cluster.name} value={cluster.name}>
+                  {cluster.context || cluster.name.split('/').pop()}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Event Type Filter */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card/50 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter('warning')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'warning'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-card/50 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Warnings Only
-          </button>
+          {/* Namespace Selector */}
+          <div>
+            <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">Namespace</label>
+            <select
+              id="events-namespace-filter"
+              name="events-namespace-filter"
+              value={selectedNamespace}
+              onChange={(e) => setSelectedNamespace(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">All Namespaces</option>
+              {namespaces.map((ns) => (
+                <option key={ns} value={ns}>{ns}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Reason/Type Selector */}
+          <div>
+            <label htmlFor="events-reason-filter" className="block text-xs text-muted-foreground mb-1">Reason</label>
+            <select
+              id="events-reason-filter"
+              name="events-reason-filter"
+              value={selectedReason}
+              onChange={(e) => setSelectedReason(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">All Reasons</option>
+              {reasons.map((reason) => (
+                <option key={reason} value={reason}>{reason}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Event Type Filter */}
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Status</label>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'all'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter('warning')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'warning'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Warnings
+              </button>
+              <button
+                onClick={() => setFilter('normal')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filter === 'normal'
+                    ? 'bg-green-500 text-white'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Normal
+              </button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="events-search" className="block text-xs text-muted-foreground mb-1">Search</label>
+            <input
+              type="text"
+              id="events-search"
+              name="events-search"
+              autoComplete="off"
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Auto Refresh Toggle */}
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Refresh</label>
+            <label htmlFor="events-auto-refresh" className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg bg-secondary">
+              <input
+                type="checkbox"
+                id="events-auto-refresh"
+                name="events-auto-refresh"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-border"
+              />
+              <span className="text-sm text-muted-foreground">Auto</span>
+            </label>
+          </div>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <div>
+              <label className="block text-xs text-transparent mb-1">Clear</label>
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Search */}
-        <div className="flex-1 min-w-[200px]">
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {/* Auto Refresh Toggle */}
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={autoRefresh}
-            onChange={(e) => setAutoRefresh(e.target.checked)}
-            className="rounded border-border"
-          />
-          <span className="text-sm text-muted-foreground">Auto-refresh</span>
-        </label>
+        {/* Active filter count */}
+        {hasActiveFilters && (
+          <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+            Showing {filteredEvents.length} of {allEvents.length} events
+          </div>
+        )}
       </div>
 
       {/* Events List */}
@@ -233,6 +354,14 @@ export function Events() {
       ) : filteredEvents.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">No events found</p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="mt-2 text-sm text-primary hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
@@ -273,15 +402,15 @@ export function Events() {
                                 x{event.count}
                               </span>
                             )}
+                            {event.cluster && (
+                              <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />
+                            )}
                           </div>
                           <p className="text-sm text-foreground mt-1 break-words">
                             {event.message}
                           </p>
                           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                             <span>{getTimeAgo(event.lastSeen)}</span>
-                            {event.cluster && (
-                              <span>Cluster: {event.cluster.split('/').pop()}</span>
-                            )}
                           </div>
                         </div>
                       </div>
