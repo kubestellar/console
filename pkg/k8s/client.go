@@ -21,17 +21,18 @@ import (
 
 // MultiClusterClient manages connections to multiple Kubernetes clusters
 type MultiClusterClient struct {
-	mu          sync.RWMutex
-	kubeconfig  string
-	clients     map[string]*kubernetes.Clientset
-	configs     map[string]*rest.Config
-	rawConfig   *api.Config
-	healthCache map[string]*ClusterHealth
-	cacheTTL    time.Duration
-	cacheTime   map[string]time.Time
-	watcher     *fsnotify.Watcher
-	stopWatch   chan struct{}
-	onReload    func() // Callback when config is reloaded
+	mu              sync.RWMutex
+	kubeconfig      string
+	clients         map[string]*kubernetes.Clientset
+	configs         map[string]*rest.Config
+	rawConfig       *api.Config
+	healthCache     map[string]*ClusterHealth
+	cacheTTL        time.Duration
+	cacheTime       map[string]time.Time
+	watcher         *fsnotify.Watcher
+	stopWatch       chan struct{}
+	onReload        func() // Callback when config is reloaded
+	inClusterConfig *rest.Config // In-cluster config when running inside k8s
 }
 
 // ClusterInfo represents basic cluster information
@@ -149,20 +150,44 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		}
 	}
 
-	return &MultiClusterClient{
+	client := &MultiClusterClient{
 		kubeconfig:  kubeconfig,
 		clients:     make(map[string]*kubernetes.Clientset),
 		configs:     make(map[string]*rest.Config),
 		healthCache: make(map[string]*ClusterHealth),
 		cacheTTL:    30 * time.Second,
 		cacheTime:   make(map[string]time.Time),
-	}, nil
+	}
+
+	// Try to detect if we're running in-cluster
+	if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
+		// No kubeconfig file, try in-cluster config
+		if inClusterConfig, err := rest.InClusterConfig(); err == nil {
+			log.Println("Using in-cluster config (no kubeconfig file found)")
+			client.inClusterConfig = inClusterConfig
+		}
+	}
+
+	return client, nil
 }
 
 // LoadConfig loads the kubeconfig
 func (m *MultiClusterClient) LoadConfig() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// If we have in-cluster config and no kubeconfig file, use that
+	if m.inClusterConfig != nil {
+		if _, err := os.Stat(m.kubeconfig); os.IsNotExist(err) {
+			log.Println("No kubeconfig file, using in-cluster config only")
+			m.rawConfig = nil
+			m.clients = make(map[string]*kubernetes.Clientset)
+			m.configs = make(map[string]*rest.Config)
+			m.healthCache = make(map[string]*ClusterHealth)
+			m.cacheTime = make(map[string]time.Time)
+			return nil
+		}
+	}
 
 	config, err := clientcmd.LoadFromFile(m.kubeconfig)
 	if err != nil {
@@ -275,38 +300,55 @@ func (m *MultiClusterClient) SetOnReload(callback func()) {
 func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, error) {
 	m.mu.RLock()
 	rawConfig := m.rawConfig
+	inClusterConfig := m.inClusterConfig
 	m.mu.RUnlock()
 
-	if rawConfig == nil {
+	if rawConfig == nil && inClusterConfig == nil {
 		if err := m.LoadConfig(); err != nil {
 			return nil, err
 		}
 		m.mu.RLock()
 		rawConfig = m.rawConfig
+		inClusterConfig = m.inClusterConfig
 		m.mu.RUnlock()
 	}
 
 	var clusters []ClusterInfo
-	currentContext := rawConfig.CurrentContext
 
-	for contextName, contextInfo := range rawConfig.Contexts {
-		clusterInfo, exists := rawConfig.Clusters[contextInfo.Cluster]
-		server := ""
-		if exists {
-			server = clusterInfo.Server
-		}
-
-		// Get the user name from the AuthInfo reference
-		user := contextInfo.AuthInfo
-
+	// If we have in-cluster config, add the local cluster
+	if inClusterConfig != nil {
 		clusters = append(clusters, ClusterInfo{
-			Name:      contextName,
-			Context:   contextName,
-			Server:    server,
-			User:      user,
-			Source:    "kubeconfig",
-			IsCurrent: contextName == currentContext,
+			Name:      "in-cluster",
+			Context:   "in-cluster",
+			Server:    inClusterConfig.Host,
+			Source:    "in-cluster",
+			IsCurrent: rawConfig == nil, // Current if no kubeconfig
 		})
+	}
+
+	// Add clusters from kubeconfig if available
+	if rawConfig != nil {
+		currentContext := rawConfig.CurrentContext
+
+		for contextName, contextInfo := range rawConfig.Contexts {
+			clusterInfo, exists := rawConfig.Clusters[contextInfo.Cluster]
+			server := ""
+			if exists {
+				server = clusterInfo.Server
+			}
+
+			// Get the user name from the AuthInfo reference
+			user := contextInfo.AuthInfo
+
+			clusters = append(clusters, ClusterInfo{
+				Name:      contextName,
+				Context:   contextName,
+				Server:    server,
+				User:      user,
+				Source:    "kubeconfig",
+				IsCurrent: contextName == currentContext,
+			})
+		}
 	}
 
 	// Sort by name
@@ -324,6 +366,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientse
 		m.mu.RUnlock()
 		return client, nil
 	}
+	inClusterConfig := m.inClusterConfig
 	m.mu.RUnlock()
 
 	m.mu.Lock()
@@ -334,12 +377,20 @@ func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientse
 		return client, nil
 	}
 
-	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: m.kubeconfig},
-		&clientcmd.ConfigOverrides{CurrentContext: contextName},
-	).ClientConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get config for context %s: %w", contextName, err)
+	var config *rest.Config
+	var err error
+
+	// Handle in-cluster context specially
+	if contextName == "in-cluster" && inClusterConfig != nil {
+		config = rest.CopyConfig(inClusterConfig)
+	} else {
+		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: m.kubeconfig},
+			&clientcmd.ConfigOverrides{CurrentContext: contextName},
+		).ClientConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get config for context %s: %w", contextName, err)
+		}
 	}
 
 	// Set reasonable timeouts
