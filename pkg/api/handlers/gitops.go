@@ -90,6 +90,17 @@ type SyncResponse struct {
 	TokensUsed int      `json:"tokensUsed,omitempty"`
 }
 
+// HelmRelease represents a Helm release from helm ls
+type HelmRelease struct {
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	Revision   string `json:"revision"`
+	Updated    string `json:"updated"`
+	Status     string `json:"status"`
+	Chart      string `json:"chart"`
+	AppVersion string `json:"app_version"`
+}
+
 // ListDrifts returns a list of detected drifts (for GET endpoint)
 func (h *GitOpsHandlers) ListDrifts(c *fiber.Ctx) error {
 	// Optional query params for filtering
@@ -100,6 +111,45 @@ func (h *GitOpsHandlers) ListDrifts(c *fiber.Ctx) error {
 	// which should be done via POST /api/gitops/detect-drift
 	return c.JSON(fiber.Map{
 		"drifts": []GitOpsDrift{},
+	})
+}
+
+// ListHelmReleases returns all Helm releases across all namespaces
+func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+
+	// Build helm ls command
+	args := []string{"ls", "-A", "--output", "json"}
+	if cluster != "" {
+		args = append(args, "--kube-context", cluster)
+	}
+
+	cmd := exec.CommandContext(c.Context(), "helm", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("helm ls failed: %v, stderr: %s", err, stderr.String())
+		return c.Status(500).JSON(fiber.Map{
+			"error":    "failed to list helm releases",
+			"details":  stderr.String(),
+			"releases": []HelmRelease{},
+		})
+	}
+
+	// Parse JSON output
+	var releases []HelmRelease
+	if err := json.Unmarshal(stdout.Bytes(), &releases); err != nil {
+		log.Printf("failed to parse helm ls output: %v, stdout: %s", err, stdout.String())
+		return c.Status(500).JSON(fiber.Map{
+			"error":    "failed to parse helm releases",
+			"releases": []HelmRelease{},
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"releases": releases,
 	})
 }
 

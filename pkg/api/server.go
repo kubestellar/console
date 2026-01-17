@@ -292,11 +292,13 @@ func (s *Server) setupRoutes() {
 	if s.config.DevMode {
 		// Dev mode: unprotected for testing
 		s.app.Get("/api/gitops/drifts", gitopsHandlers.ListDrifts)
+		s.app.Get("/api/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
 		s.app.Post("/api/gitops/detect-drift", gitopsHandlers.DetectDrift)
 		s.app.Post("/api/gitops/sync", gitopsHandlers.Sync)
 	} else {
 		// Production: protected
 		api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
+		api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
 		api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 		api.Post("/gitops/sync", gitopsHandlers.Sync)
 	}
