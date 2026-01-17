@@ -132,6 +132,6 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/kkc -n kkc --timeout=3m
+          kubectl rollout status deployment/kkc-kubestellar-klaude-console -n kkc --timeout=3m
           echo "Deployment successful!"
           echo "Access KKC at: https://kkc.apps.fmaas-vllm-d.fmaas.res.ibm.com"
