@@ -145,17 +145,48 @@ async function fetchClustersFromAgent(): Promise<ClusterInfo[] | null> {
     if (response.ok) {
       const data = await response.json()
       // Transform agent response to ClusterInfo format
-      return (data.clusters || []).map((c: any) => ({
+      const clusters = (data.clusters || []).map((c: any) => ({
         name: c.name,
         context: c.context || c.name,
         server: c.server,
         user: c.user,
-        healthy: true, // Agent doesn't provide health, assume healthy if reachable
+        healthy: true, // Default to healthy, will be updated with real health data
         source: 'kubeconfig',
-        nodeCount: c.nodeCount,
-        podCount: c.podCount,
+        nodeCount: 0, // Will be updated with health data
+        podCount: 0, // Will be updated with health data
         isCurrent: c.isCurrent,
       }))
+
+      // Try to fetch health data from backend to enrich clusters
+      try {
+        const healthResponse = await fetch('http://localhost:8080/api/mcp/clusters/health', {
+          signal: AbortSignal.timeout(10000),
+        })
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json()
+          const healthMap = new Map<string, ClusterHealth>()
+          for (const h of healthData.health || []) {
+            healthMap.set(h.cluster, h)
+          }
+          // Merge health data into clusters
+          return clusters.map((c: ClusterInfo) => {
+            const health = healthMap.get(c.name)
+            if (health) {
+              return {
+                ...c,
+                healthy: health.healthy,
+                nodeCount: health.nodeCount,
+                podCount: health.podCount,
+              }
+            }
+            return c
+          })
+        }
+      } catch {
+        // Health fetch failed, return clusters without health data
+        console.log('[useClusters] Health fetch failed, using basic cluster info')
+      }
+      return clusters
     }
   } catch {
     // Local agent not available
