@@ -5,6 +5,7 @@ web/node_modules/
 # Build outputs
 web/dist/
 console
+console-server
 *.exe
 
 # Environment and secrets
