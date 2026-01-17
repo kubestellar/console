@@ -11,6 +11,7 @@ export interface ClusterInfo {
   source?: string
   nodeCount?: number
   podCount?: number
+  cpuCores?: number
   isCurrent?: boolean
 }
 
@@ -21,6 +22,7 @@ export interface ClusterHealth {
   nodeCount: number
   readyNodes: number
   podCount?: number
+  cpuCores?: number
   issues?: string[]
 }
 
@@ -177,6 +179,7 @@ async function fetchClustersFromAgent(): Promise<ClusterInfo[] | null> {
                 healthy: health.healthy,
                 nodeCount: health.nodeCount,
                 podCount: health.podCount,
+                cpuCores: health.cpuCores,
               }
             }
             return c

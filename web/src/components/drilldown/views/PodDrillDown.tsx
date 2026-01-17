@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { RemediationConsole } from '../RemediationConsole'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { Sparkles } from 'lucide-react'
 
 interface Props {
@@ -190,7 +191,7 @@ export function PodDrillDown({ data }: Props) {
             </div>
             <div>
               <dt className="text-muted-foreground">Cluster</dt>
-              <dd className="font-mono text-foreground break-all">{cluster.split('/').pop()}</dd>
+              <dd><ClusterBadge cluster={cluster.split('/').pop() || cluster} size="md" /></dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Status</dt>

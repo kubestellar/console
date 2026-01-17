@@ -9,6 +9,7 @@ import { EventsDrillDown } from './views/EventsDrillDown'
 import { NodeDrillDown } from './views/NodeDrillDown'
 import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
 import { YAMLDrillDown } from './views/YAMLDrillDown'
+import { ResourcesDrillDown } from './views/ResourcesDrillDown'
 
 export function DrillDownModal() {
   const { state, pop, goTo, close } = useDrillDown()
@@ -70,6 +71,8 @@ export function DrillDownModal() {
         return <GPUNodeDrillDown data={data} />
       case 'yaml':
         return <YAMLDrillDown data={data} />
+      case 'resources':
+        return <ResourcesDrillDown data={data} />
       case 'custom':
         return state.currentView?.customComponent || <div>Custom view</div>
       default:

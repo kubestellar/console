@@ -1,15 +1,58 @@
-import { Server, CheckCircle, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { useState, useMemo } from 'react'
+import { Server, CheckCircle, AlertTriangle, XCircle, RefreshCw, Cpu } from 'lucide-react'
+import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { CardControls, SortDirection } from '../ui/CardControls'
+
+type SortByOption = 'status' | 'name' | 'nodes' | 'pods'
+
+const SORT_OPTIONS = [
+  { value: 'status' as const, label: 'Status' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'nodes' as const, label: 'Nodes' },
+  { value: 'pods' as const, label: 'Pods' },
+]
 
 export function ClusterHealth() {
-  const { clusters, isLoading, error, refetch } = useClusters()
+  const { clusters: rawClusters, isLoading, error, refetch } = useClusters()
+  const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCluster } = useDrillDownActions()
+  const [sortBy, setSortBy] = useState<SortByOption>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [limit, setLimit] = useState<number | 'unlimited'>('unlimited')
 
-  const healthyClusters = clusters.filter((c) => c.healthy).length
-  const unhealthyClusters = clusters.filter((c) => !c.healthy).length
-  const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+  // Calculate GPU counts per cluster
+  const gpuByCluster = useMemo(() => {
+    const map: Record<string, number> = {}
+    gpuNodes.forEach(node => {
+      const clusterKey = node.cluster.split('/')[0]
+      map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
+    })
+    return map
+  }, [gpuNodes])
+
+  // Sort and limit clusters
+  const clusters = useMemo(() => {
+    const sorted = [...rawClusters].sort((a, b) => {
+      let result = 0
+      if (sortBy === 'status') {
+        if (a.healthy !== b.healthy) result = a.healthy ? 1 : -1 // unhealthy first
+        else result = a.name.localeCompare(b.name)
+      } else if (sortBy === 'name') result = a.name.localeCompare(b.name)
+      else if (sortBy === 'nodes') result = (b.nodeCount || 0) - (a.nodeCount || 0)
+      else if (sortBy === 'pods') result = (b.podCount || 0) - (a.podCount || 0)
+      return sortDirection === 'asc' ? result : -result
+    })
+    if (limit === 'unlimited') return sorted
+    return sorted.slice(0, limit)
+  }, [rawClusters, sortBy, sortDirection, limit])
+
+  const healthyClusters = rawClusters.filter((c) => c.healthy).length
+  const unhealthyClusters = rawClusters.filter((c) => !c.healthy).length
+  const totalNodes = rawClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const totalCPUs = rawClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
+  const totalPods = rawClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+  const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
 
   if (isLoading) {
     return (
@@ -26,16 +69,27 @@ export function ClusterHealth() {
         <div className="flex items-center gap-2">
           <Server className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-muted-foreground">
-            {clusters.length} Clusters
+            {rawClusters.length} Clusters
           </span>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-          title="Refresh"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <button
+            onClick={() => refetch()}
+            className="p-1 hover:bg-secondary rounded transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -79,15 +133,31 @@ export function ClusterHealth() {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>{cluster.nodeCount || 0} nodes</span>
+              {(cluster.cpuCores || 0) > 0 && (
+                <span>{cluster.cpuCores} CPUs</span>
+              )}
               <span>{cluster.podCount || 0} pods</span>
+              {(gpuByCluster[cluster.name] || 0) > 0 && (
+                <span className="flex items-center gap-1 text-purple-400">
+                  <Cpu className="w-3 h-3" />
+                  {gpuByCluster[cluster.name]} GPUs
+                </span>
+              )}
             </div>
           </div>
         ))}
       </div>
 
       {/* Footer totals */}
-      <div className="mt-4 pt-3 border-t border-border/50 flex justify-between text-xs text-muted-foreground">
+      <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
         <span>{totalNodes} total nodes</span>
+        {totalCPUs > 0 && <span>{totalCPUs} CPUs</span>}
+        {totalGPUs > 0 && (
+          <span className="flex items-center gap-1 text-purple-400">
+            <Cpu className="w-3 h-3" />
+            {totalGPUs} GPUs
+          </span>
+        )}
         <span>{totalPods} total pods</span>
       </div>
 

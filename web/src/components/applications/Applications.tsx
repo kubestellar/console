@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useClusters, useDeploymentIssues, usePodIssues } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 interface AppSummary {
   namespace: string
@@ -131,9 +132,7 @@ export function Applications() {
                   <StatusIndicator status={app.status} size="lg" />
                   <div>
                     <h3 className="font-semibold text-foreground">{app.namespace}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {app.cluster.split('/').pop() || app.cluster}
-                    </p>
+                    <ClusterBadge cluster={app.cluster.split('/').pop() || app.cluster} size="sm" />
                   </div>
                 </div>
 

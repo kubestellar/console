@@ -4,7 +4,16 @@ import { useAuth } from '../../lib/auth'
 import { GlobeAnimation } from '../animations/globe'
 
 export function Login() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, isLoading } = useAuth()
+
+  // Show loading while checking auth status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    )
+  }
 
   // Redirect to dashboard if already authenticated
   if (isAuthenticated) {

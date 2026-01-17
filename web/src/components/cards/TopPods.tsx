@@ -1,23 +1,33 @@
+import { useState } from 'react'
 import { RefreshCw, Loader2, AlertTriangle } from 'lucide-react'
 import { usePods } from '../../hooks/useMCP'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { CardControls } from '../ui/CardControls'
+
+type SortByOption = 'restarts' | 'name'
 
 interface TopPodsProps {
   config?: {
     cluster?: string
     namespace?: string
-    sortBy?: 'restarts' | 'name'
+    sortBy?: SortByOption
     limit?: number
   }
 }
 
+const SORT_OPTIONS = [
+  { value: 'restarts' as const, label: 'Restarts' },
+  { value: 'name' as const, label: 'Name' },
+]
+
 export function TopPods({ config }: TopPodsProps) {
   const cluster = config?.cluster
   const namespace = config?.namespace
-  const sortBy = config?.sortBy || 'restarts'
-  const limit = config?.limit || 10
+  const [sortBy, setSortBy] = useState<SortByOption>(config?.sortBy || 'restarts')
+  const [limit, setLimit] = useState<number | 'unlimited'>(config?.limit || 5)
 
-  const { pods, isLoading, error, refetch } = usePods(cluster, namespace, sortBy, limit)
+  const effectiveLimit = limit === 'unlimited' ? 1000 : limit
+  const { pods, isLoading, error, refetch } = usePods(cluster, namespace, sortBy, effectiveLimit)
 
   if (isLoading && pods.length === 0) {
     return (
@@ -41,17 +51,24 @@ export function TopPods({ config }: TopPodsProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-muted-foreground">
-          Top Pods by {sortBy === 'restarts' ? 'Restarts' : 'Name'}
-        </span>
-        <button
-          onClick={() => refetch()}
-          className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
-          title="Refresh"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-muted-foreground">Top Pods</span>
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+          />
+          <button
+            onClick={() => refetch()}
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Pods list */}

@@ -1,8 +1,19 @@
-import { CheckCircle, Clock, XCircle, ArrowRight } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { CheckCircle, Clock, XCircle, ArrowRight, ChevronRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { CardControls, SortDirection } from '../ui/CardControls'
+
+type SortByOption = 'status' | 'name' | 'cluster'
+
+const SORT_OPTIONS = [
+  { value: 'status' as const, label: 'Status' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'cluster' as const, label: 'Cluster' },
+]
 
 // Demo deployment data
-const deployments = [
+const rawDeployments = [
   {
     name: 'api-gateway',
     cluster: 'prod-east',
@@ -61,17 +72,47 @@ const statusConfig = {
 }
 
 export function DeploymentStatus() {
-  const activeDeployments = deployments.filter((d) => d.status === 'deploying').length
-  const failedDeployments = deployments.filter((d) => d.status === 'failed').length
+  const { drillToDeployment } = useDrillDownActions()
+  const [sortBy, setSortBy] = useState<SortByOption>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [limit, setLimit] = useState<number | 'unlimited'>(5)
+
+  const statusOrder: Record<string, number> = { failed: 0, deploying: 1, running: 2 }
+
+  const deployments = useMemo(() => {
+    const sorted = [...rawDeployments].sort((a, b) => {
+      let result = 0
+      if (sortBy === 'status') result = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3)
+      else if (sortBy === 'name') result = a.name.localeCompare(b.name)
+      else if (sortBy === 'cluster') result = a.cluster.localeCompare(b.cluster)
+      return sortDirection === 'asc' ? result : -result
+    })
+    if (limit === 'unlimited') return sorted
+    return sorted.slice(0, limit)
+  }, [sortBy, sortDirection, limit])
+
+  const activeDeployments = rawDeployments.filter((d) => d.status === 'deploying').length
+  const failedDeployments = rawDeployments.filter((d) => d.status === 'failed').length
+
+  const handleDeploymentClick = (deployment: typeof rawDeployments[0]) => {
+    drillToDeployment(deployment.cluster, 'default', deployment.name, {
+      status: deployment.status,
+      version: deployment.version,
+      previousVersion: deployment.previousVersion,
+      replicas: deployment.replicas,
+      progress: deployment.progress,
+      error: deployment.error,
+    })
+  }
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-muted-foreground">
-          Deployment Status
-        </span>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            Deployment Status
+          </span>
           {activeDeployments > 0 && (
             <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
               {activeDeployments} deploying
@@ -83,6 +124,15 @@ export function DeploymentStatus() {
             </span>
           )}
         </div>
+        <CardControls
+          limit={limit}
+          onLimitChange={setLimit}
+          sortBy={sortBy}
+          sortOptions={SORT_OPTIONS}
+          onSortChange={setSortBy}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+        />
       </div>
 
       {/* Deployments list */}
@@ -94,7 +144,8 @@ export function DeploymentStatus() {
           return (
             <div
               key={deployment.name}
-              className="p-3 rounded-lg bg-secondary/30 border border-border/50"
+              onClick={() => handleDeploymentClick(deployment)}
+              className="p-3 rounded-lg bg-secondary/30 border border-border/50 cursor-pointer hover:bg-secondary/50 hover:border-border transition-colors group"
             >
               <div className="flex items-start justify-between mb-2">
                 <div>
@@ -106,21 +157,24 @@ export function DeploymentStatus() {
                     {deployment.name}
                   </span>
                 </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1 text-xs">
-                    {deployment.previousVersion && (
-                      <>
-                        <span className="text-muted-foreground">
-                          {deployment.previousVersion}
-                        </span>
-                        <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                      </>
-                    )}
-                    <span className="text-white">{deployment.version}</span>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 text-xs">
+                      {deployment.previousVersion && (
+                        <>
+                          <span className="text-muted-foreground">
+                            {deployment.previousVersion}
+                          </span>
+                          <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                        </>
+                      )}
+                      <span className="text-white">{deployment.version}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {deployment.replicas.ready}/{deployment.replicas.desired} ready
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {deployment.replicas.ready}/{deployment.replicas.desired} ready
-                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
 

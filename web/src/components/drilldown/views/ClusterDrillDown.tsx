@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function ClusterDrillDown({ data }: Props) {
-  const clusterName = data.cluster as string
+  const clusterName = (data.cluster as string) || ''
   const { drillToNamespace, drillToNode: _drillToNode, drillToGPUNode, drillToEvents } = useDrillDownActions()
 
   const { health, isLoading } = useClusterHealth(clusterName)
@@ -17,7 +17,7 @@ export function ClusterDrillDown({ data }: Props) {
   const { issues: deploymentIssues } = useDeploymentIssues()
   const { nodes: allGPUNodes } = useGPUNodes()
 
-  // Filter data for this cluster
+  // Filter data for this cluster - ALL useMemo hooks must be before any early returns
   const clusterGPUNodes = useMemo(() =>
     allGPUNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0])),
     [allGPUNodes, clusterName]
@@ -35,6 +35,30 @@ export function ClusterDrillDown({ data }: Props) {
     clusterDeploymentIssues.forEach(d => ns.add(d.namespace))
     return Array.from(ns).sort()
   }, [podIssues, clusterDeploymentIssues])
+
+  // Group GPUs by type
+  const gpuByType = useMemo(() => {
+    const map: Record<string, { total: number; allocated: number; nodes: number }> = {}
+    clusterGPUNodes.forEach(node => {
+      const type = node.gpuType || 'Unknown'
+      if (!map[type]) {
+        map[type] = { total: 0, allocated: 0, nodes: 0 }
+      }
+      map[type].total += node.gpuCount
+      map[type].allocated += node.gpuAllocated
+      map[type].nodes += 1
+    })
+    return map
+  }, [clusterGPUNodes])
+
+  // Guard against missing cluster name (after ALL hooks)
+  if (!clusterName) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        No cluster selected
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -78,6 +102,24 @@ export function ClusterDrillDown({ data }: Props) {
           <div className="text-xs text-yellow-400">{allocatedGPUs} allocated</div>
         </div>
       </div>
+
+      {/* GPU Type Breakdown */}
+      {Object.keys(gpuByType).length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-foreground mb-3">GPU Types</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {Object.entries(gpuByType).map(([type, info]) => (
+              <div key={type} className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <div className="text-sm font-medium text-purple-400">{type}</div>
+                <div className="text-xl font-bold text-foreground mt-1">{info.total} GPUs</div>
+                <div className="text-xs text-muted-foreground">
+                  {info.allocated} allocated • {info.nodes} node{info.nodes !== 1 ? 's' : ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">

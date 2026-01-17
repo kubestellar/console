@@ -286,6 +286,7 @@ export function Clusters() {
     healthy: clusters.filter(c => c.healthy).length,
     unhealthy: clusters.filter(c => !c.healthy).length,
     totalNodes: clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
+    totalCPUs: clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
     totalPods: clusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
   }), [clusters])
 
@@ -349,6 +350,10 @@ export function Clusters() {
         <div className="glass p-4 rounded-lg">
           <div className="text-3xl font-bold text-foreground">{stats.totalNodes}</div>
           <div className="text-sm text-muted-foreground">Total Nodes</div>
+        </div>
+        <div className="glass p-4 rounded-lg">
+          <div className="text-3xl font-bold text-foreground">{stats.totalCPUs}</div>
+          <div className="text-sm text-muted-foreground">Total CPUs</div>
         </div>
         <div className="glass p-4 rounded-lg">
           <div className="text-3xl font-bold text-foreground">{stats.totalPods}</div>
@@ -450,10 +455,14 @@ export function Clusters() {
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-lg font-bold text-foreground">{cluster.nodeCount || 0}</div>
                   <div className="text-xs text-muted-foreground">Nodes</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-foreground">{cluster.cpuCores || 0}</div>
+                  <div className="text-xs text-muted-foreground">CPUs</div>
                 </div>
                 <div>
                   <div className="text-lg font-bold text-foreground">{cluster.podCount || 0}</div>
