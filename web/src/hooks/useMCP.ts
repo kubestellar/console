@@ -223,6 +223,13 @@ export function useClusters() {
     refetch()
 
     // Connect to WebSocket for real-time kubeconfig change notifications
+    // Only attempt WebSocket on localhost (dev mode) - deployed versions don't have a backend
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    if (!isLocalhost) {
+      // On deployed versions, just poll without WebSocket
+      return
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//localhost:8080/ws`
     let ws: WebSocket | null = null
