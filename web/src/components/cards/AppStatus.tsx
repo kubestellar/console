@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, RefreshCw } from 'lucide-react'
+import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls, SortDirection } from '../ui/CardControls'
