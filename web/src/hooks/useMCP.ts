@@ -161,8 +161,10 @@ async function fetchClustersFromAgent(): Promise<ClusterInfo[] | null> {
 
       // Try to fetch health data from backend to enrich clusters
       try {
+        const token = localStorage.getItem('token')
         const healthResponse = await fetch('http://localhost:8080/api/mcp/clusters/health', {
           signal: AbortSignal.timeout(10000),
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         })
         if (healthResponse.ok) {
           const healthData = await healthResponse.json()
