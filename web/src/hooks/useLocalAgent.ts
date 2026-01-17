@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export interface AgentHealth {
   status: string
@@ -20,7 +20,7 @@ export interface AgentHealth {
 export type AgentConnectionStatus = 'connected' | 'disconnected' | 'connecting'
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
-const POLL_INTERVAL = 10000 // Check every 10 seconds (reduced frequency for stability)
+const POLL_INTERVAL = 10000 // Check every 10 seconds
 const FAILURE_THRESHOLD = 3 // Require 3 consecutive failures before disconnecting
 
 // Demo data for when agent is not connected
@@ -39,69 +39,147 @@ const DEMO_DATA: AgentHealth = {
   },
 }
 
-export function useLocalAgent() {
-  const [status, setStatus] = useState<AgentConnectionStatus>('connecting')
-  const [health, setHealth] = useState<AgentHealth | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const failureCountRef = useRef(0)
-  const isCheckingRef = useRef(false)
+// ============================================================================
+// Singleton Agent Manager - ensures only ONE polling loop exists globally
+// ============================================================================
 
-  const checkAgent = useCallback(async () => {
+interface AgentState {
+  status: AgentConnectionStatus
+  health: AgentHealth | null
+  error: string | null
+}
+
+type Listener = (state: AgentState) => void
+
+class AgentManager {
+  private state: AgentState = {
+    status: 'connecting',
+    health: null,
+    error: null,
+  }
+  private listeners: Set<Listener> = new Set()
+  private pollInterval: ReturnType<typeof setInterval> | null = null
+  private failureCount = 0
+  private isChecking = false
+  private isStarted = false
+
+  start() {
+    if (this.isStarted) return
+    this.isStarted = true
+    console.log('[AgentManager] Starting singleton polling')
+    this.checkAgent()
+    this.pollInterval = setInterval(() => this.checkAgent(), POLL_INTERVAL)
+  }
+
+  stop() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+      this.pollInterval = null
+    }
+    this.isStarted = false
+    console.log('[AgentManager] Stopped polling')
+  }
+
+  subscribe(listener: Listener): () => void {
+    this.listeners.add(listener)
+    // Start polling when first subscriber joins
+    if (this.listeners.size === 1) {
+      this.start()
+    }
+    // Immediately notify new subscriber of current state
+    listener(this.state)
+    return () => {
+      this.listeners.delete(listener)
+      // Stop polling when last subscriber leaves
+      if (this.listeners.size === 0) {
+        this.stop()
+      }
+    }
+  }
+
+  private notify() {
+    this.listeners.forEach((listener) => listener(this.state))
+  }
+
+  private setState(updates: Partial<AgentState>) {
+    this.state = { ...this.state, ...updates }
+    this.notify()
+  }
+
+  async checkAgent() {
     // Skip if already checking (prevent overlapping requests)
-    if (isCheckingRef.current) {
-      console.log('[useLocalAgent] Skipping check - already in progress')
+    if (this.isChecking) {
+      console.log('[AgentManager] Skipping check - already in progress')
       return
     }
-    isCheckingRef.current = true
+    this.isChecking = true
 
     try {
       const response = await fetch(`${LOCAL_AGENT_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        // No AbortController - let the request complete naturally
       })
 
       if (response.ok) {
         const data = await response.json()
-        setHealth(data)
-        setStatus('connected')
-        setError(null)
-        failureCountRef.current = 0 // Reset failure count on success
-        console.log('[useLocalAgent] Connected successfully')
+        this.failureCount = 0 // Reset failure count on success
+        this.setState({
+          health: data,
+          status: 'connected',
+          error: null,
+        })
+        console.log('[AgentManager] Connected successfully')
       } else {
         throw new Error(`Agent returned ${response.status}`)
       }
     } catch (err) {
-      failureCountRef.current++
-      console.log(`[useLocalAgent] Check failed (attempt ${failureCountRef.current}/${FAILURE_THRESHOLD})`, err)
+      this.failureCount++
+      console.log(
+        `[AgentManager] Check failed (attempt ${this.failureCount}/${FAILURE_THRESHOLD})`,
+        err
+      )
       // Only mark as disconnected after multiple consecutive failures
-      if (failureCountRef.current >= FAILURE_THRESHOLD) {
-        setStatus((prev) => {
-          if (prev !== 'disconnected') {
-            console.log(`[useLocalAgent] Transitioning to disconnected after ${failureCountRef.current} failures`)
-          }
-          return 'disconnected'
+      if (this.failureCount >= FAILURE_THRESHOLD) {
+        if (this.state.status !== 'disconnected') {
+          console.log(
+            `[AgentManager] Transitioning to disconnected after ${this.failureCount} failures`
+          )
+        }
+        this.setState({
+          status: 'disconnected',
+          health: DEMO_DATA,
+          error: 'Local agent not available',
         })
-        setHealth(DEMO_DATA)
-        setError('Local agent not available')
       }
     } finally {
-      isCheckingRef.current = false
+      this.isChecking = false
     }
+  }
+
+  getState() {
+    return this.state
+  }
+}
+
+// Global singleton instance
+const agentManager = new AgentManager()
+
+// ============================================================================
+// React Hook - subscribes to the singleton
+// ============================================================================
+
+export function useLocalAgent() {
+  const [state, setState] = useState<AgentState>(agentManager.getState())
+
+  useEffect(() => {
+    // Subscribe to state changes
+    const unsubscribe = agentManager.subscribe(setState)
+    return unsubscribe
   }, [])
 
-  // Start polling on mount
-  useEffect(() => {
-    checkAgent()
-    pollIntervalRef.current = setInterval(checkAgent, POLL_INTERVAL)
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-      }
-    }
-  }, [checkAgent])
+  const refresh = useCallback(() => {
+    agentManager.checkAgent()
+  }, [])
 
   // Install instructions
   const installInstructions = {
@@ -130,12 +208,12 @@ export function useLocalAgent() {
   }
 
   return {
-    status,
-    health,
-    error,
-    isConnected: status === 'connected',
-    isDemoMode: status === 'disconnected',
+    status: state.status,
+    health: state.health,
+    error: state.error,
+    isConnected: state.status === 'connected',
+    isDemoMode: state.status === 'disconnected',
     installInstructions,
-    refresh: checkAgent,
+    refresh,
   }
 }
