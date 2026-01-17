@@ -12,6 +12,7 @@ export type DrillDownViewType =
   | 'logs'
   | 'gpu-node'
   | 'yaml'
+  | 'resources'
   | 'custom'
 
 export interface DrillDownView {
@@ -226,6 +227,15 @@ export function useDrillDownActions() {
     })
   }, [openOrPush])
 
+  const drillToResources = useCallback(() => {
+    openOrPush({
+      type: 'resources',
+      title: 'Resource Usage',
+      subtitle: 'All clusters',
+      data: {},
+    })
+  }, [openOrPush])
+
   return {
     drillToCluster,
     drillToNamespace,
@@ -236,5 +246,6 @@ export function useDrillDownActions() {
     drillToNode,
     drillToGPUNode,
     drillToYAML,
+    drillToResources,
   }
 }

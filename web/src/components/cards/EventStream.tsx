@@ -1,10 +1,36 @@
+import { useState, useMemo } from 'react'
 import { AlertTriangle, Info, XCircle, RefreshCw, ChevronRight } from 'lucide-react'
 import { useEvents } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { CardControls, SortDirection } from '../ui/CardControls'
+
+type SortByOption = 'time' | 'count' | 'type'
+
+const SORT_OPTIONS = [
+  { value: 'time' as const, label: 'Time' },
+  { value: 'count' as const, label: 'Count' },
+  { value: 'type' as const, label: 'Type' },
+]
 
 export function EventStream() {
-  const { events, isLoading, error, refetch } = useEvents(undefined, undefined, 10)
+  const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [sortBy, setSortBy] = useState<SortByOption>('time')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const effectiveLimit = limit === 'unlimited' ? 1000 : limit
+  const { events: rawEvents, isLoading, error, refetch } = useEvents(undefined, undefined, effectiveLimit)
+
+  // Sort events based on sortBy and direction
+  const events = useMemo(() => {
+    const sorted = [...rawEvents].sort((a, b) => {
+      let result = 0
+      if (sortBy === 'count') result = b.count - a.count
+      else if (sortBy === 'type') result = a.type.localeCompare(b.type)
+      // 'time' - keep original order (already sorted by time desc)
+      return sortDirection === 'asc' ? -result : result
+    })
+    return sorted
+  }, [rawEvents, sortBy, sortDirection])
   const { drillToEvents, drillToPod, drillToDeployment } = useDrillDownActions()
 
   const handleEventClick = (event: typeof events[0]) => {
@@ -44,16 +70,25 @@ export function EventStream() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-muted-foreground">
-          Recent Events
-        </span>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-          title="Refresh"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <span className="text-sm font-medium text-muted-foreground">Recent Events</span>
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <button
+            onClick={() => refetch()}
+            className="p-1 hover:bg-secondary rounded transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Event list */}

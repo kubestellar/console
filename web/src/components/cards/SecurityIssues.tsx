@@ -1,7 +1,17 @@
+import { useState, useMemo } from 'react'
 import { Shield, AlertTriangle, RefreshCw, User, Network, Server, ChevronRight } from 'lucide-react'
 import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
 import { PaginatedList } from '../ui/PaginatedList'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { CardControls } from '../ui/CardControls'
+
+type SortByOption = 'severity' | 'name' | 'cluster'
+
+const SORT_OPTIONS = [
+  { value: 'severity' as const, label: 'Severity' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'cluster' as const, label: 'Cluster' },
+]
 
 interface SecurityIssuesProps {
   config?: Record<string, unknown>
@@ -31,10 +41,25 @@ const getSeverityColor = (severity: string) => {
 export function SecurityIssues({ config }: SecurityIssuesProps) {
   const cluster = config?.cluster as string | undefined
   const namespace = config?.namespace as string | undefined
-  const { issues, isLoading, error, refetch } = useSecurityIssues(cluster, namespace)
+  const { issues: rawIssues, isLoading, error, refetch } = useSecurityIssues(cluster, namespace)
+  const [sortBy, setSortBy] = useState<SortByOption>('severity')
+  const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
-  const highCount = issues.filter(i => i.severity === 'high').length
-  const mediumCount = issues.filter(i => i.severity === 'medium').length
+  const severityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
+
+  const issues = useMemo(() => {
+    const sorted = [...rawIssues].sort((a, b) => {
+      if (sortBy === 'severity') return (severityOrder[a.severity] || 3) - (severityOrder[b.severity] || 3)
+      if (sortBy === 'name') return a.name.localeCompare(b.name)
+      if (sortBy === 'cluster') return (a.cluster || '').localeCompare(b.cluster || '')
+      return 0
+    })
+    if (limit === 'unlimited') return sorted
+    return sorted.slice(0, limit)
+  }, [rawIssues, sortBy, limit])
+
+  const highCount = rawIssues.filter(i => i.severity === 'high').length
+  const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
 
   if (isLoading) {
     return (
@@ -84,20 +109,29 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+          />
+          <button
+            onClick={() => refetch()}
+            className="p-1 hover:bg-secondary rounded transition-colors"
+          >
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Issues list with pagination */}
       <div className="flex-1 overflow-y-auto">
         <PaginatedList
           items={issues}
-          pageSize={5}
-          pageSizeOptions={[5, 10, 25]}
+          pageSize={limit === 'unlimited' ? 1000 : limit}
+          pageSizeOptions={[]}
           emptyMessage="No security issues"
           renderItem={(issue: SecurityIssue, idx: number) => {
             const Icon = getIssueIcon(issue.issue)

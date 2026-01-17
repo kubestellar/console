@@ -1,7 +1,17 @@
+import { useState, useMemo } from 'react'
 import { AlertTriangle, RefreshCw, AlertCircle, Clock, Scale, ChevronRight } from 'lucide-react'
 import { useDeploymentIssues, DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { CardControls, SortDirection } from '../ui/CardControls'
+
+type SortByOption = 'status' | 'name' | 'cluster'
+
+const SORT_OPTIONS = [
+  { value: 'status' as const, label: 'Status' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'cluster' as const, label: 'Cluster' },
+]
 
 interface DeploymentIssuesProps {
   config?: Record<string, unknown>
@@ -17,8 +27,23 @@ const getIssueIcon = (status: string) => {
 export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   const cluster = config?.cluster as string | undefined
   const namespace = config?.namespace as string | undefined
-  const { issues, isLoading, error, refetch } = useDeploymentIssues(cluster, namespace)
+  const { issues: rawIssues, isLoading, error, refetch } = useDeploymentIssues(cluster, namespace)
   const { drillToDeployment } = useDrillDownActions()
+  const [sortBy, setSortBy] = useState<SortByOption>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [limit, setLimit] = useState<number | 'unlimited'>(5)
+
+  const issues = useMemo(() => {
+    const sorted = [...rawIssues].sort((a, b) => {
+      let result = 0
+      if (sortBy === 'status') result = (a.reason || '').localeCompare(b.reason || '')
+      else if (sortBy === 'name') result = a.name.localeCompare(b.name)
+      else if (sortBy === 'cluster') result = (a.cluster || '').localeCompare(b.cluster || '')
+      return sortDirection === 'asc' ? result : -result
+    })
+    if (limit === 'unlimited') return sorted
+    return sorted.slice(0, limit)
+  }, [rawIssues, sortBy, sortDirection, limit])
 
   const handleDeploymentClick = (issue: DeploymentIssue) => {
     drillToDeployment(issue.cluster || 'default', issue.namespace, issue.name, {
@@ -79,15 +104,26 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">Deployment Issues</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-            {issues.length}
+            {rawIssues.length}
           </span>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <button
+            onClick={() => refetch()}
+            className="p-1 hover:bg-secondary rounded transition-colors"
+          >
+            <RefreshCw className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Issues list */}
