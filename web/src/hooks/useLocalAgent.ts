@@ -20,8 +20,8 @@ export interface AgentHealth {
 export type AgentConnectionStatus = 'connected' | 'disconnected' | 'connecting'
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
-const POLL_INTERVAL = 5000 // Check every 5 seconds
-const CONNECTION_TIMEOUT = 10000 // 10 second timeout (allow for slow connections)
+const POLL_INTERVAL = 10000 // Check every 10 seconds (reduced frequency for stability)
+const FAILURE_THRESHOLD = 3 // Require 3 consecutive failures before disconnecting
 
 // Demo data for when agent is not connected
 const DEMO_DATA: AgentHealth = {
@@ -44,36 +44,50 @@ export function useLocalAgent() {
   const [health, setHealth] = useState<AgentHealth | null>(null)
   const [error, setError] = useState<string | null>(null)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const failureCountRef = useRef(0)
+  const isCheckingRef = useRef(false)
 
   const checkAgent = useCallback(async () => {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT)
+    // Skip if already checking (prevent overlapping requests)
+    if (isCheckingRef.current) {
+      console.log('[useLocalAgent] Skipping check - already in progress')
+      return
+    }
+    isCheckingRef.current = true
 
+    try {
       const response = await fetch(`${LOCAL_AGENT_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        signal: controller.signal,
+        // No AbortController - let the request complete naturally
       })
-
-      clearTimeout(timeoutId)
 
       if (response.ok) {
         const data = await response.json()
         setHealth(data)
         setStatus('connected')
         setError(null)
+        failureCountRef.current = 0 // Reset failure count on success
+        console.log('[useLocalAgent] Connected successfully')
       } else {
         throw new Error(`Agent returned ${response.status}`)
       }
     } catch (err) {
-      setStatus('disconnected')
-      setHealth(DEMO_DATA)
-      if (err instanceof Error && err.name === 'AbortError') {
-        setError('Connection timeout - agent not responding')
-      } else {
+      failureCountRef.current++
+      console.log(`[useLocalAgent] Check failed (attempt ${failureCountRef.current}/${FAILURE_THRESHOLD})`, err)
+      // Only mark as disconnected after multiple consecutive failures
+      if (failureCountRef.current >= FAILURE_THRESHOLD) {
+        setStatus((prev) => {
+          if (prev !== 'disconnected') {
+            console.log(`[useLocalAgent] Transitioning to disconnected after ${failureCountRef.current} failures`)
+          }
+          return 'disconnected'
+        })
+        setHealth(DEMO_DATA)
         setError('Local agent not available')
       }
+    } finally {
+      isCheckingRef.current = false
     }
   }, [])
 
