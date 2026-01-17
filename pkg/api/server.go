@@ -368,7 +368,13 @@ func LoadConfigFromEnv() Config {
 		dbPath = p
 	}
 
-	frontendURL := "http://localhost:5174"
+	// Default frontend URL depends on mode:
+	// - Dev mode: Vite dev server on 5174
+	// - Production mode: Backend serves frontend on 8080
+	frontendURL := "http://localhost:8080"
+	if os.Getenv("DEV_MODE") == "true" {
+		frontendURL = "http://localhost:5174"
+	}
 	if u := os.Getenv("FRONTEND_URL"); u != "" {
 		frontendURL = u
 	}
