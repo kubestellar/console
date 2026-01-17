@@ -1,8 +1,10 @@
 import { Server, CheckCircle, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 export function ClusterHealth() {
   const { clusters, isLoading, error, refetch } = useClusters()
+  const { drillToCluster } = useDrillDownActions()
 
   const healthyClusters = clusters.filter((c) => c.healthy).length
   const unhealthyClusters = clusters.filter((c) => !c.healthy).length
@@ -60,6 +62,12 @@ export function ClusterHealth() {
           <div
             key={cluster.name}
             className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+            onClick={() => drillToCluster(cluster.name, {
+              healthy: cluster.healthy,
+              nodeCount: cluster.nodeCount,
+              podCount: cluster.podCount,
+              server: cluster.server,
+            })}
           >
             <div className="flex items-center gap-2">
               <div

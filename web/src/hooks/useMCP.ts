@@ -129,6 +129,39 @@ export function useMCPStatus() {
   return { status, isLoading, error }
 }
 
+// Local agent URL for direct cluster access
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+
+// Try to fetch from local agent first, then fall back to backend API
+async function fetchClustersFromAgent(): Promise<ClusterInfo[] | null> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const response = await fetch(`${LOCAL_AGENT_URL}/clusters`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    if (response.ok) {
+      const data = await response.json()
+      // Transform agent response to ClusterInfo format
+      return (data.clusters || []).map((c: any) => ({
+        name: c.name,
+        context: c.context || c.name,
+        server: c.server,
+        user: c.user,
+        healthy: true, // Agent doesn't provide health, assume healthy if reachable
+        source: 'kubeconfig',
+        nodeCount: c.nodeCount,
+        podCount: c.podCount,
+        isCurrent: c.isCurrent,
+      }))
+    }
+  } catch {
+    // Local agent not available
+  }
+  return null
+}
+
 // Hook to list clusters with WebSocket support for real-time updates
 export function useClusters() {
   const [clusters, setClusters] = useState<ClusterInfo[]>([])
@@ -140,6 +173,15 @@ export function useClusters() {
   const silentFetch = useCallback(async () => {
     setIsUpdating(true)
     try {
+      // Try local agent first
+      const agentClusters = await fetchClustersFromAgent()
+      if (agentClusters) {
+        setClusters(agentClusters)
+        setError(null)
+        setIsUpdating(false)
+        return
+      }
+      // Fall back to backend API
       const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
       setClusters(data.clusters || [])
       setError(null)
@@ -155,6 +197,15 @@ export function useClusters() {
   const refetch = useCallback(async () => {
     setIsLoading(true)
     try {
+      // Try local agent first
+      const agentClusters = await fetchClustersFromAgent()
+      if (agentClusters) {
+        setClusters(agentClusters)
+        setError(null)
+        setIsLoading(false)
+        return
+      }
+      // Fall back to backend API
       const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
       setClusters(data.clusters || [])
       setError(null)
