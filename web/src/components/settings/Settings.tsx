@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Save, Coins, Cpu, Moon, Sun, Monitor, Gauge, RefreshCw, Plug, Check, X, Copy, Eye, User } from 'lucide-react'
+import { Save, Coins, Cpu, Moon, Sun, Monitor, Gauge, RefreshCw, Plug, Check, X, Copy, Eye, User, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { useAIMode, AIMode } from '../../hooks/useAIMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAccessibility } from '../../hooks/useAccessibility'
+import { CanIChecker } from '../rbac/CanIChecker'
 
 export function Settings() {
   const { user, refreshUser } = useAuth()
@@ -515,6 +516,20 @@ export function Settings() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Permissions Checker */}
+        <div className="glass rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-emerald-500/20">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-foreground">Permissions</h2>
+              <p className="text-sm text-muted-foreground">Check your Kubernetes RBAC permissions</p>
+            </div>
+          </div>
+          <CanIChecker />
         </div>
       </div>
     </div>

@@ -279,6 +279,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/rbac/permissions", rbac.GetClusterPermissions)
 	api.Post("/rbac/service-accounts", rbac.CreateServiceAccount)
 	api.Post("/rbac/bindings", rbac.CreateRoleBinding)
+	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
+	api.Post("/rbac/can-i", rbac.CheckCanI)
 
 	// MCP routes (cluster operations via klaude and direct k8s)
 	// In production, these are protected (dev mode routes registered above)

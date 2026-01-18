@@ -116,7 +116,21 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_pending_swaps_due ON pending_swaps(swap_at, status);
 	`
 	_, err := s.db.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Run column migrations for existing databases
+	migrations := []string{
+		"ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'viewer'",
+		"ALTER TABLE users ADD COLUMN slack_id TEXT",
+	}
+	for _, migration := range migrations {
+		// Ignore errors - column may already exist
+		s.db.Exec(migration)
+	}
+
+	return nil
 }
 
 // Close closes the database connection

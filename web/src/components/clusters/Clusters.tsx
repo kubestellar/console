@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Pencil, X, Check, Loader2, Globe, User, Hourglass } from 'lucide-react'
+import { Pencil, X, Check, Loader2, Globe, User, Hourglass, ShieldAlert } from 'lucide-react'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes } from '../../hooks/useMCP'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { usePermissions } from '../../hooks/usePermissions'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { Gauge } from '../charts/Gauge'
 
@@ -242,6 +243,7 @@ export function Clusters() {
   const { clusters, isLoading, isUpdating, error, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { isConnected } = useLocalAgent()
+  const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -498,11 +500,23 @@ export function Clusters() {
                     </div>
                   </div>
                 </div>
-                {cluster.isCurrent && (
-                  <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">
-                    Current
-                  </span>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  {cluster.isCurrent && (
+                    <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">
+                      Current
+                    </span>
+                  )}
+                  {!permissionsLoading && !isClusterAdmin(cluster.name) && (
+                    <span
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400"
+                      title="You have limited permissions on this cluster"
+                      data-testid="permission-badge"
+                    >
+                      <ShieldAlert className="w-3 h-3" />
+                      Limited Access
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-4 gap-4 text-center">
