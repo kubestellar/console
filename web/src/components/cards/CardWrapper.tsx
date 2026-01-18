@@ -47,23 +47,68 @@ interface CardWrapperProps {
 }
 
 const CARD_TITLES: Record<string, string> = {
+  // Core cluster cards
   cluster_health: 'Cluster Health',
+  cluster_focus: 'Cluster Focus',
+  cluster_network: 'Cluster Network',
+  cluster_comparison: 'Cluster Comparison',
+  cluster_costs: 'Cluster Costs',
+  cluster_metrics: 'Cluster Metrics',
+
+  // App and deployment cards
   app_status: 'App Status',
-  event_stream: 'Event Stream',
-  pod_issues: 'Pod Issues',
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
   deployment_issues: 'Deployment Issues',
+
+  // Pod and resource cards
+  pod_issues: 'Pod Issues',
   top_pods: 'Top Pods',
   resource_capacity: 'Resource Capacity',
   resource_usage: 'Resource Usage',
-  cluster_metrics: 'Cluster Metrics',
+
+  // Events
+  event_stream: 'Event Stream',
+
+  // Namespace cards
+  namespace_overview: 'Namespace Overview',
+  namespace_analysis: 'Namespace Analysis',
+  namespace_rbac: 'Namespace RBAC',
+  namespace_quotas: 'Namespace Quotas',
+  namespace_events: 'Namespace Events',
+
+  // Operator cards
+  operator_status: 'Operator Status',
+  operator_subscriptions: 'Operator Subscriptions',
+  crd_health: 'CRD Health',
+
+  // Helm/GitOps cards
   gitops_drift: 'GitOps Drift',
+  helm_release_status: 'Helm Release Status',
+  helm_releases: 'Helm Releases',
+  helm_history: 'Helm History',
+  helm_values_diff: 'Helm Values Diff',
+  kustomization_status: 'Kustomization Status',
+  overlay_comparison: 'Overlay Comparison',
+  chart_versions: 'Chart Versions',
+
+  // ArgoCD cards
+  argocd_applications: 'ArgoCD Applications',
+  argocd_sync_status: 'ArgoCD Sync Status',
+  argocd_health: 'ArgoCD Health',
+
+  // GPU cards
+  gpu_overview: 'GPU Overview',
+  gpu_status: 'GPU Status',
+  gpu_inventory: 'GPU Inventory',
+
+  // Security and RBAC
   security_issues: 'Security Issues',
   rbac_overview: 'RBAC Overview',
   policy_violations: 'Policy Violations',
+
+  // Other
   upgrade_status: 'Upgrade Status',
-  namespace_analysis: 'Namespace Analysis',
   user_management: 'User Management',
 }
 
@@ -216,7 +261,7 @@ export function CardWrapper({
             <div className="relative" data-tour="card-menu">
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                 title="Card menu - configure, replace, or remove"
               >
                 <MoreVertical className="w-4 h-4" />
@@ -228,7 +273,7 @@ export function CardWrapper({
                       setShowMenu(false)
                       onConfigure?.()
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-white hover:bg-secondary/50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
                     title="Configure card settings like cluster and namespace filters"
                   >
                     <Settings className="w-4 h-4" />
@@ -239,7 +284,7 @@ export function CardWrapper({
                       setShowMenu(false)
                       onReplace?.()
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-white hover:bg-secondary/50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
                     title="Replace this card with a different card type"
                   >
                     <Replace className="w-4 h-4" />
@@ -278,7 +323,7 @@ export function CardWrapper({
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => handleSnooze(3600000)}
-                className="text-xs px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-white"
+                className="text-xs px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
                 title="Delay this swap for 1 hour"
               >
                 Snooze 1hr
@@ -305,7 +350,7 @@ export function CardWrapper({
         {showSummary && lastSummary && (
           <div className="absolute bottom-full left-0 right-0 mb-2 mx-4 p-3 glass rounded-lg text-sm animate-fade-in-up">
             <p className="text-xs text-muted-foreground mb-1">Since last focus:</p>
-            <p className="text-white">{lastSummary}</p>
+            <p className="text-foreground">{lastSummary}</p>
           </div>
         )}
       </div>
@@ -315,10 +360,10 @@ export function CardWrapper({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-black/80">
           <div className="w-full max-w-4xl max-h-[80vh] glass rounded-2xl overflow-hidden animate-fade-in-up">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-              <h3 className="text-lg font-medium text-white">{title}</h3>
+              <h3 className="text-lg font-medium text-foreground">{title}</h3>
               <button
                 onClick={() => setIsExpanded(false)}
-                className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white transition-colors"
+                className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

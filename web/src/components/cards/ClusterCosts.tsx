@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { DollarSign, Server, Cpu, HardDrive, TrendingUp, RefreshCw } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 
 interface ClusterCostsProps {
@@ -17,8 +18,32 @@ const DEFAULT_MEMORY_COST = 0.01 // per GB per hour
 const DEFAULT_GPU_COST = 2.50 // per GPU per hour
 
 export function ClusterCosts({ config }: ClusterCostsProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const cpuCost = config?.cpuCostPerHour ?? DEFAULT_CPU_COST
   const memoryCost = config?.memoryCostPerGBHour ?? DEFAULT_MEMORY_COST
@@ -97,11 +122,11 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-green-400 mb-1">Estimated Monthly</p>
-            <p className="text-2xl font-bold text-white">${totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-2xl font-bold text-foreground">${totalMonthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground mb-1">Daily</p>
-            <p className="text-lg font-medium text-white">${totalDaily.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            <p className="text-lg font-medium text-foreground">${totalDaily.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
           </div>
         </div>
       </div>
@@ -118,7 +143,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Server className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-white">{cluster.name}</span>
+                  <span className="text-sm font-medium text-foreground">{cluster.name}</span>
                   <div className={`w-1.5 h-1.5 rounded-full ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
                 </div>
                 <span className="text-sm font-medium text-green-400">

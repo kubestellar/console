@@ -24,7 +24,7 @@ export function DashboardDropZone({
   return (
     <div className="fixed right-6 top-24 z-50 animate-fade-in-up">
       <div className="glass rounded-xl border border-border/50 p-4 w-64 shadow-2xl">
-        <div className="flex items-center gap-2 mb-3 text-sm font-medium text-white">
+        <div className="flex items-center gap-2 mb-3 text-sm font-medium text-foreground">
           <LayoutDashboard className="w-4 h-4 text-purple-400" />
           Move to Dashboard
         </div>
@@ -56,7 +56,7 @@ export function DashboardDropZone({
             {onCreateDashboard && (
               <button
                 onClick={onCreateDashboard}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border/50 text-muted-foreground hover:text-white hover:border-purple-500/50 text-sm transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border/50 text-muted-foreground hover:text-foreground hover:border-purple-500/50 text-sm transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Create New Dashboard
@@ -93,8 +93,8 @@ function DroppableDashboard({ dashboard }: DroppableDashboardProps) {
       className={cn(
         'flex items-center gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer',
         isOver
-          ? 'bg-purple-500/20 border-purple-500 text-white scale-105'
-          : 'bg-secondary/30 border-border/50 text-muted-foreground hover:text-white hover:border-border'
+          ? 'bg-purple-500/20 border-purple-500 text-foreground scale-105'
+          : 'bg-secondary/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
       )}
     >
       <LayoutDashboard className={cn('w-4 h-4', isOver && 'text-purple-400')} />

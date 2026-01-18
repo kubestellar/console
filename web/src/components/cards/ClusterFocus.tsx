@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Server, Activity, Box, Cpu, HardDrive, Network, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues, useDeploymentIssues } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 
@@ -12,12 +13,36 @@ interface ClusterFocusProps {
 
 export function ClusterFocus({ config }: ClusterFocusProps) {
   const selectedCluster = config?.cluster
-  const { clusters, isLoading: clustersLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { issues: podIssues } = usePodIssues(selectedCluster)
   const { issues: deploymentIssues } = useDeploymentIssues(selectedCluster)
-  const { drillToCluster } = useDrillDownActions()
+  const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const clusterName = selectedCluster || internalCluster
 
@@ -62,7 +87,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
           <select
             value={internalCluster}
             onChange={(e) => setInternalCluster(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           >
             <option value="">Select cluster...</option>
             {clusters.map(c => (
@@ -83,7 +108,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Server className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-white">{clusterName}</span>
+          <span className="text-sm font-medium text-foreground">{clusterName}</span>
           <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex items-center gap-2">
@@ -91,7 +116,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             <select
               value={internalCluster}
               onChange={(e) => setInternalCluster(e.target.value)}
-              className="px-2 py-1 rounded bg-secondary border border-border text-xs text-white"
+              className="px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground"
             >
               {clusters.map(c => (
                 <option key={c.name} value={c.name}>{c.name}</option>
@@ -123,7 +148,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             <Activity className="w-4 h-4 text-blue-400" />
             <span className="text-xs text-muted-foreground">Nodes</span>
           </div>
-          <span className="text-xl font-bold text-white">{cluster?.nodeCount || 0}</span>
+          <span className="text-xl font-bold text-foreground">{cluster?.nodeCount || 0}</span>
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
@@ -131,7 +156,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             <Box className="w-4 h-4 text-green-400" />
             <span className="text-xs text-muted-foreground">Pods</span>
           </div>
-          <span className="text-xl font-bold text-white">{cluster?.podCount || 0}</span>
+          <span className="text-xl font-bold text-foreground">{cluster?.podCount || 0}</span>
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
@@ -139,7 +164,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             <Cpu className="w-4 h-4 text-purple-400" />
             <span className="text-xs text-muted-foreground">GPUs</span>
           </div>
-          <span className="text-xl font-bold text-white">{clusterGPUs}</span>
+          <span className="text-xl font-bold text-foreground">{clusterGPUs}</span>
         </div>
 
         <div className="p-3 rounded-lg bg-secondary/30">
@@ -147,13 +172,27 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
             <HardDrive className="w-4 h-4 text-cyan-400" />
             <span className="text-xs text-muted-foreground">CPU Cores</span>
           </div>
-          <span className="text-xl font-bold text-white">{cluster?.cpuCores || 0}</span>
+          <span className="text-xl font-bold text-foreground">{cluster?.cpuCores || 0}</span>
         </div>
       </div>
 
       {/* Issues Summary */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+        <div
+          className="flex items-center justify-between p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
+          onClick={() => {
+            if (podIssues.length > 0) {
+              const issue = podIssues[0]
+              drillToPod(clusterName, issue.namespace, issue.name, {
+                status: issue.status,
+                reason: issue.reason,
+                issues: issue.issues,
+                restarts: issue.restarts,
+              })
+            }
+          }}
+          title={podIssues.length > 0 ? `Click to view ${podIssues[0].name}` : 'No pod issues'}
+        >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-400" />
             <span className="text-sm text-orange-300">Pod Issues</span>
@@ -161,7 +200,21 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
           <span className="text-sm font-medium text-orange-400">{clusterPodIssues}</span>
         </div>
 
-        <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
+        <div
+          className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          onClick={() => {
+            if (deploymentIssues.length > 0) {
+              const issue = deploymentIssues[0]
+              drillToDeployment(clusterName, issue.namespace, issue.name, {
+                replicas: issue.replicas,
+                readyReplicas: issue.readyReplicas,
+                reason: issue.reason,
+                message: issue.message,
+              })
+            }
+          }}
+          title={deploymentIssues.length > 0 ? `Click to view ${deploymentIssues[0].name}` : 'No deployment issues'}
+        >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-red-400" />
             <span className="text-sm text-red-300">Deployment Issues</span>

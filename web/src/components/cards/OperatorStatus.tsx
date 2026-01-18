@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Package, CheckCircle, AlertTriangle, XCircle, RefreshCw, ArrowUpCircle } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { useClusters, useOperators, Operator } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -10,26 +11,38 @@ interface OperatorStatusProps {
   }
 }
 
-interface Operator {
-  name: string
-  namespace: string
-  version: string
-  status: 'Succeeded' | 'Failed' | 'Installing' | 'Upgrading'
-  upgradeAvailable?: string
-}
-
 export function OperatorStatus({ config }: OperatorStatusProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
 
-  // Mock operator data - would come from OLM API
-  const operators: Operator[] = selectedCluster ? [
-    { name: 'prometheus-operator', namespace: 'monitoring', version: 'v0.65.1', status: 'Succeeded' },
-    { name: 'cert-manager', namespace: 'cert-manager', version: 'v1.12.0', status: 'Succeeded', upgradeAvailable: 'v1.13.0' },
-    { name: 'elasticsearch-operator', namespace: 'elastic-system', version: 'v2.8.0', status: 'Succeeded' },
-    { name: 'strimzi-kafka-operator', namespace: 'kafka', version: 'v0.35.0', status: 'Installing' },
-    { name: 'argocd-operator', namespace: 'argocd', version: 'v0.6.0', status: 'Failed' },
-  ] : []
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  // Fetch operators for selected cluster
+  const { operators, isLoading: operatorsLoading, refetch } = useOperators(selectedCluster || undefined)
+
+  const isLoading = clustersLoading || operatorsLoading
 
   const getStatusIcon = (status: Operator['status']) => {
     switch (status) {
@@ -98,7 +111,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
       <select
         value={selectedCluster}
         onChange={(e) => setSelectedCluster(e.target.value)}
-        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white mb-4"
+        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
         <option value="">Select cluster...</option>
         {clusters.map(c => (
@@ -147,7 +160,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400 ${op.status === 'Installing' ? 'animate-spin' : ''}`} />
-                      <span className="text-sm text-white">{op.name}</span>
+                      <span className="text-sm text-foreground">{op.name}</span>
                     </div>
                     <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
                       {op.status}

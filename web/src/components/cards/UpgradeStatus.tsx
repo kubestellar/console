@@ -1,12 +1,40 @@
+import { useMemo } from 'react'
 import { RefreshCw, ArrowUp, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
 }
 
 export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { drillToCluster } = useDrillDownActions()
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   if (isLoading) {
     return (
@@ -58,10 +86,11 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
         {clusterVersions.map((cluster) => (
           <div
             key={cluster.name}
-            className="p-3 rounded-lg bg-secondary/30"
+            className="p-3 rounded-lg bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
+            onClick={() => drillToCluster(cluster.name, { tab: 'upgrade', version: cluster.currentVersion, targetVersion: cluster.targetVersion })}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-white truncate">{cluster.name}</span>
+              <span className="text-sm font-medium text-foreground truncate">{cluster.name}</span>
               {getStatusIcon(cluster.status)}
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">

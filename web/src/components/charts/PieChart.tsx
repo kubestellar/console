@@ -63,7 +63,7 @@ export function PieChart({
           {isDonut && (centerLabel || centerValue) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               {centerValue && (
-                <span className="text-2xl font-bold text-white">{centerValue}</span>
+                <span className="text-2xl font-bold text-foreground">{centerValue}</span>
               )}
               {centerLabel && (
                 <span className="text-xs text-muted-foreground">{centerLabel}</span>
@@ -82,7 +82,7 @@ export function PieChart({
                   />
                   <span className="text-sm text-muted-foreground">{item.name}</span>
                 </div>
-                <span className="text-sm font-medium text-white">{item.value}</span>
+                <span className="text-sm font-medium text-foreground">{item.value}</span>
               </div>
             ))}
           </div>

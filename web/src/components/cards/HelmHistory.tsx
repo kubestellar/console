@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, RefreshCw, Clock } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -22,9 +23,33 @@ interface HistoryEntry {
 }
 
 export function HelmHistory({ config }: HelmHistoryProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Mock releases
   const releases = selectedCluster ? [
@@ -110,7 +135,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             setSelectedCluster(e.target.value)
             setSelectedRelease('')
           }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">Select cluster...</option>
           {clusters.map(c => (
@@ -121,7 +146,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           value={selectedRelease}
           onChange={(e) => setSelectedRelease(e.target.value)}
           disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white disabled:opacity-50"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">Select release...</option>
           {releases.map(r => (
@@ -140,7 +165,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           <div className="flex items-center gap-2 mb-4">
             <ClusterBadge cluster={selectedCluster} />
             <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-white">{selectedRelease}</span>
+            <span className="text-sm text-foreground">{selectedRelease}</span>
           </div>
 
           {/* History timeline */}
@@ -162,13 +187,13 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                       <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
                         isCurrent ? 'bg-green-500' : 'bg-secondary border border-border'
                       }`}>
-                        <StatusIcon className={`w-2.5 h-2.5 ${isCurrent ? 'text-white' : `text-${color}-400`}`} />
+                        <StatusIcon className={`w-2.5 h-2.5 ${isCurrent ? 'text-foreground' : `text-${color}-400`}`} />
                       </div>
 
                       <div className={`p-2 rounded-lg ${isCurrent ? 'bg-green-500/10 border border-green-500/20' : 'bg-secondary/30'}`}>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white">Rev {entry.revision}</span>
+                            <span className="text-sm font-medium text-foreground">Rev {entry.revision}</span>
                             {isCurrent && (
                               <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
                                 current

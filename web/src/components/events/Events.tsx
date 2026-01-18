@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useEvents, useWarningEvents, useClusters } from '../../hooks/useMCP'
+import { useEvents, useWarningEvents } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
 type EventFilter = 'all' | 'warning' | 'normal'
@@ -62,17 +63,21 @@ function getEventIcon(type: string, reason: string): React.ReactNode {
 }
 
 export function Events() {
-  const { clusters } = useClusters()
-  const [selectedCluster, setSelectedCluster] = useState<string>('')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    filterBySeverity,
+    customFilter: globalCustomFilter,
+  } = useGlobalFilters()
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [selectedReason, setSelectedReason] = useState<string>('')
   const [filter, setFilter] = useState<EventFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(true)
 
-  // Get events based on filter
-  const { events: allEvents, isLoading: loadingAll, refetch: refetchAll } = useEvents(selectedCluster || undefined)
-  const { events: warningEvents, isLoading: loadingWarnings, refetch: refetchWarnings } = useWarningEvents(selectedCluster || undefined)
+  // Get events - fetch all, filter client-side with global filter
+  const { events: allEvents, isLoading: loadingAll, refetch: refetchAll } = useEvents(undefined)
+  const { events: warningEvents, isLoading: loadingWarnings, refetch: refetchWarnings } = useWarningEvents(undefined)
 
   const isLoading = filter === 'warning' ? loadingWarnings : loadingAll
 
@@ -91,11 +96,58 @@ export function Events() {
     return () => clearInterval(interval)
   }, [autoRefresh, filter, refetchAll, refetchWarnings])
 
-  // Extract unique namespaces and reasons from events for filter dropdowns
+  // Events after global filter (before local filters)
+  const globalFilteredAllEvents = useMemo(() => {
+    let result = allEvents
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
+    }
+
+    // Apply global custom text filter
+    if (globalCustomFilter.trim()) {
+      const query = globalCustomFilter.toLowerCase()
+      result = result.filter(e =>
+        e.reason.toLowerCase().includes(query) ||
+        e.message.toLowerCase().includes(query) ||
+        e.object.toLowerCase().includes(query) ||
+        e.namespace.toLowerCase().includes(query) ||
+        (e.cluster && e.cluster.toLowerCase().includes(query))
+      )
+    }
+
+    return result
+  }, [allEvents, globalSelectedClusters, isAllClustersSelected, globalCustomFilter])
+
+  const globalFilteredWarningEvents = useMemo(() => {
+    let result = warningEvents
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
+    }
+
+    // Apply global custom text filter
+    if (globalCustomFilter.trim()) {
+      const query = globalCustomFilter.toLowerCase()
+      result = result.filter(e =>
+        e.reason.toLowerCase().includes(query) ||
+        e.message.toLowerCase().includes(query) ||
+        e.object.toLowerCase().includes(query) ||
+        e.namespace.toLowerCase().includes(query) ||
+        (e.cluster && e.cluster.toLowerCase().includes(query))
+      )
+    }
+
+    return result
+  }, [warningEvents, globalSelectedClusters, isAllClustersSelected, globalCustomFilter])
+
+  // Extract unique namespaces and reasons from globally filtered events for filter dropdowns
   const { namespaces, reasons } = useMemo(() => {
     const nsSet = new Set<string>()
     const reasonSet = new Set<string>()
-    allEvents.forEach(e => {
+    globalFilteredAllEvents.forEach(e => {
       if (e.namespace) nsSet.add(e.namespace)
       if (e.reason) reasonSet.add(e.reason)
     })
@@ -103,41 +155,69 @@ export function Events() {
       namespaces: Array.from(nsSet).sort(),
       reasons: Array.from(reasonSet).sort(),
     }
-  }, [allEvents])
+  }, [globalFilteredAllEvents])
 
   // Select events based on filter and apply search query
   const filteredEvents = useMemo(() => {
     // First select events based on filter type
-    let baseEvents = filter === 'warning' ? warningEvents : allEvents
+    let result = filter === 'warning' ? warningEvents : allEvents
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
+    }
+
+    // Apply global severity filter (map event type to severity)
+    result = filterBySeverity(result.map(e => ({
+      ...e,
+      severity: e.type === 'Warning' ? 'high' : 'info'
+    }))).map(e => {
+      const { severity, ...rest } = e as typeof e & { severity: string }
+      return rest
+    })
+
+    // Apply global custom text filter
+    if (globalCustomFilter.trim()) {
+      const query = globalCustomFilter.toLowerCase()
+      result = result.filter(e =>
+        e.reason.toLowerCase().includes(query) ||
+        e.message.toLowerCase().includes(query) ||
+        e.object.toLowerCase().includes(query) ||
+        e.namespace.toLowerCase().includes(query) ||
+        (e.cluster && e.cluster.toLowerCase().includes(query))
+      )
+    }
 
     // Apply namespace filter
     if (selectedNamespace) {
-      baseEvents = baseEvents.filter(e => e.namespace === selectedNamespace)
+      result = result.filter(e => e.namespace === selectedNamespace)
     }
 
     // Apply reason filter
     if (selectedReason) {
-      baseEvents = baseEvents.filter(e => e.reason === selectedReason)
+      result = result.filter(e => e.reason === selectedReason)
     }
 
-    // Then apply search filter if any
-    if (!searchQuery) return baseEvents
+    // Apply local search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(e =>
+        e.reason.toLowerCase().includes(query) ||
+        e.message.toLowerCase().includes(query) ||
+        e.object.toLowerCase().includes(query) ||
+        e.namespace.toLowerCase().includes(query)
+      )
+    }
 
-    const query = searchQuery.toLowerCase()
-    return baseEvents.filter(e =>
-      e.reason.toLowerCase().includes(query) ||
-      e.message.toLowerCase().includes(query) ||
-      e.object.toLowerCase().includes(query) ||
-      e.namespace.toLowerCase().includes(query)
-    )
-  }, [filter, allEvents, warningEvents, searchQuery, selectedNamespace, selectedReason])
+    return result
+  }, [filter, allEvents, warningEvents, searchQuery, selectedNamespace, selectedReason, globalSelectedClusters, isAllClustersSelected, filterBySeverity, globalCustomFilter])
 
-  // Stats
+  // Stats (based on globally filtered events)
   const stats = useMemo(() => ({
-    total: allEvents.length,
-    warnings: warningEvents.length,
-    normal: allEvents.length - warningEvents.length,
-  }), [allEvents, warningEvents])
+    total: globalFilteredAllEvents.length,
+    warnings: globalFilteredWarningEvents.length,
+    normal: globalFilteredAllEvents.length - globalFilteredWarningEvents.length,
+  }), [globalFilteredAllEvents, globalFilteredWarningEvents])
 
   // Group events by time
   const groupedEvents = useMemo(() => {
@@ -168,14 +248,13 @@ export function Events() {
 
   // Clear filters
   const clearFilters = () => {
-    setSelectedCluster('')
     setSelectedNamespace('')
     setSelectedReason('')
     setFilter('all')
     setSearchQuery('')
   }
 
-  const hasActiveFilters = selectedCluster || selectedNamespace || selectedReason || filter !== 'all' || searchQuery
+  const hasActiveFilters = selectedNamespace || selectedReason || filter !== 'all' || searchQuery
 
   return (
     <div className="pt-16">
@@ -203,25 +282,6 @@ export function Events() {
       {/* Filters */}
       <div className="glass p-4 rounded-lg mb-6">
         <div className="flex flex-wrap items-center gap-4">
-          {/* Cluster Selector */}
-          <div>
-            <label htmlFor="events-cluster-filter" className="block text-xs text-muted-foreground mb-1">Cluster</label>
-            <select
-              id="events-cluster-filter"
-              name="events-cluster-filter"
-              value={selectedCluster}
-              onChange={(e) => setSelectedCluster(e.target.value)}
-              className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">All Clusters</option>
-              {clusters.map((cluster) => (
-                <option key={cluster.name} value={cluster.name}>
-                  {cluster.context || cluster.name.split('/').pop()}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Namespace Selector */}
           <div>
             <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">Namespace</label>
@@ -274,7 +334,7 @@ export function Events() {
                 onClick={() => setFilter('warning')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filter === 'warning'
-                    ? 'bg-yellow-500 text-white'
+                    ? 'bg-yellow-500 text-foreground'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -284,7 +344,7 @@ export function Events() {
                 onClick={() => setFilter('normal')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   filter === 'normal'
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-green-500 text-foreground'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'
                 }`}
               >

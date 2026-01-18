@@ -974,6 +974,191 @@ function getDemoGPUNodes(): GPUNode[] {
   ]
 }
 
+// Hook to get namespaces for a cluster (derived from pods)
+export function useNamespaces(cluster?: string) {
+  const [namespaces, setNamespaces] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    if (!cluster) {
+      setNamespaces([])
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      // Fetch pods for the cluster to get namespaces
+      const { data } = await api.get<{ pods: PodInfo[] }>(`/api/mcp/pods?cluster=${encodeURIComponent(cluster)}`)
+      const nsSet = new Set<string>()
+      data.pods?.forEach(pod => {
+        if (pod.namespace) nsSet.add(pod.namespace)
+      })
+      // Sort and set namespaces
+      setNamespaces(Array.from(nsSet).sort())
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch namespaces')
+      // Fallback to demo namespaces
+      setNamespaces(getDemoNamespaces())
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { namespaces, isLoading, error, refetch }
+}
+
+function getDemoNamespaces(): string[] {
+  return ['default', 'kube-system', 'kube-public', 'monitoring', 'production', 'staging', 'batch', 'data', 'web', 'ingress']
+}
+
+// Operator types
+export interface Operator {
+  name: string
+  namespace: string
+  version: string
+  status: 'Succeeded' | 'Failed' | 'Installing' | 'Upgrading'
+  upgradeAvailable?: string
+  cluster?: string
+}
+
+export interface OperatorSubscription {
+  name: string
+  namespace: string
+  channel: string
+  source: string
+  installPlanApproval: 'Automatic' | 'Manual'
+  currentCSV: string
+  pendingUpgrade?: string
+  cluster?: string
+}
+
+// Hook to get operators for a cluster
+export function useOperators(cluster?: string) {
+  const [operators, setOperators] = useState<Operator[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    if (!cluster) {
+      setOperators([])
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      // Try to fetch from API - will fall back to demo data if not available
+      const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(cluster)}`)
+      setOperators(data.operators || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch operators')
+      // Use demo data with cluster-specific variation
+      setOperators(getDemoOperators(cluster))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { operators, isLoading, error, refetch }
+}
+
+// Hook to get operator subscriptions for a cluster
+export function useOperatorSubscriptions(cluster?: string) {
+  const [subscriptions, setSubscriptions] = useState<OperatorSubscription[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    if (!cluster) {
+      setSubscriptions([])
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(`/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`)
+      setSubscriptions(data.subscriptions || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch subscriptions')
+      setSubscriptions(getDemoOperatorSubscriptions(cluster))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { subscriptions, isLoading, error, refetch }
+}
+
+function getDemoOperators(cluster: string): Operator[] {
+  // Vary demo data slightly based on cluster name
+  const suffix = cluster.includes('prod') ? '-prod' : cluster.includes('staging') ? '-staging' : ''
+  return [
+    { name: 'prometheus-operator', namespace: 'monitoring', version: 'v0.65.1', status: 'Succeeded', cluster },
+    { name: 'cert-manager', namespace: 'cert-manager', version: 'v1.12.0', status: 'Succeeded', upgradeAvailable: 'v1.13.0', cluster },
+    { name: `elasticsearch-operator${suffix}`, namespace: 'elastic-system', version: 'v2.8.0', status: 'Succeeded', cluster },
+    { name: 'strimzi-kafka-operator', namespace: 'kafka', version: 'v0.35.0', status: cluster.includes('staging') ? 'Installing' : 'Succeeded', cluster },
+    { name: 'argocd-operator', namespace: 'argocd', version: 'v0.6.0', status: cluster.includes('prod') ? 'Succeeded' : 'Failed', cluster },
+  ]
+}
+
+function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
+  return [
+    {
+      name: 'prometheus-operator',
+      namespace: 'monitoring',
+      channel: 'stable',
+      source: 'operatorhubio-catalog',
+      installPlanApproval: 'Automatic',
+      currentCSV: 'prometheusoperator.v0.65.1',
+      cluster,
+    },
+    {
+      name: 'cert-manager',
+      namespace: 'cert-manager',
+      channel: 'stable',
+      source: 'operatorhubio-catalog',
+      installPlanApproval: 'Manual',
+      currentCSV: 'cert-manager.v1.12.0',
+      pendingUpgrade: 'cert-manager.v1.13.0',
+      cluster,
+    },
+    {
+      name: 'strimzi-kafka-operator',
+      namespace: 'kafka',
+      channel: 'stable',
+      source: 'operatorhubio-catalog',
+      installPlanApproval: 'Automatic',
+      currentCSV: 'strimzi-cluster-operator.v0.35.0',
+      cluster,
+    },
+    {
+      name: 'argocd-operator',
+      namespace: 'argocd',
+      channel: 'alpha',
+      source: 'operatorhubio-catalog',
+      installPlanApproval: 'Manual',
+      currentCSV: 'argocd-operator.v0.6.0',
+      pendingUpgrade: cluster.includes('staging') ? 'argocd-operator.v0.7.0' : undefined,
+      cluster,
+    },
+  ]
+}
+
 function getDemoEvents(): ClusterEvent[] {
   return [
     {

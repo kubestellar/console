@@ -5,7 +5,7 @@ import { Bell, Search, Server, Box, Activity, Command, Sun, Moon, Monitor, Coins
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
-import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG } from '../../hooks/useGlobalFilters'
+import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../hooks/useGlobalFilters'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { languages } from '../../lib/i18n'
 import { TourTrigger } from '../onboarding/Tour'
@@ -58,6 +58,15 @@ export function Navbar() {
     selectAllSeverities,
     deselectAllSeverities,
     isAllSeveritiesSelected,
+    selectedStatuses,
+    toggleStatus,
+    selectAllStatuses,
+    deselectAllStatuses,
+    isAllStatusesSelected,
+    customFilter,
+    setCustomFilter,
+    clearCustomFilter,
+    hasCustomFilter,
     isFiltered,
   } = useGlobalFilters()
 
@@ -201,7 +210,7 @@ export function Navbar() {
             }}
             onFocus={() => setIsSearchOpen(true)}
             placeholder="Search clusters, apps, pods..."
-            className="w-full pl-10 pr-16 py-2 bg-secondary/50 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            className="w-full pl-10 pr-16 py-2 bg-secondary/50 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
           />
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
             <Command className="w-3 h-3" />K
@@ -218,8 +227,8 @@ export function Navbar() {
                       onClick={() => handleSelect(result)}
                       className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-colors ${
                         index === selectedIndex
-                          ? 'bg-purple-500/20 text-white'
-                          : 'text-muted-foreground hover:bg-secondary/50 hover:text-white'
+                          ? 'bg-purple-500/20 text-foreground'
+                          : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                       }`}
                     >
                       <result.icon className="w-4 h-4" />
@@ -253,6 +262,8 @@ export function Navbar() {
             onClick={() => {
               selectAllClusters()
               selectAllSeverities()
+              selectAllStatuses()
+              clearCustomFilter()
             }}
             className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-xs font-medium"
             title={t('common:filters.clearAll', 'Clear all filters')}
@@ -286,12 +297,37 @@ export function Navbar() {
           {/* Filter dropdown */}
           {showClusterFilter && (
             <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+              {/* Custom Text Filter */}
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Search className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm font-medium text-foreground">{t('common:filters.customFilter', 'Custom Filter')}</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customFilter}
+                    onChange={(e) => setCustomFilter(e.target.value)}
+                    placeholder={t('common:filters.customFilterPlaceholder', 'Filter by name, namespace...')}
+                    className="flex-1 px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                  {hasCustomFilter && (
+                    <button
+                      onClick={clearCustomFilter}
+                      className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Severity Filter Section */}
               <div className="p-3 border-b border-border">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-orange-400" />
-                    <span className="text-sm font-medium text-white">{t('common:filters.severity', 'Severity')}</span>
+                    <span className="text-sm font-medium text-foreground">{t('common:filters.severity', 'Severity')}</span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -331,12 +367,57 @@ export function Navbar() {
                 </div>
               </div>
 
+              {/* Status Filter Section */}
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-foreground">{t('common:filters.status', 'Status')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={selectAllStatuses}
+                      className="text-xs text-purple-400 hover:text-purple-300"
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={deselectAllStatuses}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUS_LEVELS.map((status) => {
+                    const config = STATUS_CONFIG[status]
+                    const isSelected = isAllStatusesSelected || selectedStatuses.includes(status)
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => toggleStatus(status)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors',
+                          isSelected
+                            ? `${config.bgColor} ${config.color}`
+                            : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {isSelected && <Check className="w-3 h-3" />}
+                        {config.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Cluster Groups Section */}
               {clusterGroups.length > 0 && (
                 <div className="p-3 border-b border-border">
                   <div className="flex items-center gap-2 mb-2">
                     <Folder className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-medium text-white">{t('common:filters.clusterGroups', 'Cluster Groups')}</span>
+                    <span className="text-sm font-medium text-foreground">{t('common:filters.clusterGroups', 'Cluster Groups')}</span>
                   </div>
                   <div className="space-y-1">
                     {clusterGroups.map((group) => (
@@ -366,7 +447,7 @@ export function Navbar() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Server className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-white">{t('common:filters.clusters', 'Clusters')}</span>
+                    <span className="text-sm font-medium text-foreground">{t('common:filters.clusters', 'Clusters')}</span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -437,7 +518,7 @@ export function Navbar() {
                       placeholder="Group name..."
                       value={newGroupName}
                       onChange={(e) => setNewGroupName(e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
                     />
                     <div className="text-xs text-muted-foreground mb-1">Select clusters for group:</div>
                     <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -582,19 +663,19 @@ export function Navbar() {
           {/* Token details dropdown */}
           {showTokenDetails && (
             <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-50">
-              <h4 className="text-sm font-medium text-white mb-3">Token Usage</h4>
+              <h4 className="text-sm font-medium text-foreground mb-3">Token Usage</h4>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Used</span>
-                  <span className="text-white font-mono">{usage.used.toLocaleString()}</span>
+                  <span className="text-foreground font-mono">{usage.used.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Limit</span>
-                  <span className="text-white font-mono">{usage.limit.toLocaleString()}</span>
+                  <span className="text-foreground font-mono">{usage.limit.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Remaining</span>
-                  <span className="text-white font-mono">{remaining.toLocaleString()}</span>
+                  <span className="text-foreground font-mono">{remaining.toLocaleString()}</span>
                 </div>
                 <div className="h-2 bg-secondary rounded-full overflow-hidden mt-2">
                   <div

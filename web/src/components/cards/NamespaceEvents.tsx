@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Activity, AlertTriangle, Info, AlertCircle, RefreshCw, Clock } from 'lucide-react'
-import { useClusters, useWarningEvents } from '../../hooks/useMCP'
+import { useClusters, useWarningEvents, useNamespaces } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -12,17 +13,37 @@ interface NamespaceEventsProps {
 }
 
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
-  const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { events: allEvents, isLoading: eventsLoading, refetch: refetchEvents } = useWarningEvents()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
 
-  // Get unique namespaces from events
-  const namespaces = useMemo(() => {
-    const nsSet = new Set<string>()
-    allEvents.forEach(e => e.namespace && nsSet.add(e.namespace))
-    return Array.from(nsSet).sort()
-  }, [allEvents])
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  // Fetch namespaces for the selected cluster
+  const { namespaces } = useNamespaces(selectedCluster || undefined)
 
   // Filter events by cluster and namespace
   const filteredEvents = useMemo(() => {
@@ -107,7 +128,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
             setSelectedCluster(e.target.value)
             setSelectedNamespace('')
           }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">All clusters</option>
           {clusters.map(c => (
@@ -117,7 +138,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
         <select
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">All namespaces</option>
           {namespaces.map(ns => (
@@ -133,7 +154,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
           {selectedNamespace && (
             <>
               <span className="text-muted-foreground">/</span>
-              <span className="text-sm text-white">{selectedNamespace}</span>
+              <span className="text-sm text-foreground">{selectedNamespace}</span>
             </>
           )}
         </div>
@@ -148,7 +169,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="text-sm text-white">No Warning Events</p>
+            <p className="text-sm text-foreground">No Warning Events</p>
             <p className="text-xs text-muted-foreground">All systems operating normally</p>
           </div>
         ) : (
@@ -167,7 +188,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs text-muted-foreground">{event.namespace}</span>
                       <span className="text-xs text-muted-foreground">/</span>
-                      <span className="text-sm text-white truncate">{event.object}</span>
+                      <span className="text-sm text-foreground truncate">{event.object}</span>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{event.message}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">

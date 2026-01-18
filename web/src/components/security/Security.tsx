@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -43,27 +43,58 @@ function getMockSecurityData(): SecurityIssue[] {
 }
 
 export function Security() {
-  const { clusters } = useClusters()
-  const [selectedCluster, setSelectedCluster] = useState<string>('')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    filterBySeverity,
+    customFilter,
+  } = useGlobalFilters()
   const [severityFilter, setSeverityFilter] = useState<string>('all')
 
   // In production, fetch from API
   const securityIssues = useMemo(() => getMockSecurityData(), [])
 
+  // Issues after global filter (before local severity filter)
+  const globalFilteredIssues = useMemo(() => {
+    let result = securityIssues
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(issue => globalSelectedClusters.includes(issue.cluster))
+    }
+
+    // Apply global severity filter
+    result = filterBySeverity(result)
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(issue =>
+        issue.resource.toLowerCase().includes(query) ||
+        issue.namespace.toLowerCase().includes(query) ||
+        issue.cluster.toLowerCase().includes(query) ||
+        issue.message.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [securityIssues, globalSelectedClusters, isAllClustersSelected, filterBySeverity, customFilter])
+
   const filteredIssues = useMemo(() => {
-    return securityIssues.filter(issue => {
-      if (selectedCluster && !issue.cluster.includes(selectedCluster)) return false
-      if (severityFilter !== 'all' && issue.severity !== severityFilter) return false
-      return true
-    })
-  }, [securityIssues, selectedCluster, severityFilter])
+    let result = globalFilteredIssues
+    // Apply local severity filter
+    if (severityFilter !== 'all') {
+      result = result.filter(issue => issue.severity === severityFilter)
+    }
+    return result
+  }, [globalFilteredIssues, severityFilter])
 
   const stats = useMemo(() => ({
-    total: securityIssues.length,
-    high: securityIssues.filter(i => i.severity === 'high').length,
-    medium: securityIssues.filter(i => i.severity === 'medium').length,
-    low: securityIssues.filter(i => i.severity === 'low').length,
-  }), [securityIssues])
+    total: globalFilteredIssues.length,
+    high: globalFilteredIssues.filter(i => i.severity === 'high').length,
+    medium: globalFilteredIssues.filter(i => i.severity === 'medium').length,
+    low: globalFilteredIssues.filter(i => i.severity === 'low').length,
+  }), [globalFilteredIssues])
 
   const severityColor = (severity: string) => {
     switch (severity) {
@@ -126,21 +157,6 @@ export function Security() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
-        <select
-          id="security-cluster-filter"
-          name="security-cluster-filter"
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className="px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm"
-        >
-          <option value="">All Clusters</option>
-          {clusters.map((cluster) => (
-            <option key={cluster.name} value={cluster.name}>
-              {cluster.context || cluster.name.split('/').pop()}
-            </option>
-          ))}
-        </select>
-
         <div className="flex gap-2">
           {['all', 'high', 'medium', 'low'].map(sev => (
             <button
@@ -148,9 +164,9 @@ export function Security() {
               onClick={() => setSeverityFilter(sev)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 severityFilter === sev
-                  ? sev === 'high' ? 'bg-red-500 text-white' :
-                    sev === 'medium' ? 'bg-yellow-500 text-white' :
-                    sev === 'low' ? 'bg-blue-500 text-white' :
+                  ? sev === 'high' ? 'bg-red-500 text-foreground' :
+                    sev === 'medium' ? 'bg-yellow-500 text-foreground' :
+                    sev === 'low' ? 'bg-blue-500 text-foreground' :
                     'bg-primary text-primary-foreground'
                   : 'bg-card/50 text-muted-foreground hover:text-foreground'
               }`}

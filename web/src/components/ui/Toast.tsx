@@ -104,7 +104,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       <span className="flex-1 text-sm">{toast.message}</span>
       <button
         onClick={onRemove}
-        className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white"
+        className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground"
       >
         <X className="w-3 h-3" />
       </button>

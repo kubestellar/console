@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Package, ArrowUpCircle, CheckCircle, RefreshCw, ExternalLink } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -19,9 +20,33 @@ interface ChartInfo {
 }
 
 export function ChartVersions({ config }: ChartVersionsProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [showUpgradesOnly, setShowUpgradesOnly] = useState(false)
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Mock chart version data
   const allCharts: ChartInfo[] = selectedCluster ? [
@@ -82,7 +107,7 @@ export function ChartVersions({ config }: ChartVersionsProps) {
       <select
         value={selectedCluster}
         onChange={(e) => setSelectedCluster(e.target.value)}
-        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white mb-4"
+        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
         <option value="">Select cluster...</option>
         {clusters.map(c => (
@@ -140,7 +165,7 @@ export function ChartVersions({ config }: ChartVersionsProps) {
                     ) : (
                       <CheckCircle className="w-4 h-4 text-green-400" />
                     )}
-                    <span className="text-sm text-white font-medium">{chart.name}</span>
+                    <span className="text-sm text-foreground font-medium">{chart.name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">{chart.repository}</span>
                 </div>

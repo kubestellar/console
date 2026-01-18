@@ -236,7 +236,7 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-white">{app.name}</span>
+                  <span className="text-sm font-medium text-foreground">{app.name}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded ${syncConfig.bg} ${syncConfig.color}`}>
                     <SyncIcon className="w-3 h-3 inline mr-1" />
                     {app.syncStatus}

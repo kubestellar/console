@@ -163,11 +163,11 @@ export function TourOverlay() {
             <div className="p-1.5 rounded-lg bg-purple-500/20">
               <KubeStellarAIIcon className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-white">{currentStep.title}</h3>
+            <h3 className="font-semibold text-foreground">{currentStep.title}</h3>
           </div>
           <button
             onClick={skipTour}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white"
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
           >
             <X className="w-4 h-4" />
           </button>
@@ -200,14 +200,14 @@ export function TourOverlay() {
             {currentStepIndex > 0 && (
               <button
                 onClick={prevStep}
-                className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+                className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
             )}
             <button
               onClick={nextStep}
-              className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors flex items-center gap-1"
+              className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground text-sm font-medium transition-colors flex items-center gap-1"
             >
               {currentStepIndex === totalSteps - 1 ? (
                 'Finish'
@@ -244,7 +244,7 @@ export function TourTrigger() {
       className={cn(
         'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
         hasCompletedTour
-          ? 'text-muted-foreground hover:text-white hover:bg-secondary/50'
+          ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
           : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 animate-pulse'
       )}
       title="Take a tour"
@@ -270,14 +270,14 @@ export function TourPrompt() {
           <KubeStellarAIIcon className="w-6 h-6" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-white mb-1">Welcome!</h3>
+          <h3 className="font-semibold text-foreground mb-1">Welcome!</h3>
           <p className="text-sm text-muted-foreground mb-3">
             Would you like a quick tour of the console? Learn about AI features, drill-down navigation, and more.
           </p>
           <div className="flex gap-2">
             <button
               onClick={startTour}
-              className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground text-sm font-medium transition-colors"
             >
               Start Tour
             </button>
@@ -286,7 +286,7 @@ export function TourPrompt() {
                 setDismissed(true)
                 skipTour()
               }}
-              className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-white text-sm transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground text-sm transition-colors"
             >
               Skip
             </button>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { useClusters, useDeploymentIssues, usePodIssues } from '../../hooks/useMCP'
+import { useDeploymentIssues, usePodIssues, useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -14,17 +15,52 @@ interface AppSummary {
 }
 
 export function Applications() {
-  const { clusters } = useClusters()
   const { issues: podIssues } = usePodIssues()
   const { issues: deploymentIssues } = useDeploymentIssues()
+  const { clusters } = useClusters()
   const { drillToNamespace } = useDrillDownActions()
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
 
-  // Group applications by namespace
+  // Group applications by namespace with global filter applied
   const apps = useMemo(() => {
+    // Filter issues by global cluster selection
+    let filteredPodIssues = podIssues
+    let filteredDeploymentIssues = deploymentIssues
+
+    if (!isAllClustersSelected) {
+      filteredPodIssues = filteredPodIssues.filter(issue =>
+        issue.cluster && globalSelectedClusters.includes(issue.cluster)
+      )
+      filteredDeploymentIssues = filteredDeploymentIssues.filter(issue =>
+        issue.cluster && globalSelectedClusters.includes(issue.cluster)
+      )
+    }
+
+    // Note: Status filter not applied here as issues represent problems, not running state
+
+    // Apply custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      filteredPodIssues = filteredPodIssues.filter(issue =>
+        issue.name.toLowerCase().includes(query) ||
+        issue.namespace.toLowerCase().includes(query) ||
+        (issue.cluster && issue.cluster.toLowerCase().includes(query))
+      )
+      filteredDeploymentIssues = filteredDeploymentIssues.filter(issue =>
+        issue.name.toLowerCase().includes(query) ||
+        issue.namespace.toLowerCase().includes(query) ||
+        (issue.cluster && issue.cluster.toLowerCase().includes(query))
+      )
+    }
+
     const appMap = new Map<string, AppSummary>()
 
     // Group pod issues by namespace
-    podIssues.forEach(issue => {
+    filteredPodIssues.forEach(issue => {
       const key = `${issue.cluster}/${issue.namespace}`
       if (!appMap.has(key)) {
         appMap.set(key, {
@@ -42,7 +78,7 @@ export function Applications() {
     })
 
     // Group deployment issues by namespace
-    deploymentIssues.forEach(issue => {
+    filteredDeploymentIssues.forEach(issue => {
       const key = `${issue.cluster}/${issue.namespace}`
       if (!appMap.has(key)) {
         appMap.set(key, {
@@ -70,7 +106,7 @@ export function Applications() {
       }
       return (b.podIssues + b.deploymentIssues) - (a.podIssues + a.deploymentIssues)
     })
-  }, [podIssues, deploymentIssues])
+  }, [podIssues, deploymentIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const stats = useMemo(() => ({
     total: apps.length,
@@ -163,7 +199,9 @@ export function Applications() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {clusters.map((cluster) => (
+          {clusters
+            .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
+            .map((cluster) => (
             <div key={cluster.name} className="glass p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <StatusIndicator status={cluster.healthy ? 'healthy' : 'error'} size="sm" />

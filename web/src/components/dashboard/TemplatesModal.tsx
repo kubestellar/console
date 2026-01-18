@@ -60,7 +60,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Layout className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-white">Dashboard Templates</h2>
+            <h2 className="text-lg font-semibold text-foreground">Dashboard Templates</h2>
           </div>
           <button
             onClick={onClose}
@@ -84,7 +84,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
                   selectedCategory === category.id
                     ? 'bg-purple-500/20 text-purple-400'
-                    : 'hover:bg-secondary text-muted-foreground hover:text-white'
+                    : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <span>{category.icon}</span>
@@ -109,7 +109,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl">{template.icon}</span>
                     <div>
-                      <h3 className="text-sm font-medium text-white">{template.name}</h3>
+                      <h3 className="text-sm font-medium text-foreground">{template.name}</h3>
                       <p className="text-xs text-muted-foreground">{template.cards.length} cards</p>
                     </div>
                     {selectedTemplate?.id === template.id && (
@@ -157,14 +157,14 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-muted-foreground hover:text-white transition-colors"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleApply}
               disabled={!selectedTemplate}
-              className="px-4 py-2 bg-gradient-ks text-white rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
             >
               Apply Template
               <ChevronRight className="w-4 h-4" />

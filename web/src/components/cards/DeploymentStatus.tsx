@@ -161,7 +161,7 @@ export function DeploymentStatus() {
                     <ClusterBadge cluster={deployment.cluster} />
                     <StatusIcon className={`w-4 h-4 ${config.color}`} />
                   </div>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-foreground">
                     {deployment.name}
                   </span>
                 </div>
@@ -176,7 +176,7 @@ export function DeploymentStatus() {
                           <ArrowRight className="w-3 h-3 text-muted-foreground" />
                         </>
                       )}
-                      <span className="text-white">{deployment.version}</span>
+                      <span className="text-foreground">{deployment.version}</span>
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {deployment.replicas.ready}/{deployment.replicas.desired} ready

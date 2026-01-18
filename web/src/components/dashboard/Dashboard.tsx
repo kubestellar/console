@@ -163,6 +163,8 @@ export function Dashboard() {
     isTemplatesModalOpen,
     closeTemplatesModal,
     openTemplatesModal,
+    pendingRestoreCard,
+    clearPendingRestoreCard,
   } = useDashboardContext()
 
   // Get all dashboards for cross-dashboard dragging
@@ -254,6 +256,34 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboard()
   }, [])
+
+  // Handle pending restore card from CardHistory
+  useEffect(() => {
+    if (pendingRestoreCard && !isLoading) {
+      const newCard: Card = {
+        id: `restored-${Date.now()}`,
+        card_type: pendingRestoreCard.cardType,
+        config: pendingRestoreCard.config || {},
+        position: { x: 0, y: 0, w: 4, h: 3 },
+        title: pendingRestoreCard.cardTitle,
+      }
+      // Record the card addition in history
+      recordCardAdded(
+        newCard.id,
+        newCard.card_type,
+        newCard.title,
+        newCard.config,
+        dashboard?.id,
+        dashboard?.name
+      )
+      // Add the card
+      setLocalCards((prev) => [...prev, newCard])
+      // Clear the pending card
+      clearPendingRestoreCard()
+      // Show success toast
+      showToast(`Restored "${pendingRestoreCard.cardTitle || pendingRestoreCard.cardType}" card`, 'success')
+    }
+  }, [pendingRestoreCard, isLoading, dashboard, recordCardAdded, clearPendingRestoreCard, showToast])
 
   const loadDashboard = async () => {
     try {
@@ -436,7 +466,7 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-foreground">
             {dashboard?.name || 'Dashboard'}
           </h1>
           <p className="text-muted-foreground">
@@ -626,7 +656,7 @@ function DragPreviewCard({ card }: { card: Card }) {
         maxWidth: '400px',
       }}
     >
-      <div className="text-sm font-medium text-white mb-2">
+      <div className="text-sm font-medium text-foreground mb-2">
         {card.title || card.card_type.replace(/_/g, ' ')}
       </div>
       <div className="h-24 flex items-center justify-center text-muted-foreground">

@@ -1,12 +1,40 @@
+import { useMemo } from 'react'
 import { RefreshCw, Cpu, HardDrive, Zap } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 interface ResourceCapacityProps {
   config?: Record<string, unknown>
 }
 
 export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { drillToResources } = useDrillDownActions()
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   if (isLoading) {
     return (
@@ -86,13 +114,16 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       </div>
 
       {/* Summary */}
-      <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 gap-4 text-center">
+      <div
+        className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 gap-4 text-center cursor-pointer hover:bg-secondary/30 rounded-lg transition-colors"
+        onClick={() => drillToResources()}
+      >
         <div>
-          <p className="text-2xl font-bold text-white">{totals.nodes}</p>
+          <p className="text-2xl font-bold text-foreground">{totals.nodes}</p>
           <p className="text-xs text-muted-foreground">Total Nodes</p>
         </div>
         <div>
-          <p className="text-2xl font-bold text-white">{clusters.length}</p>
+          <p className="text-2xl font-bold text-foreground">{clusters.length}</p>
           <p className="text-xs text-muted-foreground">Clusters</p>
         </div>
       </div>
@@ -133,7 +164,7 @@ function ResourceBar({ icon, label, used, total, unit, color }: ResourceBarProps
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <span className={bgClasses[color]}>{icon}</span>
-          <span className="text-sm text-white">{label}</span>
+          <span className="text-sm text-foreground">{label}</span>
         </div>
         <span className="text-xs text-muted-foreground">
           {used} / {total} {unit}

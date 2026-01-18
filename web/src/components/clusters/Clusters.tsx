@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Pencil, X, Check, Loader2, Globe, User, Hourglass } from 'lucide-react'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes } from '../../hooks/useMCP'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { Gauge } from '../charts/Gauge'
 
@@ -241,6 +242,11 @@ export function Clusters() {
   const { clusters, isLoading, isUpdating, error, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { isConnected } = useLocalAgent()
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'healthy' | 'unhealthy'>('all')
   const [renamingCluster, setRenamingCluster] = useState<string | null>(null)
@@ -260,12 +266,33 @@ export function Clusters() {
   }
 
   const filteredClusters = useMemo(() => {
-    return clusters.filter(c => {
-      if (filter === 'healthy') return c.healthy
-      if (filter === 'unhealthy') return !c.healthy
-      return true
-    })
-  }, [clusters, filter])
+    let result = clusters
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    // Apply custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query) ||
+        c.server?.toLowerCase().includes(query) ||
+        c.user?.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply local health filter
+    if (filter === 'healthy') {
+      result = result.filter(c => c.healthy)
+    } else if (filter === 'unhealthy') {
+      result = result.filter(c => !c.healthy)
+    }
+
+    return result
+  }, [clusters, filter, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Get GPU count per cluster
   const gpuByCluster = useMemo(() => {
@@ -281,14 +308,37 @@ export function Clusters() {
     return map
   }, [gpuNodes])
 
+  // Base clusters after global filter (before local health filter)
+  const globalFilteredClusters = useMemo(() => {
+    let result = clusters
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    // Apply custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query) ||
+        c.server?.toLowerCase().includes(query) ||
+        c.user?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [clusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
   const stats = useMemo(() => ({
-    total: clusters.length,
-    healthy: clusters.filter(c => c.healthy).length,
-    unhealthy: clusters.filter(c => !c.healthy).length,
-    totalNodes: clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
-    totalCPUs: clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
-    totalPods: clusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
-  }), [clusters])
+    total: globalFilteredClusters.length,
+    healthy: globalFilteredClusters.filter(c => c.healthy).length,
+    unhealthy: globalFilteredClusters.filter(c => !c.healthy).length,
+    totalNodes: globalFilteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
+    totalCPUs: globalFilteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
+    totalPods: globalFilteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
+  }), [globalFilteredClusters])
 
   if (isLoading) {
     return (
@@ -377,7 +427,7 @@ export function Clusters() {
           onClick={() => setFilter('healthy')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === 'healthy'
-              ? 'bg-green-500 text-white'
+              ? 'bg-green-500 text-foreground'
               : 'bg-card/50 text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -387,7 +437,7 @@ export function Clusters() {
           onClick={() => setFilter('unhealthy')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === 'unhealthy'
-              ? 'bg-red-500 text-white'
+              ? 'bg-red-500 text-foreground'
               : 'bg-card/50 text-muted-foreground hover:text-foreground'
           }`}
         >

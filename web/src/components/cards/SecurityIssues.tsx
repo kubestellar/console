@@ -91,7 +91,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
           <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title="Security scan passed">
             <Shield className="w-6 h-6 text-green-400" />
           </div>
-          <p className="text-white font-medium">No security issues</p>
+          <p className="text-foreground font-medium">No security issues</p>
           <p className="text-sm text-muted-foreground">All pods pass security checks</p>
         </div>
       </div>
@@ -157,7 +157,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
                       <ClusterBadge cluster={issue.cluster || 'default'} />
                       <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
                     </div>
-                    <p className="text-sm font-medium text-white truncate" title={issue.name}>{issue.name}</p>
+                    <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded ${colors.badge} ${colors.text}`} title={`Issue type: ${issue.issue}`}>
                         {issue.issue}

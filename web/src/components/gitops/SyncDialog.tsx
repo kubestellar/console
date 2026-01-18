@@ -338,7 +338,7 @@ export function SyncDialog({
               return (
                 <div key={label} className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                    ${isComplete ? 'bg-green-500 text-white' :
+                    ${isComplete ? 'bg-green-500 text-foreground' :
                       isActive ? 'bg-primary text-primary-foreground' :
                       'bg-muted text-muted-foreground'}`}
                   >
@@ -486,7 +486,7 @@ export function SyncDialog({
             {phase === 'complete' && (
               <button
                 onClick={handleClose}
-                className="px-4 py-2 rounded-lg text-sm bg-green-500 text-white hover:bg-green-600 transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-lg text-sm bg-green-500 text-foreground hover:bg-green-600 transition-colors flex items-center gap-2"
               >
                 <Check className="w-4 h-4" />
                 Done

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Gauge, Cpu, HardDrive, Box, RefreshCw } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { useClusters, useNamespaces } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -20,12 +21,36 @@ interface QuotaUsage {
 }
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
-  const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'default')
+  const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
 
-  // Mock namespaces - in real implementation, fetch from API
-  const namespaces = ['default', 'kube-system', 'monitoring', 'production', 'staging']
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  // Fetch namespaces for the selected cluster
+  const { namespaces } = useNamespaces(selectedCluster || undefined)
 
   // Mock quota data
   const quotas: QuotaUsage[] = selectedNamespace && selectedCluster ? [
@@ -89,7 +114,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         <select
           value={selectedCluster}
           onChange={(e) => setSelectedCluster(e.target.value)}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">Select cluster...</option>
           {clusters.map(c => (
@@ -100,7 +125,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
           disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white disabled:opacity-50"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">Select namespace...</option>
           {namespaces.map(ns => (
@@ -119,7 +144,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
           <div className="flex items-center gap-2 mb-4">
             <ClusterBadge cluster={selectedCluster} />
             <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-white">{selectedNamespace}</span>
+            <span className="text-sm text-foreground">{selectedNamespace}</span>
           </div>
 
           {/* Quota list */}
@@ -134,7 +159,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Icon className={`w-4 h-4 text-${color}-400`} />
-                      <span className="text-sm text-white">{quota.resource}</span>
+                      <span className="text-sm text-foreground">{quota.resource}</span>
                     </div>
                     <span className="text-sm text-muted-foreground">
                       {quota.used}{quota.unit} / {quota.limit}{quota.unit}

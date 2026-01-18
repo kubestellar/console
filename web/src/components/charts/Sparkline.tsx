@@ -93,7 +93,7 @@ export function StatWithSparkline({
         )}
       </div>
       <div className="flex items-end justify-between">
-        <span className="text-2xl font-bold text-white">
+        <span className="text-2xl font-bold text-foreground">
           {value}
           {unit && <span className="text-sm text-muted-foreground ml-1">{unit}</span>}
         </span>

@@ -2,12 +2,43 @@ import { useMemo } from 'react'
 import { Gauge } from '../charts'
 import { Cpu, MemoryStick } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 export function ResourceUsage() {
-  const { clusters, isLoading } = useClusters()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { clusters: allClusters, isLoading } = useClusters()
+  const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  const gpuNodes = useMemo(() => {
+    if (isAllClustersSelected && !customFilter.trim()) return allGPUNodes
+    const clusterNames = clusters.map(c => c.name)
+    return allGPUNodes.filter(n => clusterNames.includes(n.cluster.split('/')[0]))
+  }, [allGPUNodes, clusters, isAllClustersSelected, customFilter])
 
   // Calculate totals from real cluster data
   const totals = useMemo(() => {
@@ -104,16 +135,16 @@ export function ResourceUsage() {
       <div className={`mt-4 pt-3 border-t border-border/50 grid ${totals.gpu.total > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-center`}>
         <div>
           <p className="text-xs text-muted-foreground">Total CPU</p>
-          <p className="text-sm font-medium text-white">{totals.cpu.total} cores</p>
+          <p className="text-sm font-medium text-foreground">{totals.cpu.total} cores</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Total RAM</p>
-          <p className="text-sm font-medium text-white">{totals.memory.total} GB</p>
+          <p className="text-sm font-medium text-foreground">{totals.memory.total} GB</p>
         </div>
         {totals.gpu.total > 0 && (
           <div>
             <p className="text-xs text-muted-foreground">Total GPU</p>
-            <p className="text-sm font-medium text-white">
+            <p className="text-sm font-medium text-foreground">
               <span className="text-purple-400">{totals.gpu.used}</span>/{totals.gpu.total}
             </p>
           </div>

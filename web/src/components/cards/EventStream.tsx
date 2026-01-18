@@ -120,7 +120,7 @@ export function EventStream() {
                     <ClusterBadge cluster={event.cluster || 'default'} />
                     <span className="text-xs text-muted-foreground truncate" title={`Namespace: ${event.namespace}`}>{event.namespace}</span>
                   </div>
-                  <p className="text-sm text-white truncate" title={event.message}>{event.message}</p>
+                  <p className="text-sm text-foreground truncate" title={event.message}>{event.message}</p>
                   <p className="text-xs text-muted-foreground truncate" title={`Resource: ${event.object}`}>
                     {event.object}
                   </p>

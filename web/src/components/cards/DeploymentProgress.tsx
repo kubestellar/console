@@ -109,13 +109,13 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
                     <span className="text-xs text-muted-foreground">{deployment.namespace}</span>
                     <StatusIcon className={`w-4 h-4 ${config.color}`} />
                   </div>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm font-medium text-foreground">
                     {deployment.name}
                   </span>
                 </div>
                 <div className="text-right">
                   <div className="flex items-center gap-1 text-xs">
-                    <span className="text-white">{version}</span>
+                    <span className="text-foreground">{version}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {deployment.readyReplicas}/{deployment.replicas} ready

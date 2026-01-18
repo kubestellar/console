@@ -47,7 +47,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Cpu className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-white font-medium">No GPU Nodes</p>
+          <p className="text-foreground font-medium">No GPU Nodes</p>
           <p className="text-sm text-muted-foreground">No GPU resources detected</p>
         </div>
       </div>
@@ -75,7 +75,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
-          <p className="text-lg font-bold text-white">{totalGPUs}</p>
+          <p className="text-lg font-bold text-foreground">{totalGPUs}</p>
           <p className="text-xs text-muted-foreground">Total</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
@@ -97,7 +97,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
           >
             <div className="flex items-center gap-2 mb-2">
               <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-white truncate">{node.name}</span>
+              <span className="text-sm font-medium text-foreground truncate">{node.name}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <ClusterBadge cluster={node.cluster} size="sm" />

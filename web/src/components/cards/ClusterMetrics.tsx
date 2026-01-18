@@ -41,8 +41,8 @@ export function ClusterMetrics() {
       {/* Header with metric selector */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h4 className="text-sm font-medium text-white">{config.label}</h4>
-          <p className="text-2xl font-bold text-white">
+          <h4 className="text-sm font-medium text-foreground">{config.label}</h4>
+          <p className="text-2xl font-bold text-foreground">
             {Math.round(currentValue)}<span className="text-sm text-muted-foreground">{config.unit}</span>
           </p>
         </div>
@@ -54,7 +54,7 @@ export function ClusterMetrics() {
               className={`px-2 py-1 text-xs rounded transition-colors ${
                 selectedMetric === key
                   ? 'bg-purple-500/20 text-purple-400'
-                  : 'text-muted-foreground hover:text-white hover:bg-secondary/50'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
             >
               {metricConfig[key].label.split(' ')[0]}
@@ -78,19 +78,19 @@ export function ClusterMetrics() {
       <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
         <div>
           <p className="text-xs text-muted-foreground">Min</p>
-          <p className="text-sm font-medium text-white">
+          <p className="text-sm font-medium text-foreground">
             {Math.round(Math.min(...data.map((d) => d.value)))}{config.unit}
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Avg</p>
-          <p className="text-sm font-medium text-white">
+          <p className="text-sm font-medium text-foreground">
             {Math.round(data.reduce((a, b) => a + b.value, 0) / data.length)}{config.unit}
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Max</p>
-          <p className="text-sm font-medium text-white">
+          <p className="text-sm font-medium text-foreground">
             {Math.round(Math.max(...data.map((d) => d.value)))}{config.unit}
           </p>
         </div>

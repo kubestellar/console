@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Layers, Box, Activity, AlertTriangle, RefreshCw, Server } from 'lucide-react'
-import { useClusters, usePodIssues, useDeploymentIssues } from '../../hooks/useMCP'
+import { useClusters, usePodIssues, useDeploymentIssues, useNamespaces } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -12,12 +13,39 @@ interface NamespaceOverviewProps {
 }
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
-  const { clusters, isLoading: clustersLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const { issues: allPodIssues } = usePodIssues(selectedCluster)
   const { issues: allDeploymentIssues } = useDeploymentIssues(selectedCluster)
+
+  // Fetch namespaces for the selected cluster
+  const { namespaces } = useNamespaces(selectedCluster || undefined)
 
   // Filter by namespace
   const podIssues = useMemo(() => {
@@ -29,14 +57,6 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     if (!selectedNamespace) return allDeploymentIssues
     return allDeploymentIssues.filter(d => d.namespace === selectedNamespace)
   }, [allDeploymentIssues, selectedNamespace])
-
-  // Get unique namespaces from issues
-  const namespaces = useMemo(() => {
-    const nsSet = new Set<string>()
-    allPodIssues.forEach(p => p.namespace && nsSet.add(p.namespace))
-    allDeploymentIssues.forEach(d => d.namespace && nsSet.add(d.namespace))
-    return Array.from(nsSet).sort()
-  }, [allPodIssues, allDeploymentIssues])
 
   const cluster = clusters.find(c => c.name === selectedCluster)
 
@@ -81,7 +101,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
             setSelectedCluster(e.target.value)
             setSelectedNamespace('')
           }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">Select cluster...</option>
           {clusters.map(c => (
@@ -92,7 +112,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
           disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white disabled:opacity-50"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">Select namespace...</option>
           {namespaces.map(ns => (
@@ -121,14 +141,14 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
                 <Box className="w-4 h-4 text-green-400" />
                 <span className="text-xs text-muted-foreground">Pods with Issues</span>
               </div>
-              <span className="text-2xl font-bold text-white">{podIssues.length}</span>
+              <span className="text-2xl font-bold text-foreground">{podIssues.length}</span>
             </div>
             <div className="p-3 rounded-lg bg-secondary/30">
               <div className="flex items-center gap-2 mb-1">
                 <Activity className="w-4 h-4 text-orange-400" />
                 <span className="text-xs text-muted-foreground">Deployment Issues</span>
               </div>
-              <span className="text-2xl font-bold text-white">{deploymentIssues.length}</span>
+              <span className="text-2xl font-bold text-foreground">{deploymentIssues.length}</span>
             </div>
           </div>
 
@@ -141,7 +161,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-sm text-white">Namespace Healthy</p>
+                <p className="text-sm text-foreground">Namespace Healthy</p>
                 <p className="text-xs text-muted-foreground">No issues detected</p>
               </div>
             ) : (
@@ -150,7 +170,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
                   <div key={`dep-${idx}`} className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-orange-400" />
-                      <span className="text-sm text-white">{issue.name}</span>
+                      <span className="text-sm text-foreground">{issue.name}</span>
                       <span className="text-xs text-muted-foreground ml-auto">
                         {issue.readyReplicas}/{issue.replicas}
                       </span>
@@ -161,7 +181,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
                   <div key={`pod-${idx}`} className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-red-400" />
-                      <span className="text-sm text-white truncate">{issue.name}</span>
+                      <span className="text-sm text-foreground truncate">{issue.name}</span>
                       <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 ml-auto">
                         {issue.status}
                       </span>

@@ -172,7 +172,7 @@ export function StateMachine({ states, currentState, title }: StateMachineProps)
                   ) : (
                     <span
                       className={`text-xs font-medium ${
-                        isCurrent ? 'text-white' : 'text-muted-foreground'
+                        isCurrent ? 'text-foreground' : 'text-muted-foreground'
                       }`}
                     >
                       {index + 1}
@@ -181,7 +181,7 @@ export function StateMachine({ states, currentState, title }: StateMachineProps)
                 </div>
                 <span
                   className={`text-xs mt-1 ${
-                    isCurrent ? 'text-white' : 'text-muted-foreground'
+                    isCurrent ? 'text-foreground' : 'text-muted-foreground'
                   }`}
                 >
                   {state.label}
