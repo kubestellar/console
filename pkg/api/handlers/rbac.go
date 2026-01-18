@@ -360,3 +360,62 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 
 	return c.JSON(users)
 }
+
+// GetPermissionsSummary returns permission summaries for all clusters
+func (h *RBACHandler) GetPermissionsSummary(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+	}
+
+	ctx := c.Context()
+	summaries, err := h.k8sClient.GetAllPermissionsSummaries(ctx)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get permissions summary: "+err.Error())
+	}
+
+	// Convert to map format for API response
+	response := models.PermissionsSummaryResponse{
+		Clusters: make(map[string]models.ClusterPermissionsSummary),
+	}
+
+	for _, summary := range summaries {
+		response.Clusters[summary.Cluster] = models.ClusterPermissionsSummary{
+			IsClusterAdmin:       summary.IsClusterAdmin,
+			CanListNodes:         summary.CanListNodes,
+			CanListNamespaces:    summary.CanListNamespaces,
+			CanCreateNamespaces:  summary.CanCreateNamespaces,
+			CanManageRBAC:        summary.CanManageRBAC,
+			CanViewSecrets:       summary.CanViewSecrets,
+			AccessibleNamespaces: summary.AccessibleNamespaces,
+		}
+	}
+
+	return c.JSON(response)
+}
+
+// CheckCanI checks if the current user can perform an action
+func (h *RBACHandler) CheckCanI(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+	}
+
+	var req models.CanIRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+
+	if req.Cluster == "" || req.Verb == "" || req.Resource == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "Cluster, verb, and resource are required")
+	}
+
+	ctx := c.Context()
+	result, err := h.k8sClient.CheckCanI(ctx, req.Cluster, req)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to check permission: "+err.Error())
+	}
+
+	return c.JSON(models.CanIResponse{
+		Allowed: result.Allowed,
+		Reason:  result.Reason,
+	})
+}

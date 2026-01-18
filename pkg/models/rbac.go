@@ -132,3 +132,36 @@ type AuditLogEntry struct {
 	Details     string    `json:"details,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
+
+// CanIRequest represents a request to check if user can perform an action
+type CanIRequest struct {
+	Cluster     string `json:"cluster"`
+	Verb        string `json:"verb"`
+	Resource    string `json:"resource"`
+	Namespace   string `json:"namespace,omitempty"`
+	Group       string `json:"group,omitempty"`
+	Subresource string `json:"subresource,omitempty"`
+	Name        string `json:"name,omitempty"`
+}
+
+// CanIResponse represents the result of a permission check
+type CanIResponse struct {
+	Allowed bool   `json:"allowed"`
+	Reason  string `json:"reason,omitempty"`
+}
+
+// PermissionsSummaryResponse represents the API response for permission summaries
+type PermissionsSummaryResponse struct {
+	Clusters map[string]ClusterPermissionsSummary `json:"clusters"`
+}
+
+// ClusterPermissionsSummary represents detailed permissions for a cluster
+type ClusterPermissionsSummary struct {
+	IsClusterAdmin       bool     `json:"isClusterAdmin"`
+	CanListNodes         bool     `json:"canListNodes"`
+	CanListNamespaces    bool     `json:"canListNamespaces"`
+	CanCreateNamespaces  bool     `json:"canCreateNamespaces"`
+	CanManageRBAC        bool     `json:"canManageRBAC"`
+	CanViewSecrets       bool     `json:"canViewSecrets"`
+	AccessibleNamespaces []string `json:"accessibleNamespaces"`
+}

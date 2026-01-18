@@ -517,3 +517,163 @@ func (m *MultiClusterClient) GetAllK8sUsers(ctx context.Context, contextName str
 
 	return users, nil
 }
+
+// CanIResult represents the result of a permission check with details
+type CanIResult struct {
+	Allowed bool   `json:"allowed"`
+	Reason  string `json:"reason,omitempty"`
+}
+
+// CheckCanI performs a SelfSubjectAccessReview and returns detailed result
+func (m *MultiClusterClient) CheckCanI(ctx context.Context, contextName string, req models.CanIRequest) (*CanIResult, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	review := &authv1.SelfSubjectAccessReview{
+		Spec: authv1.SelfSubjectAccessReviewSpec{
+			ResourceAttributes: &authv1.ResourceAttributes{
+				Verb:        req.Verb,
+				Resource:    req.Resource,
+				Namespace:   req.Namespace,
+				Group:       req.Group,
+				Subresource: req.Subresource,
+				Name:        req.Name,
+			},
+		},
+	}
+
+	result, err := client.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to perform access review: %w", err)
+	}
+
+	return &CanIResult{
+		Allowed: result.Status.Allowed,
+		Reason:  result.Status.Reason,
+	}, nil
+}
+
+// PermissionsSummary represents comprehensive permission info for a cluster
+type PermissionsSummary struct {
+	Cluster              string   `json:"cluster"`
+	IsClusterAdmin       bool     `json:"isClusterAdmin"`
+	CanListNodes         bool     `json:"canListNodes"`
+	CanListNamespaces    bool     `json:"canListNamespaces"`
+	CanCreateNamespaces  bool     `json:"canCreateNamespaces"`
+	CanManageRBAC        bool     `json:"canManageRBAC"`
+	CanViewSecrets       bool     `json:"canViewSecrets"`
+	AccessibleNamespaces []string `json:"accessibleNamespaces"`
+}
+
+// GetPermissionsSummary returns a comprehensive permission summary for a cluster
+func (m *MultiClusterClient) GetPermissionsSummary(ctx context.Context, contextName string) (*PermissionsSummary, error) {
+	summary := &PermissionsSummary{
+		Cluster: contextName,
+	}
+
+	// Check cluster-admin access
+	isAdmin, err := m.CheckClusterAdminAccess(ctx, contextName)
+	if err == nil {
+		summary.IsClusterAdmin = isAdmin
+	}
+
+	// Check specific permissions
+	canListNodes, _ := m.CheckPermission(ctx, contextName, "list", "nodes", "")
+	summary.CanListNodes = canListNodes
+
+	canListNS, _ := m.CheckPermission(ctx, contextName, "list", "namespaces", "")
+	summary.CanListNamespaces = canListNS
+
+	canCreateNS, _ := m.CheckPermission(ctx, contextName, "create", "namespaces", "")
+	summary.CanCreateNamespaces = canCreateNS
+
+	canManageRBAC, _ := m.CheckPermission(ctx, contextName, "create", "rolebindings", "")
+	summary.CanManageRBAC = canManageRBAC
+
+	canViewSecrets, _ := m.CheckPermission(ctx, contextName, "get", "secrets", "")
+	summary.CanViewSecrets = canViewSecrets
+
+	// Get accessible namespaces
+	if canListNS {
+		namespaces, err := m.listAllNamespaces(ctx, contextName)
+		if err == nil {
+			summary.AccessibleNamespaces = namespaces
+		}
+	} else {
+		// Try to find namespaces user can access by checking common ones
+		accessible, _ := m.getAccessibleNamespaces(ctx, contextName)
+		summary.AccessibleNamespaces = accessible
+	}
+
+	return summary, nil
+}
+
+// listAllNamespaces returns all namespace names in a cluster
+func (m *MultiClusterClient) listAllNamespaces(ctx context.Context, contextName string) ([]string, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	nsList, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var namespaces []string
+	for _, ns := range nsList.Items {
+		namespaces = append(namespaces, ns.Name)
+	}
+	return namespaces, nil
+}
+
+// getAccessibleNamespaces finds namespaces user can access when they can't list all
+func (m *MultiClusterClient) getAccessibleNamespaces(ctx context.Context, contextName string) ([]string, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Try common namespaces
+	commonNamespaces := []string{"default", "kube-system", "kube-public"}
+	var accessible []string
+
+	for _, ns := range commonNamespaces {
+		// Try to get the namespace
+		_, err := client.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+		if err == nil {
+			// Check if user can list pods in this namespace
+			canList, _ := m.CheckPermission(ctx, contextName, "list", "pods", ns)
+			if canList {
+				accessible = append(accessible, ns)
+			}
+		}
+	}
+
+	return accessible, nil
+}
+
+// GetAllPermissionsSummaries returns permission summaries for all clusters
+func (m *MultiClusterClient) GetAllPermissionsSummaries(ctx context.Context) ([]PermissionsSummary, error) {
+	clusters, err := m.ListClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var summaries []PermissionsSummary
+	for _, cluster := range clusters {
+		summary, err := m.GetPermissionsSummary(ctx, cluster.Name)
+		if err != nil {
+			// Include partial info on error
+			summaries = append(summaries, PermissionsSummary{
+				Cluster: cluster.Name,
+			})
+			continue
+		}
+		summaries = append(summaries, *summary)
+	}
+
+	return summaries, nil
+}
