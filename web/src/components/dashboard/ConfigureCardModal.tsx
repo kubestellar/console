@@ -391,14 +391,14 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
           <div>
-            <h2 className="text-lg font-medium text-white">Configure Card</h2>
+            <h2 className="text-lg font-medium text-foreground">Configure Card</h2>
             <p className="text-sm text-muted-foreground">
               Customize "{card.title || card.card_type}"
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white"
+            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -412,7 +412,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               'flex-1 px-4 py-3 text-sm font-medium transition-colors',
               activeTab === 'settings'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Settings
@@ -423,7 +423,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               'flex-1 px-4 py-3 text-sm font-medium transition-colors',
               activeTab === 'behaviors'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Behaviors
@@ -434,7 +434,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               'flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2',
               activeTab === 'ai'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <Sparkles className="w-4 h-4" />
@@ -454,7 +454,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Custom title (optional)"
-                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm"
+                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                 />
               </div>
 
@@ -466,7 +466,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     <select
                       value={(config[field.key] as string) || ''}
                       onChange={(e) => updateConfig(field.key, e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     >
                       <option value="">All Clusters</option>
                       {clusters.map((c) => (
@@ -477,7 +477,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     <select
                       value={(config[field.key] as string) || ''}
                       onChange={(e) => updateConfig(field.key, e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     >
                       <option value="">Default</option>
                       <option value="cpu">CPU Usage</option>
@@ -490,7 +490,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       value={(config[field.key] as number) || ''}
                       onChange={(e) => updateConfig(field.key, parseInt(e.target.value) || undefined)}
                       placeholder="Default"
-                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     />
                   ) : (
                     <input
@@ -498,7 +498,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       value={(config[field.key] as string) || ''}
                       onChange={(e) => updateConfig(field.key, e.target.value || undefined)}
                       placeholder={`Enter ${field.label.toLowerCase()}`}
-                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm"
+                      className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     />
                   )}
                 </div>
@@ -528,13 +528,13 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                         : 'border-border'
                     )}>
                       {behaviors[behavior.key] && (
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-3 h-3 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-white">{behavior.label}</p>
+                      <p className="text-sm font-medium text-foreground">{behavior.label}</p>
                       <p className="text-xs text-muted-foreground">{behavior.description}</p>
                     </div>
                   </div>
@@ -604,7 +604,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     setAiError(null) // Clear error on new input
                   }}
                   placeholder="e.g., 'Show me only warning events from the vllm-d cluster and play a sound when new ones appear'"
-                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm h-24 resize-none"
+                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm h-24 resize-none"
                   disabled={isProcessing}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey && nlPrompt.trim()) {
@@ -622,7 +622,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                 className={cn(
                   'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors',
                   nlPrompt.trim() && !isProcessing
-                    ? 'bg-purple-500 text-white hover:bg-purple-600'
+                    ? 'bg-purple-500 text-foreground hover:bg-purple-600'
                     : 'bg-secondary text-muted-foreground cursor-not-allowed'
                 )}
               >
@@ -658,13 +658,13 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/50">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white hover:bg-secondary/50"
+            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+            className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600"
           >
             Save Changes
           </button>

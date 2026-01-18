@@ -163,14 +163,14 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
           <div>
-            <h2 className="text-lg font-medium text-white">Replace Card</h2>
+            <h2 className="text-lg font-medium text-foreground">Replace Card</h2>
             <p className="text-sm text-muted-foreground">
               Replace "{card.title || card.card_type}" with a new card
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white"
+            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -184,7 +184,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
               'flex-1 px-4 py-3 text-sm font-medium transition-colors',
               activeTab === 'select'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Choose Card Type
@@ -195,7 +195,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
               'flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2',
               activeTab === 'ai'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <Sparkles className="w-4 h-4" />
@@ -225,7 +225,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                         'w-5 h-5',
                         selectedType === cardType.type ? 'text-purple-400' : 'text-muted-foreground'
                       )} />
-                      <span className="font-medium text-white">{cardType.name}</span>
+                      <span className="font-medium text-foreground">{cardType.name}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">{cardType.description}</p>
                   </button>
@@ -254,7 +254,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                   value={nlPrompt}
                   onChange={(e) => setNlPrompt(e.target.value)}
                   placeholder="e.g., 'Show me pods that have restarted more than 5 times in the last hour'"
-                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm h-24 resize-none"
+                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm h-24 resize-none"
                   disabled={isProcessing}
                 />
               </div>
@@ -265,7 +265,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                 className={cn(
                   'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors',
                   nlPrompt.trim() && !isProcessing
-                    ? 'bg-purple-500 text-white hover:bg-purple-600'
+                    ? 'bg-purple-500 text-foreground hover:bg-purple-600'
                     : 'bg-secondary text-muted-foreground cursor-not-allowed'
                 )}
               >
@@ -292,17 +292,17 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                   <div className="space-y-2">
                     <div>
                       <span className="text-xs text-muted-foreground">Title:</span>
-                      <p className="text-white font-medium">{aiSuggestion.title}</p>
+                      <p className="text-foreground font-medium">{aiSuggestion.title}</p>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">Type:</span>
-                      <p className="text-white">{CARD_TYPES.find(c => c.type === aiSuggestion.type)?.name}</p>
+                      <p className="text-foreground">{CARD_TYPES.find(c => c.type === aiSuggestion.type)?.name}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">{aiSuggestion.explanation}</p>
                   </div>
                   <button
                     onClick={handleAIReplace}
-                    className="w-full mt-3 px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 text-sm font-medium"
+                    className="w-full mt-3 px-4 py-2 rounded-lg bg-green-500 text-foreground hover:bg-green-600 text-sm font-medium"
                   >
                     Use This Card
                   </button>
@@ -317,7 +317,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                     <button
                       key={i}
                       onClick={() => setNlPrompt(prompt)}
-                      className="px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+                      className="px-2 py-1 rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {prompt}
                     </button>
@@ -332,7 +332,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/50">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white hover:bg-secondary/50"
+            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           >
             Cancel
           </button>
@@ -343,7 +343,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
               className={cn(
                 'px-4 py-2 rounded-lg',
                 selectedType
-                  ? 'bg-purple-500 text-white hover:bg-purple-600'
+                  ? 'bg-purple-500 text-foreground hover:bg-purple-600'
                   : 'bg-secondary text-muted-foreground cursor-not-allowed'
               )}
             >

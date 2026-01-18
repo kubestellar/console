@@ -85,6 +85,7 @@ export function ClusterHealth() {
     ? gpuNodes
     : gpuNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
   const totalGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuCount, 0)
+  const assignedGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
 
   // Show skeleton structure during loading to prevent layout shift
   if (isLoading) {
@@ -152,14 +153,14 @@ export function ClusterHealth() {
             <CheckCircle className="w-4 h-4 text-green-400" />
             <span className="text-xs text-green-400">Healthy</span>
           </div>
-          <span className="text-2xl font-bold text-white">{healthyClusters}</span>
+          <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
         </div>
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={`${unhealthyClusters} clusters have issues or are unreachable`}>
           <div className="flex items-center gap-2 mb-1">
             <XCircle className="w-4 h-4 text-red-400" />
             <span className="text-xs text-red-400">Unhealthy</span>
           </div>
-          <span className="text-2xl font-bold text-white">{unhealthyClusters}</span>
+          <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
       </div>
 
@@ -184,7 +185,7 @@ export function ClusterHealth() {
             >
               <div className="flex items-center gap-2" title={statusTooltip}>
                 <ClusterStatusDot state={clusterState} />
-                <span className="text-sm text-white">{cluster.name}</span>
+                <span className="text-sm text-foreground">{cluster.name}</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span title={`${cluster.nodeCount || 0} worker nodes in cluster`}>{cluster.nodeCount || 0} nodes</span>
@@ -209,9 +210,9 @@ export function ClusterHealth() {
         <span title="Total worker nodes across all filtered clusters">{totalNodes} total nodes</span>
         {totalCPUs > 0 && <span title="Total CPU cores across all filtered clusters">{totalCPUs} CPUs</span>}
         {totalGPUs > 0 && (
-          <span className="flex items-center gap-1 text-purple-400" title="Total GPUs available across all filtered clusters">
+          <span className="flex items-center gap-1 text-purple-400" title={`${assignedGPUs} GPUs assigned out of ${totalGPUs} total`}>
             <Cpu className="w-3 h-3" />
-            {totalGPUs} GPUs
+            {assignedGPUs}/{totalGPUs} GPUs
           </span>
         )}
         <span title="Total pods running across all filtered clusters">{totalPods} total pods</span>

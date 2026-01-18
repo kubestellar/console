@@ -43,7 +43,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Activity className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-white font-medium">No GPU Data</p>
+          <p className="text-foreground font-medium">No GPU Data</p>
           <p className="text-sm text-muted-foreground">GPU metrics not available</p>
         </div>
       </div>

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Newspaper, Clock, AlertTriangle, RefreshCw, Settings } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { useClusters, useOperatorSubscriptions } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -10,57 +11,38 @@ interface OperatorSubscriptionsProps {
   }
 }
 
-interface Subscription {
-  name: string
-  namespace: string
-  channel: string
-  source: string
-  installPlanApproval: 'Automatic' | 'Manual'
-  currentCSV: string
-  pendingUpgrade?: string
-}
-
 export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
 
-  // Mock subscription data
-  const subscriptions: Subscription[] = selectedCluster ? [
-    {
-      name: 'prometheus-operator',
-      namespace: 'monitoring',
-      channel: 'stable',
-      source: 'operatorhubio-catalog',
-      installPlanApproval: 'Automatic',
-      currentCSV: 'prometheusoperator.v0.65.1',
-    },
-    {
-      name: 'cert-manager',
-      namespace: 'cert-manager',
-      channel: 'stable',
-      source: 'operatorhubio-catalog',
-      installPlanApproval: 'Manual',
-      currentCSV: 'cert-manager.v1.12.0',
-      pendingUpgrade: 'cert-manager.v1.13.0',
-    },
-    {
-      name: 'strimzi-kafka-operator',
-      namespace: 'kafka',
-      channel: 'stable',
-      source: 'operatorhubio-catalog',
-      installPlanApproval: 'Automatic',
-      currentCSV: 'strimzi-cluster-operator.v0.35.0',
-    },
-    {
-      name: 'argocd-operator',
-      namespace: 'argocd',
-      channel: 'alpha',
-      source: 'operatorhubio-catalog',
-      installPlanApproval: 'Manual',
-      currentCSV: 'argocd-operator.v0.6.0',
-      pendingUpgrade: 'argocd-operator.v0.7.0',
-    },
-  ] : []
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  // Fetch subscriptions for selected cluster
+  const { subscriptions, isLoading: subscriptionsLoading, refetch } = useOperatorSubscriptions(selectedCluster || undefined)
+
+  const isLoading = clustersLoading || subscriptionsLoading
 
   const autoCount = subscriptions.filter(s => s.installPlanApproval === 'Automatic').length
   const manualCount = subscriptions.filter(s => s.installPlanApproval === 'Manual').length
@@ -107,7 +89,7 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
       <select
         value={selectedCluster}
         onChange={(e) => setSelectedCluster(e.target.value)}
-        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white mb-4"
+        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
         <option value="">Select cluster...</option>
         {clusters.map(c => (
@@ -152,7 +134,7 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
                 className={`p-3 rounded-lg ${sub.pendingUpgrade ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-secondary/30'}`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-white font-medium">{sub.name}</span>
+                  <span className="text-sm text-foreground font-medium">{sub.name}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded ${
                     sub.installPlanApproval === 'Automatic'
                       ? 'bg-green-500/20 text-green-400'

@@ -8,7 +8,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAccessibility } from '../../hooks/useAccessibility'
 
 export function Settings() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { theme, setTheme } = useTheme()
   const { usage, updateSettings, resetUsage } = useTokenUsage()
   const { mode, setMode, description } = useAIMode()
@@ -56,6 +56,8 @@ export function Settings() {
       if (!response.ok) {
         throw new Error('Failed to save profile')
       }
+      // Refresh user data to update the dropdown
+      await refreshUser()
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 2000)
     } catch (error) {

@@ -330,7 +330,7 @@ Labels:       app=${resourceName.split('-')[0]}
               )}
             </div>
             <div>
-              <h2 className="font-semibold text-white">
+              <h2 className="font-semibold text-foreground">
                 {activeTab === 'ai' ? 'AI Remediation' : 'Shell'} Console
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -340,7 +340,7 @@ Labels:       app=${resourceName.split('-')[0]}
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white"
+            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -354,7 +354,7 @@ Labels:       app=${resourceName.split('-')[0]}
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
               activeTab === 'ai'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <Sparkles className="w-4 h-4" />
@@ -369,7 +369,7 @@ Labels:       app=${resourceName.split('-')[0]}
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
               activeTab === 'shell'
                 ? 'text-green-400 border-b-2 border-green-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <Terminal className="w-4 h-4" />
@@ -448,7 +448,7 @@ Labels:       app=${resourceName.split('-')[0]}
                     key={i}
                     onClick={() => executeCommand(qc.cmd)}
                     disabled={isExecuting}
-                    className="px-3 py-1 text-xs rounded bg-card/50 border border-border text-muted-foreground hover:text-white hover:border-green-500/50 transition-colors disabled:opacity-50"
+                    className="px-3 py-1 text-xs rounded bg-card/50 border border-border text-muted-foreground hover:text-foreground hover:border-green-500/50 transition-colors disabled:opacity-50"
                   >
                     {qc.label}
                   </button>
@@ -500,7 +500,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 onKeyDown={handleShellKeyDown}
                 placeholder="Enter kubectl command..."
                 disabled={isExecuting}
-                className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
                 autoFocus
               />
               <button
@@ -522,7 +522,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 {!isRunning && !isComplete && (
                   <button
                     onClick={startRemediation}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground transition-colors"
                   >
                     <Play className="w-4 h-4" />
                     Start Remediation
@@ -532,14 +532,14 @@ Labels:       app=${resourceName.split('-')[0]}
                   <>
                     <button
                       onClick={() => setIsPaused(!isPaused)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-foreground transition-colors"
                     >
                       {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                       {isPaused ? 'Resume' : 'Pause'}
                     </button>
                     <button
                       onClick={stopRemediation}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-foreground transition-colors"
                     >
                       <X className="w-4 h-4" />
                       Stop
@@ -567,7 +567,7 @@ Labels:       app=${resourceName.split('-')[0]}
             <button
               onClick={copyLogs}
               disabled={logs.length === 0}
-              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white disabled:opacity-50"
+              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
               title="Copy logs"
             >
               <Copy className="w-4 h-4" />
@@ -575,7 +575,7 @@ Labels:       app=${resourceName.split('-')[0]}
             <button
               onClick={downloadLogs}
               disabled={logs.length === 0}
-              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-white disabled:opacity-50"
+              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
               title="Download logs"
             >
               <Download className="w-4 h-4" />

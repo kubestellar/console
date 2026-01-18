@@ -121,10 +121,10 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                     disabled={addingCard === rec.id}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       rec.priority === 'high'
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        ? 'bg-red-500 hover:bg-red-600 text-foreground'
                         : rec.priority === 'medium'
-                        ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        ? 'bg-yellow-500 hover:bg-yellow-600 text-foreground'
+                        : 'bg-blue-500 hover:bg-blue-600 text-foreground'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {addingCard === rec.id ? (

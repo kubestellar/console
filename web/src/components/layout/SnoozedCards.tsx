@@ -144,7 +144,7 @@ function SnoozedItem({ swap, onApply, onDismiss }: SnoozedItemProps) {
       <div className="flex items-center gap-1 pr-4 mb-1">
         <span className="text-muted-foreground truncate">{swap.originalCardTitle}</span>
         <ArrowRight className="w-3 h-3 text-purple-400 flex-shrink-0" />
-        <span className="text-white truncate">{swap.newCardTitle}</span>
+        <span className="text-foreground truncate">{swap.newCardTitle}</span>
       </div>
 
       {/* Time remaining and actions */}
@@ -229,7 +229,7 @@ function SnoozedRecommendationItem({ rec, onApply, onDismiss }: SnoozedRecommend
       {/* Recommendation info */}
       <div className="flex items-center gap-2 pr-4 mb-1">
         <Lightbulb className={cn('w-3 h-3 flex-shrink-0', priorityTextColor)} />
-        <span className="text-white truncate font-medium">{rec.recommendation.title}</span>
+        <span className="text-foreground truncate font-medium">{rec.recommendation.title}</span>
       </div>
 
       {/* Elapsed time and actions */}

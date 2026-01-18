@@ -84,7 +84,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-white">{gpuUtilization.toFixed(0)}%</span>
+            <span className="text-2xl font-bold text-foreground">{gpuUtilization.toFixed(0)}%</span>
             <span className="text-xs text-muted-foreground">Utilized</span>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="text-center">
-          <p className="text-lg font-bold text-white">{totalGPUs}</p>
+          <p className="text-lg font-bold text-foreground">{totalGPUs}</p>
           <p className="text-xs text-muted-foreground">Total GPUs</p>
         </div>
         <div className="text-center">
@@ -113,7 +113,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           <div className="space-y-1">
             {Object.entries(gpuTypes).map(([type, count]) => (
               <div key={type} className="flex items-center justify-between text-sm">
-                <span className="text-white">{type}</span>
+                <span className="text-foreground">{type}</span>
                 <span className="text-muted-foreground">{count}</span>
               </div>
             ))}

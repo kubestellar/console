@@ -1,5 +1,13 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 
+// Card to be restored from history
+export interface PendingRestoreCard {
+  cardType: string
+  cardTitle?: string
+  config: Record<string, unknown>
+  dashboardId?: string
+}
+
 interface DashboardContextType {
   // Add Card Modal state
   isAddCardModalOpen: boolean
@@ -10,6 +18,11 @@ interface DashboardContextType {
   isTemplatesModalOpen: boolean
   openTemplatesModal: () => void
   closeTemplatesModal: () => void
+
+  // Card restoration from history
+  pendingRestoreCard: PendingRestoreCard | null
+  setPendingRestoreCard: (card: PendingRestoreCard | null) => void
+  clearPendingRestoreCard: () => void
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null)
@@ -17,6 +30,7 @@ const DashboardContext = createContext<DashboardContextType | null>(null)
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false)
+  const [pendingRestoreCard, setPendingRestoreCardState] = useState<PendingRestoreCard | null>(null)
 
   const openAddCardModal = useCallback(() => {
     setIsAddCardModalOpen(true)
@@ -34,6 +48,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setIsTemplatesModalOpen(false)
   }, [])
 
+  const setPendingRestoreCard = useCallback((card: PendingRestoreCard | null) => {
+    setPendingRestoreCardState(card)
+  }, [])
+
+  const clearPendingRestoreCard = useCallback(() => {
+    setPendingRestoreCardState(null)
+  }, [])
+
   return (
     <DashboardContext.Provider
       value={{
@@ -43,6 +65,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         isTemplatesModalOpen,
         openTemplatesModal,
         closeTemplatesModal,
+        pendingRestoreCard,
+        setPendingRestoreCard,
+        clearPendingRestoreCard,
       }}
     >
       {children}

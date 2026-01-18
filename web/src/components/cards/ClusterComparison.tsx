@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { GitCompare, Server, Activity, Box, Cpu, RefreshCw } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 
 interface ClusterComparisonProps {
@@ -10,9 +11,33 @@ interface ClusterComparisonProps {
 }
 
 export function ClusterComparison({ config }: ClusterComparisonProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: rawClusters, isLoading, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const allClusters = useMemo(() => {
+    let result = rawClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [rawClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const gpuByCluster = useMemo(() => {
     const map: Record<string, number> = {}
@@ -94,7 +119,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
             className={`px-2 py-1 text-xs rounded-full transition-colors ${
               selectedClusters.includes(c.name) || (selectedClusters.length === 0 && clustersToCompare.includes(c))
                 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                : 'bg-secondary/50 text-muted-foreground hover:text-white'
+                : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             }`}
           >
             {c.name}
@@ -112,7 +137,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
                 <th key={c.name} className="text-right py-2 px-2">
                   <div className="flex items-center justify-end gap-1">
                     <Server className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-white font-medium">{c.name}</span>
+                    <span className="text-foreground font-medium">{c.name}</span>
                     <div className={`w-1.5 h-1.5 rounded-full ${c.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
                   </div>
                 </th>
@@ -133,7 +158,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
                   const isMax = value === maxValues[m.key] && value > 0
                   return (
                     <td key={c.name} className="text-right py-2 px-2">
-                      <span className={`font-medium ${isMax ? 'text-green-400' : 'text-white'}`}>
+                      <span className={`font-medium ${isMax ? 'text-green-400' : 'text-foreground'}`}>
                         {value.toLocaleString()}
                       </span>
                     </td>

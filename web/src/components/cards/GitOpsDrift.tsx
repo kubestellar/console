@@ -85,7 +85,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
           )}
           <button
             onClick={() => refetch()}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Refresh"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -129,7 +129,7 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
             <TypeIcon className={`w-3 h-3 ${typeConfig.color}`} />
           </span>
           <div className="min-w-0 flex-1">
-            <span className="text-sm font-medium text-white truncate block" title={drift.resource}>
+            <span className="text-sm font-medium text-foreground truncate block" title={drift.resource}>
               {drift.resource}
             </span>
             <span className="text-xs text-muted-foreground">

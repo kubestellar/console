@@ -185,10 +185,10 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
 
     return (
       <div className="flex items-center gap-2">
-        <span className="text-white font-mono text-sm break-all">{stringValue}</span>
+        <span className="text-foreground font-mono text-sm break-all">{stringValue}</span>
         <button
           onClick={() => handleCopy(key, stringValue)}
-          className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-white flex-shrink-0"
+          className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0"
         >
           {copiedField === key ? (
             <CheckCircle className="w-3 h-3 text-green-400" />
@@ -214,7 +214,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-medium text-white">{resource.name}</h2>
+                <h2 className="text-lg font-medium text-foreground">{resource.name}</h2>
                 <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
                   {resource.type}
                 </span>
@@ -232,7 +232,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white"
+            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -246,7 +246,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
               'flex-1 px-4 py-3 text-sm font-medium transition-colors',
               activeTab === 'details'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Details
@@ -257,7 +257,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
               'flex-1 px-4 py-3 text-sm font-medium transition-colors',
               activeTab === 'actions'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Quick Actions
@@ -268,7 +268,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
               'flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2',
               activeTab === 'ai'
                 ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-white'
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             <Sparkles className="w-4 h-4" />
@@ -305,7 +305,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                 {resource.status && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Status</p>
-                    <span className={cn('font-medium', statusConfig?.color || 'text-white')}>
+                    <span className={cn('font-medium', statusConfig?.color || 'text-foreground')}>
                       {resource.status}
                     </span>
                   </div>
@@ -315,7 +315,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
               {/* Additional details */}
               {resource.details && Object.keys(resource.details).length > 0 && (
                 <div className="mt-4 pt-4 border-t border-border/50">
-                  <h4 className="text-sm font-medium text-white mb-3">Additional Information</h4>
+                  <h4 className="text-sm font-medium text-foreground mb-3">Additional Information</h4>
                   <div className="space-y-3">
                     {Object.entries(resource.details).map(([key, value]) => (
                       <div key={key}>
@@ -331,7 +331,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
 
               {/* Quick command reference */}
               <div className="mt-4 pt-4 border-t border-border/50">
-                <h4 className="text-sm font-medium text-white mb-3">Quick Commands</h4>
+                <h4 className="text-sm font-medium text-foreground mb-3">Quick Commands</h4>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-2 rounded bg-secondary/30 font-mono text-xs">
                     <span className="text-muted-foreground">
@@ -340,7 +340,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                     </span>
                     <button
                       onClick={() => handleCopy('cmd-describe', `kubectl describe ${resource.type} ${resource.name}${resource.namespace ? ` -n ${resource.namespace}` : ''}`)}
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white"
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
                     >
                       <Copy className="w-3 h-3" />
                     </button>
@@ -352,7 +352,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                     </span>
                     <button
                       onClick={() => handleCopy('cmd-yaml', `kubectl get ${resource.type} ${resource.name}${resource.namespace ? ` -n ${resource.namespace}` : ''} -o yaml`)}
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white"
+                      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
                     >
                       <Copy className="w-3 h-3" />
                     </button>
@@ -374,7 +374,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                       'flex items-center gap-3 p-4 rounded-lg transition-colors text-left',
                       action.danger
                         ? 'bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400'
-                        : 'bg-secondary/30 hover:bg-secondary/50 text-white'
+                        : 'bg-secondary/30 hover:bg-secondary/50 text-foreground'
                     )}
                   >
                     <Icon className="w-5 h-5" />
@@ -411,7 +411,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                   value={nlPrompt}
                   onChange={(e) => setNlPrompt(e.target.value)}
                   placeholder={`e.g., "Why is this ${resource.type} failing?" or "How do I view the logs?"`}
-                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white text-sm h-20 resize-none"
+                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm h-20 resize-none"
                   disabled={isProcessing}
                 />
               </div>
@@ -422,7 +422,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                 className={cn(
                   'w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors',
                   nlPrompt.trim() && !isProcessing
-                    ? 'bg-purple-500 text-white hover:bg-purple-600'
+                    ? 'bg-purple-500 text-foreground hover:bg-purple-600'
                     : 'bg-secondary text-muted-foreground cursor-not-allowed'
                 )}
               >
@@ -445,7 +445,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
                     <Sparkles className="w-4 h-4 text-purple-400" />
                     <span className="text-sm font-medium text-purple-300">AI Response</span>
                   </div>
-                  <div className="text-sm text-white whitespace-pre-wrap font-mono">
+                  <div className="text-sm text-foreground whitespace-pre-wrap font-mono">
                     {aiResponse}
                   </div>
                 </div>
@@ -469,14 +469,14 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
         <div className="flex justify-between gap-3 px-6 py-4 border-t border-border/50">
           <button
             onClick={() => window.open(`#/${resource.type}/${resource.name}`, '_blank')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-white hover:bg-secondary/50"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
           >
             <ExternalLink className="w-4 h-4" />
             Open Full View
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+            className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600"
           >
             Close
           </button>

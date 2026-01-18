@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Shield, Users, Key, Lock, RefreshCw, ChevronRight } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { useClusters, useNamespaces } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -48,10 +48,12 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const { clusters, isLoading, refetch } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
-  const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'default')
+  const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
 
-  const namespaces = ['default', 'kube-system', 'monitoring', 'production', 'staging']
+  // Fetch namespaces for the selected cluster
+  const clusterForNamespaces = selectedCluster === 'all' ? undefined : selectedCluster
+  const { namespaces } = useNamespaces(clusterForNamespaces)
 
   // Filter clusters based on global filter
   const filteredClusters = useMemo(() => {
@@ -136,7 +138,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
         <select
           value={selectedCluster}
           onChange={(e) => setSelectedCluster(e.target.value)}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="all">All Clusters ({filteredClusters.length})</option>
           {filteredClusters.map(c => (
@@ -146,7 +148,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
         <select
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">Select namespace...</option>
           {namespaces.map(ns => (
@@ -171,7 +173,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
               <ClusterBadge cluster={selectedCluster} />
             )}
             <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-white">{selectedNamespace}</span>
+            <span className="text-sm text-foreground">{selectedNamespace}</span>
           </div>
 
           {/* Tabs */}
@@ -183,7 +185,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
                 className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${
                   activeTab === tab.key
                     ? 'bg-purple-500/20 text-purple-400'
-                    : 'text-muted-foreground hover:text-white'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <tab.icon className="w-3 h-3" />
@@ -205,7 +207,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
                     {activeTab === 'roles' && <Key className="w-4 h-4 text-yellow-400" />}
                     {activeTab === 'bindings' && <Lock className="w-4 h-4 text-green-400" />}
                     {activeTab === 'serviceaccounts' && <Users className="w-4 h-4 text-blue-400" />}
-                    <span className="text-sm text-white">{item.name}</span>
+                    <span className="text-sm text-foreground">{item.name}</span>
                     {showClusterBadge && item.cluster && (
                       <ClusterBadge cluster={item.cluster} size="sm" />
                     )}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Anchor, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -23,9 +24,33 @@ interface HelmRelease {
 }
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Mock Helm release data
   const allReleases: HelmRelease[] = selectedCluster ? [
@@ -125,7 +150,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
             setSelectedCluster(e.target.value)
             setSelectedNamespace('')
           }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">Select cluster...</option>
           {clusters.map(c => (
@@ -136,7 +161,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
           disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white disabled:opacity-50"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">All namespaces</option>
           {namespaces.map(ns => (
@@ -157,7 +182,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
             {selectedNamespace && (
               <>
                 <span className="text-muted-foreground">/</span>
-                <span className="text-sm text-white">{selectedNamespace}</span>
+                <span className="text-sm text-foreground">{selectedNamespace}</span>
               </>
             )}
           </div>
@@ -192,7 +217,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400`} />
-                      <span className="text-sm text-white font-medium">{release.name}</span>
+                      <span className="text-sm text-foreground font-medium">{release.name}</span>
                     </div>
                     <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
                       {release.status}

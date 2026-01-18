@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { RefreshCw, Box, Loader2, Package, Ship, Layers, Cog, ChevronDown, ExternalLink } from 'lucide-react'
@@ -66,10 +66,28 @@ function getTimeAgo(timestamp: string | undefined): string {
   return 'Just now'
 }
 
+// Safe JSON parser that checks content-type first
+async function safeJsonParse(response: Response): Promise<{ ok: boolean; data?: unknown; error?: string }> {
+  try {
+    const contentType = response.headers.get('content-type')
+    if (!contentType?.includes('application/json')) {
+      return { ok: false, error: `Expected JSON but got ${contentType || 'unknown content type'}` }
+    }
+    const data = await response.json()
+    return { ok: true, data }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Failed to parse JSON' }
+  }
+}
+
 export function GitOps() {
-  const { clusters } = useClusters()
   const { showToast } = useToast()
-  const [selectedCluster, setSelectedCluster] = useState<string>('')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    filterByStatus: globalFilterByStatus,
+    customFilter,
+  } = useGlobalFilters()
   const [typeFilter, setTypeFilter] = useState<ReleaseType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [releases, setReleases] = useState<Release[]>([])
@@ -83,17 +101,16 @@ export function GitOps() {
     setError(null)
     try {
       const token = localStorage.getItem('token')
-      const clusterParam = selectedCluster ? `?cluster=${encodeURIComponent(selectedCluster)}` : ''
 
-      // Fetch all release types in parallel
+      // Fetch all release types in parallel (fetch all, filter client-side with global filter)
       const [helmRes, kustomizeRes, operatorRes] = await Promise.allSettled([
-        fetch(`/api/gitops/helm-releases${clusterParam}`, {
+        fetch('/api/gitops/helm-releases', {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         }),
-        fetch(`/api/gitops/kustomizations${clusterParam}`, {
+        fetch('/api/gitops/kustomizations', {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         }),
-        fetch(`/api/gitops/operators${clusterParam}`, {
+        fetch('/api/gitops/operators', {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         }),
       ])
@@ -102,32 +119,41 @@ export function GitOps() {
 
       // Process Helm releases
       if (helmRes.status === 'fulfilled' && helmRes.value.ok) {
-        const data = await helmRes.value.json()
-        const helmReleases = (data.releases || []).map((r: Omit<HelmRelease, 'type'>) => ({
-          ...r,
-          type: 'helm' as const,
-        }))
-        allReleases.push(...helmReleases)
+        const result = await safeJsonParse(helmRes.value)
+        if (result.ok && result.data) {
+          const data = result.data as { releases?: Omit<HelmRelease, 'type'>[] }
+          const helmReleases = (data.releases || []).map((r) => ({
+            ...r,
+            type: 'helm' as const,
+          }))
+          allReleases.push(...helmReleases)
+        }
       }
 
       // Process Kustomizations
       if (kustomizeRes.status === 'fulfilled' && kustomizeRes.value.ok) {
-        const data = await kustomizeRes.value.json()
-        const kustomizations = (data.kustomizations || []).map((k: Omit<Kustomization, 'type'>) => ({
-          ...k,
-          type: 'kustomize' as const,
-        }))
-        allReleases.push(...kustomizations)
+        const result = await safeJsonParse(kustomizeRes.value)
+        if (result.ok && result.data) {
+          const data = result.data as { kustomizations?: Omit<Kustomization, 'type'>[] }
+          const kustomizations = (data.kustomizations || []).map((k) => ({
+            ...k,
+            type: 'kustomize' as const,
+          }))
+          allReleases.push(...kustomizations)
+        }
       }
 
       // Process Operators
       if (operatorRes.status === 'fulfilled' && operatorRes.value.ok) {
-        const data = await operatorRes.value.json()
-        const operators = (data.operators || []).map((o: Omit<Operator, 'type'>) => ({
-          ...o,
-          type: 'operator' as const,
-        }))
-        allReleases.push(...operators)
+        const result = await safeJsonParse(operatorRes.value)
+        if (result.ok && result.data) {
+          const data = result.data as { operators?: Omit<Operator, 'type'>[] }
+          const operators = (data.operators || []).map((o) => ({
+            ...o,
+            type: 'operator' as const,
+          }))
+          allReleases.push(...operators)
+        }
       }
 
       setReleases(allReleases)
@@ -137,7 +163,7 @@ export function GitOps() {
     } finally {
       setIsLoading(false)
     }
-  }, [selectedCluster])
+  }, [])
 
   // Fetch releases on mount and when cluster changes
   useEffect(() => {
@@ -151,32 +177,91 @@ export function GitOps() {
   }, [fetchReleases, showToast])
 
   const filteredReleases = useMemo(() => {
-    return releases.filter(release => {
-      // Filter by type
-      if (typeFilter !== 'all' && release.type !== typeFilter) return false
+    let result = releases
 
-      // Filter by status
-      if (statusFilter === 'deployed' && release.status !== 'deployed' && release.status !== 'Ready') return false
-      if (statusFilter === 'failed' && release.status !== 'failed' && release.status !== 'Failed') return false
-      if (statusFilter === 'pending' && !release.status.toLowerCase().includes('pending') && !release.status.toLowerCase().includes('progressing')) return false
-      return true
-    })
-  }, [releases, typeFilter, statusFilter])
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(release =>
+        release.cluster && globalSelectedClusters.includes(release.cluster)
+      )
+    }
+
+    // Apply global status filter
+    result = globalFilterByStatus(result)
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(release =>
+        release.name.toLowerCase().includes(query) ||
+        release.namespace.toLowerCase().includes(query) ||
+        (release.cluster && release.cluster.toLowerCase().includes(query)) ||
+        (release.type === 'helm' && (release as HelmRelease).chart.toLowerCase().includes(query))
+      )
+    }
+
+    // Apply local type filter
+    if (typeFilter !== 'all') {
+      result = result.filter(release => release.type === typeFilter)
+    }
+
+    // Apply local status filter
+    if (statusFilter === 'deployed') {
+      result = result.filter(release => release.status === 'deployed' || release.status === 'Ready')
+    } else if (statusFilter === 'failed') {
+      result = result.filter(release => release.status === 'failed' || release.status === 'Failed')
+    } else if (statusFilter === 'pending') {
+      result = result.filter(release =>
+        release.status.toLowerCase().includes('pending') ||
+        release.status.toLowerCase().includes('progressing')
+      )
+    }
+
+    return result
+  }, [releases, typeFilter, statusFilter, globalSelectedClusters, isAllClustersSelected, globalFilterByStatus, customFilter])
+
+  // Releases after global filter (before local type/status filter)
+  const globalFilteredReleases = useMemo(() => {
+    let result = releases
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(release =>
+        release.cluster && globalSelectedClusters.includes(release.cluster)
+      )
+    }
+
+    // Apply global status filter
+    result = globalFilterByStatus(result)
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(release =>
+        release.name.toLowerCase().includes(query) ||
+        release.namespace.toLowerCase().includes(query) ||
+        (release.cluster && release.cluster.toLowerCase().includes(query)) ||
+        (release.type === 'helm' && (release as HelmRelease).chart.toLowerCase().includes(query))
+      )
+    }
+
+    return result
+  }, [releases, globalSelectedClusters, isAllClustersSelected, globalFilterByStatus, customFilter])
 
   const stats = useMemo(() => {
-    const helmReleases = releases.filter(r => r.type === 'helm')
-    const kustomizations = releases.filter(r => r.type === 'kustomize')
-    const operators = releases.filter(r => r.type === 'operator')
+    const helmReleases = globalFilteredReleases.filter(r => r.type === 'helm')
+    const kustomizations = globalFilteredReleases.filter(r => r.type === 'kustomize')
+    const operators = globalFilteredReleases.filter(r => r.type === 'operator')
 
     return {
-      total: releases.length,
+      total: globalFilteredReleases.length,
       helm: helmReleases.length,
       kustomize: kustomizations.length,
       operators: operators.length,
-      deployed: releases.filter(r => r.status === 'deployed' || r.status === 'Ready' || r.status === 'Succeeded').length,
-      failed: releases.filter(r => r.status === 'failed' || r.status === 'Failed').length,
+      deployed: globalFilteredReleases.filter(r => r.status === 'deployed' || r.status === 'Ready' || r.status === 'Succeeded').length,
+      failed: globalFilteredReleases.filter(r => r.status === 'failed' || r.status === 'Failed').length,
     }
-  }, [releases])
+  }, [globalFilteredReleases])
 
   const getStatusColor = (status: string) => {
     const s = status.toLowerCase()
@@ -339,20 +424,6 @@ export function GitOps() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
-        {/* Cluster filter */}
-        <select
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className="px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm"
-        >
-          <option value="">All Clusters</option>
-          {clusters.map((cluster) => (
-            <option key={cluster.name} value={cluster.context || cluster.name.split('/').pop()}>
-              {cluster.context || cluster.name.split('/').pop()}
-            </option>
-          ))}
-        </select>
-
         {/* Type filter dropdown */}
         <div className="relative">
           <button
@@ -423,7 +494,7 @@ export function GitOps() {
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
               statusFilter === 'deployed'
-                ? 'bg-green-500 text-white'
+                ? 'bg-green-500 text-foreground'
                 : 'bg-card/50 text-muted-foreground hover:text-foreground'
             )}
           >
@@ -434,7 +505,7 @@ export function GitOps() {
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
               statusFilter === 'failed'
-                ? 'bg-red-500 text-white'
+                ? 'bg-red-500 text-foreground'
                 : 'bg-card/50 text-muted-foreground hover:text-foreground'
             )}
           >
@@ -445,7 +516,7 @@ export function GitOps() {
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
               statusFilter === 'pending'
-                ? 'bg-blue-500 text-white'
+                ? 'bg-blue-500 text-foreground'
                 : 'bg-card/50 text-muted-foreground hover:text-foreground'
             )}
           >

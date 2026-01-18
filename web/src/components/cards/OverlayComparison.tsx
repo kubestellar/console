@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { GitCompare, Plus, Minus, Edit, RefreshCw, Layers } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -18,10 +19,34 @@ interface OverlayDiff {
 }
 
 export function OverlayComparison({ config }: OverlayComparisonProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedBase, setSelectedBase] = useState<string>('')
   const [selectedOverlay, setSelectedOverlay] = useState<string>('')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Mock overlays
   const overlays = selectedCluster ? ['base', 'dev', 'staging', 'production'] : []
@@ -103,7 +128,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
           setSelectedBase('')
           setSelectedOverlay('')
         }}
-        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white mb-4"
+        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
         <option value="">Select cluster...</option>
         {clusters.map(c => (
@@ -129,7 +154,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
               <select
                 value={selectedBase}
                 onChange={(e) => setSelectedBase(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+                className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
               >
                 <option value="">Select base...</option>
                 {overlays.map(o => (
@@ -143,7 +168,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                 value={selectedOverlay}
                 onChange={(e) => setSelectedOverlay(e.target.value)}
                 disabled={!selectedBase}
-                className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white disabled:opacity-50"
+                className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
               >
                 <option value="">Select overlay...</option>
                 {overlays.filter(o => o !== selectedBase).map(o => (
@@ -188,7 +213,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <DiffIcon className={`w-4 h-4 text-${color}-400 flex-shrink-0`} />
-                        <span className="text-sm text-white truncate">{diff.resource}</span>
+                        <span className="text-sm text-foreground truncate">{diff.resource}</span>
                       </div>
                       <div className="ml-6 text-xs text-muted-foreground truncate">
                         {diff.details}

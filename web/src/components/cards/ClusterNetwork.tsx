@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Network, Server, Globe, Shield, RefreshCw, ExternalLink } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 
 interface ClusterNetworkProps {
@@ -10,8 +11,32 @@ interface ClusterNetworkProps {
 }
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const cluster = useMemo(() => {
     return clusters.find(c => c.name === selectedCluster)
@@ -56,7 +81,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
           <select
             value={selectedCluster}
             onChange={(e) => setSelectedCluster(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           >
             <option value="">Select cluster...</option>
             {clusters.map(c => (
@@ -77,7 +102,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Network className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-medium text-white">{selectedCluster}</span>
+          <span className="text-sm font-medium text-foreground">{selectedCluster}</span>
           <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex items-center gap-2">
@@ -85,7 +110,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
             <select
               value={selectedCluster}
               onChange={(e) => setSelectedCluster(e.target.value)}
-              className="px-2 py-1 rounded bg-secondary border border-border text-xs text-white"
+              className="px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground"
             >
               {clusters.map(c => (
                 <option key={c.name} value={c.name}>{c.name}</option>
@@ -111,15 +136,15 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Host</span>
-              <span className="text-sm text-white font-mono">{serverInfo.host}</span>
+              <span className="text-sm text-foreground font-mono">{serverInfo.host}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Port</span>
-              <span className="text-sm text-white font-mono">{serverInfo.port}</span>
+              <span className="text-sm text-foreground font-mono">{serverInfo.port}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Protocol</span>
-              <span className="text-sm text-white font-mono uppercase">{serverInfo.protocol}</span>
+              <span className="text-sm text-foreground font-mono uppercase">{serverInfo.protocol}</span>
             </div>
           </div>
         </div>
@@ -155,7 +180,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <Server className="w-4 h-4 text-blue-400" />
               <span className="text-sm text-muted-foreground">Nodes</span>
             </div>
-            <span className="text-sm font-medium text-white">{cluster?.nodeCount || 0}</span>
+            <span className="text-sm font-medium text-foreground">{cluster?.nodeCount || 0}</span>
           </div>
         </div>
       </div>

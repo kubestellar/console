@@ -90,7 +90,7 @@ export function PodDrillDown({ data }: Props) {
                 <Sparkles className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">AI Remediation Available</h3>
+                <h3 className="font-semibold text-foreground">AI Remediation Available</h3>
                 <p className="text-sm text-muted-foreground">
                   Let Claude analyze and help fix these issues
                 </p>
@@ -98,7 +98,7 @@ export function PodDrillDown({ data }: Props) {
             </div>
             <button
               onClick={() => setShowRemediation(true)}
-              className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground transition-colors flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
               Remediate

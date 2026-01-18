@@ -56,7 +56,7 @@ export function Login() {
                 className="w-14 h-14"
               />
               <div>
-                <h1 className="text-2xl font-bold text-white">KubeStellar</h1>
+                <h1 className="text-2xl font-bold text-foreground">KubeStellar</h1>
                 <p className="text-sm text-muted-foreground">Klaude Console</p>
               </div>
             </div>
@@ -64,7 +64,7 @@ export function Login() {
 
           {/* Welcome text */}
           <div className="text-center mb-8">
-            <h2 className="text-xl font-semibold text-white mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Welcome back
             </h2>
             <p className="text-muted-foreground">

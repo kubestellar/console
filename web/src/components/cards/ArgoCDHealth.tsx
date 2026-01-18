@@ -78,12 +78,12 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
       {/* Health gauge */}
       <div className="flex items-center justify-center gap-4 mb-4 p-4 rounded-lg bg-secondary/30">
         <div className="text-center">
-          <p className="text-3xl font-bold text-white">{healthyPercent.toFixed(0)}%</p>
+          <p className="text-3xl font-bold text-foreground">{healthyPercent.toFixed(0)}%</p>
           <p className="text-xs text-muted-foreground">Healthy</p>
         </div>
         <div className="w-px h-12 bg-border" />
         <div className="text-center">
-          <p className="text-3xl font-bold text-white">{total}</p>
+          <p className="text-3xl font-bold text-foreground">{total}</p>
           <p className="text-xs text-muted-foreground">Total Apps</p>
         </div>
       </div>
@@ -98,7 +98,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
             <div key={key} className={`flex items-center justify-between p-2 rounded-lg ${config.bg}`}>
               <div className="flex items-center gap-2">
                 <Icon className={`w-4 h-4 ${config.color}`} />
-                <span className="text-sm text-white">{config.label}</span>
+                <span className="text-sm text-foreground">{config.label}</span>
               </div>
               <span className={`text-sm font-bold ${config.color}`}>{count}</span>
             </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { FileCode, CheckCircle, AlertTriangle, XCircle, RefreshCw, Database } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -20,9 +21,33 @@ interface CRD {
 }
 
 export function CRDHealth({ config }: CRDHealthProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [filterGroup, setFilterGroup] = useState<string>('')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Mock CRD data
   const allCRDs: CRD[] = selectedCluster ? [
@@ -111,7 +136,7 @@ export function CRDHealth({ config }: CRDHealthProps) {
       <select
         value={selectedCluster}
         onChange={(e) => setSelectedCluster(e.target.value)}
-        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white mb-4"
+        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
         <option value="">Select cluster...</option>
         {clusters.map(c => (
@@ -131,7 +156,7 @@ export function CRDHealth({ config }: CRDHealthProps) {
             <select
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
-              className="ml-auto px-2 py-1 rounded bg-secondary border border-border text-xs text-white"
+              className="ml-auto px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground"
             >
               <option value="">All groups</option>
               {groups.map(g => (
@@ -170,7 +195,7 @@ export function CRDHealth({ config }: CRDHealthProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400`} />
-                      <span className="text-sm text-white">{crd.name}</span>
+                      <span className="text-sm text-foreground">{crd.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Database className="w-3 h-3 text-muted-foreground" />

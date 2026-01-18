@@ -433,7 +433,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-white">Add Cards with AI</h2>
+            <h2 className="text-lg font-semibold text-foreground">Add Cards with AI</h2>
           </div>
           <button
             onClick={onClose}
@@ -457,12 +457,12 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                 placeholder="e.g., Show me GPU status, utilization, and any issues..."
-                className="flex-1 px-4 py-2 bg-secondary rounded-lg text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               />
               <button
                 onClick={handleGenerate}
                 disabled={!query.trim() || isGenerating}
-                className="px-4 py-2 bg-gradient-ks text-white rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
               >
                 {isGenerating ? (
                   <>
@@ -495,7 +495,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                   <button
                     key={example}
                     onClick={() => setQuery(example)}
-                    className="px-3 py-1 text-xs bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-white rounded-full transition-colors"
+                    className="px-3 py-1 text-xs bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-full transition-colors"
                   >
                     {example}
                   </button>
@@ -528,7 +528,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span>{visualizationIcons[card.visualization]}</span>
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-medium text-foreground">
                           {card.title}
                         </span>
                         {isAlreadyAdded && (
@@ -554,14 +554,14 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           <div className="flex items-center justify-end gap-3 p-4 border-t border-border">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-muted-foreground hover:text-white transition-colors"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleAddCards}
               disabled={selectedCards.size === 0}
-              className="px-4 py-2 bg-gradient-ks text-white rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Add {selectedCards.size} Card{selectedCards.size !== 1 ? 's' : ''}

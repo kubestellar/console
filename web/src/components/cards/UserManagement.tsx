@@ -279,7 +279,7 @@ function ConsoleUsersTab({
                       className={cn(
                         'px-2 py-1 rounded text-xs font-medium transition-colors',
                         user.role === role
-                          ? 'bg-purple-500 text-white'
+                          ? 'bg-purple-500 text-foreground'
                           : 'bg-secondary hover:bg-secondary/80 text-muted-foreground'
                       )}
                     >

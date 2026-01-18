@@ -63,7 +63,7 @@ export function TopPods({ config }: TopPodsProps) {
           />
           <button
             onClick={() => refetch()}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             title="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
@@ -86,7 +86,7 @@ export function TopPods({ config }: TopPodsProps) {
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span className="text-xs text-muted-foreground w-5">{index + 1}.</span>
-                  <span className="text-sm font-medium text-white truncate" title={pod.name}>
+                  <span className="text-sm font-medium text-foreground truncate" title={pod.name}>
                     {pod.name}
                   </span>
                 </div>

@@ -14,6 +14,18 @@ export const SEVERITY_CONFIG: Record<SeverityLevel, { label: string; color: stri
   info: { label: 'Info', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
 }
 
+// Status levels
+export type StatusLevel = 'pending' | 'failed' | 'running' | 'init'
+
+export const STATUS_LEVELS: StatusLevel[] = ['pending', 'failed', 'running', 'init']
+
+export const STATUS_CONFIG: Record<StatusLevel, { label: string; color: string; bgColor: string }> = {
+  pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-500/10' },
+  failed: { label: 'Failed', color: 'text-red-400', bgColor: 'bg-red-500/10' },
+  running: { label: 'Running', color: 'text-green-400', bgColor: 'bg-green-500/10' },
+  init: { label: 'Init', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
+}
+
 // Cluster group definition
 export interface ClusterGroup {
   id: string
@@ -52,6 +64,21 @@ interface GlobalFiltersContextType {
   isAllSeveritiesSelected: boolean
   isSeveritiesFiltered: boolean
 
+  // Status filtering
+  selectedStatuses: StatusLevel[]
+  setSelectedStatuses: (statuses: StatusLevel[]) => void
+  toggleStatus: (status: StatusLevel) => void
+  selectAllStatuses: () => void
+  deselectAllStatuses: () => void
+  isAllStatusesSelected: boolean
+  isStatusesFiltered: boolean
+
+  // Custom text filter
+  customFilter: string
+  setCustomFilter: (filter: string) => void
+  clearCustomFilter: () => void
+  hasCustomFilter: boolean
+
   // Combined filter helpers
   isFiltered: boolean
   clearAllFilters: () => void
@@ -59,6 +86,8 @@ interface GlobalFiltersContextType {
   // Filter functions for cards to use
   filterByCluster: <T extends { cluster?: string }>(items: T[]) => T[]
   filterBySeverity: <T extends { severity?: string }>(items: T[]) => T[]
+  filterByStatus: <T extends { status?: string }>(items: T[]) => T[]
+  filterByCustomText: <T extends Record<string, unknown>>(items: T[], searchFields?: string[]) => T[]
   filterItems: <T extends { cluster?: string; severity?: string }>(items: T[]) => T[]
 }
 
@@ -66,6 +95,8 @@ const GlobalFiltersContext = createContext<GlobalFiltersContextType | null>(null
 
 const CLUSTER_STORAGE_KEY = 'globalFilter:clusters'
 const SEVERITY_STORAGE_KEY = 'globalFilter:severities'
+const STATUS_STORAGE_KEY = 'globalFilter:statuses'
+const CUSTOM_FILTER_STORAGE_KEY = 'globalFilter:customText'
 const GROUPS_STORAGE_KEY = 'globalFilter:clusterGroups'
 
 // Default cluster groups
@@ -122,6 +153,30 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     return DEFAULT_GROUPS
   })
 
+  // Initialize statuses from localStorage or default to all
+  const [selectedStatuses, setSelectedStatusesState] = useState<StatusLevel[]>(() => {
+    try {
+      const stored = localStorage.getItem(STATUS_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return parsed === null ? [] : parsed
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return [] // Empty means all statuses
+  })
+
+  // Initialize custom text filter from localStorage
+  const [customFilter, setCustomFilterState] = useState<string>(() => {
+    try {
+      return localStorage.getItem(CUSTOM_FILTER_STORAGE_KEY) || ''
+    } catch {
+      // Ignore errors
+    }
+    return ''
+  })
+
   // Persist to localStorage
   useEffect(() => {
     localStorage.setItem(CLUSTER_STORAGE_KEY, JSON.stringify(selectedClusters.length === 0 ? null : selectedClusters))
@@ -134,6 +189,14 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(clusterGroups))
   }, [clusterGroups])
+
+  useEffect(() => {
+    localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(selectedStatuses.length === 0 ? null : selectedStatuses))
+  }, [selectedStatuses])
+
+  useEffect(() => {
+    localStorage.setItem(CUSTOM_FILTER_STORAGE_KEY, customFilter)
+  }, [customFilter])
 
   // Cluster filtering
   const setSelectedClusters = useCallback((clusters: string[]) => {
@@ -241,12 +304,67 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // Get effective selected severities (for filtering)
   const effectiveSelectedSeverities = isAllSeveritiesSelected ? SEVERITY_LEVELS : selectedSeverities
 
+  // Status filtering
+  const setSelectedStatuses = useCallback((statuses: StatusLevel[]) => {
+    setSelectedStatusesState(statuses)
+  }, [])
+
+  const toggleStatus = useCallback((status: StatusLevel) => {
+    setSelectedStatusesState(prev => {
+      // If currently "all" (empty), switch to all except this one
+      if (prev.length === 0) {
+        return STATUS_LEVELS.filter(s => s !== status)
+      }
+
+      if (prev.includes(status)) {
+        // Remove status - if last one, revert to all
+        const newSelection = prev.filter(s => s !== status)
+        return newSelection.length === 0 ? [] : newSelection
+      } else {
+        // Add status
+        const newSelection = [...prev, status]
+        // If all statuses are now selected, switch to "all" mode
+        if (newSelection.length === STATUS_LEVELS.length) {
+          return []
+        }
+        return newSelection
+      }
+    })
+  }, [])
+
+  const selectAllStatuses = useCallback(() => {
+    setSelectedStatusesState([])
+  }, [])
+
+  const deselectAllStatuses = useCallback(() => {
+    setSelectedStatusesState(['__none__' as StatusLevel])
+  }, [])
+
+  const isAllStatusesSelected = selectedStatuses.length === 0
+  const isStatusesFiltered = !isAllStatusesSelected
+
+  // Get effective selected statuses (for filtering)
+  const effectiveSelectedStatuses = isAllStatusesSelected ? STATUS_LEVELS : selectedStatuses
+
+  // Custom text filter
+  const setCustomFilter = useCallback((filter: string) => {
+    setCustomFilterState(filter)
+  }, [])
+
+  const clearCustomFilter = useCallback(() => {
+    setCustomFilterState('')
+  }, [])
+
+  const hasCustomFilter = customFilter.trim().length > 0
+
   // Combined filter state
-  const isFiltered = isClustersFiltered || isSeveritiesFiltered
+  const isFiltered = isClustersFiltered || isSeveritiesFiltered || isStatusesFiltered || hasCustomFilter
 
   const clearAllFilters = useCallback(() => {
     setSelectedClustersState([])
     setSelectedSeveritiesState([])
+    setSelectedStatusesState([])
+    setCustomFilterState('')
   }, [])
 
   // Filter functions for cards to use
@@ -267,6 +385,29 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       return effectiveSelectedSeverities.includes(severity as SeverityLevel)
     })
   }, [isAllSeveritiesSelected, selectedSeverities, effectiveSelectedSeverities])
+
+  const filterByStatus = useCallback(<T extends { status?: string }>(items: T[]): T[] => {
+    if (isAllStatusesSelected) return items
+    if ((selectedStatuses as string[]).includes('__none__')) return []
+    return items.filter(item => {
+      const status = (item.status || '').toLowerCase()
+      return effectiveSelectedStatuses.some(s => status.includes(s))
+    })
+  }, [isAllStatusesSelected, selectedStatuses, effectiveSelectedStatuses])
+
+  const filterByCustomText = useCallback(<T extends Record<string, unknown>>(
+    items: T[],
+    searchFields: string[] = ['name', 'namespace', 'cluster', 'message']
+  ): T[] => {
+    if (!customFilter.trim()) return items
+    const query = customFilter.toLowerCase()
+    return items.filter(item =>
+      searchFields.some(field => {
+        const value = item[field]
+        return typeof value === 'string' && value.toLowerCase().includes(query)
+      })
+    )
+  }, [customFilter])
 
   const filterItems = useCallback(<T extends { cluster?: string; severity?: string }>(items: T[]): T[] => {
     let filtered = items
@@ -305,6 +446,21 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         isAllSeveritiesSelected,
         isSeveritiesFiltered,
 
+        // Status filtering
+        selectedStatuses: effectiveSelectedStatuses,
+        setSelectedStatuses,
+        toggleStatus,
+        selectAllStatuses,
+        deselectAllStatuses,
+        isAllStatusesSelected,
+        isStatusesFiltered,
+
+        // Custom text filter
+        customFilter,
+        setCustomFilter,
+        clearCustomFilter,
+        hasCustomFilter,
+
         // Combined filter helpers
         isFiltered,
         clearAllFilters,
@@ -312,6 +468,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         // Filter functions
         filterByCluster,
         filterBySeverity,
+        filterByStatus,
+        filterByCustomText,
         filterItems,
       }}
     >

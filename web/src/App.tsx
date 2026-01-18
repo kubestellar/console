@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Login } from './components/auth/Login'
 import { AuthCallback } from './components/auth/AuthCallback'
 import { Onboarding } from './components/onboarding/Onboarding'
@@ -10,14 +10,35 @@ import { Applications } from './components/applications/Applications'
 import { Security } from './components/security/Security'
 import { GitOps } from './components/gitops/GitOps'
 import { CardHistory } from './components/history/CardHistory'
+import { CardHistoryEntry } from './hooks/useCardHistory'
 import { UserManagementPage } from './pages/UserManagement'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
 import { AuthProvider, useAuth } from './lib/auth'
 import { DrillDownProvider } from './hooks/useDrillDown'
-import { DashboardProvider } from './hooks/useDashboardContext'
+import { DashboardProvider, useDashboardContext } from './hooks/useDashboardContext'
 import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
 import { ToastProvider } from './components/ui/Toast'
+
+// Wrapper for CardHistory that provides the restore functionality
+function CardHistoryWithRestore() {
+  const navigate = useNavigate()
+  const { setPendingRestoreCard } = useDashboardContext()
+
+  const handleRestoreCard = (entry: CardHistoryEntry) => {
+    // Set the card to be restored in context
+    setPendingRestoreCard({
+      cardType: entry.cardType,
+      cardTitle: entry.cardTitle,
+      config: entry.config,
+      dashboardId: entry.dashboardId,
+    })
+    // Navigate to the dashboard
+    navigate('/')
+  }
+
+  return <CardHistory onRestoreCard={handleRestoreCard} />
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -144,7 +165,7 @@ function App() {
             <ProtectedRoute>
               <OnboardedRoute>
                 <Layout>
-                  <CardHistory />
+                  <CardHistoryWithRestore />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>

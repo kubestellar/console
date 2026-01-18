@@ -107,7 +107,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold text-white">{total}</span>
+            <span className="text-xl font-bold text-foreground">{total}</span>
             <span className="text-xs text-muted-foreground">Apps</span>
           </div>
         </div>
@@ -118,21 +118,21 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
         <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-400" />
-            <span className="text-sm text-white">Synced</span>
+            <span className="text-sm text-foreground">Synced</span>
           </div>
           <span className="text-sm font-bold text-green-400">{stats.synced}</span>
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/10">
           <div className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-white">Out of Sync</span>
+            <span className="text-sm text-foreground">Out of Sync</span>
           </div>
           <span className="text-sm font-bold text-yellow-400">{stats.outOfSync}</span>
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-white">Unknown</span>
+            <span className="text-sm text-foreground">Unknown</span>
           </div>
           <span className="text-sm font-bold text-gray-400">{stats.unknown}</span>
         </div>

@@ -7,7 +7,7 @@ interface UserProfileDropdownProps {
     email?: string
     avatar_url?: string
     role?: string
-    slack_id?: string
+    slackId?: string
   } | null
   onLogout: () => void
   onPreferences?: () => void
@@ -87,7 +87,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 </div>
               )}
               <div>
-                <p className="font-medium text-white">{user.github_login}</p>
+                <p className="font-medium text-foreground">{user.github_login}</p>
                 <p className="text-sm text-muted-foreground">{user.email || 'No email set'}</p>
               </div>
             </div>
@@ -98,18 +98,18 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Mail className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">Email:</span>
-              <span className="text-white truncate">{user.email || 'Not set'}</span>
+              <span className="text-foreground truncate">{user.email || 'Not set'}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <MessageSquare className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">Slack:</span>
-              <span className="text-white">{user.slack_id || 'Not connected'}</span>
+              <span className="text-foreground">{user.slackId || 'Not connected'}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Shield className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">Role:</span>
               <span className={`text-xs px-2 py-0.5 rounded ${
-                user.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-secondary text-white'
+                user.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-secondary text-foreground'
               }`}>
                 {user.role || 'User'}
               </span>
@@ -123,7 +123,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 setIsOpen(false)
                 onPreferences?.()
               }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-white hover:bg-secondary rounded-lg transition-colors"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
               <Settings className="w-4 h-4 text-muted-foreground" />
               Preferences

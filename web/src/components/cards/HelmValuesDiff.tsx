@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { FileJson, ChevronRight, RefreshCw, Plus, Minus, Edit } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
@@ -20,9 +21,33 @@ interface ValueDiff {
 }
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, refetch } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
+  const {
+    selectedClusters: globalSelectedClusters,
+    isAllClustersSelected,
+    customFilter,
+  } = useGlobalFilters()
+
+  // Apply global filters
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.context?.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Mock releases for the selected cluster
   const releases = selectedCluster ? [
@@ -108,7 +133,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
             setSelectedCluster(e.target.value)
             setSelectedRelease('')
           }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">Select cluster...</option>
           {clusters.map(c => (
@@ -119,7 +144,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           value={selectedRelease}
           onChange={(e) => setSelectedRelease(e.target.value)}
           disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-white disabled:opacity-50"
+          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">Select release...</option>
           {releases.map(r => (
@@ -138,7 +163,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           <div className="flex items-center gap-2 mb-4">
             <ClusterBadge cluster={selectedCluster} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-white">{selectedRelease}</span>
+            <span className="text-sm text-foreground">{selectedRelease}</span>
           </div>
 
           {/* Summary */}
@@ -170,7 +195,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
                 >
                   <div className="flex items-center gap-2">
                     <DiffIcon className={`w-3 h-3 text-${color}-400 flex-shrink-0`} />
-                    <span className="text-white truncate">{diff.path}</span>
+                    <span className="text-foreground truncate">{diff.path}</span>
                   </div>
                   <div className="ml-5 mt-1">
                     {diff.oldValue && (

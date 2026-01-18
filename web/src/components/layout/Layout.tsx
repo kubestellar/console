@@ -19,7 +19,7 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <TourProvider>
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-background">
       {/* Tour overlay and prompt */}
       <TourOverlay />
       <TourPrompt />

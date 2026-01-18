@@ -137,13 +137,13 @@ export function CardChat({
               <Bot className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h2 className="text-lg font-medium text-white">Chat with Card</h2>
+              <h2 className="text-lg font-medium text-foreground">Chat with Card</h2>
               <p className="text-sm text-muted-foreground">{cardTitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-white"
+            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -183,8 +183,8 @@ export function CardChat({
                 className={cn(
                   'max-w-[80%] rounded-2xl px-4 py-3',
                   message.role === 'user'
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-secondary/50 text-white'
+                    ? 'bg-purple-500 text-foreground'
+                    : 'bg-secondary/50 text-foreground'
                 )}
               >
                 <div className="text-sm whitespace-pre-wrap">{message.content}</div>
@@ -248,7 +248,7 @@ export function CardChat({
               <button
                 key={i}
                 onClick={() => handleQuickPrompt(prompt)}
-                className="text-xs px-2 py-1 rounded-full bg-secondary/50 text-muted-foreground hover:text-white hover:bg-secondary transition-colors"
+                className="text-xs px-2 py-1 rounded-full bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
                 {prompt}
               </button>
@@ -266,7 +266,7 @@ export function CardChat({
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a question or give a command..."
-                className="w-full px-4 py-3 pr-12 rounded-xl bg-secondary border border-border text-white text-sm resize-none h-12 max-h-32"
+                className="w-full px-4 py-3 pr-12 rounded-xl bg-secondary border border-border text-foreground text-sm resize-none h-12 max-h-32"
                 rows={1}
                 disabled={isLoading}
               />
@@ -280,7 +280,7 @@ export function CardChat({
               className={cn(
                 'p-3 rounded-xl transition-colors',
                 input.trim() && !isLoading
-                  ? 'bg-purple-500 text-white hover:bg-purple-600'
+                  ? 'bg-purple-500 text-foreground hover:bg-purple-600'
                   : 'bg-secondary text-muted-foreground'
               )}
             >

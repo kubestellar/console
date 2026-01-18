@@ -174,7 +174,7 @@ export function Onboarding() {
 
         {/* Question card */}
         <div className="glass rounded-2xl p-8 animate-fade-in-up">
-          <h2 className="text-2xl font-bold text-white mb-2">{currentQuestion.question}</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{currentQuestion.question}</h2>
           {currentQuestion.description && (
             <p className="text-muted-foreground mb-6">{currentQuestion.description}</p>
           )}
@@ -193,7 +193,7 @@ export function Onboarding() {
                       {index + 1}
                     </span>
                   </div>
-                  <span className="flex-1 text-white">{option}</span>
+                  <span className="flex-1 text-foreground">{option}</span>
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleRankMove(index, 'up')}
@@ -221,7 +221,7 @@ export function Onboarding() {
                   onClick={() => handleSelect(option)}
                   className={`w-full p-4 rounded-xl text-left transition-all duration-200 ${
                     answers[currentQuestion.key] === option
-                      ? 'bg-purple-500/20 border-2 border-purple-500 text-white'
+                      ? 'bg-purple-500/20 border-2 border-purple-500 text-foreground'
                       : 'bg-secondary/50 border-2 border-transparent hover:bg-secondary hover:border-purple-500/30 text-muted-foreground'
                   }`}
                 >
@@ -241,7 +241,7 @@ export function Onboarding() {
             <button
               onClick={handleBack}
               disabled={currentStep === 0}
-              className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
               Back

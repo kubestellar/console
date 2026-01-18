@@ -106,7 +106,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <History className="w-6 h-6 text-purple-400" />
             Card History
           </h1>
@@ -135,7 +135,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
               'px-3 py-1.5 rounded-lg text-sm transition-colors',
               filter === action
                 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                : 'bg-secondary/50 text-muted-foreground hover:text-white'
+                : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             )}
           >
             {action === 'all' ? 'All' : action.charAt(0).toUpperCase() + action.slice(1)}
@@ -173,7 +173,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-white">
+                  <span className="font-medium text-foreground">
                     {entry.cardTitle || formatCardType(entry.cardType)}
                   </span>
                   <ActionBadge action={entry.action} />
@@ -183,9 +183,9 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
                 <p className="text-sm text-muted-foreground">
                   {entry.action === 'replaced' && entry.previousCardType && (
                     <>
-                      <span className="text-white/80">{formatCardType(entry.previousCardType)}</span>
+                      <span className="text-foreground/80">{formatCardType(entry.previousCardType)}</span>
                       <ArrowRight className="w-3 h-3 inline mx-1" />
-                      <span className="text-white/80">{formatCardType(entry.cardType)}</span>
+                      <span className="text-foreground/80">{formatCardType(entry.cardType)}</span>
                     </>
                   )}
                   {entry.action === 'removed' && (

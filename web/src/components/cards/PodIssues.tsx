@@ -97,7 +97,7 @@ export function PodIssues() {
               />
             </svg>
           </div>
-          <p className="text-white font-medium">All pods healthy</p>
+          <p className="text-foreground font-medium">All pods healthy</p>
           <p className="text-sm text-muted-foreground">No issues detected</p>
         </div>
       </div>
@@ -160,7 +160,7 @@ export function PodIssues() {
                     <ClusterBadge cluster={issue.cluster || 'default'} />
                     <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
                   </div>
-                  <p className="text-sm font-medium text-white truncate" title={issue.name}>{issue.name}</p>
+                  <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className={`text-xs px-2 py-0.5 rounded ${colors.bg} ${colors.text}`} title={`Status: ${issue.status}`}>
                       {issue.status}
