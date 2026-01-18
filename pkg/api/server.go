@@ -282,6 +282,15 @@ func (s *Server) setupRoutes() {
 	api.Get("/permissions/summary", rbac.GetPermissionsSummary)
 	api.Post("/rbac/can-i", rbac.CheckCanI)
 
+	// Namespace management routes (admin only)
+	namespaces := handlers.NewNamespaceHandler(s.store, s.k8sClient)
+	api.Get("/namespaces", namespaces.ListNamespaces)
+	api.Post("/namespaces", namespaces.CreateNamespace)
+	api.Delete("/namespaces/:name", namespaces.DeleteNamespace)
+	api.Get("/namespaces/:name/access", namespaces.GetNamespaceAccess)
+	api.Post("/namespaces/:name/access", namespaces.GrantNamespaceAccess)
+	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
+
 	// MCP routes (cluster operations via klaude and direct k8s)
 	// In production, these are protected (dev mode routes registered above)
 	if !s.config.DevMode {

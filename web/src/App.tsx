@@ -12,6 +12,7 @@ import { GitOps } from './components/gitops/GitOps'
 import { CardHistory } from './components/history/CardHistory'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { UserManagementPage } from './pages/UserManagement'
+import { NamespaceManager } from './components/namespaces/NamespaceManager'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
 import { AuthProvider, useAuth } from './lib/auth'
@@ -190,6 +191,18 @@ function App() {
               <OnboardedRoute>
                 <Layout>
                   <UserManagementPage />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/namespaces"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <NamespaceManager />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>

@@ -165,3 +165,38 @@ type ClusterPermissionsSummary struct {
 	CanViewSecrets       bool     `json:"canViewSecrets"`
 	AccessibleNamespaces []string `json:"accessibleNamespaces"`
 }
+
+// NamespaceDetails represents a Kubernetes namespace with metadata
+type NamespaceDetails struct {
+	Name      string            `json:"name"`
+	Cluster   string            `json:"cluster"`
+	Status    string            `json:"status"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	CreatedAt string            `json:"createdAt"`
+}
+
+// CreateNamespaceRequest represents a request to create a namespace
+type CreateNamespaceRequest struct {
+	Cluster string            `json:"cluster"`
+	Name    string            `json:"name"`
+	Labels  map[string]string `json:"labels,omitempty"`
+}
+
+// GrantNamespaceAccessRequest represents a request to grant access to a namespace
+type GrantNamespaceAccessRequest struct {
+	Cluster     string `json:"cluster"`
+	SubjectKind string `json:"subjectKind"` // User, Group, or ServiceAccount
+	SubjectName string `json:"subjectName"`
+	SubjectNS   string `json:"subjectNamespace,omitempty"` // For ServiceAccount
+	Role        string `json:"role"`                       // admin, edit, view, or custom role name
+}
+
+// NamespaceAccessEntry represents a single access entry for a namespace
+type NamespaceAccessEntry struct {
+	BindingName string `json:"bindingName"`
+	SubjectKind string `json:"subjectKind"`
+	SubjectName string `json:"subjectName"`
+	SubjectNS   string `json:"subjectNamespace,omitempty"`
+	RoleName    string `json:"roleName"`
+	RoleKind    string `json:"roleKind"`
+}

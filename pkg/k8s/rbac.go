@@ -677,3 +677,150 @@ func (m *MultiClusterClient) GetAllPermissionsSummaries(ctx context.Context) ([]
 
 	return summaries, nil
 }
+
+// ListNamespacesWithDetails returns namespaces with details for a cluster
+func (m *MultiClusterClient) ListNamespacesWithDetails(ctx context.Context, contextName string) ([]models.NamespaceDetails, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	nsList, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var namespaces []models.NamespaceDetails
+	for _, ns := range nsList.Items {
+		namespaces = append(namespaces, models.NamespaceDetails{
+			Name:      ns.Name,
+			Cluster:   contextName,
+			Status:    string(ns.Status.Phase),
+			Labels:    ns.Labels,
+			CreatedAt: ns.CreationTimestamp.Format(time.RFC3339),
+		})
+	}
+	return namespaces, nil
+}
+
+// CreateNamespace creates a new namespace in a cluster
+func (m *MultiClusterClient) CreateNamespace(ctx context.Context, contextName, name string, labels map[string]string) (*models.NamespaceDetails, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+	}
+
+	created, err := client.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.NamespaceDetails{
+		Name:      created.Name,
+		Cluster:   contextName,
+		Status:    string(created.Status.Phase),
+		Labels:    created.Labels,
+		CreatedAt: created.CreationTimestamp.Format(time.RFC3339),
+	}, nil
+}
+
+// DeleteNamespace deletes a namespace from a cluster
+func (m *MultiClusterClient) DeleteNamespace(ctx context.Context, contextName, name string) error {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	return client.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// GrantNamespaceAccess creates a RoleBinding to grant access to a namespace
+func (m *MultiClusterClient) GrantNamespaceAccess(ctx context.Context, contextName, namespace string, req models.GrantNamespaceAccessRequest) (string, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return "", err
+	}
+
+	// Determine the ClusterRole to bind based on the role requested
+	roleName := req.Role
+	if roleName == "admin" {
+		roleName = "admin" // built-in ClusterRole
+	} else if roleName == "edit" {
+		roleName = "edit" // built-in ClusterRole
+	} else if roleName == "view" {
+		roleName = "view" // built-in ClusterRole
+	}
+	// Otherwise, use the role name as-is (custom role)
+
+	// Generate binding name
+	bindingName := fmt.Sprintf("%s-%s-%s", req.SubjectName, roleName, namespace)
+	// Sanitize the binding name (remove special characters)
+	bindingName = sanitizeK8sName(bindingName)
+
+	subject := rbacv1.Subject{
+		Kind: req.SubjectKind,
+		Name: req.SubjectName,
+	}
+
+	if req.SubjectKind == "ServiceAccount" {
+		subject.Namespace = req.SubjectNS
+		subject.APIGroup = ""
+	} else {
+		subject.APIGroup = "rbac.authorization.k8s.io"
+	}
+
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      bindingName,
+			Namespace: namespace,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     roleName,
+		},
+		Subjects: []rbacv1.Subject{subject},
+	}
+
+	_, err = client.RbacV1().RoleBindings(namespace).Create(ctx, rb, metav1.CreateOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return bindingName, nil
+}
+
+// sanitizeK8sName ensures a name is valid for Kubernetes
+func sanitizeK8sName(name string) string {
+	// Replace @ and other invalid characters with -
+	result := ""
+	for _, c := range name {
+		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '.' {
+			result += string(c)
+		} else if c >= 'A' && c <= 'Z' {
+			result += string(c + 32) // lowercase
+		} else {
+			result += "-"
+		}
+	}
+	// Ensure it starts with alphanumeric
+	if len(result) > 0 && (result[0] == '-' || result[0] == '.') {
+		result = "x" + result
+	}
+	// Truncate to max length
+	if len(result) > 63 {
+		result = result[:63]
+	}
+	// Ensure it ends with alphanumeric
+	for len(result) > 0 && (result[len(result)-1] == '-' || result[len(result)-1] == '.') {
+		result = result[:len(result)-1]
+	}
+	return result
+}
