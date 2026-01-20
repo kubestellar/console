@@ -832,6 +832,12 @@ function DragPreviewCard({ card }: { card: Card }) {
 }
 
 function mapVisualizationToCardType(visualization: string, type: string): string {
+  // First, check if the type is a valid registered card - if so, use it directly
+  if (type && CARD_COMPONENTS[type]) {
+    return type
+  }
+
+  // Fall back to visualization mapping for AI-generated or unknown types
   const mapping: Record<string, string> = {
     gauge: 'resource_usage',
     timeseries: 'cluster_metrics',
