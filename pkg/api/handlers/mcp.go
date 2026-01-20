@@ -962,6 +962,91 @@ type CallToolRequest struct {
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
+// AllowedOpsTools is the whitelist of klaude-ops tools that can be called via API
+// SECURITY: Only read-only tools are allowed by default to prevent unauthorized modifications
+var AllowedOpsTools = map[string]bool{
+	// Cluster discovery and health
+	"list_clusters":       true,
+	"get_cluster_health":  true,
+	"detect_cluster_type": true,
+	"audit_kubeconfig":    true,
+
+	// Read-only queries
+	"get_pods":            true,
+	"get_deployments":     true,
+	"get_services":        true,
+	"get_nodes":           true,
+	"get_events":          true,
+	"get_warning_events":  true,
+	"describe_pod":        true,
+	"get_pod_logs":        true,
+
+	// Issue detection (read-only analysis)
+	"find_pod_issues":        true,
+	"find_deployment_issues": true,
+	"check_resource_limits":  true,
+	"check_security_issues":  true,
+
+	// RBAC queries (read-only)
+	"get_roles":                    true,
+	"get_cluster_roles":            true,
+	"get_role_bindings":            true,
+	"get_cluster_role_bindings":    true,
+	"can_i":                        true,
+	"analyze_subject_permissions":  true,
+	"describe_role":                true,
+
+	// Upgrade checking (read-only)
+	"get_cluster_version_info":     true,
+	"check_olm_operator_upgrades":  true,
+	"check_helm_release_upgrades":  true,
+	"get_upgrade_prerequisites":    true,
+	"get_upgrade_status":           true,
+
+	// Ownership analysis (read-only)
+	"find_resource_owners":         true,
+	"check_gatekeeper":             true,
+	"get_ownership_policy_status":  true,
+	"list_ownership_violations":    true,
+}
+
+// AllowedDeployTools is the whitelist of klaude-deploy tools that can be called via API
+// SECURITY: Write operations require explicit allowlisting
+var AllowedDeployTools = map[string]bool{
+	// Read-only operations
+	"get_app_instances":        true,
+	"get_app_status":           true,
+	"get_app_logs":             true,
+	"list_cluster_capabilities": true,
+	"find_clusters_for_workload": true,
+	"detect_drift":             true,
+	"preview_changes":          true,
+
+	// Write operations - disabled by default for security
+	// Enable these only after proper authorization checks
+	// "deploy_app":     false,
+	// "scale_app":      false,
+	// "patch_app":      false,
+	// "sync_from_git":  false,
+	// "reconcile":      false,
+}
+
+// validateToolName checks if a tool name is in the allowed list
+func validateToolName(name string, allowedTools map[string]bool) error {
+	if name == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "tool name is required")
+	}
+
+	// Check if tool is in allowlist
+	allowed, exists := allowedTools[name]
+	if !exists || !allowed {
+		log.Printf("SECURITY: Blocked attempt to call unauthorized tool: %s", name)
+		return fiber.NewError(fiber.StatusForbidden, "tool not allowed: "+name)
+	}
+
+	return nil
+}
+
 // CallOpsTool calls a klaude-ops tool
 func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	if h.bridge == nil {
@@ -971,6 +1056,11 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	var req CallToolRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	// SECURITY: Validate tool name against whitelist
+	if err := validateToolName(req.Name, AllowedOpsTools); err != nil {
+		return err
 	}
 
 	result, err := h.bridge.CallOpsTool(c.Context(), req.Name, req.Arguments)
@@ -990,6 +1080,11 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 	var req CallToolRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	// SECURITY: Validate tool name against whitelist
+	if err := validateToolName(req.Name, AllowedDeployTools); err != nil {
+		return err
 	}
 
 	result, err := h.bridge.CallDeployTool(c.Context(), req.Name, req.Arguments)

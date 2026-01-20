@@ -67,6 +67,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// WebSocket hub for real-time updates
 	hub := handlers.NewHub()
+	hub.SetJWTSecret(cfg.JWTSecret) // Enable JWT auth for WebSocket connections
 	go hub.Run()
 
 	// Initialize Kubernetes multi-cluster client
@@ -198,36 +199,11 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/auth/github/callback", auth.GitHubCallback)
 	s.app.Post("/auth/refresh", auth.RefreshToken)
 
-	// MCP routes - register BEFORE protected routes in dev mode
-	// This ensures they're accessible without auth for testing
+	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
-	if s.config.DevMode {
-		s.app.Get("/api/mcp/status", mcpHandlers.GetStatus)
-		s.app.Get("/api/mcp/tools/ops", mcpHandlers.GetOpsTools)
-		s.app.Get("/api/mcp/tools/deploy", mcpHandlers.GetDeployTools)
-		s.app.Get("/api/mcp/clusters", mcpHandlers.ListClusters)
-		s.app.Get("/api/mcp/clusters/health", mcpHandlers.GetAllClusterHealth)
-		s.app.Get("/api/mcp/clusters/:cluster/health", mcpHandlers.GetClusterHealth)
-		s.app.Get("/api/mcp/pods", mcpHandlers.GetPods)
-		s.app.Get("/api/mcp/pod-issues", mcpHandlers.FindPodIssues)
-		s.app.Get("/api/mcp/deployment-issues", mcpHandlers.FindDeploymentIssues)
-		s.app.Get("/api/mcp/deployments", mcpHandlers.GetDeployments)
-		s.app.Get("/api/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
-		s.app.Get("/api/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
-		s.app.Get("/api/mcp/nodes", mcpHandlers.GetNodes)
-		s.app.Get("/api/mcp/events", mcpHandlers.GetEvents)
-		s.app.Get("/api/mcp/events/warnings", mcpHandlers.GetWarningEvents)
-		s.app.Get("/api/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
-		s.app.Get("/api/mcp/services", mcpHandlers.GetServices)
-		s.app.Get("/api/mcp/jobs", mcpHandlers.GetJobs)
-		s.app.Get("/api/mcp/hpas", mcpHandlers.GetHPAs)
-		s.app.Get("/api/mcp/configmaps", mcpHandlers.GetConfigMaps)
-		s.app.Get("/api/mcp/secrets", mcpHandlers.GetSecrets)
-		s.app.Get("/api/mcp/serviceaccounts", mcpHandlers.GetServiceAccounts)
-		s.app.Get("/api/mcp/pods/logs", mcpHandlers.GetPodLogs)
-		s.app.Post("/api/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
-		s.app.Post("/api/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
-	}
+	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
+	// Dev mode only affects things like frontend URLs and default users,
+	// NOT authentication requirements
 
 	// API routes (protected)
 	api := s.app.Group("/api", middleware.JWTAuth(s.config.JWTSecret))
@@ -301,53 +277,42 @@ func (s *Server) setupRoutes() {
 	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
 
 	// MCP routes (cluster operations via klaude and direct k8s)
-	// In production, these are protected (dev mode routes registered above)
-	if !s.config.DevMode {
-		api.Get("/mcp/status", mcpHandlers.GetStatus)
-		api.Get("/mcp/tools/ops", mcpHandlers.GetOpsTools)
-		api.Get("/mcp/tools/deploy", mcpHandlers.GetDeployTools)
-		api.Get("/mcp/clusters", mcpHandlers.ListClusters)
-		api.Get("/mcp/clusters/health", mcpHandlers.GetAllClusterHealth)
-		api.Get("/mcp/clusters/:cluster/health", mcpHandlers.GetClusterHealth)
-		api.Get("/mcp/pods", mcpHandlers.GetPods)
-		api.Get("/mcp/pod-issues", mcpHandlers.FindPodIssues)
-		api.Get("/mcp/deployment-issues", mcpHandlers.FindDeploymentIssues)
-		api.Get("/mcp/deployments", mcpHandlers.GetDeployments)
-		api.Get("/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
-		api.Get("/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
-		api.Get("/mcp/nodes", mcpHandlers.GetNodes)
-		api.Get("/mcp/events", mcpHandlers.GetEvents)
-		api.Get("/mcp/events/warnings", mcpHandlers.GetWarningEvents)
-		api.Get("/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
-		api.Get("/mcp/services", mcpHandlers.GetServices)
-		api.Get("/mcp/jobs", mcpHandlers.GetJobs)
-		api.Get("/mcp/hpas", mcpHandlers.GetHPAs)
-		api.Get("/mcp/configmaps", mcpHandlers.GetConfigMaps)
-		api.Get("/mcp/secrets", mcpHandlers.GetSecrets)
-		api.Get("/mcp/pods/logs", mcpHandlers.GetPodLogs)
-		api.Post("/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
-		api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
-	}
+	// SECURITY: All MCP routes require authentication in both dev and production modes
+	api.Get("/mcp/status", mcpHandlers.GetStatus)
+	api.Get("/mcp/tools/ops", mcpHandlers.GetOpsTools)
+	api.Get("/mcp/tools/deploy", mcpHandlers.GetDeployTools)
+	api.Get("/mcp/clusters", mcpHandlers.ListClusters)
+	api.Get("/mcp/clusters/health", mcpHandlers.GetAllClusterHealth)
+	api.Get("/mcp/clusters/:cluster/health", mcpHandlers.GetClusterHealth)
+	api.Get("/mcp/pods", mcpHandlers.GetPods)
+	api.Get("/mcp/pod-issues", mcpHandlers.FindPodIssues)
+	api.Get("/mcp/deployment-issues", mcpHandlers.FindDeploymentIssues)
+	api.Get("/mcp/deployments", mcpHandlers.GetDeployments)
+	api.Get("/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
+	api.Get("/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
+	api.Get("/mcp/nodes", mcpHandlers.GetNodes)
+	api.Get("/mcp/events", mcpHandlers.GetEvents)
+	api.Get("/mcp/events/warnings", mcpHandlers.GetWarningEvents)
+	api.Get("/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
+	api.Get("/mcp/services", mcpHandlers.GetServices)
+	api.Get("/mcp/jobs", mcpHandlers.GetJobs)
+	api.Get("/mcp/hpas", mcpHandlers.GetHPAs)
+	api.Get("/mcp/configmaps", mcpHandlers.GetConfigMaps)
+	api.Get("/mcp/secrets", mcpHandlers.GetSecrets)
+	api.Get("/mcp/serviceaccounts", mcpHandlers.GetServiceAccounts)
+	api.Get("/mcp/pods/logs", mcpHandlers.GetPodLogs)
+	api.Post("/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
+	api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
 
 	// GitOps routes (drift detection and sync)
+	// SECURITY: All GitOps routes require authentication in both dev and production modes
 	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient)
-	if s.config.DevMode {
-		// Dev mode: unprotected for testing
-		s.app.Get("/api/gitops/drifts", gitopsHandlers.ListDrifts)
-		s.app.Get("/api/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
-		s.app.Get("/api/gitops/kustomizations", gitopsHandlers.ListKustomizations)
-		s.app.Get("/api/gitops/operators", gitopsHandlers.ListOperators)
-		s.app.Post("/api/gitops/detect-drift", gitopsHandlers.DetectDrift)
-		s.app.Post("/api/gitops/sync", gitopsHandlers.Sync)
-	} else {
-		// Production: protected
-		api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
-		api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
-		api.Get("/gitops/kustomizations", gitopsHandlers.ListKustomizations)
-		api.Get("/gitops/operators", gitopsHandlers.ListOperators)
-		api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
-		api.Post("/gitops/sync", gitopsHandlers.Sync)
-	}
+	api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
+	api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
+	api.Get("/gitops/kustomizations", gitopsHandlers.ListKustomizations)
+	api.Get("/gitops/operators", gitopsHandlers.ListOperators)
+	api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
+	api.Post("/gitops/sync", gitopsHandlers.Sync)
 
 	// WebSocket for real-time updates
 	s.app.Use("/ws", middleware.WebSocketUpgrade())
@@ -414,24 +379,42 @@ func LoadConfigFromEnv() Config {
 		dbPath = p
 	}
 
+	devMode := os.Getenv("DEV_MODE") == "true"
+
 	// Default frontend URL depends on mode:
 	// - Dev mode: Vite dev server on 5174
 	// - Production mode: Backend serves frontend on 8080
 	frontendURL := "http://localhost:8080"
-	if os.Getenv("DEV_MODE") == "true" {
+	if devMode {
 		frontendURL = "http://localhost:5174"
 	}
 	if u := os.Getenv("FRONTEND_URL"); u != "" {
 		frontendURL = u
 	}
 
+	// JWT secret handling - CRITICAL SECURITY FIX
+	// In production, JWT_SECRET MUST be set via environment variable
+	// In dev mode, use a stable secret so tokens persist across restarts
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		if devMode {
+			// Only allow default secret in dev mode
+			jwtSecret = generateDevSecret()
+			log.Println("WARNING: Using dev-mode JWT secret. Set JWT_SECRET env var for production.")
+		} else {
+			// In production, fail fast if JWT_SECRET is not configured
+			log.Fatal("FATAL: JWT_SECRET environment variable is required in production mode. " +
+				"Set JWT_SECRET to a cryptographically secure random string (at least 32 characters).")
+		}
+	}
+
 	return Config{
 		Port:             port,
-		DevMode:          os.Getenv("DEV_MODE") == "true",
+		DevMode:          devMode,
 		DatabasePath:     dbPath,
 		GitHubClientID:   os.Getenv("GITHUB_CLIENT_ID"),
 		GitHubSecret:     os.Getenv("GITHUB_CLIENT_SECRET"),
-		JWTSecret:        getEnvOrDefault("JWT_SECRET", generateDefaultSecret()),
+		JWTSecret:        jwtSecret,
 		FrontendURL:      frontendURL,
 		ClaudeAPIKey:     os.Getenv("CLAUDE_API_KEY"),
 		KlaudeOpsPath:    getEnvOrDefault("KLAUDE_OPS_PATH", "klaude-ops"),
@@ -442,7 +425,7 @@ func LoadConfigFromEnv() Config {
 		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
 		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
 		// GitHub token for dev mode profile fetching
-		GitHubToken:   os.Getenv("GITHUB_TOKEN"),
+		GitHubToken: os.Getenv("GITHUB_TOKEN"),
 	}
 }
 
@@ -453,8 +436,7 @@ func getEnvOrDefault(key, defaultVal string) string {
 	return defaultVal
 }
 
-func generateDefaultSecret() string {
-	// In production, this should be set via environment
-	// In dev mode, use a stable secret so tokens persist across restarts
-	return "dev-secret-kubestellar-console-2024"
+func generateDevSecret() string {
+	// Dev-only secret - clearly marked as insecure for production
+	return "INSECURE-DEV-ONLY-" + "kubestellar-console-dev-secret"
 }

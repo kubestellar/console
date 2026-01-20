@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
 // Message represents a WebSocket message
@@ -31,6 +32,7 @@ type Hub struct {
 	unregister chan *Client
 	mu         sync.RWMutex
 	done       chan struct{}
+	jwtSecret  string // JWT secret for WebSocket auth
 }
 
 type broadcastMessage struct {
@@ -48,6 +50,11 @@ func NewHub() *Hub {
 		unregister: make(chan *Client),
 		done:       make(chan struct{}),
 	}
+}
+
+// SetJWTSecret sets the JWT secret for WebSocket authentication
+func (h *Hub) SetJWTSecret(secret string) {
+	h.jwtSecret = secret
 }
 
 // Run starts the hub
@@ -138,14 +145,39 @@ func (h *Hub) BroadcastAll(msg Message) {
 
 // HandleConnection handles a new WebSocket connection
 func (h *Hub) HandleConnection(conn *websocket.Conn) {
-	// Get user ID from query param (set during WebSocket upgrade)
-	// Anonymous connections are allowed for broadcast-only (e.g., kubeconfig changes)
-	userIDStr := conn.Query("user_id")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		// Use nil UUID for anonymous connections
-		userID = uuid.Nil
-		log.Printf("Anonymous WebSocket connection (will receive broadcasts)")
+	// SECURITY: Validate JWT token for WebSocket connections
+	// Token can be passed via query parameter since WebSocket doesn't support custom headers easily
+	tokenStr := conn.Query("token")
+
+	var userID uuid.UUID
+	if tokenStr == "" {
+		// SECURITY: Reject anonymous connections - require authentication
+		log.Printf("SECURITY: Rejected WebSocket connection - missing token")
+		conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "authentication required"}})
+		conn.Close()
+		return
+	}
+
+	// Validate JWT token
+	if h.jwtSecret != "" {
+		claims, err := middleware.ValidateJWT(tokenStr, h.jwtSecret)
+		if err != nil {
+			log.Printf("SECURITY: Rejected WebSocket connection - invalid token: %v", err)
+			conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "invalid token"}})
+			conn.Close()
+			return
+		}
+		userID = claims.UserID
+		log.Printf("Authenticated WebSocket connection for user: %s", claims.GitHubLogin)
+	} else {
+		// Fallback to user_id param if JWT secret not configured (dev mode compatibility)
+		userIDStr := conn.Query("user_id")
+		var err error
+		userID, err = uuid.Parse(userIDStr)
+		if err != nil {
+			userID = uuid.Nil
+			log.Printf("WARNING: WebSocket connection without JWT validation (JWT secret not configured)")
+		}
 	}
 
 	client := &Client{

@@ -72,6 +72,13 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	}
 }
 
+const (
+	// OAuth state cookie name
+	oauthStateCookieName = "oauth_state"
+	// OAuth state cookie max age (10 minutes)
+	oauthStateCookieMaxAge = 600
+)
+
 // GitHubLogin initiates GitHub OAuth flow
 func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 	// Dev mode: bypass GitHub OAuth if dev mode is enabled or no client ID configured
@@ -79,8 +86,20 @@ func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 		return h.devModeLogin(c)
 	}
 
+	// Generate cryptographically secure state for CSRF protection
 	state := uuid.New().String()
-	// In production, store state in session/cookie for CSRF protection
+
+	// Store state in a secure httpOnly cookie for CSRF validation on callback
+	c.Cookie(&fiber.Cookie{
+		Name:     oauthStateCookieName,
+		Value:    state,
+		Path:     "/",
+		MaxAge:   oauthStateCookieMaxAge,
+		HTTPOnly: true,
+		Secure:   !h.devMode, // Secure in production (requires HTTPS)
+		SameSite: "Lax",      // Lax allows the cookie to be sent on OAuth redirects
+	})
+
 	url := h.oauthConfig.AuthCodeURL(state)
 	return c.Redirect(url, fiber.StatusTemporaryRedirect)
 }
@@ -173,6 +192,24 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	code := c.Query("code")
 	if code == "" {
 		return c.Redirect(h.frontendURL+"/login?error=missing_code", fiber.StatusTemporaryRedirect)
+	}
+
+	// CSRF validation: verify state parameter matches stored cookie
+	state := c.Query("state")
+	storedState := c.Cookies(oauthStateCookieName)
+
+	// Clear the state cookie immediately (one-time use)
+	c.Cookie(&fiber.Cookie{
+		Name:     oauthStateCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1, // Delete cookie
+		HTTPOnly: true,
+	})
+
+	if state == "" || storedState == "" || state != storedState {
+		log.Printf("[Auth] CSRF validation failed: state mismatch (received=%s, stored=%s)", state, storedState)
+		return c.Redirect(h.frontendURL+"/login?error=csrf_validation_failed", fiber.StatusTemporaryRedirect)
 	}
 
 	// Exchange code for token

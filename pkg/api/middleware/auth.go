@@ -86,3 +86,26 @@ func WebSocketUpgrade() fiber.Handler {
 		return c.Next()
 	}
 }
+
+// ValidateJWT validates a JWT token string and returns the claims
+// Used for WebSocket connections where token is passed via query param
+func ValidateJWT(tokenString, secret string) (*UserClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, jwt.ErrTokenUnverifiable
+	}
+
+	claims, ok := token.Claims.(*UserClaims)
+	if !ok {
+		return nil, jwt.ErrTokenInvalidClaims
+	}
+
+	return claims, nil
+}

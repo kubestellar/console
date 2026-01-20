@@ -53,12 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout])
 
   const login = useCallback(() => {
-    // In demo mode, bypass OAuth and set mock credentials directly
-    // Check env var OR detect Netlify domain (for when env var isn't set)
-    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
-      window.location.hostname.includes('netlify.app')
+    // SECURITY: Demo mode ONLY enabled via explicit environment variable
+    // NEVER auto-detect based on hostname - that's a security vulnerability
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
     if (isDemoMode) {
+      // Demo mode provides read-only viewer access, not admin
       localStorage.setItem('token', 'demo-token')
       setTokenState('demo-token')
       setUser({
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         github_login: 'demo-user',
         email: 'demo@example.com',
         avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
-        role: 'admin',
+        role: 'viewer', // Demo users get viewer role, not admin
         onboarded: true,
       })
       return

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -766,8 +767,74 @@ func getString(m map[string]interface{}, key string) string {
 	return ""
 }
 
+// gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
+const gitOpsTempDirPrefix = "/tmp/gitops-"
+
+// validateRepoURL validates that a repository URL is safe to clone
+// SECURITY: Prevents command injection and malformed URLs
+func validateRepoURL(repoURL string) error {
+	if repoURL == "" {
+		return fmt.Errorf("repository URL is required")
+	}
+
+	// Only allow https:// and git@ (SSH) URLs
+	if !strings.HasPrefix(repoURL, "https://") && !strings.HasPrefix(repoURL, "git@") {
+		return fmt.Errorf("only HTTPS and SSH git URLs are allowed")
+	}
+
+	// Block URLs with shell metacharacters
+	dangerousChars := []string{";", "|", "&", "$", "`", "(", ")", "{", "}", "<", ">", "\\", "'", "\"", "\n", "\r"}
+	for _, char := range dangerousChars {
+		if strings.Contains(repoURL, char) {
+			return fmt.Errorf("invalid characters in repository URL")
+		}
+	}
+
+	// Block file:// URLs which could be used for local file access
+	if strings.Contains(strings.ToLower(repoURL), "file://") {
+		return fmt.Errorf("file:// URLs are not allowed")
+	}
+
+	return nil
+}
+
+// validateBranchName validates that a branch name is safe
+func validateBranchName(branch string) error {
+	if branch == "" {
+		return nil // Empty branch is OK - git will use default
+	}
+
+	// Only allow alphanumeric, -, _, /, .
+	for _, char := range branch {
+		if !((char >= 'a' && char <= 'z') ||
+			(char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') ||
+			char == '-' || char == '_' || char == '/' || char == '.') {
+			return fmt.Errorf("invalid character in branch name: %c", char)
+		}
+	}
+
+	// Block dangerous patterns
+	if strings.HasPrefix(branch, "-") {
+		return fmt.Errorf("branch name cannot start with '-'")
+	}
+	if strings.Contains(branch, "..") {
+		return fmt.Errorf("branch name cannot contain '..'")
+	}
+
+	return nil
+}
+
 func cloneRepo(ctx context.Context, repoURL, branch string) (string, error) {
-	tempDir := fmt.Sprintf("/tmp/gitops-%d", time.Now().UnixNano())
+	// SECURITY: Validate inputs before executing
+	if err := validateRepoURL(repoURL); err != nil {
+		return "", fmt.Errorf("invalid repository URL: %w", err)
+	}
+	if err := validateBranchName(branch); err != nil {
+		return "", fmt.Errorf("invalid branch name: %w", err)
+	}
+
+	tempDir := fmt.Sprintf("%s%d", gitOpsTempDirPrefix, time.Now().UnixNano())
 
 	args := []string{"clone", "--depth", "1"}
 	if branch != "" {
@@ -796,8 +863,25 @@ func isKustomizeDir(path string) bool {
 	return cmd.Run() == nil
 }
 
+// cleanupTempDir safely removes a temporary directory
+// SECURITY: Validates the path is within expected temp directory to prevent path traversal
 func cleanupTempDir(dir string) {
-	exec.Command("rm", "-rf", dir).Run()
+	// Only remove directories that match our expected pattern
+	if !strings.HasPrefix(dir, gitOpsTempDirPrefix) {
+		log.Printf("SECURITY: Refused to delete directory outside gitops temp prefix: %s", dir)
+		return
+	}
+
+	// Additional validation: ensure no path traversal
+	if strings.Contains(dir, "..") {
+		log.Printf("SECURITY: Refused to delete directory with path traversal: %s", dir)
+		return
+	}
+
+	// Use os.RemoveAll instead of shell command for safety
+	if err := os.RemoveAll(dir); err != nil {
+		log.Printf("Warning: Failed to cleanup temp directory %s: %v", dir, err)
+	}
 }
 
 func parseDiffOutput(output, namespace string) []DriftedResource {

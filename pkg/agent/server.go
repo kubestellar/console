@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -19,14 +21,24 @@ type Config struct {
 	Kubeconfig string
 }
 
+// AllowedOrigins for WebSocket connections (can be extended via env var)
+var defaultAllowedOrigins = []string{
+	"http://localhost",
+	"https://localhost",
+	"http://127.0.0.1",
+	"https://127.0.0.1",
+}
+
 // Server is the local agent WebSocket server
 type Server struct {
-	config     Config
-	upgrader   websocket.Upgrader
-	kubectl    *KubectlProxy
-	claude     *ClaudeDetector
-	clients    map[*websocket.Conn]bool
-	clientsMux sync.RWMutex
+	config         Config
+	upgrader       websocket.Upgrader
+	kubectl        *KubectlProxy
+	claude         *ClaudeDetector
+	clients        map[*websocket.Conn]bool
+	clientsMux     sync.RWMutex
+	allowedOrigins []string
+	agentToken     string // Optional shared secret for authentication
 }
 
 // NewServer creates a new agent server
@@ -36,18 +48,85 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to initialize kubectl proxy: %w", err)
 	}
 
-	return &Server{
-		config: cfg,
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				// Allow connections from any origin (localhost only)
-				return true
-			},
-		},
-		kubectl: kubectl,
-		claude:  NewClaudeDetector(),
-		clients: make(map[*websocket.Conn]bool),
-	}, nil
+	// Build allowed origins list
+	allowedOrigins := append([]string{}, defaultAllowedOrigins...)
+
+	// Add custom origins from environment variable (comma-separated)
+	if extraOrigins := os.Getenv("KKC_ALLOWED_ORIGINS"); extraOrigins != "" {
+		for _, origin := range strings.Split(extraOrigins, ",") {
+			origin = strings.TrimSpace(origin)
+			if origin != "" {
+				allowedOrigins = append(allowedOrigins, origin)
+			}
+		}
+	}
+
+	// Optional shared secret for authentication
+	agentToken := os.Getenv("KKC_AGENT_TOKEN")
+	if agentToken != "" {
+		log.Println("Agent token authentication enabled")
+	}
+
+	server := &Server{
+		config:         cfg,
+		kubectl:        kubectl,
+		claude:         NewClaudeDetector(),
+		clients:        make(map[*websocket.Conn]bool),
+		allowedOrigins: allowedOrigins,
+		agentToken:     agentToken,
+	}
+
+	server.upgrader = websocket.Upgrader{
+		CheckOrigin: server.checkOrigin,
+	}
+
+	return server, nil
+}
+
+// checkOrigin validates the Origin header against allowed origins
+// SECURITY: This prevents malicious websites from connecting to the local agent
+func (s *Server) checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+
+	// No origin header (e.g., same-origin request, curl, etc.) - allow
+	if origin == "" {
+		return true
+	}
+
+	// Check against allowed origins
+	for _, allowed := range s.allowedOrigins {
+		// Match origin prefix (e.g., "http://localhost" matches "http://localhost:5174")
+		if strings.HasPrefix(origin, allowed) {
+			return true
+		}
+	}
+
+	log.Printf("SECURITY: Rejected WebSocket connection from unauthorized origin: %s", origin)
+	return false
+}
+
+// validateToken checks the authentication token (if configured)
+func (s *Server) validateToken(r *http.Request) bool {
+	// If no token configured, skip token validation
+	if s.agentToken == "" {
+		return true
+	}
+
+	// Check Authorization header first
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token == s.agentToken {
+			return true
+		}
+	}
+
+	// Check query parameter as fallback (for WebSocket connections)
+	if r.URL.Query().Get("token") == s.agentToken {
+		return true
+	}
+
+	return false
 }
 
 // Start starts the agent server
@@ -89,17 +168,24 @@ func (s *Server) Start() error {
 
 // handleHealth handles HTTP health checks
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	// CORS headers including Private Network Access for browser security
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// CORS headers - only allow configured origins
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Content-Type", "application/json")
 
 	// Handle preflight
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+
+	// Health endpoint doesn't require token auth (used for discovery)
+	// but does enforce origin checks via CORS
 
 	clusters, _ := s.kubectl.ListContexts()
 	hasClaude := s.checkClaudeAvailable()
@@ -115,15 +201,38 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(payload)
 }
 
+// isAllowedOrigin checks if the origin is in the allowed list
+func (s *Server) isAllowedOrigin(origin string) bool {
+	if origin == "" {
+		return false
+	}
+	for _, allowed := range s.allowedOrigins {
+		if strings.HasPrefix(origin, allowed) {
+			return true
+		}
+	}
+	return false
+}
+
 // handleClustersHTTP returns the list of kubeconfig contexts
 func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization")
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token for data endpoints
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -134,14 +243,23 @@ func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleRenameContextHTTP renames a kubeconfig context
 func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// SECURITY: Validate token for mutation endpoints
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -176,6 +294,13 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 
 // handleWebSocket handles WebSocket connections
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Validate token if configured
+	if !s.validateToken(r) {
+		log.Printf("SECURITY: Rejected WebSocket connection - invalid or missing token")
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade failed: %v", err)
@@ -193,7 +318,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.clientsMux.Unlock()
 	}()
 
-	log.Printf("Client connected: %s", conn.RemoteAddr())
+	log.Printf("Client connected: %s (origin: %s)", conn.RemoteAddr(), r.Header.Get("Origin"))
 
 	for {
 		var msg protocol.Message
