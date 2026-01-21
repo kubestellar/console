@@ -47,22 +47,18 @@ jobs:
       - name: Run Claude Code
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # Extract issue details
-          ISSUE_TITLE="${{ github.event.issue.title }}"
-          ISSUE_BODY=$(cat <<'EOF'
-          ${{ github.event.issue.body }}
-          EOF
-          )
-
           # Create prompt file for Claude Code
-          cat > /tmp/claude-prompt.txt <<'PROMPT'
+          cat > /tmp/claude-prompt.txt <<EOF
 You are fixing a bug or implementing a feature request for the KubeStellar Console project.
 
-Issue #${{ github.event.issue.number }}: $ISSUE_TITLE
+Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}
 
 Description:
-$ISSUE_BODY
+${ISSUE_BODY}
 
 Instructions:
 1. Analyze the codebase to understand the issue
@@ -80,11 +76,7 @@ The project structure:
 - /pkg/models: Data models
 
 Please implement the fix now.
-PROMPT
-
-          # Substitute variables in prompt
-          sed -i "s/\$ISSUE_TITLE/$ISSUE_TITLE/g" /tmp/claude-prompt.txt
-          sed -i "s/\$ISSUE_BODY/$ISSUE_BODY/g" /tmp/claude-prompt.txt
+EOF
 
           # Run Claude Code in non-interactive mode
           echo "$(cat /tmp/claude-prompt.txt)" | claude-code --non-interactive || true
