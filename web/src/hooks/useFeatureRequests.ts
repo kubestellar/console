@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 
+// Check if user is in demo mode (demo-token)
+function isDemoUser(): boolean {
+  const token = localStorage.getItem('token')
+  return token === 'demo-token'
+}
+
 // Types
 export type RequestType = 'bug' | 'feature'
-export type RequestStatus = 'submitted' | 'open' | 'in_progress' | 'pr_ready' | 'preview_available' | 'closed'
+export type RequestStatus = 'open' | 'needs_triage' | 'triage_accepted' | 'feasibility_study' | 'fix_ready' | 'fix_complete' | 'unable_to_fix' | 'closed'
 export type FeedbackType = 'positive' | 'negative'
-export type NotificationType = 'issue_created' | 'pr_created' | 'preview_ready' | 'pr_merged' | 'pr_closed' | 'feedback_received'
+export type NotificationType = 'issue_created' | 'triage_accepted' | 'feasibility_study' | 'fix_ready' | 'fix_complete' | 'unable_to_fix' | 'closed' | 'feedback_received'
 
 export interface FeatureRequest {
   id: string
@@ -19,6 +25,8 @@ export interface FeatureRequest {
   pr_number?: number
   pr_url?: string
   netlify_preview_url?: string
+  /** Latest comment from GitHub (used for unable_to_fix status) */
+  latest_comment?: string
   created_at: string
   updated_at?: string
 }
@@ -41,6 +49,7 @@ export interface Notification {
   message: string
   read: boolean
   created_at: string
+  action_url?: string // URL to GitHub issue, PR, or preview
 }
 
 export interface CreateFeatureRequestInput {
@@ -56,22 +65,103 @@ export interface SubmitFeedbackInput {
 
 // Status display helpers
 export const STATUS_LABELS: Record<RequestStatus, string> = {
-  submitted: 'Submitted',
   open: 'Open',
-  in_progress: 'In Progress',
-  pr_ready: 'PR Ready',
-  preview_available: 'Preview Available',
+  needs_triage: 'Needs Triage',
+  triage_accepted: 'Triage Accepted',
+  feasibility_study: 'Claude Working',
+  fix_ready: 'Fix Ready',
+  fix_complete: 'Fix Complete',
+  unable_to_fix: 'Needs Human Review',
   closed: 'Closed',
 }
 
 export const STATUS_COLORS: Record<RequestStatus, string> = {
-  submitted: 'bg-gray-500',
   open: 'bg-blue-500',
-  in_progress: 'bg-yellow-500',
-  pr_ready: 'bg-purple-500',
-  preview_available: 'bg-green-500',
+  needs_triage: 'bg-yellow-500',
+  triage_accepted: 'bg-cyan-500',
+  feasibility_study: 'bg-purple-500',
+  fix_ready: 'bg-green-500',
+  fix_complete: 'bg-emerald-500',
+  unable_to_fix: 'bg-orange-500',
   closed: 'bg-gray-400',
 }
+
+export const STATUS_DESCRIPTIONS: Record<RequestStatus, string> = {
+  open: 'Issue created on GitHub',
+  needs_triage: 'Awaiting review by the team',
+  triage_accepted: 'Accepted and queued for AI analysis',
+  feasibility_study: 'Claude is analyzing and working on a fix',
+  fix_ready: 'PR created and ready for review',
+  fix_complete: 'Fix has been merged',
+  unable_to_fix: 'Requires human developer review',
+  closed: 'This request has been closed',
+}
+
+// Demo mode mock data
+const DEMO_FEATURE_REQUESTS: FeatureRequest[] = [
+  {
+    id: 'demo-1',
+    user_id: 'demo-user',
+    title: 'Add dark mode toggle to settings',
+    description: 'Would be great to have a dark mode option in the settings panel.',
+    request_type: 'feature',
+    github_issue_number: 42,
+    github_issue_url: 'https://github.com/kubestellar/console/issues/42',
+    status: 'fix_ready',
+    pr_number: 87,
+    pr_url: 'https://github.com/kubestellar/console/pull/87',
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-2',
+    user_id: 'demo-user',
+    title: 'Dashboard not loading cluster data',
+    description: 'The dashboard shows a loading spinner but never loads the cluster data.',
+    request_type: 'bug',
+    github_issue_number: 56,
+    github_issue_url: 'https://github.com/kubestellar/console/issues/56',
+    status: 'feasibility_study',
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-3',
+    user_id: 'demo-user',
+    title: 'Export dashboard as PDF',
+    description: 'Ability to export the current dashboard view as a PDF document.',
+    request_type: 'feature',
+    github_issue_number: 38,
+    github_issue_url: 'https://github.com/kubestellar/console/issues/38',
+    status: 'fix_complete',
+    pr_number: 72,
+    pr_url: 'https://github.com/kubestellar/console/pull/72',
+    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
+const DEMO_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'demo-notif-1',
+    user_id: 'demo-user',
+    feature_request_id: 'demo-1',
+    notification_type: 'fix_ready',
+    title: 'PR Ready: Add dark mode toggle',
+    message: 'A pull request has been created for your feature request.',
+    read: false,
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    action_url: 'https://github.com/kubestellar/console/pull/87',
+  },
+  {
+    id: 'demo-notif-2',
+    user_id: 'demo-user',
+    feature_request_id: 'demo-3',
+    notification_type: 'fix_complete',
+    title: 'Merged: Export dashboard as PDF',
+    message: 'Your feature request has been implemented and merged.',
+    read: true,
+    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    action_url: 'https://github.com/kubestellar/console/pull/72',
+  },
+]
 
 // Feature Requests Hook
 export function useFeatureRequests() {
@@ -79,8 +169,16 @@ export function useFeatureRequests() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const isDemoMode = isDemoUser()
 
   const loadRequests = useCallback(async () => {
+    // In demo mode, use mock data
+    if (isDemoUser()) {
+      setRequests(DEMO_FEATURE_REQUESTS)
+      setIsLoading(false)
+      return
+    }
     try {
       setIsLoading(true)
       const { data } = await api.get<FeatureRequest[]>('/api/feedback/requests')
@@ -98,8 +196,10 @@ export function useFeatureRequests() {
     loadRequests()
   }, [loadRequests])
 
-  // Polling for status updates (every 30 seconds)
+  // Polling for status updates (every 30 seconds) - skip in demo mode
   useEffect(() => {
+    if (isDemoUser()) return
+
     const interval = setInterval(() => {
       // Only poll if there are pending requests
       const hasPending = requests.some(r =>
@@ -112,6 +212,14 @@ export function useFeatureRequests() {
 
     return () => clearInterval(interval)
   }, [requests, loadRequests])
+
+  // Refresh function with loading indicator (minimum 500ms to show animation)
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true)
+    const minDelay = new Promise(resolve => setTimeout(resolve, 500))
+    await Promise.all([loadRequests(), minDelay])
+    setIsRefreshing(false)
+  }, [loadRequests])
 
   const createRequest = useCallback(async (input: CreateFeatureRequestInput) => {
     try {
@@ -147,15 +255,44 @@ export function useFeatureRequests() {
     }
   }, [])
 
+  const requestUpdate = useCallback(async (requestId: string) => {
+    try {
+      const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/request-update`)
+      // Refresh the request in the list
+      setRequests(prev => prev.map(r => r.id === requestId ? data : r))
+      return data
+    } catch (err) {
+      console.error('Failed to request update:', err)
+      throw err
+    }
+  }, [])
+
+  const closeRequest = useCallback(async (requestId: string) => {
+    try {
+      const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/close`)
+      // Update the request in the list
+      setRequests(prev => prev.map(r => r.id === requestId ? data : r))
+      return data
+    } catch (err) {
+      console.error('Failed to close request:', err)
+      throw err
+    }
+  }, [])
+
   return {
     requests,
     isLoading,
+    isRefreshing,
     error,
     isSubmitting,
+    isDemoMode,
     loadRequests,
+    refresh,
     createRequest,
     getRequest,
     submitFeedback,
+    requestUpdate,
+    closeRequest,
   }
 }
 
@@ -164,9 +301,15 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const pollingRef = useRef<number | null>(null)
 
   const loadNotifications = useCallback(async () => {
+    // In demo mode, use mock data
+    if (isDemoUser()) {
+      setNotifications(DEMO_NOTIFICATIONS)
+      return
+    }
     try {
       const { data } = await api.get<Notification[]>('/api/notifications')
       setNotifications(data || [])
@@ -176,6 +319,11 @@ export function useNotifications() {
   }, [])
 
   const loadUnreadCount = useCallback(async () => {
+    // In demo mode, calculate from mock data
+    if (isDemoUser()) {
+      setUnreadCount(DEMO_NOTIFICATIONS.filter(n => !n.read).length)
+      return
+    }
     try {
       const { data } = await api.get<{ count: number }>('/api/notifications/unread-count')
       setUnreadCount(data.count)
@@ -194,8 +342,10 @@ export function useNotifications() {
     loadAll()
   }, [loadAll])
 
-  // Poll for new notifications every 30 seconds
+  // Poll for new notifications every 30 seconds - skip in demo mode
   useEffect(() => {
+    if (isDemoUser()) return
+
     pollingRef.current = window.setInterval(() => {
       loadUnreadCount()
     }, 30000)
@@ -208,6 +358,14 @@ export function useNotifications() {
   }, [loadUnreadCount])
 
   const markAsRead = useCallback(async (id: string) => {
+    // In demo mode, just update local state
+    if (isDemoUser()) {
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      )
+      setUnreadCount(prev => Math.max(0, prev - 1))
+      return
+    }
     try {
       await api.post(`/api/notifications/${id}/read`)
       setNotifications(prev =>
@@ -221,6 +379,12 @@ export function useNotifications() {
   }, [])
 
   const markAllAsRead = useCallback(async () => {
+    // In demo mode, just update local state
+    if (isDemoUser()) {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      setUnreadCount(0)
+      return
+    }
     try {
       await api.post('/api/notifications/read-all')
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
@@ -231,15 +395,24 @@ export function useNotifications() {
     }
   }, [])
 
+  // Refresh function with loading indicator (minimum 500ms to show animation)
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true)
+    const minDelay = new Promise(resolve => setTimeout(resolve, 500))
+    await Promise.all([loadAll(), minDelay])
+    setIsRefreshing(false)
+  }, [loadAll])
+
   return {
     notifications,
     unreadCount,
     isLoading,
+    isRefreshing,
     loadNotifications,
     loadUnreadCount,
     markAsRead,
     markAllAsRead,
-    refresh: loadAll,
+    refresh,
   }
 }
 
@@ -253,6 +426,7 @@ export function useFeedback() {
     notifications: notifications.notifications,
     unreadCount: notifications.unreadCount,
     notificationsLoading: notifications.isLoading,
+    notificationsRefreshing: notifications.isRefreshing,
     markNotificationAsRead: notifications.markAsRead,
     markAllNotificationsAsRead: notifications.markAllAsRead,
     refreshNotifications: notifications.refresh,
