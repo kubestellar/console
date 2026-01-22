@@ -186,10 +186,20 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     }
 
     return new Promise<void>((resolve, reject) => {
+      // Connection timeout - 5 seconds
+      const timeout = setTimeout(() => {
+        if (wsRef.current) {
+          wsRef.current.close()
+          wsRef.current = null
+        }
+        reject(new Error('CONNECTION_TIMEOUT'))
+      }, 5000)
+
       try {
         wsRef.current = new WebSocket(KKC_AGENT_WS_URL)
 
         wsRef.current.onopen = () => {
+          clearTimeout(timeout)
           console.log('[Missions] Connected to KKC agent')
           // Fetch available agents on connect
           fetchAgents()
@@ -206,15 +216,18 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         }
 
         wsRef.current.onclose = () => {
+          clearTimeout(timeout)
           console.log('[Missions] Connection closed')
           wsRef.current = null
           setAgentsLoading(true) // Reset loading state on disconnect
         }
 
         wsRef.current.onerror = () => {
-          reject(new Error('Failed to connect to KKC agent'))
+          clearTimeout(timeout)
+          reject(new Error('CONNECTION_FAILED'))
         }
       } catch (err) {
+        clearTimeout(timeout)
         reject(err)
       }
     })
@@ -411,17 +424,27 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           agent: selectedAgent || undefined,
         }
       }))
-    }).catch(err => {
+    }).catch(() => {
+      const errorContent = `**Local Agent Not Connected**
+
+The AI missions feature requires the local KKC agent to be running.
+
+**To get started:**
+1. Install the agent: \`brew install kubestellar/tap/kkc-agent\`
+2. Start the agent: \`kkc-agent\`
+3. **[Configure API Keys →](/settings)** for Claude, OpenAI, or Gemini`
+
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
           ...m,
           status: 'failed',
+          currentStep: undefined,
           messages: [
             ...m.messages,
             {
               id: `msg-${Date.now()}`,
               role: 'system',
-              content: `Failed to connect to KKC agent: ${err.message}`,
+              content: errorContent,
               timestamp: new Date(),
             }
           ]
@@ -466,6 +489,23 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           agent: selectedAgent || undefined,
         }
       }))
+    }).catch(() => {
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'failed',
+          currentStep: undefined,
+          messages: [
+            ...m.messages,
+            {
+              id: `msg-${Date.now()}`,
+              role: 'system',
+              content: 'Lost connection to local agent. Please ensure the agent is running and try again.',
+              timestamp: new Date(),
+            }
+          ]
+        } : m
+      ))
     })
   }, [ensureConnection])
 
