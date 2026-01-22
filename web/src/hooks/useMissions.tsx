@@ -220,6 +220,40 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           console.log('[Missions] Connection closed')
           wsRef.current = null
           setAgentsLoading(true) // Reset loading state on disconnect
+
+          // Fail any pending missions that were waiting for a response
+          if (pendingRequests.current.size > 0) {
+            const errorContent = `**Local Agent Not Connected**
+
+The AI missions feature requires the local KKC agent to be running.
+
+**To get started:**
+1. Install the agent: \`brew install kubestellar/tap/kkc-agent\`
+2. Start the agent: \`kkc-agent\`
+3. **[Configure API Keys →](/settings)** for Claude, OpenAI, or Gemini`
+
+            const pendingMissionIds = new Set(pendingRequests.current.values())
+            setMissions(prev => prev.map(m => {
+              if (pendingMissionIds.has(m.id) && m.status === 'running') {
+                return {
+                  ...m,
+                  status: 'failed',
+                  currentStep: undefined,
+                  messages: [
+                    ...m.messages,
+                    {
+                      id: `msg-${Date.now()}-${m.id}`,
+                      role: 'system',
+                      content: errorContent,
+                      timestamp: new Date(),
+                    }
+                  ]
+                }
+              }
+              return m
+            }))
+            pendingRequests.current.clear()
+          }
         }
 
         wsRef.current.onerror = () => {
