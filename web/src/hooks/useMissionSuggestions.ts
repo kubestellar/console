@@ -53,8 +53,8 @@ export function useMissionSuggestions() {
   const { nodes } = useNodes()
   const { pods } = usePods()
 
-  // Get snooze/dismiss state
-  const { isSnoozed, isDismissed } = useSnoozedMissions()
+  // Get snooze/dismiss state - also get the raw lists to trigger reactivity
+  const { isSnoozed, isDismissed, snoozedMissions, dismissedMissions } = useSnoozedMissions()
 
   // Analyze and generate suggestions
   const analyzeAndSuggest = useCallback(() => {
@@ -248,9 +248,10 @@ export function useMissionSuggestions() {
   }, [analyzeAndSuggest])
 
   // Filter out snoozed and dismissed suggestions
+  // Include snoozedMissions and dismissedMissions in deps to trigger re-filter on snooze changes
   const visibleSuggestions = useMemo(() => {
     return suggestions.filter(s => !isSnoozed(s.id) && !isDismissed(s.id))
-  }, [suggestions, isSnoozed, isDismissed])
+  }, [suggestions, isSnoozed, isDismissed, snoozedMissions, dismissedMissions])
 
   // Stats
   const stats = useMemo(() => ({
