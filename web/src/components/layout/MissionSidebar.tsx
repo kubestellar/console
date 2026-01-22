@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   X,
   Send,
@@ -28,6 +28,47 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { useMissions, Mission, MissionStatus } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
+
+// Rotating status messages for agent thinking
+const THINKING_MESSAGES = [
+  'Analyzing clusters...',
+  'Checking resources...',
+  'Reviewing configurations...',
+  'Processing request...',
+  'Generating response...',
+  'Evaluating options...',
+  'Inspecting workloads...',
+  'Gathering data...',
+]
+
+// Animated typing indicator with 3 bouncing dots and optional rotating message
+function TypingIndicator({ showMessage = false }: { showMessage?: boolean }) {
+  const [messageIndex, setMessageIndex] = useState(0)
+
+  // Rotate through messages every 2 seconds
+  useEffect(() => {
+    if (!showMessage) return
+    const interval = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % THINKING_MESSAGES.length)
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [showMessage])
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex items-center gap-1">
+        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+      </div>
+      {showMessage && (
+        <span className="text-xs text-muted-foreground animate-pulse">
+          {THINKING_MESSAGES[messageIndex]}
+        </span>
+      )}
+    </div>
+  )
+}
 
 const STATUS_CONFIG: Record<MissionStatus, { icon: typeof Loader2; color: string; label: string }> = {
   pending: { icon: Clock, color: 'text-yellow-400', label: 'Starting...' },
@@ -119,12 +160,34 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
   const { sendMessage, cancelMission, dismissMission, rateMission } = useMissions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const lastMessageCountRef = useRef(mission.messages.length)
 
-  // Auto-scroll to bottom on new messages
+  // Check if user is at bottom of scroll container
+  const isAtBottom = useCallback(() => {
+    const container = messagesContainerRef.current
+    if (!container) return true
+    const threshold = 50 // pixels from bottom to consider "at bottom"
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+  }, [])
+
+  // Handle scroll events to detect user scrolling
+  const handleScroll = useCallback(() => {
+    setShouldAutoScroll(isAtBottom())
+  }, [isAtBottom])
+
+  // Auto-scroll to bottom only when new messages are added (not on every render)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [mission.messages])
+    const messageCount = mission.messages.length
+    const hasNewMessages = messageCount > lastMessageCountRef.current
+    lastMessageCountRef.current = messageCount
+
+    if (shouldAutoScroll && hasNewMessages) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [mission.messages.length, shouldAutoScroll])
 
   // Focus input when mission becomes active
   useEffect(() => {
@@ -169,7 +232,11 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+      >
         {mission.messages.map((msg) => (
           <div
             key={msg.id}
@@ -212,18 +279,38 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
             </div>
           </div>
         ))}
+
+        {/* Typing indicator when agent is working */}
+        {mission.status === 'running' && (
+          <div className="flex gap-3">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-purple-500/20">
+              <Bot className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="rounded-lg bg-secondary/50 flex items-center gap-2 pr-3">
+              {/* Show rotating messages if no specific currentStep */}
+              <TypingIndicator showMessage={!mission.currentStep} />
+              {mission.currentStep && (
+                <span className="text-xs text-muted-foreground">{mission.currentStep}</span>
+              )}
+              {mission.tokenUsage && mission.tokenUsage.total > 0 && (
+                <span className="text-[10px] text-muted-foreground/70 font-mono">
+                  {mission.tokenUsage.total.toLocaleString()} tokens
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input / Actions */}
       <div className="p-4 border-t border-border flex-shrink-0 bg-card">
         {mission.status === 'running' ? (
-          <div className="flex items-center justify-center gap-2 py-2">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Agent is working...</span>
+          <div className="flex items-center justify-end py-2">
             <button
               onClick={() => cancelMission(mission.id)}
-              className="text-xs text-red-400 hover:text-red-300 ml-2"
+              className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
             >
               Cancel
             </button>
@@ -372,7 +459,7 @@ export function MissionSidebar() {
       // Use separate transitions for smoother animation
       "transition-[width,top,border] duration-300",
       isFullScreen
-        ? "inset-0 border-l-0"
+        ? "inset-0 top-16 border-l-0"
         : "top-16 right-0 bottom-0 w-96 border-l"
     )}>
       {/* Header */}
