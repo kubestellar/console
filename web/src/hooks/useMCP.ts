@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess } from './useLocalAgent'
 import { getDemoMode, useDemoMode } from './useDemoMode'
-import { useAuth } from '../lib/auth'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
 const REFRESH_INTERVAL_MS = 120000
@@ -17,13 +16,17 @@ export interface ClusterInfo {
   source?: string
   nodeCount?: number
   podCount?: number
+  // Total allocatable resources (capacity)
   cpuCores?: number
-  // Memory metrics
   memoryBytes?: number
   memoryGB?: number
-  // Storage metrics
   storageBytes?: number
   storageGB?: number
+  // Resource requests (allocated/used)
+  cpuRequestsMillicores?: number
+  cpuRequestsCores?: number
+  memoryRequestsBytes?: number
+  memoryRequestsGB?: number
   // PVC metrics
   pvcCount?: number
   pvcBoundCount?: number
@@ -48,13 +51,17 @@ export interface ClusterHealth {
   nodeCount: number
   readyNodes: number
   podCount?: number
+  // Total allocatable resources (capacity)
   cpuCores?: number
-  // Memory metrics
   memoryBytes?: number
   memoryGB?: number
-  // Storage metrics
   storageBytes?: number
   storageGB?: number
+  // Resource requests (allocated/used)
+  cpuRequestsMillicores?: number
+  cpuRequestsCores?: number
+  memoryRequestsBytes?: number
+  memoryRequestsGB?: number
   // PVC metrics
   pvcCount?: number
   pvcBoundCount?: number
@@ -73,6 +80,7 @@ export interface ContainerInfo {
   state: 'running' | 'waiting' | 'terminated'
   reason?: string
   message?: string
+  gpuRequested?: number  // Number of GPUs requested by this container
 }
 
 export interface PodInfo {
@@ -315,6 +323,33 @@ export interface PV {
   labels?: Record<string, string>
 }
 
+export interface ResourceQuota {
+  name: string
+  namespace: string
+  cluster?: string
+  hard: Record<string, string>  // Resource limits
+  used: Record<string, string>  // Current usage
+  age?: string
+  labels?: Record<string, string>
+}
+
+export interface LimitRangeItem {
+  type: string  // Pod, Container, PersistentVolumeClaim
+  default?: Record<string, string>
+  defaultRequest?: Record<string, string>
+  max?: Record<string, string>
+  min?: Record<string, string>
+}
+
+export interface LimitRange {
+  name: string
+  namespace: string
+  cluster?: string
+  limits: LimitRangeItem[]
+  age?: string
+  labels?: Record<string, string>
+}
+
 export interface MCPStatus {
   opsClient: {
     available: boolean
@@ -367,6 +402,9 @@ interface ClusterCache {
   isLoading: boolean
   isRefreshing: boolean
   error: string | null
+  consecutiveFailures: number
+  isFailed: boolean
+  lastRefresh: Date | null
 }
 
 // Cache cluster distribution in localStorage to prevent logo flickering on page load
@@ -512,6 +550,9 @@ let clusterCache: ClusterCache = {
   isLoading: storedClusters.length === 0, // Don't show loading if we have cached data
   isRefreshing: false,
   error: null,
+  consecutiveFailures: 0,
+  isFailed: false,
+  lastRefresh: storedClusters.length > 0 ? new Date() : null,
 }
 
 // Subscribers that get notified when cluster data changes
@@ -608,6 +649,9 @@ if (import.meta.hot) {
       isLoading: true,
       isRefreshing: false,
       error: null,
+      consecutiveFailures: 0,
+      isFailed: false,
+      lastRefresh: null,
     }
     clusterSubscribers.clear()
   })
@@ -770,9 +814,11 @@ async function checkHealthProgressively(clusterList: ClusterInfo[]) {
         nodeCount: health.nodeCount,
         podCount: health.podCount,
         cpuCores: health.cpuCores,
+        cpuRequestsCores: health.cpuRequestsCores,
         // Memory/storage metrics
         memoryBytes: health.memoryBytes,
         memoryGB: health.memoryGB,
+        memoryRequestsGB: health.memoryRequestsGB,
         storageBytes: health.storageBytes,
         storageGB: health.storageGB,
         pvcCount: health.pvcCount,
@@ -936,6 +982,9 @@ async function fullFetchClusters() {
         lastUpdated: new Date(),
         isLoading: false,
         isRefreshing: false,
+        consecutiveFailures: 0,
+        isFailed: false,
+        lastRefresh: new Date(),
       })
       // Reset flag before returning - allows subsequent refresh calls
       fetchInProgress = false
@@ -975,14 +1024,21 @@ async function fullFetchClusters() {
       lastUpdated: new Date(),
       isLoading: false,
       isRefreshing: false,
+      consecutiveFailures: 0,
+      isFailed: false,
+      lastRefresh: new Date(),
     })
     fetchInProgress = false
   } catch (err) {
+    const newFailures = clusterCache.consecutiveFailures + 1
     await finishWithMinDuration({
       error: 'Failed to fetch clusters',
-      clusters: getDemoClusters(),
+      clusters: clusterCache.clusters.length > 0 ? clusterCache.clusters : getDemoClusters(),
       isLoading: false,
       isRefreshing: false,
+      consecutiveFailures: newFailures,
+      isFailed: newFailures >= 3,
+      lastRefresh: new Date(),
     })
     fetchInProgress = false
   }
@@ -1012,9 +1068,11 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
       nodeCount: health.nodeCount,
       podCount: health.podCount,
       cpuCores: health.cpuCores,
+      cpuRequestsCores: health.cpuRequestsCores,
       // Memory/storage metrics
       memoryBytes: health.memoryBytes,
       memoryGB: health.memoryGB,
+      memoryRequestsGB: health.memoryRequestsGB,
       storageBytes: health.storageBytes,
       storageGB: health.storageGB,
       pvcCount: health.pvcCount,
@@ -1154,6 +1212,9 @@ export function useClusters() {
     lastUpdated: localState.lastUpdated,
     error: localState.error,
     refetch,
+    consecutiveFailures: localState.consecutiveFailures,
+    isFailed: localState.isFailed,
+    lastRefresh: localState.lastRefresh,
   }
 }
 
@@ -1333,6 +1394,17 @@ export function useAllPods(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoPods = getDemoAllPods().filter(p =>
+        (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
+      )
+      setPods(demoPods)
+      setIsLoading(false)
+      setError(null)
+      setLastUpdated(new Date())
+      return
+    }
     if (!silent) {
       const hasCachedData = podsCache && podsCache.key === cacheKey
       if (!hasCachedData) {
@@ -1355,10 +1427,12 @@ export function useAllPods(cluster?: string, namespace?: string) {
       setError(null)
       setLastUpdated(now)
     } catch (err) {
-      // Keep stale data on error
+      // Keep stale data on error, fallback to demo data if no cache
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
-        setPods(getDemoPods())
+        setPods(getDemoAllPods().filter(p =>
+          (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
+        ))
       }
     } finally {
       if (!silent) {
@@ -1405,6 +1479,8 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -1412,6 +1488,8 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       const hasCachedData = podIssuesCache && podIssuesCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
       }
     }
     try {
@@ -1428,8 +1506,12 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       setIssues(newData)
       setError(null)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
       // Keep stale data, only use demo if no cached data
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent && !podIssuesCache) {
         setError('Failed to fetch pod issues')
         setIssues(getDemoPodIssues())
@@ -1450,7 +1532,17 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { issues, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    issues,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Hook to get events
@@ -1479,6 +1571,8 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -1486,6 +1580,8 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       const hasCachedData = eventsCache && eventsCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
       }
     }
     try {
@@ -1503,8 +1599,12 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setEvents(newData)
       setError(null)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
       // Keep stale data, only use demo if no cached data
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent && !eventsCache) {
         setError('Failed to fetch events')
         setEvents(getDemoEvents())
@@ -1525,7 +1625,17 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    events,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Module-level cache for deployment issues data (persists across navigation)
@@ -1554,6 +1664,8 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -1561,6 +1673,8 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       const hasCachedData = deploymentIssuesCache && deploymentIssuesCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
       }
     }
     try {
@@ -1577,8 +1691,12 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       setIssues(newData)
       setError(null)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
       // Keep stale data, only use demo if no cached data
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent && !deploymentIssuesCache) {
         setError('Failed to fetch deployment issues')
         setIssues(getDemoDeploymentIssues())
@@ -1599,7 +1717,17 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { issues, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    issues,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Module-level cache for deployments data (persists across navigation)
@@ -1628,12 +1756,16 @@ export function useDeployments(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent && (!deploymentsCache || deploymentsCache.key !== cacheKey)) {
       // Only show loading if no cache
       setIsLoading(true)
+    } else if (!silent) {
+      setIsRefreshing(true)
     }
     try {
       const params = new URLSearchParams()
@@ -1645,10 +1777,14 @@ export function useDeployments(cluster?: string, namespace?: string) {
       setError(null)
       const now = new Date()
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
       // Update cache
       deploymentsCache = { data: newDeployments, timestamp: now, key: cacheKey }
     } catch (err) {
       // Only set demo data if no cache exists
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent && !deploymentsCache) {
         setError('Failed to fetch deployments')
         setDeployments(getDemoDeployments())
@@ -1670,7 +1806,17 @@ export function useDeployments(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { deployments, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    deployments,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Module-level cache for services data (persists across navigation)
@@ -1733,14 +1879,31 @@ export function useServices(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoServices = getDemoServices().filter(s =>
+        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+      )
+      setServices(demoServices)
+      setIsLoading(false)
+      setError(null)
+      setLastUpdated(new Date())
+      setConsecutiveFailures(0)
+      setLastRefresh(new Date())
+      return
+    }
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       // Only show loading if we have no data
       const hasCachedData = servicesCache && servicesCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
       }
     }
     try {
@@ -1758,9 +1921,19 @@ export function useServices(cluster?: string, namespace?: string) {
       setServices(newData)
       setError(null)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent) {
         setError('Failed to fetch services')
+        // Fall back to demo data on error if no cached data
+        if (services.length === 0) {
+          setServices(getDemoServices().filter(s =>
+            (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+          ))
+        }
       }
       // Don't clear services on error - keep stale data
     } finally {
@@ -1769,7 +1942,7 @@ export function useServices(cluster?: string, namespace?: string) {
       }
       setIsRefreshing(false)
     }
-  }, [cluster, namespace, cacheKey])
+  }, [cluster, namespace, cacheKey, services.length])
 
   useEffect(() => {
     // If we have cached data, still refresh in background but don't show loading
@@ -1781,7 +1954,17 @@ export function useServices(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { services, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    services,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Hook to get jobs
@@ -1851,6 +2034,16 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoConfigMaps = getDemoConfigMaps().filter(cm =>
+        (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
+      )
+      setConfigMaps(demoConfigMaps)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
@@ -1861,7 +2054,10 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       setError(null)
     } catch (err) {
       setError('Failed to fetch ConfigMaps')
-      setConfigMaps([])
+      // Fallback to demo data on error
+      setConfigMaps(getDemoConfigMaps().filter(cm =>
+        (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -1881,6 +2077,16 @@ export function useSecrets(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoSecrets = getDemoSecrets().filter(s =>
+        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+      )
+      setSecrets(demoSecrets)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
@@ -1891,7 +2097,10 @@ export function useSecrets(cluster?: string, namespace?: string) {
       setError(null)
     } catch (err) {
       setError('Failed to fetch Secrets')
-      setSecrets([])
+      // Fallback to demo data on error
+      setSecrets(getDemoSecrets().filter(s =>
+        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -1911,6 +2120,16 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoSAs = getDemoServiceAccounts().filter(sa =>
+        (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
+      )
+      setServiceAccounts(demoSAs)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
@@ -1921,7 +2140,10 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       setError(null)
     } catch (err) {
       setError('Failed to fetch ServiceAccounts')
-      setServiceAccounts([])
+      // Fallback to demo data on error
+      setServiceAccounts(getDemoServiceAccounts().filter(sa =>
+        (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -1997,6 +2219,17 @@ export function usePVCs(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoPVCs = getDemoPVCs().filter(p =>
+        (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
+      )
+      setPVCs(demoPVCs)
+      setIsLoading(false)
+      setError(null)
+      setLastUpdated(new Date())
+      return
+    }
     if (!silent) {
       const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
       if (!hasCachedData) {
@@ -2019,9 +2252,12 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setError(null)
       setLastUpdated(now)
     } catch (err) {
-      // Keep stale data on error
+      // Keep stale data on error, fallback to demo data if no cache
       if (!silent && !pvcsCache) {
         setError('Failed to fetch PVCs')
+        setPVCs(getDemoPVCs().filter(p =>
+          (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
+        ))
       }
     } finally {
       if (!silent) {
@@ -2072,6 +2308,133 @@ export function usePVs(cluster?: string) {
 
   return { pvs, isLoading, error, refetch }
 }
+
+// Hook to get ResourceQuotas
+export function useResourceQuotas(cluster?: string, namespace?: string) {
+  const [resourceQuotas, setResourceQuotas] = useState<ResourceQuota[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoQuotas = getDemoResourceQuotas().filter(q =>
+        (!cluster || q.cluster === cluster) && (!namespace || q.namespace === namespace)
+      )
+      setResourceQuotas(demoQuotas)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ resourceQuotas: ResourceQuota[] }>(`/api/mcp/resourcequotas?${params}`)
+      setResourceQuotas(data.resourceQuotas || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch ResourceQuotas')
+      // Don't fall back to demo data - show empty instead
+      setResourceQuotas([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace])
+
+  useEffect(() => {
+    refetch()
+    const interval = setInterval(refetch, REFRESH_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [refetch])
+
+  return { resourceQuotas, isLoading, error, refetch }
+}
+
+// Hook to get LimitRanges
+export function useLimitRanges(cluster?: string, namespace?: string) {
+  const [limitRanges, setLimitRanges] = useState<LimitRange[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoRanges = getDemoLimitRanges().filter(lr =>
+        (!cluster || lr.cluster === cluster) && (!namespace || lr.namespace === namespace)
+      )
+      setLimitRanges(demoRanges)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ limitRanges: LimitRange[] }>(`/api/mcp/limitranges?${params}`)
+      setLimitRanges(data.limitRanges || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch LimitRanges')
+      // Don't fall back to demo data - show empty instead
+      setLimitRanges([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace])
+
+  useEffect(() => {
+    refetch()
+    const interval = setInterval(refetch, REFRESH_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [refetch])
+
+  return { limitRanges, isLoading, error, refetch }
+}
+
+// Interface for creating/updating ResourceQuotas
+export interface ResourceQuotaSpec {
+  cluster: string
+  name: string
+  namespace: string
+  hard: Record<string, string>
+  labels?: Record<string, string>
+}
+
+// Create or update a ResourceQuota
+export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Promise<ResourceQuota> {
+  const { data } = await api.post<{ resourceQuota: ResourceQuota }>('/api/mcp/resourcequotas', spec)
+  return data.resourceQuota
+}
+
+// Delete a ResourceQuota
+export async function deleteResourceQuota(cluster: string, namespace: string, name: string): Promise<void> {
+  await api.delete(`/api/mcp/resourcequotas?cluster=${cluster}&namespace=${namespace}&name=${name}`)
+}
+
+// Common GPU resource types for quotas
+export const GPU_RESOURCE_TYPES = [
+  { key: 'requests.nvidia.com/gpu', label: 'NVIDIA GPU Requests', description: 'Maximum GPUs that can be requested' },
+  { key: 'limits.nvidia.com/gpu', label: 'NVIDIA GPU Limits', description: 'Maximum GPU limits allowed' },
+  { key: 'requests.amd.com/gpu', label: 'AMD GPU Requests', description: 'Maximum AMD GPUs that can be requested' },
+  { key: 'limits.amd.com/gpu', label: 'AMD GPU Limits', description: 'Maximum AMD GPU limits allowed' },
+] as const
+
+// Common resource types for quotas
+export const COMMON_RESOURCE_TYPES = [
+  { key: 'requests.cpu', label: 'CPU Requests', description: 'Total CPU requests allowed' },
+  { key: 'limits.cpu', label: 'CPU Limits', description: 'Total CPU limits allowed' },
+  { key: 'requests.memory', label: 'Memory Requests', description: 'Total memory requests allowed' },
+  { key: 'limits.memory', label: 'Memory Limits', description: 'Total memory limits allowed' },
+  { key: 'pods', label: 'Pods', description: 'Maximum number of pods' },
+  { key: 'services', label: 'Services', description: 'Maximum number of services' },
+  { key: 'persistentvolumeclaims', label: 'PVCs', description: 'Maximum number of PVCs' },
+  { key: 'requests.storage', label: 'Storage Requests', description: 'Total storage that can be requested' },
+  ...GPU_RESOURCE_TYPES,
+] as const
 
 // Hook to get pod logs
 export function usePodLogs(cluster: string, namespace: string, pod: string, container?: string, tail = 100) {
@@ -2187,7 +2550,10 @@ interface GPUNodeCache {
   nodes: GPUNode[]
   lastUpdated: Date | null
   isLoading: boolean
+  isRefreshing: boolean
   error: string | null
+  consecutiveFailures: number
+  lastRefresh: Date | null
 }
 
 // Try to restore GPU cache from localStorage for instant display on page load
@@ -2202,14 +2568,17 @@ function loadGPUCacheFromStorage(): GPUNodeCache {
           nodes: parsed.nodes,
           lastUpdated: parsed.lastUpdated ? new Date(parsed.lastUpdated) : null,
           isLoading: false,
+          isRefreshing: false,
           error: null,
+          consecutiveFailures: 0,
+          lastRefresh: parsed.lastUpdated ? new Date(parsed.lastUpdated) : null,
         }
       }
     }
   } catch {
     // Ignore parse errors
   }
-  return { nodes: [], lastUpdated: null, isLoading: false, error: null }
+  return { nodes: [], lastUpdated: null, isLoading: false, isRefreshing: false, error: null, consecutiveFailures: 0, lastRefresh: null }
 }
 
 function saveGPUCacheToStorage(cache: GPUNodeCache) {
@@ -2251,7 +2620,10 @@ async function fetchGPUNodes(cluster?: string) {
       nodes: getDemoGPUNodes(),
       lastUpdated: new Date(),
       isLoading: false,
+      isRefreshing: false,
       error: null,
+      consecutiveFailures: 0,
+      lastRefresh: new Date(),
     })
     return
   }
@@ -2259,9 +2631,11 @@ async function fetchGPUNodes(cluster?: string) {
   if (gpuFetchInProgress) return
   gpuFetchInProgress = true
 
-  // Only show loading if we have no cached data
+  // Show loading only if no cached data, otherwise show refreshing
   if (gpuNodeCache.nodes.length === 0) {
-    updateGPUNodeCache({ isLoading: true })
+    updateGPUNodeCache({ isLoading: true, isRefreshing: false })
+  } else {
+    updateGPUNodeCache({ isLoading: false, isRefreshing: true })
   }
 
   try {
@@ -2276,27 +2650,43 @@ async function fetchGPUNodes(cluster?: string) {
       updateGPUNodeCache({
         lastUpdated: new Date(),
         isLoading: false,
+        isRefreshing: false,
         error: null,
+        consecutiveFailures: 0,
+        lastRefresh: new Date(),
       })
     } else {
       updateGPUNodeCache({
         nodes: newNodes,
         lastUpdated: new Date(),
         isLoading: false,
+        isRefreshing: false,
         error: null,
+        consecutiveFailures: 0,
+        lastRefresh: new Date(),
       })
     }
   } catch (err) {
+    const newFailures = gpuNodeCache.consecutiveFailures + 1
     // On error, preserve existing cached data or use demo data
     if (gpuNodeCache.nodes.length === 0) {
       updateGPUNodeCache({
         nodes: getDemoGPUNodes(),
         isLoading: false,
+        isRefreshing: false,
         error: 'Failed to fetch GPU nodes',
+        consecutiveFailures: newFailures,
+        lastRefresh: new Date(),
       })
     } else {
       // Preserve existing cache on error
-      updateGPUNodeCache({ isLoading: false, error: 'Failed to refresh GPU nodes' })
+      updateGPUNodeCache({
+        isLoading: false,
+        isRefreshing: false,
+        error: 'Failed to refresh GPU nodes',
+        consecutiveFailures: newFailures,
+        lastRefresh: new Date(),
+      })
     }
   } finally {
     gpuFetchInProgress = false
@@ -2336,8 +2726,12 @@ export function useGPUNodes(cluster?: string) {
   return {
     nodes: filteredNodes,
     isLoading: state.isLoading,
+    isRefreshing: state.isRefreshing,
     error: state.error,
     refetch,
+    consecutiveFailures: state.consecutiveFailures,
+    isFailed: state.consecutiveFailures >= 3,
+    lastRefresh: state.lastRefresh,
   }
 }
 
@@ -2348,6 +2742,14 @@ export function useNodes(cluster?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoNodes = getDemoNodes().filter(n => !cluster || n.cluster === cluster)
+      setNodes(demoNodes)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     try {
       const params = new URLSearchParams()
@@ -2357,7 +2759,8 @@ export function useNodes(cluster?: string) {
       setError(null)
     } catch (err) {
       setError('Failed to fetch nodes')
-      setNodes([])
+      // Fall back to demo data on error
+      setNodes(getDemoNodes().filter(n => !cluster || n.cluster === cluster))
     } finally {
       setIsLoading(false)
     }
@@ -3097,4 +3500,884 @@ function getDemoEvents(): ClusterEvent[] {
       count: 8,
     },
   ]
+}
+
+function getDemoNodes(): NodeInfo[] {
+  return [
+    {
+      name: 'node-1',
+      cluster: 'prod-east',
+      status: 'Ready',
+      roles: ['control-plane', 'master'],
+      internalIP: '10.0.1.10',
+      kubeletVersion: 'v1.28.4',
+      containerRuntime: 'containerd://1.6.24',
+      os: 'Ubuntu 22.04.3 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '8',
+      memoryCapacity: '32Gi',
+      storageCapacity: '200Gi',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      labels: { 'node-role.kubernetes.io/control-plane': '' },
+      taints: ['node-role.kubernetes.io/control-plane:NoSchedule'],
+      age: '45d',
+      unschedulable: false,
+    },
+    {
+      name: 'node-2',
+      cluster: 'prod-east',
+      status: 'Ready',
+      roles: ['worker'],
+      internalIP: '10.0.1.11',
+      kubeletVersion: 'v1.28.4',
+      containerRuntime: 'containerd://1.6.24',
+      os: 'Ubuntu 22.04.3 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '16',
+      memoryCapacity: '64Gi',
+      storageCapacity: '500Gi',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      labels: { 'node.kubernetes.io/instance-type': 'm5.4xlarge' },
+      age: '45d',
+      unschedulable: false,
+    },
+    {
+      name: 'gpu-node-1',
+      cluster: 'vllm-d',
+      status: 'Ready',
+      roles: ['worker'],
+      internalIP: '10.0.2.20',
+      kubeletVersion: 'v1.28.4',
+      containerRuntime: 'containerd://1.6.24',
+      os: 'Ubuntu 22.04.3 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '32',
+      memoryCapacity: '128Gi',
+      storageCapacity: '1Ti',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      labels: { 'nvidia.com/gpu': 'true', 'node.kubernetes.io/instance-type': 'p3.8xlarge' },
+      age: '30d',
+      unschedulable: false,
+    },
+    {
+      name: 'kind-control-plane',
+      cluster: 'kind-local',
+      status: 'Ready',
+      roles: ['control-plane'],
+      internalIP: '172.18.0.2',
+      kubeletVersion: 'v1.27.3',
+      containerRuntime: 'containerd://1.7.1',
+      os: 'Ubuntu 22.04.2 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '4',
+      memoryCapacity: '8Gi',
+      storageCapacity: '50Gi',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      age: '7d',
+      unschedulable: false,
+    },
+  ]
+}
+
+function getDemoServices(): Service[] {
+  return [
+    { name: 'kubernetes', namespace: 'default', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.0.1', ports: ['443/TCP'], age: '45d' },
+    { name: 'api-gateway', namespace: 'production', cluster: 'prod-east', type: 'LoadBalancer', clusterIP: '10.96.10.50', externalIP: '52.14.123.45', ports: ['80/TCP', '443/TCP'], age: '30d' },
+    { name: 'frontend', namespace: 'web', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.20.100', ports: ['3000/TCP'], age: '25d' },
+    { name: 'postgres', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.10', ports: ['5432/TCP'], age: '40d' },
+    { name: 'redis', namespace: 'data', cluster: 'prod-east', type: 'ClusterIP', clusterIP: '10.96.30.20', ports: ['6379/TCP'], age: '40d' },
+    { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.40.10', ports: ['9090/TCP'], age: '20d' },
+    { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], age: '20d' },
+    { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], age: '15d' },
+  ]
+}
+
+function getDemoPVCs(): PVC[] {
+  return [
+    { name: 'postgres-data', namespace: 'data', cluster: 'prod-east', status: 'Bound', storageClass: 'gp3', capacity: '100Gi', accessModes: ['ReadWriteOnce'], volumeName: 'pvc-abc123', age: '40d' },
+    { name: 'redis-data', namespace: 'data', cluster: 'prod-east', status: 'Bound', storageClass: 'gp3', capacity: '20Gi', accessModes: ['ReadWriteOnce'], volumeName: 'pvc-def456', age: '40d' },
+    { name: 'prometheus-data', namespace: 'monitoring', cluster: 'staging', status: 'Bound', storageClass: 'standard', capacity: '50Gi', accessModes: ['ReadWriteOnce'], volumeName: 'pvc-ghi789', age: '20d' },
+    { name: 'grafana-data', namespace: 'monitoring', cluster: 'staging', status: 'Bound', storageClass: 'standard', capacity: '10Gi', accessModes: ['ReadWriteOnce'], volumeName: 'pvc-jkl012', age: '20d' },
+    { name: 'model-cache', namespace: 'ml', cluster: 'vllm-d', status: 'Bound', storageClass: 'fast-ssd', capacity: '500Gi', accessModes: ['ReadWriteMany'], volumeName: 'pvc-mno345', age: '15d' },
+    { name: 'training-data', namespace: 'ml', cluster: 'vllm-d', status: 'Pending', storageClass: 'fast-ssd', capacity: '1Ti', accessModes: ['ReadWriteMany'], age: '1d' },
+    { name: 'logs-archive', namespace: 'logging', cluster: 'prod-east', status: 'Bound', storageClass: 'cold-storage', capacity: '200Gi', accessModes: ['ReadWriteOnce'], volumeName: 'pvc-pqr678', age: '60d' },
+  ]
+}
+
+function getDemoConfigMaps(): ConfigMap[] {
+  return [
+    { name: 'kube-root-ca.crt', namespace: 'default', cluster: 'prod-east', dataCount: 1, age: '45d' },
+    { name: 'app-config', namespace: 'production', cluster: 'prod-east', dataCount: 5, age: '30d' },
+    { name: 'nginx-config', namespace: 'web', cluster: 'prod-east', dataCount: 3, age: '25d' },
+    { name: 'prometheus-config', namespace: 'monitoring', cluster: 'staging', dataCount: 2, age: '20d' },
+    { name: 'grafana-dashboards', namespace: 'monitoring', cluster: 'staging', dataCount: 12, age: '20d' },
+    { name: 'model-config', namespace: 'ml', cluster: 'vllm-d', dataCount: 8, age: '15d' },
+    { name: 'coredns', namespace: 'kube-system', cluster: 'kind-local', dataCount: 2, age: '7d' },
+  ]
+}
+
+function getDemoSecrets(): Secret[] {
+  return [
+    { name: 'default-token', namespace: 'default', cluster: 'prod-east', type: 'kubernetes.io/service-account-token', dataCount: 3, age: '45d' },
+    { name: 'db-credentials', namespace: 'data', cluster: 'prod-east', type: 'Opaque', dataCount: 2, age: '40d' },
+    { name: 'tls-cert', namespace: 'production', cluster: 'prod-east', type: 'kubernetes.io/tls', dataCount: 2, age: '30d' },
+    { name: 'api-keys', namespace: 'production', cluster: 'prod-east', type: 'Opaque', dataCount: 4, age: '30d' },
+    { name: 'grafana-admin', namespace: 'monitoring', cluster: 'staging', type: 'Opaque', dataCount: 1, age: '20d' },
+    { name: 'ml-api-token', namespace: 'ml', cluster: 'vllm-d', type: 'Opaque', dataCount: 1, age: '15d' },
+    { name: 'registry-credentials', namespace: 'default', cluster: 'kind-local', type: 'kubernetes.io/dockerconfigjson', dataCount: 1, age: '7d' },
+  ]
+}
+
+function getDemoServiceAccounts(): ServiceAccount[] {
+  return [
+    { name: 'default', namespace: 'default', cluster: 'prod-east', secrets: ['default-token'], age: '45d' },
+    { name: 'api-server', namespace: 'production', cluster: 'prod-east', secrets: ['api-server-token'], imagePullSecrets: ['registry-credentials'], age: '30d' },
+    { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', secrets: ['prometheus-token'], age: '20d' },
+    { name: 'grafana', namespace: 'monitoring', cluster: 'staging', secrets: ['grafana-token'], age: '20d' },
+    { name: 'ml-worker', namespace: 'ml', cluster: 'vllm-d', secrets: ['ml-worker-token'], imagePullSecrets: ['registry-credentials'], age: '15d' },
+    { name: 'default', namespace: 'kube-system', cluster: 'kind-local', secrets: ['default-token'], age: '7d' },
+  ]
+}
+
+function getDemoAllPods(): PodInfo[] {
+  // Returns pods across all clusters for useAllPods
+  return [
+    ...getDemoPods(),
+    { name: 'ml-inference-0', namespace: 'ml', cluster: 'vllm-d', status: 'Running', ready: '1/1', restarts: 0, age: '5d', node: 'gpu-node-1' },
+    { name: 'ml-inference-1', namespace: 'ml', cluster: 'vllm-d', status: 'Running', ready: '1/1', restarts: 0, age: '5d', node: 'gpu-node-1' },
+    { name: 'model-server-0', namespace: 'ml', cluster: 'vllm-d', status: 'Running', ready: '2/2', restarts: 1, age: '10d', node: 'gpu-node-1' },
+    { name: 'training-job-abc', namespace: 'ml', cluster: 'vllm-d', status: 'Running', ready: '1/1', restarts: 0, age: '1d', node: 'gpu-node-1' },
+  ]
+}
+
+function getDemoResourceQuotas(): ResourceQuota[] {
+  return [
+    {
+      name: 'compute-quota',
+      namespace: 'production',
+      cluster: 'prod-east',
+      hard: { 'requests.cpu': '10', 'requests.memory': '20Gi', 'limits.cpu': '20', 'limits.memory': '40Gi', pods: '50' },
+      used: { 'requests.cpu': '5', 'requests.memory': '10Gi', 'limits.cpu': '8', 'limits.memory': '16Gi', pods: '25' },
+      age: '30d'
+    },
+    {
+      name: 'storage-quota',
+      namespace: 'data',
+      cluster: 'prod-east',
+      hard: { 'requests.storage': '500Gi', persistentvolumeclaims: '10' },
+      used: { 'requests.storage': '320Gi', persistentvolumeclaims: '5' },
+      age: '40d'
+    },
+    {
+      name: 'ml-quota',
+      namespace: 'ml',
+      cluster: 'vllm-d',
+      hard: { 'requests.cpu': '100', 'requests.memory': '200Gi', 'limits.cpu': '200', 'limits.memory': '400Gi', 'requests.nvidia.com/gpu': '8', pods: '20' },
+      used: { 'requests.cpu': '64', 'requests.memory': '128Gi', 'limits.cpu': '128', 'limits.memory': '256Gi', 'requests.nvidia.com/gpu': '4', pods: '8' },
+      age: '15d'
+    },
+    {
+      name: 'default-quota',
+      namespace: 'default',
+      cluster: 'staging',
+      hard: { 'requests.cpu': '4', 'requests.memory': '8Gi', 'limits.cpu': '8', 'limits.memory': '16Gi', pods: '20' },
+      used: { 'requests.cpu': '1', 'requests.memory': '2Gi', 'limits.cpu': '2', 'limits.memory': '4Gi', pods: '5' },
+      age: '60d'
+    },
+  ]
+}
+
+function getDemoLimitRanges(): LimitRange[] {
+  return [
+    {
+      name: 'container-limits',
+      namespace: 'production',
+      cluster: 'prod-east',
+      limits: [
+        {
+          type: 'Container',
+          default: { cpu: '500m', memory: '512Mi' },
+          defaultRequest: { cpu: '100m', memory: '128Mi' },
+          max: { cpu: '2', memory: '4Gi' },
+          min: { cpu: '50m', memory: '64Mi' }
+        }
+      ],
+      age: '30d'
+    },
+    {
+      name: 'pod-limits',
+      namespace: 'ml',
+      cluster: 'vllm-d',
+      limits: [
+        {
+          type: 'Container',
+          default: { cpu: '1', memory: '2Gi' },
+          defaultRequest: { cpu: '500m', memory: '1Gi' },
+          max: { cpu: '16', memory: '64Gi' },
+          min: { cpu: '100m', memory: '256Mi' }
+        },
+        {
+          type: 'Pod',
+          max: { cpu: '32', memory: '128Gi' }
+        }
+      ],
+      age: '15d'
+    },
+    {
+      name: 'storage-limits',
+      namespace: 'data',
+      cluster: 'prod-east',
+      limits: [
+        {
+          type: 'PersistentVolumeClaim',
+          max: { storage: '100Gi' },
+          min: { storage: '1Gi' }
+        }
+      ],
+      age: '40d'
+    },
+  ]
+}
+
+// ============================================
+// RBAC Hooks - Roles and RoleBindings
+// ============================================
+
+// K8s role type (mirrors backend model)
+export interface K8sRole {
+  name: string
+  namespace?: string
+  cluster: string
+  isCluster: boolean
+  ruleCount: number
+}
+
+// K8s role binding type
+export interface K8sRoleBinding {
+  name: string
+  namespace?: string
+  cluster: string
+  isCluster: boolean
+  roleName: string
+  roleKind: string
+  subjects: Array<{
+    kind: 'User' | 'Group' | 'ServiceAccount'
+    name: string
+    namespace?: string
+  }>
+}
+
+// K8s service account type (for RBAC)
+export interface K8sServiceAccountInfo {
+  name: string
+  namespace: string
+  cluster: string
+  secrets?: string[]
+  roles?: string[]
+  createdAt?: string
+}
+
+// Demo RBAC data for when demo mode is enabled
+function getDemoK8sRoles(cluster?: string): K8sRole[] {
+  const roles: K8sRole[] = [
+    { name: 'admin', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 12 },
+    { name: 'edit', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 8 },
+    { name: 'view', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 4 },
+    { name: 'pod-reader', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 2 },
+    { name: 'cluster-admin', cluster: 'prod-east', isCluster: true, ruleCount: 20 },
+    { name: 'cluster-view', cluster: 'prod-east', isCluster: true, ruleCount: 6 },
+    { name: 'admin', cluster: 'staging', namespace: 'default', isCluster: false, ruleCount: 12 },
+    { name: 'developer', cluster: 'staging', namespace: 'development', isCluster: false, ruleCount: 10 },
+    { name: 'cluster-admin', cluster: 'staging', isCluster: true, ruleCount: 20 },
+  ]
+  return cluster ? roles.filter(r => r.cluster === cluster) : roles
+}
+
+function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBinding[] {
+  const bindings: K8sRoleBinding[] = [
+    {
+      name: 'admin-binding',
+      cluster: 'prod-east',
+      namespace: 'default',
+      isCluster: false,
+      roleName: 'admin',
+      roleKind: 'Role',
+      subjects: [
+        { kind: 'User', name: 'admin-user' },
+        { kind: 'Group', name: 'ops-team' },
+      ],
+    },
+    {
+      name: 'developer-binding',
+      cluster: 'prod-east',
+      namespace: 'default',
+      isCluster: false,
+      roleName: 'edit',
+      roleKind: 'Role',
+      subjects: [{ kind: 'Group', name: 'dev-team' }],
+    },
+    {
+      name: 'readonly-binding',
+      cluster: 'prod-east',
+      namespace: 'default',
+      isCluster: false,
+      roleName: 'view',
+      roleKind: 'Role',
+      subjects: [{ kind: 'User', name: 'viewer' }],
+    },
+    {
+      name: 'cluster-admin-binding',
+      cluster: 'prod-east',
+      isCluster: true,
+      roleName: 'cluster-admin',
+      roleKind: 'ClusterRole',
+      subjects: [{ kind: 'User', name: 'super-admin' }],
+    },
+    {
+      name: 'admin-binding',
+      cluster: 'staging',
+      namespace: 'default',
+      isCluster: false,
+      roleName: 'admin',
+      roleKind: 'Role',
+      subjects: [{ kind: 'ServiceAccount', name: 'deployer', namespace: 'default' }],
+    },
+  ]
+
+  let result = bindings
+  if (cluster) result = result.filter(b => b.cluster === cluster)
+  if (namespace) result = result.filter(b => b.namespace === namespace || b.isCluster)
+  return result
+}
+
+function getDemoK8sServiceAccounts(cluster?: string, namespace?: string): K8sServiceAccountInfo[] {
+  const sas: K8sServiceAccountInfo[] = [
+    { name: 'default', namespace: 'default', cluster: 'prod-east', secrets: ['default-token'] },
+    { name: 'deployer', namespace: 'default', cluster: 'prod-east', secrets: ['deployer-token'], roles: ['admin'] },
+    { name: 'monitoring', namespace: 'monitoring', cluster: 'prod-east', secrets: ['monitoring-token'], roles: ['view'] },
+    { name: 'default', namespace: 'default', cluster: 'staging', secrets: ['default-token'] },
+    { name: 'ci-bot', namespace: 'ci-cd', cluster: 'staging', secrets: ['ci-bot-token'], roles: ['edit'] },
+  ]
+
+  let result = sas
+  if (cluster) result = result.filter(s => s.cluster === cluster)
+  if (namespace) result = result.filter(s => s.namespace === namespace)
+  return result
+}
+
+// Hook to fetch K8s roles from a cluster
+export function useK8sRoles(cluster?: string, namespace?: string, includeSystem = false) {
+  const [roles, setRoles] = useState<K8sRole[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    // Demo mode returns demo data
+    if (getDemoMode()) {
+      setRoles(getDemoK8sRoles(cluster))
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
+    if (!cluster) {
+      setRoles([])
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      if (includeSystem) params.append('includeSystem', 'true')
+
+      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`)
+      setRoles(data || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch roles')
+      // Fall back to demo data on error
+      setRoles(getDemoK8sRoles(cluster))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace, includeSystem])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { roles, isLoading, error, refetch }
+}
+
+// Hook to fetch K8s role bindings from a cluster
+export function useK8sRoleBindings(cluster?: string, namespace?: string, includeSystem = false) {
+  const [bindings, setBindings] = useState<K8sRoleBinding[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    // Demo mode returns demo data
+    if (getDemoMode()) {
+      setBindings(getDemoK8sRoleBindings(cluster, namespace))
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
+    if (!cluster) {
+      setBindings([])
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      if (includeSystem) params.append('includeSystem', 'true')
+
+      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`)
+      setBindings(data || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch role bindings')
+      // Fall back to demo data on error
+      setBindings(getDemoK8sRoleBindings(cluster, namespace))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace, includeSystem])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { bindings, isLoading, error, refetch }
+}
+
+// Hook to fetch K8s service accounts for RBAC view
+export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
+  const [serviceAccounts, setServiceAccounts] = useState<K8sServiceAccountInfo[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    // Demo mode returns demo data
+    if (getDemoMode()) {
+      setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+
+      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`)
+      setServiceAccounts(data || [])
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch service accounts')
+      // Fall back to demo data on error
+      setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster, namespace])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { serviceAccounts, isLoading, error, refetch }
+}
+
+// ============================================================================
+// Helm Releases
+// ============================================================================
+
+export interface HelmRelease {
+  name: string
+  namespace: string
+  revision: string
+  updated: string
+  status: string
+  chart: string
+  app_version: string
+  cluster?: string
+}
+
+// Helm releases cache with localStorage persistence
+const HELM_RELEASES_CACHE_KEY = 'kubestellar-helm-releases'
+const HELM_CACHE_TTL_MS = 30000 // 30 seconds before stale
+const HELM_REFRESH_INTERVAL_MS = 120000 // 2 minutes auto-refresh
+
+interface HelmReleasesCache {
+  data: HelmRelease[]
+  timestamp: number
+  consecutiveFailures: number
+  lastError: string | null
+  listeners: Set<(state: HelmReleasesCacheState) => void>
+}
+
+interface HelmReleasesCacheState {
+  releases: HelmRelease[]
+  isRefreshing: boolean
+  consecutiveFailures: number
+  lastError: string | null
+  lastRefresh: number | null
+}
+
+// Load from localStorage
+function loadHelmReleasesFromStorage(): { data: HelmRelease[], timestamp: number } {
+  try {
+    const stored = localStorage.getItem(HELM_RELEASES_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed.data)) {
+        return { data: parsed.data, timestamp: parsed.timestamp || 0 }
+      }
+    }
+  } catch { /* ignore */ }
+  return { data: [], timestamp: 0 }
+}
+
+// Save to localStorage
+function saveHelmReleasesToStorage(data: HelmRelease[], timestamp: number) {
+  try {
+    localStorage.setItem(HELM_RELEASES_CACHE_KEY, JSON.stringify({ data, timestamp }))
+  } catch { /* ignore storage errors */ }
+}
+
+// Initialize from localStorage
+const storedHelmReleases = loadHelmReleasesFromStorage()
+
+const helmReleasesCache: HelmReleasesCache = {
+  data: storedHelmReleases.data,
+  timestamp: storedHelmReleases.timestamp,
+  consecutiveFailures: 0,
+  lastError: null,
+  listeners: new Set()
+}
+
+// Hook to get Helm releases - uses shared cache with localStorage persistence
+export function useHelmReleases(cluster?: string) {
+  // Initialize from cache (localStorage backed)
+  const [releases, setReleases] = useState<HelmRelease[]>(helmReleasesCache.data)
+  const [isLoading, setIsLoading] = useState(helmReleasesCache.data.length === 0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(helmReleasesCache.lastError)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(helmReleasesCache.consecutiveFailures)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(
+    helmReleasesCache.timestamp > 0 ? helmReleasesCache.timestamp : null
+  )
+
+  // Register this component to receive cache updates
+  useEffect(() => {
+    const updateHandler = (state: HelmReleasesCacheState) => {
+      setReleases(state.releases)
+      setIsRefreshing(state.isRefreshing)
+      setConsecutiveFailures(state.consecutiveFailures)
+      setError(state.lastError)
+      setLastRefresh(state.lastRefresh)
+    }
+    helmReleasesCache.listeners.add(updateHandler)
+    return () => { helmReleasesCache.listeners.delete(updateHandler) }
+  }, [])
+
+  const notifyListeners = useCallback((isRefreshing: boolean) => {
+    const state: HelmReleasesCacheState = {
+      releases: helmReleasesCache.data,
+      isRefreshing,
+      consecutiveFailures: helmReleasesCache.consecutiveFailures,
+      lastError: helmReleasesCache.lastError,
+      lastRefresh: helmReleasesCache.timestamp > 0 ? helmReleasesCache.timestamp : null
+    }
+    helmReleasesCache.listeners.forEach(listener => listener(state))
+  }, [])
+
+  const refetch = useCallback(async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true)
+    } else {
+      setIsRefreshing(true)
+      notifyListeners(true)
+    }
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      const { data } = await api.get<{ releases: HelmRelease[] }>(`/api/gitops/helm-releases?${params}`)
+      const newReleases = data.releases || []
+
+      // Update cache if fetching all clusters
+      if (!cluster) {
+        helmReleasesCache.data = newReleases
+        helmReleasesCache.timestamp = Date.now()
+        helmReleasesCache.consecutiveFailures = 0
+        helmReleasesCache.lastError = null
+        saveHelmReleasesToStorage(newReleases, helmReleasesCache.timestamp)
+        notifyListeners(false)
+      }
+
+      setReleases(newReleases)
+      setError(null)
+      setConsecutiveFailures(0)
+      setLastRefresh(Date.now())
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm releases'
+
+      // Increment failure count
+      if (!cluster) {
+        helmReleasesCache.consecutiveFailures++
+        helmReleasesCache.lastError = errorMessage
+        notifyListeners(false)
+      }
+
+      setError(errorMessage)
+      setConsecutiveFailures(prev => prev + 1)
+      // Keep existing cached data on error
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+      if (!cluster) notifyListeners(false)
+    }
+  }, [cluster, notifyListeners])
+
+  useEffect(() => {
+    // Use cached data if fresh enough and we're fetching all clusters
+    const now = Date.now()
+    const cacheAge = now - helmReleasesCache.timestamp
+    const cacheValid = !cluster && helmReleasesCache.data.length > 0 && cacheAge < HELM_CACHE_TTL_MS
+
+    if (cacheValid) {
+      setReleases(helmReleasesCache.data)
+      setIsLoading(false)
+      // Still refresh in background if somewhat stale
+      if (cacheAge > HELM_CACHE_TTL_MS / 2) {
+        refetch(true)
+      }
+    } else {
+      refetch()
+    }
+
+    const interval = setInterval(() => refetch(true), HELM_REFRESH_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [refetch, cluster])
+
+  const isFailed = consecutiveFailures >= 3
+
+  return { releases, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed, lastRefresh }
+}
+
+// Helm history entry from API
+export interface HelmHistoryEntry {
+  revision: number
+  updated: string
+  status: string
+  chart: string
+  app_version: string
+  description: string
+}
+
+// Module-level cache for Helm history - keyed by cluster:release
+const helmHistoryCache = new Map<string, {
+  data: HelmHistoryEntry[]
+  timestamp: number
+  consecutiveFailures: number
+}>()
+
+// Hook to fetch Helm release history
+export function useHelmHistory(cluster?: string, release?: string, namespace?: string) {
+  const cacheKey = cluster && release ? `${cluster}:${release}` : ''
+  const cachedEntry = cacheKey ? helmHistoryCache.get(cacheKey) : undefined
+
+  const [history, setHistory] = useState<HelmHistoryEntry[]>(cachedEntry?.data || [])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(cachedEntry?.consecutiveFailures || 0)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(cachedEntry?.timestamp || null)
+
+  const refetch = useCallback(async () => {
+    if (!release) {
+      setHistory([])
+      return
+    }
+
+    // Show refreshing if we have cached data, loading if not
+    const hasCachedData = history.length > 0 || (cachedEntry?.data?.length || 0) > 0
+    if (hasCachedData) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
+
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      params.append('release', release)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ history: HelmHistoryEntry[], error?: string }>(`/api/gitops/helm-history?${params}`)
+      const newHistory = data.history || []
+      setHistory(newHistory)
+      setError(data.error || null)
+      setConsecutiveFailures(0)
+      setLastRefresh(Date.now())
+
+      // Update cache
+      if (cluster && release) {
+        helmHistoryCache.set(`${cluster}:${release}`, {
+          data: newHistory,
+          timestamp: Date.now(),
+          consecutiveFailures: 0
+        })
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm history'
+      setError(errorMessage)
+      setConsecutiveFailures(prev => prev + 1)
+
+      // Update cache failure count
+      if (cluster && release && cachedEntry) {
+        helmHistoryCache.set(`${cluster}:${release}`, {
+          ...cachedEntry,
+          consecutiveFailures: (cachedEntry.consecutiveFailures || 0) + 1
+        })
+      }
+      // Keep cached data on error
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [cluster, release, namespace, cachedEntry, history.length])
+
+  useEffect(() => {
+    // Use cached data if available
+    const key = cluster && release ? `${cluster}:${release}` : ''
+    const cached = key ? helmHistoryCache.get(key) : undefined
+    if (cached && cached.data.length > 0) {
+      setHistory(cached.data)
+      setLastRefresh(cached.timestamp)
+      setConsecutiveFailures(cached.consecutiveFailures || 0)
+      // Only refetch if cache is stale (older than 30s)
+      if (Date.now() - cached.timestamp > HELM_CACHE_TTL_MS) {
+        refetch()
+      }
+    } else if (release) {
+      refetch()
+    }
+  }, [cluster, release, refetch])
+
+  const isFailed = consecutiveFailures >= 3
+
+  return { history, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh }
+}
+
+// Module-level cache for Helm values - keyed by cluster:release
+const helmValuesCache = new Map<string, {
+  values: Record<string, unknown> | string | null
+  format: 'json' | 'yaml'
+  timestamp: number
+  consecutiveFailures: number
+}>()
+
+// Hook to fetch Helm release values
+export function useHelmValues(cluster?: string, release?: string, namespace?: string) {
+  const cacheKey = cluster && release ? `${cluster}:${release}` : ''
+  const cachedEntry = cacheKey ? helmValuesCache.get(cacheKey) : undefined
+
+  const [values, setValues] = useState<Record<string, unknown> | string | null>(cachedEntry?.values || null)
+  const [format, setFormat] = useState<'json' | 'yaml'>(cachedEntry?.format || 'json')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(cachedEntry?.consecutiveFailures || 0)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(cachedEntry?.timestamp || null)
+
+  const refetch = useCallback(async () => {
+    if (!release) {
+      setValues(null)
+      return
+    }
+
+    // Show refreshing if we have cached data, loading if not
+    const hasCachedData = values !== null || cachedEntry?.values !== null
+    if (hasCachedData) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
+
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      params.append('release', release)
+      if (namespace) params.append('namespace', namespace)
+      const { data } = await api.get<{ values: Record<string, unknown> | string, format: 'json' | 'yaml', error?: string }>(`/api/gitops/helm-values?${params}`)
+      setValues(data.values)
+      setFormat(data.format || 'json')
+      setError(data.error || null)
+      setConsecutiveFailures(0)
+      setLastRefresh(Date.now())
+
+      // Update cache
+      if (cluster && release) {
+        helmValuesCache.set(`${cluster}:${release}`, {
+          values: data.values,
+          format: data.format || 'json',
+          timestamp: Date.now(),
+          consecutiveFailures: 0
+        })
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm values'
+      setError(errorMessage)
+      setConsecutiveFailures(prev => prev + 1)
+
+      // Update cache failure count
+      if (cluster && release && cachedEntry) {
+        helmValuesCache.set(`${cluster}:${release}`, {
+          ...cachedEntry,
+          consecutiveFailures: (cachedEntry.consecutiveFailures || 0) + 1
+        })
+      }
+      // Keep cached data on error
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [cluster, release, namespace, cachedEntry, values])
+
+  useEffect(() => {
+    // Use cached data if available
+    const key = cluster && release ? `${cluster}:${release}` : ''
+    const cached = key ? helmValuesCache.get(key) : undefined
+    if (cached && cached.values !== null) {
+      setValues(cached.values)
+      setFormat(cached.format)
+      setLastRefresh(cached.timestamp)
+      setConsecutiveFailures(cached.consecutiveFailures || 0)
+      // Only refetch if cache is stale (older than 30s)
+      if (Date.now() - cached.timestamp > HELM_CACHE_TTL_MS) {
+        refetch()
+      }
+    } else if (release) {
+      refetch()
+    }
+  }, [cluster, release, refetch])
+
+  const isFailed = consecutiveFailures >= 3
+
+  return { values, format, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh }
 }

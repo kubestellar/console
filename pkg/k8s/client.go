@@ -13,6 +13,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -64,15 +65,23 @@ type ClusterHealth struct {
 	NodeCount     int      `json:"nodeCount"`
 	ReadyNodes    int      `json:"readyNodes"`
 	PodCount      int      `json:"podCount"`
-	CpuCores      int      `json:"cpuCores"`
-	MemoryBytes   int64    `json:"memoryBytes"`   // Total allocatable memory in bytes
-	MemoryGB      float64  `json:"memoryGB"`      // Total allocatable memory in GB
-	StorageBytes  int64    `json:"storageBytes"`  // Total ephemeral storage in bytes
-	StorageGB     float64  `json:"storageGB"`     // Total ephemeral storage in GB
-	PVCCount      int      `json:"pvcCount,omitempty"`      // Total PVC count
-	PVCBoundCount int      `json:"pvcBoundCount,omitempty"` // Bound PVC count
-	Issues        []string `json:"issues,omitempty"`
-	CheckedAt     string   `json:"checkedAt,omitempty"`
+	// Total allocatable resources (capacity)
+	CpuCores     int     `json:"cpuCores"`
+	MemoryBytes  int64   `json:"memoryBytes"`  // Total allocatable memory in bytes
+	MemoryGB     float64 `json:"memoryGB"`     // Total allocatable memory in GB
+	StorageBytes int64   `json:"storageBytes"` // Total ephemeral storage in bytes
+	StorageGB    float64 `json:"storageGB"`    // Total ephemeral storage in GB
+	// Resource requests (allocated/used)
+	CpuRequestsMillicores int64   `json:"cpuRequestsMillicores,omitempty"` // Sum of pod CPU requests in millicores
+	CpuRequestsCores      float64 `json:"cpuRequestsCores,omitempty"`      // Sum of pod CPU requests in cores
+	MemoryRequestsBytes   int64   `json:"memoryRequestsBytes,omitempty"`   // Sum of pod memory requests in bytes
+	MemoryRequestsGB      float64 `json:"memoryRequestsGB,omitempty"`      // Sum of pod memory requests in GB
+	// PVC metrics
+	PVCCount      int `json:"pvcCount,omitempty"`      // Total PVC count
+	PVCBoundCount int `json:"pvcBoundCount,omitempty"` // Bound PVC count
+	// Issues and timing
+	Issues    []string `json:"issues,omitempty"`
+	CheckedAt string   `json:"checkedAt,omitempty"`
 }
 
 // PodInfo represents pod information
@@ -92,12 +101,13 @@ type PodInfo struct {
 
 // ContainerInfo represents container information
 type ContainerInfo struct {
-	Name    string `json:"name"`
-	Image   string `json:"image"`
-	Ready   bool   `json:"ready"`
-	State   string `json:"state"` // running, waiting, terminated
-	Reason  string `json:"reason,omitempty"`
-	Message string `json:"message,omitempty"`
+	Name         string `json:"name"`
+	Image        string `json:"image"`
+	Ready        bool   `json:"ready"`
+	State        string `json:"state"` // running, waiting, terminated
+	Reason       string `json:"reason,omitempty"`
+	Message      string `json:"message,omitempty"`
+	GPURequested int    `json:"gpuRequested,omitempty"` // Number of GPUs requested by this container
 }
 
 // PodIssue represents a pod with issues
@@ -316,6 +326,36 @@ type SecurityIssue struct {
 	Issue     string `json:"issue"`
 	Severity  string `json:"severity"` // high, medium, low
 	Details   string `json:"details,omitempty"`
+}
+
+// ResourceQuota represents a Kubernetes ResourceQuota
+type ResourceQuota struct {
+	Name      string                 `json:"name"`
+	Namespace string                 `json:"namespace"`
+	Cluster   string                 `json:"cluster,omitempty"`
+	Hard      map[string]string      `json:"hard"`      // Resource limits
+	Used      map[string]string      `json:"used"`      // Current usage
+	Age       string                 `json:"age,omitempty"`
+	Labels    map[string]string      `json:"labels,omitempty"`
+}
+
+// LimitRange represents a Kubernetes LimitRange
+type LimitRange struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	Cluster   string            `json:"cluster,omitempty"`
+	Limits    []LimitRangeItem  `json:"limits"`
+	Age       string            `json:"age,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+}
+
+// LimitRangeItem represents a single limit in a LimitRange
+type LimitRangeItem struct {
+	Type           string            `json:"type"` // Pod, Container, PersistentVolumeClaim
+	Default        map[string]string `json:"default,omitempty"`
+	DefaultRequest map[string]string `json:"defaultRequest,omitempty"`
+	Max            map[string]string `json:"max,omitempty"`
+	Min            map[string]string `json:"min,omitempty"`
 }
 
 // NewMultiClusterClient creates a new multi-cluster client
@@ -756,10 +796,34 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		}
 	}
 
-	// Get pod count
+	// Get pod count and resource requests
 	pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err == nil {
 		health.PodCount = len(pods.Items)
+
+		// Sum resource requests from all running pods
+		var totalCPURequests int64
+		var totalMemoryRequests int64
+		for _, pod := range pods.Items {
+			// Only count running pods
+			if pod.Status.Phase != corev1.PodRunning {
+				continue
+			}
+			for _, container := range pod.Spec.Containers {
+				if container.Resources.Requests != nil {
+					if cpu := container.Resources.Requests.Cpu(); cpu != nil {
+						totalCPURequests += cpu.MilliValue()
+					}
+					if mem := container.Resources.Requests.Memory(); mem != nil {
+						totalMemoryRequests += mem.Value()
+					}
+				}
+			}
+		}
+		health.CpuRequestsMillicores = totalCPURequests
+		health.CpuRequestsCores = float64(totalCPURequests) / 1000.0
+		health.MemoryRequestsBytes = totalMemoryRequests
+		health.MemoryRequestsGB = float64(totalMemoryRequests) / (1024 * 1024 * 1024)
 	}
 
 	// Get PVC count
@@ -829,6 +893,21 @@ func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace
 					ci.State = "terminated"
 					ci.Reason = cs.State.Terminated.Reason
 					ci.Message = cs.State.Terminated.Message
+				}
+			}
+			// Check for GPU resource requests (nvidia.com/gpu, amd.com/gpu)
+			if c.Resources.Requests != nil {
+				for resourceName, qty := range c.Resources.Requests {
+					if resourceName == "nvidia.com/gpu" || resourceName == "amd.com/gpu" {
+						ci.GPURequested = int(qty.Value())
+					}
+				}
+			}
+			if ci.GPURequested == 0 && c.Resources.Limits != nil {
+				for resourceName, qty := range c.Resources.Limits {
+					if resourceName == "nvidia.com/gpu" || resourceName == "amd.com/gpu" {
+						ci.GPURequested = int(qty.Value())
+					}
 				}
 			}
 			containers = append(containers, ci)
@@ -1813,6 +1892,226 @@ func (m *MultiClusterClient) GetPVs(ctx context.Context, contextName string) ([]
 	}
 
 	return result, nil
+}
+
+// GetResourceQuotas returns all ResourceQuotas in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetResourceQuotas(ctx context.Context, contextName, namespace string) ([]ResourceQuota, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	quotas, err := client.CoreV1().ResourceQuotas(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []ResourceQuota
+	for _, quota := range quotas.Items {
+		age := formatAge(quota.CreationTimestamp.Time)
+
+		// Convert resource quantities to strings
+		hard := make(map[string]string)
+		for name, quantity := range quota.Status.Hard {
+			hard[string(name)] = quantity.String()
+		}
+
+		used := make(map[string]string)
+		for name, quantity := range quota.Status.Used {
+			used[string(name)] = quantity.String()
+		}
+
+		result = append(result, ResourceQuota{
+			Name:      quota.Name,
+			Namespace: quota.Namespace,
+			Cluster:   contextName,
+			Hard:      hard,
+			Used:      used,
+			Age:       age,
+			Labels:    quota.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetLimitRanges returns all LimitRanges in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetLimitRanges(ctx context.Context, contextName, namespace string) ([]LimitRange, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	limitRanges, err := client.CoreV1().LimitRanges(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []LimitRange
+	for _, lr := range limitRanges.Items {
+		age := formatAge(lr.CreationTimestamp.Time)
+
+		var limits []LimitRangeItem
+		for _, limit := range lr.Spec.Limits {
+			item := LimitRangeItem{
+				Type: string(limit.Type),
+			}
+
+			// Convert Default
+			if limit.Default != nil {
+				item.Default = make(map[string]string)
+				for name, quantity := range limit.Default {
+					item.Default[string(name)] = quantity.String()
+				}
+			}
+
+			// Convert DefaultRequest
+			if limit.DefaultRequest != nil {
+				item.DefaultRequest = make(map[string]string)
+				for name, quantity := range limit.DefaultRequest {
+					item.DefaultRequest[string(name)] = quantity.String()
+				}
+			}
+
+			// Convert Max
+			if limit.Max != nil {
+				item.Max = make(map[string]string)
+				for name, quantity := range limit.Max {
+					item.Max[string(name)] = quantity.String()
+				}
+			}
+
+			// Convert Min
+			if limit.Min != nil {
+				item.Min = make(map[string]string)
+				for name, quantity := range limit.Min {
+					item.Min[string(name)] = quantity.String()
+				}
+			}
+
+			limits = append(limits, item)
+		}
+
+		result = append(result, LimitRange{
+			Name:      lr.Name,
+			Namespace: lr.Namespace,
+			Cluster:   contextName,
+			Limits:    limits,
+			Age:       age,
+			Labels:    lr.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// ResourceQuotaSpec represents the desired spec for creating/updating a ResourceQuota
+type ResourceQuotaSpec struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	Hard      map[string]string `json:"hard"` // Resource limits to set
+	Labels    map[string]string `json:"labels,omitempty"`
+}
+
+// CreateOrUpdateResourceQuota creates or updates a ResourceQuota in a namespace
+func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, contextName string, spec ResourceQuotaSpec) (*ResourceQuota, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert string values to resource quantities
+	hard := make(corev1.ResourceList)
+	for name, value := range spec.Hard {
+		quantity, err := resource.ParseQuantity(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid quantity for %s: %v", name, err)
+		}
+		hard[corev1.ResourceName(name)] = quantity
+	}
+
+	// Build the ResourceQuota object
+	quota := &corev1.ResourceQuota{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      spec.Name,
+			Namespace: spec.Namespace,
+			Labels:    spec.Labels,
+		},
+		Spec: corev1.ResourceQuotaSpec{
+			Hard: hard,
+		},
+	}
+
+	// Try to get existing quota first
+	existing, err := client.CoreV1().ResourceQuotas(spec.Namespace).Get(ctx, spec.Name, metav1.GetOptions{})
+	if err == nil {
+		// Update existing quota
+		existing.Spec.Hard = hard
+		if spec.Labels != nil {
+			existing.Labels = spec.Labels
+		}
+		updated, err := client.CoreV1().ResourceQuotas(spec.Namespace).Update(ctx, existing, metav1.UpdateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to update ResourceQuota: %v", err)
+		}
+
+		// Convert to our response type
+		resultHard := make(map[string]string)
+		for name, quantity := range updated.Status.Hard {
+			resultHard[string(name)] = quantity.String()
+		}
+		used := make(map[string]string)
+		for name, quantity := range updated.Status.Used {
+			used[string(name)] = quantity.String()
+		}
+
+		return &ResourceQuota{
+			Name:      updated.Name,
+			Namespace: updated.Namespace,
+			Cluster:   contextName,
+			Hard:      resultHard,
+			Used:      used,
+			Age:       formatAge(updated.CreationTimestamp.Time),
+			Labels:    updated.Labels,
+		}, nil
+	}
+
+	// Create new quota
+	created, err := client.CoreV1().ResourceQuotas(spec.Namespace).Create(ctx, quota, metav1.CreateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ResourceQuota: %v", err)
+	}
+
+	// Convert to our response type
+	resultHard := make(map[string]string)
+	for name, quantity := range created.Spec.Hard {
+		resultHard[string(name)] = quantity.String()
+	}
+
+	return &ResourceQuota{
+		Name:      created.Name,
+		Namespace: created.Namespace,
+		Cluster:   contextName,
+		Hard:      resultHard,
+		Used:      make(map[string]string), // New quota has no usage yet
+		Age:       formatAge(created.CreationTimestamp.Time),
+		Labels:    created.Labels,
+	}, nil
+}
+
+// DeleteResourceQuota deletes a ResourceQuota from a namespace
+func (m *MultiClusterClient) DeleteResourceQuota(ctx context.Context, contextName, namespace, name string) error {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return err
+	}
+
+	err = client.CoreV1().ResourceQuotas(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete ResourceQuota: %v", err)
+	}
+
+	return nil
 }
 
 // GetPodLogs returns logs from a pod

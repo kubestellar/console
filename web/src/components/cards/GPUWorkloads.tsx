@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
-import { RefreshCw, Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
+import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -20,42 +22,10 @@ const SORT_OPTIONS = [
   { value: 'cluster' as const, label: 'Cluster' },
 ]
 
-// Check if pod labels/annotations indicate GPU affinity or GPU-related workload
-function hasGPUAffinity(labels?: Record<string, string>, annotations?: Record<string, string>): boolean {
-  const gpuLabels = [
-    'nvidia.com/gpu',
-    'nvidia.com/gpu.product',
-    'nvidia.com/gpu.count',
-    'amd.com/gpu',
-    'gpu.intel.com/i915',
-    'accelerator',
-  ]
-
-  const gpuAnnotationPatterns = [
-    /nvidia/i,
-    /gpu/i,
-    /cuda/i,
-  ]
-
-  // Check labels
-  if (labels) {
-    for (const key of Object.keys(labels)) {
-      if (gpuLabels.some(gl => key.includes(gl)) || /gpu/i.test(key)) {
-        return true
-      }
-    }
-  }
-
-  // Check annotations for GPU-related content
-  if (annotations) {
-    for (const [key, value] of Object.entries(annotations)) {
-      if (gpuAnnotationPatterns.some(p => p.test(key) || p.test(value))) {
-        return true
-      }
-    }
-  }
-
-  return false
+// Check if any container in the pod requests GPUs
+function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
+  if (!containers) return false
+  return containers.some(c => (c.gpuRequested ?? 0) > 0)
 }
 
 // Normalize cluster name for matching (handle kubeconfig/xxx format)
@@ -66,41 +36,17 @@ function normalizeClusterName(cluster: string): string {
   return parts[parts.length - 1] || cluster
 }
 
-// GPU/ML-related namespace patterns - fallback for identifying GPU workloads
-const GPU_NAMESPACE_PATTERNS = [
-  /^nvidia/i,
-  /^gpu-operator/i,
-  /^gpu/i,
-  /gpu/i,           // Any namespace containing "gpu"
-  /dcgm/i,
-  /^vllm/i,
-  /vllm/i,          // Any namespace containing "vllm"
-  /^ml-/i,
-  /^ai-/i,
-  /^inference/i,
-  /^llm/i,
-  /^ollama/i,
-  /^kubeai/i,
-  /^ray/i,          // Ray clusters
-  /^kubeflow/i,     // Kubeflow
-  /^mlflow/i,       // MLflow
-  /^triton/i,       // NVIDIA Triton
-  /^tensorrt/i,     // TensorRT
-  /^pytorch/i,      // PyTorch
-  /^tensorflow/i,   // TensorFlow
-  /^huggingface/i,  // HuggingFace
-  /^transformers/i, // Transformers
-  /^model/i,        // Model serving namespaces
-  /^training/i,     // Training namespaces
-  /^serving/i,      // Serving namespaces
-]
-
-function isGPURelatedNamespace(namespace: string): boolean {
-  return GPU_NAMESPACE_PATTERNS.some(pattern => pattern.test(namespace))
-}
 
 export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
-  const { nodes: gpuNodes, isLoading: gpuLoading, refetch: refetchGPU } = useGPUNodes()
+  const {
+    nodes: gpuNodes,
+    isLoading: gpuLoading,
+    isRefreshing: gpuRefreshing,
+    refetch: refetchGPU,
+    isFailed: gpuFailed,
+    consecutiveFailures: gpuFailures,
+    lastRefresh: gpuLastRefresh
+  } = useGPUNodes()
   const { pods: allPods, isLoading: podsLoading, refetch: refetchPods } = useAllPods()
   useClusters() // Keep hook for cache warming
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -110,56 +56,36 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
-  const isLoading = gpuLoading || podsLoading
+  // Only show loading when no cached data exists
+  const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
+  const isRefreshing = gpuRefreshing
 
-  // Filter pods that are running on GPU nodes
-  // This is the most accurate way to identify GPU workloads
+  // Filter pods that are actual GPU workloads
+  // Only show pods that explicitly request GPU resources - this is the most accurate indicator
   const gpuWorkloads = useMemo(() => {
-    // Build a map of GPU node names by normalized cluster name for robust lookup
-    const gpuNodesByCluster = new Map<string, Set<string>>()
-    // Also build a global set of all GPU node names for fallback matching
-    const allGPUNodeNames = new Set<string>()
-
-    gpuNodes.forEach(node => {
-      const normalizedCluster = normalizeClusterName(node.cluster)
-      if (!gpuNodesByCluster.has(normalizedCluster)) {
-        gpuNodesByCluster.set(normalizedCluster, new Set())
-      }
-      gpuNodesByCluster.get(normalizedCluster)!.add(node.name)
-      allGPUNodeNames.add(node.name)
-    })
-
-    // Helper to check if pod is on a GPU node
-    const checkIsOnGPUNode = (pod: typeof allPods[0]) => {
-      if (!pod.node) return false
-
-      // First try cluster-specific lookup
-      if (pod.cluster) {
-        const normalizedPodCluster = normalizeClusterName(pod.cluster)
-        const nodeSet = gpuNodesByCluster.get(normalizedPodCluster)
-        if (nodeSet?.has(pod.node)) return true
-      }
-
-      // Fallback: check if pod's node matches any GPU node name across all clusters
-      // This handles edge cases where cluster names might not match exactly
-      return allGPUNodeNames.has(pod.node)
-    }
-
     let filtered = allPods.filter(pod => {
       // Must have a cluster
       if (!pod.cluster) return false
 
-      // Primary check: is this pod running on a GPU node?
-      // This is the most reliable indicator of GPU workload
-      if (checkIsOnGPUNode(pod)) return true
+      // Primary check: does the pod explicitly request GPU resources?
+      // This is the only reliable indicator of an actual GPU workload
+      if (hasGPUResourceRequest(pod.containers)) return true
 
-      // Secondary check: does the pod have GPU-related affinity/labels?
-      // This catches pods configured for GPU even if not yet scheduled
-      if (hasGPUAffinity(pod.labels, pod.annotations)) return true
-
-      // Tertiary check: is the pod in a GPU-related namespace?
-      // This is a fallback heuristic for when node info isn't available
-      if (isGPURelatedNamespace(pod.namespace || '')) return true
+      // Secondary check: specific GPU workload labels (not just affinity)
+      // Look for labels that explicitly indicate this is a GPU/ML workload
+      if (pod.labels) {
+        const gpuWorkloadLabels = [
+          'nvidia.com/gpu.workload',
+          'app.kubernetes.io/component=gpu',
+          'ml.intel.com/workload',
+        ]
+        for (const [key, value] of Object.entries(pod.labels)) {
+          // Check for specific GPU workload indicators
+          if (gpuWorkloadLabels.some(l => key.includes(l))) return true
+          // Check for vLLM, LLM inference workloads by app label
+          if (key === 'app' && /vllm|llm|inference|model/i.test(value)) return true
+        }
+      }
 
       return false
     })
@@ -170,9 +96,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
         const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
         return selectedClusters.some(c => {
           const normalizedSelectedCluster = normalizeClusterName(c)
-          return normalizedPodCluster === normalizedSelectedCluster ||
-                 normalizedPodCluster.includes(normalizedSelectedCluster) ||
-                 normalizedSelectedCluster.includes(normalizedPodCluster)
+          // Exact match after normalization
+          return normalizedPodCluster === normalizedSelectedCluster
         })
       })
     }
@@ -254,26 +179,40 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
 
   if (isLoading && gpuWorkloads.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="spinner w-8 h-8" />
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-3">
+          <Skeleton variant="text" width={100} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} variant="rounded" height={50} />
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} variant="rounded" height={70} />
+          ))}
+        </div>
       </div>
     )
   }
 
   if (gpuNodes.length === 0) {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-purple-400" />
             <span className="text-sm font-medium text-muted-foreground">GPU Workloads</span>
           </div>
-          <button
-            onClick={handleRefresh}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={gpuFailed}
+            consecutiveFailures={gpuFailures}
+            lastRefresh={gpuLastRefresh}
+            onRefresh={handleRefresh}
+          />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
@@ -287,17 +226,12 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-muted-foreground">GPU Workloads</span>
-          {summary.total > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-              {summary.total} pods
-            </span>
-          )}
           {summary.failed > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
               {summary.failed} failed
@@ -314,13 +248,13 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={handleRefresh}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh GPU workloads"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={gpuFailed}
+            consecutiveFailures={gpuFailures}
+            lastRefresh={gpuLastRefresh}
+            onRefresh={handleRefresh}
+          />
         </div>
       </div>
 

@@ -156,7 +156,39 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	}
 
 	// Fall back to direct k8s client
-	if h.k8sClient != nil && cluster != "" {
+	if h.k8sClient != nil {
+		// If no cluster specified, query all clusters in parallel
+		if cluster == "" {
+			clusters, err := h.k8sClient.ListClusters(c.Context())
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			var allPods []k8s.PodInfo
+			clusterTimeout := 10 * time.Second
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					pods, err := h.k8sClient.GetPods(ctx, clusterName, namespace)
+					if err == nil && len(pods) > 0 {
+						mu.Lock()
+						allPods = append(allPods, pods...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			wg.Wait()
+			return c.JSON(fiber.Map{"pods": allPods, "source": "k8s"})
+		}
+
 		pods, err := h.k8sClient.GetPods(c.Context(), cluster, namespace)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -833,6 +865,163 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 		return c.JSON(fiber.Map{"pvs": pvs, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetResourceQuotas returns resource quotas from clusters
+func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, err := h.k8sClient.ListClusters(c.Context())
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			var allQuotas []k8s.ResourceQuota
+			clusterTimeout := 5 * time.Second
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					quotas, err := h.k8sClient.GetResourceQuotas(ctx, clusterName, namespace)
+					if err == nil && len(quotas) > 0 {
+						mu.Lock()
+						allQuotas = append(allQuotas, quotas...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			wg.Wait()
+			return c.JSON(fiber.Map{"resourceQuotas": allQuotas, "source": "k8s"})
+		}
+
+		quotas, err := h.k8sClient.GetResourceQuotas(c.Context(), cluster, namespace)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"resourceQuotas": quotas, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// GetLimitRanges returns limit ranges from clusters
+func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+
+	if h.k8sClient != nil {
+		if cluster == "" {
+			clusters, err := h.k8sClient.ListClusters(c.Context())
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			var allRanges []k8s.LimitRange
+			clusterTimeout := 5 * time.Second
+
+			for _, cl := range clusters {
+				wg.Add(1)
+				go func(clusterName string) {
+					defer wg.Done()
+					ctx, cancel := context.WithTimeout(c.Context(), clusterTimeout)
+					defer cancel()
+
+					ranges, err := h.k8sClient.GetLimitRanges(ctx, clusterName, namespace)
+					if err == nil && len(ranges) > 0 {
+						mu.Lock()
+						allRanges = append(allRanges, ranges...)
+						mu.Unlock()
+					}
+				}(cl.Name)
+			}
+
+			wg.Wait()
+			return c.JSON(fiber.Map{"limitRanges": allRanges, "source": "k8s"})
+		}
+
+		ranges, err := h.k8sClient.GetLimitRanges(c.Context(), cluster, namespace)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"limitRanges": ranges, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// CreateOrUpdateResourceQuota creates or updates a ResourceQuota
+func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
+	var req struct {
+		Cluster   string            `json:"cluster"`
+		Name      string            `json:"name"`
+		Namespace string            `json:"namespace"`
+		Hard      map[string]string `json:"hard"`
+		Labels    map[string]string `json:"labels,omitempty"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if req.Cluster == "" || req.Name == "" || req.Namespace == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "cluster, name, and namespace are required"})
+	}
+
+	if len(req.Hard) == 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "At least one resource limit is required in 'hard'"})
+	}
+
+	if h.k8sClient != nil {
+		spec := k8s.ResourceQuotaSpec{
+			Name:      req.Name,
+			Namespace: req.Namespace,
+			Hard:      req.Hard,
+			Labels:    req.Labels,
+		}
+
+		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(c.Context(), req.Cluster, spec)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"resourceQuota": quota, "source": "k8s"})
+	}
+
+	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+}
+
+// DeleteResourceQuota deletes a ResourceQuota
+func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	namespace := c.Query("namespace")
+	name := c.Query("name")
+
+	if cluster == "" || namespace == "" || name == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "cluster, namespace, and name are required"})
+	}
+
+	if h.k8sClient != nil {
+		err := h.k8sClient.DeleteResourceQuota(c.Context(), cluster, namespace, name)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		return c.JSON(fiber.Map{"deleted": true, "name": name, "namespace": namespace, "cluster": cluster})
 	}
 
 	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
