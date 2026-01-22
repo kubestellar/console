@@ -5,6 +5,7 @@ export interface DashboardCard {
   card_type: string
   config: Record<string, unknown>
   title?: string
+  position?: { w: number; h: number }
 }
 
 interface UseDashboardCardsOptions {
@@ -80,6 +81,15 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     setCards([])
   }, [])
 
+  const resetToDefaults = useCallback(() => {
+    setCards(defaultCards)
+    localStorage.removeItem(storageKey)
+  }, [defaultCards, storageKey])
+
+  const isCustomized = useCallback(() => {
+    return localStorage.getItem(storageKey) !== null
+  }, [storageKey])
+
   return {
     cards,
     addCard,
@@ -87,6 +97,8 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     updateCardConfig,
     replaceCards,
     clearCards,
+    resetToDefaults,
+    isCustomized,
     // Collapsed state
     isCollapsed,
     setIsCollapsed,
