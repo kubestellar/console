@@ -1,0 +1,329 @@
+import { useState, useEffect, useCallback } from 'react'
+import { X, Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { cn } from '../../lib/cn'
+import { AgentIcon } from './AgentIcon'
+
+const KKC_AGENT_URL = 'http://127.0.0.1:8585'
+
+interface KeyStatus {
+  provider: string
+  displayName: string
+  configured: boolean
+  source?: 'env' | 'config'
+  valid?: boolean
+  error?: string
+}
+
+interface KeysStatusResponse {
+  keys: KeyStatus[]
+  configPath: string
+}
+
+interface APIKeySettingsProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = {
+  claude: {
+    docsUrl: 'https://console.anthropic.com/settings/keys',
+    placeholder: 'sk-ant-api03-...',
+  },
+  openai: {
+    docsUrl: 'https://platform.openai.com/api-keys',
+    placeholder: 'sk-...',
+  },
+  gemini: {
+    docsUrl: 'https://makersuite.google.com/app/apikey',
+    placeholder: 'AIza...',
+  },
+}
+
+export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
+  const [keysStatus, setKeysStatus] = useState<KeyStatus[]>([])
+  const [configPath, setConfigPath] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [editingProvider, setEditingProvider] = useState<string | null>(null)
+  const [newKeyValue, setNewKeyValue] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const fetchKeysStatus = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch(`${KKC_AGENT_URL}/settings/keys`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch key status')
+      }
+      const data: KeysStatusResponse = await response.json()
+      setKeysStatus(data.keys)
+      setConfigPath(data.configPath)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect to agent')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchKeysStatus()
+    }
+  }, [isOpen, fetchKeysStatus])
+
+  const handleSaveKey = async (provider: string) => {
+    if (!newKeyValue.trim()) return
+
+    try {
+      setSaving(true)
+      const response = await fetch(`${KKC_AGENT_URL}/settings/keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, apiKey: newKeyValue }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Failed to save key')
+      }
+
+      // Success - refresh status and close edit mode
+      setEditingProvider(null)
+      setNewKeyValue('')
+      setShowKey(false)
+      await fetchKeysStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save key')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteKey = async (provider: string) => {
+    try {
+      setSaving(true)
+      const response = await fetch(`${KKC_AGENT_URL}/settings/keys/${provider}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Failed to delete key')
+      }
+
+      await fetchKeysStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete key')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const startEditing = (provider: string) => {
+    setEditingProvider(provider)
+    setNewKeyValue('')
+    setShowKey(false)
+    setError(null)
+  }
+
+  const cancelEditing = () => {
+    setEditingProvider(null)
+    setNewKeyValue('')
+    setShowKey(false)
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Key className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">API Key Settings</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-secondary rounded transition-colors"
+          >
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : error && keysStatus.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
+              <p className="text-sm text-destructive">{error}</p>
+              <button
+                onClick={fetchKeysStatus}
+                className="mt-4 text-sm text-primary hover:underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
+              {keysStatus.map((key) => (
+                <div
+                  key={key.provider}
+                  className="p-4 bg-secondary/30 border border-border rounded-lg"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <AgentIcon
+                        provider={key.provider === 'claude' ? 'anthropic' : key.provider === 'openai' ? 'openai' : 'google'}
+                        className="w-8 h-8"
+                      />
+                      <div>
+                        <h3 className="font-medium text-foreground">{key.displayName}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          {key.configured ? (
+                            <>
+                              {key.valid === true ? (
+                                <span className="flex items-center gap-1 text-xs text-green-500">
+                                  <Check className="w-3 h-3" />
+                                  Working
+                                </span>
+                              ) : key.valid === false ? (
+                                <span className="flex items-center gap-1 text-xs text-destructive">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Invalid
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Check className="w-3 h-3" />
+                                  Configured
+                                </span>
+                              )}
+                              {key.source === 'env' && (
+                                <span className="text-xs text-muted-foreground">(from env)</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Not configured</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {key.configured && key.source !== 'env' && (
+                        <button
+                          onClick={() => handleDeleteKey(key.provider)}
+                          disabled={saving}
+                          className="p-1.5 hover:bg-destructive/20 rounded transition-colors text-muted-foreground hover:text-destructive"
+                          title="Remove key"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <a
+                        href={PROVIDER_INFO[key.provider]?.docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
+                        title="Get API key"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Edit/Add key form */}
+                  {editingProvider === key.provider ? (
+                    <div className="mt-3 space-y-2">
+                      <div className="relative">
+                        <input
+                          type={showKey ? 'text' : 'password'}
+                          value={newKeyValue}
+                          onChange={(e) => setNewKeyValue(e.target.value)}
+                          placeholder={PROVIDER_INFO[key.provider]?.placeholder || 'Enter API key'}
+                          className="w-full px-3 py-2 pr-10 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKey(!showKey)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                        >
+                          {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveKey(key.provider)}
+                          disabled={!newKeyValue.trim() || saving}
+                          className="flex-1 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/80 disabled:opacity-50"
+                        >
+                          {saving ? (
+                            <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                          ) : (
+                            'Save & Validate'
+                          )}
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          disabled={saving}
+                          className="px-3 py-1.5 bg-secondary text-secondary-foreground text-sm rounded-lg hover:bg-secondary/80"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditing(key.provider)}
+                      disabled={key.source === 'env'}
+                      className={cn(
+                        'mt-3 w-full px-3 py-1.5 text-sm rounded-lg transition-colors',
+                        key.source === 'env'
+                          ? 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
+                          : 'bg-secondary hover:bg-secondary/80 text-foreground'
+                      )}
+                    >
+                      {key.configured ? 'Update Key' : 'Add Key'}
+                    </button>
+                  )}
+
+                  {key.source === 'env' && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Key is set via environment variable. Modify the environment to change it.
+                    </p>
+                  )}
+                </div>
+              ))}
+
+              {configPath && (
+                <p className="text-xs text-muted-foreground text-center mt-4">
+                  Keys saved to: <code className="bg-secondary px-1 rounded">{configPath}</code>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border bg-secondary/20">
+          <p className="text-xs text-muted-foreground text-center">
+            API keys are stored securely on your local machine and never sent to our servers.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

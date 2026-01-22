@@ -28,6 +28,8 @@ import {
 import ReactMarkdown from 'react-markdown'
 import { useMissions, Mission, MissionStatus } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
+import { AgentSelector } from '../agent/AgentSelector'
+import { AgentBadge } from '../agent/AgentIcon'
 
 // Rotating status messages for agent thinking
 const THINKING_MESSAGES = [
@@ -225,7 +227,15 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
             <span className="text-xs">{config.label}</span>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">{mission.description}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-xs text-muted-foreground flex-1">{mission.description}</p>
+          {mission.agent && (
+            <AgentBadge
+              provider={mission.agent === 'claude' ? 'anthropic' : mission.agent === 'openai' ? 'openai' : 'google'}
+              name={mission.agent}
+            />
+          )}
+        </div>
         {mission.cluster && (
           <span className="text-xs text-purple-400 mt-1 inline-block">Cluster: {mission.cluster}</span>
         )}
@@ -473,7 +483,9 @@ export function MissionSidebar() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        {/* Agent Selector */}
+        <div className="flex items-center gap-2">
+          <AgentSelector compact={!isFullScreen} />
           {isFullScreen ? (
             <button
               onClick={() => setFullScreen(false)}

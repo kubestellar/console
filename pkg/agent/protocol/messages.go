@@ -8,13 +8,18 @@ const (
 	TypeHealth        MessageType = "health"
 	TypeClusters      MessageType = "clusters"
 	TypeKubectl       MessageType = "kubectl"
-	TypeClaude        MessageType = "claude"
+	TypeClaude        MessageType = "claude"        // Legacy - routes to selected agent
+	TypeChat          MessageType = "chat"          // Generic chat with selected agent
+	TypeListAgents    MessageType = "list_agents"   // List available AI agents
+	TypeSelectAgent   MessageType = "select_agent"  // Select an AI agent
 	TypeRenameContext MessageType = "rename_context"
 
 	// Response types
-	TypeResult MessageType = "result"
-	TypeError  MessageType = "error"
-	TypeStream MessageType = "stream"
+	TypeResult        MessageType = "result"
+	TypeError         MessageType = "error"
+	TypeStream        MessageType = "stream"
+	TypeAgentSelected MessageType = "agent_selected" // Agent selection confirmed
+	TypeAgentsList    MessageType = "agents_list"    // List of available agents
 )
 
 // Message is the base message structure for WebSocket communication
@@ -114,4 +119,55 @@ type RenameContextResponse struct {
 	Success bool   `json:"success"`
 	OldName string `json:"oldName"`
 	NewName string `json:"newName"`
+}
+
+// AgentInfo contains information about an AI agent
+type AgentInfo struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
+	Provider    string `json:"provider"`
+	Available   bool   `json:"available"`
+}
+
+// AgentsListPayload is the response for listing available agents
+type AgentsListPayload struct {
+	Agents       []AgentInfo `json:"agents"`
+	DefaultAgent string      `json:"defaultAgent"`
+	Selected     string      `json:"selected"`
+}
+
+// SelectAgentRequest is the payload for selecting an AI agent
+type SelectAgentRequest struct {
+	Agent           string `json:"agent"`
+	PreserveHistory bool   `json:"preserveHistory,omitempty"`
+}
+
+// AgentSelectedPayload is the response after selecting an agent
+type AgentSelectedPayload struct {
+	Agent    string `json:"agent"`
+	Previous string `json:"previous,omitempty"`
+}
+
+// ChatRequest is the payload for chat messages (multi-agent)
+type ChatRequest struct {
+	Agent     string `json:"agent,omitempty"` // Optional - uses selected agent if empty
+	Prompt    string `json:"prompt"`
+	SessionID string `json:"sessionId,omitempty"`
+}
+
+// ChatStreamPayload is a streaming response chunk from chat
+type ChatStreamPayload struct {
+	Content   string           `json:"content"`
+	Agent     string           `json:"agent"`
+	SessionID string           `json:"sessionId"`
+	Done      bool             `json:"done"`
+	Usage     *ChatTokenUsage  `json:"usage,omitempty"`
+}
+
+// ChatTokenUsage tracks token usage for a chat response
+type ChatTokenUsage struct {
+	InputTokens  int `json:"inputTokens"`
+	OutputTokens int `json:"outputTokens"`
+	TotalTokens  int `json:"totalTokens"`
 }

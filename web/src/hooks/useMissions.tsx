@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
+import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed'
 
@@ -32,6 +33,8 @@ export interface Mission {
     output: number
     total: number
   }
+  /** AI agent used for this mission */
+  agent?: string
 }
 
 interface MissionContextValue {
@@ -44,6 +47,14 @@ interface MissionContextValue {
   unreadMissionCount: number
   /** IDs of missions with unread updates */
   unreadMissionIds: Set<string>
+  /** Available AI agents */
+  agents: AgentInfo[]
+  /** Currently selected agent */
+  selectedAgent: string | null
+  /** Default agent */
+  defaultAgent: string | null
+  /** Whether agents are loading */
+  agentsLoading: boolean
 
   // Actions
   startMission: (params: StartMissionParams) => string
@@ -53,6 +64,7 @@ interface MissionContextValue {
   rateMission: (missionId: string, feedback: MissionFeedback) => void
   setActiveMission: (missionId: string | null) => void
   markMissionAsRead: (missionId: string) => void
+  selectAgent: (agentName: string) => void
   toggleSidebar: () => void
   openSidebar: () => void
   closeSidebar: () => void
@@ -138,6 +150,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [unreadMissionIds, setUnreadMissionIds] = useState<Set<string>>(() => loadUnreadMissionIds())
 
+  // Agent state
+  const [agents, setAgents] = useState<AgentInfo[]>([])
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null)
+  const [defaultAgent, setDefaultAgent] = useState<string | null>(null)
+  const [agentsLoading, setAgentsLoading] = useState(true)
+
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
 
@@ -151,6 +169,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     saveUnreadMissionIds(unreadMissionIds)
   }, [unreadMissionIds])
 
+  // Fetch available agents
+  const fetchAgents = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        id: `list-agents-${Date.now()}`,
+        type: 'list_agents',
+      }))
+    }
+  }, [])
+
   // Connect to KKC agent WebSocket
   const ensureConnection = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -163,6 +191,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
         wsRef.current.onopen = () => {
           console.log('[Missions] Connected to KKC agent')
+          // Fetch available agents on connect
+          fetchAgents()
           resolve()
         }
 
@@ -178,6 +208,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         wsRef.current.onclose = () => {
           console.log('[Missions] Connection closed')
           wsRef.current = null
+          setAgentsLoading(true) // Reset loading state on disconnect
         }
 
         wsRef.current.onerror = () => {
@@ -187,7 +218,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         reject(err)
       }
     })
-  }, [])
+  }, [fetchAgents])
 
   // Mark a mission as having unread content (not currently being viewed)
   const markMissionAsUnread = useCallback((missionId: string) => {
@@ -203,6 +234,22 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
   // Handle messages from the agent
   const handleAgentMessage = useCallback((message: { id: string; type: string; payload?: unknown }) => {
+    // Handle agent-related messages (no mission ID needed)
+    if (message.type === 'agents_list') {
+      const payload = message.payload as AgentsListPayload
+      setAgents(payload.agents)
+      setDefaultAgent(payload.defaultAgent)
+      setSelectedAgent(payload.selected || payload.defaultAgent)
+      setAgentsLoading(false)
+      return
+    }
+
+    if (message.type === 'agent_selected') {
+      const payload = message.payload as AgentSelectedPayload
+      setSelectedAgent(payload.agent)
+      return
+    }
+
     const missionId = pendingRequests.current.get(message.id)
     if (!missionId) return
 
@@ -257,21 +304,31 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         }
       } else if (message.type === 'result') {
         // Complete response - mark as unread
-        const payload = message.payload as { content?: string; output?: string }
+        const payload = message.payload as ChatStreamPayload | { content?: string; output?: string }
         pendingRequests.current.delete(message.id)
         markMissionAsUnread(missionId)
+
+        // Extract token usage if available
+        const chatPayload = payload as ChatStreamPayload
+        const tokenUsage = chatPayload.usage ? {
+          input: chatPayload.usage.inputTokens,
+          output: chatPayload.usage.outputTokens,
+          total: chatPayload.usage.totalTokens,
+        } : m.tokenUsage
 
         return {
           ...m,
           status: 'waiting_input' as MissionStatus,
           currentStep: undefined,
           updatedAt: new Date(),
+          agent: chatPayload.agent || m.agent,
+          tokenUsage,
           messages: [
             ...m.messages,
             {
               id: `msg-${Date.now()}`,
               role: 'assistant' as const,
-              content: payload.content || payload.output || 'Task completed.',
+              content: chatPayload.content || (payload as { output?: string }).output || 'Task completed.',
               timestamp: new Date(),
             }
           ]
@@ -323,6 +380,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date(),
       context: params.context,
+      agent: selectedAgent || defaultAgent || undefined,
     }
 
     setMissions(prev => [mission, ...prev])
@@ -340,10 +398,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
       wsRef.current?.send(JSON.stringify({
         id: requestId,
-        type: 'claude',
+        type: 'chat',
         payload: {
           prompt: params.initialPrompt,
           sessionId: missionId,
+          agent: selectedAgent || undefined,
         }
       }))
     }).catch(err => {
@@ -394,10 +453,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
       wsRef.current?.send(JSON.stringify({
         id: requestId,
-        type: 'claude',
+        type: 'chat',
         payload: {
           prompt: content,
           sessionId: missionId,
+          agent: selectedAgent || undefined,
         }
       }))
     })
@@ -469,6 +529,19 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // Select an AI agent
+  const selectAgent = useCallback((agentName: string) => {
+    ensureConnection().then(() => {
+      wsRef.current?.send(JSON.stringify({
+        id: `select-agent-${Date.now()}`,
+        type: 'select_agent',
+        payload: { agent: agentName }
+      }))
+    }).catch(err => {
+      console.error('[Missions] Failed to select agent:', err)
+    })
+  }, [ensureConnection])
+
   // Sidebar controls
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), [])
   const openSidebar = useCallback(() => {
@@ -506,6 +579,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       isFullScreen,
       unreadMissionCount: unreadMissionIds.size,
       unreadMissionIds,
+      agents,
+      selectedAgent,
+      defaultAgent,
+      agentsLoading,
       startMission,
       sendMessage,
       cancelMission,
@@ -513,6 +590,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       rateMission,
       setActiveMission,
       markMissionAsRead,
+      selectAgent,
       toggleSidebar,
       openSidebar,
       closeSidebar,
