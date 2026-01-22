@@ -2,12 +2,13 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, R
 import { useClusters, ClusterInfo } from './useMCP'
 
 // Severity levels
-export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low' | 'info'
+export type SeverityLevel = 'critical' | 'warning' | 'high' | 'medium' | 'low' | 'info'
 
-export const SEVERITY_LEVELS: SeverityLevel[] = ['critical', 'high', 'medium', 'low', 'info']
+export const SEVERITY_LEVELS: SeverityLevel[] = ['critical', 'warning', 'high', 'medium', 'low', 'info']
 
 export const SEVERITY_CONFIG: Record<SeverityLevel, { label: string; color: string; bgColor: string }> = {
   critical: { label: 'Critical', color: 'text-red-500', bgColor: 'bg-red-500/20' },
+  warning: { label: 'Warning', color: 'text-orange-500', bgColor: 'bg-orange-500/20' },
   high: { label: 'High', color: 'text-red-400', bgColor: 'bg-red-500/10' },
   medium: { label: 'Medium', color: 'text-orange-400', bgColor: 'bg-orange-500/10' },
   low: { label: 'Low', color: 'text-yellow-400', bgColor: 'bg-yellow-500/10' },
@@ -15,15 +16,16 @@ export const SEVERITY_CONFIG: Record<SeverityLevel, { label: string; color: stri
 }
 
 // Status levels
-export type StatusLevel = 'pending' | 'failed' | 'running' | 'init'
+export type StatusLevel = 'pending' | 'failed' | 'running' | 'init' | 'bound'
 
-export const STATUS_LEVELS: StatusLevel[] = ['pending', 'failed', 'running', 'init']
+export const STATUS_LEVELS: StatusLevel[] = ['pending', 'failed', 'running', 'init', 'bound']
 
 export const STATUS_CONFIG: Record<StatusLevel, { label: string; color: string; bgColor: string }> = {
   pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-500/10' },
   failed: { label: 'Failed', color: 'text-red-400', bgColor: 'bg-red-500/10' },
   running: { label: 'Running', color: 'text-green-400', bgColor: 'bg-green-500/10' },
   init: { label: 'Init', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
+  bound: { label: 'Bound', color: 'text-green-400', bgColor: 'bg-green-500/10' },
 }
 
 // Cluster group definition
@@ -391,7 +393,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     if ((selectedStatuses as string[]).includes('__none__')) return []
     return items.filter(item => {
       const status = (item.status || '').toLowerCase()
-      return effectiveSelectedStatuses.some(s => status.includes(s))
+      // Use exact match instead of substring to avoid false positives
+      return effectiveSelectedStatuses.includes(status as StatusLevel)
     })
   }, [isAllStatusesSelected, selectedStatuses, effectiveSelectedStatuses])
 

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, RefreshCw, ChevronRight } from 'lucide-react'
 import { useDeployments } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { usePagination, Pagination } from '../ui/Pagination'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -65,6 +66,12 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const namespace = config?.namespace
   const { deployments, isLoading, error, refetch, isRefreshing } = useDeployments(cluster, namespace)
   const { drillToDeployment } = useDrillDownActions()
+  const {
+    selectedClusters,
+    isAllClustersSelected,
+    filterByStatus: globalFilterByStatus,
+    customFilter: globalCustomFilter
+  } = useGlobalFilters()
 
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState('')
@@ -73,10 +80,33 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  // Deployments that are actively progressing (not fully satisfied)
-  const progressingDeployments = useMemo(() =>
-    deployments.filter((d) => d.readyReplicas < d.replicas),
-  [deployments])
+  // Apply global filters first, then filter to progressing deployments
+  const progressingDeployments = useMemo(() => {
+    let result = deployments
+
+    // Filter by global cluster selection (if card doesn't have specific cluster configured)
+    if (!cluster && !isAllClustersSelected) {
+      result = result.filter(d => d.cluster && selectedClusters.some(sc =>
+        d.cluster?.includes(sc) || sc.includes(d.cluster?.split('/').pop() || '')
+      ))
+    }
+
+    // Apply global status filter
+    result = globalFilterByStatus(result)
+
+    // Apply global custom text filter
+    if (globalCustomFilter.trim()) {
+      const query = globalCustomFilter.toLowerCase()
+      result = result.filter(d =>
+        d.name.toLowerCase().includes(query) ||
+        d.namespace.toLowerCase().includes(query) ||
+        (d.cluster?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    // Filter to progressing deployments
+    return result.filter((d) => d.readyReplicas < d.replicas)
+  }, [deployments, cluster, selectedClusters, isAllClustersSelected, globalFilterByStatus, globalCustomFilter])
 
   // Status counts (for progressing deployments only)
   const statusCounts = useMemo(() => ({

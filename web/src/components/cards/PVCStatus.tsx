@@ -56,16 +56,36 @@ function getStatusColor(status: string) {
 
 export function PVCStatus() {
   const { pvcs, isLoading, error } = usePVCs()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { selectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
 
-  // Filter by selected clusters
+  // Apply global filters
   const filteredPVCs = useMemo(() => {
-    if (isAllClustersSelected) return pvcs
-    return pvcs.filter(p => p.cluster && selectedClusters.includes(p.cluster))
-  }, [pvcs, selectedClusters, isAllClustersSelected])
+    let result = pvcs
+
+    // Filter by cluster selection
+    if (!isAllClustersSelected) {
+      result = result.filter(p => p.cluster && selectedClusters.includes(p.cluster))
+    }
+
+    // Apply global status filter
+    result = filterByStatus(result)
+
+    // Apply custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        (p.namespace?.toLowerCase() || '').includes(query) ||
+        (p.cluster?.toLowerCase() || '').includes(query) ||
+        (p.storageClass?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    return result
+  }, [pvcs, selectedClusters, isAllClustersSelected, filterByStatus, customFilter])
 
   // Sort PVCs
   const sortedPVCs = useMemo(() => {
