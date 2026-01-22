@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Globe, Network as NetworkIcon, Shield, Workflow, Plus, Layout, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Activity, Hourglass, GripVertical } from 'lucide-react'
+import { Globe, Network as NetworkIcon, Shield, Workflow, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Activity, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -25,8 +25,9 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useShowCards } from '../../hooks/useShowCards'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -110,11 +111,12 @@ const SortableNetworkCard = memo(function SortableNetworkCard({
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button
             {...attributes}
@@ -143,7 +145,7 @@ function NetworkDragPreviewCard({ card }: { card: NetworkCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -161,7 +163,7 @@ export function Network() {
 
   // Card state
   const [cards, setCards] = useState<NetworkCard[]>(() => loadNetworkCards())
-  const [showStats, setShowStats] = useState(true)
+  // Stats collapsed state is now managed by StatsOverview component
   const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-network')
   const [showAddCard, setShowAddCard] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -287,6 +289,44 @@ export function Network() {
   const nodePortServices = filteredServices.filter(s => s.type === 'NodePort').length
   const clusterIPServices = filteredServices.filter(s => s.type === 'ClusterIP').length
 
+  // Stats value getter for the configurable StatsOverview component
+  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    const drillToFirstService = () => {
+      if (filteredServices.length > 0 && filteredServices[0]) {
+        drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
+      }
+    }
+    const drillToLoadBalancer = () => {
+      const svc = filteredServices.find(s => s.type === 'LoadBalancer')
+      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+    }
+    const drillToNodePort = () => {
+      const svc = filteredServices.find(s => s.type === 'NodePort')
+      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+    }
+    const drillToClusterIP = () => {
+      const svc = filteredServices.find(s => s.type === 'ClusterIP')
+      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+    }
+
+    switch (blockId) {
+      case 'services':
+        return { value: filteredServices.length, sublabel: 'total services', onClick: drillToFirstService, isClickable: filteredServices.length > 0 }
+      case 'loadbalancers':
+        return { value: loadBalancers, sublabel: 'external access', onClick: drillToLoadBalancer, isClickable: loadBalancers > 0 }
+      case 'nodeport':
+        return { value: nodePortServices, sublabel: 'node-level access', onClick: drillToNodePort, isClickable: nodePortServices > 0 }
+      case 'clusterip':
+        return { value: clusterIPServices, sublabel: 'internal only', onClick: drillToClusterIP, isClickable: clusterIPServices > 0 }
+      case 'ingresses':
+        return { value: '-', sublabel: 'ingresses', isClickable: false }
+      case 'endpoints':
+        return { value: '-', sublabel: 'endpoints', isClickable: false }
+      default:
+        return { value: '-', sublabel: '' }
+    }
+  }, [filteredServices, loadBalancers, nodePortServices, clusterIPServices, drillToService])
+
   // Transform card for ConfigureCardModal
   const configureCard = configuringCard ? {
     id: configuringCard.id,
@@ -338,109 +378,15 @@ export function Network() {
         </div>
       </div>
 
-      {/* Stats Overview - collapsible */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Activity className="w-4 h-4" />
-            <span>Stats Overview</span>
-            {showStats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-
-        {showStats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {showSkeletons ? (
-              // Loading skeletons
-              <>
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="glass p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Skeleton variant="circular" width={20} height={20} />
-                      <Skeleton variant="text" width={80} height={16} />
-                    </div>
-                    <Skeleton variant="text" width={60} height={36} className="mb-1" />
-                    <Skeleton variant="text" width={100} height={12} />
-                  </div>
-                ))}
-              </>
-            ) : (
-              // Real data
-              <>
-                <div
-                  className={`glass p-4 rounded-lg ${filteredServices.length > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    if (filteredServices.length > 0 && filteredServices[0]) {
-                      drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
-                    }
-                  }}
-                  title={filteredServices.length > 0 ? `${filteredServices.length} total services - Click to view details` : 'No services found'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Workflow className="w-5 h-5 text-blue-400" />
-                    <span className="text-sm text-muted-foreground">Services</span>
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{filteredServices.length}</div>
-                  <div className="text-xs text-muted-foreground">total services</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${loadBalancers > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    const svc = filteredServices.find(s => s.type === 'LoadBalancer')
-                    if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
-                  }}
-                  title={loadBalancers > 0 ? `${loadBalancers} LoadBalancer service${loadBalancers !== 1 ? 's' : ''} - Click to view details` : 'No LoadBalancer services'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Globe className="w-5 h-5 text-green-400" />
-                    <span className="text-sm text-muted-foreground">LoadBalancers</span>
-                  </div>
-                  <div className="text-3xl font-bold text-green-400">{loadBalancers}</div>
-                  <div className="text-xs text-muted-foreground">external access</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${nodePortServices > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    const svc = filteredServices.find(s => s.type === 'NodePort')
-                    if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
-                  }}
-                  title={nodePortServices > 0 ? `${nodePortServices} NodePort service${nodePortServices !== 1 ? 's' : ''} - Click to view details` : 'No NodePort services'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <NetworkIcon className="w-5 h-5 text-yellow-400" />
-                    <span className="text-sm text-muted-foreground">NodePort</span>
-                  </div>
-                  <div className="text-3xl font-bold text-yellow-400">{nodePortServices}</div>
-                  <div className="text-xs text-muted-foreground">node-level access</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${clusterIPServices > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    const svc = filteredServices.find(s => s.type === 'ClusterIP')
-                    if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
-                  }}
-                  title={clusterIPServices > 0 ? `${clusterIPServices} ClusterIP service${clusterIPServices !== 1 ? 's' : ''} - Click to view details` : 'No ClusterIP services'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="w-5 h-5 text-purple-400" />
-                    <span className="text-sm text-muted-foreground">ClusterIP</span>
-                  </div>
-                  <div className="text-3xl font-bold text-purple-400">{clusterIPServices}</div>
-                  <div className="text-xs text-muted-foreground">internal only</div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Stats Overview - configurable */}
+      <StatsOverview
+        dashboardType="network"
+        getStatValue={getStatValue}
+        hasData={services.length > 0 || !showSkeletons}
+        isLoading={showSkeletons}
+        lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-network-stats-collapsed"
+      />
 
       {/* Dashboard Cards Section */}
       <div className="mb-6">
@@ -454,23 +400,6 @@ export function Network() {
             <span>Network Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}

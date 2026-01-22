@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { HardDrive, Database, FolderArchive, Plus, Layout, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Activity, Hourglass, X, ExternalLink, GripVertical } from 'lucide-react'
+import { HardDrive, Database, FolderArchive, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Activity, Hourglass, X, ExternalLink, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -25,8 +25,9 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useShowCards } from '../../hooks/useShowCards'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { StatsOverview, StatBlockValue, formatMemoryValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -237,11 +238,12 @@ const SortableStorageCard = memo(function SortableStorageCard({
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button
             {...attributes}
@@ -270,7 +272,7 @@ function StorageDragPreviewCard({ card }: { card: StorageCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -290,7 +292,7 @@ export function Storage() {
 
   // Card state
   const [cards, setCards] = useState<StorageCard[]>(() => loadStorageCards())
-  const [showStats, setShowStats] = useState(true)
+  // Stats collapsed state is now managed by StatsOverview component
   const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-storage')
   const [showAddCard, setShowAddCard] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -477,6 +479,44 @@ export function Storage() {
     return Math.max(0, value)
   }
 
+  // Stats value getter for the configurable StatsOverview component
+  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    switch (blockId) {
+      case 'ephemeral':
+        return {
+          value: formatStorage(stats?.totalStorageGB || 0, hasDataToShow),
+          sublabel: 'total allocatable',
+          onClick: hasDataToShow ? drillToResources : undefined,
+          isClickable: hasDataToShow
+        }
+      case 'pvcs':
+        return {
+          value: formatStatValue(stats?.totalPVCs || 0, hasDataToShow),
+          sublabel: 'persistent volume claims',
+          onClick: () => { setPVCModalFilter('all'); setShowPVCModal(true) },
+          isClickable: hasDataToShow && (stats?.totalPVCs || 0) > 0
+        }
+      case 'bound':
+        return {
+          value: formatStatValue(stats?.boundPVCs || 0, hasDataToShow),
+          sublabel: 'PVCs bound',
+          onClick: () => { setPVCModalFilter('Bound'); setShowPVCModal(true) },
+          isClickable: hasDataToShow && (stats?.boundPVCs || 0) > 0
+        }
+      case 'pending':
+        return {
+          value: formatStatValue(stats?.pendingPVCs || 0, hasDataToShow),
+          sublabel: 'PVCs pending',
+          onClick: () => { setPVCModalFilter('Pending'); setShowPVCModal(true) },
+          isClickable: hasDataToShow && (stats?.pendingPVCs || 0) > 0
+        }
+      case 'storage_classes':
+        return { value: '-', sublabel: 'storage classes', isClickable: false }
+      default:
+        return { value: '-', sublabel: '' }
+    }
+  }, [stats, hasDataToShow, formatStorage, formatStatValue, drillToResources, setPVCModalFilter, setShowPVCModal])
+
   // Transform card for ConfigureCardModal
   const configureCard = configuringCard ? {
     id: configuringCard.id,
@@ -528,111 +568,15 @@ export function Storage() {
         </div>
       </div>
 
-      {/* Stats Overview - collapsible */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Activity className="w-4 h-4" />
-            <span>Stats Overview</span>
-            {showStats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-
-        {showStats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {showSkeletons ? (
-              // Loading skeletons
-              <>
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="glass p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Skeleton variant="circular" width={20} height={20} />
-                      <Skeleton variant="text" width={80} height={16} />
-                    </div>
-                    <Skeleton variant="text" width={60} height={36} className="mb-1" />
-                    <Skeleton variant="text" width={100} height={12} />
-                  </div>
-                ))}
-              </>
-            ) : (
-              // Real data - use cached stats during refresh
-              <>
-                <div
-                  className={`glass p-4 rounded-lg ${hasDataToShow ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-                  onClick={hasDataToShow ? drillToResources : undefined}
-                  title={hasDataToShow ? `${formatStorage(stats?.totalStorageGB || 0, hasDataToShow)} ephemeral storage allocatable across ${reachableClusters.length} cluster${reachableClusters.length !== 1 ? 's' : ''} - Click to view resources` : 'No reachable clusters'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <HardDrive className="w-5 h-5 text-purple-400" />
-                    <span className="text-sm text-muted-foreground">Ephemeral Storage</span>
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{formatStorage(stats?.totalStorageGB || 0, hasDataToShow)}</div>
-                  <div className="text-xs text-muted-foreground">total allocatable</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${hasDataToShow && (stats?.totalPVCs || 0) > 0 ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-                  onClick={() => {
-                    if (hasDataToShow && (stats?.totalPVCs || 0) > 0) {
-                      setPVCModalFilter('all')
-                      setShowPVCModal(true)
-                    }
-                  }}
-                  title={!hasDataToShow ? 'No reachable clusters' : (stats?.totalPVCs || 0) > 0 ? `${stats?.totalPVCs} persistent volume claim${(stats?.totalPVCs || 0) !== 1 ? 's' : ''} - Click to view list` : 'No PVCs found'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Database className="w-5 h-5 text-blue-400" />
-                    <span className="text-sm text-muted-foreground">PVCs</span>
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{formatStatValue(stats?.totalPVCs || 0, hasDataToShow)}</div>
-                  <div className="text-xs text-muted-foreground">persistent volume claims</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${hasDataToShow && (stats?.boundPVCs || 0) > 0 ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-                  onClick={() => {
-                    if (hasDataToShow && (stats?.boundPVCs || 0) > 0) {
-                      setPVCModalFilter('Bound')
-                      setShowPVCModal(true)
-                    }
-                  }}
-                  title={!hasDataToShow ? 'No reachable clusters' : (stats?.boundPVCs || 0) > 0 ? `${stats?.boundPVCs} PVC${(stats?.boundPVCs || 0) !== 1 ? 's' : ''} bound - Click to view list` : 'No bound PVCs'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <FolderArchive className="w-5 h-5 text-green-400" />
-                    <span className="text-sm text-muted-foreground">Bound</span>
-                  </div>
-                  <div className="text-3xl font-bold text-green-400">{formatStatValue(stats?.boundPVCs || 0, hasDataToShow)}</div>
-                  <div className="text-xs text-muted-foreground">PVCs bound</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${hasDataToShow && (stats?.pendingPVCs || 0) > 0 ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-                  onClick={() => {
-                    if (hasDataToShow && (stats?.pendingPVCs || 0) > 0) {
-                      setPVCModalFilter('Pending')
-                      setShowPVCModal(true)
-                    }
-                  }}
-                  title={!hasDataToShow ? 'No reachable clusters' : (stats?.pendingPVCs || 0) > 0 ? `${stats?.pendingPVCs} PVC${(stats?.pendingPVCs || 0) !== 1 ? 's' : ''} pending - Click to view list` : 'No pending PVCs'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Database className="w-5 h-5 text-yellow-400" />
-                    <span className="text-sm text-muted-foreground">Pending</span>
-                  </div>
-                  <div className="text-3xl font-bold text-yellow-400">{formatStatValue(stats?.pendingPVCs || 0, hasDataToShow)}</div>
-                  <div className="text-xs text-muted-foreground">PVCs pending</div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Stats Overview - configurable */}
+      <StatsOverview
+        dashboardType="storage"
+        getStatValue={getStatValue}
+        hasData={hasDataToShow}
+        isLoading={showSkeletons}
+        lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-storage-stats-collapsed"
+      />
 
       {/* Dashboard Cards Section */}
       <div className="mb-6">
@@ -646,23 +590,6 @@ export function Storage() {
             <span>Storage Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}

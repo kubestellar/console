@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Layers, Plus, Layout, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Activity, FolderOpen, AlertTriangle, AlertCircle, ListChecks, Hourglass, GripVertical } from 'lucide-react'
+import { Layers, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -27,8 +27,9 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -48,7 +49,7 @@ const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
 // Default cards for the workloads dashboard
 const DEFAULT_WORKLOAD_CARDS: WorkloadCard[] = [
-  { id: 'default-app-status', card_type: 'app_status', title: 'Application Status', config: {}, position: { w: 4, h: 2 } },
+  { id: 'default-app-status', card_type: 'app_status', title: 'Workload Status', config: {}, position: { w: 4, h: 2 } },
   { id: 'default-deployment-status', card_type: 'deployment_status', title: 'Deployment Status', config: {}, position: { w: 4, h: 2 } },
   { id: 'default-deployment-progress', card_type: 'deployment_progress', title: 'Deployment Progress', config: {}, position: { w: 4, h: 2 } },
   { id: 'default-pod-issues', card_type: 'pod_issues', title: 'Pod Issues', config: {}, position: { w: 6, h: 2 } },
@@ -114,11 +115,12 @@ const SortableWorkloadCard = memo(function SortableWorkloadCard({
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button
             {...attributes}
@@ -147,7 +149,7 @@ function WorkloadDragPreviewCard({ card }: { card: WorkloadCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -173,7 +175,7 @@ export function Workloads() {
 
   // Card state
   const [cards, setCards] = useState<WorkloadCard[]>(() => loadWorkloadCards())
-  const [showStats, setShowStats] = useState(true)
+  // Stats collapsed state is now managed by StatsOverview component
   const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-workloads')
   const [showAddCard, setShowAddCard] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -416,6 +418,46 @@ export function Workloads() {
     totalDeploymentIssues: deploymentIssues.length,
   }), [apps, podIssues, deploymentIssues])
 
+  // Stats value getter for the configurable StatsOverview component
+  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    const drillToFirst = () => {
+      if (apps.length > 0 && apps[0]) {
+        drillToNamespace(apps[0].cluster, apps[0].namespace)
+      }
+    }
+    const drillToCritical = () => {
+      const criticalApp = apps.find(a => a.status === 'error')
+      if (criticalApp) drillToNamespace(criticalApp.cluster, criticalApp.namespace)
+    }
+    const drillToWarning = () => {
+      const warningApp = apps.find(a => a.status === 'warning')
+      if (warningApp) drillToNamespace(warningApp.cluster, warningApp.namespace)
+    }
+    const drillToHealthy = () => {
+      const healthyApp = apps.find(a => a.status === 'healthy')
+      if (healthyApp) drillToNamespace(healthyApp.cluster, healthyApp.namespace)
+    }
+
+    switch (blockId) {
+      case 'namespaces':
+        return { value: stats.total, sublabel: 'active namespaces', onClick: drillToFirst, isClickable: apps.length > 0 }
+      case 'critical':
+        return { value: stats.critical, sublabel: 'critical issues', onClick: drillToCritical, isClickable: stats.critical > 0 }
+      case 'warning':
+        return { value: stats.warning, sublabel: 'warning issues', onClick: drillToWarning, isClickable: stats.warning > 0 }
+      case 'healthy':
+        return { value: stats.healthy, sublabel: 'healthy namespaces', onClick: drillToHealthy, isClickable: stats.healthy > 0 }
+      case 'deployments':
+        return { value: stats.totalDeployments, sublabel: 'total deployments', onClick: drillToFirst, isClickable: stats.totalDeployments > 0 }
+      case 'pod_issues':
+        return { value: stats.totalPodIssues, sublabel: 'pod issues', onClick: drillToFirst, isClickable: stats.totalPodIssues > 0 }
+      case 'deployment_issues':
+        return { value: stats.totalDeploymentIssues, sublabel: 'deployment issues', onClick: drillToFirst, isClickable: stats.totalDeploymentIssues > 0 }
+      default:
+        return { value: '-', sublabel: '' }
+    }
+  }, [stats, apps, drillToNamespace])
+
   // Transform card for ConfigureCardModal
   const configureCard = configuringCard ? {
     id: configuringCard.id,
@@ -467,110 +509,15 @@ export function Workloads() {
         </div>
       </div>
 
-      {/* Stats Overview - collapsible */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Activity className="w-4 h-4" />
-            <span>Stats Overview</span>
-            {showStats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-
-        {showStats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {showSkeletons ? (
-              // Loading skeletons
-              <>
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="glass p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Skeleton variant="circular" width={20} height={20} />
-                      <Skeleton variant="text" width={80} height={16} />
-                    </div>
-                    <Skeleton variant="text" width={60} height={36} className="mb-1" />
-                    <Skeleton variant="text" width={100} height={12} />
-                  </div>
-                ))}
-              </>
-            ) : (
-              // Real data
-              <>
-                <div
-                  className={`glass p-4 rounded-lg ${apps.length > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    if (apps.length > 0 && apps[0]) {
-                      drillToNamespace(apps[0].cluster, apps[0].namespace)
-                    }
-                  }}
-                  title={apps.length > 0 ? `${stats.total} namespace${stats.total !== 1 ? 's' : ''} with workloads - Click to view details` : 'No namespaces with issues'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <FolderOpen className="w-5 h-5 text-purple-400" />
-                    <span className="text-sm text-muted-foreground">Namespaces</span>
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{stats.total}</div>
-                  <div className="text-xs text-muted-foreground">active namespaces</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${stats.critical > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    const criticalApp = apps.find(a => a.status === 'error')
-                    if (criticalApp) drillToNamespace(criticalApp.cluster, criticalApp.namespace)
-                  }}
-                  title={stats.critical > 0 ? `${stats.critical} namespace${stats.critical !== 1 ? 's' : ''} with critical issues - Click to view` : 'No critical issues'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-5 h-5 text-red-400" />
-                    <span className="text-sm text-muted-foreground">Critical</span>
-                  </div>
-                  <div className="text-3xl font-bold text-red-400">{stats.critical}</div>
-                  <div className="text-xs text-muted-foreground">critical issues</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${stats.warning > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    const warningApp = apps.find(a => a.status === 'warning')
-                    if (warningApp) drillToNamespace(warningApp.cluster, warningApp.namespace)
-                  }}
-                  title={stats.warning > 0 ? `${stats.warning} namespace${stats.warning !== 1 ? 's' : ''} with warnings - Click to view` : 'No warning issues'}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                    <span className="text-sm text-muted-foreground">Warning</span>
-                  </div>
-                  <div className="text-3xl font-bold text-yellow-400">{stats.warning}</div>
-                  <div className="text-xs text-muted-foreground">warning issues</div>
-                </div>
-                <div
-                  className={`glass p-4 rounded-lg ${stats.totalDeployments > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => {
-                    if (apps.length > 0 && apps[0]) {
-                      drillToNamespace(apps[0].cluster, apps[0].namespace)
-                    }
-                  }}
-                  title={`${stats.totalDeployments} deployments across ${stats.total} namespaces`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <ListChecks className="w-5 h-5 text-blue-400" />
-                    <span className="text-sm text-muted-foreground">Deployments</span>
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{stats.totalDeployments}</div>
-                  <div className="text-xs text-muted-foreground">total deployments</div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Stats Overview - configurable */}
+      <StatsOverview
+        dashboardType="workloads"
+        getStatValue={getStatValue}
+        hasData={apps.length > 0 || !showSkeletons}
+        isLoading={showSkeletons}
+        lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-workloads-stats-collapsed"
+      />
 
       {/* Dashboard Cards Section */}
       <div className="mb-6">
@@ -584,23 +531,6 @@ export function Workloads() {
             <span>Workload Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}

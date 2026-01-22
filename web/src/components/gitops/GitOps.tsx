@@ -6,7 +6,8 @@ import { StatusIndicator } from '../charts/StatusIndicator'
 import { DonutChart, BarChart } from '../charts'
 import { useToast } from '../ui/Toast'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { RefreshCw, Box, Loader2, Package, Ship, Layers, Cog, ChevronDown, ExternalLink, GitBranch, Clock, ArrowRight, AlertTriangle, CheckCircle2, XCircle, Plus, Layout, LayoutGrid, ChevronRight, Activity, Hourglass, GripVertical } from 'lucide-react'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { RefreshCw, Box, Loader2, Package, Ship, Layers, Cog, ChevronDown, ExternalLink, GitBranch, Clock, ArrowRight, AlertTriangle, CheckCircle2, XCircle, Plus, LayoutGrid, ChevronRight, Activity, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -29,7 +30,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { cn } from '../../lib/cn'
 import { formatStat } from '../../lib/formatStats'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -103,11 +104,12 @@ const SortableGitOpsCard = memo(function SortableGitOpsCard({
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button
             {...attributes}
@@ -136,7 +138,7 @@ function GitOpsDragPreviewCard({ card }: { card: GitOpsCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -249,7 +251,7 @@ export function GitOps() {
 
   // Card state
   const [cards, setCards] = useState<GitOpsCard[]>(() => loadGitOpsCards())
-  const [showStats, setShowStats] = useState(true)
+  // Stats collapsed state is now managed by StatsOverview component
   const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-gitops')
   const [showAddCard, setShowAddCard] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -621,6 +623,30 @@ export function GitOps() {
     }
   }, [globalFilteredReleases])
 
+  // Stats value getter for the configurable StatsOverview component
+  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    switch (blockId) {
+      case 'total':
+        return { value: stats.total, sublabel: 'releases', onClick: () => { setTypeFilter('all'); setActiveTab('releases') }, isClickable: stats.total > 0 }
+      case 'helm':
+        return { value: stats.helm, sublabel: 'helm charts', onClick: () => { setTypeFilter('helm'); setActiveTab('releases') }, isClickable: stats.helm > 0 }
+      case 'kustomize':
+        return { value: stats.kustomize, sublabel: 'kustomizations', onClick: () => { setTypeFilter('kustomize'); setActiveTab('releases') }, isClickable: stats.kustomize > 0 }
+      case 'operators':
+        return { value: stats.operators, sublabel: 'operators', onClick: () => { setTypeFilter('operator'); setActiveTab('releases') }, isClickable: stats.operators > 0 }
+      case 'deployed':
+        return { value: stats.deployed, sublabel: 'successful', onClick: () => { setStatusFilter('deployed'); setActiveTab('releases') }, isClickable: stats.deployed > 0 }
+      case 'failed':
+        return { value: stats.failed, sublabel: 'failed', onClick: () => { setStatusFilter('failed'); setActiveTab('releases') }, isClickable: stats.failed > 0 }
+      case 'pending':
+        return { value: stats.pending, sublabel: 'in progress', onClick: () => { setStatusFilter('pending'); setActiveTab('releases') }, isClickable: stats.pending > 0 }
+      case 'other':
+        return { value: stats.other, sublabel: 'other statuses', onClick: () => { setTypeFilter('all'); setActiveTab('releases') }, isClickable: stats.other > 0 }
+      default:
+        return { value: '-', sublabel: '' }
+    }
+  }, [stats, setTypeFilter, setStatusFilter, setActiveTab])
+
   // Get recent changes (sorted by timestamp)
   const recentChanges = useMemo(() => {
     return [...globalFilteredReleases]
@@ -795,77 +821,15 @@ export function GitOps() {
         </div>
       </div>
 
-      {/* Stats Overview - collapsible */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => setShowStats(!showStats)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Activity className="w-4 h-4" />
-            <span>Stats Overview</span>
-            {showStats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-
-        {showStats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div
-              className={`glass p-4 rounded-lg ${stats.total > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-              onClick={() => { setTypeFilter('all'); setActiveTab('releases') }}
-              title={`${formatStat(stats.total)} total release${stats.total !== 1 ? 's' : ''} - Click to view all`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-5 h-5 text-blue-400" />
-                <span className="text-sm text-muted-foreground">Total</span>
-              </div>
-              <div className="text-3xl font-bold text-foreground">{formatStat(stats.total)}</div>
-              <div className="text-xs text-muted-foreground">releases</div>
-            </div>
-            <div
-              className={`glass p-4 rounded-lg ${stats.helm > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-              onClick={() => { setTypeFilter('helm'); setActiveTab('releases') }}
-              title={stats.helm > 0 ? `${formatStat(stats.helm)} Helm chart${stats.helm !== 1 ? 's' : ''} - Click to view` : 'No Helm charts'}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Ship className="w-5 h-5 text-cyan-400" />
-                <span className="text-sm text-muted-foreground">Helm</span>
-              </div>
-              <div className="text-3xl font-bold text-cyan-400">{formatStat(stats.helm)}</div>
-              <div className="text-xs text-muted-foreground">helm charts</div>
-            </div>
-            <div
-              className={`glass p-4 rounded-lg ${stats.deployed > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-              onClick={() => { setStatusFilter('deployed'); setActiveTab('releases') }}
-              title={stats.deployed > 0 ? `${formatStat(stats.deployed)} deployed release${stats.deployed !== 1 ? 's' : ''} - Click to view` : 'No deployed releases'}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                <span className="text-sm text-muted-foreground">Deployed</span>
-              </div>
-              <div className="text-3xl font-bold text-green-400">{formatStat(stats.deployed)}</div>
-              <div className="text-xs text-muted-foreground">successful</div>
-            </div>
-            <div
-              className={`glass p-4 rounded-lg ${stats.failed > 0 ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-              onClick={() => { setStatusFilter('failed'); setActiveTab('releases') }}
-              title={stats.failed > 0 ? `${formatStat(stats.failed)} failed release${stats.failed !== 1 ? 's' : ''} - Click to view` : 'No failed releases'}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <XCircle className="w-5 h-5 text-red-400" />
-                <span className="text-sm text-muted-foreground">Failed</span>
-              </div>
-              <div className="text-3xl font-bold text-red-400">{formatStat(stats.failed)}</div>
-              <div className="text-xs text-muted-foreground">releases</div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Stats Overview - configurable */}
+      <StatsOverview
+        dashboardType="gitops"
+        getStatValue={getStatValue}
+        hasData={releases.length > 0}
+        isLoading={isLoading && releases.length === 0}
+        lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-gitops-stats-collapsed"
+      />
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-border pb-2">
@@ -887,44 +851,6 @@ export function GitOps() {
         ))}
       </div>
 
-      {/* Stats Overview - shown on all tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-        <div className="glass p-4 rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => { setTypeFilter('all'); setActiveTab('releases') }}>
-          <div className="text-3xl font-bold text-foreground">{formatStat(stats.total)}</div>
-          <div className="text-sm text-muted-foreground">Total</div>
-        </div>
-        <div className="glass p-4 rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => { setTypeFilter('helm'); setActiveTab('releases') }}>
-          <div className="text-3xl font-bold text-blue-400">{formatStat(stats.helm)}</div>
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <Ship className="w-3 h-3" /> Helm
-          </div>
-        </div>
-        <div className="glass p-4 rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => { setTypeFilter('kustomize'); setActiveTab('releases') }}>
-          <div className="text-3xl font-bold text-purple-400">{formatStat(stats.kustomize)}</div>
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <Layers className="w-3 h-3" /> Kustomize
-          </div>
-        </div>
-        <div className="glass p-4 rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => { setTypeFilter('operator'); setActiveTab('releases') }}>
-          <div className="text-3xl font-bold text-orange-400">{formatStat(stats.operators)}</div>
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <Cog className="w-3 h-3" /> Operators
-          </div>
-        </div>
-        <div className="glass p-4 rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => { setStatusFilter('deployed'); setActiveTab('releases') }}>
-          <div className="text-3xl font-bold text-green-400">{formatStat(stats.deployed)}</div>
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Deployed
-          </div>
-        </div>
-        <div className="glass p-4 rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => { setStatusFilter('failed'); setActiveTab('releases') }}>
-          <div className="text-3xl font-bold text-red-400">{formatStat(stats.failed)}</div>
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <XCircle className="w-3 h-3" /> Failed
-          </div>
-        </div>
-      </div>
-
       {/* Dashboard Cards Section */}
       <div className="mb-6">
         {/* Card section header with toggle and buttons */}
@@ -937,23 +863,6 @@ export function GitOps() {
             <span>GitOps Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}
