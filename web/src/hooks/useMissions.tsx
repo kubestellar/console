@@ -334,8 +334,14 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           ]
         }
       } else if (message.type === 'error') {
-        const payload = message.payload as { message?: string }
+        const payload = message.payload as { code?: string; message?: string }
         pendingRequests.current.delete(message.id)
+
+        // Create helpful error message based on error code
+        let errorContent = payload.message || 'Unknown error'
+        if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
+          errorContent = `${payload.message}\n\n**[Configure API Keys →](/settings)**\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
+        }
 
         return {
           ...m,
@@ -347,7 +353,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             {
               id: `msg-${Date.now()}`,
               role: 'system' as const,
-              content: `Error: ${payload.message || 'Unknown error'}`,
+              content: errorContent,
               timestamp: new Date(),
             }
           ]

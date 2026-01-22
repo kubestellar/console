@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { X, Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { X, Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
+
+const INSTALL_COMMAND = 'brew install kubestellar/tap/kkc-agent && kkc-agent'
 
 const KKC_AGENT_URL = 'http://127.0.0.1:8585'
 
@@ -48,6 +50,13 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const [newKeyValue, setNewKeyValue] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const copyInstallCommand = async () => {
+    await navigator.clipboard.writeText(INSTALL_COMMAND)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const fetchKeysStatus = useCallback(async () => {
     try {
@@ -160,14 +169,36 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : error && keysStatus.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="text-center py-6">
+              <div className="p-3 rounded-full bg-orange-500/20 w-fit mx-auto mb-4">
+                <Plug className="w-8 h-8 text-orange-400" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">Local Agent Required</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Install and start the local agent to configure API keys.
+              </p>
+
+              <div className="bg-secondary/50 rounded-lg p-4 mb-4">
+                <p className="text-xs text-muted-foreground mb-2">Run this command to install:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 px-3 py-2 rounded bg-background font-mono text-sm text-foreground text-left overflow-x-auto">
+                    {INSTALL_COMMAND}
+                  </code>
+                  <button
+                    onClick={copyInstallCommand}
+                    className="shrink-0 flex items-center gap-1 px-3 py-2 rounded bg-primary text-primary-foreground text-sm hover:bg-primary/80"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={fetchKeysStatus}
-                className="mt-4 text-sm text-primary hover:underline"
+                className="text-sm text-primary hover:underline"
               >
-                Retry
+                Retry Connection
               </button>
             </div>
           ) : (
