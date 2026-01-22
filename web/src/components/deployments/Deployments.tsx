@@ -156,7 +156,7 @@ export function Deployments() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { deployments, isLoading, isRefreshing, lastUpdated, refetch } = useDeployments()
   const { issues: deploymentIssues, refetch: refetchIssues } = useDeploymentIssues()
-  const { clusters } = useClusters()
+  const { clusters: _clusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Card state
