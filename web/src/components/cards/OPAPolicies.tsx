@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, X, ChevronRight, RefreshCw } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, X, ChevronRight, RefreshCw, Search } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -398,15 +398,24 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   const [selectedClusterForViolations, setSelectedClusterForViolations] = useState<string>('')
   const [showPolicyModal, setShowPolicyModal] = useState(false)
   const [selectedPolicy, setSelectedPolicy] = useState<typeof DEMO_POLICIES[0] | null>(null)
+  const [localSearch, setLocalSearch] = useState('')
 
   // Use ref to avoid recreating checkAllClusters on every status change
   const statusesRef = useRef(statuses)
   statusesRef.current = statuses
 
   // Filter clusters
-  const filteredClusters = clusters.filter(c =>
-    c.healthy !== false && (isAllClustersSelected || selectedClusters.includes(c.name))
-  )
+  const filteredClusters = useMemo(() => {
+    let result = clusters.filter(c =>
+      c.healthy !== false && (isAllClustersSelected || selectedClusters.includes(c.name))
+    )
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(c => c.name.toLowerCase().includes(query))
+    }
+    return result
+  }, [clusters, isAllClustersSelected, selectedClusters, localSearch])
 
   // Check Gatekeeper on filtered clusters
   const checkAllClusters = useCallback(async () => {
@@ -543,6 +552,18 @@ Let's start by discussing what kind of policy I need.`,
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search clusters..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Summary stats */}

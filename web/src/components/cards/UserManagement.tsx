@@ -8,6 +8,7 @@ import {
   ChevronUp,
   AlertCircle,
   CheckCircle,
+  Search,
 } from 'lucide-react'
 import { useConsoleUsers, useUserManagementSummary, useK8sServiceAccounts } from '../../hooks/useUsers'
 import { useClusters } from '../../hooks/useMCP'
@@ -27,6 +28,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const [activeTab, setActiveTab] = useState<TabType>('console')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [localSearch, setLocalSearch] = useState('')
 
   const { user: currentUser } = useAuth()
   const { summary, isLoading: summaryLoading, isRefreshing: summaryRefreshing, refetch: refetchSummary } = useUserManagementSummary()
@@ -50,7 +52,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     return result
   }, [allClusters, selectedClusters, isAllClustersSelected])
 
-  // Filter users by global customFilter
+  // Filter users by global customFilter and local search
   const users = useMemo(() => {
     let result = allUsers
     if (customFilter.trim()) {
@@ -60,10 +62,19 @@ export function UserManagement({ config: _config }: UserManagementProps) {
         (u.email?.toLowerCase() || '').includes(query)
       )
     }
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(u =>
+        u.github_login.toLowerCase().includes(query) ||
+        (u.email?.toLowerCase() || '').includes(query) ||
+        u.role.toLowerCase().includes(query)
+      )
+    }
     return result
-  }, [allUsers, customFilter])
+  }, [allUsers, customFilter, localSearch])
 
-  // Filter service accounts by global filter
+  // Filter service accounts by global filter and local search
   const serviceAccounts = useMemo(() => {
     let result = allServiceAccounts
     if (!isAllClustersSelected) {
@@ -76,8 +87,17 @@ export function UserManagement({ config: _config }: UserManagementProps) {
         sa.namespace.toLowerCase().includes(query)
       )
     }
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(sa =>
+        sa.name.toLowerCase().includes(query) ||
+        sa.namespace.toLowerCase().includes(query) ||
+        sa.cluster.toLowerCase().includes(query)
+      )
+    }
     return result
-  }, [allServiceAccounts, selectedClusters, isAllClustersSelected, customFilter])
+  }, [allServiceAccounts, selectedClusters, isAllClustersSelected, customFilter, localSearch])
 
   const isAdmin = currentUser?.role === 'admin'
 
@@ -173,6 +193,18 @@ export function UserManagement({ config: _config }: UserManagementProps) {
           </p>
           <p className="text-xs text-muted-foreground mt-1">cluster admin</p>
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search users..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Tabs */}

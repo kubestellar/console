@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2 } from 'lucide-react'
+import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2, Search } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -38,6 +38,7 @@ export function AppStatus(_props: AppStatusProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
 
   // Transform deployments into app data grouped by name
   const rawApps = useMemo((): AppData[] => {
@@ -94,6 +95,16 @@ export function AppStatus(_props: AppStatusProps) {
       )
     }
 
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(app =>
+        app.name.toLowerCase().includes(query) ||
+        app.namespace.toLowerCase().includes(query) ||
+        app.clusters.some(c => c.toLowerCase().includes(query))
+      )
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       let result = 0
       if (sortBy === 'status') {
@@ -106,7 +117,7 @@ export function AppStatus(_props: AppStatusProps) {
       return sortDirection === 'asc' ? -result : result
     })
     return sorted
-  }, [rawApps, sortBy, sortDirection, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [rawApps, sortBy, sortDirection, globalSelectedClusters, isAllClustersSelected, customFilter, localSearch])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -157,6 +168,18 @@ export function AppStatus(_props: AppStatusProps) {
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search workloads..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto">

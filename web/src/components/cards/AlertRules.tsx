@@ -6,6 +6,7 @@ import {
   BellOff,
   Trash2,
   Pencil,
+  Search,
 } from 'lucide-react'
 import { useAlertRules } from '../../hooks/useAlerts'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -23,6 +24,7 @@ export function AlertRulesCard() {
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [sortBy, setSortBy] = useState<SortField>('name')
+  const [localSearch, setLocalSearch] = useState('')
 
   // Filter and sort rules
   const sortedRules = useMemo(() => {
@@ -37,6 +39,16 @@ export function AlertRulesCard() {
       )
     }
 
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(rule =>
+        rule.name.toLowerCase().includes(query) ||
+        formatCondition(rule.condition).toLowerCase().includes(query) ||
+        rule.severity.toLowerCase().includes(query)
+      )
+    }
+
     return filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name)
@@ -48,7 +60,7 @@ export function AlertRulesCard() {
         return (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0)
       }
     })
-  }, [rules, sortBy, customFilter])
+  }, [rules, sortBy, customFilter, localSearch])
 
   // Apply pagination
   const displayedRules = useMemo(() => {
@@ -145,6 +157,18 @@ export function AlertRulesCard() {
             ]}
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search rules..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Rules List */}

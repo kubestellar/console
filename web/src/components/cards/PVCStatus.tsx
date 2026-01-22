@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { HardDrive, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
+import { HardDrive, CheckCircle, AlertTriangle, Clock, Search } from 'lucide-react'
 import { usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -61,6 +61,7 @@ export function PVCStatus() {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
+  const [localSearch, setLocalSearch] = useState('')
 
   // Apply global filters
   const filteredPVCs = useMemo(() => {
@@ -85,8 +86,20 @@ export function PVCStatus() {
       )
     }
 
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        (p.namespace?.toLowerCase() || '').includes(query) ||
+        (p.cluster?.toLowerCase() || '').includes(query) ||
+        (p.storageClass?.toLowerCase() || '').includes(query) ||
+        p.status.toLowerCase().includes(query)
+      )
+    }
+
     return result
-  }, [pvcs, selectedClusters, isAllClustersSelected, filterByStatus, customFilter])
+  }, [pvcs, selectedClusters, isAllClustersSelected, filterByStatus, customFilter, localSearch])
 
   // Sort PVCs
   const sortedPVCs = useMemo(() => {
@@ -172,6 +185,18 @@ export function PVCStatus() {
           lastRefresh={lastRefresh}
           onRefresh={refetch}
           size="sm"
+        />
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search PVCs..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
       </div>
 

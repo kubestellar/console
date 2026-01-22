@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Layers, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch } from 'lucide-react'
+import { Layers, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, Search } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -41,6 +41,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -88,6 +89,19 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
       ? allKustomizations.filter(k => k.namespace === selectedNamespace)
       : allKustomizations
 
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(ks =>
+        ks.name.toLowerCase().includes(query) ||
+        ks.namespace.toLowerCase().includes(query) ||
+        ks.path.toLowerCase().includes(query) ||
+        ks.sourceRef.toLowerCase().includes(query) ||
+        ks.status.toLowerCase().includes(query) ||
+        ks.revision.toLowerCase().includes(query)
+      )
+    }
+
     // Sort
     const statusOrder: Record<string, number> = { NotReady: 0, Progressing: 1, Suspended: 2, Ready: 3 }
     result = [...result].sort((a, b) => {
@@ -110,7 +124,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     })
 
     return result
-  }, [allKustomizations, selectedNamespace, sortBy, sortDirection])
+  }, [allKustomizations, selectedNamespace, sortBy, sortDirection, localSearch])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -250,6 +264,18 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                 <span className="text-sm text-foreground">{selectedNamespace}</span>
               </>
             )}
+          </div>
+
+          {/* Local Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search kustomizations..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
           </div>
 
           {/* Summary */}

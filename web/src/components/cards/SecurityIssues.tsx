@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Shield, AlertTriangle, User, Network, Server, ChevronRight } from 'lucide-react'
+import { Shield, AlertTriangle, User, Network, Server, ChevronRight, Search } from 'lucide-react'
 import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -50,6 +50,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const { drillToPod } = useDrillDownActions()
   const [sortBy, setSortBy] = useState<SortByOption>('severity')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
 
   const handleIssueClick = (issue: SecurityIssue) => {
     drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
@@ -62,7 +63,21 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
 
   const issues = useMemo(() => {
     // Apply global filters (cluster + severity)
-    const filtered = filterItems(rawIssues)
+    let filtered = filterItems(rawIssues)
+
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(issue =>
+        issue.name.toLowerCase().includes(query) ||
+        issue.namespace.toLowerCase().includes(query) ||
+        (issue.cluster || '').toLowerCase().includes(query) ||
+        issue.issue.toLowerCase().includes(query) ||
+        issue.severity.toLowerCase().includes(query) ||
+        (issue.details || '').toLowerCase().includes(query)
+      )
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       if (sortBy === 'severity') return (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5)
       if (sortBy === 'name') return a.name.localeCompare(b.name)
@@ -71,7 +86,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
     })
     if (limit === 'unlimited') return sorted
     return sorted.slice(0, limit)
-  }, [rawIssues, sortBy, limit, filterItems])
+  }, [rawIssues, sortBy, limit, filterItems, localSearch])
 
   const highCount = rawIssues.filter(i => i.severity === 'high').length
   const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
@@ -141,6 +156,18 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
             onSortChange={setSortBy}
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search issues..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Issues list with pagination */}

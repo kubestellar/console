@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Shield, Users, Key, Lock, ChevronRight, Loader2 } from 'lucide-react'
+import { Shield, Users, Key, Lock, ChevronRight, Loader2, Search } from 'lucide-react'
 import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -39,6 +39,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
   const { namespaces } = useNamespaces(selectedCluster || undefined)
@@ -99,37 +100,47 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
       })
     }
 
+    // Filter function for local search
+    const filterItems = (items: RBACItem[]) => {
+      if (!localSearch.trim()) return items
+      const query = localSearch.toLowerCase()
+      return items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        (item.subjects || []).some(s => s.toLowerCase().includes(query))
+      )
+    }
+
     // Transform roles to RBACItem format
-    const roles: RBACItem[] = sortItems(k8sRoles
+    const roles: RBACItem[] = sortItems(filterItems(k8sRoles
       .filter(r => !r.namespace || r.namespace === selectedNamespace)
       .map(r => ({
         name: r.name,
         type: 'Role' as const,
         rules: r.ruleCount,
         cluster: r.cluster,
-      })))
+      }))))
 
     // Transform bindings to RBACItem format
-    const bindings: RBACItem[] = sortItems(k8sBindings
+    const bindings: RBACItem[] = sortItems(filterItems(k8sBindings
       .filter(b => !b.namespace || b.namespace === selectedNamespace)
       .map(b => ({
         name: b.name,
         type: 'RoleBinding' as const,
         subjects: b.subjects.map(s => s.name),
         cluster: b.cluster,
-      })))
+      }))))
 
     // Transform service accounts to RBACItem format
-    const serviceaccounts: RBACItem[] = sortItems(k8sServiceAccounts
+    const serviceaccounts: RBACItem[] = sortItems(filterItems(k8sServiceAccounts
       .filter(sa => sa.namespace === selectedNamespace)
       .map(sa => ({
         name: sa.name,
         type: 'ServiceAccount' as const,
         cluster: sa.cluster,
-      })))
+      }))))
 
     return { roles, bindings, serviceaccounts }
-  }, [selectedCluster, selectedNamespace, k8sRoles, k8sBindings, k8sServiceAccounts, sortBy, sortDirection])
+  }, [selectedCluster, selectedNamespace, k8sRoles, k8sBindings, k8sServiceAccounts, sortBy, sortDirection, localSearch])
 
   // Pagination for current tab
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -232,6 +243,18 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
         </div>
       ) : (
         <>
+          {/* Local Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search RBAC..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
+          </div>
+
           {/* Scope badge */}
           <div className="flex items-center gap-2 mb-4">
             <ClusterBadge cluster={selectedCluster} />

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Cpu, Server } from 'lucide-react'
+import { Cpu, Server, Search } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -41,12 +41,27 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('utilization')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
 
-  // Filter nodes by global cluster selection
+  // Filter nodes by global cluster selection and local search
   const filteredNodes = useMemo(() => {
-    if (isAllClustersSelected) return rawNodes
-    return rawNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-  }, [rawNodes, selectedClusters, isAllClustersSelected])
+    let filtered = rawNodes
+    if (!isAllClustersSelected) {
+      filtered = filtered.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+    }
+
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(node =>
+        node.name.toLowerCase().includes(query) ||
+        node.cluster.toLowerCase().includes(query) ||
+        node.gpuType.toLowerCase().includes(query)
+      )
+    }
+
+    return filtered
+  }, [rawNodes, selectedClusters, isAllClustersSelected, localSearch])
 
   // Sort nodes
   const sortedNodes = useMemo(() => {
@@ -160,6 +175,18 @@ export function GPUInventory({ config }: GPUInventoryProps) {
             onRefresh={() => refetch()}
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search GPU nodes..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Summary */}

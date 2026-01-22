@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search } from 'lucide-react'
 import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -45,6 +45,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
 
   const { drifts, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useGitOpsDrifts(cluster, namespace)
   const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
+  const [localSearch, setLocalSearch] = useState('')
 
   // Map drift severity to global SeverityLevel
   const mapDriftSeverityToGlobal = (severity: 'high' | 'medium' | 'low'): SeverityLevel[] => {
@@ -84,8 +85,22 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       )
     }
 
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(d =>
+        d.resource.toLowerCase().includes(query) ||
+        d.kind.toLowerCase().includes(query) ||
+        d.cluster.toLowerCase().includes(query) ||
+        d.namespace.toLowerCase().includes(query) ||
+        d.driftType.toLowerCase().includes(query) ||
+        d.severity.toLowerCase().includes(query) ||
+        (d.details?.toLowerCase() || '').includes(query)
+      )
+    }
+
     return result
-  }, [drifts, cluster, selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter])
+  }, [drifts, cluster, selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter, localSearch])
 
   if (isLoading && drifts.length === 0) {
     return (
@@ -137,6 +152,18 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search drifts..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Drifts list */}

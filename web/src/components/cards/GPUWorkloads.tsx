@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
+import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Search } from 'lucide-react'
 import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -55,6 +55,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
 
   // Only show loading when no cached data exists
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
@@ -117,7 +118,20 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       Completed: 6,
     }
 
-    const sorted = [...gpuWorkloads].sort((a, b) => {
+    // Apply local search filter
+    let filtered = gpuWorkloads
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = gpuWorkloads.filter(pod =>
+        pod.name.toLowerCase().includes(query) ||
+        (pod.namespace?.toLowerCase() || '').includes(query) ||
+        (pod.cluster?.toLowerCase() || '').includes(query) ||
+        (pod.node?.toLowerCase() || '').includes(query) ||
+        pod.status.toLowerCase().includes(query)
+      )
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
       let result = 0
       if (sortBy === 'status') {
         result = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
@@ -131,7 +145,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       return sortDirection === 'asc' ? result : -result
     })
     return sorted
-  }, [gpuWorkloads, sortBy, sortDirection])
+  }, [gpuWorkloads, sortBy, sortDirection, localSearch])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -256,6 +270,18 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
             onRefresh={handleRefresh}
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search workloads..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Summary stats */}

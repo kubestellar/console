@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, Clock } from 'lucide-react'
+import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, Search } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmHistory } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -31,6 +31,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('revision')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -89,10 +90,23 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     return Array.from(releaseSet).sort()
   }, [filteredReleases])
 
-  // Sort history
+  // Filter and sort history
   const sortedHistory = useMemo(() => {
+    let filtered = rawHistory
+
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(h =>
+        h.chart.toLowerCase().includes(query) ||
+        h.status.toLowerCase().includes(query) ||
+        (h.description?.toLowerCase() || '').includes(query) ||
+        h.revision.toString().includes(query)
+      )
+    }
+
     const statusOrder: Record<string, number> = { failed: 0, 'pending-upgrade': 1, 'pending-rollback': 2, deployed: 3, superseded: 4 }
-    return [...rawHistory].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'revision':
@@ -107,7 +121,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       }
       return sortDirection === 'asc' ? -compare : compare
     })
-  }, [rawHistory, sortBy, sortDirection])
+  }, [rawHistory, sortBy, sortDirection, localSearch])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -239,6 +253,18 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             <ClusterBadge cluster={selectedCluster} />
             <span className="text-muted-foreground">/</span>
             <span className="text-sm text-foreground">{selectedRelease}</span>
+          </div>
+
+          {/* Local Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search history..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
           </div>
 
           {/* History timeline */}

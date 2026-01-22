@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Loader2, AlertTriangle, ChevronRight } from 'lucide-react'
+import { Loader2, AlertTriangle, ChevronRight, Search } from 'lucide-react'
 import { usePods } from '../../hooks/useMCP'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
@@ -29,6 +29,7 @@ export function TopPods({ config }: TopPodsProps) {
   const namespace = config?.namespace
   const [sortBy, setSortBy] = useState<SortByOption>(config?.sortBy || 'restarts')
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(config?.limit || 5)
+  const [localSearch, setLocalSearch] = useState('')
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -59,8 +60,19 @@ export function TopPods({ config }: TopPodsProps) {
       )
     }
 
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(pod =>
+        pod.name.toLowerCase().includes(query) ||
+        pod.namespace.toLowerCase().includes(query) ||
+        (pod.cluster || '').toLowerCase().includes(query) ||
+        pod.status.toLowerCase().includes(query)
+      )
+    }
+
     return filtered
-  }, [rawPods, cluster, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [rawPods, cluster, globalSelectedClusters, isAllClustersSelected, customFilter, localSearch])
 
   // Use pagination hook
   const effectivePerPage = itemsPerPage === 'unlimited' ? 1000 : itemsPerPage
@@ -115,6 +127,18 @@ export function TopPods({ config }: TopPodsProps) {
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Local Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          placeholder="Search pods..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Pods list */}

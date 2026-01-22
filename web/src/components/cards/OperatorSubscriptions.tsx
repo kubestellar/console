@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Newspaper, Clock, AlertTriangle, Settings } from 'lucide-react'
+import { Newspaper, Clock, AlertTriangle, Settings, Search } from 'lucide-react'
 import { useClusters, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -29,6 +29,7 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('pending')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -63,9 +64,24 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
     if (selectedCluster) refetchSubscriptions()
   }
 
-  // Sort subscriptions
+  // Filter and sort subscriptions
   const sortedSubscriptions = useMemo(() => {
-    return [...rawSubscriptions].sort((a, b) => {
+    let filtered = rawSubscriptions
+
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(sub =>
+        sub.name.toLowerCase().includes(query) ||
+        sub.namespace.toLowerCase().includes(query) ||
+        sub.channel.toLowerCase().includes(query) ||
+        sub.currentCSV.toLowerCase().includes(query) ||
+        sub.installPlanApproval.toLowerCase().includes(query) ||
+        (sub.pendingUpgrade?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    return [...filtered].sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'pending':
@@ -83,7 +99,7 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
       }
       return sortDirection === 'asc' ? compare : -compare
     })
-  }, [rawSubscriptions, sortBy, sortDirection])
+  }, [rawSubscriptions, sortBy, sortDirection, localSearch])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -174,6 +190,18 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
           {/* Scope badge */}
           <div className="flex items-center gap-2 mb-4">
             <ClusterBadge cluster={selectedCluster} />
+          </div>
+
+          {/* Local Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search subscriptions..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
           </div>
 
           {/* Summary badges */}

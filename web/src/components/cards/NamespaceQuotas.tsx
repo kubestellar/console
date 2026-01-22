@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, X, Zap } from 'lucide-react'
+import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, X, Zap, Search } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import {
   useClusters,
@@ -317,6 +317,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -419,8 +420,21 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         })
       })
 
+    // Apply local search filter
+    let filtered = usages
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = usages.filter(u =>
+        u.resource.toLowerCase().includes(query) ||
+        u.rawResource.toLowerCase().includes(query) ||
+        (u.cluster || '').toLowerCase().includes(query) ||
+        (u.namespace || '').toLowerCase().includes(query) ||
+        (u.quotaName || '').toLowerCase().includes(query)
+      )
+    }
+
     // Sort
-    const sorted = [...usages].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'name':
@@ -434,7 +448,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     })
 
     return sorted
-  }, [resourceQuotas, selectedCluster, selectedNamespace, sortBy, sortDirection])
+  }, [resourceQuotas, selectedCluster, selectedNamespace, sortBy, sortDirection, localSearch])
 
   // Get unique quotas for edit/delete actions
   const uniqueQuotas = useMemo(() => {
@@ -469,14 +483,26 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         })
       })
 
+    // Apply local search filter
+    let filtered = items
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query) ||
+        (item.cluster || '').toLowerCase().includes(query) ||
+        (item.namespace || '').toLowerCase().includes(query)
+      )
+    }
+
     // Sort by name
-    const sorted = [...items].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       const compare = a.name.localeCompare(b.name)
       return sortDirection === 'asc' ? compare : -compare
     })
 
     return sorted
-  }, [limitRanges, selectedCluster, selectedNamespace, sortDirection])
+  }, [limitRanges, selectedCluster, selectedNamespace, sortDirection, localSearch])
 
   // Pagination
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -592,6 +618,18 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       </div>
 
       <>
+        {/* Local Search */}
+        <div className="relative mb-4">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            placeholder="Search quotas..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+          />
+        </div>
+
         {/* Scope badge */}
         <div className="flex items-center gap-2 mb-4">
           {selectedCluster === 'all' ? (
