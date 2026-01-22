@@ -230,7 +230,7 @@ The AI missions feature requires the local KKC agent to be running.
 **To get started:**
 1. Install the agent: \`brew install kubestellar/tap/kkc-agent\`
 2. Start the agent: \`kkc-agent\`
-3. **[Configure API Keys →](/settings)** for Claude, OpenAI, or Gemini`
+3. [Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
 
             const pendingMissionIds = new Set(pendingRequests.current.values())
             setMissions(prev => prev.map(m => {
@@ -387,7 +387,7 @@ The AI missions feature requires the local KKC agent to be running.
         // Create helpful error message based on error code
         let errorContent = payload.message || 'Unknown error'
         if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
-          errorContent = `${payload.message}\n\n**[Configure API Keys →](/settings)**\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
+          errorContent = `${payload.message}\n\n[Configure API Keys →](/settings)\n\nAdd your API key for Claude, OpenAI, or Gemini to use AI missions.`
         }
 
         return {
@@ -466,7 +466,7 @@ The AI missions feature requires the local KKC agent to be running.
 **To get started:**
 1. Install the agent: \`brew install kubestellar/tap/kkc-agent\`
 2. Start the agent: \`kkc-agent\`
-3. **[Configure API Keys →](/settings)** for Claude, OpenAI, or Gemini`
+3. [Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
 
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
