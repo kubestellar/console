@@ -121,7 +121,7 @@ export function TopPods({ config }: TopPodsProps) {
           No pods found
         </div>
       ) : (
-        <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
+        <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
           {pods.map((pod, index) => {
             const displayIndex = (currentPage - 1) * perPage + index + 1
             return (

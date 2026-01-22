@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { RefreshCw, MemoryStick, ImageOff, Clock, ChevronRight } from 'lucide-react'
+import { MemoryStick, ImageOff, Clock, RefreshCw, ChevronRight } from 'lucide-react'
 import { usePodIssues, PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -7,6 +7,8 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 type SortByOption = 'status' | 'name' | 'restarts' | 'cluster'
 
@@ -52,7 +54,20 @@ const getStatusColors = (status: string) => {
 }
 
 export function PodIssues() {
-  const { issues: rawIssues, isLoading, isRefreshing, lastUpdated, error, refetch } = usePodIssues()
+  const {
+    issues: rawIssues,
+    isLoading: hookLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = usePodIssues()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && rawIssues.length === 0
   const { drillToPod } = useDrillDownActions()
   const { filterByCluster, filterByStatus, customFilter } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
@@ -112,43 +127,32 @@ export function PodIssues() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3">
-        <div className="spinner w-8 h-8" />
-        {loadingTooLong && (
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Loading taking longer than expected...</p>
-            <button
-              onClick={() => refetch()}
-              className="mt-2 text-xs text-primary hover:underline"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-3">
+          <Skeleton variant="text" width={80} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={80} />
+          <Skeleton variant="rounded" height={80} />
+          <Skeleton variant="rounded" height={80} />
+        </div>
       </div>
     )
   }
 
   if (issues.length === 0) {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">Pod Issues</span>
-          <div className="flex items-center gap-2">
-            {lastUpdated && (
-              <span className="text-[10px] text-muted-foreground" title={`Last updated: ${lastUpdated.toLocaleString()}`}>
-                {formatTimeAgo(lastUpdated)}
-              </span>
-            )}
-            <button
-              onClick={() => refetch()}
-              disabled={isRefreshing}
-              className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-              title={isRefreshing ? 'Refreshing...' : 'Refresh pod issues'}
-            >
-              <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title="All pods are healthy">
@@ -174,7 +178,7 @@ export function PodIssues() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -193,24 +197,18 @@ export function PodIssues() {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          {lastUpdated && (
-            <span className="text-[10px] text-muted-foreground" title={`Last updated: ${lastUpdated.toLocaleString()}`}>
-              {formatTimeAgo(lastUpdated)}
-            </span>
-          )}
-          <button
-            onClick={() => refetch()}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-            title={isRefreshing ? 'Refreshing...' : 'Refresh pod issues'}
-          >
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 
       {/* Issues list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
+      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
         {issues.map((issue: PodIssue, idx: number) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.status)
           const colors = getStatusColors(issue.status)

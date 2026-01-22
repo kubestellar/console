@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, Clock, XCircle, ChevronRight, Loader2, Search, Filter, RefreshCw } from 'lucide-react'
+import { CheckCircle, Clock, XCircle, ChevronRight, Search, Filter } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDeployments } from '../../hooks/useMCP'
 import { usePagination, Pagination } from '../ui/Pagination'
 import { CardControls, SortDirection } from '../ui/CardControls'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -56,7 +58,18 @@ function extractVersion(image?: string): string {
 
 export function DeploymentStatus() {
   const { drillToDeployment } = useDrillDownActions()
-  const { deployments: allDeployments, isLoading, refetch, isRefreshing } = useDeployments()
+  const {
+    deployments: allDeployments,
+    isLoading: hookLoading,
+    refetch,
+    isRefreshing,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useDeployments()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && allDeployments.length === 0
   const { selectedClusters, isAllClustersSelected, filterByStatus: globalFilterByStatus, customFilter: globalCustomFilter } = useGlobalFilters()
 
   // Filter and sort state
@@ -167,10 +180,19 @@ export function DeploymentStatus() {
     })
   }
 
-  if (isLoading && allDeployments.length === 0) {
+  if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton variant="text" width={100} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <Skeleton variant="rounded" height={32} className="mb-2" />
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={70} />
+          <Skeleton variant="rounded" height={70} />
+          <Skeleton variant="rounded" height={70} />
+        </div>
       </div>
     )
   }
@@ -184,7 +206,7 @@ export function DeploymentStatus() {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-0">
+    <div className="h-full flex flex-col min-h-0 content-loaded">
       {/* Header with controls */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -202,14 +224,13 @@ export function DeploymentStatus() {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            disabled={isRefreshing}
-            className="p-1 text-xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 
@@ -255,7 +276,7 @@ export function DeploymentStatus() {
       </div>
 
       {/* Deployments list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
+      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
         {paginatedDeployments.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No deployments match the current filters

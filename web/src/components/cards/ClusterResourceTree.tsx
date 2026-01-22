@@ -503,7 +503,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       </div>
 
       {/* Tree Content */}
-      <div className="flex-1 bg-card/30 rounded-lg border border-border overflow-y-auto min-h-0">
+      <div className="flex-1 bg-card/30 rounded-lg border border-border overflow-y-auto min-h-card-content">
         <div className="p-2">
           {/* Clusters Root */}
           <TreeNode

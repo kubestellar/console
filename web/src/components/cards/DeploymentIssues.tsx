@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { AlertTriangle, RefreshCw, AlertCircle, Clock, Scale, ChevronRight } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Clock, Scale, ChevronRight } from 'lucide-react'
 import { useDeploymentIssues, DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -8,6 +8,7 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 type SortByOption = 'status' | 'name' | 'cluster'
 
@@ -31,7 +32,19 @@ const getIssueIcon = (status: string): { icon: typeof AlertCircle; tooltip: stri
 export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   const cluster = config?.cluster as string | undefined
   const namespace = config?.namespace as string | undefined
-  const { issues: rawIssues, isLoading, error, refetch } = useDeploymentIssues(cluster, namespace)
+  const {
+    issues: rawIssues,
+    isLoading: hookLoading,
+    isRefreshing,
+    error,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useDeploymentIssues(cluster, namespace)
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && rawIssues.length === 0
   const { drillToDeployment } = useDrillDownActions()
   const { filterByCluster } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
@@ -98,13 +111,13 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
       <div className="h-full flex flex-col min-h-card content-loaded">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">Deployment Issues</span>
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh deployment status"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title="All deployments are healthy">
@@ -149,18 +162,18 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh deployment status"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 
       {/* Issues list */}
-      <div className="flex-1 space-y-3 overflow-y-auto min-h-0">
+      <div className="flex-1 space-y-3 overflow-y-auto min-h-card-content">
         {issues.map((issue, idx) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.reason || '')
 

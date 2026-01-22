@@ -256,7 +256,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
       </div>
 
       {/* Deployments list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
+      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
         {paginatedDeployments.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No deployments match the current filters

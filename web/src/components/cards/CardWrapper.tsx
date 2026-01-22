@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { ChatMessage } from './CardChat'
 
 // Format relative time (e.g., "2m ago", "1h ago")
@@ -47,6 +48,10 @@ interface CardWrapperProps {
   lastUpdated?: Date | null
   /** Whether this card uses demo/mock data instead of real data */
   isDemoData?: boolean
+  /** Whether data refresh has failed 3+ times consecutively */
+  isFailed?: boolean
+  /** Number of consecutive refresh failures */
+  consecutiveFailures?: number
   /** Current card width in grid columns (1-12) */
   cardWidth?: number
   onSwap?: (newType: string) => void
@@ -106,7 +111,7 @@ const CARD_TITLES: Record<string, string> = {
   helm_values_diff: 'Helm Values Diff',
   kustomization_status: 'Kustomization Status',
   overlay_comparison: 'Overlay Comparison',
-  chart_versions: 'Chart Versions',
+  chart_versions: 'Helm Chart Versions',
 
   // ArgoCD cards
   argocd_applications: 'ArgoCD Applications',
@@ -144,6 +149,8 @@ export function CardWrapper({
   isRefreshing,
   lastUpdated,
   isDemoData,
+  isFailed,
+  consecutiveFailures,
   cardWidth,
   onSwap,
   onSwapCancel,
@@ -167,6 +174,7 @@ export function CardWrapper({
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
   const { snoozeSwap } = useSnoozedCards()
+  const { isDemoMode } = useDemoMode()
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -280,7 +288,8 @@ export function CardWrapper({
         data-tour="card"
         className={cn(
           'glass rounded-xl h-full overflow-hidden card-hover',
-          'flex flex-col'
+          'flex flex-col',
+          (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50'
         )}
         onMouseEnter={() => setShowSummary(true)}
         onMouseLeave={() => setShowSummary(false)}
@@ -290,21 +299,30 @@ export function CardWrapper({
           <div className="flex items-center gap-2">
             {dragHandle}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
-            {/* Demo data indicator */}
-            {isDemoData && (
+            {/* Demo data indicator - shows if global demo mode is on OR card uses demo data */}
+            {(isDemoMode || isDemoData) && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
-                title="This card displays demo data"
+                title={isDemoMode ? "Demo mode enabled - showing sample data" : "This card displays demo data"}
               >
                 Demo
               </span>
             )}
+            {/* Failure indicator */}
+            {isFailed && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
+                title={`${consecutiveFailures} consecutive refresh failures`}
+              >
+                Refresh failed
+              </span>
+            )}
             {/* Refresh indicator */}
-            {isRefreshing && (
-              <RefreshCw className="w-3 h-3 text-purple-400 animate-spin" />
+            {isRefreshing && !isFailed && (
+              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
             )}
             {/* Last updated indicator */}
-            {!isRefreshing && lastUpdated && (
+            {!isRefreshing && !isFailed && lastUpdated && (
               <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
                 {formatTimeAgo(lastUpdated)}
               </span>
@@ -319,10 +337,12 @@ export function CardWrapper({
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
                   isRefreshing
-                    ? 'text-purple-400 cursor-not-allowed'
+                    ? 'text-blue-400 cursor-not-allowed'
+                    : isFailed
+                    ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
                     : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 )}
-                title="Refresh data"
+                title={isFailed ? `Refresh failed ${consecutiveFailures} times - click to retry` : 'Refresh data'}
               >
                 <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
               </button>
@@ -439,7 +459,7 @@ export function CardWrapper({
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 overflow-auto">{children}</div>
+        <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">{children}</div>
 
         {/* Pending swap notification */}
         {pendingSwap && (

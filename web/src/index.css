@@ -370,6 +370,24 @@
   min-height: 280px;
 }
 
+/* Card content minimum height - ensures consistent card heights regardless of item count */
+.min-h-card-content {
+  min-height: 200px;
+}
+
+/* List content minimum heights based on typical items per page */
+.min-h-list-3 {
+  min-height: 180px; /* ~60px per item */
+}
+
+.min-h-list-5 {
+  min-height: 300px; /* ~60px per item */
+}
+
+.min-h-list-10 {
+  min-height: 600px;
+}
+
 /* Accessibility - Color Blind Mode Patterns */
 .bg-stripes {
   background-image: repeating-linear-gradient(

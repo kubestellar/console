@@ -776,7 +776,7 @@ const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, 
   const CardComponent = CARD_COMPONENTS[card.card_type]
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="h-full">
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
@@ -838,7 +838,7 @@ function DragPreviewCard({ card }: { card: Card }) {
       }}
     >
       <div className="text-sm font-medium text-foreground mb-2">
-        {card.title || formatCardTitle(card.card_type)}
+        {formatCardTitle(card.card_type)}
       </div>
       <div className="h-24 flex items-center justify-center text-muted-foreground">
         {CardComponent ? 'Moving card...' : `Card type: ${card.card_type}`}

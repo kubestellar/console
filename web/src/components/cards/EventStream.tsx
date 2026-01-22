@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
-import { AlertTriangle, Info, XCircle, RefreshCw, ChevronRight } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { AlertTriangle, Info, XCircle, ChevronRight } from 'lucide-react'
 import { useEvents } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -7,6 +7,8 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 type SortByOption = 'time' | 'count' | 'type'
 
@@ -32,20 +34,21 @@ export function EventStream() {
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
   const [sortBy, setSortBy] = useState<SortByOption>('time')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [loadingTooLong, setLoadingTooLong] = useState(false)
   // Fetch more events from API to enable pagination
-  const { events: rawEvents, isLoading, isRefreshing, lastUpdated, error, refetch } = useEvents(undefined, undefined, 100)
+  const {
+    events: rawEvents,
+    isLoading: hookLoading,
+    isRefreshing,
+    error,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useEvents(undefined, undefined, 100)
   const { filterByCluster } = useGlobalFilters()
 
-  // Track if loading is taking too long
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => setLoadingTooLong(true), 10000)
-      return () => clearTimeout(timer)
-    } else {
-      setLoadingTooLong(false)
-    }
-  }, [isLoading])
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && rawEvents.length === 0
 
   // Filter and sort events
   const filteredAndSorted = useMemo(() => {
@@ -100,25 +103,22 @@ export function EventStream() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3">
-        <div className="spinner w-8 h-8" />
-        {loadingTooLong && (
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Loading taking longer than expected...</p>
-            <button
-              onClick={() => refetch()}
-              className="mt-2 text-xs text-primary hover:underline"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-3">
+          <Skeleton variant="text" width={100} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={60} />
+          <Skeleton variant="rounded" height={60} />
+          <Skeleton variant="rounded" height={60} />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-muted-foreground">Recent Events</span>
@@ -132,24 +132,18 @@ export function EventStream() {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          {lastUpdated && (
-            <span className="text-[10px] text-muted-foreground" title={`Last updated: ${lastUpdated.toLocaleString()}`}>
-              {formatTimeAgo(lastUpdated)}
-            </span>
-          )}
-          <button
-            onClick={() => refetch()}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-            title={isRefreshing ? 'Refreshing...' : 'Refresh events'}
-          >
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 
       {/* Event list */}
-      <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
+      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
         {events.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
             No recent events
