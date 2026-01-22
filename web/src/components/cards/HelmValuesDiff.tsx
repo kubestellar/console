@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { FileJson, ChevronRight, RefreshCw, Plus, Minus, Edit } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { FileJson, ChevronRight, Plus, Edit } from 'lucide-react'
+import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface HelmValuesDiffProps {
   config?: {
@@ -13,15 +14,33 @@ interface HelmValuesDiffProps {
   }
 }
 
-interface ValueDiff {
+interface ValueEntry {
   path: string
-  type: 'added' | 'removed' | 'changed'
-  oldValue?: string
-  newValue?: string
+  value: string
+}
+
+// Flatten nested object to dot-notation paths
+function flattenValues(obj: Record<string, unknown>, prefix = ''): ValueEntry[] {
+  const entries: ValueEntry[] = []
+
+  for (const [key, value] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key
+
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      entries.push(...flattenValues(value as Record<string, unknown>, path))
+    } else {
+      entries.push({
+        path,
+        value: JSON.stringify(value)
+      })
+    }
+  }
+
+  return entries
 }
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const {
@@ -30,7 +49,29 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     customFilter,
   } = useGlobalFilters()
 
-  // Apply global filters
+  // Fetch ALL Helm releases from all clusters once (not per-cluster)
+  const { releases: allHelmReleases, isLoading: releasesLoading } = useHelmReleases()
+
+  // Fetch values for selected release (hook handles caching)
+  const {
+    values,
+    format,
+    isLoading: valuesLoading,
+    isRefreshing: valuesRefreshing,
+    refetch: refetchValues,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useHelmValues(
+    selectedCluster || undefined,
+    selectedRelease || undefined,
+    undefined
+  )
+
+  // Only show skeleton when no cached data exists
+  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Apply global filters to clusters
   const clusters = useMemo(() => {
     let result = allClusters
 
@@ -49,43 +90,33 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Mock releases for the selected cluster
-  const releases = selectedCluster ? [
-    'prometheus', 'grafana', 'nginx-ingress', 'cert-manager', 'redis', 'postgresql'
-  ] : []
+  // Filter releases locally by selected cluster (no API call)
+  const filteredReleases = useMemo(() => {
+    if (!selectedCluster) return allHelmReleases
+    return allHelmReleases.filter(r => r.cluster === selectedCluster)
+  }, [allHelmReleases, selectedCluster])
 
-  // Mock diff data - comparing current values to default chart values
-  const diffs: ValueDiff[] = selectedRelease ? [
-    { path: 'replicaCount', type: 'changed', oldValue: '1', newValue: '3' },
-    { path: 'resources.limits.memory', type: 'changed', oldValue: '256Mi', newValue: '512Mi' },
-    { path: 'resources.limits.cpu', type: 'changed', oldValue: '100m', newValue: '500m' },
-    { path: 'ingress.enabled', type: 'changed', oldValue: 'false', newValue: 'true' },
-    { path: 'ingress.hosts[0].host', type: 'added', newValue: 'app.example.com' },
-    { path: 'ingress.tls[0].secretName', type: 'added', newValue: 'app-tls' },
-    { path: 'serviceAccount.create', type: 'removed', oldValue: 'true' },
-    { path: 'persistence.enabled', type: 'changed', oldValue: 'false', newValue: 'true' },
-    { path: 'persistence.size', type: 'added', newValue: '10Gi' },
-  ] : []
+  // Get unique release names for dropdown
+  const releases = useMemo(() => {
+    const releaseSet = new Set(filteredReleases.map(r => r.name))
+    return Array.from(releaseSet).sort()
+  }, [filteredReleases])
 
-  const getDiffIcon = (type: ValueDiff['type']) => {
-    switch (type) {
-      case 'added': return Plus
-      case 'removed': return Minus
-      case 'changed': return Edit
+  // Process values into entries
+  const valueEntries = useMemo(() => {
+    if (!values) return []
+
+    if (format === 'yaml' && typeof values === 'string') {
+      // For YAML, just show the raw string
+      return [{ path: 'values.yaml', value: values }]
     }
-  }
 
-  const getDiffColor = (type: ValueDiff['type']) => {
-    switch (type) {
-      case 'added': return 'green'
-      case 'removed': return 'red'
-      case 'changed': return 'yellow'
+    if (typeof values === 'object') {
+      return flattenValues(values as Record<string, unknown>)
     }
-  }
 
-  const addedCount = diffs.filter(d => d.type === 'added').length
-  const removedCount = diffs.filter(d => d.type === 'removed').length
-  const changedCount = diffs.filter(d => d.type === 'changed').length
+    return []
+  }, [values, format])
 
   if (isLoading) {
     return (
@@ -111,18 +142,20 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
         <div className="flex items-center gap-2">
           <FileJson className="w-4 h-4 text-amber-400" />
           <span className="text-sm font-medium text-muted-foreground">Helm Values Diff</span>
-          {diffs.length > 0 && (
+          {valueEntries.length > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
-              {diffs.length}
+              {valueEntries.length} values
             </span>
           )}
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <RefreshButton
+          isRefreshing={valuesRefreshing || valuesLoading}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetchValues}
+          size="sm"
+        />
       </div>
 
       {/* Selectors */}
@@ -143,7 +176,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
         <select
           value={selectedRelease}
           onChange={(e) => setSelectedRelease(e.target.value)}
-          disabled={!selectedCluster}
+          disabled={!selectedCluster || releasesLoading}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">Select release...</option>
@@ -157,6 +190,10 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
           Select a cluster and release to compare values
         </div>
+      ) : valuesLoading && values === null ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Skeleton variant="rounded" height={50} className="w-full" />
+        </div>
       ) : (
         <>
           {/* Scope badge */}
@@ -168,51 +205,43 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
 
           {/* Summary */}
           <div className="flex gap-2 mb-4 text-xs">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-400">
-              <Plus className="w-3 h-3" />
-              <span>{addedCount} added</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/10 text-red-400">
-              <Minus className="w-3 h-3" />
-              <span>{removedCount} removed</span>
-            </div>
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-400">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400">
               <Edit className="w-3 h-3" />
-              <span>{changedCount} changed</span>
+              <span>{valueEntries.length} custom values</span>
             </div>
           </div>
 
-          {/* Diff list */}
+          {/* Values list */}
           <div className="flex-1 space-y-1 overflow-y-auto font-mono text-xs">
-            {diffs.map((diff, idx) => {
-              const DiffIcon = getDiffIcon(diff.type)
-              const color = getDiffColor(diff.type)
-
-              return (
+            {valueEntries.length === 0 ? (
+              <div className="flex items-center justify-center text-muted-foreground text-sm py-4">
+                No custom values set (using chart defaults)
+              </div>
+            ) : format === 'yaml' && typeof values === 'string' ? (
+              <pre className="p-3 rounded bg-secondary/30 text-foreground whitespace-pre-wrap overflow-x-auto">
+                {values}
+              </pre>
+            ) : (
+              valueEntries.map((entry, idx) => (
                 <div
                   key={idx}
-                  className={`p-2 rounded bg-${color}-500/10 border-l-2 border-${color}-500`}
+                  className="p-2 rounded bg-blue-500/10 border-l-2 border-blue-500"
                 >
                   <div className="flex items-center gap-2">
-                    <DiffIcon className={`w-3 h-3 text-${color}-400 flex-shrink-0`} />
-                    <span className="text-foreground truncate">{diff.path}</span>
+                    <Plus className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                    <span className="text-foreground truncate">{entry.path}</span>
                   </div>
                   <div className="ml-5 mt-1">
-                    {diff.oldValue && (
-                      <div className="text-red-400 truncate">- {diff.oldValue}</div>
-                    )}
-                    {diff.newValue && (
-                      <div className="text-green-400 truncate">+ {diff.newValue}</div>
-                    )}
+                    <div className="text-green-400 truncate">{entry.value}</div>
                   </div>
                 </div>
-              )
-            })}
+              ))
+            )}
           </div>
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            Comparing deployed values vs chart defaults
+            Showing custom values overriding chart defaults
           </div>
         </>
       )}

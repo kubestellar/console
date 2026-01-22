@@ -6,6 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -121,7 +122,7 @@ const healthStatusConfig = {
 }
 
 export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
   const [sortBy, setSortBy] = useState<SortByOption>('syncStatus')
@@ -219,7 +220,6 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
         <div className="flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-orange-400" />
           <span className="text-sm font-medium text-muted-foreground">ArgoCD Applications</span>
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400">Demo</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
             {totalItems}
           </span>
@@ -243,13 +243,14 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh applications"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

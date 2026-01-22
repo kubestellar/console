@@ -4,6 +4,8 @@ import { useServices } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 type SortByOption = 'type' | 'name' | 'namespace' | 'ports'
 
@@ -41,7 +43,19 @@ function getTypeColor(type: string) {
 }
 
 export function ServiceStatus() {
-  const { services, isLoading, error } = useServices()
+  const {
+    services,
+    isLoading: hookLoading,
+    isRefreshing,
+    error,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useServices()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && services.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('type')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -116,14 +130,28 @@ export function ServiceStatus() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading services...</div>
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton variant="text" width={100} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <Skeleton variant="rounded" height={32} className="mb-3" />
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} variant="rounded" height={40} />
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton variant="rounded" height={50} />
+          <Skeleton variant="rounded" height={50} />
+          <Skeleton variant="rounded" height={50} />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -135,15 +163,24 @@ export function ServiceStatus() {
             </span>
           )}
         </div>
-        <CardControls
-          limit={limit}
-          onLimitChange={setLimit}
-          sortBy={sortBy}
-          sortOptions={SORT_OPTIONS}
-          onSortChange={setSortBy}
-          sortDirection={sortDirection}
-          onSortDirectionChange={setSortDirection}
-        />
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
+        </div>
       </div>
 
       {/* Search */}

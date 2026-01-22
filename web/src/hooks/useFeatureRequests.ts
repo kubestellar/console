@@ -16,6 +16,8 @@ export type NotificationType = 'issue_created' | 'triage_accepted' | 'feasibilit
 export interface FeatureRequest {
   id: string
   user_id: string
+  /** GitHub login of the issue author (for queue items from GitHub) */
+  github_login?: string
   title: string
   description: string
   request_type: RequestType
@@ -27,8 +29,15 @@ export interface FeatureRequest {
   netlify_preview_url?: string
   /** Latest comment from GitHub (used for unable_to_fix status) */
   latest_comment?: string
+  /** True if closed by the user themselves, false if closed externally */
+  closed_by_user?: boolean
   created_at: string
   updated_at?: string
+}
+
+/** Check if a request has been triaged (accepted for review) */
+export function isTriaged(status: RequestStatus): boolean {
+  return status !== 'open' && status !== 'needs_triage'
 }
 
 export interface PRFeedback {
@@ -163,8 +172,35 @@ const DEMO_NOTIFICATIONS: Notification[] = [
   },
 ]
 
+// Sort requests: user's issues first by date (desc), then others by date (desc)
+function sortRequests(requests: FeatureRequest[], currentGitHubLogin: string): FeatureRequest[] {
+  const userRequests: FeatureRequest[] = []
+  const otherRequests: FeatureRequest[] = []
+
+  for (const r of requests) {
+    // Compare by github_login if available (for queue items), otherwise by user_id
+    const isOwner = r.github_login
+      ? r.github_login === currentGitHubLogin
+      : r.user_id === currentGitHubLogin
+    if (isOwner) {
+      userRequests.push(r)
+    } else {
+      otherRequests.push(r)
+    }
+  }
+
+  // Sort by date descending (newest first)
+  const sortByDate = (a: FeatureRequest, b: FeatureRequest) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+
+  userRequests.sort(sortByDate)
+  otherRequests.sort(sortByDate)
+
+  return [...userRequests, ...otherRequests]
+}
+
 // Feature Requests Hook
-export function useFeatureRequests() {
+export function useFeatureRequests(currentUserId?: string) {
   const [requests, setRequests] = useState<FeatureRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -175,14 +211,18 @@ export function useFeatureRequests() {
   const loadRequests = useCallback(async () => {
     // In demo mode, use mock data
     if (isDemoUser()) {
-      setRequests(DEMO_FEATURE_REQUESTS)
+      const sorted = currentUserId ? sortRequests(DEMO_FEATURE_REQUESTS, currentUserId) : DEMO_FEATURE_REQUESTS
+      setRequests(sorted)
       setIsLoading(false)
       return
     }
     try {
       setIsLoading(true)
-      const { data } = await api.get<FeatureRequest[]>('/api/feedback/requests')
-      setRequests(data || [])
+      // Fetch from queue endpoint to get all issues
+      const { data } = await api.get<FeatureRequest[]>('/api/feedback/queue')
+      // Sort: user's issues first, then others, both by date
+      const sorted = currentUserId ? sortRequests(data || [], currentUserId) : (data || [])
+      setRequests(sorted)
       setError(null)
     } catch (err) {
       console.error('Failed to load feature requests:', err)
@@ -190,7 +230,7 @@ export function useFeatureRequests() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [currentUserId])
 
   useEffect(() => {
     loadRequests()

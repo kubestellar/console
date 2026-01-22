@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Users,
   Shield,
@@ -11,9 +11,11 @@ import {
 } from 'lucide-react'
 import { useConsoleUsers, useUserManagementSummary, useK8sServiceAccounts } from '../../hooks/useUsers'
 import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useAuth } from '../../lib/auth'
 import { cn } from '../../lib/cn'
 import type { ConsoleUser, UserRole } from '../../types/users'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -27,10 +29,55 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
 
   const { user: currentUser } = useAuth()
-  const { summary, isLoading: summaryLoading } = useUserManagementSummary()
-  const { users, isLoading: usersLoading, updateUserRole, deleteUser } = useConsoleUsers()
-  const { clusters } = useClusters()
-  const { serviceAccounts, isLoading: sasLoading } = useK8sServiceAccounts(selectedCluster)
+  const { summary, isLoading: summaryLoading, isRefreshing: summaryRefreshing, refetch: refetchSummary } = useUserManagementSummary()
+  const { users: allUsers, isLoading: usersLoading, isRefreshing: usersRefreshing, refetch: refetchUsers, updateUserRole, deleteUser } = useConsoleUsers()
+
+  const isRefreshing = summaryRefreshing || usersRefreshing
+  const refetch = () => {
+    refetchSummary()
+    refetchUsers()
+  }
+  const { clusters: allClusters } = useClusters()
+  const { serviceAccounts: allServiceAccounts, isLoading: sasLoading } = useK8sServiceAccounts(selectedCluster)
+  const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
+
+  // Filter clusters by global filter
+  const clusters = useMemo(() => {
+    let result = allClusters
+    if (!isAllClustersSelected) {
+      result = result.filter(c => selectedClusters.includes(c.name))
+    }
+    return result
+  }, [allClusters, selectedClusters, isAllClustersSelected])
+
+  // Filter users by global customFilter
+  const users = useMemo(() => {
+    let result = allUsers
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(u =>
+        u.github_login.toLowerCase().includes(query) ||
+        (u.email?.toLowerCase() || '').includes(query)
+      )
+    }
+    return result
+  }, [allUsers, customFilter])
+
+  // Filter service accounts by global filter
+  const serviceAccounts = useMemo(() => {
+    let result = allServiceAccounts
+    if (!isAllClustersSelected) {
+      result = result.filter(sa => selectedClusters.includes(sa.cluster))
+    }
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(sa =>
+        sa.name.toLowerCase().includes(query) ||
+        sa.namespace.toLowerCase().includes(query)
+      )
+    }
+    return result
+  }, [allServiceAccounts, selectedClusters, isAllClustersSelected, customFilter])
 
   const isAdmin = currentUser?.role === 'admin'
 
@@ -62,7 +109,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     }
   }
 
-  if (summaryLoading) {
+  // Only show spinner if no cached data exists
+  const hasData = summary !== null || users.length > 0
+  if (summaryLoading && !hasData) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="spinner w-6 h-6" />
@@ -72,6 +121,19 @@ export function UserManagement({ config: _config }: UserManagementProps) {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-purple-400" />
+          <span className="text-sm font-medium text-muted-foreground">User Management</span>
+        </div>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          onRefresh={refetch}
+          size="sm"
+        />
+      </div>
+
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="p-3 rounded-lg bg-secondary/30">

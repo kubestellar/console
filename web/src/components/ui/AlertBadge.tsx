@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Bot, Server } from 'lucide-react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Bot, Server, Search, ExternalLink } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { useDrillDown } from '../../hooks/useDrillDown'
+import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 
@@ -20,19 +22,77 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function AlertBadge() {
+  const navigate = useNavigate()
   const { activeAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
   const { open: openDrillDown } = useDrillDown()
+  const { missions, setActiveMission, openSidebar } = useMissions()
   const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all')
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Sort alerts by severity and time
-  const sortedAlerts = [...activeAlerts].sort((a, b) => {
-    const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-    const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
-    if (severityDiff !== 0) return severityDiff
-    return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
-  })
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isOpen) return
 
-  const recentAlerts = sortedAlerts.slice(0, 5)
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+
+    // Use mousedown for immediate response
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  // Check if a mission exists for an alert
+  const getMissionForAlert = useCallback((alert: Alert) => {
+    if (!alert.aiDiagnosis?.missionId) return null
+    return missions.find(m => m.id === alert.aiDiagnosis?.missionId) || null
+  }, [missions])
+
+  // Open mission sidebar for an alert
+  const handleOpenMission = (e: React.MouseEvent, alert: Alert) => {
+    e.stopPropagation()
+    const mission = getMissionForAlert(alert)
+    if (mission) {
+      setActiveMission(mission.id)
+      openSidebar()
+      setIsOpen(false)
+    }
+  }
+
+  // Filter and sort alerts
+  const filteredAlerts = useMemo(() => {
+    let result = [...activeAlerts]
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(a =>
+        a.ruleName.toLowerCase().includes(query) ||
+        a.message.toLowerCase().includes(query) ||
+        (a.cluster?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    // Apply severity filter
+    if (severityFilter !== 'all') {
+      result = result.filter(a => a.severity === severityFilter)
+    }
+
+    // Sort by severity and time
+    return result.sort((a, b) => {
+      const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
+      const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
+      if (severityDiff !== 0) return severityDiff
+      return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
+    })
+  }, [activeAlerts, searchQuery, severityFilter])
+
+  // Show all filtered alerts (scrollable container handles overflow)
+  const displayedAlerts = filteredAlerts
 
   const handleAlertClick = (alert: Alert) => {
     setIsOpen(false)
@@ -53,6 +113,7 @@ export function AlertBadge() {
   const handleDiagnose = (e: React.MouseEvent, alertId: string) => {
     e.stopPropagation()
     runAIDiagnosis(alertId)
+    setIsOpen(false) // Close dialog after starting diagnosis
   }
 
   // Determine badge color based on most severe alert
@@ -94,15 +155,10 @@ export function AlertBadge() {
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <>
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-
-          {/* Panel */}
-          <div className="absolute right-0 top-full mt-2 w-96 bg-background border border-border rounded-lg shadow-xl z-50">
+            ref={dropdownRef}
+            className="absolute right-0 top-full mt-2 w-96 bg-background border border-border rounded-lg shadow-xl z-50"
+          >
             {/* Header */}
             <div className="p-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -120,31 +176,75 @@ export function AlertBadge() {
               </button>
             </div>
 
-            {/* Stats Row */}
-            <div className="p-2 border-b border-border flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-xs text-muted-foreground">
-                  {stats.critical} critical
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-orange-500" />
-                <span className="text-xs text-muted-foreground">
-                  {stats.warning} warning
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-xs text-muted-foreground">
-                  {stats.info} info
-                </span>
+            {/* Search */}
+            <div className="p-2 border-b border-border">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search alerts..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
               </div>
             </div>
 
+            {/* Severity Filter */}
+            <div className="p-2 border-b border-border flex items-center gap-2">
+              <button
+                onClick={() => setSeverityFilter('all')}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  severityFilter === 'all'
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                All ({stats.firing})
+              </button>
+              <button
+                onClick={() => setSeverityFilter('critical')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                  severityFilter === 'critical'
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                {stats.critical}
+              </button>
+              <button
+                onClick={() => setSeverityFilter('warning')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                  severityFilter === 'warning'
+                    ? 'bg-orange-500/20 text-orange-400'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                {stats.warning}
+              </button>
+              <button
+                onClick={() => setSeverityFilter('info')}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+                  severityFilter === 'info'
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                {stats.info}
+              </button>
+            </div>
+
             {/* Alerts List */}
-            <div className="max-h-80 overflow-y-auto">
-              {recentAlerts.map(alert => (
+            <div className="max-h-64 overflow-y-auto">
+              {displayedAlerts.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No alerts match your filters</p>
+                </div>
+              ) : displayedAlerts.map(alert => (
                 <div
                   key={alert.id}
                   onClick={() => handleAlertClick(alert)}
@@ -187,15 +287,32 @@ export function AlertBadge() {
                         Acknowledge
                       </button>
                     )}
-                    {!alert.aiDiagnosis?.missionId && (
-                      <button
-                        onClick={e => handleDiagnose(e, alert.id)}
-                        className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
-                      >
-                        <Bot className="w-3 h-3" />
-                        Diagnose
-                      </button>
-                    )}
+                    {(() => {
+                      const mission = getMissionForAlert(alert)
+                      if (mission) {
+                        // Mission exists - show link to view it
+                        return (
+                          <button
+                            onClick={e => handleOpenMission(e, alert)}
+                            className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            View Diagnosis
+                          </button>
+                        )
+                      } else {
+                        // No mission or mission was deleted - show diagnose button
+                        return (
+                          <button
+                            onClick={e => handleDiagnose(e, alert.id)}
+                            className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                          >
+                            <Bot className="w-3 h-3" />
+                            Diagnose
+                          </button>
+                        )
+                      }
+                    })()}
                     {alert.acknowledgedAt && (
                       <span className="px-2 py-1 text-xs text-green-400 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
@@ -208,21 +325,18 @@ export function AlertBadge() {
             </div>
 
             {/* Footer */}
-            {activeAlerts.length > 5 && (
-              <div className="p-2 border-t border-border text-center">
-                <button
-                  onClick={() => {
-                    setIsOpen(false)
-                    // Navigate to alerts page or open full alerts view
-                  }}
-                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                >
-                  View all {activeAlerts.length} alerts
-                </button>
-              </div>
-            )}
+            <div className="p-2 border-t border-border text-center">
+              <button
+                onClick={() => {
+                  setIsOpen(false)
+                  navigate('/alerts')
+                }}
+                className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Open Alerts Dashboard
+              </button>
+            </div>
           </div>
-        </>
       )}
     </div>
   )

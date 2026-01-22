@@ -18,11 +18,13 @@ const (
 type RequestStatus string
 
 const (
-	RequestStatusSubmitted        RequestStatus = "submitted"
 	RequestStatusOpen             RequestStatus = "open"
-	RequestStatusInProgress       RequestStatus = "in_progress"
-	RequestStatusPRReady          RequestStatus = "pr_ready"
-	RequestStatusPreviewAvailable RequestStatus = "preview_available"
+	RequestStatusNeedsTriage      RequestStatus = "needs_triage"
+	RequestStatusTriageAccepted   RequestStatus = "triage_accepted"
+	RequestStatusFeasibilityStudy RequestStatus = "feasibility_study"
+	RequestStatusFixReady         RequestStatus = "fix_ready"
+	RequestStatusFixComplete      RequestStatus = "fix_complete"
+	RequestStatusUnableToFix      RequestStatus = "unable_to_fix"
 	RequestStatusClosed           RequestStatus = "closed"
 )
 
@@ -38,12 +40,14 @@ const (
 type NotificationType string
 
 const (
-	NotificationTypeIssueCreated     NotificationType = "issue_created"
-	NotificationTypePRCreated        NotificationType = "pr_created"
-	NotificationTypePreviewReady     NotificationType = "preview_ready"
-	NotificationTypePRMerged         NotificationType = "pr_merged"
-	NotificationTypePRClosed         NotificationType = "pr_closed"
-	NotificationTypeFeedbackReceived NotificationType = "feedback_received"
+	NotificationTypeIssueCreated      NotificationType = "issue_created"
+	NotificationTypeTriageAccepted    NotificationType = "triage_accepted"
+	NotificationTypeFeasibilityStudy  NotificationType = "feasibility_study"
+	NotificationTypeFixReady          NotificationType = "fix_ready"
+	NotificationTypeFixComplete       NotificationType = "fix_complete"
+	NotificationTypeUnableToFix       NotificationType = "unable_to_fix"
+	NotificationTypeClosed            NotificationType = "closed"
+	NotificationTypeFeedbackReceived  NotificationType = "feedback_received"
 )
 
 // FeatureRequest represents a bug or feature request submitted by a user
@@ -59,6 +63,8 @@ type FeatureRequest struct {
 	PRNumber          *int          `json:"pr_number,omitempty"`
 	PRURL             string        `json:"pr_url,omitempty"`
 	NetlifyPreviewURL string        `json:"netlify_preview_url,omitempty"`
+	LatestComment     string        `json:"latest_comment,omitempty"`
+	ClosedByUser      bool          `json:"closed_by_user"`
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         *time.Time    `json:"updated_at,omitempty"`
 }
@@ -82,6 +88,7 @@ type Notification struct {
 	Title            string           `json:"title"`
 	Message          string           `json:"message"`
 	Read             bool             `json:"read"`
+	ActionURL        string           `json:"action_url,omitempty"`
 	CreatedAt        time.Time        `json:"created_at"`
 }
 

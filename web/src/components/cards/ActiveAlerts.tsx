@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import {
   Bell,
   AlertTriangle,
@@ -9,11 +9,15 @@ import {
   Server,
   Filter,
   ChevronDown,
+  Eye,
+  EyeOff,
+  ExternalLink,
 } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/useMCP'
 import { useDrillDown } from '../../hooks/useDrillDown'
+import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
@@ -36,16 +40,26 @@ function formatRelativeTime(dateString: string): string {
 type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
-  const { activeAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
+  const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
   const { clusters } = useClusters()
   const { open } = useDrillDown()
+  const { missions, setActiveMission, openSidebar } = useMissions()
 
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const [showAcknowledged, setShowAcknowledged] = useState(false)
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [sortBy, setSortBy] = useState<SortField>('severity')
   const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  // Combine active and acknowledged alerts when toggle is on
+  const allAlertsToShow = useMemo(() => {
+    if (showAcknowledged) {
+      return [...activeAlerts, ...acknowledgedAlerts]
+    }
+    return activeAlerts
+  }, [activeAlerts, acknowledgedAlerts, showAcknowledged])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -78,9 +92,19 @@ export function ActiveAlerts() {
     })
   }
 
+  // Map AlertSeverity to global SeverityLevel for filtering
+  const mapAlertSeverityToGlobal = (alertSeverity: AlertSeverity): SeverityLevel[] => {
+    switch (alertSeverity) {
+      case 'critical': return ['critical']
+      case 'warning': return ['warning']
+      case 'info': return ['info']
+      default: return ['info']
+    }
+  }
+
   // Filter and sort alerts
   const filteredAlerts = useMemo(() => {
-    let result = activeAlerts
+    let result = allAlertsToShow
 
     // Apply global cluster filter
     if (!isAllClustersSelected) {
@@ -90,6 +114,24 @@ export function ActiveAlerts() {
     // Apply local cluster filter
     if (localClusterFilter.length > 0) {
       result = result.filter(a => !a.cluster || localClusterFilter.includes(a.cluster))
+    }
+
+    // Apply global severity filter
+    if (!isAllSeveritiesSelected) {
+      result = result.filter(a => {
+        const mappedSeverities = mapAlertSeverityToGlobal(a.severity)
+        return mappedSeverities.some(s => selectedSeverities.includes(s))
+      })
+    }
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(a =>
+        a.ruleName.toLowerCase().includes(query) ||
+        a.message.toLowerCase().includes(query) ||
+        (a.cluster?.toLowerCase() || '').includes(query)
+      )
     }
 
     // Sort by selected field
@@ -103,7 +145,7 @@ export function ActiveAlerts() {
         return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
       }
     })
-  }, [activeAlerts, selectedClusters, isAllClustersSelected, localClusterFilter, sortBy])
+  }, [allAlertsToShow, selectedClusters, isAllClustersSelected, localClusterFilter, sortBy, selectedSeverities, isAllSeveritiesSelected, customFilter])
 
   // Apply pagination
   const displayedAlerts = useMemo(() => {
@@ -129,6 +171,22 @@ export function ActiveAlerts() {
   const handleAcknowledge = (e: React.MouseEvent, alertId: string) => {
     e.stopPropagation()
     acknowledgeAlert(alertId)
+  }
+
+  // Check if a mission exists for an alert
+  const getMissionForAlert = useCallback((alert: Alert) => {
+    if (!alert.aiDiagnosis?.missionId) return null
+    return missions.find(m => m.id === alert.aiDiagnosis?.missionId) || null
+  }, [missions])
+
+  // Open mission sidebar for an alert
+  const handleOpenMission = (e: React.MouseEvent, alert: Alert) => {
+    e.stopPropagation()
+    const mission = getMissionForAlert(alert)
+    if (mission) {
+      setActiveMission(mission.id)
+      openSidebar()
+    }
   }
 
   // Severity indicator badge
@@ -168,16 +226,36 @@ export function ActiveAlerts() {
           )}
         </div>
 
-        <CardControls
-          limit={limit}
-          onLimitChange={setLimit}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          sortOptions={[
-            { value: 'severity', label: 'Severity' },
-            { value: 'time', label: 'Time' },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          {/* Toggle acknowledged alerts */}
+          <button
+            onClick={() => setShowAcknowledged(!showAcknowledged)}
+            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+              showAcknowledged
+                ? 'bg-green-500/20 border-green-500/30 text-green-400'
+                : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+            }`}
+            title={showAcknowledged ? 'Hide acknowledged alerts' : 'Show acknowledged alerts'}
+          >
+            {showAcknowledged ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+            <span>Ack'd</span>
+            {acknowledgedAlerts.length > 0 && (
+              <span className="ml-0.5 px-1 py-0 text-[10px] rounded-full bg-green-500/30">
+                {acknowledgedAlerts.length}
+              </span>
+            )}
+          </button>
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            sortOptions={[
+              { value: 'severity', label: 'Severity' },
+              { value: 'time', label: 'Time' },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Cluster Filter */}
@@ -298,7 +376,7 @@ export function ActiveAlerts() {
                       <Clock className="w-3 h-3" />
                       {formatRelativeTime(alert.firedAt)}
                     </span>
-                    {alert.aiDiagnosis?.missionId && (
+                    {getMissionForAlert(alert) && (
                       <span className="text-xs text-purple-400 flex items-center gap-1">
                         <Bot className="w-3 h-3" />
                         Klaude
@@ -322,15 +400,30 @@ export function ActiveAlerts() {
                     Acknowledge
                   </button>
                 )}
-                {!alert.aiDiagnosis?.missionId && (
-                  <button
-                    onClick={e => handleAIDiagnose(e, alert.id)}
-                    className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
-                  >
-                    <Bot className="w-3 h-3" />
-                    Klaude Diagnose
-                  </button>
-                )}
+                {(() => {
+                  const mission = getMissionForAlert(alert)
+                  if (mission) {
+                    return (
+                      <button
+                        onClick={e => handleOpenMission(e, alert)}
+                        className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View Diagnosis
+                      </button>
+                    )
+                  } else {
+                    return (
+                      <button
+                        onClick={e => handleAIDiagnose(e, alert.id)}
+                        className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
+                      >
+                        <Bot className="w-3 h-3" />
+                        Klaude Diagnose
+                      </button>
+                    )
+                  }
+                })()}
               </div>
             </div>
           ))

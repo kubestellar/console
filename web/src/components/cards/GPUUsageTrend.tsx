@@ -12,7 +12,8 @@ import {
 } from 'recharts'
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 
 interface GPUDataPoint {
   time: string
@@ -38,10 +39,19 @@ function normalizeClusterName(cluster: string): string {
 }
 
 export function GPUUsageTrend() {
-  const { nodes: gpuNodes, isLoading, refetch: _refetch } = useGPUNodes()
-  const isRefreshing = false
-  const lastUpdated = new Date()
+  const {
+    nodes: gpuNodes,
+    isLoading: hookLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useGPUNodes()
   const { clusters } = useClusters()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && gpuNodes.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -234,20 +244,32 @@ export function GPUUsageTrend() {
 
   if (isLoading && history.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading GPU data...</div>
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton variant="text" width={120} height={16} />
+          <Skeleton variant="rounded" width={28} height={28} />
+        </div>
+        <SkeletonStats className="mb-4" />
+        <Skeleton variant="rounded" height={160} className="flex-1" />
       </div>
     )
   }
 
   if (gpuNodes.length === 0) {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-purple-400" />
             <span className="text-sm font-medium text-muted-foreground">GPU Usage Trend</span>
           </div>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
@@ -261,7 +283,7 @@ export function GPUUsageTrend() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -279,10 +301,12 @@ export function GPUUsageTrend() {
             </span>
           )}
         </div>
-        <RefreshIndicator
+        <RefreshButton
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
-          size="sm"
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={() => refetch()}
         />
       </div>
 

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useShowCards } from '../../hooks/useShowCards'
-import { Pencil, X, Check, Loader2, Hourglass, WifiOff, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, ChevronDown, HardDrive, Network, FolderOpen, Plus, Trash2, Box, Layers, Server, List, GitBranch, Eye, Terminal, FileText, Info, Activity, Briefcase, Lock, Settings, LayoutGrid, Wrench, Layout, RefreshCw, GripVertical } from 'lucide-react'
+import { Pencil, X, Check, Loader2, Hourglass, WifiOff, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, ChevronDown, HardDrive, Network, FolderOpen, Plus, Trash2, Box, Layers, Server, List, GitBranch, Eye, Terminal, FileText, Info, Activity, Briefcase, Lock, Settings, LayoutGrid, Wrench, RefreshCw, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -27,7 +27,7 @@ import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { ClusterDetailModal } from './ClusterDetailModal'
 import {
   RenameModal,
@@ -107,11 +107,12 @@ const SortableClusterCard = memo(function SortableClusterCard({
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button
             {...attributes}
@@ -140,7 +141,7 @@ function DragPreviewCard({ card }: { card: ClusterCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -2099,23 +2100,6 @@ export function Clusters() {
             <span>Dashboard Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}
@@ -2262,7 +2246,7 @@ function CardConfigModal({
       <div className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">
-            Configure {card.title || formatCardTitle(card.card_type)}
+            Configure {formatCardTitle(card.card_type)}
           </h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />

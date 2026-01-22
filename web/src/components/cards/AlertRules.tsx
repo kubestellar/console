@@ -8,6 +8,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import { useAlertRules } from '../../hooks/useAlerts'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { formatCondition } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
@@ -17,14 +18,26 @@ type SortField = 'name' | 'severity' | 'enabled'
 
 export function AlertRulesCard() {
   const { rules, createRule, updateRule, toggleRule, deleteRule } = useAlertRules()
+  const { customFilter } = useGlobalFilters()
   const [showEditor, setShowEditor] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [sortBy, setSortBy] = useState<SortField>('name')
 
-  // Sort rules
+  // Filter and sort rules
   const sortedRules = useMemo(() => {
-    return [...rules].sort((a, b) => {
+    let filtered = [...rules]
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      filtered = filtered.filter(rule =>
+        rule.name.toLowerCase().includes(query) ||
+        formatCondition(rule.condition).toLowerCase().includes(query)
+      )
+    }
+
+    return filtered.sort((a, b) => {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name)
       } else if (sortBy === 'severity') {
@@ -35,7 +48,7 @@ export function AlertRulesCard() {
         return (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0)
       }
     })
-  }, [rules, sortBy])
+  }, [rules, sortBy, customFilter])
 
   // Apply pagination
   const displayedRules = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { MemoryStick, ImageOff, Clock, RefreshCw, ChevronRight } from 'lucide-react'
 import { usePodIssues, PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -18,18 +18,6 @@ const SORT_OPTIONS = [
   { value: 'restarts' as const, label: 'Restarts' },
   { value: 'cluster' as const, label: 'Cluster' },
 ]
-
-// Format relative time (e.g., "2m ago", "1h ago")
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
-  if (seconds < 60) return 'now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
 
 const getIssueIcon = (status: string): { icon: typeof MemoryStick; tooltip: string } => {
   if (status.includes('OOM')) return { icon: MemoryStick, tooltip: 'Out of Memory - Pod exceeded memory limits' }
@@ -58,7 +46,6 @@ export function PodIssues() {
     issues: rawIssues,
     isLoading: hookLoading,
     isRefreshing,
-    lastUpdated,
     error,
     refetch,
     isFailed,
@@ -73,17 +60,6 @@ export function PodIssues() {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
-  const [loadingTooLong, setLoadingTooLong] = useState(false)
-
-  // Track if loading is taking too long
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => setLoadingTooLong(true), 10000)
-      return () => clearTimeout(timer)
-    } else {
-      setLoadingTooLong(false)
-    }
-  }, [isLoading])
 
   // Filter and sort issues
   const filteredAndSorted = useMemo(() => {

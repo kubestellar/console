@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
-import { RefreshCw, Zap } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls, SortDirection } from '../ui/CardControls'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
@@ -17,8 +19,19 @@ const SORT_OPTIONS = [
 ]
 
 export function GPUOverview({ config: _config }: GPUOverviewProps) {
-  const { nodes: rawNodes, isLoading, refetch } = useGPUNodes()
+  const {
+    nodes: rawNodes,
+    isLoading: hookLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useGPUNodes()
   const { clusters } = useClusters()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && rawNodes.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
 
@@ -55,8 +68,19 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
 
   if (isLoading && hasReachableClusters) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="spinner w-8 h-8" />
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton variant="text" width={100} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <div className="flex justify-center mb-4">
+          <Skeleton variant="circular" width={128} height={128} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} variant="rounded" height={50} />
+          ))}
+        </div>
       </div>
     )
   }
@@ -102,7 +126,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const clusterCount = new Set(nodes.map(n => n.cluster)).size
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -118,13 +142,13 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
             onSortDirectionChange={setSortDirection}
             showLimit={false}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh GPU data"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 

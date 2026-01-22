@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { DollarSign, TrendingDown, AlertTriangle, ExternalLink, RefreshCw, AlertCircle, PieChart } from 'lucide-react'
+import { DollarSign, TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart } from 'lucide-react'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface KubecostOverviewProps {
   config?: {
@@ -49,7 +50,6 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-emerald-400" />
           <span className="text-sm font-medium text-muted-foreground">Kubecost</span>
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400">Demo</span>
         </div>
         <div className="flex items-center gap-1">
           <a
@@ -61,13 +61,11 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            size="sm"
+          />
         </div>
       </div>
 

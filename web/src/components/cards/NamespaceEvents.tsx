@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Activity, AlertTriangle, Info, AlertCircle, RefreshCw, Clock } from 'lucide-react'
+import { Activity, AlertTriangle, Info, AlertCircle, Clock } from 'lucide-react'
 import { useClusters, useWarningEvents, useNamespaces } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface NamespaceEventsProps {
   config?: {
@@ -24,8 +25,9 @@ const SORT_OPTIONS = [
 ]
 
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
-  const { clusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
-  const { events: allEvents, isLoading: eventsLoading, refetch: refetchEvents } = useWarningEvents()
+  const { clusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { events: allEvents, isLoading: eventsLoading, isRefreshing: eventsRefreshing, refetch: refetchEvents } = useWarningEvents()
+  const isRefreshing = clustersRefreshing || eventsRefreshing
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [sortBy, setSortBy] = useState<SortByOption>('time')
@@ -170,13 +172,14 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => { refetchClusters(); refetchEvents(); }}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh events"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => { refetchClusters(); refetchEvents(); }}
+            size="sm"
+          />
         </div>
       </div>
 

@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Package, ArrowUpCircle, CheckCircle, RefreshCw, ExternalLink } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { Package } from 'lucide-react'
+import { useClusters, useHelmReleases } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ChartVersionsProps {
   config?: {
@@ -15,25 +16,25 @@ interface ChartVersionsProps {
 
 interface ChartInfo {
   name: string
-  installed: string
-  latest: string
-  hasUpgrade: boolean
-  repository: string
+  chart: string
+  version: string
+  namespace: string
+  cluster?: string
 }
 
-type SortByOption = 'upgrade' | 'name' | 'repository'
+type SortByOption = 'name' | 'chart' | 'namespace'
 
 const SORT_OPTIONS = [
-  { value: 'upgrade' as const, label: 'Upgrade Available' },
   { value: 'name' as const, label: 'Name' },
-  { value: 'repository' as const, label: 'Repository' },
+  { value: 'chart' as const, label: 'Chart' },
+  { value: 'namespace' as const, label: 'Namespace' },
 ]
 
 export function ChartVersions({ config }: ChartVersionsProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  // Default to all clusters (empty string)
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
-  const [showUpgradesOnly, setShowUpgradesOnly] = useState(false)
-  const [sortBy, setSortBy] = useState<SortByOption>('upgrade')
+  const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const {
@@ -42,7 +43,27 @@ export function ChartVersions({ config }: ChartVersionsProps) {
     customFilter,
   } = useGlobalFilters()
 
-  // Apply global filters
+  // Fetch ALL Helm releases once - filter locally
+  const {
+    releases: allHelmReleases,
+    isLoading: releasesLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useHelmReleases()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Filter by selected cluster locally (no API call)
+  const helmReleases = useMemo(() => {
+    if (!selectedCluster) return allHelmReleases
+    return allHelmReleases.filter(r => r.cluster === selectedCluster)
+  }, [allHelmReleases, selectedCluster])
+
+  // Apply global filters to get available clusters
   const clusters = useMemo(() => {
     let result = allClusters
 
@@ -61,39 +82,58 @@ export function ChartVersions({ config }: ChartVersionsProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Mock chart version data
-  const allCharts: ChartInfo[] = selectedCluster ? [
-    { name: 'prometheus', installed: '25.8.0', latest: '25.10.0', hasUpgrade: true, repository: 'prometheus-community' },
-    { name: 'grafana', installed: '7.0.8', latest: '7.0.8', hasUpgrade: false, repository: 'grafana' },
-    { name: 'ingress-nginx', installed: '4.9.0', latest: '4.9.1', hasUpgrade: true, repository: 'ingress-nginx' },
-    { name: 'cert-manager', installed: '1.13.3', latest: '1.14.0', hasUpgrade: true, repository: 'jetstack' },
-    { name: 'redis', installed: '18.6.1', latest: '18.6.1', hasUpgrade: false, repository: 'bitnami' },
-    { name: 'postgresql', installed: '13.2.24', latest: '14.0.0', hasUpgrade: true, repository: 'bitnami' },
-    { name: 'elasticsearch', installed: '8.5.1', latest: '8.5.1', hasUpgrade: false, repository: 'elastic' },
-  ] : []
+  // Transform Helm releases to chart info
+  const allCharts: ChartInfo[] = useMemo(() => {
+    return helmReleases.map(r => {
+      // Parse chart name and version (e.g., "prometheus-25.8.0" -> chart: "prometheus", version: "25.8.0")
+      const chartParts = r.chart.match(/^(.+)-(\d+\.\d+\.\d+.*)$/)
+      const chartName = chartParts ? chartParts[1] : r.chart
+      const chartVersion = chartParts ? chartParts[2] : ''
 
+      return {
+        name: r.name,
+        chart: chartName,
+        version: chartVersion,
+        namespace: r.namespace,
+        cluster: r.cluster,
+      }
+    })
+  }, [helmReleases])
+
+  // Filter and sort
   const filteredAndSorted = useMemo(() => {
-    let result = showUpgradesOnly ? allCharts.filter(c => c.hasUpgrade) : allCharts
+    let result = [...allCharts]
+
+    // Apply custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.chart.toLowerCase().includes(query) ||
+        c.namespace.toLowerCase().includes(query) ||
+        c.version.toLowerCase().includes(query)
+      )
+    }
 
     // Sort
-    result = [...result].sort((a, b) => {
+    result.sort((a, b) => {
       let compare = 0
       switch (sortBy) {
-        case 'upgrade':
-          compare = (a.hasUpgrade ? 0 : 1) - (b.hasUpgrade ? 0 : 1)
-          break
         case 'name':
           compare = a.name.localeCompare(b.name)
           break
-        case 'repository':
-          compare = a.repository.localeCompare(b.repository)
+        case 'chart':
+          compare = a.chart.localeCompare(b.chart)
+          break
+        case 'namespace':
+          compare = a.namespace.localeCompare(b.namespace)
           break
       }
       return sortDirection === 'asc' ? compare : -compare
     })
 
     return result
-  }, [allCharts, showUpgradesOnly, sortBy, sortDirection])
+  }, [allCharts, customFilter, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -107,7 +147,8 @@ export function ChartVersions({ config }: ChartVersionsProps) {
     needsPagination,
   } = usePagination(filteredAndSorted, effectivePerPage)
 
-  const upgradeCount = allCharts.filter(c => c.hasUpgrade).length
+  // Count unique charts
+  const uniqueCharts = new Set(allCharts.map(c => c.chart)).size
 
   if (isLoading) {
     return (
@@ -132,11 +173,6 @@ export function ChartVersions({ config }: ChartVersionsProps) {
         <div className="flex items-center gap-2">
           <Package className="w-4 h-4 text-emerald-400" />
           <span className="text-sm font-medium text-muted-foreground">Chart Versions</span>
-          {upgradeCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
-              {upgradeCount} upgrades
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <CardControls
@@ -148,13 +184,14 @@ export function ChartVersions({ config }: ChartVersionsProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh chart versions"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 
@@ -164,77 +201,66 @@ export function ChartVersions({ config }: ChartVersionsProps) {
         onChange={(e) => setSelectedCluster(e.target.value)}
         className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
-        <option value="">Select cluster...</option>
+        <option value="">All clusters</option>
         {clusters.map(c => (
           <option key={c.name} value={c.name}>{c.name}</option>
         ))}
       </select>
 
-      {!selectedCluster ? (
+      {clusters.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          Select a cluster to check chart versions
+          No clusters available
         </div>
       ) : (
         <>
-          {/* Scope and filter */}
-          <div className="flex items-center justify-between mb-4">
-            <ClusterBadge cluster={selectedCluster} />
-            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showUpgradesOnly}
-                onChange={(e) => setShowUpgradesOnly(e.target.checked)}
-                className="rounded border-border bg-secondary"
-              />
-              <span>Upgrades only</span>
-            </label>
+          {/* Scope badge */}
+          <div className="flex items-center mb-4">
+            {selectedCluster ? (
+              <ClusterBadge cluster={selectedCluster} />
+            ) : (
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">All clusters</span>
+            )}
           </div>
 
           {/* Summary */}
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-emerald-500/10 text-center">
               <span className="text-lg font-bold text-emerald-400">{allCharts.length}</span>
-              <p className="text-xs text-muted-foreground">Charts</p>
+              <p className="text-xs text-muted-foreground">Releases</p>
             </div>
-            <div className="flex-1 p-2 rounded-lg bg-cyan-500/10 text-center">
-              <span className="text-lg font-bold text-cyan-400">{upgradeCount}</span>
-              <p className="text-xs text-muted-foreground">Upgrades</p>
-            </div>
-            <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">
-              <span className="text-lg font-bold text-green-400">{allCharts.length - upgradeCount}</span>
-              <p className="text-xs text-muted-foreground">Up-to-date</p>
+            <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center">
+              <span className="text-lg font-bold text-blue-400">{uniqueCharts}</span>
+              <p className="text-xs text-muted-foreground">Unique Charts</p>
             </div>
           </div>
 
           {/* Charts list */}
           <div className="flex-1 space-y-2 overflow-y-auto">
-            {charts.map((chart, idx) => (
-              <div
-                key={idx}
-                className={`p-3 rounded-lg ${chart.hasUpgrade ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    {chart.hasUpgrade ? (
-                      <ArrowUpCircle className="w-4 h-4 text-cyan-400" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4 text-green-400" />
-                    )}
-                    <span className="text-sm text-foreground font-medium">{chart.name}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{chart.repository}</span>
-                </div>
-                <div className="flex items-center gap-2 ml-6 text-xs">
-                  <span className="text-muted-foreground">v{chart.installed}</span>
-                  {chart.hasUpgrade && (
-                    <>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="text-cyan-400 font-medium">v{chart.latest}</span>
-                    </>
-                  )}
-                </div>
+            {charts.length === 0 ? (
+              <div className="flex items-center justify-center text-muted-foreground text-sm py-4">
+                No Helm releases found
               </div>
-            ))}
+            ) : (
+              charts.map((chart, idx) => (
+                <div
+                  key={`${chart.cluster}-${chart.namespace}-${chart.name}-${idx}`}
+                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm text-foreground font-medium">{chart.name}</span>
+                    </div>
+                    {chart.cluster && <ClusterBadge cluster={chart.cluster} size="sm" />}
+                  </div>
+                  <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground">
+                    <span title={`Chart: ${chart.chart}`}>{chart.chart}</span>
+                    {chart.version && <span title={`Version: ${chart.version}`}>v{chart.version}</span>}
+                    <span title={`Namespace: ${chart.namespace}`}>{chart.namespace}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Pagination */}
@@ -252,12 +278,8 @@ export function ChartVersions({ config }: ChartVersionsProps) {
           )}
 
           {/* Footer */}
-          <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Checked against Artifact Hub</span>
-            <a href="#" className="flex items-center gap-1 text-emerald-400 hover:underline">
-              <ExternalLink className="w-3 h-3" />
-              View all
-            </a>
+          <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+            {totalItems} releases{selectedCluster ? ` in ${selectedCluster}` : ' across all clusters'}
           </div>
         </>
       )}

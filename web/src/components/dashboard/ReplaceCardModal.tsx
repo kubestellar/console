@@ -19,7 +19,7 @@ const CARD_TYPES = [
   { type: 'cluster_health', name: 'Cluster Health', icon: Server, description: 'Overview of cluster health status' },
   { type: 'event_stream', name: 'Event Stream', icon: Activity, description: 'Live Kubernetes events' },
   { type: 'pod_issues', name: 'Pod Issues', icon: AlertTriangle, description: 'Pods with problems' },
-  { type: 'app_status', name: 'App Status', icon: Box, description: 'Application deployment status' },
+  { type: 'app_status', name: 'Workload Status', icon: Box, description: 'Workload deployment status' },
   { type: 'resource_usage', name: 'Resource Usage', icon: Gauge, description: 'CPU & memory utilization' },
   { type: 'cluster_metrics', name: 'Cluster Metrics', icon: LayoutDashboard, description: 'Time-series cluster data' },
   { type: 'deployment_status', name: 'Deployment Status', icon: GitBranch, description: 'Deployment rollout progress' },

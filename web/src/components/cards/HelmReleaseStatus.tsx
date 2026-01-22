@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Anchor, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { Anchor, CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react'
+import { useClusters, useHelmReleases } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface HelmReleaseStatusProps {
   config?: {
@@ -14,7 +15,8 @@ interface HelmReleaseStatusProps {
   }
 }
 
-interface HelmRelease {
+// Display format for Helm release
+interface HelmReleaseDisplay {
   name: string
   namespace: string
   chart: string
@@ -23,6 +25,7 @@ interface HelmRelease {
   status: 'deployed' | 'failed' | 'pending' | 'superseded' | 'uninstalling'
   updated: string
   revision: number
+  cluster?: string
 }
 
 type SortByOption = 'status' | 'name' | 'chart' | 'updated'
@@ -35,7 +38,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
@@ -48,7 +51,27 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     filterByStatus,
   } = useGlobalFilters()
 
-  // Apply global filters
+  // Fetch ALL Helm releases once (not per-cluster) - filter locally
+  const {
+    releases: allHelmReleases,
+    isLoading: releasesLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useHelmReleases()
+
+  // Only show loading skeleton when no data exists (not during refresh)
+  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Filter by selected cluster locally (no API call)
+  const helmReleases = useMemo(() => {
+    if (!selectedCluster) return allHelmReleases
+    return allHelmReleases.filter(r => r.cluster === selectedCluster)
+  }, [allHelmReleases, selectedCluster])
+
+  // Apply global filters to get available clusters
   const clusters = useMemo(() => {
     let result = allClusters
 
@@ -67,15 +90,27 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Mock Helm release data
-  const allReleases: HelmRelease[] = selectedCluster ? [
-    { name: 'prometheus', namespace: 'monitoring', chart: 'prometheus', version: '25.8.0', appVersion: '2.47.0', status: 'deployed', updated: '2024-01-10T14:30:00Z', revision: 5 },
-    { name: 'grafana', namespace: 'monitoring', chart: 'grafana', version: '7.0.8', appVersion: '10.2.2', status: 'deployed', updated: '2024-01-09T10:15:00Z', revision: 3 },
-    { name: 'nginx-ingress', namespace: 'ingress', chart: 'ingress-nginx', version: '4.9.0', appVersion: '1.9.5', status: 'deployed', updated: '2024-01-08T09:00:00Z', revision: 12 },
-    { name: 'cert-manager', namespace: 'cert-manager', chart: 'cert-manager', version: '1.13.3', appVersion: '1.13.3', status: 'deployed', updated: '2024-01-05T16:45:00Z', revision: 2 },
-    { name: 'redis', namespace: 'default', chart: 'redis', version: '18.6.1', appVersion: '7.2.3', status: 'failed', updated: '2024-01-11T08:20:00Z', revision: 4 },
-    { name: 'postgresql', namespace: 'default', chart: 'postgresql', version: '13.2.24', appVersion: '16.1.0', status: 'pending', updated: '2024-01-11T11:00:00Z', revision: 1 },
-  ] : []
+  // Transform API data to display format
+  const allReleases = useMemo(() => {
+    return helmReleases.map(r => {
+      // Parse chart name and version (e.g., "prometheus-25.8.0" -> chart: "prometheus", version: "25.8.0")
+      const chartParts = r.chart.match(/^(.+)-(\d+\.\d+\.\d+.*)$/)
+      const chartName = chartParts ? chartParts[1] : r.chart
+      const chartVersion = chartParts ? chartParts[2] : ''
+
+      return {
+        name: r.name,
+        namespace: r.namespace,
+        chart: chartName,
+        version: chartVersion,
+        appVersion: r.app_version || '',
+        status: r.status.toLowerCase() as 'deployed' | 'failed' | 'pending' | 'superseded' | 'uninstalling',
+        updated: r.updated,
+        revision: parseInt(r.revision) || 1,
+        cluster: r.cluster,
+      }
+    })
+  }, [helmReleases])
 
   // Get unique namespaces
   const namespaces = useMemo(() => {
@@ -142,7 +177,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     needsPagination,
   } = usePagination(filteredAndSorted, effectivePerPage)
 
-  const getStatusIcon = (status: HelmRelease['status']) => {
+  const getStatusIcon = (status: HelmReleaseDisplay['status']) => {
     switch (status) {
       case 'deployed': return CheckCircle
       case 'failed': return XCircle
@@ -151,7 +186,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     }
   }
 
-  const getStatusColor = (status: HelmRelease['status']) => {
+  const getStatusColor = (status: HelmReleaseDisplay['status']) => {
     switch (status) {
       case 'deployed': return 'green'
       case 'failed': return 'red'
@@ -169,8 +204,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     return `${Math.floor(diff / 86400000)}d ago`
   }
 
-  const deployedCount = releases.filter(r => r.status === 'deployed').length
-  const failedCount = releases.filter(r => r.status === 'failed').length
+  // Use filteredAndSorted for total counts (not paginated releases)
+  const deployedCount = filteredAndSorted.filter(r => r.status === 'deployed').length
+  const failedCount = filteredAndSorted.filter(r => r.status === 'failed').length
 
   if (isLoading) {
     return (
@@ -196,11 +232,6 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
         <div className="flex items-center gap-2">
           <Anchor className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-muted-foreground">Helm Releases</span>
-          {failedCount > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${failedCount} Helm release${failedCount !== 1 ? 's' : ''} in failed state`}>
-              {failedCount} failed
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <CardControls
@@ -212,13 +243,14 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh Helm releases"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 
@@ -231,9 +263,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
             setSelectedNamespace('')
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-          title="Select a cluster to view Helm releases"
+          title="Filter Helm releases by cluster"
         >
-          <option value="">Select cluster...</option>
+          <option value="">All clusters</option>
           {clusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
@@ -252,15 +284,19 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
         </select>
       </div>
 
-      {!selectedCluster ? (
+      {clusters.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          Select a cluster to view releases
+          No clusters available
         </div>
       ) : (
         <>
           {/* Scope badge */}
           <div className="flex items-center gap-2 mb-4">
-            <ClusterBadge cluster={selectedCluster} />
+            {selectedCluster ? (
+              <ClusterBadge cluster={selectedCluster} />
+            ) : (
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">All clusters</span>
+            )}
             {selectedNamespace && (
               <>
                 <span className="text-muted-foreground">/</span>
@@ -271,8 +307,8 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
           {/* Summary */}
           <div className="flex gap-2 mb-4">
-            <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center cursor-default" title={`${releases.length} total Helm release${releases.length !== 1 ? 's' : ''}`}>
-              <span className="text-lg font-bold text-blue-400">{releases.length}</span>
+            <div className="flex-1 p-2 rounded-lg bg-blue-500/10 text-center cursor-default" title={`${totalItems} total Helm release${totalItems !== 1 ? 's' : ''}`}>
+              <span className="text-lg font-bold text-blue-400">{totalItems}</span>
               <p className="text-xs text-muted-foreground">Total</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center cursor-default" title={`${deployedCount} release${deployedCount !== 1 ? 's' : ''} successfully deployed`}>
@@ -307,6 +343,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground">
+                    {release.cluster && <ClusterBadge cluster={release.cluster} size="sm" />}
                     <span title={`Chart: ${release.chart}, Version: ${release.version}`}>{release.chart}@{release.version}</span>
                     <span title={`Helm revision: ${release.revision}`}>Rev {release.revision}</span>
                     <span className="ml-auto" title={`Last updated: ${new Date(release.updated).toLocaleString()}`}>{formatTime(release.updated)}</span>
@@ -332,7 +369,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} releases{selectedNamespace ? ` in ${selectedNamespace}` : ''}
+            {totalItems} releases{selectedCluster ? (selectedNamespace ? ` in ${selectedCluster}/${selectedNamespace}` : ` in ${selectedCluster}`) : ' across all clusters'}
           </div>
         </>
       )}

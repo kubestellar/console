@@ -4,9 +4,10 @@ import { Cpu, MemoryStick } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 export function ResourceUsage() {
-  const { clusters: allClusters, isLoading } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const {
@@ -81,9 +82,19 @@ export function ResourceUsage() {
         <span className="text-sm font-medium text-muted-foreground">
           Resource Usage
         </span>
-        <span className="text-xs text-muted-foreground">
-          {clusters.length} clusters
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {clusters.length} clusters
+          </span>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
+        </div>
       </div>
 
       <div

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { DollarSign, Server, Box, HardDrive, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react'
+import { DollarSign, Server, Box, HardDrive, ExternalLink, AlertCircle } from 'lucide-react'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface OpenCostOverviewProps {
   config?: {
@@ -35,7 +36,6 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-muted-foreground">OpenCost</span>
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400">Demo</span>
         </div>
         <div className="flex items-center gap-1">
           <a
@@ -47,13 +47,11 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            size="sm"
+          />
         </div>
       </div>
 

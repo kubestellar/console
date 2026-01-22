@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { FileCode, CheckCircle, AlertTriangle, XCircle, RefreshCw, Database } from 'lucide-react'
+import { FileCode, CheckCircle, AlertTriangle, XCircle, Database } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface CRDHealthProps {
   config?: {
@@ -32,7 +33,7 @@ const SORT_OPTIONS = [
 ]
 
 export function CRDHealth({ config }: CRDHealthProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [filterGroup, setFilterGroup] = useState<string>('')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
@@ -168,7 +169,7 @@ export function CRDHealth({ config }: CRDHealthProps) {
           <span className="text-sm font-medium text-muted-foreground">CRD Health</span>
           {unhealthyCRDs > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-              {unhealthyCRDs} issues
+              {unhealthyCRDs} {unhealthyCRDs === 1 ? 'issue' : 'issues'}
             </span>
           )}
         </div>
@@ -182,13 +183,14 @@ export function CRDHealth({ config }: CRDHealthProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh CRDs"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

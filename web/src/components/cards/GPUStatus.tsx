@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
-import { RefreshCw, Cpu, Activity } from 'lucide-react'
+import { Cpu, Activity } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 interface GPUStatusProps {
   config?: Record<string, unknown>
@@ -20,8 +22,19 @@ const SORT_OPTIONS = [
 
 export function GPUStatus({ config }: GPUStatusProps) {
   const cluster = config?.cluster as string | undefined
-  const { nodes: rawNodes, isLoading, refetch } = useGPUNodes(cluster)
+  const {
+    nodes: rawNodes,
+    isLoading: hookLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useGPUNodes(cluster)
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && rawNodes.length === 0
 
   const [sortBy, setSortBy] = useState<SortByOption>('utilization')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -100,23 +113,33 @@ export function GPUStatus({ config }: GPUStatusProps) {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="spinner w-8 h-8" />
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-3">
+          <Skeleton variant="text" width={100} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <Skeleton variant="rounded" height={32} className="mb-3" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} variant="rounded" height={80} />
+          ))}
+        </div>
       </div>
     )
   }
 
   if (filteredNodes.length === 0) {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">GPU Status</span>
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
@@ -130,7 +153,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -150,13 +173,13 @@ export function GPUStatus({ config }: GPUStatusProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh GPU status"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 

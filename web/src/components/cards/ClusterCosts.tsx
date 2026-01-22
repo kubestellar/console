@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { DollarSign, Server, Cpu, HardDrive, TrendingUp, RefreshCw, Info, ExternalLink, ChevronDown } from 'lucide-react'
+import { DollarSign, Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci'
 
@@ -70,7 +71,7 @@ interface ClusterCostsProps {
 }
 
 export function ClusterCosts({ config }: ClusterCostsProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const {
     selectedClusters: globalSelectedClusters,
@@ -177,12 +178,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           >
             <Info className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

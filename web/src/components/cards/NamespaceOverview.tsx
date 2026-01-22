@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Layers, Box, Activity, AlertTriangle, RefreshCw, Server } from 'lucide-react'
+import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useClusters, usePodIssues, useDeploymentIssues, useNamespaces } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface NamespaceOverviewProps {
   config?: {
@@ -14,7 +15,7 @@ interface NamespaceOverviewProps {
 }
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
-  const { clusters: allClusters, isLoading: clustersLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const {
@@ -87,13 +88,14 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           <Layers className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-muted-foreground">Namespace Overview</span>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-          title="Refresh namespace data"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Selectors */}

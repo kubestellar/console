@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { RefreshCw, Loader2, AlertTriangle, ChevronRight } from 'lucide-react'
+import { Loader2, AlertTriangle, ChevronRight } from 'lucide-react'
 import { usePods } from '../../hooks/useMCP'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 type SortByOption = 'restarts' | 'name'
 
@@ -37,7 +38,7 @@ export function TopPods({ config }: TopPodsProps) {
   const { drillToPod } = useDrillDownActions()
 
   // Fetch more pods to allow client-side filtering and pagination
-  const { pods: rawPods, isLoading, error, refetch } = usePods(cluster, namespace, sortBy, 100)
+  const { pods: rawPods, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePods(cluster, namespace, sortBy, 100)
 
   // Apply global filters (without limit - pagination handles that)
   const filteredPods = useMemo(() => {
@@ -105,13 +106,14 @@ export function TopPods({ config }: TopPodsProps) {
             sortOptions={SORT_OPTIONS}
             onSortChange={setSortBy}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

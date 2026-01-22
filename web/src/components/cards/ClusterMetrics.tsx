@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { TimeSeriesChart } from '../charts'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { Server, Clock, Filter, ChevronDown } from 'lucide-react'
+import { useDemoMode } from '../../hooks/useDemoMode'
+import { Server, Clock, Filter, ChevronDown, Info } from 'lucide-react'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -56,6 +57,7 @@ function stringToSeed(str: string): number {
 export function ClusterMetrics() {
   const { clusters: rawClusters } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { isDemoMode } = useDemoMode()
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -112,11 +114,16 @@ export function ClusterMetrics() {
   // Get time range config
   const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]
 
-  // Generate time-series data - use real values as base when available
+  // Generate time-series data - only in demo mode
   const data = useMemo(() => {
     const config = metricConfig[selectedMetric]
     const points = timeRangeConfig.points
     const intervalMs = timeRangeConfig.intervalMs
+
+    // Only generate synthetic data in demo mode
+    if (!isDemoMode) {
+      return []
+    }
 
     if (clusters.length === 0) {
       return generateTimeSeriesData(points, 0, 0, 0, intervalMs)
@@ -139,7 +146,7 @@ export function ClusterMetrics() {
         value: totalValue,
       }
     })
-  }, [clusters, selectedMetric, hasRealData, realValues, timeRange, timeRangeConfig.points, timeRangeConfig.intervalMs])
+  }, [clusters, selectedMetric, hasRealData, realValues, timeRange, timeRangeConfig.points, timeRangeConfig.intervalMs, isDemoMode])
 
   const config = metricConfig[selectedMetric]
   // Use real current value if available, otherwise use last chart value
@@ -263,6 +270,12 @@ export function ClusterMetrics() {
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             No clusters selected
           </div>
+        ) : !isDemoMode ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
+            <Info className="w-5 h-5" />
+            <span>Historical metrics require Prometheus</span>
+            <span className="text-xs text-muted-foreground/70">Enable demo mode to see simulated data</span>
+          </div>
         ) : (
           <TimeSeriesChart
             data={data}
@@ -274,27 +287,29 @@ export function ClusterMetrics() {
         )}
       </div>
 
-      {/* Stats */}
-      <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
-        <div>
-          <p className="text-xs text-muted-foreground">Min</p>
-          <p className="text-sm font-medium text-foreground">
-            {data.length > 0 ? Math.round(Math.min(...data.map((d) => d.value))) : 0}{config.unit}
-          </p>
+      {/* Stats - only show when we have time series data */}
+      {isDemoMode && data.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Min</p>
+            <p className="text-sm font-medium text-foreground">
+              {Math.round(Math.min(...data.map((d) => d.value)))}{config.unit}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Avg</p>
+            <p className="text-sm font-medium text-foreground">
+              {Math.round(data.reduce((a, b) => a + b.value, 0) / data.length)}{config.unit}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Max</p>
+            <p className="text-sm font-medium text-foreground">
+              {Math.round(Math.max(...data.map((d) => d.value)))}{config.unit}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Avg</p>
-          <p className="text-sm font-medium text-foreground">
-            {data.length > 0 ? Math.round(data.reduce((a, b) => a + b.value, 0) / data.length) : 0}{config.unit}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Max</p>
-          <p className="text-sm font-medium text-foreground">
-            {data.length > 0 ? Math.round(Math.max(...data.map((d) => d.value))) : 0}{config.unit}
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

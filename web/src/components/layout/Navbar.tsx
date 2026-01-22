@@ -13,7 +13,7 @@ import { languages } from '../../lib/i18n'
 import { TourTrigger } from '../onboarding/Tour'
 import { UserProfileDropdown } from './UserProfileDropdown'
 import { AlertBadge } from '../ui/AlertBadge'
-import { FeatureRequestButton, NotificationBadge } from '../feedback'
+import { FeatureRequestButton } from '../feedback'
 import { cn } from '../../lib/cn'
 
 interface SearchResult {
@@ -936,11 +936,8 @@ export function Navbar() {
         {/* Tour trigger */}
         <TourTrigger />
 
-        {/* Feature Request */}
+        {/* Feature Request (includes notifications) */}
         <FeatureRequestButton />
-
-        {/* User Notifications (bug/feature status) */}
-        <NotificationBadge />
 
         {/* Alerts */}
         <AlertBadge />

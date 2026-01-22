@@ -3,11 +3,17 @@ import { Network, Globe, Server, Layers, ExternalLink } from 'lucide-react'
 import { useClusters, useServices } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 export function NetworkOverview() {
-  const { clusters, isLoading, isRefreshing, lastUpdated } = useClusters()
-  const { services, isLoading: servicesLoading } = useServices()
+  const { clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, refetch: refetchServices } = useServices()
+
+  const isRefreshing = clustersRefreshing || servicesRefreshing
+  const refetch = () => {
+    refetchClusters()
+    refetchServices()
+  }
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
 
@@ -72,9 +78,12 @@ export function NetworkOverview() {
             </span>
           )}
         </div>
-        <RefreshIndicator
+        <RefreshButton
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
           size="sm"
         />
       </div>

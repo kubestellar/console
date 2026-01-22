@@ -60,11 +60,15 @@ type Store interface {
 	// Feature Requests
 	CreateFeatureRequest(request *models.FeatureRequest) error
 	GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error)
+	GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error)
 	GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error)
+	GetAllFeatureRequests() ([]models.FeatureRequest, error)
 	UpdateFeatureRequest(request *models.FeatureRequest) error
 	UpdateFeatureRequestStatus(id uuid.UUID, status models.RequestStatus) error
+	CloseFeatureRequest(id uuid.UUID, closedByUser bool) error
 	UpdateFeatureRequestPR(id uuid.UUID, prNumber int, prURL string) error
 	UpdateFeatureRequestPreview(id uuid.UUID, previewURL string) error
+	UpdateFeatureRequestLatestComment(id uuid.UUID, comment string) error
 
 	// PR Feedback
 	CreatePRFeedback(feedback *models.PRFeedback) error

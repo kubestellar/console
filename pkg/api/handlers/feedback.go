@@ -81,7 +81,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		Title:       input.Title,
 		Description: input.Description,
 		RequestType: input.RequestType,
-		Status:      models.RequestStatusSubmitted,
+		Status:      models.RequestStatusOpen,
 	}
 
 	if err := h.store.CreateFeatureRequest(request); err != nil {
@@ -107,8 +107,13 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		UserID:           userID,
 		FeatureRequestID: &request.ID,
 		NotificationType: models.NotificationTypeIssueCreated,
-		Title:            "Request Submitted",
+		Title:            fmt.Sprintf("Issue #%d Created", *request.GitHubIssueNumber),
 		Message:          fmt.Sprintf("Your %s request '%s' has been submitted.", request.RequestType, request.Title),
+		ActionURL:        request.GitHubIssueURL,
+	}
+	// Use generic title if no issue number
+	if request.GitHubIssueNumber == nil {
+		notification.Title = "Request Submitted"
 	}
 	h.store.CreateNotification(notification)
 
@@ -116,6 +121,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 }
 
 // ListFeatureRequests returns the user's feature requests
+// Only returns requests that have been triaged (to prevent abuse/profanity in UI)
 func (h *FeedbackHandler) ListFeatureRequests(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 
@@ -126,6 +132,188 @@ func (h *FeedbackHandler) ListFeatureRequests(c *fiber.Ctx) error {
 
 	if requests == nil {
 		requests = []models.FeatureRequest{}
+	}
+
+	// Filter to only show triaged requests (hide open/needs_triage to prevent abuse)
+	// Requests only become visible after a maintainer adds triage/accepted label
+	triaged := make([]models.FeatureRequest, 0, len(requests))
+	for _, r := range requests {
+		if r.Status != models.RequestStatusOpen && r.Status != models.RequestStatusNeedsTriage {
+			triaged = append(triaged, r)
+		}
+	}
+
+	return c.JSON(triaged)
+}
+
+// GitHubIssue represents an issue from GitHub API
+type GitHubIssue struct {
+	Number    int    `json:"number"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	State     string `json:"state"`
+	HTMLURL   string `json:"html_url"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	User      struct {
+		Login string `json:"login"`
+		ID    int    `json:"id"`
+	} `json:"user"`
+	Labels []struct {
+		Name string `json:"name"`
+	} `json:"labels"`
+}
+
+// QueueItem represents an issue in the queue for the frontend
+type QueueItem struct {
+	ID                string `json:"id"`
+	UserID            string `json:"user_id"`
+	GitHubLogin       string `json:"github_login"`
+	Title             string `json:"title"`
+	Description       string `json:"description"`
+	RequestType       string `json:"request_type"`
+	GitHubIssueNumber int    `json:"github_issue_number"`
+	GitHubIssueURL    string `json:"github_issue_url"`
+	Status            string `json:"status"`
+	CreatedAt         string `json:"created_at"`
+	UpdatedAt         string `json:"updated_at,omitempty"`
+}
+
+// ListAllFeatureRequests returns all issues from GitHub as a queue
+// For untriaged issues that don't belong to the current user, title and description are redacted
+// Frontend will display these with blur effect
+func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
+	// Get current user's GitHub login for ownership comparison
+	user, _ := h.store.GetUser(userID)
+	currentGitHubLogin := ""
+	if user != nil {
+		currentGitHubLogin = user.GitHubLogin
+	}
+
+	// Fetch issues from GitHub
+	issues, err := h.fetchGitHubIssues()
+	if err != nil {
+		log.Printf("Failed to fetch GitHub issues: %v", err)
+		// Fall back to local database if GitHub fetch fails
+		return h.listLocalFeatureRequests(c, userID)
+	}
+
+	// Convert to queue items
+	queueItems := make([]QueueItem, 0, len(issues))
+	for _, issue := range issues {
+		// Determine status based on labels
+		status := "needs_triage"
+		requestType := "feature"
+		for _, label := range issue.Labels {
+			switch label.Name {
+			case "triage/accepted":
+				status = "triage_accepted"
+			case "bug":
+				requestType = "bug"
+			case "enhancement", "feature":
+				requestType = "feature"
+			}
+		}
+
+		isOwnedByUser := issue.User.Login == currentGitHubLogin
+		isTriaged := status == "triage_accepted"
+
+		title := issue.Title
+		description := issue.Body
+		// Blur untriaged issues that aren't owned by the current user
+		if !isTriaged && !isOwnedByUser {
+			title = "[Pending Review]"
+			description = "This request is pending maintainer review."
+		}
+
+		queueItems = append(queueItems, QueueItem{
+			ID:                fmt.Sprintf("gh-%d", issue.Number),
+			UserID:            fmt.Sprintf("gh-%d", issue.User.ID),
+			GitHubLogin:       issue.User.Login,
+			Title:             title,
+			Description:       description,
+			RequestType:       requestType,
+			GitHubIssueNumber: issue.Number,
+			GitHubIssueURL:    issue.HTMLURL,
+			Status:            status,
+			CreatedAt:         issue.CreatedAt,
+			UpdatedAt:         issue.UpdatedAt,
+		})
+	}
+
+	return c.JSON(queueItems)
+}
+
+// fetchGitHubIssues fetches open issues from the configured GitHub repo
+func (h *FeedbackHandler) fetchGitHubIssues() ([]GitHubIssue, error) {
+	if h.githubToken == "" || h.repoOwner == "" || h.repoName == "" {
+		return nil, fmt.Errorf("GitHub not configured")
+	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues?state=open&per_page=50&sort=created&direction=desc",
+		h.repoOwner, h.repoName)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var issues []GitHubIssue
+	if err := json.NewDecoder(resp.Body).Decode(&issues); err != nil {
+		return nil, err
+	}
+
+	// Filter out pull requests (GitHub API returns PRs as issues)
+	filtered := make([]GitHubIssue, 0, len(issues))
+	for _, issue := range issues {
+		// PRs have a pull_request field, but our struct doesn't include it
+		// So we check if the URL contains /pull/
+		if issue.HTMLURL != "" && !bytes.Contains([]byte(issue.HTMLURL), []byte("/pull/")) {
+			filtered = append(filtered, issue)
+		}
+	}
+
+	return filtered, nil
+}
+
+// listLocalFeatureRequests falls back to local database when GitHub is unavailable
+func (h *FeedbackHandler) listLocalFeatureRequests(c *fiber.Ctx, userID uuid.UUID) error {
+	requests, err := h.store.GetAllFeatureRequests()
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list feature requests")
+	}
+
+	if requests == nil {
+		requests = []models.FeatureRequest{}
+	}
+
+	// For untriaged issues (open, needs_triage) that don't belong to the current user,
+	// redact title and description to prevent abuse/profanity display
+	for i := range requests {
+		r := &requests[i]
+		isUntriaged := r.Status == models.RequestStatusOpen || r.Status == models.RequestStatusNeedsTriage
+		isOwnedByUser := r.UserID == userID
+		if isUntriaged && !isOwnedByUser {
+			r.Title = "[Pending Review]"
+			r.Description = "This request is pending maintainer review."
+		}
 	}
 
 	return c.JSON(requests)
@@ -153,6 +341,131 @@ func (h *FeedbackHandler) GetFeatureRequest(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(request)
+}
+
+// CloseRequest closes a feature request
+func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	requestID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request ID")
+	}
+
+	// Get the feature request
+	request, err := h.store.GetFeatureRequest(requestID)
+	if err != nil || request == nil {
+		return fiber.NewError(fiber.StatusNotFound, "Feature request not found")
+	}
+
+	// Ensure user owns this request
+	if request.UserID != userID {
+		return fiber.NewError(fiber.StatusForbidden, "Access denied")
+	}
+
+	// Update status to closed (closed by the user themselves)
+	if err := h.store.CloseFeatureRequest(requestID, true); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to close request")
+	}
+
+	// Close the GitHub issue if we have one
+	if h.githubToken != "" && request.GitHubIssueNumber != nil {
+		go h.closeGitHubIssue(*request.GitHubIssueNumber)
+	}
+
+	// Refresh and return the updated request
+	request, _ = h.store.GetFeatureRequest(requestID)
+	return c.JSON(request)
+}
+
+// RequestUpdate requests an update on a feature request (pings the issue)
+func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+	requestID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request ID")
+	}
+
+	// Get the feature request
+	request, err := h.store.GetFeatureRequest(requestID)
+	if err != nil || request == nil {
+		return fiber.NewError(fiber.StatusNotFound, "Feature request not found")
+	}
+
+	// Ensure user owns this request
+	if request.UserID != userID {
+		return fiber.NewError(fiber.StatusForbidden, "Access denied")
+	}
+
+	// Add a comment to the GitHub issue requesting an update
+	if h.githubToken != "" && request.GitHubIssueNumber != nil {
+		go h.addIssueComment(*request.GitHubIssueNumber, "The user has requested an update on this issue.")
+	}
+
+	return c.JSON(request)
+}
+
+// closeGitHubIssue closes an issue on GitHub
+func (h *FeedbackHandler) closeGitHubIssue(issueNumber int) {
+	payload := map[string]string{"state": "closed"}
+	jsonData, _ := json.Marshal(payload)
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d",
+		h.repoOwner, h.repoName, issueNumber)
+
+	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Failed to create close issue request: %v", err)
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to close GitHub issue: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("GitHub API returned %d when closing issue: %s", resp.StatusCode, string(body))
+	}
+}
+
+// addIssueComment adds a comment to a GitHub issue
+func (h *FeedbackHandler) addIssueComment(issueNumber int, comment string) {
+	payload := map[string]string{"body": comment}
+	jsonData, _ := json.Marshal(payload)
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d/comments",
+		h.repoOwner, h.repoName, issueNumber)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("Failed to create issue comment request: %v", err)
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to add issue comment: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("GitHub API returned %d when adding comment: %s", resp.StatusCode, string(body))
+	}
 }
 
 // SubmitFeedback submits thumbs up/down feedback on a PR
@@ -323,13 +636,161 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 	}
 
 	issueNumber := int(issue["number"].(float64))
+	issueURL, _ := issue["html_url"].(string)
 
-	// Find feature request by issue number
-	// This is a simplified lookup - in production you'd want a proper index
-	// For now, we'll skip this as we don't have a method to lookup by issue number
 	log.Printf("[Webhook] Issue #%d %s", issueNumber, action)
 
+	// Handle label events
+	if action == "labeled" {
+		label, _ := payload["label"].(map[string]interface{})
+		if label != nil {
+			labelName, _ := label["name"].(string)
+			if labelName == "ai-processing-complete" {
+				// AI processing complete - check if there's a PR or needs human review
+				return h.handleAIProcessingComplete(issueNumber, issueURL, issue)
+			}
+		}
+	}
+
+	// Handle issue closed
+	if action == "closed" {
+		return h.handleIssueClosed(issueNumber, issueURL, issue)
+	}
+
 	return nil
+}
+
+// handleAIProcessingComplete handles when AI processing is complete
+func (h *FeedbackHandler) handleAIProcessingComplete(issueNumber int, issueURL string, issue map[string]interface{}) error {
+	// Find feature request by issue number
+	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
+	if err != nil || request == nil {
+		log.Printf("[Webhook] Feature request not found for issue #%d", issueNumber)
+		return nil
+	}
+
+	// If there's already a PR, don't update - the PR webhook will handle it
+	if request.PRNumber != nil {
+		return nil
+	}
+
+	// Update status to unable to fix (needs human review)
+	h.store.UpdateFeatureRequestStatus(request.ID, models.RequestStatusUnableToFix)
+
+	// Get the most recent bot comment to summarize the status
+	summary := h.getLatestBotComment(issueNumber)
+	if summary == "" {
+		summary = "AI analysis complete. A human developer will review this issue."
+	}
+
+	// Store the latest comment on the request
+	h.store.UpdateFeatureRequestLatestComment(request.ID, summary)
+
+	// Create notification
+	h.createNotification(
+		request.UserID,
+		&request.ID,
+		models.NotificationTypeUnableToFix,
+		fmt.Sprintf("Issue #%d: Needs Human Review", issueNumber),
+		summary,
+		issueURL,
+	)
+
+	return nil
+}
+
+// handleIssueClosed handles when an issue is closed
+func (h *FeedbackHandler) handleIssueClosed(issueNumber int, issueURL string, issue map[string]interface{}) error {
+	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
+	if err != nil || request == nil {
+		return nil
+	}
+
+	// If already closed (e.g., user closed via console), don't overwrite
+	if request.Status == models.RequestStatusClosed {
+		return nil
+	}
+
+	// Update status to closed (closed externally, not by the user via console)
+	h.store.CloseFeatureRequest(request.ID, false)
+
+	// Get close reason from state_reason if available
+	stateReason, _ := issue["state_reason"].(string)
+	message := "This issue has been closed."
+	if stateReason == "completed" {
+		message = "This issue has been resolved and closed."
+	} else if stateReason == "not_planned" {
+		message = "This issue was closed as not planned."
+	}
+
+	h.createNotification(
+		request.UserID,
+		&request.ID,
+		models.NotificationTypeClosed,
+		fmt.Sprintf("Issue #%d Closed", issueNumber),
+		message,
+		issueURL,
+	)
+
+	return nil
+}
+
+// getLatestBotComment fetches the most recent bot comment from the issue
+func (h *FeedbackHandler) getLatestBotComment(issueNumber int) string {
+	if h.githubToken == "" {
+		return ""
+	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/issues/%d/comments?per_page=10&sort=created&direction=desc",
+		h.repoOwner, h.repoName, issueNumber)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return ""
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var comments []struct {
+		Body string `json:"body"`
+		User struct {
+			Login string `json:"login"`
+			Type  string `json:"type"`
+		} `json:"user"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&comments); err != nil {
+		return ""
+	}
+
+	// Find the most recent bot comment (github-actions or similar)
+	for _, comment := range comments {
+		if comment.User.Type == "Bot" || comment.User.Login == "github-actions[bot]" {
+			// Extract a summary - first paragraph or first 200 chars
+			body := comment.Body
+			if idx := bytes.Index([]byte(body), []byte("\n\n")); idx > 0 {
+				body = body[:idx]
+			}
+			if len(body) > 200 {
+				body = body[:200] + "..."
+			}
+			return body
+		}
+	}
+
+	return ""
 }
 
 // handlePREvent processes pull request events
@@ -376,18 +837,24 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 	case "opened":
 		// Update request with PR info
 		h.store.UpdateFeatureRequestPR(requestID, prNumber, prURL)
-		h.createNotification(request.UserID, &requestID, models.NotificationTypePRCreated,
-			"PR Created", fmt.Sprintf("A fix for '%s' is ready for review.", request.Title))
+		h.createNotification(request.UserID, &requestID, models.NotificationTypeFixReady,
+			fmt.Sprintf("PR #%d Created", prNumber),
+			fmt.Sprintf("A fix for '%s' is ready for review.", request.Title),
+			prURL)
 
 	case "closed":
 		merged, _ := pr["merged"].(bool)
 		if merged {
-			h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusClosed)
-			h.createNotification(request.UserID, &requestID, models.NotificationTypePRMerged,
-				"Fix Merged", fmt.Sprintf("The fix for '%s' has been merged!", request.Title))
+			h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixComplete)
+			h.createNotification(request.UserID, &requestID, models.NotificationTypeFixComplete,
+				fmt.Sprintf("PR #%d Merged", prNumber),
+				fmt.Sprintf("The fix for '%s' has been merged!", request.Title),
+				prURL)
 		} else {
-			h.createNotification(request.UserID, &requestID, models.NotificationTypePRClosed,
-				"PR Closed", fmt.Sprintf("The PR for '%s' was closed without merging.", request.Title))
+			h.createNotification(request.UserID, &requestID, models.NotificationTypeClosed,
+				fmt.Sprintf("PR #%d Closed", prNumber),
+				fmt.Sprintf("The PR for '%s' was closed without merging.", request.Title),
+				prURL)
 		}
 	}
 
@@ -558,13 +1025,14 @@ func (h *FeedbackHandler) verifyWebhookSignature(payload []byte, signature strin
 }
 
 // createNotification is a helper to create notifications
-func (h *FeedbackHandler) createNotification(userID uuid.UUID, requestID *uuid.UUID, notifType models.NotificationType, title, message string) {
+func (h *FeedbackHandler) createNotification(userID uuid.UUID, requestID *uuid.UUID, notifType models.NotificationType, title, message, actionURL string) {
 	notification := &models.Notification{
 		UserID:           userID,
 		FeatureRequestID: requestID,
 		NotificationType: notifType,
 		Title:            title,
 		Message:          message,
+		ActionURL:        actionURL,
 	}
 	if err := h.store.CreateNotification(notification); err != nil {
 		log.Printf("Failed to create notification: %v", err)

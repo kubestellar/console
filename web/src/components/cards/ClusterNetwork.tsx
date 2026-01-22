@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
-import { Network, Server, Globe, Shield, RefreshCw, ExternalLink } from 'lucide-react'
+import { Network, Server, Globe, Shield, ExternalLink } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ClusterNetworkProps {
   config?: {
@@ -11,7 +12,7 @@ interface ClusterNetworkProps {
 }
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const {
     selectedClusters: globalSelectedClusters,
@@ -117,12 +118,14 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               ))}
             </select>
           )}
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

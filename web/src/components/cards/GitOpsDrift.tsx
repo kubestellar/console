@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2 } from 'lucide-react'
 import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface GitOpsDriftProps {
   config?: {
@@ -40,7 +43,49 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const cluster = config?.cluster
   const namespace = config?.namespace
 
-  const { drifts, isLoading, error, refetch } = useGitOpsDrifts(cluster, namespace)
+  const { drifts, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useGitOpsDrifts(cluster, namespace)
+  const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
+
+  // Map drift severity to global SeverityLevel
+  const mapDriftSeverityToGlobal = (severity: 'high' | 'medium' | 'low'): SeverityLevel[] => {
+    switch (severity) {
+      case 'high': return ['critical', 'high']
+      case 'medium': return ['medium']
+      case 'low': return ['low', 'info']
+      default: return ['info']
+    }
+  }
+
+  // Filter drifts by global filters
+  const filteredDrifts = useMemo(() => {
+    let result = drifts
+
+    // Apply global cluster filter (only if no config cluster specified)
+    if (!cluster && !isAllClustersSelected) {
+      result = result.filter(d => selectedClusters.includes(d.cluster))
+    }
+
+    // Apply global severity filter
+    if (!isAllSeveritiesSelected) {
+      result = result.filter(d => {
+        const mappedSeverities = mapDriftSeverityToGlobal(d.severity)
+        return mappedSeverities.some(s => selectedSeverities.includes(s))
+      })
+    }
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(d =>
+        d.resource.toLowerCase().includes(query) ||
+        d.kind.toLowerCase().includes(query) ||
+        d.cluster.toLowerCase().includes(query) ||
+        d.namespace.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [drifts, cluster, selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter])
 
   if (isLoading && drifts.length === 0) {
     return (
@@ -58,8 +103,8 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     )
   }
 
-  const highSeverityCount = drifts.filter(d => d.severity === 'high').length
-  const totalDrifts = drifts.length
+  const highSeverityCount = filteredDrifts.filter(d => d.severity === 'high').length
+  const totalDrifts = filteredDrifts.length
 
   return (
     <div className="h-full flex flex-col">
@@ -83,30 +128,31 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
               {totalDrifts} drift{totalDrifts !== 1 ? 's' : ''}
             </span>
           )}
-          <button
-            onClick={() => refetch()}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 
       {/* Drifts list */}
-      {drifts.length === 0 ? (
+      {filteredDrifts.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
             <GitBranch className="w-6 h-6 text-green-400" />
           </div>
           <p className="text-sm font-medium text-green-400">No Drift Detected</p>
           <p className="text-xs text-muted-foreground mt-1">
-            All clusters are in sync with Git
+            {drifts.length > 0 ? 'All drifts filtered out' : 'All clusters are in sync with Git'}
           </p>
         </div>
       ) : (
         <div className="flex-1 space-y-2 overflow-y-auto">
-          {drifts.map((drift, index) => (
+          {filteredDrifts.map((drift, index) => (
             <DriftItem key={`${drift.cluster}-${drift.namespace}-${drift.resource}-${index}`} drift={drift} />
           ))}
         </div>

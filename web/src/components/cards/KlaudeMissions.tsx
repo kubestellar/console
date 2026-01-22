@@ -1,8 +1,11 @@
-import { Bot, Stethoscope, FileSearch, AlertCircle, Play, CheckCircle, Clock, RefreshCw, ChevronRight } from 'lucide-react'
+import { useMemo } from 'react'
+import { Bot, Stethoscope, FileSearch, AlertCircle, Play, CheckCircle, Clock, ChevronRight } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useClusters, usePodIssues, useDeploymentIssues } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { cn } from '../../lib/cn'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 // Klaude Mission Cards - Quick actions for AI-powered cluster management
 
@@ -13,10 +16,61 @@ interface KlaudeMissionCardProps {
 // Card 1: Klaude Issues Overview - Shows issues Klaude can help fix
 export function KlaudeIssuesCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
-  useClusters() // Keep hook active for real-time updates
-  const { issues: podIssues } = usePodIssues()
-  const { issues: deploymentIssues } = useDeploymentIssues()
+  const { isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { issues: allPodIssues, isRefreshing: podRefreshing, refetch: refetchPods } = usePodIssues()
+  const { issues: allDeploymentIssues, isRefreshing: depRefreshing, refetch: refetchDeps } = useDeploymentIssues()
+  const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
+
+  const isRefreshing = clustersRefreshing || podRefreshing || depRefreshing
+  const refetch = () => {
+    refetchClusters()
+    refetchPods()
+    refetchDeps()
+  }
   const { drillToPod, drillToDeployment } = useDrillDownActions()
+
+  // Filter issues by global cluster filter
+  const podIssues = useMemo(() => {
+    let result = allPodIssues
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(p => !p.cluster || selectedClusters.includes(p.cluster))
+    }
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.namespace.toLowerCase().includes(query) ||
+        (p.cluster?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    return result
+  }, [allPodIssues, selectedClusters, isAllClustersSelected, customFilter])
+
+  const deploymentIssues = useMemo(() => {
+    let result = allDeploymentIssues
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(d => !d.cluster || selectedClusters.includes(d.cluster))
+    }
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(d =>
+        d.name.toLowerCase().includes(query) ||
+        d.namespace.toLowerCase().includes(query) ||
+        (d.cluster?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    return result
+  }, [allDeploymentIssues, selectedClusters, isAllClustersSelected, customFilter])
 
   const totalIssues = podIssues.length + deploymentIssues.length
   const clustersWithIssues = new Set([
@@ -63,12 +117,22 @@ Please:
           <Bot className="w-5 h-5 text-purple-400" />
           <span className="text-sm font-medium text-muted-foreground">Klaude Issues</span>
         </div>
-        {runningRepairMission && (
-          <span className="flex items-center gap-1 text-xs text-purple-400">
-            <Clock className="w-3 h-3 animate-pulse" />
-            Fixing...
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {runningRepairMission && (
+            <span className="flex items-center gap-1 text-xs text-purple-400">
+              <Clock className="w-3 h-3 animate-pulse" />
+              Fixing...
+            </span>
+          )}
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
+        </div>
       </div>
 
       {/* Issue Summary */}
@@ -157,8 +221,30 @@ Please:
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function KlaudeKubeconfigAuditCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
+
+  // Filter clusters by global filter
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(c => selectedClusters.includes(c.name))
+    }
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        (c.errorMessage?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    return result
+  }, [allClusters, selectedClusters, isAllClustersSelected, customFilter])
 
   const unreachableClusters = clusters.filter(c => c.reachable === false || c.nodeCount === 0)
 
@@ -202,13 +288,14 @@ Please:
           <FileSearch className="w-5 h-5 text-cyan-400" />
           <span className="text-sm font-medium text-muted-foreground">Kubeconfig Audit</span>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-          title="Refresh cluster status"
-        >
-          <RefreshCw className={cn('w-4 h-4 text-muted-foreground', isLoading && 'animate-spin')} />
-        </button>
+        <RefreshButton
+          isRefreshing={isRefreshing || isLoading}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Audit Summary */}
@@ -291,10 +378,50 @@ Please:
 // Card 3: Cluster Health Check - Overall health assessment
 export function KlaudeHealthCheckCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { clusters, isLoading, refetch } = useClusters()
-  const { issues: podIssues } = usePodIssues()
-  const { issues: deploymentIssues } = useDeploymentIssues()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { issues: allPodIssues } = usePodIssues()
+  const { issues: allDeploymentIssues } = useDeploymentIssues()
+  const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToPod } = useDrillDownActions()
+
+  // Filter clusters by global filter
+  const clusters = useMemo(() => {
+    let result = allClusters
+
+    // Apply global cluster filter
+    if (!isAllClustersSelected) {
+      result = result.filter(c => selectedClusters.includes(c.name))
+    }
+
+    // Apply global custom text filter
+    if (customFilter.trim()) {
+      const query = customFilter.toLowerCase()
+      result = result.filter(c => c.name.toLowerCase().includes(query))
+    }
+
+    return result
+  }, [allClusters, selectedClusters, isAllClustersSelected, customFilter])
+
+  // Filter issues by global filter
+  const podIssues = useMemo(() => {
+    let result = allPodIssues
+
+    if (!isAllClustersSelected) {
+      result = result.filter(p => !p.cluster || selectedClusters.includes(p.cluster))
+    }
+
+    return result
+  }, [allPodIssues, selectedClusters, isAllClustersSelected])
+
+  const deploymentIssues = useMemo(() => {
+    let result = allDeploymentIssues
+
+    if (!isAllClustersSelected) {
+      result = result.filter(d => !d.cluster || selectedClusters.includes(d.cluster))
+    }
+
+    return result
+  }, [allDeploymentIssues, selectedClusters, isAllClustersSelected])
 
   const healthyClusters = clusters.filter(c => c.healthy && c.reachable !== false).length
   const unhealthyClusters = clusters.filter(c => !c.healthy && c.reachable !== false).length
@@ -361,13 +488,14 @@ Please provide:
           <Stethoscope className="w-5 h-5 text-green-400" />
           <span className="text-sm font-medium text-muted-foreground">Health Check</span>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-          title="Refresh cluster status"
-        >
-          <RefreshCw className={cn('w-4 h-4 text-muted-foreground', isLoading && 'animate-spin')} />
-        </button>
+        <RefreshButton
+          isRefreshing={isRefreshing || isLoading}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Health Score */}

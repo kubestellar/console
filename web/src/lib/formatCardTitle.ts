@@ -1,3 +1,12 @@
+// Custom title overrides for specific card types
+const CUSTOM_TITLES: Record<string, string> = {
+  app_status: 'Workload Status',
+  chart_versions: 'Helm Chart Versions',
+  helm_release_status: 'Helm Release Status',
+  helm_history: 'Helm History',
+  helm_values_diff: 'Helm Values Diff',
+}
+
 // Known acronyms that should stay uppercase
 const ACRONYMS = new Set([
   'opa',
@@ -32,8 +41,14 @@ const ACRONYMS = new Set([
 /**
  * Formats a card_type string into a proper title
  * Handles acronyms properly (e.g., "opa_policies" -> "OPA Policies")
+ * Uses custom title overrides for specific card types
  */
 export function formatCardTitle(cardType: string): string {
+  // Check for custom title override first
+  if (CUSTOM_TITLES[cardType]) {
+    return CUSTOM_TITLES[cardType]
+  }
+
   return cardType
     .replace(/_/g, ' ')
     .split(' ')

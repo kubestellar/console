@@ -6,6 +6,7 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDeployments } from '../../hooks/useMCP'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 type SortByOption = 'status' | 'name' | 'clusters'
 
@@ -28,7 +29,7 @@ interface AppData {
 
 export function AppStatus(_props: AppStatusProps) {
   const { drillToDeployment } = useDrillDownActions()
-  const { deployments, isLoading } = useDeployments()
+  const { deployments, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useDeployments()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -137,15 +138,25 @@ export function AppStatus(_props: AppStatusProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-muted-foreground">Workload Status</span>
-        <CardControls
-          limit={limit}
-          onLimitChange={setLimit}
-          sortBy={sortBy}
-          sortOptions={SORT_OPTIONS}
-          onSortChange={setSortBy}
-          sortDirection={sortDirection}
-          onSortDirectionChange={setSortDirection}
-        />
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
+        </div>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto">

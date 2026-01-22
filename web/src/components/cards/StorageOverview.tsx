@@ -2,13 +2,19 @@ import { useMemo } from 'react'
 import { HardDrive, Database, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
 
 export function StorageOverview() {
-  const { clusters, isLoading, isRefreshing, lastUpdated } = useClusters()
-  const { pvcs, isLoading: pvcsLoading } = usePVCs()
+  const { clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { pvcs, isLoading: pvcsLoading, isRefreshing: pvcsRefreshing, refetch: refetchPVCs } = usePVCs()
+
+  const isRefreshing = clustersRefreshing || pvcsRefreshing
+  const refetch = () => {
+    refetchClusters()
+    refetchPVCs()
+  }
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
 
@@ -75,9 +81,12 @@ export function StorageOverview() {
             </span>
           )}
         </div>
-        <RefreshIndicator
+        <RefreshButton
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
           size="sm"
         />
       </div>

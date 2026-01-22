@@ -43,7 +43,7 @@ const CARD_CATALOG = {
     { type: 'helm_release_status', title: 'Helm Releases', description: 'Helm release status and versions', visualization: 'status' },
     { type: 'helm_history', title: 'Helm History', description: 'Release revision history', visualization: 'events' },
     { type: 'helm_values_diff', title: 'Helm Values Diff', description: 'Compare values vs defaults', visualization: 'table' },
-    { type: 'chart_versions', title: 'Chart Versions', description: 'Available chart upgrades', visualization: 'table' },
+    { type: 'chart_versions', title: 'Helm Chart Versions', description: 'Available chart upgrades', visualization: 'table' },
     { type: 'kustomization_status', title: 'Kustomization Status', description: 'Flux kustomizations health', visualization: 'status' },
     { type: 'overlay_comparison', title: 'Overlay Comparison', description: 'Compare kustomize overlays', visualization: 'table' },
     { type: 'gitops_drift', title: 'GitOps Drift', description: 'Configuration drift detection', visualization: 'status' },
@@ -343,7 +343,7 @@ function generateCardSuggestions(query: string): CardSuggestion[] {
       },
       {
         type: 'chart_versions',
-        title: 'Chart Versions',
+        title: 'Helm Chart Versions',
         description: 'Available chart upgrades',
         visualization: 'table',
         config: {},

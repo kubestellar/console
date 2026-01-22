@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, RefreshCw, ChevronRight } from 'lucide-react'
+import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, ChevronRight } from 'lucide-react'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -233,14 +234,11 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            disabled={isRefreshing}
-            className="p-1 text-xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

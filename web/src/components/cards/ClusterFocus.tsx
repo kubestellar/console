@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Server, Activity, Box, Cpu, HardDrive, Network, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Server, Activity, Box, Cpu, HardDrive, Network, AlertTriangle } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues, useDeploymentIssues } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ClusterFocusProps {
   config?: {
@@ -13,7 +14,7 @@ interface ClusterFocusProps {
 
 export function ClusterFocus({ config }: ClusterFocusProps) {
   const selectedCluster = config?.cluster
-  const { clusters: allClusters, isLoading: clustersLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { issues: podIssues } = usePodIssues(selectedCluster)
   const { issues: deploymentIssues } = useDeploymentIssues(selectedCluster)
@@ -123,12 +124,14 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
               ))}
             </select>
           )}
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

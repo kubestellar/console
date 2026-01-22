@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, RefreshCw, XCircle, Info, X, ChevronRight } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, X, ChevronRight, RefreshCw } from 'lucide-react'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMissions } from '../../hooks/useMissions'
@@ -536,14 +537,11 @@ Let's start by discussing what kind of policy I need.`,
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <button
-            onClick={checkAllClusters}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-            title="Refresh status"
-          >
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={checkAllClusters}
+            size="sm"
+          />
         </div>
       </div>
 

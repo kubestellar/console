@@ -25,7 +25,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useShowCards } from '../../hooks/useShowCards'
 import { Skeleton } from '../ui/Skeleton'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -97,12 +97,13 @@ const SortableCard = memo(function SortableCard({
   return (
     <div ref={setNodeRef} style={style} className={colSpan}>
       <CardWrapper
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         onRemove={onRemove}
         onConfigure={onConfigure}
         cardType={card.card_type}
         cardWidth={width}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
             <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -126,7 +127,7 @@ function DragPreviewCard({ card }: { card: CostCard }) {
   return (
     <div className={colSpan}>
       <CardWrapper
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardType={card.card_type}
       >
         <CardComponent config={card.config} />

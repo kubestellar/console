@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { GitBranch, CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
+import { GitBranch, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
@@ -28,7 +29,7 @@ const healthConfig = {
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
-  const { clusters, isLoading, refetch } = useClusters()
+  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   const filteredClusterCount = useMemo(() => {
@@ -66,7 +67,6 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
         <div className="flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-orange-400" />
           <span className="text-sm font-medium text-muted-foreground">App Health</span>
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400">Demo</span>
         </div>
         <div className="flex items-center gap-1">
           <a
@@ -78,12 +78,14 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

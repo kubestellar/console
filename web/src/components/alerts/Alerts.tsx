@@ -104,7 +104,7 @@ function SortableCard({ card, onRemove, onReplace, onConfigure }: {
       style={style}
     >
       <CardWrapper
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardId={card.id}
         cardType={card.card_type}
         onRemove={() => onRemove(card.id)}

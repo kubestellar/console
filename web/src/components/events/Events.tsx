@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap, Plus, Layout, LayoutGrid, ChevronDown, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap, Plus, LayoutGrid, ChevronDown, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -29,7 +29,7 @@ import { BarChart } from '../charts/BarChart'
 import { cn } from '../../lib/cn'
 import { formatStat } from '../../lib/formatStats'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -103,11 +103,12 @@ const SortableEventCard = memo(function SortableEventCard({
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         dragHandle={
           <button
             {...attributes}
@@ -136,7 +137,7 @@ function EventDragPreviewCard({ card }: { card: EventCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -765,23 +766,6 @@ export function Events() {
             <span>Event Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}

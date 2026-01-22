@@ -180,17 +180,8 @@ export const DEMO_DATA_CARDS = new Set([
   // GitOps cards - use mock data
   'kustomization_status',
   'overlay_comparison',
-  // Helm cards - use mock data
-  'helm_release_status',
-  'helm_values_diff',
-  'helm_history',
-  'chart_versions',
-  // Namespace cards - use mock RBAC/quota data
-  'namespace_quotas',
-  'namespace_rbac',
-  // Other cards using mock/simulated data
-  'resource_capacity',
-  'cluster_costs',
+  // Helm cards - all now use real data via helm CLI backend
+  // Namespace cards - namespace_quotas, namespace_rbac, resource_capacity, and helm_release_status now have real data support
   // Cost management integrations - demo until connected
   'opencost_overview',
   'kubecost_overview',

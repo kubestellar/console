@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Server, CheckCircle, XCircle, WifiOff, Cpu, RefreshCw, Loader2, ExternalLink } from 'lucide-react'
+import { Server, CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { ClusterStatusDot, getClusterState, ClusterState } from '../ui/ClusterStatusBadge'
 import { classifyError } from '../../lib/errorClassifier'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
@@ -78,7 +78,16 @@ function getClusterStateFromInfo(cluster: ClusterInfo): ClusterState {
 }
 
 export function ClusterHealth() {
-  const { clusters: rawClusters, isLoading, isRefreshing, lastUpdated, error, refetch } = useClusters()
+  const {
+    clusters: rawClusters,
+    isLoading,
+    isRefreshing,
+    error,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
@@ -195,9 +204,12 @@ export function ClusterHealth() {
           <span className="text-sm font-medium text-muted-foreground" title={`${rawClusters.length} total clusters configured`}>
             {rawClusters.length} Clusters
           </span>
-          <RefreshIndicator
+          <RefreshButton
             isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
             size="sm"
           />
         </div>
@@ -211,13 +223,13 @@ export function ClusterHealth() {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh cluster health status"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
       </div>
 

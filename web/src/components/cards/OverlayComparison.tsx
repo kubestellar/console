@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { GitCompare, Plus, Minus, Edit, RefreshCw, Layers } from 'lucide-react'
+import { GitCompare, Plus, Minus, Edit, Layers } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface OverlayComparisonProps {
   config?: {
@@ -19,7 +20,7 @@ interface OverlayDiff {
 }
 
 export function OverlayComparison({ config }: OverlayComparisonProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedBase, setSelectedBase] = useState<string>('')
   const [selectedOverlay, setSelectedOverlay] = useState<string>('')
@@ -112,12 +113,14 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Cluster selector */}

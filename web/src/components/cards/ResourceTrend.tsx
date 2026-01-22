@@ -12,7 +12,7 @@ import {
 } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ResourcePoint {
   time: string
@@ -33,7 +33,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 ]
 
 export function ResourceTrend() {
-  const { clusters, isLoading, isRefreshing, lastUpdated } = useClusters()
+  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [view, setView] = useState<MetricView>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
@@ -165,26 +165,19 @@ export function ResourceTrend() {
     }
   }, [currentTotals, isLoading])
 
-  // Initialize with simulated history
+  // Initialize with a single real data point (no synthetic history)
   useEffect(() => {
     if (history.length === 0 && currentTotals.nodes > 0) {
       const now = new Date()
-      const initialPoints: ResourcePoint[] = []
-
-      for (let i = 9; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60000)
-        const variance = 1 + (Math.random() * 0.05 - 0.025) // ±2.5% variance
-        initialPoints.push({
-          time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          cpuCores: Math.round(currentTotals.cpuCores * variance),
-          memoryGB: Math.round(currentTotals.memoryGB * variance * 10) / 10,
-          pods: Math.round(currentTotals.pods * variance),
-          nodes: currentTotals.nodes, // Nodes typically don't change rapidly
-        })
+      const initialPoint: ResourcePoint = {
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        cpuCores: currentTotals.cpuCores,
+        memoryGB: currentTotals.memoryGB,
+        pods: currentTotals.pods,
+        nodes: currentTotals.nodes,
       }
-
-      historyRef.current = initialPoints
-      setHistory(initialPoints)
+      historyRef.current = [initialPoint]
+      setHistory([initialPoint])
     }
   }, [currentTotals, history.length])
 
@@ -239,9 +232,12 @@ export function ResourceTrend() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <RefreshIndicator
+          <RefreshButton
             isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
             size="sm"
           />
         </div>
@@ -361,9 +357,13 @@ export function ResourceTrend() {
 
       {/* Multi-line Chart */}
       <div className="flex-1 min-h-[160px]">
-        {history.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            No resource data available
+        {history.length < 2 ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
+            <TrendingUp className="w-6 h-6 mb-2 opacity-50" />
+            <span>{history.length === 0 ? 'No resource data available' : 'Collecting data...'}</span>
+            {history.length === 1 && (
+              <span className="text-xs mt-1">Chart will appear after next interval</span>
+            )}
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: 160, height: 160 }}>

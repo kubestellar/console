@@ -104,6 +104,16 @@ type HelmRelease struct {
 	Cluster    string `json:"cluster,omitempty"`
 }
 
+// HelmHistoryEntry represents a single history entry for a Helm release
+type HelmHistoryEntry struct {
+	Revision    int    `json:"revision"`
+	Updated     string `json:"updated"`
+	Status      string `json:"status"`
+	Chart       string `json:"chart"`
+	AppVersion  string `json:"app_version"`
+	Description string `json:"description"`
+}
+
 // Kustomization represents a Flux Kustomization resource
 type Kustomization struct {
 	Name       string `json:"name"`
@@ -1050,4 +1060,86 @@ func getDemoDrifts(cluster, namespace string) []GitOpsDrift {
 		}
 	}
 	return filtered
+}
+
+// ListHelmHistory returns the history of a specific Helm release
+func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	release := c.Query("release")
+	namespace := c.Query("namespace")
+
+	if release == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "release parameter is required"})
+	}
+
+	args := []string{"history", release, "--output", "json"}
+	if namespace != "" {
+		args = append(args, "-n", namespace)
+	} else {
+		args = append(args, "-A")
+	}
+	if cluster != "" {
+		args = append(args, "--kube-context", cluster)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("helm history failed for release %s: %v, stderr: %s", release, err, stderr.String())
+		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": stderr.String()})
+	}
+
+	var history []HelmHistoryEntry
+	if err := json.Unmarshal(stdout.Bytes(), &history); err != nil {
+		log.Printf("failed to parse helm history output for release %s: %v", release, err)
+		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": "failed to parse history"})
+	}
+
+	return c.JSON(fiber.Map{"history": history})
+}
+
+// GetHelmValues returns the values of a specific Helm release
+func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
+	cluster := c.Query("cluster")
+	release := c.Query("release")
+	namespace := c.Query("namespace")
+
+	if release == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "release parameter is required"})
+	}
+
+	args := []string{"get", "values", release, "--output", "json"}
+	if namespace != "" {
+		args = append(args, "-n", namespace)
+	}
+	if cluster != "" {
+		args = append(args, "--kube-context", cluster)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "helm", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("helm get values failed for release %s: %v, stderr: %s", release, err, stderr.String())
+		return c.JSON(fiber.Map{"values": map[string]interface{}{}, "error": stderr.String()})
+	}
+
+	var values map[string]interface{}
+	if err := json.Unmarshal(stdout.Bytes(), &values); err != nil {
+		// If JSON fails, return as raw YAML string
+		return c.JSON(fiber.Map{"values": stdout.String(), "format": "yaml"})
+	}
+
+	return c.JSON(fiber.Map{"values": values, "format": "json"})
 }

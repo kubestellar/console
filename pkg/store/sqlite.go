@@ -168,6 +168,7 @@ func (s *SQLiteStore) migrate() error {
 	migrations := []string{
 		"ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'viewer'",
 		"ALTER TABLE users ADD COLUMN slack_id TEXT",
+		"ALTER TABLE feature_requests ADD COLUMN closed_by_user INTEGER DEFAULT 0",
 	}
 	for _, migration := range migrations {
 		// Ignore errors - column may already exist
@@ -870,7 +871,7 @@ func (s *SQLiteStore) CreateFeatureRequest(request *models.FeatureRequest) error
 	}
 	request.CreatedAt = time.Now()
 	if request.Status == "" {
-		request.Status = models.RequestStatusSubmitted
+		request.Status = models.RequestStatusOpen
 	}
 
 	_, err := s.db.Exec(`INSERT INTO feature_requests (id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -881,12 +882,35 @@ func (s *SQLiteStore) CreateFeatureRequest(request *models.FeatureRequest) error
 }
 
 func (s *SQLiteStore) GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error) {
-	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, created_at, updated_at FROM feature_requests WHERE id = ?`, id.String())
+	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE id = ?`, id.String())
+	return s.scanFeatureRequest(row)
+}
+
+func (s *SQLiteStore) GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error) {
+	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE github_issue_number = ?`, issueNumber)
 	return s.scanFeatureRequest(row)
 }
 
 func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC`, userID.String())
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC`, userID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var requests []models.FeatureRequest
+	for rows.Next() {
+		r, err := s.scanFeatureRequestRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		requests = append(requests, *r)
+	}
+	return requests, rows.Err()
+}
+
+func (s *SQLiteStore) GetAllFeatureRequests() ([]models.FeatureRequest, error) {
+	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -909,9 +933,10 @@ func (s *SQLiteStore) scanFeatureRequest(row *sql.Row) (*models.FeatureRequest, 
 	var requestType, status string
 	var issueNumber, prNumber sql.NullInt64
 	var issueURL, prURL, previewURL sql.NullString
+	var closedByUser sql.NullInt64
 	var updatedAt sql.NullTime
 
-	err := row.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &issueURL, &status, &prNumber, &prURL, &previewURL, &r.CreatedAt, &updatedAt)
+	err := row.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &issueURL, &status, &prNumber, &prURL, &previewURL, &closedByUser, &r.CreatedAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -940,6 +965,9 @@ func (s *SQLiteStore) scanFeatureRequest(row *sql.Row) (*models.FeatureRequest, 
 	if previewURL.Valid {
 		r.NetlifyPreviewURL = previewURL.String
 	}
+	if closedByUser.Valid {
+		r.ClosedByUser = closedByUser.Int64 == 1
+	}
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
@@ -952,9 +980,10 @@ func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequ
 	var requestType, status string
 	var issueNumber, prNumber sql.NullInt64
 	var issueURL, prURL, previewURL sql.NullString
+	var closedByUser sql.NullInt64
 	var updatedAt sql.NullTime
 
-	err := rows.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &issueURL, &status, &prNumber, &prURL, &previewURL, &r.CreatedAt, &updatedAt)
+	err := rows.Scan(&idStr, &userIDStr, &r.Title, &r.Description, &requestType, &issueNumber, &issueURL, &status, &prNumber, &prURL, &previewURL, &closedByUser, &r.CreatedAt, &updatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -980,6 +1009,9 @@ func (s *SQLiteStore) scanFeatureRequestRow(rows *sql.Rows) (*models.FeatureRequ
 	if previewURL.Valid {
 		r.NetlifyPreviewURL = previewURL.String
 	}
+	if closedByUser.Valid {
+		r.ClosedByUser = closedByUser.Int64 == 1
+	}
 	if updatedAt.Valid {
 		r.UpdatedAt = &updatedAt.Time
 	}
@@ -1004,17 +1036,35 @@ func (s *SQLiteStore) UpdateFeatureRequestStatus(id uuid.UUID, status models.Req
 	return err
 }
 
+func (s *SQLiteStore) CloseFeatureRequest(id uuid.UUID, closedByUser bool) error {
+	now := time.Now()
+	closedByUserInt := 0
+	if closedByUser {
+		closedByUserInt = 1
+	}
+	_, err := s.db.Exec(`UPDATE feature_requests SET status = ?, closed_by_user = ?, updated_at = ? WHERE id = ?`,
+		string(models.RequestStatusClosed), closedByUserInt, now, id.String())
+	return err
+}
+
 func (s *SQLiteStore) UpdateFeatureRequestPR(id uuid.UUID, prNumber int, prURL string) error {
 	now := time.Now()
 	_, err := s.db.Exec(`UPDATE feature_requests SET pr_number = ?, pr_url = ?, status = ?, updated_at = ? WHERE id = ?`,
-		prNumber, prURL, string(models.RequestStatusPRReady), now, id.String())
+		prNumber, prURL, string(models.RequestStatusFixReady), now, id.String())
 	return err
 }
 
 func (s *SQLiteStore) UpdateFeatureRequestPreview(id uuid.UUID, previewURL string) error {
 	now := time.Now()
-	_, err := s.db.Exec(`UPDATE feature_requests SET netlify_preview_url = ?, status = ?, updated_at = ? WHERE id = ?`,
-		previewURL, string(models.RequestStatusPreviewAvailable), now, id.String())
+	_, err := s.db.Exec(`UPDATE feature_requests SET netlify_preview_url = ?, updated_at = ? WHERE id = ?`,
+		previewURL, now, id.String())
+	return err
+}
+
+func (s *SQLiteStore) UpdateFeatureRequestLatestComment(id uuid.UUID, comment string) error {
+	now := time.Now()
+	_, err := s.db.Exec(`UPDATE feature_requests SET latest_comment = ?, updated_at = ? WHERE id = ?`,
+		comment, now, id.String())
 	return err
 }
 

@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Zap, TrendingUp, Clock, Filter, ChevronDown, Server } from 'lucide-react'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import {
   AreaChart,
   Area,
@@ -33,8 +35,19 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
 ]
 
 export function GPUUtilization() {
-  const { nodes: gpuNodes, isLoading } = useGPUNodes()
+  const {
+    nodes: gpuNodes,
+    isLoading: hookLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useGPUNodes()
   const { clusters } = useClusters()
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && gpuNodes.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -183,16 +196,21 @@ export function GPUUtilization() {
 
   if (isLoading && history.length === 0 && hasReachableClusters) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading GPU data...</div>
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton variant="text" width={120} height={16} />
+          <Skeleton variant="rounded" width={28} height={28} />
+        </div>
+        <SkeletonStats className="mb-4" />
+        <Skeleton variant="rounded" height={120} className="flex-1" />
       </div>
     )
   }
 
   // No reachable clusters or no GPUs available - still show filters so user can change selection
-  if (!hasReachableClusters || (!isLoading && currentStats.total === 0)) {
+  if (!hasReachableClusters || (!hookLoading && currentStats.total === 0)) {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col content-loaded">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -205,6 +223,13 @@ export function GPUUtilization() {
               </span>
             )}
           </div>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
         </div>
 
         {/* Filter controls - always show so user can change selection */}
@@ -279,7 +304,7 @@ export function GPUUtilization() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -297,6 +322,13 @@ export function GPUUtilization() {
             </span>
           )}
         </div>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={() => refetch()}
+        />
       </div>
 
       {/* Filter controls */}

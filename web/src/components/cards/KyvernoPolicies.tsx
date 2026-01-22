@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, RefreshCw, AlertCircle, FileCheck } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck } from 'lucide-react'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface KyvernoPoliciesProps {
   config?: Record<string, unknown>
@@ -93,7 +94,6 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-cyan-400" />
           <span className="text-sm font-medium text-muted-foreground">Kyverno</span>
-          <span className="px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-400">Demo</span>
         </div>
         <div className="flex items-center gap-1">
           <a
@@ -105,14 +105,11 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-1 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            size="sm"
+          />
         </div>
       </div>
 

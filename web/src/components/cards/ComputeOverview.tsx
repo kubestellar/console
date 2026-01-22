@@ -2,12 +2,12 @@ import { useMemo } from 'react'
 import { Cpu, MemoryStick, Zap, Server, Box } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatMemoryStat } from '../../lib/formatStats'
 
 export function ComputeOverview() {
-  const { clusters, isLoading, isRefreshing, lastUpdated } = useClusters()
+  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
@@ -82,9 +82,12 @@ export function ComputeOverview() {
             </span>
           )}
         </div>
-        <RefreshIndicator
+        <RefreshButton
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
           size="sm"
         />
       </div>

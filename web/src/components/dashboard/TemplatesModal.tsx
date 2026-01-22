@@ -219,7 +219,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                   {hoveredTemplate.cards.map((card, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-xs">
                       <div className={`w-2 h-2 rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40'}`} />
-                      <span className="text-foreground/80">{card.title || formatCardTitle(card.card_type)}</span>
+                      <span className="text-foreground/80">{formatCardTitle(card.card_type)}</span>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight, Plus, Layout, LayoutGrid, ChevronDown, RefreshCw, Activity, Hourglass, GripVertical } from 'lucide-react'
+import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight, Plus, LayoutGrid, ChevronDown, RefreshCw, Activity, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -28,7 +28,7 @@ import { ProgressBar } from '../charts/ProgressBar'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
@@ -97,16 +97,19 @@ const SortableSecurityCard = memo(function SortableSecurityCard({
     return null
   }
 
+  const isDemoData = DEMO_DATA_CARDS.has(card.card_type)
+
   return (
     <div ref={setNodeRef} style={style}>
       <CardWrapper
         cardId={card.id}
         cardType={card.card_type}
-        title={card.title || formatCardTitle(card.card_type)}
+        title={formatCardTitle(card.card_type)}
         cardWidth={cardWidth}
         onConfigure={onConfigure}
         onRemove={onRemove}
         onWidthChange={onWidthChange}
+        isDemoData={isDemoData}
         dragHandle={
           <button
             {...attributes}
@@ -135,7 +138,7 @@ function SecurityDragPreviewCard({ card }: { card: SecurityCard }) {
       <div className="flex items-center gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground" />
         <span className="text-sm font-medium truncate">
-          {card.title || formatCardTitle(card.card_type)}
+          {formatCardTitle(card.card_type)}
         </span>
       </div>
     </div>
@@ -769,23 +772,6 @@ export function Security() {
             <span>Security Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowTemplates(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-            >
-              <Layout className="w-3.5 h-3.5" />
-              Templates
-            </button>
-            <button
-              onClick={() => setShowAddCard(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Card
-            </button>
-          </div>
         </div>
 
         {/* Cards grid */}

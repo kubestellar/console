@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
-import { GitCompare, Server, Activity, Box, Cpu, RefreshCw } from 'lucide-react'
+import { GitCompare, Server, Activity, Box, Cpu } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface ClusterComparisonProps {
   config?: {
@@ -11,7 +12,7 @@ interface ClusterComparisonProps {
 }
 
 export function ClusterComparison({ config }: ClusterComparisonProps) {
-  const { clusters: rawClusters, isLoading, refetch } = useClusters()
+  const { clusters: rawClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
   const {
@@ -102,12 +103,14 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
           <GitCompare className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-muted-foreground">Cluster Comparison</span>
         </div>
-        <button
-          onClick={() => refetch()}
-          className="p-1 hover:bg-secondary rounded transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Cluster selector */}

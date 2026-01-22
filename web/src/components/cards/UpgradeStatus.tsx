@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { RefreshCw, ArrowUp, CheckCircle, AlertTriangle, Rocket, WifiOff } from 'lucide-react'
+import { ArrowUp, CheckCircle, AlertTriangle, Rocket, WifiOff } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -7,6 +7,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -146,7 +147,7 @@ function getStatusIcon(status: string) {
 }
 
 export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
@@ -320,13 +321,14 @@ Please proceed step by step and ask for confirmation before making any changes.`
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh upgrade status"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

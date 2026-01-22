@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import { usePodIssues, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface HealthPoint {
   time: string
@@ -30,7 +30,14 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 ]
 
 export function PodHealthTrend() {
-  const { clusters, isLoading: clustersLoading, isRefreshing, lastUpdated } = useClusters()
+  const { clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { isRefreshing: issuesRefreshing, refetch: refetchIssues } = usePodIssues()
+
+  const isRefreshing = clustersRefreshing || issuesRefreshing
+  const refetch = () => {
+    refetchClusters()
+    refetchIssues()
+  }
   const { issues, isLoading: issuesLoading } = usePodIssues()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
@@ -180,26 +187,18 @@ export function PodHealthTrend() {
     }
   }, [currentStats, clustersLoading, issuesLoading])
 
-  // Initialize with current data point if empty
+  // Initialize with a single real data point (no synthetic history)
   useEffect(() => {
     if (history.length === 0 && currentStats.total > 0) {
       const now = new Date()
-      const initialPoints: HealthPoint[] = []
-
-      // Create 10 historical points with slight variations
-      for (let i = 9; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60000)
-        const variance = Math.floor(Math.random() * 3)
-        initialPoints.push({
-          time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          healthy: Math.max(0, currentStats.healthy - variance),
-          issues: currentStats.issues + Math.floor(variance / 2),
-          pending: currentStats.pending,
-        })
+      const initialPoint: HealthPoint = {
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        healthy: currentStats.healthy,
+        issues: currentStats.issues,
+        pending: currentStats.pending,
       }
-
-      historyRef.current = initialPoints
-      setHistory(initialPoints)
+      historyRef.current = [initialPoint]
+      setHistory([initialPoint])
     }
   }, [currentStats, history.length])
 
@@ -232,9 +231,12 @@ export function PodHealthTrend() {
             </span>
           )}
         </div>
-        <RefreshIndicator
+        <RefreshButton
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
           size="sm"
         />
       </div>

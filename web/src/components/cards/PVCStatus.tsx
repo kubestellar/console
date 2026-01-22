@@ -4,6 +4,7 @@ import { usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 type SortByOption = 'status' | 'name' | 'capacity' | 'age'
 
@@ -55,7 +56,7 @@ function getStatusColor(status: string) {
 }
 
 export function PVCStatus() {
-  const { pvcs, isLoading, error } = usePVCs()
+  const { pvcs, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePVCs()
   const { selectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -163,6 +164,14 @@ export function PVCStatus() {
           onSortChange={setSortBy}
           sortDirection={sortDirection}
           onSortDirectionChange={setSortDirection}
+        />
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
         />
       </div>
 

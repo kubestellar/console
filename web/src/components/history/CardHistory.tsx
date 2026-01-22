@@ -8,7 +8,7 @@ const CARD_TYPE_LABELS: Record<string, string> = {
   event_stream: 'Event Stream',
   pod_issues: 'Pod Issues',
   top_pods: 'Top Pods',
-  app_status: 'App Status',
+  app_status: 'Workload Status',
   resource_usage: 'Resource Usage',
   cluster_metrics: 'Cluster Metrics',
   deployment_status: 'Deployment Status',

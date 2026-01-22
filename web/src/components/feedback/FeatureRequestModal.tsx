@@ -6,6 +6,7 @@ import {
   useNotifications,
   STATUS_LABELS,
   STATUS_DESCRIPTIONS,
+  isTriaged,
   type RequestType,
   type RequestStatus,
   type Notification,
@@ -85,7 +86,7 @@ function getNotificationStatus(type: NotificationType): { label: string; color: 
 }
 
 // Get status display info
-function getStatusInfo(status: RequestStatus): { label: string; color: string; bgColor: string } {
+function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: string; color: string; bgColor: string } {
   const colors: Record<RequestStatus, { color: string; bgColor: string }> = {
     open: { color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
     needs_triage: { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
@@ -96,13 +97,19 @@ function getStatusInfo(status: RequestStatus): { label: string; color: string; b
     unable_to_fix: { color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
     closed: { color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
   }
-  return { label: STATUS_LABELS[status], ...colors[status] }
+  // Show different label for closed status based on who closed it
+  let label = STATUS_LABELS[status]
+  if (status === 'closed' && closedByUser) {
+    label = 'Closed by You'
+  }
+  return { label, ...colors[status] }
 }
 
 export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProps) {
-  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode } = useFeatureRequests()
+  const { user, isAuthenticated, token } = useAuth()
+  const currentGitHubLogin = user?.github_login || ''
+  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications } = useNotifications()
-  const { isAuthenticated, token } = useAuth()
   const isRefreshing = requestsRefreshing || notificationsRefreshing
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== 'demo-token'
@@ -325,7 +332,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
           {activeTab === 'updates' ? (
             /* Updates Tab */
             <div>
-              {/* Sub-tabs for Requests vs Activity */}
+              {/* Sub-tabs for Queue vs Activity */}
               <div className="flex border-b border-border/50">
                 <button
                   onClick={() => setUpdatesSubTab('requests')}
@@ -335,7 +342,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  My Requests ({requests.length})
+                  Queue ({requests.length})
                 </button>
                 <button
                   onClick={() => setUpdatesSubTab('activity')}
@@ -378,7 +385,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
 
               <div className="max-h-80 overflow-y-auto">
                 {updatesSubTab === 'requests' ? (
-                  /* My Requests Sub-tab */
+                  /* Request Queue Sub-tab */
                   requestsLoading && requests.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                       <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
@@ -387,14 +394,20 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   ) : requests.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                       <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No requests yet</p>
-                      <p className="text-xs mt-1">Submit a bug report or feature request</p>
+                      <p className="text-sm">No requests in queue</p>
+                      <p className="text-xs mt-1">Submit a bug report or feature request to get started</p>
                     </div>
                   ) : (
                     requests.map(request => {
-                      const statusInfo = getStatusInfo(request.status)
+                      const statusInfo = getStatusInfo(request.status, request.closed_by_user)
                       const isLoading = actionLoading === request.id
                       const showConfirm = confirmClose === request.id
+                      // Check ownership by github_login (for queue items) or user_id
+                      const isOwnedByUser = request.github_login
+                        ? request.github_login === currentGitHubLogin
+                        : request.user_id === currentGitHubLogin
+                      // Blur untriaged issues that aren't owned by the current user
+                      const shouldBlur = !isTriaged(request.status) && !isOwnedByUser
                       return (
                         <div
                           key={request.id}
@@ -413,15 +426,20 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                                     #{request.github_issue_number}
                                   </span>
                                 )}
+                                {isOwnedByUser && (
+                                  <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-500/20 text-blue-400">
+                                    Yours
+                                  </span>
+                                )}
                               </div>
-                              <p className="text-sm font-medium text-foreground mt-1 truncate">
+                              <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-sm select-none' : ''}`}>
                                 {request.title}
                               </p>
                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                   {statusInfo.label}
                                 </span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-sm select-none' : ''}`}>
                                   {STATUS_DESCRIPTIONS[request.status]}
                                 </span>
                               </div>
@@ -483,8 +501,8 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                                   </a>
                                 )}
                               </div>
-                              {/* Actions - only show for active requests (not closed or fix_complete) */}
-                              {request.status !== 'closed' && request.status !== 'fix_complete' && (
+                              {/* Actions - only show for user's own active requests (not closed or fix_complete) */}
+                              {isOwnedByUser && request.status !== 'closed' && request.status !== 'fix_complete' && (
                                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
                                   {!canPerformActions ? (
                                     /* Not authenticated or demo mode - show login prompts */
@@ -635,9 +653,12 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
               <h3 className="text-lg font-medium text-foreground mb-2">
                 Request Submitted!
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Our AI will analyze your request and create a fix.
-                You'll be notified when a preview is ready.
+              <p className="text-sm text-muted-foreground mb-2">
+                Your request has been submitted for review.
+              </p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Once a maintainer approves your request, it will appear in "My Requests"
+                and our AI will start working on a fix.
               </p>
               {success.issueUrl && (
                 <a
@@ -727,9 +748,9 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
 
                 {/* Info */}
                 <p className="text-xs text-muted-foreground">
-                  Your request will be analyzed by our AI, which will attempt to
-                  create a fix automatically. You'll receive a notification when
-                  a preview is ready for testing.
+                  Your request will be reviewed by a maintainer before being analyzed
+                  by our AI. Once approved, the AI will attempt to create a fix
+                  automatically and you'll receive a notification when ready.
                 </p>
               </div>
 

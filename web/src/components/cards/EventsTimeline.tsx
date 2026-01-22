@@ -11,7 +11,8 @@ import {
 } from 'recharts'
 import { useEvents, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 
 interface TimePoint {
   time: string
@@ -75,7 +76,18 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 }
 
 export function EventsTimeline() {
-  const { events, isLoading, isRefreshing, lastUpdated } = useEvents(undefined, undefined, 100)
+  const {
+    events,
+    isLoading: hookLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useEvents(undefined, undefined, 100)
+
+  // Only show skeleton when no cached data exists
+  const isLoading = hookLoading && events.length === 0
   const { clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
@@ -156,14 +168,19 @@ export function EventsTimeline() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading events...</div>
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton variant="text" width={120} height={16} />
+          <Skeleton variant="rounded" width={28} height={28} />
+        </div>
+        <SkeletonStats className="mb-4" />
+        <Skeleton variant="rounded" height={160} className="flex-1" />
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -181,10 +198,12 @@ export function EventsTimeline() {
             </span>
           )}
         </div>
-        <RefreshIndicator
+        <RefreshButton
           isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
-          size="sm"
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={() => refetch()}
         />
       </div>
 

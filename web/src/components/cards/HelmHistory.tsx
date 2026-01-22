@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, RefreshCw, Clock } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
+import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, Clock } from 'lucide-react'
+import { useClusters, useHelmReleases, useHelmHistory } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface HelmHistoryProps {
   config?: {
@@ -13,15 +14,6 @@ interface HelmHistoryProps {
     release?: string
     namespace?: string
   }
-}
-
-interface HistoryEntry {
-  revision: number
-  updated: string
-  status: 'deployed' | 'superseded' | 'failed' | 'pending-upgrade' | 'pending-rollback'
-  chart: string
-  appVersion: string
-  description: string
 }
 
 type SortByOption = 'revision' | 'status' | 'updated'
@@ -33,7 +25,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmHistory({ config }: HelmHistoryProps) {
-  const { clusters: allClusters, isLoading, refetch } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const [sortBy, setSortBy] = useState<SortByOption>('revision')
@@ -45,7 +37,28 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     customFilter,
   } = useGlobalFilters()
 
-  // Apply global filters
+  // Fetch ALL Helm releases from all clusters once (not per-cluster)
+  const { releases: allHelmReleases, isLoading: releasesLoading } = useHelmReleases()
+
+  // Fetch history for selected release (hook handles caching)
+  const {
+    history: rawHistory,
+    isLoading: historyLoading,
+    isRefreshing: historyRefreshing,
+    refetch: refetchHistory,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh
+  } = useHelmHistory(
+    selectedCluster || undefined,
+    selectedRelease || undefined,
+    undefined
+  )
+
+  // Only show skeleton when no cached data exists
+  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Apply global filters to clusters
   const clusters = useMemo(() => {
     let result = allClusters
 
@@ -64,24 +77,22 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Mock releases
-  const releases = selectedCluster ? [
-    'prometheus', 'grafana', 'nginx-ingress', 'cert-manager'
-  ] : []
+  // Filter releases locally by selected cluster (no API call)
+  const filteredReleases = useMemo(() => {
+    if (!selectedCluster) return allHelmReleases
+    return allHelmReleases.filter(r => r.cluster === selectedCluster)
+  }, [allHelmReleases, selectedCluster])
 
-  // Mock history data
-  const allHistory: HistoryEntry[] = selectedRelease ? [
-    { revision: 5, updated: '2024-01-11T14:30:00Z', status: 'deployed', chart: 'prometheus-25.8.0', appVersion: '2.47.0', description: 'Upgrade complete' },
-    { revision: 4, updated: '2024-01-08T10:15:00Z', status: 'superseded', chart: 'prometheus-25.7.0', appVersion: '2.46.0', description: 'Upgrade complete' },
-    { revision: 3, updated: '2024-01-05T16:00:00Z', status: 'superseded', chart: 'prometheus-25.6.0', appVersion: '2.46.0', description: 'Upgrade complete' },
-    { revision: 2, updated: '2024-01-02T09:30:00Z', status: 'superseded', chart: 'prometheus-25.5.0', appVersion: '2.45.0', description: 'Rollback to 1' },
-    { revision: 1, updated: '2023-12-20T11:00:00Z', status: 'superseded', chart: 'prometheus-25.4.0', appVersion: '2.45.0', description: 'Install complete' },
-  ] : []
+  // Get unique release names for dropdown
+  const releases = useMemo(() => {
+    const releaseSet = new Set(filteredReleases.map(r => r.name))
+    return Array.from(releaseSet).sort()
+  }, [filteredReleases])
 
   // Sort history
   const sortedHistory = useMemo(() => {
     const statusOrder: Record<string, number> = { failed: 0, 'pending-upgrade': 1, 'pending-rollback': 2, deployed: 3, superseded: 4 }
-    return [...allHistory].sort((a, b) => {
+    return [...rawHistory].sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'revision':
@@ -96,7 +107,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       }
       return sortDirection === 'asc' ? -compare : compare
     })
-  }, [allHistory, sortBy, sortDirection])
+  }, [rawHistory, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -110,7 +121,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     needsPagination,
   } = usePagination(sortedHistory, effectivePerPage)
 
-  const getStatusIcon = (status: HistoryEntry['status']) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'deployed': return CheckCircle
       case 'failed': return XCircle
@@ -120,7 +131,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     }
   }
 
-  const getStatusColor = (status: HistoryEntry['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'deployed': return 'green'
       case 'failed': return 'red'
@@ -174,13 +185,14 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh history"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={historyRefreshing || historyLoading}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetchHistory}
+            size="sm"
+          />
         </div>
       </div>
 
@@ -202,7 +214,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
         <select
           value={selectedRelease}
           onChange={(e) => setSelectedRelease(e.target.value)}
-          disabled={!selectedCluster}
+          disabled={!selectedCluster || releasesLoading}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">Select release...</option>
@@ -216,6 +228,10 @@ export function HelmHistory({ config }: HelmHistoryProps) {
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
           Select a cluster and release to view history
         </div>
+      ) : historyLoading && rawHistory.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Skeleton variant="rounded" height={50} className="w-full" />
+        </div>
       ) : (
         <>
           {/* Scope badge */}
@@ -227,49 +243,59 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
           {/* History timeline */}
           <div className="flex-1 overflow-y-auto">
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-[7px] top-4 bottom-4 w-0.5 bg-border" />
+            {history.length === 0 ? (
+              <div className="flex items-center justify-center text-muted-foreground text-sm py-4">
+                No history found for this release
+              </div>
+            ) : (
+              <div className="relative">
+                {/* Timeline line */}
+                <div className="absolute left-[7px] top-4 bottom-4 w-0.5 bg-border" />
 
-              {/* History entries */}
-              <div className="space-y-3">
-                {history.map((entry, idx) => {
-                  const StatusIcon = getStatusIcon(entry.status)
-                  const color = getStatusColor(entry.status)
-                  const isCurrent = entry.status === 'deployed'
+                {/* History entries */}
+                <div className="space-y-3">
+                  {history.map((entry, idx) => {
+                    const StatusIcon = getStatusIcon(entry.status)
+                    const color = getStatusColor(entry.status)
+                    const isCurrent = entry.status === 'deployed'
 
-                  return (
-                    <div key={idx} className="relative pl-6">
-                      {/* Timeline dot */}
-                      <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
-                        isCurrent ? 'bg-green-500' : 'bg-secondary border border-border'
-                      }`}>
-                        <StatusIcon className={`w-2.5 h-2.5 ${isCurrent ? 'text-foreground' : `text-${color}-400`}`} />
-                      </div>
+                    return (
+                      <div key={idx} className="relative pl-6">
+                        {/* Timeline dot */}
+                        <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
+                          isCurrent ? 'bg-green-500' : 'bg-secondary border border-border'
+                        }`}>
+                          <StatusIcon className={`w-2.5 h-2.5 ${isCurrent ? 'text-foreground' : `text-${color}-400`}`} />
+                        </div>
 
-                      <div className={`p-2 rounded-lg ${isCurrent ? 'bg-green-500/10 border border-green-500/20' : 'bg-secondary/30'}`}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-foreground">Rev {entry.revision}</span>
-                            {isCurrent && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                                current
-                              </span>
+                        <div className={`p-2 rounded-lg ${isCurrent ? 'bg-green-500/10 border border-green-500/20' : 'bg-secondary/30'}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-foreground">Rev {entry.revision}</span>
+                              {isCurrent && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                                  current
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">{formatDate(entry.updated)}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            <span>{entry.chart}</span>
+                            {entry.description && (
+                              <>
+                                <span className="mx-2">•</span>
+                                <span>{entry.description}</span>
+                              </>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground">{formatDate(entry.updated)}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          <span>{entry.chart}</span>
-                          <span className="mx-2">•</span>
-                          <span>{entry.description}</span>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Pagination */}

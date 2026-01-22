@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Shield, AlertTriangle, RefreshCw, User, Network, Server, ChevronRight } from 'lucide-react'
+import { Shield, AlertTriangle, User, Network, Server, ChevronRight } from 'lucide-react'
 import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { PaginatedList } from '../ui/PaginatedList'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
-import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 
 type SortByOption = 'severity' | 'name' | 'cluster'
@@ -45,7 +45,7 @@ const getSeverityColor = (severity: string) => {
 export function SecurityIssues({ config }: SecurityIssuesProps) {
   const cluster = config?.cluster as string | undefined
   const namespace = config?.namespace as string | undefined
-  const { issues: rawIssues, isLoading, isRefreshing, lastUpdated, error, refetch } = useSecurityIssues(cluster, namespace)
+  const { issues: rawIssues, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useSecurityIssues(cluster, namespace)
   const { filterItems } = useGlobalFilters()
   const { drillToPod } = useDrillDownActions()
   const [sortBy, setSortBy] = useState<SortByOption>('severity')
@@ -89,13 +89,12 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       <div className="h-full flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-muted-foreground">Security Issues</span>
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh security scan"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3" title="Security scan passed">
@@ -124,9 +123,12 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
               {mediumCount} med
             </span>
           )}
-          <RefreshIndicator
+          <RefreshButton
             isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
             size="sm"
           />
         </div>

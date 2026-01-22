@@ -1,7 +1,7 @@
 {
   "titles": {
     "cluster_health": "Cluster Health",
-    "app_status": "App Status",
+    "app_status": "Workload Status",
     "event_stream": "Event Stream",
     "pod_issues": "Pod Issues",
     "deployment_progress": "Deployment Progress",
@@ -34,14 +34,14 @@
     "helm_release_status": "Helm Release Status",
     "helm_values_diff": "Helm Values Diff",
     "helm_history": "Helm History",
-    "chart_versions": "Chart Versions",
+    "chart_versions": "Helm Chart Versions",
     "kustomization_status": "Kustomization Status",
     "overlay_comparison": "Overlay Comparison",
     "user_management": "User Management"
   },
   "descriptions": {
     "cluster_health": "Monitor health status across all clusters",
-    "app_status": "Application deployment status overview",
+    "app_status": "Workload deployment status overview",
     "event_stream": "Real-time Kubernetes events stream",
     "pod_issues": "Pods with issues like CrashLoopBackOff",
     "deployment_progress": "Track ongoing deployment rollouts",

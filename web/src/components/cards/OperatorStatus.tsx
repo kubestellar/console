@@ -6,6 +6,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface OperatorStatusProps {
   config?: {
@@ -23,7 +24,7 @@ const SORT_OPTIONS = [
 ]
 
 export function OperatorStatus({ config }: OperatorStatusProps) {
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -55,7 +56,13 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Fetch operators for selected cluster
-  const { operators: rawOperators, isLoading: operatorsLoading, refetch } = useOperators(selectedCluster || undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing: operatorsRefreshing, refetch: refetchOperators } = useOperators(selectedCluster || undefined)
+
+  const isRefreshing = clustersRefreshing || operatorsRefreshing
+  const refetch = () => {
+    refetchClusters()
+    if (selectedCluster) refetchOperators()
+  }
 
   // Apply filters and sorting to operators
   const filteredAndSorted = useMemo(() => {
@@ -177,13 +184,14 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh operators"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 

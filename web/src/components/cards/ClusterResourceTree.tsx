@@ -4,6 +4,7 @@ import { useClusters, usePodIssues, useNodes, useNamespaces, useDeployments, use
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 // Resource tree lens/view options
 type TreeLens = 'all' | 'issues' | 'nodes' | 'workloads' | 'storage' | 'network'
@@ -56,7 +57,7 @@ interface ClusterDataCache {
 }
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
-  const { clusters, refetch: refetchClusters } = useClusters()
+  const { clusters, isRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToCluster, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
 
@@ -65,7 +66,6 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   const [searchFilter, setSearchFilter] = useState('')
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Per-cluster data cache - persists data for all expanded clusters
   const [clusterDataCache, setClusterDataCache] = useState<Map<string, ClusterDataCache>>(new Map())
@@ -174,11 +174,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     })
   }, [])
 
-  // Handle refresh
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true)
-    await refetchClusters()
-    setIsRefreshing(false)
+  // Handle refresh - just call refetchClusters, the hook manages isRefreshing
+  const handleRefresh = useCallback(() => {
+    refetchClusters()
   }, [refetchClusters])
 
   // Build namespace resources from cached data for a specific cluster
@@ -449,14 +447,14 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
             <span className="text-xs text-muted-foreground">• {selectedCluster}</span>
           )}
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="p-1.5 hover:bg-secondary rounded transition-colors disabled:opacity-50"
-          title="Refresh"
-        >
-          <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-        </button>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={handleRefresh}
+          size="sm"
+        />
       </div>
 
       {/* Search and Lens Filters */}

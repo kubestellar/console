@@ -29,6 +29,7 @@ import { DashboardProvider, useDashboardContext } from './hooks/useDashboardCont
 import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
 import { MissionProvider } from './hooks/useMissions'
 import { ToastProvider } from './components/ui/Toast'
+import { AlertsProvider } from './contexts/AlertsContext'
 
 // Wrapper for CardHistory that provides the restore functionality
 function CardHistoryWithRestore() {
@@ -85,6 +86,7 @@ function App() {
       <ToastProvider>
       <GlobalFiltersProvider>
       <MissionProvider>
+      <AlertsProvider>
       <DashboardProvider>
       <DrillDownProvider>
       <DrillDownModal />
@@ -307,6 +309,7 @@ function App() {
       </Routes>
       </DrillDownProvider>
       </DashboardProvider>
+      </AlertsProvider>
       </MissionProvider>
       </GlobalFiltersProvider>
       </ToastProvider>

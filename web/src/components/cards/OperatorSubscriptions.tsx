@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Newspaper, Clock, AlertTriangle, RefreshCw, Settings } from 'lucide-react'
+import { Newspaper, Clock, AlertTriangle, Settings } from 'lucide-react'
 import { useClusters, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface OperatorSubscriptionsProps {
   config?: {
@@ -23,7 +24,7 @@ const SORT_OPTIONS = [
 ]
 
 export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { clusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [sortBy, setSortBy] = useState<SortByOption>('pending')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -54,7 +55,13 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Fetch subscriptions for selected cluster
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, refetch } = useOperatorSubscriptions(selectedCluster || undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing: subscriptionsRefreshing, refetch: refetchSubscriptions } = useOperatorSubscriptions(selectedCluster || undefined)
+
+  const isRefreshing = clustersRefreshing || subscriptionsRefreshing
+  const refetch = () => {
+    refetchClusters()
+    if (selectedCluster) refetchSubscriptions()
+  }
 
   // Sort subscriptions
   const sortedSubscriptions = useMemo(() => {
@@ -135,13 +142,14 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
-          <button
-            onClick={() => refetch()}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-            title="Refresh subscriptions"
-          >
-            <RefreshCw className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 
