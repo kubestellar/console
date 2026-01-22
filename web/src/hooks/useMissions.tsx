@@ -94,16 +94,36 @@ function loadMissions(): Mission[] {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
-      // Convert date strings back to Date objects
-      return parsed.map((m: Mission) => ({
-        ...m,
-        createdAt: new Date(m.createdAt),
-        updatedAt: new Date(m.updatedAt),
-        messages: m.messages.map(msg => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        }))
-      }))
+      // Convert date strings back to Date objects and mark stale running missions as failed
+      return parsed.map((m: Mission) => {
+        const mission = {
+          ...m,
+          createdAt: new Date(m.createdAt),
+          updatedAt: new Date(m.updatedAt),
+          messages: m.messages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }))
+        }
+        // Mark any "running" missions as failed - they're stale from a previous session
+        if (mission.status === 'running') {
+          return {
+            ...mission,
+            status: 'failed' as const,
+            currentStep: undefined,
+            messages: [
+              ...mission.messages,
+              {
+                id: `msg-stale-${Date.now()}`,
+                role: 'system' as const,
+                content: `**Session Interrupted**\n\nThis mission was interrupted when the page was refreshed.\n\n[Configure API Keys →](/settings) and start a new mission to try again.`,
+                timestamp: new Date(),
+              }
+            ]
+          }
+        }
+        return mission
+      })
     }
   } catch (e) {
     console.error('Failed to load missions from localStorage:', e)
