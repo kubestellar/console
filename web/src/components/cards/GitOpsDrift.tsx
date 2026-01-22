@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState, useMemo } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search } from 'lucide-react'
 import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
@@ -85,17 +85,14 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       )
     }
 
-    // Apply local search
+    // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
       result = result.filter(d =>
         d.resource.toLowerCase().includes(query) ||
         d.kind.toLowerCase().includes(query) ||
         d.cluster.toLowerCase().includes(query) ||
-        d.namespace.toLowerCase().includes(query) ||
-        d.driftType.toLowerCase().includes(query) ||
-        d.severity.toLowerCase().includes(query) ||
-        (d.details?.toLowerCase() || '').includes(query)
+        d.namespace.toLowerCase().includes(query)
       )
     }
 
@@ -155,7 +152,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
+      <div className="relative mb-4">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"

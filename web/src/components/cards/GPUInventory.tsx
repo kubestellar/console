@@ -45,22 +45,23 @@ export function GPUInventory({ config }: GPUInventoryProps) {
 
   // Filter nodes by global cluster selection and local search
   const filteredNodes = useMemo(() => {
-    let filtered = rawNodes
+    let result = rawNodes
+
     if (!isAllClustersSelected) {
-      filtered = filtered.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+      result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
     }
 
-    // Apply local search
+    // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
-      filtered = filtered.filter(node =>
-        node.name.toLowerCase().includes(query) ||
-        node.cluster.toLowerCase().includes(query) ||
-        node.gpuType.toLowerCase().includes(query)
+      result = result.filter(n =>
+        n.name.toLowerCase().includes(query) ||
+        n.cluster.toLowerCase().includes(query) ||
+        n.gpuType.toLowerCase().includes(query)
       )
     }
 
-    return filtered
+    return result
   }, [rawNodes, selectedClusters, isAllClustersSelected, localSearch])
 
   // Sort nodes
@@ -178,7 +179,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
+      <div className="relative mb-4">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"

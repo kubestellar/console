@@ -66,22 +66,20 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
 
   // Filter and sort subscriptions
   const sortedSubscriptions = useMemo(() => {
-    let filtered = rawSubscriptions
+    let result = [...rawSubscriptions]
 
-    // Apply local search
+    // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
-      filtered = filtered.filter(sub =>
+      result = result.filter(sub =>
         sub.name.toLowerCase().includes(query) ||
         sub.namespace.toLowerCase().includes(query) ||
         sub.channel.toLowerCase().includes(query) ||
-        sub.currentCSV.toLowerCase().includes(query) ||
-        sub.installPlanApproval.toLowerCase().includes(query) ||
-        (sub.pendingUpgrade?.toLowerCase() || '').includes(query)
+        sub.currentCSV.toLowerCase().includes(query)
       )
     }
 
-    return [...filtered].sort((a, b) => {
+    return result.sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'pending':

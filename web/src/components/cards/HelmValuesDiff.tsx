@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { FileJson, ChevronRight, Plus, Edit } from 'lucide-react'
+import { FileJson, ChevronRight, Plus, Edit, Search } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -43,6 +43,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
+  const [localSearch, setLocalSearch] = useState('')
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -106,17 +107,26 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const valueEntries = useMemo(() => {
     if (!values) return []
 
+    let entries: ValueEntry[] = []
+
     if (format === 'yaml' && typeof values === 'string') {
       // For YAML, just show the raw string
-      return [{ path: 'values.yaml', value: values }]
+      entries = [{ path: 'values.yaml', value: values }]
+    } else if (typeof values === 'object') {
+      entries = flattenValues(values as Record<string, unknown>)
     }
 
-    if (typeof values === 'object') {
-      return flattenValues(values as Record<string, unknown>)
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      entries = entries.filter(e =>
+        e.path.toLowerCase().includes(query) ||
+        e.value.toLowerCase().includes(query)
+      )
     }
 
-    return []
-  }, [values, format])
+    return entries
+  }, [values, format, localSearch])
 
   if (isLoading) {
     return (
@@ -201,6 +211,18 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
             <ClusterBadge cluster={selectedCluster} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-foreground">{selectedRelease}</span>
+          </div>
+
+          {/* Local Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search values..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
           </div>
 
           {/* Summary */}

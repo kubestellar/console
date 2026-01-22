@@ -108,7 +108,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
 export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProps) {
   const { user, isAuthenticated, token } = useAuth()
   const currentGitHubLogin = user?.github_login || ''
-  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode } = useFeatureRequests(currentGitHubLogin)
+  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications } = useNotifications()
   const isRefreshing = requestsRefreshing || notificationsRefreshing
   // User can't perform actions if not authenticated or if using demo token

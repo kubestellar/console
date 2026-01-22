@@ -258,7 +258,7 @@ export function useDataCache<T>({
     }
 
     // Set up auto-refresh interval
-    let intervalId: NodeJS.Timeout | undefined
+    let intervalId: ReturnType<typeof setInterval> | undefined
     if (autoRefresh && enabled) {
       intervalId = setInterval(refetch, effectiveRefreshInterval)
     }
@@ -289,13 +289,7 @@ export function useArrayDataCache<T extends { name: string; cluster?: string }>(
   options: Omit<UseDataCacheOptions<T[]>, 'merge' | 'initialData'> & { initialData?: T[] }
 ): UseDataCacheResult<T[]> {
   // Default merge: update existing items, add new ones, remove missing ones
-  const merge = useCallback((oldData: T[], newData: T[]): T[] => {
-    // Create a map of new data by unique key (name + cluster)
-    const newMap = new Map(newData.map(item => [
-      `${item.cluster || ''}:${item.name}`,
-      item
-    ]))
-
+  const merge = useCallback((_oldData: T[], newData: T[]): T[] => {
     // Start with new data (which includes updates and new items)
     // Old items not in new data are considered removed
     return newData

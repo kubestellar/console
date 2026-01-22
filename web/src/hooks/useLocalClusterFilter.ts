@@ -99,8 +99,8 @@ export function useLocalClusterFilter<T extends Cluster = Cluster>(
 
   // Get reachable clusters
   const reachableClusters = useMemo(() => {
-    if (!excludeUnreachable) return rawClusters as T[]
-    return rawClusters.filter(c => c.reachable !== false) as T[]
+    if (!excludeUnreachable) return rawClusters as unknown as T[]
+    return rawClusters.filter(c => c.reachable !== false) as unknown as T[]
   }, [rawClusters, excludeUnreachable])
 
   // Get available clusters for local filter (respects global filter)

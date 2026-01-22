@@ -888,17 +888,47 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
 
                 {/* Card catalog */}
                 <div className="max-h-[50vh] overflow-y-auto space-y-3">
-                  {Object.entries(filteredCatalog).map(([category, cards]) => (
+                  {Object.entries(filteredCatalog).map(([category, cards]) => {
+                    // Count how many cards in this category are not already added
+                    const availableCards = cards.filter(c => !existingCardTypes.includes(c.type))
+                    const allCategorySelected = availableCards.length > 0 && availableCards.every(c => selectedBrowseCards.has(c.type))
+
+                    return (
                     <div key={category} className="border border-border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleCategory(category)}
-                        className="w-full px-3 py-2 bg-secondary/50 text-left text-sm font-medium text-foreground flex items-center justify-between hover:bg-secondary transition-colors"
-                      >
-                        <span>{category}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {cards.length} cards {expandedCategories.has(category) ? '▼' : '▶'}
-                        </span>
-                      </button>
+                      <div className="flex items-center bg-secondary/50 hover:bg-secondary transition-colors">
+                        <button
+                          onClick={() => toggleCategory(category)}
+                          className="flex-1 px-3 py-2 text-left text-sm font-medium text-foreground flex items-center justify-between"
+                        >
+                          <span>{category}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {cards.length} cards {expandedCategories.has(category) ? '▼' : '▶'}
+                          </span>
+                        </button>
+                        {availableCards.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const newSelected = new Set(selectedBrowseCards)
+                              if (allCategorySelected) {
+                                // Deselect all from this category
+                                availableCards.forEach(c => newSelected.delete(c.type))
+                              } else {
+                                // Select all from this category
+                                availableCards.forEach(c => newSelected.add(c.type))
+                              }
+                              setSelectedBrowseCards(newSelected)
+                            }}
+                            className={`px-2 py-1 mr-2 text-xs rounded transition-colors ${
+                              allCategorySelected
+                                ? 'bg-purple-500/30 text-purple-300 hover:bg-purple-500/40'
+                                : 'bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground'
+                            }`}
+                          >
+                            {allCategorySelected ? 'Deselect All' : 'Add All'}
+                          </button>
+                        )}
+                      </div>
                       {expandedCategories.has(category) && (
                         <div className="p-2 grid grid-cols-2 gap-2">
                           {cards.map((card) => {
@@ -937,24 +967,58 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                         </div>
                       )}
                     </div>
-                  ))}
+                  )})}
+
                 </div>
 
                 {/* Browse footer */}
-                {selectedBrowseCards.size > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {selectedBrowseCards.size} card{selectedBrowseCards.size !== 1 ? 's' : ''} selected
-                    </span>
-                    <button
-                      onClick={handleAddBrowseCards}
-                      className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Cards
-                    </button>
-                  </div>
-                )}
+                {(() => {
+                  // Calculate total available cards (not already added)
+                  const allAvailableCards = Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type))
+                  const uniqueAvailableTypes = new Set(allAvailableCards.map(c => c.type))
+                  const totalAvailable = uniqueAvailableTypes.size
+
+                  return (
+                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        {selectedBrowseCards.size > 0
+                          ? `${selectedBrowseCards.size} card${selectedBrowseCards.size !== 1 ? 's' : ''} selected`
+                          : `${totalAvailable} cards available`}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {totalAvailable > 0 && selectedBrowseCards.size !== totalAvailable && (
+                          <button
+                            onClick={() => {
+                              const newSelected = new Set(selectedBrowseCards)
+                              uniqueAvailableTypes.forEach(type => newSelected.add(type))
+                              setSelectedBrowseCards(newSelected)
+                            }}
+                            className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
+                          >
+                            Select All ({totalAvailable})
+                          </button>
+                        )}
+                        {selectedBrowseCards.size > 0 && (
+                          <>
+                            <button
+                              onClick={() => setSelectedBrowseCards(new Set())}
+                              className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                            <button
+                              onClick={handleAddBrowseCards}
+                              className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium flex items-center gap-2"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add {selectedBrowseCards.size} Card{selectedBrowseCards.size !== 1 ? 's' : ''}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Right side - Preview Panel (always rendered) */}

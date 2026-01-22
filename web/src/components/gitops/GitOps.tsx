@@ -7,7 +7,7 @@ import { DonutChart, BarChart } from '../charts'
 import { useToast } from '../ui/Toast'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-import { RefreshCw, Box, Loader2, Package, Ship, Layers, Cog, ChevronDown, ExternalLink, GitBranch, Clock, ArrowRight, AlertTriangle, CheckCircle2, XCircle, Plus, LayoutGrid, ChevronRight, Activity, Hourglass, GripVertical } from 'lucide-react'
+import { RefreshCw, Box, Loader2, Package, Ship, Layers, Cog, ChevronDown, ExternalLink, GitBranch, Clock, ArrowRight, AlertTriangle, Plus, LayoutGrid, ChevronRight, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,

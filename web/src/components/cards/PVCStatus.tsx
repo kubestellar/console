@@ -75,7 +75,7 @@ export function PVCStatus() {
     // Apply global status filter
     result = filterByStatus(result)
 
-    // Apply custom text filter
+    // Apply custom text filter (global)
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
       result = result.filter(p =>
@@ -93,8 +93,7 @@ export function PVCStatus() {
         p.name.toLowerCase().includes(query) ||
         (p.namespace?.toLowerCase() || '').includes(query) ||
         (p.cluster?.toLowerCase() || '').includes(query) ||
-        (p.storageClass?.toLowerCase() || '').includes(query) ||
-        p.status.toLowerCase().includes(query)
+        (p.storageClass?.toLowerCase() || '').includes(query)
       )
     }
 

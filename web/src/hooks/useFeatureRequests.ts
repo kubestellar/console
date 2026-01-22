@@ -11,7 +11,7 @@ function isDemoUser(): boolean {
 export type RequestType = 'bug' | 'feature'
 export type RequestStatus = 'open' | 'needs_triage' | 'triage_accepted' | 'feasibility_study' | 'fix_ready' | 'fix_complete' | 'unable_to_fix' | 'closed'
 export type FeedbackType = 'positive' | 'negative'
-export type NotificationType = 'issue_created' | 'triage_accepted' | 'feasibility_study' | 'fix_ready' | 'fix_complete' | 'unable_to_fix' | 'closed' | 'feedback_received'
+export type NotificationType = 'issue_created' | 'triage_accepted' | 'feasibility_study' | 'fix_ready' | 'fix_complete' | 'unable_to_fix' | 'closed' | 'feedback_received' | 'pr_created' | 'preview_ready' | 'pr_merged' | 'pr_closed'
 
 export interface FeatureRequest {
   id: string
@@ -243,7 +243,7 @@ export function useFeatureRequests(currentUserId?: string) {
     const interval = setInterval(() => {
       // Only poll if there are pending requests
       const hasPending = requests.some(r =>
-        r.status !== 'closed' && r.status !== 'preview_available'
+        r.status !== 'closed' && r.status !== 'fix_complete'
       )
       if (hasPending) {
         loadRequests()

@@ -89,16 +89,14 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
       ? allKustomizations.filter(k => k.namespace === selectedNamespace)
       : allKustomizations
 
-    // Apply local search
+    // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
-      result = result.filter(ks =>
-        ks.name.toLowerCase().includes(query) ||
-        ks.namespace.toLowerCase().includes(query) ||
-        ks.path.toLowerCase().includes(query) ||
-        ks.sourceRef.toLowerCase().includes(query) ||
-        ks.status.toLowerCase().includes(query) ||
-        ks.revision.toLowerCase().includes(query)
+      result = result.filter(k =>
+        k.name.toLowerCase().includes(query) ||
+        k.namespace.toLowerCase().includes(query) ||
+        k.path.toLowerCase().includes(query) ||
+        k.sourceRef.toLowerCase().includes(query)
       )
     }
 
@@ -124,7 +122,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     })
 
     return result
-  }, [allKustomizations, selectedNamespace, sortBy, sortDirection, localSearch])
+  }, [allKustomizations, selectedNamespace, localSearch, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit

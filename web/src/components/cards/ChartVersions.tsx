@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Package } from 'lucide-react'
+import { Package, Search } from 'lucide-react'
 import { useClusters, useHelmReleases } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -37,6 +37,7 @@ export function ChartVersions({ config }: ChartVersionsProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localSearch, setLocalSearch] = useState('')
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -104,9 +105,20 @@ export function ChartVersions({ config }: ChartVersionsProps) {
   const filteredAndSorted = useMemo(() => {
     let result = [...allCharts]
 
-    // Apply custom text filter
+    // Apply custom text filter (global)
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.chart.toLowerCase().includes(query) ||
+        c.namespace.toLowerCase().includes(query) ||
+        c.version.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
       result = result.filter(c =>
         c.name.toLowerCase().includes(query) ||
         c.chart.toLowerCase().includes(query) ||
@@ -133,7 +145,7 @@ export function ChartVersions({ config }: ChartVersionsProps) {
     })
 
     return result
-  }, [allCharts, customFilter, sortBy, sortDirection])
+  }, [allCharts, customFilter, localSearch, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -220,6 +232,18 @@ export function ChartVersions({ config }: ChartVersionsProps) {
             ) : (
               <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">All clusters</span>
             )}
+          </div>
+
+          {/* Local Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Search charts..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            />
           </div>
 
           {/* Summary */}

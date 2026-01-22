@@ -196,11 +196,6 @@ export function CRDHealth({ config }: CRDHealthProps) {
         <div className="flex items-center gap-2">
           <FileCode className="w-4 h-4 text-teal-400" />
           <span className="text-sm font-medium text-muted-foreground">CRD Health</span>
-          {unhealthyCRDs > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-              {unhealthyCRDs} {unhealthyCRDs === 1 ? 'issue' : 'issues'}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <CardControls
@@ -273,14 +268,18 @@ export function CRDHealth({ config }: CRDHealthProps) {
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-4 gap-2 mb-4">
             <div className="p-2 rounded-lg bg-teal-500/10 text-center">
-              <span className="text-lg font-bold text-teal-400">{crds.length}</span>
+              <span className="text-lg font-bold text-teal-400">{filteredAndSorted.length}</span>
               <p className="text-xs text-muted-foreground">CRDs</p>
             </div>
             <div className="p-2 rounded-lg bg-green-500/10 text-center">
               <span className="text-lg font-bold text-green-400">{healthyCRDs}</span>
               <p className="text-xs text-muted-foreground">Healthy</p>
+            </div>
+            <div className="p-2 rounded-lg bg-red-500/10 text-center">
+              <span className="text-lg font-bold text-red-400">{unhealthyCRDs}</span>
+              <p className="text-xs text-muted-foreground">Issues</p>
             </div>
             <div className="p-2 rounded-lg bg-blue-500/10 text-center">
               <span className="text-lg font-bold text-blue-400">{totalInstances}</span>
@@ -302,6 +301,7 @@ export function CRDHealth({ config }: CRDHealthProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400`} />
+                      <ClusterBadge cluster={crd.cluster} size="sm" />
                       <span className="text-sm text-foreground">{crd.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -310,7 +310,6 @@ export function CRDHealth({ config }: CRDHealthProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-1 ml-6 text-xs text-muted-foreground">
-                    <ClusterBadge cluster={crd.cluster} size="sm" />
                     <span className="truncate">{crd.group}</span>
                     <span className="text-border">|</span>
                     <span>{crd.version}</span>

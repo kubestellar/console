@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { HardDrive, Database, FolderArchive, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Activity, Hourglass, X, ExternalLink, GripVertical } from 'lucide-react'
+import { HardDrive, Database, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, X, ExternalLink, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -24,8 +24,7 @@ import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useShowCards } from '../../hooks/useShowCards'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { Skeleton } from '../ui/Skeleton'
-import { StatsOverview, StatBlockValue, formatMemoryValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'

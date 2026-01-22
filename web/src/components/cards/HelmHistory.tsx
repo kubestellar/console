@@ -90,23 +90,23 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     return Array.from(releaseSet).sort()
   }, [filteredReleases])
 
-  // Filter and sort history
+  // Sort and filter history
   const sortedHistory = useMemo(() => {
-    let filtered = rawHistory
+    const statusOrder: Record<string, number> = { failed: 0, 'pending-upgrade': 1, 'pending-rollback': 2, deployed: 3, superseded: 4 }
+    let result = [...rawHistory]
 
-    // Apply local search
+    // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
-      filtered = filtered.filter(h =>
+      result = result.filter(h =>
         h.chart.toLowerCase().includes(query) ||
         h.status.toLowerCase().includes(query) ||
         (h.description?.toLowerCase() || '').includes(query) ||
-        h.revision.toString().includes(query)
+        String(h.revision).includes(query)
       )
     }
 
-    const statusOrder: Record<string, number> = { failed: 0, 'pending-upgrade': 1, 'pending-rollback': 2, deployed: 3, superseded: 4 }
-    return [...filtered].sort((a, b) => {
+    return result.sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'revision':

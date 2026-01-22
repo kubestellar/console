@@ -103,8 +103,19 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       })
     }
 
+    // Apply local search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      filtered = filtered.filter(pod =>
+        pod.name.toLowerCase().includes(query) ||
+        (pod.namespace?.toLowerCase() || '').includes(query) ||
+        (pod.cluster?.toLowerCase() || '').includes(query) ||
+        (pod.node?.toLowerCase() || '').includes(query)
+      )
+    }
+
     return filtered
-  }, [allPods, gpuNodes, selectedClusters, isAllClustersSelected])
+  }, [allPods, gpuNodes, selectedClusters, isAllClustersSelected, localSearch])
 
   // Sort workloads
   const sortedWorkloads = useMemo(() => {
@@ -118,20 +129,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       Completed: 6,
     }
 
-    // Apply local search filter
-    let filtered = gpuWorkloads
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = gpuWorkloads.filter(pod =>
-        pod.name.toLowerCase().includes(query) ||
-        (pod.namespace?.toLowerCase() || '').includes(query) ||
-        (pod.cluster?.toLowerCase() || '').includes(query) ||
-        (pod.node?.toLowerCase() || '').includes(query) ||
-        pod.status.toLowerCase().includes(query)
-      )
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
+    const sorted = [...gpuWorkloads].sort((a, b) => {
       let result = 0
       if (sortBy === 'status') {
         result = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
@@ -145,7 +143,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       return sortDirection === 'asc' ? result : -result
     })
     return sorted
-  }, [gpuWorkloads, sortBy, sortDirection, localSearch])
+  }, [gpuWorkloads, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -272,7 +270,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
         </div>
       </div>
 
-      {/* Local Search */}
+      {/* Local search */}
       <div className="relative mb-3">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input

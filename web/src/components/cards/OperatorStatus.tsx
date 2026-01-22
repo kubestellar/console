@@ -72,7 +72,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
     // Apply status filter
     result = filterByStatus(result)
 
-    // Apply custom text filter
+    // Apply custom text filter (global)
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
       result = result.filter(op =>
@@ -88,8 +88,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
       result = result.filter(op =>
         op.name.toLowerCase().includes(query) ||
         op.namespace.toLowerCase().includes(query) ||
-        op.version.toLowerCase().includes(query) ||
-        op.status.toLowerCase().includes(query)
+        op.version.toLowerCase().includes(query)
       )
     }
 
@@ -115,7 +114,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
     })
 
     return result
-  }, [rawOperators, filterByStatus, customFilter, sortBy, sortDirection, localSearch])
+  }, [rawOperators, filterByStatus, customFilter, localSearch, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
