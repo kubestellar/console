@@ -1,6 +1,10 @@
-import { Hourglass, Clock } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { RefreshCw, Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { formatLastSeen } from '../../lib/errorClassifier'
+
+// Minimum duration to show spin animation (ensures at least one full rotation)
+const MIN_SPIN_DURATION = 500
 
 interface RefreshIndicatorProps {
   isRefreshing: boolean
@@ -16,7 +20,7 @@ interface RefreshIndicatorProps {
  *
  * States:
  * - Idle: Shows clock icon with "Updated Xs ago"
- * - Refreshing: Shows hourglass icon with "Updating" label
+ * - Refreshing: Shows spinning refresh icon with "Updating" label
  * - Stale: Shows amber clock icon with warning styling
  */
 export function RefreshIndicator({
@@ -27,6 +31,31 @@ export function RefreshIndicator({
   showLabel = true,
   staleThresholdMinutes = 5,
 }: RefreshIndicatorProps) {
+  // Track visual spinning state separately to ensure minimum spin duration
+  const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
+  const spinStartRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (isRefreshing) {
+      setIsVisuallySpinning(true)
+      spinStartRef.current = Date.now()
+    } else if (spinStartRef.current !== null) {
+      const elapsed = Date.now() - spinStartRef.current
+      const remaining = Math.max(0, MIN_SPIN_DURATION - elapsed)
+
+      if (remaining > 0) {
+        const timeout = setTimeout(() => {
+          setIsVisuallySpinning(false)
+          spinStartRef.current = null
+        }, remaining)
+        return () => clearTimeout(timeout)
+      } else {
+        setIsVisuallySpinning(false)
+        spinStartRef.current = null
+      }
+    }
+  }, [isRefreshing])
+
   const isStale = lastUpdated &&
     (Date.now() - lastUpdated.getTime()) > staleThresholdMinutes * 60 * 1000
 
@@ -37,17 +66,17 @@ export function RefreshIndicator({
     ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
     : 'Not yet updated'
 
-  if (isRefreshing) {
+  if (isVisuallySpinning) {
     return (
       <span
         className={cn(
-          'inline-flex items-center gap-0.5 text-muted-foreground',
+          'inline-flex items-center gap-0.5 text-blue-400',
           textSize,
           className
         )}
         title="Updating..."
       >
-        <Hourglass className={cn(iconSize, 'animate-pulse')} />
+        <RefreshCw className={cn(iconSize, 'animate-spin-min')} />
         {showLabel && <span>Updating</span>}
       </span>
     )
@@ -70,5 +99,157 @@ export function RefreshIndicator({
         </span>
       )}
     </span>
+  )
+}
+
+// Button variant for manual refresh with failure state
+interface RefreshButtonProps {
+  isRefreshing: boolean
+  isFailed?: boolean
+  consecutiveFailures?: number
+  lastRefresh?: Date | number | null
+  onRefresh?: () => void
+  disabled?: boolean
+  size?: 'sm' | 'md'
+  className?: string
+}
+
+function formatLastRefreshTime(value: Date | number | null | undefined): string {
+  if (!value) return 'Never refreshed'
+
+  const timestamp = value instanceof Date ? value.getTime() : value
+  const now = Date.now()
+  const diff = now - timestamp
+
+  if (diff < 60000) {
+    return 'Just now'
+  } else if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000)
+    return `${minutes}m ago`
+  } else if (diff < 86400000) {
+    const hours = Math.floor(diff / 3600000)
+    return `${hours}h ago`
+  } else {
+    const days = Math.floor(diff / 86400000)
+    return `${days}d ago`
+  }
+}
+
+export function RefreshButton({
+  isRefreshing,
+  isFailed = false,
+  consecutiveFailures = 0,
+  lastRefresh,
+  onRefresh,
+  disabled = false,
+  size = 'md',
+  className = '',
+}: RefreshButtonProps) {
+  // Track visual spinning state separately to ensure minimum spin duration
+  const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
+  const spinStartRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (isRefreshing) {
+      // Start spinning
+      setIsVisuallySpinning(true)
+      spinStartRef.current = Date.now()
+    } else if (spinStartRef.current !== null) {
+      // Refresh ended - ensure minimum spin duration
+      const elapsed = Date.now() - spinStartRef.current
+      const remaining = Math.max(0, MIN_SPIN_DURATION - elapsed)
+
+      if (remaining > 0) {
+        const timeout = setTimeout(() => {
+          setIsVisuallySpinning(false)
+          spinStartRef.current = null
+        }, remaining)
+        return () => clearTimeout(timeout)
+      } else {
+        setIsVisuallySpinning(false)
+        spinStartRef.current = null
+      }
+    }
+  }, [isRefreshing])
+
+  const sizeClasses = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'
+  const buttonPadding = size === 'sm' ? 'p-0.5' : 'p-1'
+
+  const tooltipText = isFailed
+    ? `Failed to refresh (${consecutiveFailures} failures). Last success: ${formatLastRefreshTime(lastRefresh)}`
+    : `Last refresh: ${formatLastRefreshTime(lastRefresh)}`
+
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {isFailed && (
+        <div
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-xs"
+          title={`${consecutiveFailures} consecutive refresh failures`}
+        >
+          <AlertTriangle className="w-3 h-3" />
+          <span>Failed</span>
+        </div>
+      )}
+      <button
+        onClick={onRefresh}
+        disabled={disabled || isRefreshing || isVisuallySpinning}
+        className={`${buttonPadding} hover:bg-secondary rounded transition-colors disabled:opacity-50`}
+        title={tooltipText}
+      >
+        <RefreshCw
+          className={`${sizeClasses} ${
+            isVisuallySpinning
+              ? 'text-blue-400 animate-spin-min'
+              : isFailed
+              ? 'text-red-400'
+              : 'text-muted-foreground'
+          }`}
+        />
+      </button>
+    </div>
+  )
+}
+
+// Simple spinning indicator without button (for inline use)
+export function RefreshSpinner({
+  isRefreshing,
+  size = 'md',
+  className = '',
+}: {
+  isRefreshing: boolean
+  size?: 'sm' | 'md'
+  className?: string
+}) {
+  // Track visual spinning state separately to ensure minimum spin duration
+  const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
+  const spinStartRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (isRefreshing) {
+      setIsVisuallySpinning(true)
+      spinStartRef.current = Date.now()
+    } else if (spinStartRef.current !== null) {
+      const elapsed = Date.now() - spinStartRef.current
+      const remaining = Math.max(0, MIN_SPIN_DURATION - elapsed)
+
+      if (remaining > 0) {
+        const timeout = setTimeout(() => {
+          setIsVisuallySpinning(false)
+          spinStartRef.current = null
+        }, remaining)
+        return () => clearTimeout(timeout)
+      } else {
+        setIsVisuallySpinning(false)
+        spinStartRef.current = null
+      }
+    }
+  }, [isRefreshing])
+
+  if (!isVisuallySpinning) return null
+
+  const sizeClasses = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
+
+  return (
+    <RefreshCw className={`${sizeClasses} text-blue-400 animate-spin-min ${className}`} />
   )
 }

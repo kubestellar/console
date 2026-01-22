@@ -1316,10 +1316,13 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
+      setIsRefreshing(true)
       const hasCachedData = podsCache && podsCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
@@ -1348,8 +1351,12 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       setPods(sortedPods.slice(0, limit))
       setError(null)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
       // Keep stale data on error - don't fall back to demo
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent && !podsCache) {
         setError('Failed to fetch pods')
         setPods(getDemoPods())
@@ -1370,7 +1377,17 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { pods, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    pods,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Hook to get ALL pods (no limit) - for components that need to search all pods
@@ -2217,8 +2234,13 @@ export function usePVCs(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
+    if (!silent) {
+      setIsRefreshing(true)
+    }
     // If demo mode is enabled, use demo data
     if (getDemoMode()) {
       const demoPVCs = getDemoPVCs().filter(p =>
@@ -2226,6 +2248,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       )
       setPVCs(demoPVCs)
       setIsLoading(false)
+      setIsRefreshing(false)
       setError(null)
       setLastUpdated(new Date())
       return
@@ -2251,8 +2274,12 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setPVCs(newData)
       setError(null)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
       // Keep stale data on error, fallback to demo data if no cache
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent && !pvcsCache) {
         setError('Failed to fetch PVCs')
         setPVCs(getDemoPVCs().filter(p =>
@@ -2275,7 +2302,17 @@ export function usePVCs(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  return { pvcs, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    pvcs,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch: () => refetch(false),
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // Hook to get PVs (PersistentVolumes)
@@ -2825,12 +2862,26 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
-    if (!silent && issues.length === 0) {
-      setIsLoading(true)
+    if (!silent) {
+      setIsRefreshing(true)
+      // Only show loading spinner if no cached data
+      setIssues(prev => {
+        if (prev.length === 0) {
+          setIsLoading(true)
+        }
+        return prev
+      })
     }
+    let hadNoData = false
+    setIssues(prev => {
+      hadNoData = prev.length === 0
+      return prev
+    })
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
@@ -2838,10 +2889,15 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ issues: SecurityIssue[] }>(`/api/mcp/security-issues?${params}`)
       setIssues(data.issues || [])
       setError(null)
-      setLastUpdated(new Date())
+      const now = new Date()
+      setLastUpdated(now)
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
       // Only set demo data if we don't have existing data and not silent
-      if (!silent && issues.length === 0) {
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
+      if (!silent && hadNoData) {
         setError('Failed to fetch security issues')
         setIssues(getDemoSecurityIssues())
       }
@@ -2851,13 +2907,23 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       }
       setIsRefreshing(false)
     }
-  }, [cluster, namespace, issues.length])
+  }, [cluster, namespace])
 
   useEffect(() => {
     refetch()
   }, [cluster, namespace]) // Only refetch on parameter changes, not on refetch function change
 
-  return { issues, isLoading, isRefreshing, lastUpdated, error, refetch }
+  return {
+    issues,
+    isLoading,
+    isRefreshing,
+    lastUpdated,
+    error,
+    refetch,
+    consecutiveFailures,
+    isFailed: consecutiveFailures >= 3,
+    lastRefresh,
+  }
 }
 
 // GitOps drift types
@@ -2877,13 +2943,21 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   const [drifts, setDrifts] = useState<GitOpsDrift[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      setIsLoading(true)
+      setIsRefreshing(true)
+      // Only show loading spinner if no cached data
+      setDrifts(prev => {
+        if (prev.length === 0) {
+          setIsLoading(true)
+        }
+        return prev
+      })
     }
     try {
       const params = new URLSearchParams()
@@ -2892,8 +2966,12 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ drifts: GitOpsDrift[] }>(`/api/gitops/drifts?${params}`)
       setDrifts(data.drifts || [])
       setError(null)
-      setLastUpdated(new Date())
+      const now = new Date()
+      setConsecutiveFailures(0)
+      setLastRefresh(now)
     } catch (err) {
+      setConsecutiveFailures(prev => prev + 1)
+      setLastRefresh(new Date())
       if (!silent) {
         setError('Failed to fetch GitOps drifts')
         setDrifts(getDemoGitOpsDrifts())
@@ -2913,7 +2991,16 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { drifts, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
+  return {
+    drifts,
+    isLoading,
+    isRefreshing,
+    error,
+    refetch: () => refetch(false),
+    isFailed: consecutiveFailures >= 3,
+    consecutiveFailures,
+    lastRefresh,
+  }
 }
 
 function getDemoGitOpsDrifts(): GitOpsDrift[] {
@@ -3335,6 +3422,7 @@ export interface OperatorSubscription {
 export function useOperators(cluster?: string) {
   const [operators, setOperators] = useState<Operator[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
@@ -3343,7 +3431,10 @@ export function useOperators(cluster?: string) {
       return
     }
 
-    setIsLoading(true)
+    setIsRefreshing(true)
+    if (operators.length === 0) {
+      setIsLoading(true)
+    }
     try {
       // Try to fetch from API - will fall back to demo data if not available
       const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(cluster)}`)
@@ -3355,20 +3446,22 @@ export function useOperators(cluster?: string) {
       setOperators(getDemoOperators(cluster))
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }, [cluster])
+  }, [cluster, operators.length])
 
   useEffect(() => {
     refetch()
   }, [refetch])
 
-  return { operators, isLoading, error, refetch }
+  return { operators, isLoading, isRefreshing, error, refetch }
 }
 
 // Hook to get operator subscriptions for a cluster
 export function useOperatorSubscriptions(cluster?: string) {
   const [subscriptions, setSubscriptions] = useState<OperatorSubscription[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
@@ -3377,7 +3470,10 @@ export function useOperatorSubscriptions(cluster?: string) {
       return
     }
 
-    setIsLoading(true)
+    setIsRefreshing(true)
+    if (subscriptions.length === 0) {
+      setIsLoading(true)
+    }
     try {
       const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(`/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`)
       setSubscriptions(data.subscriptions || [])
@@ -3387,14 +3483,15 @@ export function useOperatorSubscriptions(cluster?: string) {
       setSubscriptions(getDemoOperatorSubscriptions(cluster))
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
-  }, [cluster])
+  }, [cluster, subscriptions.length])
 
   useEffect(() => {
     refetch()
   }, [refetch])
 
-  return { subscriptions, isLoading, error, refetch }
+  return { subscriptions, isLoading, isRefreshing, error, refetch }
 }
 
 function getDemoOperators(cluster: string): Operator[] {
@@ -4215,13 +4312,15 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       return
     }
 
-    // Show refreshing if we have cached data, loading if not
-    const hasCachedData = history.length > 0 || (cachedEntry?.data?.length || 0) > 0
-    if (hasCachedData) {
-      setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
-    }
+    // Always set isRefreshing to show animation on manual refresh
+    setIsRefreshing(true)
+    // Also set loading if no cached data (use functional update to check)
+    setHistory(prev => {
+      if (prev.length === 0 && (!cachedEntry?.data?.length)) {
+        setIsLoading(true)
+      }
+      return prev
+    })
 
     try {
       const params = new URLSearchParams()
@@ -4260,7 +4359,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [cluster, release, namespace, cachedEntry, history.length])
+  }, [cluster, release, namespace, cachedEntry])
 
   useEffect(() => {
     // Use cached data if available
@@ -4311,13 +4410,15 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       return
     }
 
-    // Show refreshing if we have cached data, loading if not
-    const hasCachedData = values !== null || cachedEntry?.values !== null
-    if (hasCachedData) {
-      setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
-    }
+    // Always set isRefreshing to show animation on manual refresh
+    setIsRefreshing(true)
+    // Also set loading if no cached data (use functional update to check)
+    setValues(prev => {
+      if (prev === null && cachedEntry?.values === null) {
+        setIsLoading(true)
+      }
+      return prev
+    })
 
     try {
       const params = new URLSearchParams()
@@ -4357,7 +4458,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [cluster, release, namespace, cachedEntry, values])
+  }, [cluster, release, namespace, cachedEntry])
 
   useEffect(() => {
     // Use cached data if available

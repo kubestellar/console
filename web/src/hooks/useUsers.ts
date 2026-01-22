@@ -19,10 +19,18 @@ import type {
 export function useConsoleUsers() {
   const [users, setUsers] = useState<ConsoleUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
-    setIsLoading(true)
+    // Only show loading spinner if no cached data
+    setIsRefreshing(true)
+    setUsers(prev => {
+      if (prev.length === 0) {
+        setIsLoading(true)
+      }
+      return prev
+    })
     setError(null)
     try {
       const { data } = await api.get<ConsoleUser[]>('/api/users')
@@ -32,6 +40,7 @@ export function useConsoleUsers() {
       console.error('Failed to load users:', err)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -66,6 +75,7 @@ export function useConsoleUsers() {
   return {
     users,
     isLoading,
+    isRefreshing,
     error,
     refetch: fetchUsers,
     updateUserRole,
@@ -79,10 +89,18 @@ export function useConsoleUsers() {
 export function useUserManagementSummary() {
   const [summary, setSummary] = useState<UserManagementSummary | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchSummary = useCallback(async () => {
-    setIsLoading(true)
+    // Only show loading spinner if no cached data
+    setIsRefreshing(true)
+    setSummary(prev => {
+      if (prev === null) {
+        setIsLoading(true)
+      }
+      return prev
+    })
     setError(null)
     try {
       const { data } = await api.get<UserManagementSummary>('/api/users/summary')
@@ -92,6 +110,7 @@ export function useUserManagementSummary() {
       console.error('Failed to load user summary:', err)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -99,7 +118,7 @@ export function useUserManagementSummary() {
     fetchSummary()
   }, [fetchSummary])
 
-  return { summary, isLoading, error, refetch: fetchSummary }
+  return { summary, isLoading, isRefreshing, error, refetch: fetchSummary }
 }
 
 /**
