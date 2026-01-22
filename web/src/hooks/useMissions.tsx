@@ -239,7 +239,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           clearTimeout(timeout)
           console.log('[Missions] Connection closed')
           wsRef.current = null
-          setAgentsLoading(true) // Reset loading state on disconnect
+          setAgentsLoading(false) // Stop loading spinner on disconnect
+          setAgents([]) // Clear agents so "Configure AI" button shows
 
           // Fail any pending missions that were waiting for a response
           if (pendingRequests.current.size > 0) {
