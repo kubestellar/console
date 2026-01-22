@@ -278,7 +278,7 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
             )}>
               {msg.role === 'assistant' || msg.role === 'system' ? (
                 <div className={cn(
-                  "text-sm prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-pre:bg-black/30 prose-pre:text-xs prose-code:text-purple-300 prose-code:bg-black/20 prose-code:px-1 prose-code:rounded prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
+                  "text-sm prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2 prose-pre:bg-black/30 prose-pre:text-xs prose-code:text-purple-300 prose-code:bg-black/20 prose-code:px-1 prose-code:rounded prose-a:text-blue-400 prose-a:underline hover:prose-a:text-blue-300",
                   msg.role === 'system' ? 'text-yellow-200' : 'text-foreground'
                 )}>
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
