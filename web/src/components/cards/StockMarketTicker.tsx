@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { 
   TrendingUp, TrendingDown, Clock, BarChart3, 
   ChevronDown, ChevronRight, Search as SearchIcon,
-  Star, X, Loader2, GripVertical
+  Star, X, Loader2
 } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -360,19 +360,55 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
 function StockRow({ 
   stock, 
   expanded, 
-  onToggle 
+  onToggle,
+  onToggleFavorite,
+  onRemove,
+  isFavorite,
+  canRemove
 }: { 
   stock: StockData
   expanded: boolean
   onToggle: () => void
+  onToggleFavorite: () => void
+  onRemove: () => void
+  isFavorite: boolean
+  canRemove: boolean
 }) {
   const isPositive = stock.change >= 0
 
   return (
-    <div className="border-b border-border/30 last:border-0">
+    <div className="border-b border-border/30 last:border-0 relative">
+      {/* Action buttons - Left side */}
+      <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFavorite()
+          }}
+          className="p-1 rounded hover:bg-accent transition-colors"
+          title={isFavorite ? 'Unfavorite' : 'Favorite'}
+        >
+          <Star 
+            className={`w-3 h-3 ${isFavorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
+          />
+        </button>
+        {canRemove && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+            title="Remove from list"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+
       {/* Main row */}
       <div 
-        className="flex items-center gap-3 p-3 pl-10 pr-20 hover:bg-accent/50 cursor-pointer transition-colors"
+        className="flex items-center gap-3 p-3 pl-16 pr-4 hover:bg-accent/50 cursor-pointer transition-colors"
         onClick={onToggle}
       >
         {/* Symbol and name */}
@@ -708,6 +744,12 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
               placeholder="Search stocks by symbol or name..."
               value={stockSearchInput}
               onChange={(e) => setStockSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && stockSearchResults.length > 0) {
+                  e.preventDefault()
+                  addStock(stockSearchResults[0])
+                }
+              }}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
@@ -776,50 +818,20 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       ) : (
         <div className="flex-1 overflow-y-auto border border-border/30 rounded-lg">
           {stocks.map(stock => (
-            <div key={stock.symbol} className="relative">
-              {/* Drag handle (visual indicator - drag-and-drop functionality requires additional implementation) */}
-              <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
-                <button
-                  className="p-1 text-muted-foreground hover:text-foreground cursor-move transition-colors"
-                  title="Drag to reorder (use sort controls for now)"
-                  disabled
-                >
-                  <GripVertical className="w-4 h-4 opacity-50" />
-                </button>
-              </div>
-              <StockRow
-                stock={stock}
-                expanded={expandedStocks.has(stock.symbol)}
-                onToggle={() => toggleExpanded(stock.symbol)}
-              />
-              {/* Favorite and remove buttons */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1 bg-card/90 backdrop-blur-sm p-1 rounded">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    toggleFavorite(stock.symbol)
-                  }}
-                  className="p-1 rounded hover:bg-accent transition-colors"
-                  title={savedStocks.find(s => s.symbol === stock.symbol)?.favorite ? 'Unfavorite' : 'Favorite'}
-                >
-                  <Star 
-                    className={`w-3 h-3 ${savedStocks.find(s => s.symbol === stock.symbol)?.favorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
-                  />
-                </button>
-                {activeSymbols.length > 1 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeStock(stock.symbol)
-                    }}
-                    className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-                    title="Remove from list"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            </div>
+            <StockRow
+              key={stock.symbol}
+              stock={stock}
+              expanded={expandedStocks.has(stock.symbol)}
+              onToggle={() => toggleExpanded(stock.symbol)}
+              onToggleFavorite={() => toggleFavorite(stock.symbol)}
+              onRemove={() => {
+                removeStock(stock.symbol)
+                // Trigger immediate refresh to update the display
+                setTimeout(() => handleRefresh(), 100)
+              }}
+              isFavorite={savedStocks.find(s => s.symbol === stock.symbol)?.favorite || false}
+              canRemove={activeSymbols.length > 1}
+            />
           ))}
         </div>
       )}
