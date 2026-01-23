@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Cloud, CloudRain, CloudSnow, Sun, Wind, Droplets, Gauge, Eye, MapPin, Calendar, Search as SearchIcon, Settings } from 'lucide-react'
+import { Cloud, CloudRain, CloudSnow, Sun, Wind, Droplets, Gauge, Eye, MapPin, Calendar, Search as SearchIcon, Settings, Star, X, ExternalLink } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -35,6 +35,13 @@ interface WeatherConfig {
   zipcode?: string
   units?: 'F' | 'C'
   forecastLength?: 2 | 7 | 14
+}
+
+interface SavedLocation {
+  zipcode: string
+  cityName: string
+  temperature: number
+  condition: keyof typeof WEATHER_CONDITIONS
 }
 
 type SortByOption = 'date' | 'temperature' | 'precipitation'
@@ -193,10 +200,49 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const [showConfig, setShowConfig] = useState(false)
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
+    // Load saved locations from localStorage
+    const saved = localStorage.getItem('weather-saved-locations')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [showSavedLocations, setShowSavedLocations] = useState(false)
 
   // Generate forecast data
   const [forecast, setForecast] = useState<ForecastDay[]>(() => generateMockForecast(forecastLength, units, zipcode))
   const [currentWeather, setCurrentWeather] = useState(() => getCurrentWeather(units, zipcode))
+
+  // Save locations to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('weather-saved-locations', JSON.stringify(savedLocations))
+  }, [savedLocations])
+
+  // Save current location
+  const saveCurrentLocation = useCallback(() => {
+    const newLocation: SavedLocation = {
+      zipcode,
+      cityName: getCityName(zipcode),
+      temperature: currentWeather.temperature,
+      condition: currentWeather.condition,
+    }
+    
+    // Don't save if already saved
+    if (savedLocations.some(loc => loc.zipcode === zipcode)) {
+      return
+    }
+    
+    setSavedLocations(prev => [...prev, newLocation])
+  }, [zipcode, currentWeather, savedLocations])
+
+  // Remove a saved location
+  const removeSavedLocation = useCallback((zipcodeToRemove: string) => {
+    setSavedLocations(prev => prev.filter(loc => loc.zipcode !== zipcodeToRemove))
+  }, [])
+
+  // Load a saved location
+  const loadSavedLocation = useCallback((savedZipcode: string) => {
+    setZipcode(savedZipcode)
+    setShowSavedLocations(false)
+  }, [])
 
   // Refresh weather data
   const refreshWeather = useCallback(() => {
@@ -274,6 +320,15 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           >
             <Settings className="w-3 h-3 text-muted-foreground" />
           </button>
+          <button
+            onClick={saveCurrentLocation}
+            className={`p-1 rounded hover:bg-secondary/50 transition-colors ${
+              savedLocations.some(loc => loc.zipcode === zipcode) ? 'text-yellow-400' : 'text-muted-foreground'
+            }`}
+            title={savedLocations.some(loc => loc.zipcode === zipcode) ? 'Location saved' : 'Save this location'}
+          >
+            <Star className="w-3 h-3" fill={savedLocations.some(loc => loc.zipcode === zipcode) ? 'currentColor' : 'none'} />
+          </button>
         </div>
         <RefreshButton
           isRefreshing={isRefreshing}
@@ -320,6 +375,61 @@ export function Weather({ config }: { config?: WeatherConfig }) {
               </select>
             </div>
           </div>
+          
+          {/* Saved Locations */}
+          {savedLocations.length > 0 && (
+            <div className="pt-2 border-t border-border/30">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-muted-foreground">Saved Locations</label>
+                <button
+                  onClick={() => setShowSavedLocations(!showSavedLocations)}
+                  className="text-xs text-blue-400 hover:text-blue-300"
+                >
+                  {showSavedLocations ? 'Hide' : 'Show'} ({savedLocations.length})
+                </button>
+              </div>
+              {showSavedLocations && (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {savedLocations.map((location) => {
+                    const condition = WEATHER_CONDITIONS[location.condition]
+                    const Icon = condition.icon
+                    const colorClass = {
+                      'sunny': 'text-yellow-400',
+                      'cloudy': 'text-gray-400',
+                      'rainy': 'text-blue-400',
+                      'snowy': 'text-blue-200',
+                      'windy': 'text-cyan-400',
+                    }[location.condition] || 'text-gray-400'
+                    
+                    return (
+                      <div
+                        key={location.zipcode}
+                        className="flex items-center justify-between p-2 rounded bg-secondary/50 hover:bg-secondary transition-colors group"
+                      >
+                        <button
+                          onClick={() => loadSavedLocation(location.zipcode)}
+                          className="flex items-center gap-2 flex-1 text-left"
+                        >
+                          <Icon className={`w-4 h-4 ${colorClass}`} />
+                          <div className="flex-1">
+                            <div className="text-xs font-medium text-foreground">{location.cityName}</div>
+                            <div className="text-xs text-muted-foreground">{location.temperature}°{units}</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => removeSavedLocation(location.zipcode)}
+                          className="p-1 rounded hover:bg-destructive/20 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Remove location"
+                        >
+                          <X className="w-3 h-3 text-destructive" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -401,10 +511,21 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                 key={day.date}
                 className="p-3 rounded-lg border border-border/30 bg-secondary/30 hover:bg-secondary/50 transition-all"
               >
-                <div className="text-center space-y-2">
+                 <div className="text-center space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{day.dayOfWeek}</span>
-                    <Calendar className="w-3 h-3" />
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      <a
+                        href={`https://www.open-meteo.com/?date=${day.date}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-blue-400 transition-colors"
+                        title="View detailed forecast"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                   </div>
                   
                   <div className="flex justify-center">
@@ -451,8 +572,21 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       )}
 
       {/* Footer */}
-      <div className="mt-3 pt-2 border-t border-border/50 text-xs text-muted-foreground text-center">
-        Showing {paginatedForecast.length} of {totalItems} days • Last updated {lastRefresh.toLocaleTimeString()}
+      <div className="mt-3 pt-2 border-t border-border/50 text-xs text-muted-foreground">
+        <div className="text-center mb-1">
+          Showing {paginatedForecast.length} of {totalItems} days • Last updated {lastRefresh.toLocaleTimeString()}
+        </div>
+        <div className="text-center">
+          <a
+            href="https://open-meteo.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 hover:text-blue-400 transition-colors"
+          >
+            Weather data from Open-Meteo
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       </div>
     </div>
   )
