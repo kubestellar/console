@@ -21,6 +21,22 @@ export type DrillDownViewType =
   | 'yaml'
   | 'resources'
   | 'custom'
+  // Phase 2: GitOps and operational views
+  | 'helm'
+  | 'argoapp'
+  | 'kustomization'
+  | 'drift'
+  // Phase 2: Policy and compliance views
+  | 'policy'
+  | 'crd'
+  // Phase 2: Alerting and monitoring views
+  | 'alert'
+  | 'alertrule'
+  // Phase 2: Cost and RBAC views
+  | 'cost'
+  | 'rbac'
+  // Phase 2: Operator views
+  | 'operator'
 
 export interface DrillDownView {
   type: DrillDownViewType
@@ -169,6 +185,33 @@ function getViewKey(view: DrillDownView): string {
       return `logs:${data.cluster}:${data.namespace}:${data.pod}:${data.container || ''}`
     case 'events':
       return `events:${data.cluster}:${data.namespace || ''}:${data.objectName || ''}`
+    // Phase 2: GitOps and operational views
+    case 'helm':
+      return `helm:${data.cluster}:${data.namespace}:${data.release}`
+    case 'argoapp':
+      return `argoapp:${data.cluster}:${data.namespace}:${data.app}`
+    case 'kustomization':
+      return `kustomization:${data.cluster}:${data.namespace}:${data.name}`
+    case 'drift':
+      return `drift:${data.cluster}`
+    // Phase 2: Policy and compliance views
+    case 'policy':
+      return `policy:${data.cluster}:${data.namespace || ''}:${data.policy}`
+    case 'crd':
+      return `crd:${data.cluster}:${data.crd}`
+    // Phase 2: Alerting and monitoring views
+    case 'alert':
+      return `alert:${data.cluster}:${data.namespace || ''}:${data.alert}`
+    case 'alertrule':
+      return `alertrule:${data.cluster}:${data.namespace}:${data.ruleName}`
+    // Phase 2: Cost and RBAC views
+    case 'cost':
+      return `cost:${data.cluster}`
+    case 'rbac':
+      return `rbac:${data.cluster}:${data.namespace || ''}:${data.subject}`
+    // Phase 2: Operator views
+    case 'operator':
+      return `operator:${data.cluster}:${data.namespace}:${data.operator}`
     default:
       return `${type}:${JSON.stringify(data)}`
   }
@@ -360,6 +403,110 @@ export function useDrillDownActions() {
     })
   }, [openOrPush])
 
+  // Phase 2: GitOps and operational drill actions
+  const drillToHelm = useCallback((cluster: string, namespace: string, release: string, helmData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'helm',
+      title: release,
+      subtitle: `Helm Release in ${namespace}`,
+      data: { cluster, namespace, release, ...helmData },
+    })
+  }, [openOrPush])
+
+  const drillToArgoApp = useCallback((cluster: string, namespace: string, app: string, argoData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'argoapp',
+      title: app,
+      subtitle: `ArgoCD Application`,
+      data: { cluster, namespace, app, ...argoData },
+    })
+  }, [openOrPush])
+
+  const drillToKustomization = useCallback((cluster: string, namespace: string, name: string, kustomizeData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'kustomization',
+      title: name,
+      subtitle: `Kustomization in ${namespace}`,
+      data: { cluster, namespace, name, ...kustomizeData },
+    })
+  }, [openOrPush])
+
+  const drillToDrift = useCallback((cluster: string, driftData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'drift',
+      title: 'Configuration Drift',
+      subtitle: cluster.split('/').pop() || cluster,
+      data: { cluster, ...driftData },
+    })
+  }, [openOrPush])
+
+  // Phase 2: Policy and compliance drill actions
+  const drillToPolicy = useCallback((cluster: string, namespace: string | undefined, policy: string, policyData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'policy',
+      title: policy,
+      subtitle: namespace ? `Policy in ${namespace}` : 'Cluster Policy',
+      data: { cluster, namespace, policy, ...policyData },
+    })
+  }, [openOrPush])
+
+  const drillToCRD = useCallback((cluster: string, crd: string, crdData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'crd',
+      title: crd,
+      subtitle: 'Custom Resource Definition',
+      data: { cluster, crd, ...crdData },
+    })
+  }, [openOrPush])
+
+  // Phase 2: Alerting and monitoring drill actions
+  const drillToAlert = useCallback((cluster: string, namespace: string | undefined, alert: string, alertData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'alert',
+      title: alert,
+      subtitle: namespace ? `Alert in ${namespace}` : 'Cluster Alert',
+      data: { cluster, namespace, alert, ...alertData },
+    })
+  }, [openOrPush])
+
+  const drillToAlertRule = useCallback((cluster: string, namespace: string, ruleName: string, ruleData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'alertrule',
+      title: ruleName,
+      subtitle: `Alert Rule in ${namespace}`,
+      data: { cluster, namespace, ruleName, ...ruleData },
+    })
+  }, [openOrPush])
+
+  // Phase 2: Cost and RBAC drill actions
+  const drillToCost = useCallback((cluster: string, costData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'cost',
+      title: 'Cost Analysis',
+      subtitle: cluster.split('/').pop() || cluster,
+      data: { cluster, ...costData },
+    })
+  }, [openOrPush])
+
+  const drillToRBAC = useCallback((cluster: string, namespace: string | undefined, subject: string, rbacData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'rbac',
+      title: subject,
+      subtitle: namespace ? `RBAC in ${namespace}` : 'Cluster RBAC',
+      data: { cluster, namespace, subject, ...rbacData },
+    })
+  }, [openOrPush])
+
+  // Phase 2: Operator drill actions
+  const drillToOperator = useCallback((cluster: string, namespace: string, operator: string, operatorData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'operator',
+      title: operator,
+      subtitle: `Operator in ${namespace}`,
+      data: { cluster, namespace, operator, ...operatorData },
+    })
+  }, [openOrPush])
+
   return {
     drillToCluster,
     drillToNamespace,
@@ -379,5 +526,17 @@ export function useDrillDownActions() {
     drillToJob,
     drillToHPA,
     drillToService,
+    // Phase 2 actions
+    drillToHelm,
+    drillToArgoApp,
+    drillToKustomization,
+    drillToDrift,
+    drillToPolicy,
+    drillToCRD,
+    drillToAlert,
+    drillToAlertRule,
+    drillToCost,
+    drillToRBAC,
+    drillToOperator,
   }
 }

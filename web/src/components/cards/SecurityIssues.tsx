@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import { Shield, AlertTriangle, User, Network, Server, ChevronRight, Search } from 'lucide-react'
-import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Shield, AlertTriangle, User, Network, Server, ChevronRight, Search, Filter, ChevronDown } from 'lucide-react'
+import { useSecurityIssues, SecurityIssue, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { PaginatedList } from '../ui/PaginatedList'
@@ -46,12 +46,43 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const cluster = config?.cluster as string | undefined
   const namespace = config?.namespace as string | undefined
   const { issues: rawIssues, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useSecurityIssues(cluster, namespace)
-  const { filterItems } = useGlobalFilters()
+  const { filterItems, selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { clusters } = useClusters()
   const { drillToPod } = useDrillDownActions()
   const [sortBy, setSortBy] = useState<SortByOption>('severity')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [localSearch, setLocalSearch] = useState('')
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Get available clusters for local filter (respects global filter)
+  const availableClustersForFilter = useMemo(() => {
+    const reachable = clusters.filter(c => c.reachable !== false)
+    if (isAllClustersSelected) return reachable
+    return reachable.filter(c => selectedClusters.includes(c.name))
+  }, [clusters, selectedClusters, isAllClustersSelected])
+
+  const toggleClusterFilter = (clusterName: string) => {
+    setLocalClusterFilter(prev => {
+      if (prev.includes(clusterName)) {
+        return prev.filter(c => c !== clusterName)
+      }
+      return [...prev, clusterName]
+    })
+  }
 
   const handleIssueClick = (issue: SecurityIssue) => {
     drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
@@ -65,6 +96,11 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const issues = useMemo(() => {
     // Apply global filters (cluster + severity)
     let filtered = filterItems(rawIssues)
+
+    // Apply local cluster filter (on top of global)
+    if (localClusterFilter.length > 0) {
+      filtered = filtered.filter(issue => issue.cluster && localClusterFilter.includes(issue.cluster))
+    }
 
     // Apply local search
     if (localSearch.trim()) {
@@ -87,7 +123,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       return sortDirection === 'asc' ? comparison : -comparison
     })
     return sorted
-  }, [rawIssues, sortBy, sortDirection, filterItems, localSearch])
+  }, [rawIssues, sortBy, sortDirection, filterItems, localSearch, localClusterFilter])
 
   const highCount = rawIssues.filter(i => i.severity === 'high').length
   const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
@@ -151,7 +187,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -166,16 +202,57 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
               {mediumCount} med
             </span>
           )}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClustersForFilter.length}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            isFailed={isFailed}
-            consecutiveFailures={consecutiveFailures}
-            lastRefresh={lastRefresh}
-            onRefresh={refetch}
-            size="sm"
-          />
+          {/* Cluster Filter */}
+          {availableClustersForFilter.length > 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={() => setLocalClusterFilter([])}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClustersForFilter.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -184,6 +261,14 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
             onSortChange={setSortBy}
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
           />
         </div>
       </div>
