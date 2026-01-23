@@ -45,16 +45,49 @@ const SORT_OPTIONS = [
   { value: 'precipitation' as const, label: 'Precipitation' },
 ]
 
-// Generate mock weather data
-function generateMockForecast(days: number, units: 'F' | 'C'): ForecastDay[] {
+// Simple hash function to seed random data based on zipcode
+function hashZipcode(zipcode: string): number {
+  let hash = 0
+  for (let i = 0; i < zipcode.length; i++) {
+    hash = ((hash << 5) - hash) + zipcode.charCodeAt(i)
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return Math.abs(hash)
+}
+
+// Seeded random number generator
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000
+  return x - Math.floor(x)
+}
+
+// Get city name for zipcode (mock mapping - in production use real API)
+function getCityName(zipcode: string): string {
+  const cityMap: Record<string, string> = {
+    '10001': 'New York, NY',
+    '10512': 'Carmel, NY',
+    '90210': 'Beverly Hills, CA',
+    '60601': 'Chicago, IL',
+    '33101': 'Miami, FL',
+    '02101': 'Boston, MA',
+    '98101': 'Seattle, WA',
+    '94102': 'San Francisco, CA',
+  }
+  return cityMap[zipcode] || `Area ${zipcode}`
+}
+
+// Generate mock weather data with seeded randomness based on zipcode
+function generateMockForecast(days: number, units: 'F' | 'C', zipcode: string): ForecastDay[] {
   const conditions: Array<keyof typeof WEATHER_CONDITIONS> = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy']
   const forecast: ForecastDay[] = []
   const today = new Date()
+  const seed = hashZipcode(zipcode)
 
   for (let i = 0; i < days; i++) {
     const date = new Date(today)
     date.setDate(today.getDate() + i)
-    const condition = conditions[Math.floor(Math.random() * conditions.length)]
+    const conditionIndex = Math.floor(seededRandom(seed + i) * conditions.length)
+    const condition = conditions[conditionIndex]
     
     // Temperature based on condition
     let baseTemp = units === 'F' ? 72 : 22
@@ -66,20 +99,22 @@ function generateMockForecast(days: number, units: 'F' | 'C'): ForecastDay[] {
       date: date.toISOString().split('T')[0],
       dayOfWeek: date.toLocaleDateString('en-US', { weekday: 'short' }),
       condition,
-      tempHigh: baseTemp + Math.floor(Math.random() * 10),
-      tempLow: baseTemp - Math.floor(Math.random() * 15) - 5,
-      precipitation: condition === 'rainy' || condition === 'snowy' ? Math.floor(Math.random() * 80) + 20 : Math.floor(Math.random() * 30),
-      humidity: Math.floor(Math.random() * 40) + 40,
-      windSpeed: condition === 'windy' ? Math.floor(Math.random() * 20) + 15 : Math.floor(Math.random() * 15) + 2,
+      tempHigh: baseTemp + Math.floor(seededRandom(seed + i + 100) * 10),
+      tempLow: baseTemp - Math.floor(seededRandom(seed + i + 200) * 15) - 5,
+      precipitation: condition === 'rainy' || condition === 'snowy' ? Math.floor(seededRandom(seed + i + 300) * 80) + 20 : Math.floor(seededRandom(seed + i + 300) * 30),
+      humidity: Math.floor(seededRandom(seed + i + 400) * 40) + 40,
+      windSpeed: condition === 'windy' ? Math.floor(seededRandom(seed + i + 500) * 20) + 15 : Math.floor(seededRandom(seed + i + 500) * 15) + 2,
     })
   }
 
   return forecast
 }
 
-function getCurrentWeather(units: 'F' | 'C') {
+function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   const conditions: Array<keyof typeof WEATHER_CONDITIONS> = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy']
-  const condition = conditions[Math.floor(Math.random() * conditions.length)]
+  const seed = hashZipcode(zipcode)
+  const conditionIndex = Math.floor(seededRandom(seed) * conditions.length)
+  const condition = conditions[conditionIndex]
   
   let baseTemp = units === 'F' ? 72 : 22
   if (condition === 'snowy') baseTemp = units === 'F' ? 28 : -2
@@ -88,10 +123,10 @@ function getCurrentWeather(units: 'F' | 'C') {
 
   return {
     condition,
-    temperature: baseTemp + Math.floor(Math.random() * 5),
-    humidity: Math.floor(Math.random() * 40) + 40,
-    windSpeed: condition === 'windy' ? Math.floor(Math.random() * 20) + 15 : Math.floor(Math.random() * 15) + 2,
-    uvIndex: condition === 'sunny' ? Math.floor(Math.random() * 5) + 6 : Math.floor(Math.random() * 4) + 1,
+    temperature: baseTemp + Math.floor(seededRandom(seed + 1000) * 5),
+    humidity: Math.floor(seededRandom(seed + 2000) * 40) + 40,
+    windSpeed: condition === 'windy' ? Math.floor(seededRandom(seed + 3000) * 20) + 15 : Math.floor(seededRandom(seed + 3000) * 15) + 2,
+    uvIndex: condition === 'sunny' ? Math.floor(seededRandom(seed + 4000) * 5) + 6 : Math.floor(seededRandom(seed + 4000) * 4) + 1,
   }
 }
 
@@ -160,21 +195,21 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [showConfig, setShowConfig] = useState(false)
 
   // Generate forecast data
-  const [forecast, setForecast] = useState<ForecastDay[]>(() => generateMockForecast(forecastLength, units))
-  const [currentWeather, setCurrentWeather] = useState(() => getCurrentWeather(units))
+  const [forecast, setForecast] = useState<ForecastDay[]>(() => generateMockForecast(forecastLength, units, zipcode))
+  const [currentWeather, setCurrentWeather] = useState(() => getCurrentWeather(units, zipcode))
 
   // Refresh weather data
   const refreshWeather = useCallback(() => {
     setIsRefreshing(true)
     setTimeout(() => {
-      setForecast(generateMockForecast(forecastLength, units))
-      setCurrentWeather(getCurrentWeather(units))
+      setForecast(generateMockForecast(forecastLength, units, zipcode))
+      setCurrentWeather(getCurrentWeather(units, zipcode))
       setLastRefresh(new Date())
       setIsRefreshing(false)
     }, 1000)
-  }, [forecastLength, units])
+  }, [forecastLength, units, zipcode])
 
-  // Auto-refresh on config changes
+  // Auto-refresh on config changes (including zipcode)
   useEffect(() => {
     refreshWeather()
   }, [refreshWeather])
@@ -230,7 +265,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-muted-foreground">
-            Weather for {zipcode}
+            Weather for {getCityName(zipcode)}
           </span>
           <button
             onClick={() => setShowConfig(!showConfig)}
@@ -347,7 +382,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
       {/* Forecast List */}
       <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-3 pb-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pb-2">
           {paginatedForecast.map((day) => {
             const condition = WEATHER_CONDITIONS[day.condition]
             const Icon = condition.icon
@@ -364,7 +399,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             return (
               <div
                 key={day.date}
-                className="flex-shrink-0 w-32 p-3 rounded-lg border border-border/30 bg-secondary/30 hover:bg-secondary/50 transition-all"
+                className="p-3 rounded-lg border border-border/30 bg-secondary/30 hover:bg-secondary/50 transition-all"
               >
                 <div className="text-center space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
