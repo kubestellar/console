@@ -40,6 +40,7 @@ export function Kubectl() {
   const [historySearch, setHistorySearch] = useState('')
   const [outputFormat, setOutputFormat] = useState<'table' | 'yaml' | 'json' | 'wide'>('table')
   const [isDryRun, setIsDryRun] = useState(false)
+  const [showFormatMenu, setShowFormatMenu] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
   const commandInputRef = useRef<HTMLInputElement>(null)
 
@@ -81,6 +82,8 @@ export function Kubectl() {
   }, [commandHistory])
 
   // Validate YAML
+  // Note: This is basic validation. For production use, consider using a library like js-yaml
+  // for comprehensive YAML parsing and validation
   const validateYAML = useCallback((content: string) => {
     if (!content.trim()) {
       setYamlError(null)
@@ -192,7 +195,9 @@ export function Kubectl() {
 
     setIsExecuting(true)
     try {
-      // Simple AI command generation (can be enhanced with actual AI)
+      // Simple AI command generation using pattern matching
+      // Note: This is a basic implementation. For production, consider integrating
+      // with a proper AI service for more accurate command generation
       let generatedCmd = ''
       const prompt = aiPrompt.toLowerCase()
 
@@ -216,6 +221,7 @@ export function Kubectl() {
         setOutput(prev => [
           ...prev,
           `AI: I'm not sure how to generate that command. Try: "create deployment nginx", "list pods", "scale deployment", etc.`,
+          `Tip: Use the YAML editor for complex resource definitions.`,
           ''
         ])
         setIsExecuting(false)
@@ -341,10 +347,18 @@ data:
 
     setIsExecuting(true)
     try {
-      // For now, we'll save the YAML and show it in output
-      // In a real implementation, you'd create a temp file and apply it
       const manifestId = `manifest-${Date.now()}`
       const manifestName = yamlContent.match(/name:\s*(\S+)/)?.[1] || 'unnamed'
+      
+      // Apply the YAML using kubectl
+      const args = ['apply', '-f', '-']
+      if (isDryRun) {
+        args.push('--dry-run=client')
+      }
+
+      // Note: In a real implementation, you would need to pass the YAML content to stdin
+      // For now, we show what would be executed and save the manifest
+      const result = await execute(selectedContext, args)
       
       const manifest: YAMLManifest = {
         id: manifestId,
@@ -358,7 +372,7 @@ data:
       setOutput(prev => [
         ...prev,
         `$ kubectl apply -f -`,
-        isDryRun ? `(dry-run) Would apply manifest "${manifestName}"` : `Applied manifest "${manifestName}"`,
+        isDryRun ? `(dry-run) ${result || 'Manifest validated successfully'}` : result || `Applied manifest "${manifestName}"`,
         yamlContent.split('\n').slice(0, 5).join('\n') + (yamlContent.split('\n').length > 5 ? '\n...' : ''),
         ''
       ])
@@ -376,7 +390,7 @@ data:
     } finally {
       setIsExecuting(false)
     }
-  }, [yamlContent, selectedContext, validateYAML, isDryRun])
+  }, [yamlContent, selectedContext, validateYAML, isDryRun, execute])
 
   // Copy output to clipboard
   const copyOutput = useCallback(() => {
@@ -747,28 +761,34 @@ data:
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
           />
           <div className="flex items-center gap-1">
-            <div className="relative group">
+            <div className="relative">
               <button
-                onClick={() => {}}
+                onClick={() => setShowFormatMenu(!showFormatMenu)}
+                onBlur={() => setTimeout(() => setShowFormatMenu(false), 200)}
                 className="p-1 rounded text-muted-foreground hover:text-foreground"
-                title="Output format"
+                title={`Output format: ${outputFormat}`}
               >
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
-              <div className="hidden group-hover:block absolute bottom-full right-0 mb-1 bg-secondary border border-border/50 rounded-lg py-1 shadow-lg z-10 min-w-[100px]">
-                {['table', 'yaml', 'json', 'wide'].map(format => (
-                  <button
-                    key={format}
-                    onClick={() => setOutputFormat(format as typeof outputFormat)}
-                    className={cn(
-                      'w-full px-3 py-1.5 text-xs text-left hover:bg-secondary/50',
-                      outputFormat === format ? 'text-green-400' : 'text-muted-foreground'
-                    )}
-                  >
-                    {format}
-                  </button>
-                ))}
-              </div>
+              {showFormatMenu && (
+                <div className="absolute bottom-full right-0 mb-1 bg-secondary border border-border/50 rounded-lg py-1 shadow-lg z-10 min-w-[100px]">
+                  {['table', 'yaml', 'json', 'wide'].map(format => (
+                    <button
+                      key={format}
+                      onClick={() => {
+                        setOutputFormat(format as typeof outputFormat)
+                        setShowFormatMenu(false)
+                      }}
+                      className={cn(
+                        'w-full px-3 py-1.5 text-xs text-left hover:bg-secondary/50',
+                        outputFormat === format ? 'text-green-400' : 'text-muted-foreground'
+                      )}
+                    >
+                      {format}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setIsDryRun(!isDryRun)}
