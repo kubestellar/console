@@ -477,13 +477,14 @@
   animation: spin-min 1s linear infinite;
 }
 
-/* Enhanced Weather Animations - Premium, Dynamic Effects */
+/* Enhanced Weather Animations - High Contrast, Premium Effects */
 
 /* ========== SNOW ANIMATIONS ========== */
 @keyframes snow-fall {
   0% { 
     transform: translateY(-10px) translateX(0) rotate(0deg);
     opacity: 0;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
   }
   10% {
     opacity: 1;
@@ -494,6 +495,7 @@
   100% { 
     transform: translateY(100vh) translateX(50px) rotate(360deg);
     opacity: 0;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
   }
 }
 
@@ -501,16 +503,18 @@
   0% { 
     transform: translateY(-10px) translateX(0) rotate(0deg);
     opacity: 0;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
   }
   10% {
-    opacity: 0.6;
+    opacity: 0.9;
   }
   90% {
-    opacity: 0.6;
+    opacity: 0.9;
   }
   100% { 
     transform: translateY(100vh) translateX(-30px) rotate(180deg);
     opacity: 0;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
   }
 }
 
@@ -526,21 +530,45 @@
   }
 }
 
+/* Snow particle styles with better visibility */
+.weather-snow {
+  animation: snow-fall 8s linear infinite, snow-drift 4s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.9) 50%, rgba(230, 240, 255, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 8px rgba(200, 220, 255, 0.6));
+}
+
+.weather-snow:nth-child(2n) {
+  animation: snow-fall-slow 12s linear infinite, snow-drift 4s ease-in-out infinite 0.5s;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(240, 250, 255, 0.85) 60%, rgba(220, 235, 255, 0.5) 100%);
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 1)) drop-shadow(0 0 10px rgba(180, 210, 255, 0.7));
+}
+
+.weather-snow:nth-child(3n) {
+  animation: snow-fall 10s linear infinite -2s, snow-drift 4s ease-in-out infinite 1s;
+  background: radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(235, 245, 255, 0.9) 55%, rgba(210, 230, 255, 0.6) 100%);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 12px rgba(190, 220, 255, 0.8));
+}
+
 /* ========== RAIN ANIMATIONS ========== */
 @keyframes rain-drop {
   0% { 
     transform: translateY(-10px) scaleY(0.5);
     opacity: 0;
+    filter: drop-shadow(0 0 2px rgba(100, 150, 255, 0.8));
   }
   5% {
-    opacity: 0.9;
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(100, 150, 255, 0.9));
   }
   95% {
-    opacity: 0.9;
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(100, 150, 255, 0.9));
   }
   100% { 
     transform: translateY(100vh) scaleY(1.5);
     opacity: 0;
+    filter: drop-shadow(0 0 2px rgba(100, 150, 255, 0.8));
   }
 }
 
@@ -548,14 +576,17 @@
   0% {
     opacity: 1;
     transform: scale(0.1);
+    filter: drop-shadow(0 0 4px rgba(150, 200, 255, 1));
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.8;
     transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(150, 200, 255, 0.9));
   }
   100% {
     opacity: 0;
     transform: scale(1.5);
+    filter: drop-shadow(0 0 8px rgba(150, 200, 255, 0.8));
   }
 }
 
@@ -564,38 +595,82 @@
     opacity: 0;
   }
   10%, 20% {
-    opacity: 0.8;
+    opacity: 1;
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1)) drop-shadow(0 0 40px rgba(200, 220, 255, 0.9));
   }
+}
+
+/* Rain particle styles with high visibility */
+.weather-rain {
+  animation: rain-drop 0.8s linear infinite;
+  background: linear-gradient(180deg, rgba(150, 200, 255, 0.95) 0%, rgba(100, 150, 255, 0.85) 50%, rgba(80, 130, 255, 0.7) 100%);
+  border-left: 1px solid rgba(180, 220, 255, 0.6);
+  border-right: 1px solid rgba(120, 170, 255, 0.4);
+  filter: drop-shadow(0 0 3px rgba(100, 150, 255, 0.9)) drop-shadow(0 0 6px rgba(150, 200, 255, 0.6));
+}
+
+.weather-rain:nth-child(2n) {
+  animation-duration: 0.6s;
+  animation-delay: 0.2s;
+  background: linear-gradient(180deg, rgba(160, 210, 255, 1) 0%, rgba(110, 160, 255, 0.9) 50%, rgba(90, 140, 255, 0.75) 100%);
+  filter: drop-shadow(0 0 4px rgba(120, 170, 255, 1)) drop-shadow(0 0 8px rgba(160, 210, 255, 0.7));
+}
+
+.weather-rain:nth-child(3n) {
+  animation-duration: 1s;
+  animation-delay: 0.4s;
+  background: linear-gradient(180deg, rgba(140, 190, 255, 0.9) 0%, rgba(90, 140, 255, 0.8) 50%, rgba(70, 120, 255, 0.65) 100%);
+  filter: drop-shadow(0 0 3px rgba(110, 160, 255, 0.85)) drop-shadow(0 0 6px rgba(140, 190, 255, 0.55));
+}
+
+.weather-rain-splash {
+  animation: rain-splash 0.5s ease-out infinite;
+  background: radial-gradient(circle, rgba(180, 220, 255, 0.9) 0%, rgba(130, 180, 255, 0.6) 50%, rgba(100, 150, 255, 0.3) 100%);
+  border: 2px solid rgba(200, 230, 255, 0.7);
+  filter: drop-shadow(0 0 6px rgba(150, 200, 255, 0.9));
+}
+
+.weather-lightning {
+  animation: lightning-flash 8s ease-in-out infinite;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 248, 255, 0.9) 50%, rgba(220, 235, 255, 0.85) 100%);
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1)) drop-shadow(0 0 40px rgba(200, 220, 255, 0.9)) drop-shadow(0 0 60px rgba(180, 210, 255, 0.7));
 }
 
 /* ========== CLOUD ANIMATIONS ========== */
 @keyframes cloud-drift {
   0% { 
     transform: translateX(-20%);
+    filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.6));
   }
   100% { 
     transform: translateX(120%);
+    filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.6));
   }
 }
 
 @keyframes cloud-drift-slow {
   0% { 
     transform: translateX(-15%) translateY(0);
+    filter: drop-shadow(0 3px 10px rgba(255, 255, 255, 0.7));
   }
   50% { 
     transform: translateX(55%) translateY(-5px);
+    filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.8));
   }
   100% { 
     transform: translateX(115%) translateY(0);
+    filter: drop-shadow(0 3px 10px rgba(255, 255, 255, 0.7));
   }
 }
 
 @keyframes cloud-drift-reverse {
   0% { 
     transform: translateX(120%);
+    filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.65));
   }
   100% { 
     transform: translateX(-20%);
+    filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.65));
   }
 }
 
@@ -608,30 +683,58 @@
   }
 }
 
+/* Cloud particle styles with better visibility */
+.weather-cloud {
+  animation: cloud-drift 60s linear infinite;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.95) 0%, rgba(240, 248, 255, 0.85) 40%, rgba(220, 235, 255, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.7)) drop-shadow(0 4px 16px rgba(230, 240, 255, 0.5));
+  opacity: 0.9;
+}
+
+.weather-cloud:nth-child(2n) {
+  animation: cloud-drift-slow 80s ease-in-out infinite, cloud-float 6s ease-in-out infinite;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.9) 0%, rgba(245, 250, 255, 0.8) 45%, rgba(230, 242, 255, 0.55) 100%);
+  filter: drop-shadow(0 3px 10px rgba(255, 255, 255, 0.75)) drop-shadow(0 5px 18px rgba(235, 245, 255, 0.55));
+  opacity: 0.85;
+}
+
+.weather-cloud:nth-child(3n) {
+  animation: cloud-drift-reverse 70s linear infinite, cloud-float 6s ease-in-out infinite 1s;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.92) 0%, rgba(242, 250, 255, 0.82) 42%, rgba(225, 238, 255, 0.58) 100%);
+  filter: drop-shadow(0 2px 9px rgba(255, 255, 255, 0.72)) drop-shadow(0 4px 17px rgba(232, 242, 255, 0.52));
+  opacity: 0.87;
+}
+
 /* ========== SUN ANIMATIONS ========== */
 @keyframes sun-rays {
   0% { 
-    opacity: 0.4;
+    opacity: 0.7;
     transform: rotate(0deg) scale(1);
+    filter: drop-shadow(0 0 15px rgba(255, 220, 100, 0.9)) drop-shadow(0 0 30px rgba(255, 200, 80, 0.7));
   }
   50% { 
-    opacity: 0.8;
+    opacity: 1;
     transform: rotate(180deg) scale(1.15);
+    filter: drop-shadow(0 0 20px rgba(255, 230, 120, 1)) drop-shadow(0 0 40px rgba(255, 210, 90, 0.8));
   }
   100% { 
-    opacity: 0.4;
+    opacity: 0.7;
     transform: rotate(360deg) scale(1);
+    filter: drop-shadow(0 0 15px rgba(255, 220, 100, 0.9)) drop-shadow(0 0 30px rgba(255, 200, 80, 0.7));
   }
 }
 
 @keyframes sun-pulse {
   0%, 100% { 
-    opacity: 0.6;
+    opacity: 0.8;
     transform: scale(1);
+    filter: drop-shadow(0 0 25px rgba(255, 230, 120, 0.9)) drop-shadow(0 0 50px rgba(255, 200, 80, 0.6));
   }
   50% { 
     opacity: 1;
     transform: scale(1.05);
+    filter: drop-shadow(0 0 35px rgba(255, 240, 140, 1)) drop-shadow(0 0 70px rgba(255, 210, 90, 0.7));
   }
 }
 
@@ -639,20 +742,55 @@
   0%, 100% {
     opacity: 0;
     transform: translateX(-50%) scale(0.8);
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.9));
   }
   50% {
-    opacity: 0.3;
+    opacity: 0.7;
     transform: translateX(50%) scale(1.2);
+    filter: drop-shadow(0 0 30px rgba(255, 245, 200, 1)) drop-shadow(0 0 50px rgba(255, 230, 150, 0.8));
   }
 }
 
 @keyframes sun-shimmer {
   0%, 100% {
-    opacity: 0.1;
+    opacity: 0.3;
+    filter: drop-shadow(0 0 10px rgba(255, 245, 200, 0.7));
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.7;
+    filter: drop-shadow(0 0 20px rgba(255, 240, 180, 0.9));
   }
+}
+
+/* Sun particle styles with high visibility */
+.weather-sun {
+  animation: sun-rays 12s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(255, 240, 150, 1) 0%, rgba(255, 220, 100, 0.95) 35%, rgba(255, 200, 80, 0.7) 70%, rgba(255, 180, 60, 0.4) 100%);
+  filter: drop-shadow(0 0 20px rgba(255, 230, 120, 1)) drop-shadow(0 0 40px rgba(255, 200, 80, 0.8)) drop-shadow(0 0 60px rgba(255, 180, 60, 0.5));
+}
+
+.weather-sun-pulse {
+  animation: sun-pulse 4s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(255, 245, 180, 0.95) 0%, rgba(255, 230, 140, 0.85) 40%, rgba(255, 210, 100, 0.65) 80%, rgba(255, 190, 80, 0.3) 100%);
+  filter: drop-shadow(0 0 30px rgba(255, 240, 160, 0.95)) drop-shadow(0 0 60px rgba(255, 210, 100, 0.7));
+}
+
+.weather-sun-flare {
+  animation: lens-flare 8s ease-in-out infinite;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 250, 220, 0.9) 30%,
+    rgba(255, 240, 200, 1) 50%,
+    rgba(255, 250, 220, 0.9) 70%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: drop-shadow(0 0 25px rgba(255, 245, 200, 0.95)) drop-shadow(0 0 50px rgba(255, 230, 150, 0.8));
+}
+
+.weather-sun-shimmer {
+  animation: sun-shimmer 3s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(255, 250, 230, 0.8) 0%, rgba(255, 240, 200, 0.6) 50%, rgba(255, 230, 180, 0.3) 100%);
+  filter: drop-shadow(0 0 15px rgba(255, 245, 210, 0.9));
 }
 
 /* ========== WIND ANIMATIONS ========== */
@@ -660,16 +798,20 @@
   0% { 
     transform: translateX(-100%);
     opacity: 0;
+    filter: drop-shadow(0 0 8px rgba(200, 230, 255, 0.8));
   }
   10% {
-    opacity: 0.5;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 12px rgba(220, 240, 255, 0.9));
   }
   90% {
-    opacity: 0.5;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 12px rgba(220, 240, 255, 0.9));
   }
   100% { 
     transform: translateX(200%);
     opacity: 0;
+    filter: drop-shadow(0 0 8px rgba(200, 230, 255, 0.8));
   }
 }
 
@@ -677,16 +819,20 @@
   0% { 
     transform: translateX(-80%) skewX(-15deg);
     opacity: 0;
+    filter: drop-shadow(0 0 10px rgba(180, 220, 255, 0.85));
   }
   5% {
-    opacity: 0.7;
+    opacity: 1;
+    filter: drop-shadow(0 0 15px rgba(200, 235, 255, 0.95));
   }
   95% {
-    opacity: 0.7;
+    opacity: 1;
+    filter: drop-shadow(0 0 15px rgba(200, 235, 255, 0.95));
   }
   100% { 
     transform: translateX(180%) skewX(-15deg);
     opacity: 0;
+    filter: drop-shadow(0 0 10px rgba(180, 220, 255, 0.85));
   }
 }
 
@@ -694,17 +840,74 @@
   0% { 
     transform: translateX(-10%) translateY(0) rotate(0deg);
     opacity: 0;
+    filter: drop-shadow(0 0 6px rgba(255, 220, 150, 0.8));
   }
   10% {
-    opacity: 0.8;
+    opacity: 0.95;
+    filter: drop-shadow(0 0 8px rgba(255, 230, 170, 0.9));
   }
   90% {
-    opacity: 0.8;
+    opacity: 0.95;
+    filter: drop-shadow(0 0 8px rgba(255, 230, 170, 0.9));
   }
   100% { 
     transform: translateX(110%) translateY(50px) rotate(360deg);
     opacity: 0;
+    filter: drop-shadow(0 0 6px rgba(255, 220, 150, 0.8));
   }
+}
+
+/* Wind particle styles with high visibility */
+.weather-wind {
+  animation: wind-blow 3s ease-in-out infinite;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(220, 240, 255, 0.85) 20%,
+    rgba(200, 230, 255, 0.95) 50%,
+    rgba(220, 240, 255, 0.85) 80%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  border-top: 1px solid rgba(240, 250, 255, 0.6);
+  border-bottom: 1px solid rgba(180, 220, 255, 0.4);
+  filter: drop-shadow(0 0 12px rgba(210, 235, 255, 0.9)) drop-shadow(0 0 24px rgba(180, 220, 255, 0.6));
+}
+
+.weather-wind:nth-child(2n) {
+  animation: wind-gust 2.5s ease-in-out infinite 0.5s;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(230, 245, 255, 0.9) 15%,
+    rgba(210, 235, 255, 1) 50%,
+    rgba(230, 245, 255, 0.9) 85%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: drop-shadow(0 0 15px rgba(220, 240, 255, 0.95)) drop-shadow(0 0 30px rgba(190, 225, 255, 0.7));
+}
+
+.weather-wind:nth-child(3n) {
+  animation: wind-blow 4s ease-in-out infinite 1s;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(225, 242, 255, 0.88) 18%,
+    rgba(205, 232, 255, 0.97) 50%,
+    rgba(225, 242, 255, 0.88) 82%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: drop-shadow(0 0 13px rgba(215, 237, 255, 0.92)) drop-shadow(0 0 26px rgba(185, 222, 255, 0.65));
+}
+
+.weather-leaves {
+  animation: leaves-blow 6s ease-in-out infinite;
+  background: radial-gradient(ellipse, rgba(255, 230, 170, 0.95) 0%, rgba(240, 200, 120, 0.85) 50%, rgba(220, 180, 100, 0.6) 100%);
+  border: 1px solid rgba(255, 240, 190, 0.5);
+  filter: drop-shadow(0 0 8px rgba(255, 225, 160, 0.9)) drop-shadow(0 0 16px rgba(230, 195, 130, 0.6));
+}
+
+.weather-leaves:nth-child(2n) {
+  animation-duration: 8s;
+  animation-delay: 1s;
+  background: radial-gradient(ellipse, rgba(255, 240, 190, 0.9) 0%, rgba(250, 215, 140, 0.8) 50%, rgba(230, 190, 110, 0.55) 100%);
+  filter: drop-shadow(0 0 9px rgba(255, 235, 180, 0.85)) drop-shadow(0 0 18px rgba(240, 205, 140, 0.55));
 }
 
 /* ========== AMBIENT/IDLE ANIMATIONS ========== */
