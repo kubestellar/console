@@ -659,7 +659,7 @@ export function Events() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="pt-16 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">

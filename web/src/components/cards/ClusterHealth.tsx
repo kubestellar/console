@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Server, CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
@@ -90,10 +91,25 @@ export function ClusterHealth() {
   } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { status: agentStatus } = useLocalAgent()
+  const prevAgentStatus = useRef(agentStatus)
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>('unlimited')
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
+
+  // Aggressively refresh when agent reconnects
+  useEffect(() => {
+    const wasDisconnected = prevAgentStatus.current === 'disconnected' || prevAgentStatus.current === 'connecting'
+    const isNowConnected = agentStatus === 'connected'
+
+    if (wasDisconnected && isNowConnected) {
+      console.log('[ClusterHealth] Agent reconnected, triggering immediate refresh')
+      refetch()
+    }
+
+    prevAgentStatus.current = agentStatus
+  }, [agentStatus, refetch])
 
   // Calculate GPU counts per cluster
   const gpuByCluster = useMemo(() => {

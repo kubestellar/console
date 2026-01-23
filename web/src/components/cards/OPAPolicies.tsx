@@ -410,10 +410,10 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   const statusesRef = useRef(statuses)
   statusesRef.current = statuses
 
-  // Filter clusters
+  // Filter clusters - include all clusters (even unhealthy) to show cached data
   const filteredClusters = useMemo(() => {
     let result = clusters.filter(c =>
-      c.healthy !== false && (isAllClustersSelected || selectedClusters.includes(c.name))
+      isAllClustersSelected || selectedClusters.includes(c.name)
     )
     // Apply local search
     if (localSearch.trim()) {
@@ -422,6 +422,11 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
     }
     return result
   }, [clusters, isAllClustersSelected, selectedClusters, localSearch])
+
+  // Track which clusters are currently healthy (for checking and visual indicators)
+  const healthyClusters = useMemo(() => {
+    return new Set(filteredClusters.filter(c => c.healthy !== false).map(c => c.name))
+  }, [filteredClusters])
 
   // Check Gatekeeper on filtered clusters
   const checkAllClusters = useCallback(async () => {
@@ -434,6 +439,20 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
     const newStatuses: Record<string, GatekeeperStatus> = { ...statusesRef.current }
 
     for (const cluster of filteredClusters) {
+      // Skip unhealthy clusters but preserve their cached status
+      if (!healthyClusters.has(cluster.name)) {
+        // Keep existing status if available, otherwise mark as unavailable
+        if (!newStatuses[cluster.name]) {
+          newStatuses[cluster.name] = {
+            cluster: cluster.name,
+            installed: false,
+            loading: false,
+            error: 'Cluster offline',
+          }
+        }
+        continue
+      }
+
       // For vllm-d and platform-eval, we have real OPA - check it
       // For others, show as not installed
       if (cluster.name === 'vllm-d' || cluster.name === 'platform-eval') {
@@ -457,7 +476,7 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
     setStatuses(newStatuses)
     setIsRefreshing(false)
     setHasChecked(true)
-  }, [filteredClusters])
+  }, [filteredClusters, healthyClusters])
 
   useEffect(() => {
     if (!hasChecked && filteredClusters.length > 0) {
@@ -598,22 +617,28 @@ Let's start by discussing what kind of policy I need.`,
           filteredClusters.map(cluster => {
             const status = statuses[cluster.name]
             const isLoading = !hasChecked || status?.loading
+            const isOffline = !healthyClusters.has(cluster.name)
 
             return (
               <button
                 key={cluster.name}
-                onClick={() => status?.installed && handleShowViolations(cluster.name)}
-                disabled={!status?.installed || isLoading}
+                onClick={() => status?.installed && !isOffline && handleShowViolations(cluster.name)}
+                disabled={!status?.installed || isLoading || isOffline}
                 className={`w-full text-left p-2.5 rounded-lg bg-secondary/30 transition-colors ${
-                  status?.installed && !isLoading
+                  status?.installed && !isLoading && !isOffline
                     ? 'hover:bg-secondary/50 cursor-pointer group'
-                    : ''
+                    : isOffline ? 'opacity-60' : ''
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-sm font-medium text-foreground ${status?.installed ? 'group-hover:text-purple-400' : ''}`}>
-                    {cluster.name}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium text-foreground ${status?.installed && !isOffline ? 'group-hover:text-purple-400' : ''}`}>
+                      {cluster.name}
+                    </span>
+                    {isOffline && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">offline</span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1">
                     {isLoading ? (
                       <RefreshCw className="w-3.5 h-3.5 text-muted-foreground animate-spin" />
