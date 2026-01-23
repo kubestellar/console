@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { 
   Box, Container, Database, Server, Cloud, Network, HardDrive, 
-  Cpu, Lock, Shield, Globe, GitBranch, Terminal, Activity,
-  Zap, Play, Pause, RotateCcw, Trophy, Clock, Hash
+  Cpu, Lock, Shield, Globe, GitBranch, Terminal,
+  Play, Pause, RotateCcw, Trophy, Clock, Hash
 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 
@@ -43,7 +43,7 @@ const DIFFICULTY_CONFIG = {
   hard: { rows: 4, cols: 6, pairs: 12 },
 }
 
-export function MatchGame({ config }: CardComponentProps) {
+export function MatchGame(_props: CardComponentProps) {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [cards, setCards] = useState<GameCard[]>([])
   const [flippedCards, setFlippedCards] = useState<string[]>([])
@@ -57,7 +57,7 @@ export function MatchGame({ config }: CardComponentProps) {
     medium: null,
     hard: null,
   })
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // Load high scores from localStorage
