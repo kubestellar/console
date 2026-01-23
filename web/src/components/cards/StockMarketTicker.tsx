@@ -55,10 +55,11 @@ interface StockMarketTickerProps {
   config?: StockMarketTickerConfig
 }
 
-type SortByOption = 'symbol' | 'change' | 'volume' | 'marketCap'
+type SortByOption = 'symbol' | 'price' | 'change' | 'volume' | 'marketCap'
 
 const SORT_OPTIONS = [
-  { value: 'symbol' as const, label: 'Symbol' },
+  { value: 'symbol' as const, label: 'Name' },
+  { value: 'price' as const, label: 'Price' },
   { value: 'change' as const, label: 'Change %' },
   { value: 'volume' as const, label: 'Volume' },
   { value: 'marketCap' as const, label: 'Market Cap' },
@@ -617,6 +618,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       let result = 0
       if (sortBy === 'symbol') {
         result = a.symbol.localeCompare(b.symbol)
+      } else if (sortBy === 'price') {
+        result = a.price - b.price
       } else if (sortBy === 'change') {
         result = a.changePercent - b.changePercent
       } else if (sortBy === 'volume') {
