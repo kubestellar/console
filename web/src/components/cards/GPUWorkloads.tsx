@@ -67,8 +67,6 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     const gpuNodeNames = new Set<string>()
     gpuNodes.forEach(node => {
       gpuNodeNames.add(node.name)
-      // Also add with cluster prefix for matching
-      gpuNodeNames.add(`${node.cluster}/${node.name}`)
     })
 
     let filtered = allPods.filter(pod => {
@@ -97,20 +95,14 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
         }
       }
 
-      // Quaternary check: check for GPU node affinity in pod labels/annotations
+      // Quaternary check: check for Kubernetes standard GPU node affinity labels
       // Pods with affinity to GPU nodes are considered GPU workloads
       if (pod.labels) {
-        for (const [key, value] of Object.entries(pod.labels)) {
-          // Check for node affinity to GPU nodes
-          if (key.includes('node-selector') && value.includes('gpu')) return true
-          if (key.includes('accelerator') && value.includes('gpu')) return true
-        }
-      }
-      if (pod.annotations) {
-        // Check annotations for affinity rules
-        for (const [key, value] of Object.entries(pod.annotations)) {
-          if (key.includes('affinity') && value.includes('gpu')) return true
-        }
+        // Check for standard Kubernetes accelerator labels
+        const acceleratorLabel = pod.labels['kubernetes.io/accelerator'] || 
+                                 pod.labels['node.kubernetes.io/accelerator'] ||
+                                 pod.labels['cloud.google.com/gke-accelerator']
+        if (acceleratorLabel && /gpu|nvidia|amd|intel/i.test(acceleratorLabel)) return true
       }
 
       return false
