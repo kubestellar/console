@@ -131,6 +131,7 @@ const CARD_TITLES: Record<string, string> = {
   // Other
   upgrade_status: 'Cluster Upgrade Status',
   user_management: 'User Management',
+  kubectl: 'Kubectl Terminal',
 
   // Klaude AI cards (consistent naming with Klaude prefix)
   klaude_issues: 'Klaude Issues',

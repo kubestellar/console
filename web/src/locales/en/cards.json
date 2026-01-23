@@ -37,7 +37,8 @@
     "chart_versions": "Helm Chart Versions",
     "kustomization_status": "Kustomization Status",
     "overlay_comparison": "Overlay Comparison",
-    "user_management": "User Management"
+    "user_management": "User Management",
+    "kubectl": "Kubectl Terminal"
   },
   "descriptions": {
     "cluster_health": "Monitor health status across all clusters",
@@ -56,7 +57,8 @@
     "upgrade_status": "Cluster upgrade status and availability",
     "gpu_inventory": "GPU resources across clusters",
     "gpu_status": "GPU utilization status",
-    "user_management": "Manage console and Kubernetes users"
+    "user_management": "Manage console and Kubernetes users",
+    "kubectl": "Interactive kubectl terminal with AI assistance"
   },
   "categories": {
     "core": "Core",
