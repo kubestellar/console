@@ -601,7 +601,10 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Remove stock from active list
   const removeStock = useCallback((symbol: string) => {
     setActiveSymbols(prev => prev.filter(s => s !== symbol))
-  }, [])
+    
+    // Trigger immediate refresh to update the display
+    setTimeout(() => handleRefresh(), 100)
+  }, [handleRefresh])
 
   // Toggle favorite status
   const toggleFavorite = useCallback((symbol: string) => {
