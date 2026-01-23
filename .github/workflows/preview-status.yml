@@ -1,0 +1,77 @@
+name: Preview Status Labels
+
+on:
+  # Trigger when deployment status changes
+  deployment_status:
+  # Also trigger on PR close to clean up
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  update-preview-label:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Add preview-ready label on successful deployment
+        if: |
+          github.event_name == 'deployment_status' &&
+          github.event.deployment_status.state == 'success' &&
+          contains(github.event.deployment.environment, 'preview')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract PR number from deployment
+          DEPLOY_URL="${{ github.event.deployment_status.target_url }}"
+          echo "Deployment URL: $DEPLOY_URL"
+
+          # Get the PR number from the deployment ref
+          REF="${{ github.event.deployment.ref }}"
+          echo "Deployment ref: $REF"
+
+          # Find PR for this ref
+          PR_NUM=$(gh api repos/${{ github.repository }}/pulls \
+            --jq ".[] | select(.head.ref == \"$REF\") | .number" | head -1)
+
+          if [ -n "$PR_NUM" ]; then
+            echo "Found PR #$PR_NUM for ref $REF"
+
+            # Create label if it doesn't exist
+            gh label create "preview-ready" --repo "${{ github.repository }}" \
+              --color "0e8a16" --description "Netlify preview deployment is ready" 2>/dev/null || true
+
+            # Add label to PR
+            gh pr edit "$PR_NUM" --repo "${{ github.repository }}" --add-label "preview-ready"
+            echo "Added preview-ready label to PR #$PR_NUM"
+          else
+            echo "No PR found for ref $REF"
+          fi
+
+      - name: Remove preview-ready label on failed deployment
+        if: |
+          github.event_name == 'deployment_status' &&
+          github.event.deployment_status.state == 'failure' &&
+          contains(github.event.deployment.environment, 'preview')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REF="${{ github.event.deployment.ref }}"
+          PR_NUM=$(gh api repos/${{ github.repository }}/pulls \
+            --jq ".[] | select(.head.ref == \"$REF\") | .number" | head -1)
+
+          if [ -n "$PR_NUM" ]; then
+            gh pr edit "$PR_NUM" --repo "${{ github.repository }}" --remove-label "preview-ready" 2>/dev/null || true
+            echo "Removed preview-ready label from PR #$PR_NUM"
+          fi
+
+      - name: Remove preview-ready label on PR close
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          gh pr edit "$PR_NUM" --repo "${{ github.repository }}" --remove-label "preview-ready" 2>/dev/null || true
+          echo "Removed preview-ready label from closed PR #$PR_NUM"
