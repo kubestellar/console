@@ -428,3 +428,27 @@ jobs:
           )"
 
           echo "Posted build failure comment on PR #$PR_NUM"
+
+      - name: Mark PR ready if build passes and PR is draft
+        if: steps.wait_netlify.outputs.netlify_conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          # Check if PR is still a draft
+          IS_DRAFT=$(gh pr view "$PR_NUM" --repo "$REPO" --json isDraft --jq '.isDraft')
+
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "PR #$PR_NUM is a draft with passing build, marking as ready..."
+            gh pr ready "$PR_NUM" --repo "$REPO"
+
+            # Also clean up labels
+            gh pr edit "$PR_NUM" --repo "$REPO" --remove-label "do-not-merge/work-in-progress" 2>/dev/null || true
+            gh pr edit "$PR_NUM" --repo "$REPO" --remove-label "dco-signoff: no" 2>/dev/null || true
+
+            echo "Marked PR #$PR_NUM as ready for review"
+          else
+            echo "PR #$PR_NUM is not a draft, no action needed"
+          fi
