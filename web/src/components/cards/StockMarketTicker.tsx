@@ -590,8 +590,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
         }])
       }
       
-      // Trigger immediate refresh to load the new stock data
-      setTimeout(() => handleRefresh(), 100)
+      // Trigger refresh after delay to allow state to settle
+      setTimeout(() => handleRefresh(), 1500)
     }
     setStockSearchInput('')
     setShowStockDropdown(false)
@@ -602,8 +602,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const removeStock = useCallback((symbol: string) => {
     setActiveSymbols(prev => prev.filter(s => s !== symbol))
     
-    // Trigger immediate refresh to update the display
-    setTimeout(() => handleRefresh(), 100)
+    // Trigger refresh after delay to allow state to settle
+    setTimeout(() => handleRefresh(), 1500)
   }, [handleRefresh])
 
   // Toggle favorite status
