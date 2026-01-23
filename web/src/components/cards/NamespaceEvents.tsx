@@ -121,6 +121,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   } = usePagination(sortedEvents, effectivePerPage)
 
   const isLoading = clustersLoading || eventsLoading
+  const showSkeleton = isLoading && allEvents.length === 0
 
   const getEventIcon = (type: string) => {
     if (type === 'Warning') return AlertTriangle
@@ -145,7 +146,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     return `${Math.floor(diff / 86400000)}d ago`
   }
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">
@@ -267,13 +268,16 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
 
             return (
               <div
-                key={idx}
+                key={`${event.cluster}-${event.namespace}-${event.object}-${idx}`}
                 className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20`}
               >
                 <div className="flex items-start gap-2">
                   <Icon className={`w-4 h-4 text-${color}-400 mt-0.5 flex-shrink-0`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
+                      {event.cluster && (
+                        <ClusterBadge cluster={event.cluster} size="sm" />
+                      )}
                       <span className="text-xs text-muted-foreground">{event.namespace}</span>
                       <span className="text-xs text-muted-foreground">/</span>
                       <span className="text-sm text-foreground truncate">{event.object}</span>

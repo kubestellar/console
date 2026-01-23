@@ -209,7 +209,9 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
     unhealthy: filteredAndSorted.filter(a => a.healthStatus !== 'Healthy').length,
   }), [filteredAndSorted])
 
-  if (isLoading) {
+  const showSkeleton = isLoading && filteredAndSorted.length === 0
+
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Gauge } from '../charts'
 import { Cpu, MemoryStick } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
@@ -15,9 +15,10 @@ export function ResourceUsage() {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+  const [selectedCluster, setSelectedCluster] = useState<string>('')
 
-  // Apply global filters
-  const clusters = useMemo(() => {
+  // Filter clusters based on global selection (for dropdown options)
+  const filteredClusters = useMemo(() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -35,11 +36,18 @@ export function ResourceUsage() {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
+  // Apply local cluster selection
+  const clusters = useMemo(() => {
+    if (!selectedCluster) return filteredClusters
+    return filteredClusters.filter(c => c.name === selectedCluster)
+  }, [filteredClusters, selectedCluster])
+
   const gpuNodes = useMemo(() => {
-    if (isAllClustersSelected && !customFilter.trim()) return allGPUNodes
+    // Only skip filtering if ALL of these are true: all clusters selected, no custom filter, no local selection
+    if (isAllClustersSelected && !customFilter.trim() && !selectedCluster) return allGPUNodes
     const clusterNames = clusters.map(c => c.name)
     return allGPUNodes.filter(n => clusterNames.includes(n.cluster.split('/')[0]))
-  }, [allGPUNodes, clusters, isAllClustersSelected, customFilter])
+  }, [allGPUNodes, clusters, isAllClustersSelected, customFilter, selectedCluster])
 
   // Calculate totals from real cluster data
   const totals = useMemo(() => {
@@ -64,7 +72,9 @@ export function ResourceUsage() {
     drillToResources()
   }
 
-  if (isLoading) {
+  const showSkeleton = isLoading && clusters.length === 0
+
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="spinner w-8 h-8" />
@@ -84,7 +94,7 @@ export function ResourceUsage() {
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {clusters.length} clusters
+            {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
           </span>
           <RefreshButton
             isRefreshing={isRefreshing}
@@ -95,6 +105,20 @@ export function ResourceUsage() {
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Cluster Filter */}
+      <div className="mb-4">
+        <select
+          value={selectedCluster}
+          onChange={(e) => setSelectedCluster(e.target.value)}
+          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+        >
+          <option value="">All clusters</option>
+          {filteredClusters.map(c => (
+            <option key={c.name} value={c.name}>{c.name}</option>
+          ))}
+        </select>
       </div>
 
       <div

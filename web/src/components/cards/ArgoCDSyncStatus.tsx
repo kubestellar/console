@@ -34,8 +34,9 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
   const total = stats.synced + stats.outOfSync + stats.unknown
   const syncedPercent = total > 0 ? (stats.synced / total) * 100 : 0
   const outOfSyncPercent = total > 0 ? (stats.outOfSync / total) * 100 : 0
+  const showSkeleton = isLoading && total === 0
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

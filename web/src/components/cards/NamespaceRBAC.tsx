@@ -68,6 +68,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const isInitialLoading = clustersLoading
   const isFetchingRBAC = selectedCluster && selectedNamespace && (rolesLoading || bindingsLoading || sasLoading)
   const isLoading = isInitialLoading
+  const showSkeleton = isLoading && clusters.length === 0
 
   const refetch = () => {
     refetchClusters()
@@ -160,7 +161,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
     { key: 'serviceaccounts' as const, label: 'SAs', icon: Users, count: rbacData.serviceaccounts.length },
   ]
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

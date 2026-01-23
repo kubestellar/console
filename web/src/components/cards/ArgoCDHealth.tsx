@@ -43,8 +43,9 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
 
   const total = Object.values(stats).reduce((a, b) => a + b, 0)
   const healthyPercent = total > 0 ? (stats.healthy / total) * 100 : 0
+  const showSkeleton = isLoading && total === 0
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

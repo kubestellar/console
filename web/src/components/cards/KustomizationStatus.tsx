@@ -167,8 +167,9 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
 
   const readyCount = filteredAndSorted.filter(k => k.status === 'Ready').length
   const notReadyCount = filteredAndSorted.filter(k => k.status === 'NotReady').length
+  const showSkeleton = isLoading && allKustomizations.length === 0
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">
@@ -279,7 +280,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           {/* Summary */}
           <div className="flex gap-2 mb-4">
             <div className="flex-1 p-2 rounded-lg bg-pink-500/10 text-center">
-              <span className="text-lg font-bold text-pink-400">{kustomizations.length}</span>
+              <span className="text-lg font-bold text-pink-400">{totalItems}</span>
               <p className="text-xs text-muted-foreground">Total</p>
             </div>
             <div className="flex-1 p-2 rounded-lg bg-green-500/10 text-center">

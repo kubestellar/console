@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { HardDrive, CheckCircle, AlertTriangle, Clock, Search } from 'lucide-react'
-import { usePVCs } from '../../hooks/useMCP'
+import { usePVCs, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { ClusterBadge } from '../ui/ClusterBadge'
 
 type SortByOption = 'status' | 'name' | 'capacity' | 'age'
 
@@ -57,19 +58,32 @@ function getStatusColor(status: string) {
 
 export function PVCStatus() {
   const { pvcs, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePVCs()
+  const { clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
+  const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
   const [localSearch, setLocalSearch] = useState('')
 
+  // Filter clusters based on global selection
+  const filteredClusters = useMemo(() => {
+    if (isAllClustersSelected) return clusters
+    return clusters.filter(c => selectedClusters.includes(c.name))
+  }, [clusters, selectedClusters, isAllClustersSelected])
+
   // Apply global filters
   const filteredPVCs = useMemo(() => {
     let result = pvcs
 
-    // Filter by cluster selection
+    // Filter by cluster selection (global)
     if (!isAllClustersSelected) {
       result = result.filter(p => p.cluster && selectedClusters.includes(p.cluster))
+    }
+
+    // Filter by local cluster selection
+    if (selectedCluster) {
+      result = result.filter(p => p.cluster === selectedCluster)
     }
 
     // Apply global status filter
@@ -98,7 +112,7 @@ export function PVCStatus() {
     }
 
     return result
-  }, [pvcs, selectedClusters, isAllClustersSelected, filterByStatus, customFilter, localSearch])
+  }, [pvcs, selectedClusters, isAllClustersSelected, selectedCluster, filterByStatus, customFilter, localSearch])
 
   // Sort PVCs
   const sortedPVCs = useMemo(() => {
@@ -146,8 +160,9 @@ export function PVCStatus() {
   }), [filteredPVCs])
 
   const hasRealData = !isLoading && filteredPVCs.length > 0
+  const showSkeleton = isLoading && pvcs.length === 0
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading PVCs...</div>
@@ -185,6 +200,20 @@ export function PVCStatus() {
           onRefresh={refetch}
           size="sm"
         />
+      </div>
+
+      {/* Cluster Filter */}
+      <div className="mb-4">
+        <select
+          value={selectedCluster}
+          onChange={(e) => setSelectedCluster(e.target.value)}
+          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+        >
+          <option value="">All clusters</option>
+          {filteredClusters.map(c => (
+            <option key={c.name} value={c.name}>{c.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Local Search */}
@@ -233,10 +262,11 @@ export function PVCStatus() {
             >
               <div className="flex items-center gap-2 min-w-0">
                 {getStatusIcon(pvc.status)}
+                {pvc.cluster && <ClusterBadge cluster={pvc.cluster} size="sm" />}
                 <div className="min-w-0">
                   <div className="text-sm text-foreground truncate">{pvc.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {pvc.namespace} • {pvc.cluster}
+                    {pvc.namespace}
                   </div>
                 </div>
               </div>
