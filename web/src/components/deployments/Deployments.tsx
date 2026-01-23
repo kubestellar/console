@@ -20,7 +20,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useDeployments, useDeploymentIssues, useClusters } from '../../hooks/useMCP'
+import { useDeployments, useDeploymentIssues, usePodIssues, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useShowCards } from '../../hooks/useShowCards'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
@@ -156,6 +156,7 @@ export function Deployments() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { deployments, isLoading, isRefreshing, lastUpdated, refetch } = useDeployments()
   const { issues: deploymentIssues, refetch: refetchIssues } = useDeploymentIssues()
+  const { issues: podIssues } = usePodIssues()
   const { clusters: _clusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
@@ -318,10 +319,16 @@ export function Deployments() {
         return { value: Math.max(0, totalDeployments - healthyDeployments - issueCount), sublabel: 'degraded' }
       case 'critical':
         return { value: issueCount, sublabel: 'with issues' }
+      case 'deployments':
+        return { value: totalDeployments, sublabel: 'deployments' }
+      case 'pod_issues':
+        return { value: podIssues.length, sublabel: 'pod issues' }
+      case 'deployment_issues':
+        return { value: issueCount, sublabel: 'deploy issues' }
       default:
         return { value: 0 }
     }
-  }, [totalDeployments, healthyDeployments, issueCount])
+  }, [totalDeployments, healthyDeployments, issueCount, podIssues.length])
 
   // Transform card for ConfigureCardModal
   const configureCard = configuringCard ? {

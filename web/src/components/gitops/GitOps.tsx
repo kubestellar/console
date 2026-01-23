@@ -18,7 +18,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useClusters, useHelmReleases } from '../../hooks/useMCP'
+import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { useShowCards } from '../../hooks/useShowCards'
@@ -232,6 +232,7 @@ function getTimeAgo(timestamp: string | undefined): string {
 export function GitOps() {
   const { clusters, isRefreshing, refetch } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
+  const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { showToast } = useToast()
   const { showCards, expandCards } = useShowCards('kubestellar-gitops')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
@@ -550,7 +551,7 @@ export function GitOps() {
       case 'kustomize':
         return { value: 0, sublabel: 'kustomize apps' }
       case 'operators':
-        return { value: 0, sublabel: 'operators' }
+        return { value: operatorSubs.length, sublabel: 'operators' }
       case 'deployed':
         return { value: stats.synced, sublabel: 'synced', onClick: () => setStatusFilter('synced'), isClickable: stats.synced > 0 }
       case 'failed':
@@ -562,7 +563,7 @@ export function GitOps() {
       default:
         return { value: 0 }
     }
-  }, [stats, setStatusFilter, helmCount])
+  }, [stats, setStatusFilter, helmCount, operatorSubs.length])
 
   // Transform card for ConfigureCardModal
   const configureCard = configuringCard ? {
