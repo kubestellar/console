@@ -95,6 +95,7 @@ const CARD_CATALOG = {
   ],
   'Misc': [
     { type: 'weather', title: 'Weather', description: 'Weather conditions with multi-day forecasts and animated backgrounds', visualization: 'status' },
+    { type: 'sudoku_game', title: 'Sudoku Game', description: 'Brain-training Sudoku puzzle with multiple difficulty levels, hints, and timer', visualization: 'status' },
     { type: 'match_game', title: 'Match Game', description: 'Classic memory matching game with Kubernetes-themed cards', visualization: 'status' },
     { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
   ],

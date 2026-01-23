@@ -428,19 +428,16 @@ jobs:
             RUN_URL="${{ github.event.workflow_run.html_url }}"
             WF_NAME="${{ github.event.workflow_run.name }}"
 
-            # Use heredoc for multiline comment
-            gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "$(cat <<EOF
-            ## 🔴 Workflow Failed
+            # Post failure comment
+            gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "## 🔴 Workflow Failed
 
-            **Workflow:** $WF_NAME
-            **Status:** Failed
-            **Details:** [View Workflow Run]($RUN_URL)
+**Workflow:** $WF_NAME
+**Status:** Failed
+**Details:** [View Workflow Run]($RUN_URL)
 
-            @copilot Please investigate the workflow failure and push fixes.
+@copilot Please investigate the workflow failure and push fixes.
 
-            *This comment was automatically generated.*
-            EOF
-            )"
+*This comment was automatically generated.*"
           fi
 
   # Handle code review feedback on Copilot PRs

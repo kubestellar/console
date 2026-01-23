@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Newspaper, Clock, AlertTriangle, Settings, Search } from 'lucide-react'
+import { Newspaper, Clock, AlertTriangle, Settings, Search, ChevronRight } from 'lucide-react'
 import { useClusters, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -36,6 +37,7 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+  const { drillToOperator } = useDrillDownActions()
 
   // Apply global filters
   const clusters = useMemo(() => {
@@ -238,7 +240,14 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
             {subscriptions.map((sub) => (
               <div
                 key={`${sub.cluster || 'default'}-${sub.namespace}-${sub.name}`}
-                className={`p-3 rounded-lg ${sub.pendingUpgrade ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-secondary/30'}`}
+                onClick={() => drillToOperator(sub.cluster || selectedCluster || 'default', sub.namespace, sub.name, {
+                  channel: sub.channel,
+                  currentCSV: sub.currentCSV,
+                  installPlanApproval: sub.installPlanApproval,
+                  pendingUpgrade: sub.pendingUpgrade,
+                })}
+                className={`p-3 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors group ${sub.pendingUpgrade ? 'bg-orange-500/10 border border-orange-500/20' : 'bg-secondary/30'}`}
+                title={`Click to view operator ${sub.name} details`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
@@ -247,13 +256,16 @@ export function OperatorSubscriptions({ config }: OperatorSubscriptionsProps) {
                     )}
                     <span className="text-sm text-foreground font-medium">{sub.name}</span>
                   </div>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${
-                    sub.installPlanApproval === 'Automatic'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {sub.installPlanApproval}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      sub.installPlanApproval === 'Automatic'
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {sub.installPlanApproval}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                   <div className="flex items-center justify-between">

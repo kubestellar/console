@@ -73,6 +73,8 @@ import { KyvernoPolicies } from './KyvernoPolicies'
 import { Weather } from './Weather'
 // GitHub Activity Monitoring card
 import { GitHubActivity } from './GitHubActivity'
+// Sudoku game card
+import { SudokuGame } from './SudokuGame'
 // Match Game card
 import { MatchGame } from './MatchGame'
 // Stock Market Ticker card
@@ -166,6 +168,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   weather: Weather,
   // GitHub Activity Monitoring card
   github_activity: GitHubActivity,
+  // Sudoku game card
+  sudoku_game: SudokuGame,
   // Match Game card
   match_game: MatchGame,
   // Stock Market Ticker card
@@ -257,6 +261,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   weather: 6,
   // GitHub Activity Monitoring card
   github_activity: 8,
+  // Sudoku game card
+  sudoku_game: 6,
   // Match Game card
   match_game: 6,
   // Stock Market Ticker

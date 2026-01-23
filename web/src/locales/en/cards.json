@@ -39,6 +39,7 @@
     "overlay_comparison": "Overlay Comparison",
     "user_management": "User Management",
     "github_activity": "GitHub Activity",
+    "sudoku_game": "Sudoku Game",
     "match_game": "Match Game"
   },
   "descriptions": {
@@ -60,6 +61,7 @@
     "gpu_status": "GPU utilization status",
     "user_management": "Manage console and Kubernetes users",
     "github_activity": "Monitor GitHub repository activity, PRs, issues, releases, and contributors",
+    "sudoku_game": "Brain-training Sudoku puzzle with multiple difficulty levels",
     "match_game": "Classic memory matching game with Kubernetes-themed cards"
   },
   "categories": {
