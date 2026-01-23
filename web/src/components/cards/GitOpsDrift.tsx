@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
-import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search } from 'lucide-react'
+import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search, ChevronRight } from 'lucide-react'
 import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -263,22 +264,18 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
   const TypeIcon = typeConfig.icon
   const { drillToDrift } = useDrillDownActions()
 
-  const handleClick = () => {
-    drillToDrift(drift.cluster, {
-      resource: drift.resource,
-      kind: drift.kind,
-      namespace: drift.namespace,
-      driftType: drift.driftType,
-      severity: drift.severity,
-      gitVersion: drift.gitVersion,
-      details: drift.details,
-    })
-  }
-
   return (
     <div
-      onClick={handleClick}
-      className={`p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]} cursor-pointer hover:bg-secondary/50 transition-colors group`}
+      className={`group p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]} cursor-pointer hover:bg-secondary/50 transition-colors`}
+      onClick={() => drillToDrift(drift.cluster, {
+        resource: drift.resource,
+        kind: drift.kind,
+        namespace: drift.namespace,
+        driftType: drift.driftType,
+        severity: drift.severity,
+        gitVersion: drift.gitVersion,
+        details: drift.details,
+      })}
       title={`Click to view drift details for ${drift.resource}`}
     >
       <div className="flex items-start justify-between mb-1">

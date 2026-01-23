@@ -5,7 +5,9 @@ on:
   issues:
     types: [labeled]
   pull_request:
-    types: [opened, ready_for_review, closed]
+    types: [opened, ready_for_review, closed, synchronize]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       issue_number:
@@ -415,21 +417,25 @@ jobs:
           PR_NUM="${{ github.event.pull_request.number }}"
 
           gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
-          ## ⚠️ Build Failed
+          ## ⚠️ BUILD FAILED - YOU MUST FIX THIS
 
-          @Copilot The Netlify deploy preview build has **failed**. Please check the build logs and fix the errors.
+          @Copilot The build has **FAILED**. **You MUST fix these errors before this PR can be merged.**
 
-          **Common issues to check:**
-          - TypeScript compilation errors (unused imports, type mismatches)
-          - Missing dependencies
-          - Syntax errors
+          ### Required Actions:
+          1. **Check the build logs** for the specific error (click the failing check)
+          2. **Fix the code issues** - common problems include:
+             - TypeScript errors (unused imports, type mismatches)
+             - Missing dependencies
+             - Syntax errors
+          3. **Commit and push the fix**
+          4. **Wait for the build to pass**
 
-          **To fix:**
-          1. Check the Netlify deploy logs for the specific error
-          2. Fix the code issues
-          3. Push a new commit
+          ### After Build Passes:
+          1. Wait for Netlify deploy preview to be ready
+          2. Run Playwright tests on the preview URL
+          3. **Post screenshots as proof that your fix works**
 
-          The build must pass before this PR can be reviewed.
+          ⛔ **The build MUST pass and you MUST post proof screenshots before this PR can be reviewed or merged.**
           EOF
           )"
 
@@ -458,3 +464,58 @@ jobs:
           else
             echo "PR #$PR_NUM is not a draft, no action needed"
           fi
+
+  # Monitor for Copilot errors and ask for retry
+  handle-copilot-error:
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.action == 'created' &&
+      (github.event.comment.user.login == 'copilot-swe-agent' || github.event.comment.user.login == 'Copilot') &&
+      github.event.issue.pull_request
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if comment contains error
+        id: check_error
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Check for common error patterns in Copilot's response
+          if echo "$COMMENT_BODY" | grep -qiE "(error|failed|unable to|cannot|exception|timeout|ECONNREFUSED|ETIMEDOUT|ERR_|net::ERR|playwright.*error)"; then
+            echo "has_error=true" >> $GITHUB_OUTPUT
+            echo "Detected potential error in Copilot's comment"
+          else
+            echo "has_error=false" >> $GITHUB_OUTPUT
+            echo "No error detected"
+          fi
+
+      - name: Ask Copilot to retry on error
+        if: steps.check_error.outputs.has_error == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.issue.number }}"
+
+          gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
+          ## 🔄 Error Detected - Please Retry
+
+          @Copilot It looks like you encountered an error. Please try again:
+
+          1. **If it's a network/timeout error:** Wait a moment and retry the operation
+          2. **If it's a Playwright error:** Make sure you're using the correct preview URL from the Netlify bot comment
+          3. **If it's a code error:** Fix the issue and try again
+
+          ### Preview URL
+          Get the Deploy Preview URL from the `netlify[bot]` comment that says "Deploy Preview ready!"
+          The URL format is: `https://deploy-preview-XX.console-deploy-preview.kubestellar.io`
+
+          ### Requirements:
+          - Run Playwright tests on the preview deployment
+          - Take screenshots showing the feature works
+          - Post the screenshots as proof
+
+          Please try again and report your results.
+          EOF
+          )"
+
+          echo "Posted retry request on PR #$PR_NUM"
