@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Layers, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, Search } from 'lucide-react'
+import { Layers, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, Search, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -47,6 +48,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+  const { drillToKustomization } = useDrillDownActions()
 
   // Apply global filters
   const clusters = useMemo(() => {
@@ -302,16 +304,27 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
               return (
                 <div
                   key={idx}
-                  className={`p-3 rounded-lg ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors`}
+                  onClick={() => drillToKustomization(selectedCluster, ks.namespace, ks.name, {
+                    path: ks.path,
+                    sourceRef: ks.sourceRef,
+                    status: ks.status,
+                    lastApplied: ks.lastApplied,
+                    revision: ks.revision,
+                  })}
+                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors`}
+                  title={`Click to view ${ks.name} details`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <StatusIcon className={`w-4 h-4 text-${color}-400 ${ks.status === 'Progressing' ? 'animate-spin' : ''}`} />
                       <span className="text-sm text-foreground font-medium">{ks.name}</span>
                     </div>
-                    <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
-                      {ks.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
+                        {ks.status}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
                   <div className="ml-6 text-xs text-muted-foreground space-y-0.5">
                     <div className="flex items-center gap-1">

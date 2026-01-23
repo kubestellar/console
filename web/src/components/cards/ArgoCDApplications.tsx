@@ -3,6 +3,7 @@ import { GitBranch, CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, Chevr
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -124,6 +125,7 @@ const healthStatusConfig = {
 export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { drillToArgoApp } = useDrillDownActions()
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
   const [sortBy, setSortBy] = useState<SortByOption>('syncStatus')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -343,7 +345,14 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
           return (
             <div
               key={`${app.cluster}-${app.namespace}-${app.name}-${idx}`}
+              onClick={() => drillToArgoApp(app.cluster, app.namespace, app.name, {
+                syncStatus: app.syncStatus,
+                healthStatus: app.healthStatus,
+                source: app.source,
+                lastSynced: app.lastSynced,
+              })}
               className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group"
+              title={`Click to view ${app.name} details`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
