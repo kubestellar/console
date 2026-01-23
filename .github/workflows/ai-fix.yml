@@ -100,6 +100,8 @@ jobs:
           COPILOT_NODE_ID="BOT_kgDOC9w8XQ"
 
           # Assign Copilot using GraphQL mutation (REST API doesn't work for bots)
+          echo "Attempting to assign Copilot (node ID: $COPILOT_NODE_ID) to issue (node ID: $ISSUE_NODE_ID)..."
+
           ASSIGN_RESULT=$(gh api graphql -f query="
             mutation {
               addAssigneesToAssignable(input: {
@@ -118,8 +120,11 @@ jobs:
               }
             }" 2>&1) && ASSIGN_SUCCESS=true || ASSIGN_SUCCESS=false
 
-          # Check if Copilot was successfully assigned
-          if echo "$ASSIGN_RESULT" | grep -q '"login":"Copilot"'; then
+          echo "GraphQL response: $ASSIGN_RESULT"
+          echo "GraphQL success: $ASSIGN_SUCCESS"
+
+          # Check if Copilot was successfully assigned (handle JSON with or without spaces)
+          if echo "$ASSIGN_RESULT" | grep -qE '"login"\s*:\s*"Copilot"'; then
             echo "Successfully assigned Copilot to issue #$ISSUE_NUM"
             echo "copilot_assigned=true" >> $GITHUB_OUTPUT
 
@@ -142,11 +147,60 @@ jobs:
           - Keep changes focused on the issue scope
           - Use TypeScript for frontend code
           - Use Go for backend code
+
+          ### Testing Requirements:
+          - **You MUST use Playwright to test the preview deployment**
+          - Do not just take screenshots - actually interact with the UI
+          - **IMPORTANT: Use the kubestellar.io preview URL, NOT the raw Netlify URL**
+            - Use: \`https://console.preview.kubestellar.io/pr/{PR_NUMBER}/\`
+            - Do NOT use: \`deploy-preview-*--kubestellar-console.netlify.app\`
+          - Test all user interactions (clicks, inputs, etc.) that your changes affect
+          - Verify the expected behavior occurs after each interaction
           EOF
           )" || true
           else
-            echo "::warning::Failed to assign Copilot. Response: $ASSIGN_RESULT"
-            echo "copilot_assigned=false" >> $GITHUB_OUTPUT
+            echo "::warning::GraphQL assignment returned unexpected response. Trying comment trigger as fallback..."
+            echo "Response was: $ASSIGN_RESULT"
+
+            # Fallback: Try to trigger Copilot via @mention in a comment
+            COMMENT_RESULT=$(gh issue comment "$ISSUE_NUM" --repo "${{ github.repository }}" --body "$(cat <<EOF
+          ## 🤖 AI Fix Requested
+
+          @Copilot Please analyze this issue and create a fix.
+
+          ### Instructions:
+          1. Read the issue description carefully
+          2. Explore the codebase to understand the context
+          3. Implement the requested changes
+          4. Create a PR with \`Fixes #$ISSUE_NUM\` in the description
+          5. Ensure the code follows existing patterns and style
+
+          ### Guidelines:
+          - Follow the patterns in existing code
+          - Add appropriate tests if applicable
+          - Keep changes focused on the issue scope
+          - Use TypeScript for frontend code
+          - Use Go for backend code
+
+          ### Testing Requirements:
+          - **You MUST use Playwright to test the preview deployment**
+          - Do not just take screenshots - actually interact with the UI
+          - **IMPORTANT: Use the kubestellar.io preview URL, NOT the raw Netlify URL**
+            - Use: \`https://console.preview.kubestellar.io/pr/{PR_NUMBER}/\`
+            - Do NOT use: \`deploy-preview-*--kubestellar-console.netlify.app\`
+          - Test all user interactions (clicks, inputs, etc.) that your changes affect
+          - Verify the expected behavior occurs after each interaction
+          EOF
+          )" 2>&1) && COMMENT_SUCCESS=true || COMMENT_SUCCESS=false
+
+            if [ "$COMMENT_SUCCESS" = "true" ]; then
+              echo "Posted @Copilot comment as fallback trigger"
+              echo "copilot_assigned=true" >> $GITHUB_OUTPUT
+            else
+              echo "::error::Both GraphQL assignment and comment fallback failed"
+              echo "Comment result: $COMMENT_RESULT"
+              echo "copilot_assigned=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Update labels - copilot assigned
@@ -197,7 +251,7 @@ jobs:
   update-issue-on-pr:
     if: |
       github.event_name == 'pull_request' &&
-      contains(github.event.pull_request.user.login, 'copilot-swe-agent')
+      (github.event.pull_request.user.login == 'Copilot' || contains(github.event.pull_request.user.login, 'copilot'))
     runs-on: ubuntu-latest
 
     steps:
@@ -285,3 +339,79 @@ jobs:
           gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-processing-complete"
 
           echo "Updated issue #$ISSUE: ai-processing-complete"
+
+  # Handle build failures on Copilot PRs
+  handle-build-failure:
+    if: |
+      github.event_name == 'pull_request' &&
+      (github.event.pull_request.user.login == 'Copilot' || contains(github.event.pull_request.user.login, 'copilot')) &&
+      github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for Netlify check to complete
+        id: wait_netlify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+
+          echo "Waiting for Netlify check on commit $COMMIT_SHA..."
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
+
+            # Get check runs for the commit
+            CHECK_STATUS=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs \
+              --jq '.check_runs[] | select(.name | contains("netlify") or contains("deploy-preview")) | {name: .name, status: .status, conclusion: .conclusion}' 2>/dev/null || echo "")
+
+            if [ -n "$CHECK_STATUS" ]; then
+              echo "Check status: $CHECK_STATUS"
+
+              # Check if any check has completed
+              COMPLETED=$(echo "$CHECK_STATUS" | jq -r 'select(.status == "completed")' 2>/dev/null || echo "")
+              if [ -n "$COMPLETED" ]; then
+                CONCLUSION=$(echo "$COMPLETED" | jq -r '.conclusion' | head -1)
+                echo "netlify_conclusion=$CONCLUSION" >> $GITHUB_OUTPUT
+                echo "Netlify check completed with: $CONCLUSION"
+                exit 0
+              fi
+            fi
+
+            sleep 20
+          done
+
+          echo "Timeout waiting for Netlify check"
+          echo "netlify_conclusion=timeout" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR if build failed
+        if: steps.wait_netlify.outputs.netlify_conclusion == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+
+          gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "$(cat <<'EOF'
+          ## ⚠️ Build Failed
+
+          @Copilot The Netlify deploy preview build has **failed**. Please check the build logs and fix the errors.
+
+          **Common issues to check:**
+          - TypeScript compilation errors (unused imports, type mismatches)
+          - Missing dependencies
+          - Syntax errors
+
+          **To fix:**
+          1. Check the Netlify deploy logs for the specific error
+          2. Fix the code issues
+          3. Push a new commit
+
+          The build must pass before this PR can be reviewed.
+          EOF
+          )"
+
+          echo "Posted build failure comment on PR #$PR_NUM"

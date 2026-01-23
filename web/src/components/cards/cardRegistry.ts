@@ -73,6 +73,10 @@ import { KyvernoPolicies } from './KyvernoPolicies'
 import { Weather } from './Weather'
 // Kubectl card
 import { Kubectl } from './Kubectl'
+// Match Game card
+import { MatchGame } from './MatchGame'
+// Stock Market Ticker card
+import { StockMarketTicker } from './StockMarketTicker'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -162,6 +166,10 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   weather: Weather,
   // Kubectl card
   kubectl: Kubectl,
+  // Match Game card
+  match_game: MatchGame,
+  // Stock Market Ticker card
+  stock_market_ticker: StockMarketTicker,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -249,6 +257,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   weather: 6,
   // Kubectl card - interactive terminal
   kubectl: 8,
+  // Match Game card
+  match_game: 6,
+  // Stock Market Ticker
+  stock_market_ticker: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,

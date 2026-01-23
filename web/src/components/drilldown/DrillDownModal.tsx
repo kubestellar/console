@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User } from 'lucide-react'
+import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ClusterDrillDown } from './views/ClusterDrillDown'
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
@@ -15,6 +15,15 @@ import { ResourcesDrillDown } from './views/ResourcesDrillDown'
 import { ConfigMapDrillDown } from './views/ConfigMapDrillDown'
 import { SecretDrillDown } from './views/SecretDrillDown'
 import { ServiceAccountDrillDown } from './views/ServiceAccountDrillDown'
+// Phase 2 views
+import { AlertDrillDown } from './views/AlertDrillDown'
+import { HelmReleaseDrillDown } from './views/HelmReleaseDrillDown'
+import { ArgoAppDrillDown } from './views/ArgoAppDrillDown'
+import { OperatorDrillDown } from './views/OperatorDrillDown'
+import { PolicyDrillDown } from './views/PolicyDrillDown'
+import { KustomizationDrillDown } from './views/KustomizationDrillDown'
+import { CRDDrillDown } from './views/CRDDrillDown'
+import { DriftDrillDown } from './views/DriftDrillDown'
 
 // Helper to get status badge color for pods
 const getPodStatusColor = (status: string) => {
@@ -41,6 +50,15 @@ const getViewIcon = (type: string) => {
     case 'gpu-node': return <Cpu className="w-4 h-4 text-purple-400" />
     case 'logs': return <FileText className="w-4 h-4 text-yellow-400" />
     case 'events': return <Zap className="w-4 h-4 text-amber-400" />
+    // Phase 2 view types
+    case 'alert': return <Bell className="w-4 h-4 text-red-400" />
+    case 'helm': return <Ship className="w-4 h-4 text-blue-400" />
+    case 'argoapp': return <GitBranch className="w-4 h-4 text-orange-400" />
+    case 'operator': return <Settings className="w-4 h-4 text-purple-400" />
+    case 'policy': return <Shield className="w-4 h-4 text-blue-400" />
+    case 'kustomization': return <Layers className="w-4 h-4 text-indigo-400" />
+    case 'crd': return <Package className="w-4 h-4 text-purple-400" />
+    case 'drift': return <GitBranch className="w-4 h-4 text-orange-400" />
     default: return null
   }
 }
@@ -127,6 +145,23 @@ export function DrillDownModal() {
         return <SecretDrillDown data={data} />
       case 'serviceaccount':
         return <ServiceAccountDrillDown data={data} />
+      // Phase 2 views
+      case 'alert':
+        return <AlertDrillDown data={data} />
+      case 'helm':
+        return <HelmReleaseDrillDown data={data} />
+      case 'argoapp':
+        return <ArgoAppDrillDown data={data} />
+      case 'operator':
+        return <OperatorDrillDown data={data} />
+      case 'policy':
+        return <PolicyDrillDown data={data} />
+      case 'kustomization':
+        return <KustomizationDrillDown data={data} />
+      case 'crd':
+        return <CRDDrillDown data={data} />
+      case 'drift':
+        return <DriftDrillDown data={data} />
       case 'custom':
         return state.currentView?.customComponent || <div>Custom view</div>
       default:
