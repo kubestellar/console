@@ -189,7 +189,7 @@ jobs:
           echo "Preview URL: $PREVIEW_URL"
 
       - name: Request Copilot to test preview
-        if: steps.pr_info.outputs.is_copilot == 'true' && steps.pr_info.outputs.is_draft == 'true'
+        if: steps.pr_info.outputs.is_copilot == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -197,10 +197,21 @@ jobs:
           ISSUE_NUM="${{ steps.pr_info.outputs.issue_number }}"
           PREVIEW_URL="${{ steps.preview.outputs.preview_url }}"
 
+          IS_DRAFT="${{ steps.pr_info.outputs.is_draft }}"
+
           # Get the issue body for test context
           ISSUE_BODY=""
           if [ -n "$ISSUE_NUM" ]; then
             ISSUE_BODY=$(gh api repos/${{ github.repository }}/issues/$ISSUE_NUM --jq '.body' | head -1000)
+          fi
+
+          # Build step 4 based on draft status
+          if [ "$IS_DRAFT" == "true" ]; then
+            STEP4="#### Step 4: Mark Ready for Review
+          Only after ALL tests pass, mark PR as ready for review."
+          else
+            STEP4="#### Step 4: Confirm Ready for Merge
+          Reply confirming all tests pass and the PR is ready for final review."
           fi
 
           # Use heredoc for multiline comment to avoid YAML escaping issues
@@ -240,8 +251,7 @@ jobs:
           - List of any issues found and how you fixed them
           - Confirmation that all tests pass
 
-          #### Step 4: Mark Ready for Review
-          Only after ALL tests pass, mark PR as ready for review.
+          $STEP4
 
           ### Original Issue Requirements
           $ISSUE_BODY
