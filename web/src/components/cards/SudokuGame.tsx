@@ -421,18 +421,18 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">Sudoku</span>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-xs font-medium text-muted-foreground">Sudoku</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={() => setShowSettings(true)}
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+            className="p-0.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
             title="Settings"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5" />
           </button>
           <RefreshButton
             isRefreshing={false}
@@ -443,23 +443,23 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
       </div>
 
       {/* Game info */}
-      <div className="flex items-center justify-between mb-2 text-xs">
-        <div className="flex items-center gap-3">
-          <span className="px-2 py-1 rounded bg-purple-500/20 text-purple-400 font-medium">
+      <div className="flex items-center justify-between mb-1.5 text-[10px]">
+        <div className="flex items-center gap-2">
+          <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">
             {DIFFICULTIES[gameState.difficulty].label}
           </span>
           <span className="text-muted-foreground">
-            Time: {formatTime(gameState.timer)}
+            {formatTime(gameState.timer)}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground flex items-center gap-1">
-            <Lightbulb className="w-3 h-3" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground flex items-center gap-0.5">
+            <Lightbulb className="w-2.5 h-2.5" />
             {gameState.hintsRemaining}
           </span>
           {bestTimes[gameState.difficulty] && (
-            <span className="text-muted-foreground flex items-center gap-1">
-              <Trophy className="w-3 h-3 text-yellow-500" />
+            <span className="text-muted-foreground flex items-center gap-0.5">
+              <Trophy className="w-2.5 h-2.5 text-yellow-500" />
               {formatTime(bestTimes[gameState.difficulty]!)}
             </span>
           )}
@@ -467,8 +467,8 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
       </div>
 
       {/* Sudoku Grid */}
-      <div className="flex-1 flex items-center justify-center mb-3">
-        <div className="inline-grid grid-cols-9 gap-0 border-2 border-purple-500/30 rounded-lg overflow-hidden bg-secondary/20">
+      <div className="flex-1 flex items-center justify-center mb-1.5">
+        <div className="inline-grid grid-cols-9 gap-0 border border-purple-500/30 rounded overflow-hidden bg-secondary/20">
           {gameState.board.map((row, i) =>
             row.map((cell, j) => {
               const isSelected = selectedCell?.[0] === i && selectedCell?.[1] === j
@@ -487,10 +487,10 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
                   onClick={() => handleCellClick(i, j)}
                   disabled={gameState.isComplete}
                   className={`
-                    w-8 h-8 text-xs font-medium transition-all
+                    w-6 h-6 text-[10px] font-medium transition-all
                     ${rightBorder ? 'border-r-2 border-purple-500/30' : 'border-r border-border/30'}
                     ${bottomBorder ? 'border-b-2 border-purple-500/30' : 'border-b border-border/30'}
-                    ${isSelected ? 'bg-purple-500/30 ring-2 ring-purple-500' : ''}
+                    ${isSelected ? 'bg-purple-500/30 ring-1 ring-purple-500' : ''}
                     ${!isSelected && (isInSameRow || isInSameCol || isInSameBox) ? 'bg-purple-500/10' : ''}
                     ${cell.isOriginal ? 'text-foreground font-bold' : 'text-purple-400'}
                     ${cell.isConflict ? 'text-red-500 bg-red-500/20' : ''}
@@ -500,7 +500,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
                 >
                   {cell.value || (
                     cell.notes.size > 0 && (
-                      <div className="grid grid-cols-3 gap-0 text-[6px] text-muted-foreground/50">
+                      <div className="grid grid-cols-3 gap-0 text-[5px] text-muted-foreground/50 leading-none">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
                           <div key={n}>{cell.notes.has(n) ? n : ''}</div>
                         ))}
@@ -515,15 +515,15 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
       </div>
 
       {/* Controls */}
-      <div className="space-y-2">
+      <div className="space-y-1">
         {/* Number pad */}
-        <div className="grid grid-cols-9 gap-1">
+        <div className="grid grid-cols-9 gap-0.5">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
             <button
               key={num}
               onClick={() => handleNumberInput(num)}
               disabled={!selectedCell || gameState.isComplete}
-              className="h-8 rounded bg-secondary/50 hover:bg-purple-500/20 text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="h-6 rounded bg-secondary/50 hover:bg-purple-500/20 text-[10px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {num}
             </button>
@@ -531,56 +531,56 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
         </div>
 
         {/* Action buttons */}
-        <div className="grid grid-cols-4 gap-1 text-xs">
+        <div className="grid grid-cols-4 gap-0.5 text-[10px]">
           <button
             onClick={() => setPencilMode(!pencilMode)}
-            className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded transition-colors ${
+            className={`flex items-center justify-center gap-0.5 px-1 py-1 rounded transition-colors ${
               pencilMode ? 'bg-purple-500/30 text-purple-400' : 'bg-secondary/50 hover:bg-secondary'
             }`}
           >
-            <Pencil className="w-3 h-3" />
-            Notes
+            <Pencil className="w-2.5 h-2.5" />
+            <span className="hidden sm:inline">Notes</span>
           </button>
           <button
             onClick={handleHint}
             disabled={!selectedCell || gameState.hintsRemaining <= 0 || gameState.isComplete}
-            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-0.5 px-1 py-1 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Lightbulb className="w-3 h-3" />
-            Hint
+            <Lightbulb className="w-2.5 h-2.5" />
+            <span className="hidden sm:inline">Hint</span>
           </button>
           <button
             onClick={undo}
             disabled={historyIndex <= 0}
-            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-0.5 px-1 py-1 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Undo2 className="w-3 h-3" />
+            <Undo2 className="w-2.5 h-2.5" />
           </button>
           <button
             onClick={redo}
             disabled={historyIndex >= history.length - 1}
-            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-0.5 px-1 py-1 rounded bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Redo2 className="w-3 h-3" />
+            <Redo2 className="w-2.5 h-2.5" />
           </button>
         </div>
 
         {/* Bottom controls */}
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           <button
             onClick={() => setGameState(prev => prev ? { ...prev, isPaused: !prev.isPaused } : null)}
             disabled={gameState.isComplete}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-secondary/50 hover:bg-secondary transition-colors text-xs disabled:opacity-30"
+            className="flex-1 flex items-center justify-center gap-0.5 px-1 py-1 rounded bg-secondary/50 hover:bg-secondary transition-colors text-[10px] disabled:opacity-30"
           >
-            {gameState.isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-            {gameState.isPaused ? 'Resume' : 'Pause'}
+            {gameState.isPaused ? <Play className="w-2.5 h-2.5" /> : <Pause className="w-2.5 h-2.5" />}
+            <span className="hidden sm:inline">{gameState.isPaused ? 'Resume' : 'Pause'}</span>
           </button>
           <button
             onClick={saveGame}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-secondary/50 hover:bg-secondary transition-colors text-xs"
+            className="flex-1 flex items-center justify-center gap-0.5 px-1 py-1 rounded bg-secondary/50 hover:bg-secondary transition-colors text-[10px]"
           >
-            <Save className="w-3 h-3" />
-            Save
+            <Save className="w-2.5 h-2.5" />
+            <span className="hidden sm:inline">Save</span>
           </button>
         </div>
       </div>
