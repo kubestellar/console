@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, Search } from 'lucide-react'
+import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, Search, ChevronRight } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmHistory } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -43,6 +44,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+  const { drillToHelm } = useDrillDownActions()
 
   // Sync local selection with global filter changes
   useEffect(() => {
@@ -296,12 +298,20 @@ export function HelmHistory({ config }: HelmHistoryProps) {
         </div>
       ) : (
         <>
-          {/* Scope badge */}
-          <div className="flex items-center gap-2 mb-4">
+          {/* Scope badge - clickable to drill down */}
+          <button
+            onClick={() => drillToHelm(selectedCluster, selectedReleaseNamespace || 'default', selectedRelease, {
+              history: rawHistory,
+              currentRevision: rawHistory.find(h => h.status === 'deployed')?.revision,
+            })}
+            className="group flex items-center gap-2 mb-4 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+            title={`Click to view details for ${selectedRelease}`}
+          >
             <ClusterBadge cluster={selectedCluster} />
             <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-foreground">{selectedRelease}</span>
-          </div>
+            <span className="text-sm text-foreground group-hover:text-primary transition-colors">{selectedRelease}</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
 
           {/* Local Search */}
           <div className="relative mb-4">
@@ -334,7 +344,16 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                     const isCurrent = entry.status === 'deployed'
 
                     return (
-                      <div key={idx} className="relative pl-6">
+                      <div
+                        key={idx}
+                        className="relative pl-6 group cursor-pointer"
+                        onClick={() => drillToHelm(selectedCluster, selectedReleaseNamespace || 'default', selectedRelease, {
+                          history: rawHistory,
+                          currentRevision: entry.revision,
+                          selectedRevision: entry,
+                        })}
+                        title={`Click to view details for revision ${entry.revision}`}
+                      >
                         {/* Timeline dot */}
                         <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
                           isCurrent ? 'bg-green-500' : 'bg-secondary border border-border'
@@ -342,7 +361,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                           <StatusIcon className={`w-2.5 h-2.5 ${isCurrent ? 'text-foreground' : `text-${color}-400`}`} />
                         </div>
 
-                        <div className={`p-2 rounded-lg ${isCurrent ? 'bg-green-500/10 border border-green-500/20' : 'bg-secondary/30'}`}>
+                        <div className={`p-2 rounded-lg transition-colors ${isCurrent ? 'bg-green-500/10 border border-green-500/20 group-hover:bg-green-500/20' : 'bg-secondary/30 group-hover:bg-secondary/50'}`}>
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-foreground">Rev {entry.revision}</span>
@@ -352,7 +371,10 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs text-muted-foreground">{formatDate(entry.updated)}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">{formatDate(entry.updated)}</span>
+                              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
                           </div>
                           <div className="text-xs text-muted-foreground">
                             <span>{entry.chart}</span>

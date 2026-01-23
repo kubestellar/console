@@ -136,6 +136,9 @@ const CARD_TITLES: Record<string, string> = {
   klaude_issues: 'Klaude Issues',
   klaude_kubeconfig_audit: 'Klaude Kubeconfig Audit',
   klaude_health_check: 'Klaude Health Check',
+  
+  // Stock Market Ticker
+  stock_market_ticker: 'Stock Market Ticker',
 }
 
 export function CardWrapper({

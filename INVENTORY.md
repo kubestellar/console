@@ -368,3 +368,50 @@ Based on feature requests:
 - LLM-d specific Card
 - WVA/EPP/Istio/HPA Cards
 - Workload Monitor Card (comprehensive workload tracking)
+
+---
+
+## 7. Modal Dialogs (13 Total)
+
+### Dashboard-Related Modals (6)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 1 | AddCardModal | `dashboard/AddCardModal.tsx` | "Add Card" button | AI-powered modal for adding dashboard cards with "Browse Cards" and "AI Suggestions" tabs |
+| 2 | ConfigureCardModal | `dashboard/ConfigureCardModal.tsx` | Card settings icon | Card configuration with toggles, cluster/namespace selectors, and AI suggestions |
+| 3 | ReplaceCardModal | `dashboard/ReplaceCardModal.tsx` | Card replace action | Replace card with "Select" and "AI" tabs for choosing new card type |
+| 4 | ResetDialog | `dashboard/ResetDialog.tsx` | Dashboard reset action | Two-option dialog: "Add Missing Cards" or "Replace All Cards" |
+| 5 | TemplatesModal | `dashboard/TemplatesModal.tsx` | Templates selector | Dashboard template browser organized by category |
+| 6 | ResourceDetailModal | `dashboard/ResourceDetailModal.tsx` | Click resource in card | Generic resource detail modal with Details, Actions, and AI tabs |
+
+### Cluster Management Modals (3)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 7 | ClusterDetailModal | `clusters/ClusterDetailModal.tsx` | Click cluster in list | Comprehensive cluster details: health, metrics, nodes, workloads, GPU inventory |
+| 8 | RenameModal | `clusters/components/RenameModal.tsx` | Pencil icon on cluster | Rename kubeconfig context display name |
+| 9 | GPUDetailModal | `clusters/components/GPUDetailModal.tsx` | GPU card in cluster detail | GPU resource details: inventory, specs, utilization, per-cluster breakdown |
+
+### Navigation/Exploration Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 10 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
+
+### Feature/Feedback Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 11 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feedback/bugs and track request updates with GitHub integration |
+
+### Setup/Onboarding Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 12 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
+
+### GitOps Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 13 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
+
+### Modal Features
+- All modals support ESC key to close
+- Use React portals for proper z-index layering
+- Feature blur backdrop overlays
+- Most support keyboard navigation
