@@ -4,6 +4,7 @@ web/node_modules/
 
 # Build outputs
 web/dist/
+web/tsconfig.tsbuildinfo
 console
 console-server
 *.exe
