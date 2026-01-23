@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, BackendUnavailableError } from '../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from './useLocalAgent'
 import { getDemoMode, useDemoMode } from './useDemoMode'
@@ -4462,7 +4462,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
   return { history, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh }
 }
 
-// Module-level cache for Helm values - keyed by cluster:release
+// Module-level cache for Helm values - keyed by cluster:release:namespace
 const helmValuesCache = new Map<string, {
   values: Record<string, unknown> | string | null
   format: 'json' | 'yaml'
@@ -4472,7 +4472,9 @@ const helmValuesCache = new Map<string, {
 
 // Hook to fetch Helm release values
 export function useHelmValues(cluster?: string, release?: string, namespace?: string) {
-  const cacheKey = cluster && release ? `${cluster}:${release}` : ''
+  // Build cache key - requires all three params to be valid
+  // We must have namespace to make a meaningful API call
+  const cacheKey = cluster && release && namespace ? `${cluster}:${release}:${namespace}` : ''
   const cachedEntry = cacheKey ? helmValuesCache.get(cacheKey) : undefined
 
   const [values, setValues] = useState<Record<string, unknown> | string | null>(cachedEntry?.values || null)
@@ -4482,6 +4484,9 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(cachedEntry?.consecutiveFailures || 0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cachedEntry?.timestamp || null)
+
+  // Track the key we last initiated a fetch for (to avoid duplicate fetches)
+  const fetchingKeyRef = useRef<string | null>(null)
 
   const refetch = useCallback(async () => {
     // Always set isRefreshing to show animation on manual refresh (even if returning early)
@@ -4494,20 +4499,35 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       return
     }
 
-    // Also set loading if no cached data (use functional update to check)
-    setValues(prev => {
-      if (prev === null && cachedEntry?.values === null) {
-        setIsLoading(true)
-      }
-      return prev
-    })
+    // Check cache directly to determine if we should show loading state
+    const currentCacheKey = cluster && release && namespace ? `${cluster}:${release}:${namespace}` : ''
+    const currentCached = currentCacheKey ? helmValuesCache.get(currentCacheKey) : undefined
+    if (!currentCached || currentCached.values === null) {
+      setIsLoading(true)
+    }
 
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       params.append('release', release)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ values: Record<string, unknown> | string, format: 'json' | 'yaml', error?: string }>(`/api/gitops/helm-values?${params}`)
+      const url = `/api/gitops/helm-values?${params}`
+
+      // Use direct fetch to bypass the global circuit breaker
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const token = localStorage.getItem('token')
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      })
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      const data = await response.json() as { values: Record<string, unknown> | string, format: 'json' | 'yaml', error?: string }
+
       setValues(data.values)
       setFormat(data.format || 'json')
       setError(data.error || null)
@@ -4515,8 +4535,8 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setLastRefresh(Date.now())
 
       // Update cache
-      if (cluster && release) {
-        helmValuesCache.set(`${cluster}:${release}`, {
+      if (cluster && release && namespace) {
+        helmValuesCache.set(`${cluster}:${release}:${namespace}`, {
           values: data.values,
           format: data.format || 'json',
           timestamp: Date.now(),
@@ -4528,37 +4548,115 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Update cache failure count
-      if (cluster && release && cachedEntry) {
-        helmValuesCache.set(`${cluster}:${release}`, {
-          ...cachedEntry,
-          consecutiveFailures: (cachedEntry.consecutiveFailures || 0) + 1
-        })
+      // Update cache failure count - read from cache directly
+      if (cluster && release && namespace) {
+        const cacheKeyForError = `${cluster}:${release}:${namespace}`
+        const existingCache = helmValuesCache.get(cacheKeyForError)
+        if (existingCache) {
+          helmValuesCache.set(cacheKeyForError, {
+            ...existingCache,
+            consecutiveFailures: (existingCache.consecutiveFailures || 0) + 1
+          })
+        }
       }
       // Keep cached data on error
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [cluster, release, namespace, cachedEntry])
+  }, [cluster, release, namespace])
 
+  // Effect to trigger fetch when cluster/release/namespace change
   useEffect(() => {
-    // Use cached data if available
-    const key = cluster && release ? `${cluster}:${release}` : ''
-    const cached = key ? helmValuesCache.get(key) : undefined
+    // Clear values when release is deselected
+    if (!release) {
+      setValues(null)
+      fetchingKeyRef.current = null
+      return
+    }
+
+    // CRITICAL: Don't fetch until namespace is available
+    // Fetching without namespace will return empty results
+    if (!namespace) {
+      return
+    }
+
+    // Build the unique cache key for this request
+    const key = `${cluster}:${release}:${namespace}`
+
+    // Skip if we're already fetching/fetched this exact key
+    if (fetchingKeyRef.current === key) {
+      return
+    }
+
+    // Mark that we're handling this key
+    fetchingKeyRef.current = key
+
+    // Check cache first
+    const cached = helmValuesCache.get(key)
+
     if (cached && cached.values !== null) {
+      // Use cached data
       setValues(cached.values)
       setFormat(cached.format)
       setLastRefresh(cached.timestamp)
       setConsecutiveFailures(cached.consecutiveFailures || 0)
-      // Only refetch if cache is stale (older than 30s)
+      // Refresh in background if stale
       if (Date.now() - cached.timestamp > HELM_CACHE_TTL_MS) {
         refetch()
       }
-    } else if (release) {
-      refetch()
+    } else {
+      // No cache - fetch fresh data using direct fetch (bypasses circuit breaker)
+      const doFetch = async () => {
+        setIsLoading(true)
+        setIsRefreshing(true)
+        try {
+          const params = new URLSearchParams()
+          if (cluster) params.append('cluster', cluster)
+          params.append('release', release)
+          if (namespace) params.append('namespace', namespace)
+          const url = `/api/gitops/helm-values?${params}`
+
+          // Use direct fetch to bypass the global circuit breaker
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+          const token = localStorage.getItem('token')
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+          }
+          const response = await fetch(url, {
+            method: 'GET',
+            headers,
+          })
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`)
+          }
+          const data = await response.json() as { values: Record<string, unknown> | string, format: 'json' | 'yaml', error?: string }
+
+          setValues(data.values)
+          setFormat(data.format || 'json')
+          setError(data.error || null)
+          setConsecutiveFailures(0)
+          setLastRefresh(Date.now())
+
+          // Update cache
+          helmValuesCache.set(key, {
+            values: data.values,
+            format: data.format || 'json',
+            timestamp: Date.now(),
+            consecutiveFailures: 0
+          })
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm values'
+          setError(errorMessage)
+          setConsecutiveFailures(prev => prev + 1)
+        } finally {
+          setIsLoading(false)
+          setIsRefreshing(false)
+        }
+      }
+      doFetch()
     }
-  }, [cluster, release, refetch])
+  }, [cluster, release, namespace, refetch])
 
   const isFailed = consecutiveFailures >= 3
 
