@@ -272,7 +272,7 @@ export function MatchGame(_props: CardComponentProps) {
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty]
 
   return (
-    <div className="flex flex-col gap-4 h-full relative">
+    <div className="flex flex-col gap-2 h-full relative">
       {/* Canvas for confetti */}
       <canvas
         ref={canvasRef}
@@ -282,9 +282,9 @@ export function MatchGame(_props: CardComponentProps) {
 
       {/* Header with controls */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-400" />
-          <span className="font-semibold">Match Game</span>
+        <div className="flex items-center gap-1.5">
+          <Trophy className="w-4 h-4 text-yellow-400" />
+          <span className="text-sm font-semibold">Match Game</span>
         </div>
         
         {/* Difficulty selector */}
@@ -293,7 +293,7 @@ export function MatchGame(_props: CardComponentProps) {
             <button
               key={d}
               onClick={() => changeDifficulty(d)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                 difficulty === d
                   ? 'bg-purple-500 text-white'
                   : 'bg-white/5 hover:bg-white/10 text-gray-400'
@@ -307,29 +307,29 @@ export function MatchGame(_props: CardComponentProps) {
 
       {/* Game stats */}
       {isPlaying && (
-        <div className="flex items-center justify-between gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Hash className="w-4 h-4 text-blue-400" />
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5">
+            <Hash className="w-3.5 h-3.5 text-blue-400" />
             <span>Moves: <span className="font-bold">{moves}</span></span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-green-400" />
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-green-400" />
             <span>Time: <span className="font-bold">{formatTime(time)}</span></span>
           </div>
           <div className="flex gap-1">
             <button
               onClick={togglePause}
-              className="p-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
+              className="p-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
               title={isPaused ? 'Resume' : 'Pause'}
             >
-              {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={resetGame}
-              className="p-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
+              className="p-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
               title="Reset"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -337,20 +337,20 @@ export function MatchGame(_props: CardComponentProps) {
 
       {/* High score display */}
       {highScores[difficulty] && !isPlaying && (
-        <div className="text-sm text-center p-2 bg-yellow-500/10 border border-yellow-500/20 rounded">
-          <Trophy className="w-4 h-4 inline mr-1 text-yellow-400" />
+        <div className="text-xs text-center py-1 px-2 bg-yellow-500/10 border border-yellow-500/20 rounded">
+          <Trophy className="w-3 h-3 inline mr-1 text-yellow-400" />
           Best: {highScores[difficulty]!.moves} moves in {formatTime(highScores[difficulty]!.time)}
         </div>
       )}
 
       {/* Start screen */}
       {!isPlaying && cards.length === 0 && (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center min-h-[120px]">
           <button
             onClick={initGame}
-            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2"
           >
-            <Play className="w-5 h-5" />
+            <Play className="w-4 h-4" />
             Start Game
           </button>
         </div>
@@ -358,18 +358,18 @@ export function MatchGame(_props: CardComponentProps) {
 
       {/* Game won screen */}
       {gameWon && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <div className="text-4xl">🎉</div>
-          <div className="text-xl font-bold text-center">Congratulations!</div>
-          <div className="text-center text-sm text-gray-400">
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[120px]">
+          <div className="text-2xl">🎉</div>
+          <div className="text-base font-bold text-center">Congratulations!</div>
+          <div className="text-center text-xs text-gray-400">
             <div>Completed in <span className="font-bold text-white">{moves}</span> moves</div>
             <div>Time: <span className="font-bold text-white">{formatTime(time)}</span></div>
           </div>
           <button
             onClick={resetGame}
-            className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 flex items-center gap-2"
+            className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg text-sm font-semibold hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 flex items-center gap-2"
           >
-            <RotateCcw className="w-5 h-5" />
+            <RotateCcw className="w-4 h-4" />
             Play Again
           </button>
         </div>
@@ -378,7 +378,7 @@ export function MatchGame(_props: CardComponentProps) {
       {/* Game board */}
       {isPlaying && !gameWon && (
         <div 
-          className="flex-1 grid gap-2 items-center justify-items-center"
+          className="flex-1 grid gap-1.5 items-center justify-items-center"
           style={{
             gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
             gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
@@ -394,7 +394,7 @@ export function MatchGame(_props: CardComponentProps) {
                 key={card.id}
                 onClick={() => handleCardClick(card.id)}
                 disabled={isFlipped || isPaused}
-                className="relative w-full aspect-square max-w-[80px] max-h-[80px] perspective-1000"
+                className="relative w-full aspect-square max-w-[60px] max-h-[60px] perspective-1000"
                 style={{ opacity: isPaused ? 0.5 : 1 }}
               >
                 <div
@@ -403,15 +403,15 @@ export function MatchGame(_props: CardComponentProps) {
                   }`}
                 >
                   {/* Card back */}
-                  <div className="card-face absolute inset-0 backface-hidden bg-gradient-to-br from-purple-500/20 to-blue-500/20 border-2 border-purple-500/30 rounded-lg flex items-center justify-center">
-                    <Terminal className="w-6 h-6 text-purple-400" />
+                  <div className="card-face absolute inset-0 backface-hidden bg-gradient-to-br from-purple-500/20 to-blue-500/20 border-2 border-purple-500/30 rounded flex items-center justify-center">
+                    <Terminal className="w-5 h-5 text-purple-400" />
                   </div>
                   
                   {/* Card front */}
                   <div className={`card-face absolute inset-0 backface-hidden rotate-y-180 ${
                     card.matched ? 'bg-green-500/20 border-green-500/30' : 'bg-white/10 border-white/20'
-                  } border-2 rounded-lg flex items-center justify-center`}>
-                    <Icon className={`w-8 h-8 ${icon?.color || 'text-blue-400'}`} />
+                  } border-2 rounded flex items-center justify-center`}>
+                    <Icon className={`w-6 h-6 ${icon?.color || 'text-blue-400'}`} />
                   </div>
                 </div>
               </button>
@@ -424,11 +424,11 @@ export function MatchGame(_props: CardComponentProps) {
       {isPaused && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
           <div className="text-center">
-            <Pause className="w-12 h-12 mx-auto mb-2 text-white" />
-            <div className="text-xl font-bold">Paused</div>
+            <Pause className="w-8 h-8 mx-auto mb-2 text-white" />
+            <div className="text-base font-bold">Paused</div>
             <button
               onClick={togglePause}
-              className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              className="mt-2 px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >
               Resume
             </button>
