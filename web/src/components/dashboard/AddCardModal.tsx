@@ -95,6 +95,7 @@ const CARD_CATALOG = {
   ],
   'Misc': [
     { type: 'weather', title: 'Weather', description: 'Weather conditions with multi-day forecasts and animated backgrounds', visualization: 'status' },
+    { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
   ],
 } as const
 
