@@ -71,6 +71,8 @@ import { OPAPolicies } from './OPAPolicies'
 import { KyvernoPolicies } from './KyvernoPolicies'
 // Weather card
 import { Weather } from './Weather'
+// Stock Market Ticker card
+import { StockMarketTicker } from './StockMarketTicker'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -158,6 +160,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kyverno_policies: KyvernoPolicies,
   // Weather card
   weather: Weather,
+  // Stock Market Ticker card
+  stock_market_ticker: StockMarketTicker,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -191,6 +195,8 @@ export const DEMO_DATA_CARDS = new Set([
   'kubecost_overview',
   // Policy management - kyverno is demo-only
   'kyverno_policies',
+  // Stock Market Ticker - uses mock data (demo until API integration)
+  'stock_market_ticker',
 ])
 
 /**
@@ -243,6 +249,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   user_management: 6,
   // Weather card
   weather: 6,
+  // Stock Market Ticker
+  stock_market_ticker: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,
