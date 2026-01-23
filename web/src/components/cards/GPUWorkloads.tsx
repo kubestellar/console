@@ -67,10 +67,12 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   // 2. Have specific GPU workload labels
   // 3. Are assigned to (running on) GPU nodes
   const gpuWorkloads = useMemo(() => {
-    // Create a set of GPU node names for quick lookup
-    const gpuNodeNames = new Set<string>()
+    // Create a map of GPU node names by cluster for quick lookup
+    // Key format: "normalizedCluster:nodeName"
+    const gpuNodeKeys = new Set<string>()
     gpuNodes.forEach(gpuNode => {
-      gpuNodeNames.add(gpuNode.name)
+      const normalizedCluster = normalizeClusterName(gpuNode.cluster)
+      gpuNodeKeys.add(`${normalizedCluster}:${gpuNode.name}`)
     })
 
     let filtered = allPods.filter(pod => {
@@ -97,18 +99,11 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       }
 
       // Tertiary check: is the pod assigned to a GPU node?
-      // Normalize cluster name for matching
       if (pod.node) {
         const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
+        const podKey = `${normalizedPodCluster}:${pod.node}`
         
-        // Check if this pod's node is a GPU node
-        // Match both node name and cluster
-        const isOnGPUNode = gpuNodes.some(gpuNode => {
-          const normalizedGPUCluster = normalizeClusterName(gpuNode.cluster)
-          return gpuNode.name === pod.node && normalizedGPUCluster === normalizedPodCluster
-        })
-        
-        if (isOnGPUNode) return true
+        if (gpuNodeKeys.has(podKey)) return true
       }
 
       return false
