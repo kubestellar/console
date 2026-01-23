@@ -62,17 +62,27 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const isRefreshing = gpuRefreshing
 
   // Filter pods that are actual GPU workloads
-  // Only show pods that explicitly request GPU resources - this is the most accurate indicator
+  // Show pods that: 1) request GPU resources, 2) have GPU workload labels, or 3) are assigned to GPU nodes
   const gpuWorkloads = useMemo(() => {
     let filtered = allPods.filter(pod => {
       // Must have a cluster
       if (!pod.cluster) return false
 
       // Primary check: does the pod explicitly request GPU resources?
-      // This is the only reliable indicator of an actual GPU workload
+      // This is the most reliable indicator of an actual GPU workload
       if (hasGPUResourceRequest(pod.containers)) return true
 
-      // Secondary check: specific GPU workload labels (not just affinity)
+      // Secondary check: is the pod assigned to a GPU node?
+      // This catches pods that are scheduled on GPU nodes (e.g., via affinity) but don't explicitly request GPUs
+      if (pod.node) {
+        const podCluster = normalizeClusterName(pod.cluster || '')
+        const isOnGPUNode = gpuNodes.some(gpuNode =>
+          gpuNode.name === pod.node && normalizeClusterName(gpuNode.cluster || '') === podCluster
+        )
+        if (isOnGPUNode) return true
+      }
+
+      // Tertiary check: specific GPU workload labels (not just affinity)
       // Look for labels that explicitly indicate this is a GPU/ML workload
       if (pod.labels) {
         const gpuWorkloadLabels = [
