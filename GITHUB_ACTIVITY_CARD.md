@@ -53,6 +53,62 @@ The GitHub Activity Monitoring card provides comprehensive activity metrics for 
 - **Refresh Control** - Manual refresh with last update timestamp
 - **Error Handling** - Clear error messages with retry options
 
+## Quick Start Guide
+
+### Prerequisites
+
+1. A GitHub account
+2. Access to at least one GitHub repository (public or private)
+3. Optional: GitHub Personal Access Token for private repos or higher rate limits
+
+### Step-by-Step Setup
+
+#### 1. Add the Card to Your Dashboard
+
+1. Open the KubeStellar Console
+2. Navigate to the Dashboard page
+3. Click the **"+ Add Card"** button
+4. Search for "GitHub Activity"
+5. Click on the card to add it to your dashboard
+
+#### 2. Configure the Card
+
+Click the settings icon on the card and configure:
+
+```json
+{
+  "repos": ["kubestellar/console"],
+  "timeRange": "30d"
+}
+```
+
+Replace `"kubestellar/console"` with your repository in the format `"owner/repo"`.
+
+#### 3. (Optional) Add a GitHub Token
+
+For private repositories or to increase API rate limits:
+
+**Generate Token:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token"
+3. Select scope: `repo` (Full control of private repositories)
+4. Generate and copy the token (starts with `ghp_`)
+
+**Add Token to Console:**
+1. Open browser developer console (F12)
+2. Execute: `localStorage.setItem('github_token', 'ghp_your_token_here')`
+3. Refresh the card
+
+**Security Note:** Tokens are stored in localStorage. For production use, consider implementing server-side token management.
+
+#### 4. Start Using the Card
+
+- **Switch Views:** Click tabs at the top (PRs, Issues, Releases, Contributors)
+- **Filter by Time:** Click time range buttons (7d, 30d, 90d, 1y)
+- **Sort:** Use the sort dropdown for different ordering
+- **Navigate:** Use pagination at the bottom
+- **Refresh:** Click the refresh button to update data
+
 ## Configuration
 
 ### Card Configuration
