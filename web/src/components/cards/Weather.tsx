@@ -422,3 +422,4 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     </div>
   )
 }
+
