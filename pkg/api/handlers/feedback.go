@@ -255,8 +255,13 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 			// If PR is merged (check MergedAt since Merged field isn't in list response), status is fix_complete
 			if pr.MergedAt != nil {
 				status = "fix_complete"
+			} else if pr.Draft {
+				// Draft PR means AI is still working - keep at feasibility_study
+				if status == "needs_triage" || status == "triage_accepted" {
+					status = "feasibility_study"
+				}
 			} else if status == "needs_triage" || status == "triage_accepted" || status == "feasibility_study" {
-				// If we have an open PR and status is still early, upgrade to fix_ready
+				// If we have a non-draft open PR and status is still early, upgrade to fix_ready
 				status = "fix_ready"
 			}
 		}
@@ -310,6 +315,7 @@ type GitHubPR struct {
 	State    string     `json:"state"`
 	Title    string     `json:"title"`
 	Body     string     `json:"body"`
+	Draft    bool       `json:"draft"`
 	Merged   bool       `json:"merged"`
 	MergedAt *time.Time `json:"merged_at"`
 }
