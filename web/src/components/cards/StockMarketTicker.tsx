@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { 
   TrendingUp, TrendingDown, Clock, BarChart3, 
-  ChevronDown, ChevronRight, ExternalLink, Search as SearchIcon,
-  Star, X, Plus, Loader2
+  ChevronDown, ChevronRight, Search as SearchIcon,
+  Star, X, Loader2
 } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
