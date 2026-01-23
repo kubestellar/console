@@ -151,9 +151,9 @@ jobs:
           ### Testing Requirements:
           - **You MUST use Playwright to test the preview deployment**
           - Do not just take screenshots - actually interact with the UI
-          - **IMPORTANT: Use the kubestellar.io preview URL, NOT the raw Netlify URL**
-            - Use: \`https://console.preview.kubestellar.io/pr/{PR_NUMBER}/\`
-            - Do NOT use: \`deploy-preview-*--kubestellar-console.netlify.app\`
+          - **Get the Deploy Preview URL from the Netlify bot comment on your PR**
+            - Look for the comment from \`netlify[bot]\` with "Deploy Preview ready!"
+            - Use the URL ending in \`.kubestellar.io\` (e.g., \`https://deploy-preview-XX.console-deploy-preview.kubestellar.io\`)
           - Test all user interactions (clicks, inputs, etc.) that your changes affect
           - Verify the expected behavior occurs after each interaction
           EOF
@@ -185,9 +185,9 @@ jobs:
           ### Testing Requirements:
           - **You MUST use Playwright to test the preview deployment**
           - Do not just take screenshots - actually interact with the UI
-          - **IMPORTANT: Use the kubestellar.io preview URL, NOT the raw Netlify URL**
-            - Use: \`https://console.preview.kubestellar.io/pr/{PR_NUMBER}/\`
-            - Do NOT use: \`deploy-preview-*--kubestellar-console.netlify.app\`
+          - **Get the Deploy Preview URL from the Netlify bot comment on your PR**
+            - Look for the comment from \`netlify[bot]\` with "Deploy Preview ready!"
+            - Use the URL ending in \`.kubestellar.io\` (e.g., \`https://deploy-preview-XX.console-deploy-preview.kubestellar.io\`)
           - Test all user interactions (clicks, inputs, etc.) that your changes affect
           - Verify the expected behavior occurs after each interaction
           EOF
@@ -314,12 +314,15 @@ jobs:
             echo "Assigned issue author @$ISSUE_AUTHOR to PR #$PR_NUM"
           fi
 
+          # Remove WIP label from PR
+          gh pr edit "$PR_NUM" --repo "$REPO" --remove-label "do-not-merge/work-in-progress" 2>/dev/null || true
+
           # Update issue status
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-pr-draft" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "ai-awaiting-fix" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-pr-ready"
 
-          echo "Updated issue #$ISSUE: ai-pr-ready"
+          echo "Updated issue #$ISSUE: ai-pr-ready, removed WIP label from PR #$PR_NUM"
 
       - name: Update labels on PR merged
         if: github.event.action == 'closed' && github.event.pull_request.merged == true && steps.issue.outputs.number != ''
