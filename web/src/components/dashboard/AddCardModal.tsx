@@ -95,6 +95,7 @@ const CARD_CATALOG = {
   ],
   'Misc': [
     { type: 'weather', title: 'Weather', description: 'Weather conditions with multi-day forecasts and animated backgrounds', visualization: 'status' },
+    { type: 'match_game', title: 'Match Game', description: 'Classic memory matching game with Kubernetes-themed cards', visualization: 'status' },
   ],
 } as const
 
