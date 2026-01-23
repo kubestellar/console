@@ -372,7 +372,7 @@ function StockRow({
     <div className="border-b border-border/30 last:border-0">
       {/* Main row */}
       <div 
-        className="flex items-center gap-3 p-3 pl-10 hover:bg-accent/50 cursor-pointer transition-colors"
+        className="flex items-center gap-3 p-3 pl-10 pr-20 hover:bg-accent/50 cursor-pointer transition-colors"
         onClick={onToggle}
       >
         {/* Symbol and name */}
@@ -385,12 +385,12 @@ function StockRow({
         </div>
 
         {/* Sparkline */}
-        <div className="hidden sm:block">
+        <div className="hidden sm:block flex-shrink-0">
           <Sparkline data={stock.sparklineData} isPositive={isPositive} />
         </div>
 
         {/* Price and change */}
-        <div className="text-right">
+        <div className="text-right flex-shrink-0">
           <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
           <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
             {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -777,13 +777,14 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
         <div className="flex-1 overflow-y-auto border border-border/30 rounded-lg">
           {stocks.map(stock => (
             <div key={stock.symbol} className="relative">
-              {/* Drag handle */}
+              {/* Drag handle (visual indicator - drag-and-drop functionality requires additional implementation) */}
               <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
                 <button
                   className="p-1 text-muted-foreground hover:text-foreground cursor-move transition-colors"
-                  title="Drag to reorder"
+                  title="Drag to reorder (use sort controls for now)"
+                  disabled
                 >
-                  <GripVertical className="w-4 h-4" />
+                  <GripVertical className="w-4 h-4 opacity-50" />
                 </button>
               </div>
               <StockRow
@@ -792,7 +793,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                 onToggle={() => toggleExpanded(stock.symbol)}
               />
               {/* Favorite and remove buttons */}
-              <div className="absolute right-2 top-2 flex items-center gap-1">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1 bg-card/90 backdrop-blur-sm p-1 rounded">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
