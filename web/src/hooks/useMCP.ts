@@ -3035,7 +3035,19 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ drifts: GitOpsDrift[] }>(`/api/gitops/drifts?${params}`)
+      const url = `/api/gitops/drifts?${params}`
+
+      // Use direct fetch to bypass the global circuit breaker
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const token = localStorage.getItem('token')
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch(url, { method: 'GET', headers })
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      const data = await response.json() as { drifts: GitOpsDrift[] }
       setDrifts(data.drifts || [])
       setError(null)
       const now = new Date()
@@ -4286,7 +4298,19 @@ export function useHelmReleases(cluster?: string) {
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
-      const { data } = await api.get<{ releases: HelmRelease[] }>(`/api/gitops/helm-releases?${params}`)
+      const url = `/api/gitops/helm-releases?${params}`
+
+      // Use direct fetch to bypass the global circuit breaker
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const token = localStorage.getItem('token')
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch(url, { method: 'GET', headers })
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      const data = await response.json() as { releases: HelmRelease[] }
       const newReleases = data.releases || []
 
       // Update cache if fetching all clusters
@@ -4401,7 +4425,19 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       if (cluster) params.append('cluster', cluster)
       params.append('release', release)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ history: HelmHistoryEntry[], error?: string }>(`/api/gitops/helm-history?${params}`)
+      const url = `/api/gitops/helm-history?${params}`
+
+      // Use direct fetch to bypass the global circuit breaker
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const token = localStorage.getItem('token')
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch(url, { method: 'GET', headers })
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      const data = await response.json() as { history: HelmHistoryEntry[], error?: string }
       const newHistory = data.history || []
       setHistory(newHistory)
       setError(data.error || null)
