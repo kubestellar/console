@@ -195,8 +195,6 @@ export const DEMO_DATA_CARDS = new Set([
   'kubecost_overview',
   // Policy management - kyverno is demo-only
   'kyverno_policies',
-  // Stock Market Ticker - uses mock data (demo until API integration)
-  'stock_market_ticker',
 ])
 
 /**
