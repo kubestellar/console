@@ -62,17 +62,25 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const isRefreshing = gpuRefreshing
 
   // Filter pods that are actual GPU workloads
-  // Only show pods that explicitly request GPU resources - this is the most accurate indicator
+  // Show pods that:
+  // 1. Explicitly request GPU resources
+  // 2. Have specific GPU workload labels
+  // 3. Are assigned to (running on) GPU nodes
   const gpuWorkloads = useMemo(() => {
+    // Create a set of GPU node names for quick lookup
+    const gpuNodeNames = new Set<string>()
+    gpuNodes.forEach(gpuNode => {
+      gpuNodeNames.add(gpuNode.name)
+    })
+
     let filtered = allPods.filter(pod => {
       // Must have a cluster
       if (!pod.cluster) return false
 
       // Primary check: does the pod explicitly request GPU resources?
-      // This is the only reliable indicator of an actual GPU workload
       if (hasGPUResourceRequest(pod.containers)) return true
 
-      // Secondary check: specific GPU workload labels (not just affinity)
+      // Secondary check: specific GPU workload labels
       // Look for labels that explicitly indicate this is a GPU/ML workload
       if (pod.labels) {
         const gpuWorkloadLabels = [
@@ -86,6 +94,21 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
           // Check for vLLM, LLM inference workloads by app label
           if (key === 'app' && /vllm|llm|inference|model/i.test(value)) return true
         }
+      }
+
+      // Tertiary check: is the pod assigned to a GPU node?
+      // Normalize cluster name for matching
+      if (pod.node) {
+        const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
+        
+        // Check if this pod's node is a GPU node
+        // Match both node name and cluster
+        const isOnGPUNode = gpuNodes.some(gpuNode => {
+          const normalizedGPUCluster = normalizeClusterName(gpuNode.cluster)
+          return gpuNode.name === pod.node && normalizedGPUCluster === normalizedPodCluster
+        })
+        
+        if (isOnGPUNode) return true
       }
 
       return false
