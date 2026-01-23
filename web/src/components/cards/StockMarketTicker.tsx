@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { 
   TrendingUp, TrendingDown, Clock, BarChart3, 
   ChevronDown, ChevronRight, Search as SearchIcon,
-  Star, X, Loader2
+  Star, X, Loader2, GripVertical
 } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -372,7 +372,7 @@ function StockRow({
     <div className="border-b border-border/30 last:border-0">
       {/* Main row */}
       <div 
-        className="flex items-center gap-3 p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+        className="flex items-center gap-3 p-3 pl-10 hover:bg-accent/50 cursor-pointer transition-colors"
         onClick={onToggle}
       >
         {/* Symbol and name */}
@@ -553,11 +553,14 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           favorite: true,
         }])
       }
+      
+      // Trigger immediate refresh to load the new stock data
+      setTimeout(() => handleRefresh(), 100)
     }
     setStockSearchInput('')
     setShowStockDropdown(false)
     setStockSearchResults([])
-  }, [activeSymbols, savedStocks])
+  }, [activeSymbols, savedStocks, handleRefresh])
 
   // Remove stock from active list
   const removeStock = useCallback((symbol: string) => {
@@ -723,7 +726,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
           {/* Search results dropdown */}
           {showStockDropdown && stockSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto">
               {stockSearchResults.map((result) => (
                 <button
                   key={result.symbol}
@@ -774,6 +777,15 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
         <div className="flex-1 overflow-y-auto border border-border/30 rounded-lg">
           {stocks.map(stock => (
             <div key={stock.symbol} className="relative">
+              {/* Drag handle */}
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
+                <button
+                  className="p-1 text-muted-foreground hover:text-foreground cursor-move transition-colors"
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="w-4 h-4" />
+                </button>
+              </div>
               <StockRow
                 stock={stock}
                 expanded={expandedStocks.has(stock.symbol)}
