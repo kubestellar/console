@@ -221,12 +221,12 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
-        const parsed = JSON.parse(saved)
+        const parsed = JSON.parse(saved) as GameState
         // Reconstruct Sets for notes
-        parsed.board = parsed.board.map((row: any[]) =>
-          row.map((cell: any) => ({
+        parsed.board = parsed.board.map((row) =>
+          row.map((cell) => ({
             ...cell,
-            notes: new Set(cell.notes || []),
+            notes: new Set(Array.isArray(cell.notes) ? cell.notes : []),
           }))
         )
         setGameState(parsed)
@@ -238,7 +238,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
     const savedBestTimes = localStorage.getItem(BEST_TIMES_KEY)
     if (savedBestTimes) {
       try {
-        setBestTimes(JSON.parse(savedBestTimes))
+        setBestTimes(JSON.parse(savedBestTimes) as BestTimes)
       } catch (e) {
         console.error('Failed to load best times:', e)
       }
@@ -297,7 +297,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
     if (!gameState) {
       startNewGame('easy')
     }
-  }, [])
+  }, [gameState, startNewGame])
 
   const addToHistory = useCallback((board: Cell[][], timer: number) => {
     setHistory(prev => {
