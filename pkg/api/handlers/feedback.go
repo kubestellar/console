@@ -11,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -1109,33 +1111,18 @@ func extractPRNumber(ref string) int {
 }
 
 // extractLinkedIssueNumbers extracts issue numbers from PR body
-// Looks for patterns like "Fixes #123", "Closes #456", "Resolves #789"
+// Looks for patterns like "Fixes #123", "Closes org/repo#456", "Resolves #789"
 func extractLinkedIssueNumbers(body string) []int {
 	var issueNumbers []int
-	patterns := []string{
-		"Fixes #%d",
-		"fixes #%d",
-		"Fix #%d",
-		"fix #%d",
-		"Closes #%d",
-		"closes #%d",
-		"Close #%d",
-		"close #%d",
-		"Resolves #%d",
-		"resolves #%d",
-		"Resolve #%d",
-		"resolve #%d",
-	}
 
-	for _, pattern := range patterns {
-		var issueNum int
-		remaining := body
-		for {
-			idx := bytes.Index([]byte(remaining), []byte(pattern[:len(pattern)-2]))
-			if idx == -1 {
-				break
-			}
-			_, err := fmt.Sscanf(remaining[idx:], pattern, &issueNum)
+	// Regex to match: Fixes/Closes/Resolves [org/repo]#123
+	// Handles both "#123" and "org/repo#123" formats
+	re := regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+(?:[\w-]+/[\w-]+)?#(\d+)`)
+	matches := re.FindAllStringSubmatch(body, -1)
+
+	for _, match := range matches {
+		if len(match) >= 2 {
+			issueNum, err := strconv.Atoi(match[1])
 			if err == nil && issueNum > 0 {
 				// Check for duplicates
 				found := false
@@ -1149,7 +1136,6 @@ func extractLinkedIssueNumbers(body string) []int {
 					issueNumbers = append(issueNumbers, issueNum)
 				}
 			}
-			remaining = remaining[idx+1:]
 		}
 	}
 	return issueNumbers
