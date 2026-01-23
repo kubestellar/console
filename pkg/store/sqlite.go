@@ -892,6 +892,11 @@ func (s *SQLiteStore) GetFeatureRequestByIssueNumber(issueNumber int) (*models.F
 	return s.scanFeatureRequest(row)
 }
 
+func (s *SQLiteStore) GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error) {
+	row := s.db.QueryRow(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE pr_number = ?`, prNumber)
+	return s.scanFeatureRequest(row)
+}
+
 func (s *SQLiteStore) GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error) {
 	rows, err := s.db.Query(`SELECT id, user_id, title, description, request_type, github_issue_number, github_issue_url, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, created_at, updated_at FROM feature_requests WHERE user_id = ? ORDER BY created_at DESC`, userID.String())
 	if err != nil {

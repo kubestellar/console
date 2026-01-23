@@ -61,6 +61,7 @@ type Store interface {
 	CreateFeatureRequest(request *models.FeatureRequest) error
 	GetFeatureRequest(id uuid.UUID) (*models.FeatureRequest, error)
 	GetFeatureRequestByIssueNumber(issueNumber int) (*models.FeatureRequest, error)
+	GetFeatureRequestByPRNumber(prNumber int) (*models.FeatureRequest, error)
 	GetUserFeatureRequests(userID uuid.UUID) ([]models.FeatureRequest, error)
 	GetAllFeatureRequests() ([]models.FeatureRequest, error)
 	UpdateFeatureRequest(request *models.FeatureRequest) error

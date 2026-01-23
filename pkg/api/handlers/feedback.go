@@ -803,44 +803,66 @@ func (h *FeedbackHandler) handlePREvent(payload map[string]interface{}) error {
 
 	prNumber := int(pr["number"].(float64))
 	prURL, _ := pr["html_url"].(string)
+	body, _ := pr["body"].(string)
 
-	// Check if this is an AI-generated PR by looking at labels
-	labels, _ := pr["labels"].([]interface{})
-	isAIGenerated := false
-	for _, l := range labels {
-		label, _ := l.(map[string]interface{})
-		if name, _ := label["name"].(string); name == "ai-generated" {
-			isAIGenerated = true
-			break
+	// Try to find the associated feature request
+	var request *models.FeatureRequest
+	var requestID uuid.UUID
+
+	// Method 1: Check for embedded UUID (Console Request ID:** <uuid>)
+	requestID = extractFeatureRequestID(body)
+	if requestID != uuid.Nil {
+		var err error
+		request, err = h.store.GetFeatureRequest(requestID)
+		if err != nil {
+			log.Printf("[Webhook] Error getting feature request %s: %v", requestID, err)
 		}
 	}
 
-	if !isAIGenerated {
-		return nil
+	// Method 2: Check for linked issue numbers (Fixes #123, Closes #456)
+	if request == nil {
+		linkedIssues := extractLinkedIssueNumbers(body)
+		for _, issueNum := range linkedIssues {
+			var err error
+			request, err = h.store.GetFeatureRequestByIssueNumber(issueNum)
+			if err == nil && request != nil {
+				requestID = request.ID
+				log.Printf("[Webhook] PR #%d linked to feature request via issue #%d", prNumber, issueNum)
+				break
+			}
+		}
 	}
 
-	// Extract feature request ID from PR body (we embed it when creating the PR)
-	body, _ := pr["body"].(string)
-	requestID := extractFeatureRequestID(body)
-	if requestID == uuid.Nil {
-		log.Printf("[Webhook] PR #%d has no feature request ID", prNumber)
-		return nil
-	}
-
-	request, err := h.store.GetFeatureRequest(requestID)
-	if err != nil || request == nil {
-		log.Printf("[Webhook] Feature request %s not found", requestID)
+	// If we still don't have a feature request, check labels for ai-generated
+	if request == nil {
+		labels, _ := pr["labels"].([]interface{})
+		isAIGenerated := false
+		for _, l := range labels {
+			label, _ := l.(map[string]interface{})
+			if name, _ := label["name"].(string); name == "ai-generated" {
+				isAIGenerated = true
+				break
+			}
+		}
+		if !isAIGenerated {
+			// Not linked to any feature request and not AI-generated, ignore
+			return nil
+		}
+		log.Printf("[Webhook] PR #%d has ai-generated label but no linked feature request", prNumber)
 		return nil
 	}
 
 	switch action {
-	case "opened":
-		// Update request with PR info
+	case "opened", "synchronize", "ready_for_review":
+		// Update request with PR info and set status to fix_ready
 		h.store.UpdateFeatureRequestPR(requestID, prNumber, prURL)
-		h.createNotification(request.UserID, &requestID, models.NotificationTypeFixReady,
-			fmt.Sprintf("PR #%d Created", prNumber),
-			fmt.Sprintf("A fix for '%s' is ready for review.", request.Title),
-			prURL)
+		h.store.UpdateFeatureRequestStatus(requestID, models.RequestStatusFixReady)
+		if action == "opened" {
+			h.createNotification(request.UserID, &requestID, models.NotificationTypeFixReady,
+				fmt.Sprintf("PR #%d Created", prNumber),
+				fmt.Sprintf("A fix for '%s' is ready for review.", request.Title),
+				prURL)
+		}
 
 	case "closed":
 		merged, _ := pr["merged"].(bool)
@@ -894,7 +916,25 @@ func (h *FeedbackHandler) handleDeploymentStatus(payload map[string]interface{})
 	log.Printf("[Webhook] Deployment success for PR #%d: %s", prNumber, targetURL)
 
 	// Find feature request by PR number and update preview URL
-	// This requires a new store method - for now, log and skip
+	request, err := h.store.GetFeatureRequestByPRNumber(prNumber)
+	if err != nil || request == nil {
+		log.Printf("[Webhook] No feature request found for PR #%d", prNumber)
+		return nil
+	}
+
+	// Update preview URL
+	if err := h.store.UpdateFeatureRequestPreview(request.ID, targetURL); err != nil {
+		log.Printf("[Webhook] Failed to update preview URL: %v", err)
+		return err
+	}
+
+	// Notify user that preview is ready
+	h.createNotification(request.UserID, &request.ID, models.NotificationTypePreviewReady,
+		fmt.Sprintf("Preview Ready for PR #%d", prNumber),
+		fmt.Sprintf("A preview for '%s' is now available.", request.Title),
+		targetURL)
+
+	log.Printf("[Webhook] Updated preview URL for request %s: %s", request.ID, targetURL)
 	return nil
 }
 
@@ -1066,6 +1106,53 @@ func extractPRNumber(ref string) int {
 	var prNumber int
 	fmt.Sscanf(ref, "pull/%d/head", &prNumber)
 	return prNumber
+}
+
+// extractLinkedIssueNumbers extracts issue numbers from PR body
+// Looks for patterns like "Fixes #123", "Closes #456", "Resolves #789"
+func extractLinkedIssueNumbers(body string) []int {
+	var issueNumbers []int
+	patterns := []string{
+		"Fixes #%d",
+		"fixes #%d",
+		"Fix #%d",
+		"fix #%d",
+		"Closes #%d",
+		"closes #%d",
+		"Close #%d",
+		"close #%d",
+		"Resolves #%d",
+		"resolves #%d",
+		"Resolve #%d",
+		"resolve #%d",
+	}
+
+	for _, pattern := range patterns {
+		var issueNum int
+		remaining := body
+		for {
+			idx := bytes.Index([]byte(remaining), []byte(pattern[:len(pattern)-2]))
+			if idx == -1 {
+				break
+			}
+			_, err := fmt.Sscanf(remaining[idx:], pattern, &issueNum)
+			if err == nil && issueNum > 0 {
+				// Check for duplicates
+				found := false
+				for _, n := range issueNumbers {
+					if n == issueNum {
+						found = true
+						break
+					}
+				}
+				if !found {
+					issueNumbers = append(issueNumbers, issueNum)
+				}
+			}
+			remaining = remaining[idx+1:]
+		}
+	}
+	return issueNumbers
 }
 
 // LoadFeedbackConfigFromEnv loads feedback configuration from environment
