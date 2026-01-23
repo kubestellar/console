@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { HardDrive, CheckCircle, AlertTriangle, Clock, Search } from 'lucide-react'
+import { HardDrive, CheckCircle, AlertTriangle, Clock, Search, ChevronRight } from 'lucide-react'
 import { usePVCs, useClusters } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -60,6 +61,7 @@ export function PVCStatus() {
   const { pvcs, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePVCs()
   const { clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
+  const { drillToPVC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -258,13 +260,19 @@ export function PVCStatus() {
           displayPVCs.map(pvc => (
             <div
               key={`${pvc.cluster}-${pvc.namespace}-${pvc.name}`}
-              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+              onClick={() => drillToPVC(pvc.cluster || '', pvc.namespace || '', pvc.name, {
+                status: pvc.status,
+                capacity: pvc.capacity,
+                storageClass: pvc.storageClass,
+                age: pvc.age,
+              })}
+              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
             >
               <div className="flex items-center gap-2 min-w-0">
                 {getStatusIcon(pvc.status)}
                 {pvc.cluster && <ClusterBadge cluster={pvc.cluster} size="sm" />}
                 <div className="min-w-0">
-                  <div className="text-sm text-foreground truncate">{pvc.name}</div>
+                  <div className="text-sm text-foreground truncate group-hover:text-purple-400">{pvc.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {pvc.namespace}
                   </div>
@@ -278,6 +286,7 @@ export function PVCStatus() {
                   </span>
                 )}
                 <span className={getStatusColor(pvc.status)}>{pvc.status}</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           ))

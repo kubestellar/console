@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Cpu, Activity } from 'lucide-react'
+import { Cpu, Activity, ChevronRight } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -32,6 +33,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     lastRefresh
   } = useGPUNodes(cluster)
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { drillToCluster } = useDrillDownActions()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
@@ -202,17 +204,26 @@ export function GPUStatus({ config }: GPUStatusProps) {
         {displayStats.map((stats) => (
           <div
             key={stats.clusterName}
-            className="p-3 rounded-lg bg-secondary/30"
+            onClick={() => drillToCluster(stats.clusterName, {
+              gpuTypes: stats.types,
+              totalGPUs: stats.total,
+              usedGPUs: stats.used,
+              gpuUtilization: stats.utilization,
+            })}
+            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
             <div className="flex items-center justify-between mb-2">
               <ClusterBadge cluster={stats.clusterName} size="sm" />
-              <span className={`text-xs px-1.5 py-0.5 rounded ${
-                stats.utilization > 80 ? 'bg-red-500/20 text-red-400' :
-                stats.utilization > 50 ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-green-500/20 text-green-400'
-              }`}>
-                {stats.utilization.toFixed(0)}% used
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${
+                  stats.utilization > 80 ? 'bg-red-500/20 text-red-400' :
+                  stats.utilization > 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-green-500/20 text-green-400'
+                }`}>
+                  {stats.utilization.toFixed(0)}% used
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
               <span className="truncate max-w-[60%]">{stats.types.join(', ')}</span>

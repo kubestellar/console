@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { FileJson, ChevronRight, Plus, Edit, Search, RotateCcw } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -44,6 +45,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const [localSearch, setLocalSearch] = useState('')
+  const { drillToHelm } = useDrillDownActions()
 
   // Track local selection state for global filter sync
   const savedLocalCluster = useRef<string>('')
@@ -254,11 +256,21 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
         </div>
       ) : (
         <>
-          {/* Scope badge */}
-          <div className="flex items-center gap-2 mb-4">
+          {/* Scope badge - clickable to drill into Helm release */}
+          <div
+            onClick={() => {
+              if (selectedCluster && selectedRelease && selectedReleaseNamespace) {
+                drillToHelm(selectedCluster, selectedReleaseNamespace, selectedRelease, {
+                  valuesCount: valueEntries.length,
+                })
+              }
+            }}
+            className="flex items-center gap-2 mb-4 p-2 -mx-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group"
+          >
             <ClusterBadge cluster={selectedCluster} />
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">{selectedRelease}</span>
+            <span className="text-sm text-foreground group-hover:text-amber-400">{selectedRelease}</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
 
           {/* Local Search */}

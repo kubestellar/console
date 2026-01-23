@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Cpu, Server, Search } from 'lucide-react'
+import { Cpu, Server, Search, ChevronRight } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -34,6 +35,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     lastRefresh
   } = useGPUNodes(cluster)
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { drillToGPUNode } = useDrillDownActions()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
@@ -211,11 +213,18 @@ export function GPUInventory({ config }: GPUInventoryProps) {
         {nodes.map((node) => (
           <div
             key={`${node.cluster}-${node.name}`}
-            className="p-3 rounded-lg bg-secondary/30"
+            onClick={() => drillToGPUNode(node.cluster, node.name, {
+              gpuType: node.gpuType,
+              gpuCount: node.gpuCount,
+              gpuAllocated: node.gpuAllocated,
+              utilization: (node.gpuAllocated / node.gpuCount) * 100,
+            })}
+            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
             <div className="flex items-center gap-2 mb-2">
               <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground truncate">{node.name}</span>
+              <span className="text-sm font-medium text-foreground truncate group-hover:text-purple-400">{node.name}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex items-center justify-between text-xs">
               <ClusterBadge cluster={node.cluster} size="sm" />

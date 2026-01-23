@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Activity, AlertTriangle, Info, AlertCircle, Clock, Search } from 'lucide-react'
+import { Activity, AlertTriangle, Info, AlertCircle, Clock, Search, ChevronRight } from 'lucide-react'
 import { useClusters, useWarningEvents, useNamespaces } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -28,6 +29,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { clusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { events: allEvents, isLoading: eventsLoading, isRefreshing: eventsRefreshing, refetch: refetchEvents } = useWarningEvents()
   const isRefreshing = clustersRefreshing || eventsRefreshing
+  const { drillToEvents } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [sortBy, setSortBy] = useState<SortByOption>('time')
@@ -269,7 +271,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
             return (
               <div
                 key={`${event.cluster}-${event.namespace}-${event.object}-${idx}`}
-                className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20`}
+                onClick={() => drillToEvents(event.cluster || '', event.namespace, event.object)}
+                className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20 cursor-pointer hover:bg-${color}-500/20 transition-colors group`}
               >
                 <div className="flex items-start gap-2">
                   <Icon className={`w-4 h-4 text-${color}-400 mt-0.5 flex-shrink-0`} />
@@ -280,7 +283,8 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
                       )}
                       <span className="text-xs text-muted-foreground">{event.namespace}</span>
                       <span className="text-xs text-muted-foreground">/</span>
-                      <span className="text-sm text-foreground truncate">{event.object}</span>
+                      <span className="text-sm text-foreground truncate group-hover:text-orange-400">{event.object}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{event.message}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">

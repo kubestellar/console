@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Layers, Globe, Server, ExternalLink, Search } from 'lucide-react'
+import { Layers, Globe, Server, ExternalLink, Search, ChevronRight } from 'lucide-react'
 import { useServices } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -57,6 +58,7 @@ export function ServiceStatus() {
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && services.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { drillToService } = useDrillDownActions()
   const [sortBy, setSortBy] = useState<SortByOption>('type')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
@@ -225,12 +227,17 @@ export function ServiceStatus() {
           displayServices.map(service => (
             <div
               key={`${service.cluster}-${service.namespace}-${service.name}`}
-              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+              onClick={() => drillToService(service.cluster || '', service.namespace || '', service.name, {
+                type: service.type,
+                ports: service.ports,
+                clusterIP: service.clusterIP,
+              })}
+              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
             >
               <div className="flex items-center gap-2 min-w-0">
                 {getTypeIcon(service.type || 'ClusterIP')}
                 <div className="min-w-0">
-                  <div className="text-sm text-foreground truncate">{service.name}</div>
+                  <div className="text-sm text-foreground truncate group-hover:text-cyan-400">{service.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {service.namespace} • {service.cluster}
                   </div>
@@ -245,6 +252,7 @@ export function ServiceStatus() {
                 <span className={`px-1.5 py-0.5 rounded text-xs ${getTypeColor(service.type || 'ClusterIP')}`}>
                   {service.type || 'ClusterIP'}
                 </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           ))

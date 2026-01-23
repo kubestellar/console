@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
-import { DollarSign, Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, Search } from 'lucide-react'
+import { DollarSign, Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, Search, ChevronRight } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -158,6 +159,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+  const { drillToCost } = useDrillDownActions()
 
   // Cloud provider selection
   const [selectedProvider, setSelectedProvider] = useState<CloudProvider>(config?.provider || 'estimate')
@@ -603,7 +605,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           return (
             <div
               key={cluster.name}
-              className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group"
+              onClick={() => drillToCost(cluster.name, {
+                cpus: cluster.cpus,
+                memory: cluster.memory,
+                gpus: cluster.gpus,
+                hourly: cluster.hourly,
+                daily: cluster.daily,
+                monthly: cluster.monthly,
+                provider: cluster.provider,
+              })}
+              className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors group cursor-pointer"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -652,9 +663,12 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   {/* 5. Health dot */}
                   <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
                 </div>
-                <span className="text-sm font-medium text-green-400 flex-shrink-0">
-                  ${cluster.monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-green-400 flex-shrink-0">
+                    ${cluster.monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                </div>
               </div>
 
               {/* Cost bar */}
