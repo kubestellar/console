@@ -2,11 +2,23 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { 
   Cloud, CloudRain, CloudSnow, Sun, Wind, Droplets, Gauge, Eye, 
   MapPin, Calendar, Search as SearchIcon, Settings, Star, X, 
-  ExternalLink, Sunset, ChevronRight, ChevronDown 
+  ExternalLink, Sunset, ChevronRight, ChevronDown, Loader2 
 } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
+
+// Geocoding API types
+interface GeocodingResult {
+  id: number
+  name: string
+  latitude: number
+  longitude: number
+  country: string
+  admin1?: string
+  timezone?: string
+  postal_code?: string
+}
 
 // Mock weather data - in production would integrate with weather API
 interface WeatherCondition {
@@ -321,6 +333,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
   const hourlyScrollRef = useRef<HTMLDivElement>(null)
   
+  // City search state
+  const [citySearchInput, setCitySearchInput] = useState('')
+  const [citySearchResults, setCitySearchResults] = useState<GeocodingResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
+  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
     const saved = localStorage.getItem('weather-saved-locations')
     return saved ? JSON.parse(saved) : []
@@ -336,6 +355,65 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   useEffect(() => {
     localStorage.setItem('weather-saved-locations', JSON.stringify(savedLocations))
   }, [savedLocations])
+
+  // City search with Open-Meteo Geocoding API
+  const searchCities = useCallback(async (query: string) => {
+    if (!query || query.length < 2) {
+      setCitySearchResults([])
+      setShowCityDropdown(false)
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      // TODO: In production, implement proper API error handling and rate limiting
+      const response = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        setCitySearchResults(data.results || [])
+        setShowCityDropdown(true)
+      } else {
+        setCitySearchResults([])
+        setShowCityDropdown(false)
+      }
+    } catch (error) {
+      console.error('City search error:', error)
+      setCitySearchResults([])
+      setShowCityDropdown(false)
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  // Debounced city search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      searchCities(citySearchInput)
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [citySearchInput, searchCities])
+
+  // Select city from search results
+  const selectCity = useCallback((city: GeocodingResult) => {
+    // Use postal_code if available, otherwise generate a mock zipcode from coordinates
+    const newZipcode = city.postal_code || `${String(Math.abs(Math.floor(city.latitude * 1000))).substring(0, 5)}`
+    setZipcode(newZipcode)
+    setCitySearchInput('')
+    setShowCityDropdown(false)
+    setCitySearchResults([])
+  }, [])
 
   // Save current location or toggle favorite
   const saveCurrentLocation = useCallback(() => {
@@ -488,7 +566,45 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       {showConfig && (
         <div className="mb-3 p-3 rounded-xl bg-secondary/30 backdrop-blur-sm border border-border/30 space-y-3">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Location</label>
+            <label className="text-xs text-muted-foreground mb-1 block">City Search</label>
+            <div className="relative">
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={citySearchInput}
+                  onChange={(e) => setCitySearchInput(e.target.value)}
+                  onFocus={() => citySearchResults.length > 0 && setShowCityDropdown(true)}
+                  className="w-full pl-10 pr-10 py-2 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground placeholder:text-muted-foreground"
+                  placeholder="Search for any city..."
+                />
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+                )}
+              </div>
+              
+              {/* City Search Dropdown */}
+              {showCityDropdown && citySearchResults.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-secondary/95 backdrop-blur-sm border border-border/30 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {citySearchResults.map((city) => (
+                    <button
+                      key={city.id}
+                      onClick={() => selectCity(city)}
+                      className="w-full text-left px-3 py-2 hover:bg-secondary transition-colors border-b border-border/20 last:border-0"
+                    >
+                      <div className="text-sm font-medium">{city.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[city.admin1, city.country].filter(Boolean).join(', ')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Zipcode (or generated)</label>
             <input
               type="text"
               value={zipcode}
@@ -608,28 +724,31 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
       {/* Main Weather Display - iPhone Style */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-2">
-        {/* Hero Section - Large Temperature Display */}
-        <div className={`relative rounded-3xl bg-gradient-to-b ${backgroundGradient} p-6 overflow-hidden shadow-lg`}>
+        {/* Hero Section - Large Temperature Display (Reduced Height) */}
+        <div className={`relative rounded-3xl bg-gradient-to-b ${backgroundGradient} overflow-hidden shadow-lg`}>
+          {/* Darker overlay for better text readability */}
+          <div className="absolute inset-0 bg-black/30 z-0"></div>
+          
           {/* Subtle animated background */}
           <WeatherBackground condition={currentWeather.condition} />
           
-          <div className="relative z-10 text-white">
+          <div className="relative z-10 text-white p-4">
             {/* Location */}
-            <div className="flex items-center justify-center gap-2 mb-2">
+            <div className="flex items-center justify-center gap-2 mb-1">
               <MapPin className="w-4 h-4" />
-              <h2 className="text-xl font-semibold">{getCityName(zipcode)}</h2>
+              <h2 className="text-lg font-semibold">{getCityName(zipcode)}</h2>
             </div>
             
-            {/* Large Temperature - iOS Style */}
-            <div className="text-center mb-4">
-              <div className="text-8xl font-light tracking-tight mb-2">
+            {/* Large Temperature - iOS Style (Reduced Size) */}
+            <div className="text-center mb-2">
+              <div className="text-7xl font-light tracking-tight mb-1">
                 {currentWeather.temperature}°
               </div>
-              <div className="flex items-center justify-center gap-2 text-xl mb-1">
-                <CurrentIcon className="w-6 h-6" />
+              <div className="flex items-center justify-center gap-2 text-lg mb-1">
+                <CurrentIcon className="w-5 h-5" />
                 <span>{currentCondition.label}</span>
               </div>
-              <div className="text-lg opacity-90">
+              <div className="text-base opacity-90">
                 H:{forecast[0]?.tempHigh}° L:{forecast[0]?.tempLow}°
               </div>
             </div>
