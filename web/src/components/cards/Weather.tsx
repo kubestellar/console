@@ -425,6 +425,18 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     return 'Extreme'
   }
 
+  // Get icon color based on weather condition
+  const getConditionColor = (condition: keyof typeof WEATHER_CONDITIONS) => {
+    const colorMap: Record<keyof typeof WEATHER_CONDITIONS, string> = {
+      'sunny': 'text-yellow-400',
+      'cloudy': 'text-gray-400',
+      'rainy': 'text-blue-400',
+      'snowy': 'text-blue-200',
+      'windy': 'text-cyan-400',
+    }
+    return colorMap[condition]
+  }
+
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Compact Header */}
@@ -629,7 +641,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                   <div className="text-sm font-medium">
                     {isNow ? 'Now' : hour.hour}
                   </div>
-                  <HourIcon className="w-6 h-6 text-yellow-400" />
+                  <HourIcon className={`w-6 h-6 ${getConditionColor(hour.condition)}`} />
                   <div className="text-lg font-semibold">
                     {hour.temperature}°
                   </div>
@@ -669,7 +681,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                     </div>
                     
                     {/* Icon */}
-                    <Icon className="w-6 h-6 text-yellow-400" />
+                    <Icon className={`w-6 h-6 ${getConditionColor(day.condition)}`} />
                     
                     {/* Temperature Bar */}
                     <div className="flex-1 flex items-center gap-2">
