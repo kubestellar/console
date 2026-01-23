@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Shield, Users, Key, Lock, ChevronRight, Loader2, Search } from 'lucide-react'
 import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -33,6 +34,7 @@ const SORT_OPTIONS = [
 export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const { clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
@@ -301,16 +303,21 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
               paginatedItems.map((item, idx) => (
                 <div
                   key={`${item.cluster}-${item.name}-${idx}`}
-                  className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors ${isFetchingRBAC ? 'opacity-50' : ''}`}
+                  onClick={() => drillToRBAC(selectedCluster, selectedNamespace, item.name, {
+                    type: item.type,
+                    rules: item.rules,
+                    subjects: item.subjects,
+                  })}
+                  className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group ${isFetchingRBAC ? 'opacity-50' : ''}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {activeTab === 'roles' && <Key className="w-4 h-4 text-yellow-400" />}
                       {activeTab === 'bindings' && <Lock className="w-4 h-4 text-green-400" />}
                       {activeTab === 'serviceaccounts' && <Users className="w-4 h-4 text-blue-400" />}
-                      <span className="text-sm text-foreground">{item.name}</span>
+                      <span className="text-sm text-foreground group-hover:text-purple-400">{item.name}</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   {item.rules && (
                     <p className="text-xs text-muted-foreground mt-1 ml-6">

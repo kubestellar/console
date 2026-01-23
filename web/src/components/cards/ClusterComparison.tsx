@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
-import { GitCompare, Server, Activity, Box, Cpu } from 'lucide-react'
+import { GitCompare, Server, Activity, Box, Cpu, ChevronRight } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -20,6 +21,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+  const { drillToCluster } = useDrillDownActions()
 
   // Apply global filters
   const allClusters = useMemo(() => {
@@ -145,11 +147,21 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
               <th className="text-left py-2 text-muted-foreground font-medium">Metric</th>
               {clustersToCompare.map(c => (
                 <th key={c.name} className="text-right py-2 px-2">
-                  <div className="flex items-center justify-end gap-1">
+                  <button
+                    onClick={() => drillToCluster(c.name, {
+                      nodeCount: c.nodeCount,
+                      podCount: c.podCount,
+                      cpuCores: c.cpuCores,
+                      gpuCount: gpuByCluster[c.name] || 0,
+                      healthy: c.healthy,
+                    })}
+                    className="flex items-center justify-end gap-1 w-full hover:text-purple-400 transition-colors group"
+                  >
                     <Server className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-foreground font-medium">{c.name}</span>
+                    <span className="text-foreground font-medium group-hover:text-purple-400">{c.name}</span>
                     <div className={`w-1.5 h-1.5 rounded-full ${c.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
-                  </div>
+                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                 </th>
               ))}
             </tr>

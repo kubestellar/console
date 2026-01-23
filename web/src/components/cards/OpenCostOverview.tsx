@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { DollarSign, Server, Box, HardDrive, ExternalLink, AlertCircle } from 'lucide-react'
+import { DollarSign, Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 interface OpenCostOverviewProps {
   config?: {
@@ -19,6 +20,7 @@ const DEMO_NAMESPACE_COSTS = [
 
 export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const { drillToCost } = useDrillDownActions()
 
   const totalCost = DEMO_NAMESPACE_COSTS.reduce((sum, ns) => sum + ns.totalCost, 0)
   const maxCost = Math.max(...DEMO_NAMESPACE_COSTS.map(ns => ns.totalCost))
@@ -79,13 +81,27 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
       <div className="flex-1 overflow-y-auto space-y-2">
         <p className="text-xs text-muted-foreground font-medium mb-2">Cost by Namespace</p>
         {DEMO_NAMESPACE_COSTS.map(ns => (
-          <div key={ns.namespace} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+          <div
+            key={ns.namespace}
+            onClick={() => drillToCost('all', {
+              namespace: ns.namespace,
+              cpuCost: ns.cpuCost,
+              memCost: ns.memCost,
+              storageCost: ns.storageCost,
+              totalCost: ns.totalCost,
+              source: 'opencost',
+            })}
+            className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+          >
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
                 <Box className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground">{ns.namespace}</span>
+                <span className="text-sm font-medium text-foreground group-hover:text-blue-400">{ns.namespace}</span>
               </div>
-              <span className="text-sm font-medium text-blue-400">${ns.totalCost.toLocaleString()}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-blue-400">${ns.totalCost.toLocaleString()}</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
             <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
               <div
