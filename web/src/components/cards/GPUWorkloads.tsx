@@ -99,7 +99,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       }
 
       // Tertiary check: is the pod assigned to a GPU node?
-      if (pod.node) {
+      if (pod.node && pod.node.trim()) {
         const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
         const podKey = `${normalizedPodCluster}:${pod.node}`
         
