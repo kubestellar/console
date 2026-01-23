@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Cloud, CloudRain, CloudSnow, Sun, Wind, Droplets, Gauge, Eye, MapPin, Calendar, Search as SearchIcon, Settings } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -164,7 +164,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [currentWeather, setCurrentWeather] = useState(() => getCurrentWeather(units))
 
   // Refresh weather data
-  const refreshWeather = useCallback(() => {
+  const refreshWeather = () => {
     setIsRefreshing(true)
     setTimeout(() => {
       setForecast(generateMockForecast(forecastLength, units))
@@ -172,12 +172,12 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       setLastRefresh(new Date())
       setIsRefreshing(false)
     }, 1000)
-  }, [forecastLength, units])
+  }
 
   // Auto-refresh on config changes
   useEffect(() => {
     refreshWeather()
-  }, [refreshWeather])
+  }, [forecastLength, units])
 
   // Filter and sort forecast
   const filteredAndSorted = useMemo(() => {
@@ -352,15 +352,6 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             const condition = WEATHER_CONDITIONS[day.condition]
             const Icon = condition.icon
             
-            // Map condition types to color classes (Tailwind-safe)
-            const colorClass = {
-              'sunny': 'text-yellow-400',
-              'cloudy': 'text-gray-400',
-              'rainy': 'text-blue-400',
-              'snowy': 'text-blue-200',
-              'windy': 'text-cyan-400',
-            }[day.condition] || 'text-gray-400'
-            
             return (
               <div
                 key={day.date}
@@ -373,7 +364,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                   </div>
                   
                   <div className="flex justify-center">
-                    <Icon className={`w-8 h-8 ${colorClass}`} />
+                    <Icon className={`w-8 h-8 text-${condition.gradient.split('-')[1]}-400`} />
                   </div>
                   
                   <div className="text-sm font-medium text-foreground">
