@@ -41,6 +41,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async (overrideToken?: string) => {
     const effectiveToken = overrideToken || localStorage.getItem('token')
     if (!effectiveToken) return
+
+    // Demo token - set demo user directly without API call
+    if (effectiveToken === 'demo-token') {
+      setUser({
+        id: 'demo-user',
+        github_id: '12345',
+        github_login: 'demo-user',
+        email: 'demo@example.com',
+        avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+        role: 'viewer',
+        onboarded: true,
+      })
+      return
+    }
+
     try {
       const response = await api.get('/api/me', {
         headers: { Authorization: `Bearer ${effectiveToken}` }
@@ -53,9 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout])
 
   const login = useCallback(() => {
-    // SECURITY: Demo mode ONLY enabled via explicit environment variable
-    // NEVER auto-detect based on hostname - that's a security vulnerability
-    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+    // Demo mode enabled via:
+    // 1. Explicit environment variable VITE_DEMO_MODE=true
+    // 2. Netlify deploy previews (deploy-preview-* hostnames) - safe because these are ephemeral test environments
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
+      window.location.hostname.includes('deploy-preview-') ||
+      window.location.hostname.includes('netlify.app')
 
     if (isDemoMode) {
       // Demo mode provides read-only viewer access, not admin

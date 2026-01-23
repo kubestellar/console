@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Github } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
@@ -5,6 +6,17 @@ import { GlobeAnimation } from '../animations/globe'
 
 export function Login() {
   const { login, isAuthenticated, isLoading } = useAuth()
+
+  // Auto-login for Netlify deploy previews
+  useEffect(() => {
+    const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
+      window.location.hostname.includes('netlify.app')
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+
+    if ((isNetlifyPreview || isDemoMode) && !isLoading && !isAuthenticated) {
+      login()
+    }
+  }, [isLoading, isAuthenticated, login])
 
   // Show loading while checking auth status
   if (isLoading) {

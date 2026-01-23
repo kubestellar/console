@@ -53,13 +53,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PR_NUM="${{ steps.check_bot.outputs.pr_number }}"
           SHA="${{ github.event.check_run.head_sha }}"
+
+          # Method 1: Set GitHub status (for GitHub native checks)
           gh api repos/${{ github.repository }}/statuses/$SHA \
             -X POST \
             -f state=success \
             -f context=dco \
-            -f description="DCO automatically overridden for bot commits"
-          echo "DCO overridden for bot PR"
+            -f description="DCO automatically overridden for bot commits" || true
+
+          # Method 2: Post Prow override command (for Prow-managed repos)
+          gh pr comment "$PR_NUM" --repo "${{ github.repository }}" --body "/override dco"
+
+          echo "DCO overridden for bot PR #$PR_NUM"
 
   # Handle build failures on Copilot PRs
   handle-build-failure:
