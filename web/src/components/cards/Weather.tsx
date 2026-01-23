@@ -338,7 +338,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [citySearchResults, setCitySearchResults] = useState<GeocodingResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showCityDropdown, setShowCityDropdown] = useState(false)
-  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
     const saved = localStorage.getItem('weather-saved-locations')
@@ -732,23 +732,23 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           {/* Subtle animated background */}
           <WeatherBackground condition={currentWeather.condition} />
           
-          <div className="relative z-10 text-white p-4">
+          <div className="relative z-10 text-white p-3">
             {/* Location */}
-            <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="flex items-center justify-center gap-2 mb-0.5">
               <MapPin className="w-4 h-4" />
-              <h2 className="text-lg font-semibold">{getCityName(zipcode)}</h2>
+              <h2 className="text-base font-semibold">{getCityName(zipcode)}</h2>
             </div>
             
-            {/* Large Temperature - iOS Style (Reduced Size) */}
-            <div className="text-center mb-2">
-              <div className="text-7xl font-light tracking-tight mb-1">
+            {/* Large Temperature - iOS Style (Further Reduced Size) */}
+            <div className="text-center mb-1">
+              <div className="text-6xl font-light tracking-tight mb-0.5">
                 {currentWeather.temperature}°
               </div>
-              <div className="flex items-center justify-center gap-2 text-lg mb-1">
-                <CurrentIcon className="w-5 h-5" />
+              <div className="flex items-center justify-center gap-2 text-base mb-0.5">
+                <CurrentIcon className="w-4 h-4" />
                 <span>{currentCondition.label}</span>
               </div>
-              <div className="text-base opacity-90">
+              <div className="text-sm opacity-90">
                 H:{forecast[0]?.tempHigh}° L:{forecast[0]?.tempLow}°
               </div>
             </div>
