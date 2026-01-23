@@ -79,7 +79,12 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       if (hasGPUResourceRequest(pod.containers)) return true
 
       // Secondary check: is the pod assigned to a GPU node?
-      // This catches pods with affinity to GPU nodes
+      // Why check both GPU resource requests AND node assignment?
+      // - GPU resource requests: Catches pods that explicitly declare GPU usage in their spec
+      // - Node assignment: Catches pods using nodeSelector, nodeAffinity, or taints/tolerations
+      //   to target GPU nodes without explicitly requesting GPU resources in their limits/requests.
+      //   This is common in deployments where GPU scheduling is handled externally or through
+      //   custom operators that don't set standard GPU resource requests.
       if (pod.node) {
         const podKey = `${normalizeClusterName(pod.cluster)}:${pod.node}`
         if (gpuNodeKeys.has(podKey)) return true
