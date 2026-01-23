@@ -126,7 +126,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
   const repos = config?.repos || []
   const org = config?.org
+  // Note: Token stored in localStorage - consider using sessionStorage or encrypted storage for production
   const token = config?.token || localStorage.getItem('github_token') || ''
+  const reposKey = useMemo(() => repos.join(','), [repos.join(',')])
 
   const fetchGitHubData = async (isManualRefresh = false) => {
     if (repos.length === 0 && !org) {
@@ -151,11 +153,12 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         headers['Authorization'] = `Bearer ${token}`
       }
 
-      // For simplicity, fetch data for the first repo or org
-      const targetRepo = repos[0] || (org ? `${org}/console` : null)
+      // For simplicity, fetch data for the first repo
+      // Future: support multiple repos and organization aggregation
+      const targetRepo = repos[0]
       
       if (!targetRepo) {
-        throw new Error('No valid repository specified')
+        throw new Error('No valid repository specified. Please configure at least one repository in the format "owner/repo".')
       }
 
       // Fetch repository info
@@ -173,9 +176,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       // Fetch Issues (excluding PRs)
       const issuesResponse = await fetch(`https://api.github.com/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { headers })
       if (!issuesResponse.ok) throw new Error(`Failed to fetch issues: ${issuesResponse.statusText}`)
-      const issuesData = await issuesResponse.json()
-      // Filter out pull requests (they come with issues endpoint)
-      setIssues(issuesData.filter((issue: any) => !issue.pull_request))
+      const issuesData: GitHubIssue[] = await issuesResponse.json()
+      // Filter out pull requests (they come with issues endpoint but have pull_request field)
+      setIssues(issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request))
 
       // Fetch Releases
       const releasesResponse = await fetch(`https://api.github.com/repos/${targetRepo}/releases?per_page=10`, { headers })
@@ -201,7 +204,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
   useEffect(() => {
     fetchGitHubData()
-  }, [repos.join(','), org])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reposKey, org])
 
   return {
     prs,
