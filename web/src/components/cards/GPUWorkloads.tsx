@@ -62,17 +62,26 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const isRefreshing = gpuRefreshing
 
   // Filter pods that are actual GPU workloads
-  // Only show pods that explicitly request GPU resources - this is the most accurate indicator
   const gpuWorkloads = useMemo(() => {
+    // Create a set of GPU node names for fast lookup
+    const gpuNodeNames = new Set<string>()
+    gpuNodes.forEach(node => {
+      gpuNodeNames.add(node.name)
+      // Also add with cluster prefix for matching
+      gpuNodeNames.add(`${node.cluster}/${node.name}`)
+    })
+
     let filtered = allPods.filter(pod => {
       // Must have a cluster
       if (!pod.cluster) return false
 
       // Primary check: does the pod explicitly request GPU resources?
-      // This is the only reliable indicator of an actual GPU workload
       if (hasGPUResourceRequest(pod.containers)) return true
 
-      // Secondary check: specific GPU workload labels (not just affinity)
+      // Secondary check: is the pod running on a GPU node?
+      if (pod.node && gpuNodeNames.has(pod.node)) return true
+
+      // Tertiary check: specific GPU workload labels (not just affinity)
       // Look for labels that explicitly indicate this is a GPU/ML workload
       if (pod.labels) {
         const gpuWorkloadLabels = [
@@ -85,6 +94,22 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
           if (gpuWorkloadLabels.some(l => key.includes(l))) return true
           // Check for vLLM, LLM inference workloads by app label
           if (key === 'app' && /vllm|llm|inference|model/i.test(value)) return true
+        }
+      }
+
+      // Quaternary check: check for GPU node affinity in pod labels/annotations
+      // Pods with affinity to GPU nodes are considered GPU workloads
+      if (pod.labels) {
+        for (const [key, value] of Object.entries(pod.labels)) {
+          // Check for node affinity to GPU nodes
+          if (key.includes('node-selector') && value.includes('gpu')) return true
+          if (key.includes('accelerator') && value.includes('gpu')) return true
+        }
+      }
+      if (pod.annotations) {
+        // Check annotations for affinity rules
+        for (const [key, value] of Object.entries(pod.annotations)) {
+          if (key.includes('affinity') && value.includes('gpu')) return true
         }
       }
 
