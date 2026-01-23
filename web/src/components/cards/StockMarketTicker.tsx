@@ -591,7 +591,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       }
       
       // Trigger refresh after delay to allow state to settle
-      setTimeout(() => handleRefresh(), 1500)
+      setTimeout(() => handleRefresh(), 2000)
     }
     setStockSearchInput('')
     setShowStockDropdown(false)
@@ -603,7 +603,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     setActiveSymbols(prev => prev.filter(s => s !== symbol))
     
     // Trigger refresh after delay to allow state to settle
-    setTimeout(() => handleRefresh(), 1500)
+    setTimeout(() => handleRefresh(), 2000)
   }, [handleRefresh])
 
   // Toggle favorite status
