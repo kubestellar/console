@@ -419,7 +419,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const [showSavedStocks, setShowSavedStocks] = useState(false)
   const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
   
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Save stocks to localStorage whenever they change
   useEffect(() => {
