@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { 
   TrendingUp, TrendingDown, Clock, BarChart3, 
   ChevronDown, ChevronRight, ExternalLink 
@@ -52,6 +52,7 @@ const DEFAULT_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA'
 function getMarketStatus(): { isOpen: boolean; statusText: string } {
   const now = new Date()
   const hour = now.getHours()
+  const minutes = now.getMinutes()
   const day = now.getDay()
   
   // Weekend
@@ -61,7 +62,8 @@ function getMarketStatus(): { isOpen: boolean; statusText: string } {
   
   // Weekday hours (9:30 AM - 4:00 PM EST)
   // Simple approximation without timezone handling
-  if (hour >= 9 && hour < 16) {
+  const isMarketHours = (hour === 9 && minutes >= 30) || (hour > 9 && hour < 16)
+  if (isMarketHours) {
     return { isOpen: true, statusText: 'Market Open' }
   } else if (hour >= 4 && hour < 9) {
     return { isOpen: false, statusText: 'Pre-Market' }
@@ -69,6 +71,13 @@ function getMarketStatus(): { isOpen: boolean; statusText: string } {
     return { isOpen: false, statusText: 'After Hours' }
   }
 }
+
+// Constants for mock data generation
+const PRICE_FLOOR_MULTIPLIER = 0.95 // 5% floor for sparkline prices
+const MAX_VOLUME = 50_000_000
+const MIN_VOLUME = 10_000_000
+const MAX_MARKET_CAP = 1_000_000_000_000 // 1 trillion
+const MIN_MARKET_CAP = 100_000_000_000 // 100 billion
 
 // Generate mock stock data with seeded randomness
 function generateMockStockData(symbols: string[]): StockData[] {
@@ -117,7 +126,7 @@ function generateMockStockData(symbols: string[]): StockData[] {
     let currentPrice = price - change // Start from opening price
     for (let i = 0; i < 20; i++) {
       const variation = (random(2000 + i * 100) - 0.5) * (basePrice * 0.02)
-      currentPrice = Math.max(currentPrice + variation, basePrice * 0.95)
+      currentPrice = Math.max(currentPrice + variation, basePrice * PRICE_FLOOR_MULTIPLIER)
       sparklineData.push(currentPrice)
     }
     sparklineData.push(price) // End at current price
@@ -131,8 +140,8 @@ function generateMockStockData(symbols: string[]): StockData[] {
       dayOpen: basePrice - (change * 0.8),
       dayHigh: price + Math.abs(change * 0.5),
       dayLow: price - Math.abs(change * 0.5),
-      volume: Math.floor(random(3000) * 50000000) + 10000000,
-      marketCap: Math.floor(random(4000) * 1000000000000) + 100000000000,
+      volume: Math.floor(random(3000) * MAX_VOLUME) + MIN_VOLUME,
+      marketCap: Math.floor(random(4000) * MAX_MARKET_CAP) + MIN_MARKET_CAP,
       week52High: price + (basePrice * 0.15),
       week52Low: price - (basePrice * 0.15),
       sparklineData,
@@ -287,6 +296,16 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Generate stock data
   const [stockData, setStockData] = useState<StockData[]>(() => generateMockStockData(symbols))
 
+  // Handle refresh with useCallback to avoid stale closures
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true)
+    setTimeout(() => {
+      setStockData(generateMockStockData(symbols))
+      setLastRefresh(new Date())
+      setIsRefreshing(false)
+    }, 500)
+  }, [symbols])
+
   // Auto-refresh
   useEffect(() => {
     const interval = setInterval(() => {
@@ -294,16 +313,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     }, refreshInterval * 1000)
 
     return () => clearInterval(interval)
-  }, [refreshInterval, symbols])
-
-  const handleRefresh = () => {
-    setIsRefreshing(true)
-    setTimeout(() => {
-      setStockData(generateMockStockData(symbols))
-      setLastRefresh(new Date())
-      setIsRefreshing(false)
-    }, 500)
-  }
+  }, [refreshInterval, handleRefresh])
 
   // Sort stock data
   const sortedStocks = useMemo(() => {
