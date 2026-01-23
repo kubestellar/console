@@ -81,8 +81,12 @@ export function MatchGame(_props: CardComponentProps) {
       { id: `${icon.id}-2`, iconId: icon.id, matched: false },
     ])
     
-    // Shuffle cards
-    const shuffled = cardPairs.sort(() => Math.random() - 0.5)
+    // Shuffle cards using Fisher-Yates algorithm
+    const shuffled = [...cardPairs]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
     setCards(shuffled)
     setFlippedCards([])
     setMoves(0)
@@ -209,11 +213,19 @@ export function MatchGame(_props: CardComponentProps) {
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      particles.forEach((p, i) => {
+      // Update and draw particles, filtering out off-screen ones
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i]
         p.x += p.vx
         p.y += p.vy
         p.vy += 0.3 // gravity
         p.rotation += p.rotationSpeed
+
+        // Remove particles that are off screen
+        if (p.y > canvas.height) {
+          particles.splice(i, 1)
+          continue
+        }
 
         ctx.save()
         ctx.translate(p.x, p.y)
@@ -221,12 +233,7 @@ export function MatchGame(_props: CardComponentProps) {
         ctx.fillStyle = p.color
         ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size)
         ctx.restore()
-
-        // Remove particles that are off screen
-        if (p.y > canvas.height) {
-          particles.splice(i, 1)
-        }
-      })
+      }
 
       if (particles.length > 0) {
         animationFrame = requestAnimationFrame(animate)
