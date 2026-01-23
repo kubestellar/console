@@ -71,6 +71,8 @@ import { OPAPolicies } from './OPAPolicies'
 import { KyvernoPolicies } from './KyvernoPolicies'
 // Weather card
 import { Weather } from './Weather'
+// GitHub Activity Monitoring card
+import { GitHubActivity } from './GitHubActivity'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -158,6 +160,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kyverno_policies: KyvernoPolicies,
   // Weather card
   weather: Weather,
+  // GitHub Activity Monitoring card
+  github_activity: GitHubActivity,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -243,6 +247,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   user_management: 6,
   // Weather card
   weather: 6,
+  // GitHub Activity Monitoring card
+  github_activity: 8,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,
