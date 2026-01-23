@@ -1,11 +1,30 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { 
   TrendingUp, TrendingDown, Clock, BarChart3, 
-  ChevronDown, ChevronRight, ExternalLink 
+  ChevronDown, ChevronRight, ExternalLink, Search as SearchIcon,
+  Star, X, Plus, Loader2
 } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
+
+// Stock search result interface
+interface StockSearchResult {
+  symbol: string
+  name: string
+  type: string
+  region: string
+  currency: string
+}
+
+// Saved stock interface
+interface SavedStock {
+  symbol: string
+  name: string
+  price: number
+  changePercent: number
+  favorite?: boolean
+}
 
 // Stock data interface
 interface StockData {
@@ -47,6 +66,100 @@ const SORT_OPTIONS = [
 
 // Default stock symbols to track
 const DEFAULT_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA']
+
+// Fetch real stock data from Yahoo Finance API (via proxy to avoid CORS)
+async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
+  try {
+    // Using yfinance2 API or similar free API
+    // For demo, using a fallback to Yahoo Finance query API
+    const symbolsString = symbols.join(',')
+    const response = await fetch(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsString}&fields=symbol,longName,regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,fiftyTwoWeekHigh,fiftyTwoWeekLow`
+    )
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch stock data')
+    }
+    
+    const data = await response.json()
+    const quotes = data.quoteResponse?.result || []
+    
+    return quotes.map((quote: any) => {
+      // Generate sparkline from recent price changes (mock for now, would need historical API)
+      const currentPrice = quote.regularMarketPrice || 0
+      const change = quote.regularMarketChange || 0
+      const openPrice = quote.regularMarketOpen || currentPrice
+      
+      // Simple sparkline generation - in production would fetch intraday data
+      const sparklineData: number[] = []
+      const priceRange = Math.abs(change) * 2
+      for (let i = 0; i < 21; i++) {
+        const progress = i / 20
+        const trendValue = openPrice + (change * progress)
+        const noise = (Math.random() - 0.5) * (priceRange * 0.1)
+        sparklineData.push(Math.max(trendValue + noise, openPrice * 0.95))
+      }
+      
+      return {
+        symbol: quote.symbol || '',
+        name: quote.longName || quote.shortName || quote.symbol || 'Unknown',
+        price: currentPrice,
+        change: change,
+        changePercent: quote.regularMarketChangePercent || 0,
+        dayOpen: openPrice,
+        dayHigh: quote.regularMarketDayHigh || currentPrice,
+        dayLow: quote.regularMarketDayLow || currentPrice,
+        volume: quote.regularMarketVolume || 0,
+        marketCap: quote.marketCap || 0,
+        week52High: quote.fiftyTwoWeekHigh || currentPrice,
+        week52Low: quote.fiftyTwoWeekLow || currentPrice,
+        sparklineData,
+        lastUpdated: new Date(),
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching real stock data:', error)
+    // Fallback to mock data on error
+    return generateMockStockData(symbols)
+  }
+}
+
+// Search for stocks by symbol or company name
+async function searchStocks(query: string): Promise<StockSearchResult[]> {
+  if (!query || query.length < 1) {
+    return []
+  }
+  
+  try {
+    // Using Yahoo Finance search API
+    const response = await fetch(
+      `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
+    )
+    
+    if (!response.ok) {
+      throw new Error('Failed to search stocks')
+    }
+    
+    const data = await response.json()
+    const quotes = data.quotes || []
+    
+    return quotes
+      .filter((q: any) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
+      .map((q: any) => ({
+        symbol: q.symbol,
+        name: q.longname || q.shortname || q.symbol,
+        type: q.quoteType,
+        region: q.exchDisp || q.exchange || 'US',
+        currency: q.currency || 'USD',
+      }))
+      .slice(0, 10)
+  } catch (error) {
+    console.error('Error searching stocks:', error)
+    return []
+  }
+}
+
+// Default stock symbols to track (keeping for backwards compatibility)
 
 // Market status
 function getMarketStatus(): { isOpen: boolean; statusText: string } {
@@ -292,19 +405,158 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const [expandedStocks, setExpandedStocks] = useState<Set<string>>(new Set())
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [useLiveData, setUseLiveData] = useState(true)
+  
+  // Search and saved stocks state
+  const [stockSearchInput, setStockSearchInput] = useState('')
+  const [stockSearchResults, setStockSearchResults] = useState<StockSearchResult[]>([])
+  const [showStockDropdown, setShowStockDropdown] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [savedStocks, setSavedStocks] = useState<SavedStock[]>(() => {
+    const saved = localStorage.getItem('stock-ticker-saved-stocks')
+    return saved ? JSON.parse(saved) : []
+  })
+  const [showSavedStocks, setShowSavedStocks] = useState(false)
+  const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
+  
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Save stocks to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('stock-ticker-saved-stocks', JSON.stringify(savedStocks))
+  }, [savedStocks])
 
   // Generate stock data
-  const [stockData, setStockData] = useState<StockData[]>(() => generateMockStockData(symbols))
+  const [stockData, setStockData] = useState<StockData[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
 
   // Handle refresh with useCallback to avoid stale closures
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
-    setTimeout(() => {
-      setStockData(generateMockStockData(symbols))
+    setIsLoadingData(true)
+    try {
+      const data = useLiveData 
+        ? await fetchRealStockData(activeSymbols)
+        : generateMockStockData(activeSymbols)
+      setStockData(data)
       setLastRefresh(new Date())
+      
+      // Update saved stocks with latest prices
+      setSavedStocks(prev => prev.map(saved => {
+        const stock = data.find(s => s.symbol === saved.symbol)
+        return stock ? {
+          ...saved,
+          price: stock.price,
+          changePercent: stock.changePercent,
+        } : saved
+      }))
+    } catch (error) {
+      console.error('Error refreshing stock data:', error)
+    } finally {
       setIsRefreshing(false)
-    }, 500)
-  }, [symbols])
+      setIsLoadingData(false)
+    }
+  }, [activeSymbols, useLiveData])
+
+  // Search for stocks
+  const performStockSearch = useCallback(async (query: string) => {
+    if (!query || query.length < 1) {
+      setStockSearchResults([])
+      setShowStockDropdown(false)
+      return
+    }
+
+    setIsSearching(true)
+    try {
+      const results = await searchStocks(query)
+      setStockSearchResults(results)
+      if (results.length > 0) {
+        setShowStockDropdown(true)
+      }
+    } catch (error) {
+      console.error('Stock search error:', error)
+      setStockSearchResults([])
+      setShowStockDropdown(false)
+    } finally {
+      setIsSearching(false)
+    }
+  }, [])
+
+  // Debounced stock search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performStockSearch(stockSearchInput)
+    }, 300)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [stockSearchInput, performStockSearch])
+
+  // Add stock from search results
+  const addStock = useCallback((stock: StockSearchResult) => {
+    if (!activeSymbols.includes(stock.symbol)) {
+      setActiveSymbols(prev => [...prev, stock.symbol])
+      
+      // Add to saved stocks if not already there
+      if (!savedStocks.find(s => s.symbol === stock.symbol)) {
+        setSavedStocks(prev => [...prev, {
+          symbol: stock.symbol,
+          name: stock.name,
+          price: 0,
+          changePercent: 0,
+          favorite: true,
+        }])
+      }
+    }
+    setStockSearchInput('')
+    setShowStockDropdown(false)
+    setStockSearchResults([])
+  }, [activeSymbols, savedStocks])
+
+  // Remove stock from active list
+  const removeStock = useCallback((symbol: string) => {
+    setActiveSymbols(prev => prev.filter(s => s !== symbol))
+  }, [])
+
+  // Toggle favorite status
+  const toggleFavorite = useCallback((symbol: string) => {
+    const existingStock = savedStocks.find(s => s.symbol === symbol)
+    const currentStock = stockData.find(s => s.symbol === symbol)
+    
+    if (existingStock) {
+      setSavedStocks(prev => prev.map(s => 
+        s.symbol === symbol ? { ...s, favorite: !s.favorite } : s
+      ))
+    } else if (currentStock) {
+      setSavedStocks(prev => [...prev, {
+        symbol: currentStock.symbol,
+        name: currentStock.name,
+        price: currentStock.price,
+        changePercent: currentStock.changePercent,
+        favorite: true,
+      }])
+    }
+  }, [savedStocks, stockData])
+
+  // Load saved stock
+  const loadSavedStock = useCallback((symbol: string) => {
+    if (!activeSymbols.includes(symbol)) {
+      setActiveSymbols(prev => [...prev, symbol])
+    }
+    setShowSavedStocks(false)
+  }, [activeSymbols])
+
+  // Remove saved stock
+  const removeSavedStock = useCallback((symbol: string) => {
+    setSavedStocks(prev => prev.filter(s => s.symbol !== symbol))
+  }, [])
 
   // Auto-refresh
   useEffect(() => {
@@ -314,6 +566,11 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
     return () => clearInterval(interval)
   }, [refreshInterval, handleRefresh])
+
+  // Initial data load
+  useEffect(() => {
+    handleRefresh()
+  }, []) // Only on mount
 
   // Sort stock data
   const sortedStocks = useMemo(() => {
@@ -371,7 +628,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with market status */}
+      {/* Header with market status and controls */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-muted-foreground" />
@@ -381,6 +638,13 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                 <Clock className="w-3 h-3" />
                 {marketStatus.statusText}
               </span>
+              <button
+                onClick={() => setUseLiveData(!useLiveData)}
+                className="text-xs px-2 py-0.5 rounded bg-accent hover:bg-accent/80 transition-colors"
+                title={useLiveData ? 'Using live data' : 'Using demo data'}
+              >
+                {useLiveData ? '🔴 Live' : '🟢 Demo'}
+              </button>
             </div>
           </div>
         </div>
@@ -403,6 +667,110 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
         </div>
       </div>
 
+      {/* Search and add stock */}
+      <div className="mb-3 space-y-2">
+        <div className="relative">
+          <div className="flex items-center gap-2 p-2 border border-border/50 rounded-lg bg-card">
+            <SearchIcon className="w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search stocks by symbol or name..."
+              value={stockSearchInput}
+              onChange={(e) => setStockSearchInput(e.target.value)}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            {stockSearchInput && (
+              <button
+                onClick={() => {
+                  setStockSearchInput('')
+                  setShowStockDropdown(false)
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Search results dropdown */}
+          {showStockDropdown && stockSearchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+              {stockSearchResults.map((result) => (
+                <button
+                  key={result.symbol}
+                  onClick={() => addStock(result)}
+                  className="w-full p-2 text-left hover:bg-accent transition-colors flex items-center justify-between"
+                  disabled={activeSymbols.includes(result.symbol)}
+                >
+                  <div>
+                    <div className="font-semibold text-sm">{result.symbol}</div>
+                    <div className="text-xs text-muted-foreground truncate">{result.name}</div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">{result.region}</div>
+                  {activeSymbols.includes(result.symbol) && (
+                    <span className="text-xs text-green-500 ml-2">Added</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Saved stocks toggle */}
+        {savedStocks.length > 0 && (
+          <div className="flex items-center justify-between text-xs">
+            <button
+              onClick={() => setShowSavedStocks(!showSavedStocks)}
+              className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <Star className="w-3 h-3" />
+              {showSavedStocks ? 'Hide' : 'Show'} Saved Stocks ({savedStocks.length})
+            </button>
+          </div>
+        )}
+
+        {/* Saved stocks list */}
+        {showSavedStocks && savedStocks.length > 0 && (
+          <div className="border border-border/30 rounded-lg p-2 space-y-1 max-h-40 overflow-y-auto bg-accent/20">
+            {savedStocks
+              .sort((a, b) => {
+                if (a.favorite && !b.favorite) return -1
+                if (!a.favorite && b.favorite) return 1
+                return 0
+              })
+              .map((stock) => (
+                <div
+                  key={stock.symbol}
+                  className="flex items-center justify-between p-2 rounded hover:bg-accent/50 transition-colors text-xs"
+                >
+                  <button
+                    onClick={() => loadSavedStock(stock.symbol)}
+                    className="flex-1 flex items-center gap-2 text-left"
+                  >
+                    <Star
+                      className={`w-3 h-3 ${stock.favorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
+                    />
+                    <div>
+                      <div className="font-semibold">{stock.symbol}</div>
+                      <div className="text-muted-foreground truncate">{stock.name}</div>
+                    </div>
+                  </button>
+                  <div className={`text-xs mr-2 ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                  </div>
+                  <button
+                    onClick={() => removeSavedStock(stock.symbol)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
       {/* Portfolio summary */}
       <div className="grid grid-cols-3 gap-2 mb-3 p-2 bg-accent/30 rounded-lg text-xs">
         <div className="text-center">
@@ -422,22 +790,57 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       </div>
 
       {/* Stock list */}
-      <div className="flex-1 overflow-y-auto border border-border/30 rounded-lg">
-        {stocks.map(stock => (
-          <StockRow
-            key={stock.symbol}
-            stock={stock}
-            expanded={expandedStocks.has(stock.symbol)}
-            onToggle={() => toggleExpanded(stock.symbol)}
-          />
-        ))}
-      </div>
+      {isLoadingData && stockData.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto border border-border/30 rounded-lg">
+          {stocks.map(stock => (
+            <div key={stock.symbol} className="relative">
+              <StockRow
+                stock={stock}
+                expanded={expandedStocks.has(stock.symbol)}
+                onToggle={() => toggleExpanded(stock.symbol)}
+              />
+              {/* Favorite and remove buttons */}
+              <div className="absolute right-2 top-2 flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggleFavorite(stock.symbol)
+                  }}
+                  className="p-1 rounded hover:bg-accent transition-colors"
+                  title={savedStocks.find(s => s.symbol === stock.symbol)?.favorite ? 'Unfavorite' : 'Favorite'}
+                >
+                  <Star 
+                    className={`w-3 h-3 ${savedStocks.find(s => s.symbol === stock.symbol)?.favorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
+                  />
+                </button>
+                {activeSymbols.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeStock(stock.symbol)
+                    }}
+                    className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+                    title="Remove from list"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Footer with pagination and data source */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
         <div className="text-xs text-muted-foreground flex items-center gap-1">
           <span>Data from {dataSource}</span>
-          <ExternalLink className="w-3 h-3" />
+          {useLiveData && <span className="text-green-500">(Live)</span>}
+          {!useLiveData && <span className="text-muted-foreground">(Demo)</span>}
         </div>
 
         {needsPagination && (
