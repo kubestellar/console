@@ -456,7 +456,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     const saved = localStorage.getItem('stock-ticker-saved-stocks')
     return saved ? JSON.parse(saved) : []
   })
-  const [showSavedStocks, setShowSavedStocks] = useState(false)
   const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
   
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -584,19 +583,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       }])
     }
   }, [savedStocks, stockData])
-
-  // Load saved stock
-  const loadSavedStock = useCallback((symbol: string) => {
-    if (!activeSymbols.includes(symbol)) {
-      setActiveSymbols(prev => [...prev, symbol])
-    }
-    setShowSavedStocks(false)
-  }, [activeSymbols])
-
-  // Remove saved stock
-  const removeSavedStock = useCallback((symbol: string) => {
-    setSavedStocks(prev => prev.filter(s => s.symbol !== symbol))
-  }, [])
 
   // Auto-refresh
   useEffect(() => {
@@ -759,58 +745,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           )}
         </div>
 
-        {/* Saved stocks toggle */}
-        {savedStocks.length > 0 && (
-          <div className="flex items-center justify-between text-xs">
-            <button
-              onClick={() => setShowSavedStocks(!showSavedStocks)}
-              className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <Star className="w-3 h-3" />
-              {showSavedStocks ? 'Hide' : 'Show'} Saved Stocks ({savedStocks.length})
-            </button>
-          </div>
-        )}
-
-        {/* Saved stocks list */}
-        {showSavedStocks && savedStocks.length > 0 && (
-          <div className="border border-border/30 rounded-lg p-2 space-y-1 max-h-40 overflow-y-auto bg-accent/20">
-            {savedStocks
-              .sort((a, b) => {
-                if (a.favorite && !b.favorite) return -1
-                if (!a.favorite && b.favorite) return 1
-                return 0
-              })
-              .map((stock) => (
-                <div
-                  key={stock.symbol}
-                  className="flex items-center justify-between p-2 rounded hover:bg-accent/50 transition-colors text-xs"
-                >
-                  <button
-                    onClick={() => loadSavedStock(stock.symbol)}
-                    className="flex-1 flex items-center gap-2 text-left"
-                  >
-                    <Star
-                      className={`w-3 h-3 ${stock.favorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
-                    />
-                    <div>
-                      <div className="font-semibold">{stock.symbol}</div>
-                      <div className="text-muted-foreground truncate">{stock.name}</div>
-                    </div>
-                  </button>
-                  <div className={`text-xs mr-2 ${stock.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                  </div>
-                  <button
-                    onClick={() => removeSavedStock(stock.symbol)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-          </div>
-        )}
       </div>
 
       {/* Portfolio summary */}
