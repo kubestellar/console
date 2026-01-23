@@ -150,12 +150,15 @@ jobs:
 
           ### Testing Requirements:
           - **You MUST use Playwright to test the preview deployment**
-          - Do not just take screenshots - actually interact with the UI
           - **Get the Deploy Preview URL from the Netlify bot comment on your PR**
             - Look for the comment from \`netlify[bot]\` with "Deploy Preview ready!"
             - Use the URL ending in \`.kubestellar.io\` (e.g., \`https://deploy-preview-XX.console-deploy-preview.kubestellar.io\`)
           - Test all user interactions (clicks, inputs, etc.) that your changes affect
           - Verify the expected behavior occurs after each interaction
+          - **IMPORTANT: Post screenshots as proof that your fix works**
+            - Take screenshots showing the feature/fix in action
+            - Post the screenshots as a comment on this PR
+            - Include before/after screenshots if applicable
           EOF
           )" || true
           else
@@ -184,12 +187,15 @@ jobs:
 
           ### Testing Requirements:
           - **You MUST use Playwright to test the preview deployment**
-          - Do not just take screenshots - actually interact with the UI
           - **Get the Deploy Preview URL from the Netlify bot comment on your PR**
             - Look for the comment from \`netlify[bot]\` with "Deploy Preview ready!"
             - Use the URL ending in \`.kubestellar.io\` (e.g., \`https://deploy-preview-XX.console-deploy-preview.kubestellar.io\`)
           - Test all user interactions (clicks, inputs, etc.) that your changes affect
           - Verify the expected behavior occurs after each interaction
+          - **IMPORTANT: Post screenshots as proof that your fix works**
+            - Take screenshots showing the feature/fix in action
+            - Post the screenshots as a comment on this PR
+            - Include before/after screenshots if applicable
           EOF
           )" 2>&1) && COMMENT_SUCCESS=true || COMMENT_SUCCESS=false
 
