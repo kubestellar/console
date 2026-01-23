@@ -1,5 +1,9 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { Cloud, CloudRain, CloudSnow, Sun, Wind, Droplets, Gauge, Eye, MapPin, Calendar, Search as SearchIcon, Settings, Star, X, ExternalLink, Sunset, ChevronRight, ChevronDown } from 'lucide-react'
+import { 
+  Cloud, CloudRain, CloudSnow, Sun, Wind, Droplets, Gauge, Eye, 
+  MapPin, Calendar, Search as SearchIcon, Settings, Star, X, 
+  ExternalLink, Sunset, ChevronRight, ChevronDown 
+} from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -216,6 +220,14 @@ function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   const sunriseHour = 6 + Math.floor(seededRandom(seed + 8000) * 2)
   const sunsetHour = 18 + Math.floor(seededRandom(seed + 8100) * 2)
   const isDaytime = currentHour >= sunriseHour && currentHour < sunsetHour
+  
+  // Format time in 12-hour format
+  const formatTime = (hour: number, minuteSeed: number) => {
+    const minute = Math.floor(seededRandom(minuteSeed) * 60)
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+    return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`
+  }
 
   return {
     condition,
@@ -226,8 +238,8 @@ function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
     feelsLike: baseTemp + Math.floor(seededRandom(seed + 1100) * 3) - 2,
     visibility: Math.floor(seededRandom(seed + 5000) * 5) + 5,
     isDaytime,
-    sunrise: `${sunriseHour}:${String(Math.floor(seededRandom(seed + 8200) * 60)).padStart(2, '0')} AM`,
-    sunset: `${sunsetHour - 12}:${String(Math.floor(seededRandom(seed + 8300) * 60)).padStart(2, '0')} PM`,
+    sunrise: formatTime(sunriseHour, seed + 8200),
+    sunset: formatTime(sunsetHour, seed + 8300),
   }
 }
 
@@ -407,6 +419,12 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const backgroundGradient = currentWeather.isDaytime 
     ? currentCondition.dayGradient 
     : currentCondition.nightGradient
+
+  // Wind speed unit conversion
+  const windSpeedUnit = units === 'F' ? 'mph' : 'km/h'
+  const convertWindSpeed = (mph: number) => {
+    return units === 'F' ? mph : Math.round(mph * 1.60934) // Convert to km/h for metric
+  }
 
   // Get UV Index color
   const getUVColor = (uvIndex: number) => {
@@ -651,11 +669,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           </div>
         </div>
 
-        {/* 10-Day Forecast */}
+        {/* Forecast */}
         <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
           <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
             <Calendar className="w-3 h-3" />
-            <span>10-Day Forecast</span>
+            <span>{forecastLength}-Day Forecast</span>
           </div>
           <div className="space-y-1">
             {paginatedForecast.map((day, idx) => {
@@ -723,7 +741,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Wind</span>
-                        <span className="font-medium">{day.windSpeed} mph {day.windDirection}</span>
+                        <span className="font-medium">{convertWindSpeed(day.windSpeed)} {windSpeedUnit} {day.windDirection}</span>
                       </div>
                     </div>
                   )}
@@ -775,10 +793,10 @@ export function Weather({ config }: { config?: WeatherConfig }) {
               <span>Wind</span>
             </div>
             <div className="text-3xl font-semibold mb-1">
-              {currentWeather.windSpeed}
+              {convertWindSpeed(currentWeather.windSpeed)}
             </div>
             <div className="text-sm text-muted-foreground">
-              mph
+              {windSpeedUnit}
             </div>
           </div>
 
