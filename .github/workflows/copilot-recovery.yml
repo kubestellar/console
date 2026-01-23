@@ -129,11 +129,12 @@ jobs:
           echo "Posted failure comment on PR #$PR_NUM"
 
   # Handle successful builds - trigger preview testing
+  # Netlify check runs are named like "Header rules - kubestellarklaudeconsole"
   handle-build-success:
     if: |
       github.event_name == 'check_run' &&
       github.event.check_run.conclusion == 'success' &&
-      contains(github.event.check_run.name, 'netlify')
+      contains(github.event.check_run.name, 'kubestellarklaudeconsole')
     runs-on: ubuntu-latest
     steps:
       - name: Get PR info
