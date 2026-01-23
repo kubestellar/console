@@ -185,19 +185,22 @@ jobs:
           gh issue edit "$ISSUE" --repo "$REPO" --add-label "ai-needs-human"
 
           # Add comment explaining the situation
-          gh issue comment "$ISSUE" --repo "$REPO" --body "⚠️ **Copilot SWE Agent Unavailable**
+          gh issue comment "$ISSUE" --repo "$REPO" --body "$(cat <<'EOF'
+          ⚠️ **Copilot SWE Agent Unavailable**
 
-The AI fix workflow was triggered, but GitHub Copilot SWE Agent is not available for this repository.
+          The AI fix workflow was triggered, but GitHub Copilot SWE Agent is not available for this repository.
 
-**Possible reasons:**
-- Copilot Workspace may not be enabled for this repository
-- The repository may not have access to Copilot SWE Agent features
+          **Possible reasons:**
+          - Copilot Workspace may not be enabled for this repository
+          - The repository may not have access to Copilot SWE Agent features
 
-**Next steps:**
-- A maintainer can manually address this issue
-- Or enable Copilot Workspace for this repository and re-run the workflow
+          **Next steps:**
+          - A maintainer can manually address this issue
+          - Or enable Copilot Workspace for this repository and re-run the workflow
 
-/cc @${{ github.repository_owner }}"
+          /cc @${{ github.repository_owner }}
+          EOF
+          )"
 
   # Update issue labels when Copilot's PR changes state
   update-issue-on-pr:
