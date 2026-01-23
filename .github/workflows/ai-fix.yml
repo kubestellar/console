@@ -94,27 +94,35 @@ jobs:
 
           echo "Issue ID: $ISSUE_ID"
 
-          # Get Copilot agent ID from suggested actors
+          # Get Copilot agent ID from assignable users (includes bots)
           COPILOT_ID=$(gh api graphql -f query="
             query {
               repository(owner: \"$REPO_OWNER\", name: \"$REPO_NAME\") {
-                issue(number: $ISSUE_NUM) {
-                  suggestedActors(first: 10) {
-                    nodes {
-                      ... on Bot {
-                        login
-                        id
-                      }
-                    }
+                assignableUsers(first: 100, query: \"copilot\") {
+                  nodes {
+                    login
+                    id
                   }
                 }
               }
-            }" --jq '.data.repository.issue.suggestedActors.nodes[] | select(.login == "copilot-swe-agent") | .id')
+            }" --jq '.data.repository.assignableUsers.nodes[] | select(.login == "copilot-swe-agent") | .id')
 
           echo "Copilot ID: $COPILOT_ID"
 
+          # If not found via assignableUsers, try the global bot lookup
           if [ -z "$COPILOT_ID" ]; then
-            echo "::warning::Copilot agent not found in suggested actors. Copilot may not be enabled for this repository."
+            echo "Trying global user lookup for copilot-swe-agent..."
+            COPILOT_ID=$(gh api graphql -f query="
+              query {
+                user(login: \"copilot-swe-agent\") {
+                  id
+                }
+              }" --jq '.data.user.id' 2>/dev/null || echo "")
+            echo "Global lookup result: $COPILOT_ID"
+          fi
+
+          if [ -z "$COPILOT_ID" ]; then
+            echo "::warning::Copilot agent not found. Copilot may not be enabled for this repository."
             echo "assigned=false" >> $GITHUB_OUTPUT
             exit 0
           fi
