@@ -42,6 +42,7 @@ interface SavedLocation {
   cityName: string
   temperature: number
   condition: keyof typeof WEATHER_CONDITIONS
+  favorite?: boolean
 }
 
 type SortByOption = 'date' | 'temperature' | 'precipitation'
@@ -216,21 +217,26 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     localStorage.setItem('weather-saved-locations', JSON.stringify(savedLocations))
   }, [savedLocations])
 
-  // Save current location
+  // Save current location or toggle favorite
   const saveCurrentLocation = useCallback(() => {
-    const newLocation: SavedLocation = {
-      zipcode,
-      cityName: getCityName(zipcode),
-      temperature: currentWeather.temperature,
-      condition: currentWeather.condition,
-    }
+    const existingLocation = savedLocations.find(loc => loc.zipcode === zipcode)
     
-    // Don't save if already saved
-    if (savedLocations.some(loc => loc.zipcode === zipcode)) {
-      return
+    if (existingLocation) {
+      // Toggle favorite status
+      setSavedLocations(prev => prev.map(loc => 
+        loc.zipcode === zipcode ? { ...loc, favorite: !loc.favorite } : loc
+      ))
+    } else {
+      // Add new location as favorite
+      const newLocation: SavedLocation = {
+        zipcode,
+        cityName: getCityName(zipcode),
+        temperature: currentWeather.temperature,
+        condition: currentWeather.condition,
+        favorite: true,
+      }
+      setSavedLocations(prev => [...prev, newLocation])
     }
-    
-    setSavedLocations(prev => [...prev, newLocation])
   }, [zipcode, currentWeather, savedLocations])
 
   // Remove a saved location
@@ -323,11 +329,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           <button
             onClick={saveCurrentLocation}
             className={`p-1 rounded hover:bg-secondary/50 transition-colors ${
-              savedLocations.some(loc => loc.zipcode === zipcode) ? 'text-yellow-400' : 'text-muted-foreground'
+              savedLocations.find(loc => loc.zipcode === zipcode)?.favorite ? 'text-yellow-400' : 'text-muted-foreground'
             }`}
-            title={savedLocations.some(loc => loc.zipcode === zipcode) ? 'Location saved' : 'Save this location'}
+            title={savedLocations.find(loc => loc.zipcode === zipcode)?.favorite ? 'Remove from favorites' : 'Add to favorites'}
           >
-            <Star className="w-3 h-3" fill={savedLocations.some(loc => loc.zipcode === zipcode) ? 'currentColor' : 'none'} />
+            <Star className="w-3 h-3" fill={savedLocations.find(loc => loc.zipcode === zipcode)?.favorite ? 'currentColor' : 'none'} />
           </button>
         </div>
         <RefreshButton
@@ -390,7 +396,14 @@ export function Weather({ config }: { config?: WeatherConfig }) {
               </div>
               {showSavedLocations && (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {savedLocations.map((location) => {
+                  {[...savedLocations]
+                    .sort((a, b) => {
+                      // Sort favorites to the top
+                      if (a.favorite && !b.favorite) return -1
+                      if (!a.favorite && b.favorite) return 1
+                      return 0
+                    })
+                    .map((location) => {
                     const condition = WEATHER_CONDITIONS[location.condition]
                     const Icon = condition.icon
                     const colorClass = {
@@ -412,7 +425,10 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                         >
                           <Icon className={`w-4 h-4 ${colorClass}`} />
                           <div className="flex-1">
-                            <div className="text-xs font-medium text-foreground">{location.cityName}</div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs font-medium text-foreground">{location.cityName}</span>
+                              {location.favorite && <Star className="w-3 h-3 text-yellow-400" fill="currentColor" />}
+                            </div>
                             <div className="text-xs text-muted-foreground">{location.temperature}°{units}</div>
                           </div>
                         </button>
