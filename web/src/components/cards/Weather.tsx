@@ -204,6 +204,26 @@ function generateMockForecast(days: number, units: 'F' | 'C', zipcode: string): 
   return forecast
 }
 
+// Format time in 12-hour format
+function formatTime(hour: number, minuteSeed: number) {
+  const minute = Math.floor(seededRandom(minuteSeed) * 60)
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`
+}
+
+// Get icon color based on weather condition
+function getConditionColor(condition: keyof typeof WEATHER_CONDITIONS) {
+  const colorMap: Record<keyof typeof WEATHER_CONDITIONS, string> = {
+    'sunny': 'text-yellow-400',
+    'cloudy': 'text-gray-400',
+    'rainy': 'text-blue-400',
+    'snowy': 'text-blue-200',
+    'windy': 'text-cyan-400',
+  }
+  return colorMap[condition]
+}
+
 function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   const conditions: Array<keyof typeof WEATHER_CONDITIONS> = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy']
   const seed = hashZipcode(zipcode)
@@ -220,14 +240,6 @@ function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   const sunriseHour = 6 + Math.floor(seededRandom(seed + 8000) * 2)
   const sunsetHour = 18 + Math.floor(seededRandom(seed + 8100) * 2)
   const isDaytime = currentHour >= sunriseHour && currentHour < sunsetHour
-  
-  // Format time in 12-hour format
-  const formatTime = (hour: number, minuteSeed: number) => {
-    const minute = Math.floor(seededRandom(minuteSeed) * 60)
-    const period = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
-    return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`
-  }
 
   return {
     condition,
@@ -441,18 +453,6 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     if (uvIndex <= 7) return 'High'
     if (uvIndex <= 10) return 'Very High'
     return 'Extreme'
-  }
-
-  // Get icon color based on weather condition
-  const getConditionColor = (condition: keyof typeof WEATHER_CONDITIONS) => {
-    const colorMap: Record<keyof typeof WEATHER_CONDITIONS, string> = {
-      'sunny': 'text-yellow-400',
-      'cloudy': 'text-gray-400',
-      'rainy': 'text-blue-400',
-      'snowy': 'text-blue-200',
-      'windy': 'text-cyan-400',
-    }
-    return colorMap[condition]
   }
 
   return (
