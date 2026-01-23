@@ -477,10 +477,12 @@
   animation: spin-min 1s linear infinite;
 }
 
-/* Weather animations */
+/* Enhanced Weather Animations - Premium, Dynamic Effects */
+
+/* ========== SNOW ANIMATIONS ========== */
 @keyframes snow-fall {
   0% { 
-    transform: translateY(-10px) translateX(0);
+    transform: translateY(-10px) translateX(0) rotate(0deg);
     opacity: 0;
   }
   10% {
@@ -490,82 +492,338 @@
     opacity: 1;
   }
   100% { 
-    transform: translateY(100vh) translateX(10px);
+    transform: translateY(100vh) translateX(50px) rotate(360deg);
     opacity: 0;
   }
 }
 
+@keyframes snow-fall-slow {
+  0% { 
+    transform: translateY(-10px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% { 
+    transform: translateY(100vh) translateX(-30px) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snow-drift {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(10px);
+  }
+  75% {
+    transform: translateX(-10px);
+  }
+}
+
+/* ========== RAIN ANIMATIONS ========== */
 @keyframes rain-drop {
   0% { 
-    transform: translateY(-10px);
+    transform: translateY(-10px) scaleY(0.5);
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.9;
+  }
+  95% {
+    opacity: 0.9;
+  }
+  100% { 
+    transform: translateY(100vh) scaleY(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes rain-splash {
+  0% {
+    opacity: 1;
+    transform: scale(0.1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes lightning-flash {
+  0%, 15%, 25%, 100% {
+    opacity: 0;
+  }
+  10%, 20% {
+    opacity: 0.8;
+  }
+}
+
+/* ========== CLOUD ANIMATIONS ========== */
+@keyframes cloud-drift {
+  0% { 
+    transform: translateX(-20%);
+  }
+  100% { 
+    transform: translateX(120%);
+  }
+}
+
+@keyframes cloud-drift-slow {
+  0% { 
+    transform: translateX(-15%) translateY(0);
+  }
+  50% { 
+    transform: translateX(55%) translateY(-5px);
+  }
+  100% { 
+    transform: translateX(115%) translateY(0);
+  }
+}
+
+@keyframes cloud-drift-reverse {
+  0% { 
+    transform: translateX(120%);
+  }
+  100% { 
+    transform: translateX(-20%);
+  }
+}
+
+@keyframes cloud-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ========== SUN ANIMATIONS ========== */
+@keyframes sun-rays {
+  0% { 
+    opacity: 0.4;
+    transform: rotate(0deg) scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: rotate(180deg) scale(1.15);
+  }
+  100% { 
+    opacity: 0.4;
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes sun-pulse {
+  0%, 100% { 
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes lens-flare {
+  0%, 100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translateX(50%) scale(1.2);
+  }
+}
+
+@keyframes sun-shimmer {
+  0%, 100% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ========== WIND ANIMATIONS ========== */
+@keyframes wind-blow {
+  0% { 
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% { 
+    transform: translateX(200%);
+    opacity: 0;
+  }
+}
+
+@keyframes wind-gust {
+  0% { 
+    transform: translateX(-80%) skewX(-15deg);
+    opacity: 0;
+  }
+  5% {
+    opacity: 0.7;
+  }
+  95% {
+    opacity: 0.7;
+  }
+  100% { 
+    transform: translateX(180%) skewX(-15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes leaves-blow {
+  0% { 
+    transform: translateX(-10%) translateY(0) rotate(0deg);
     opacity: 0;
   }
   10% {
     opacity: 0.8;
   }
+  90% {
+    opacity: 0.8;
+  }
   100% { 
-    transform: translateY(100vh);
+    transform: translateX(110%) translateY(50px) rotate(360deg);
     opacity: 0;
   }
 }
 
-@keyframes cloud-drift {
-  0% { 
-    transform: translateX(-10%);
+/* ========== AMBIENT/IDLE ANIMATIONS ========== */
+@keyframes gentle-sway {
+  0%, 100% {
+    transform: translateX(0);
   }
-  100% { 
-    transform: translateX(110%);
-  }
-}
-
-@keyframes sun-rays {
-  0% { 
-    opacity: 0.5;
-    transform: rotate(0deg) scale(1);
-  }
-  50% { 
-    opacity: 0.8;
-    transform: rotate(180deg) scale(1.1);
-  }
-  100% { 
-    opacity: 0.5;
-    transform: rotate(360deg) scale(1);
+  50% {
+    transform: translateX(3px);
   }
 }
 
-@keyframes wind-blow {
-  0% { 
-    transform: translateX(-5px);
+@keyframes subtle-fade {
+  0%, 100% {
     opacity: 0.3;
   }
-  50% { 
-    transform: translateX(5px);
+  50% {
     opacity: 0.6;
   }
-  100% { 
-    transform: translateX(-5px);
-    opacity: 0.3;
-  }
 }
 
+/* ========== WEATHER CONDITION CLASSES ========== */
 .weather-snow {
-  animation: snow-fall linear infinite;
+  animation: snow-fall 8s linear infinite;
+}
+
+.weather-snow:nth-child(2n) {
+  animation: snow-fall-slow 12s linear infinite;
+  animation-delay: -2s;
+}
+
+.weather-snow:nth-child(3n) {
+  animation: snow-fall 10s linear infinite, snow-drift 4s ease-in-out infinite;
+  animation-delay: -4s;
 }
 
 .weather-rain {
-  animation: rain-drop linear infinite;
+  animation: rain-drop 0.8s linear infinite;
+}
+
+.weather-rain:nth-child(2n) {
+  animation: rain-drop 0.6s linear infinite;
+  animation-delay: -0.2s;
+}
+
+.weather-rain:nth-child(3n) {
+  animation: rain-drop 1s linear infinite;
+  animation-delay: -0.4s;
 }
 
 .weather-cloud {
-  animation: cloud-drift linear infinite;
+  animation: cloud-drift 60s linear infinite;
+}
+
+.weather-cloud:nth-child(2n) {
+  animation: cloud-drift-slow 80s ease-in-out infinite;
+  opacity: 0.7;
+  animation-delay: -20s;
+}
+
+.weather-cloud:nth-child(3n) {
+  animation: cloud-drift-reverse 70s linear infinite, cloud-float 6s ease-in-out infinite;
+  opacity: 0.5;
+  animation-delay: -40s;
 }
 
 .weather-sun {
-  animation: sun-rays 8s ease-in-out infinite;
+  animation: sun-rays 12s ease-in-out infinite;
+}
+
+.weather-sun-pulse {
+  animation: sun-pulse 4s ease-in-out infinite;
+}
+
+.weather-sun-flare {
+  animation: lens-flare 8s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.weather-sun-shimmer {
+  animation: sun-shimmer 3s ease-in-out infinite;
 }
 
 .weather-wind {
-  animation: wind-blow 2s ease-in-out infinite;
+  animation: wind-blow 3s ease-in-out infinite;
+}
+
+.weather-wind:nth-child(2n) {
+  animation: wind-gust 2.5s ease-in-out infinite;
+  animation-delay: -1s;
+}
+
+.weather-wind:nth-child(3n) {
+  animation: wind-blow 4s ease-in-out infinite;
+  animation-delay: -2s;
+  opacity: 0.3;
+}
+
+.weather-leaves {
+  animation: leaves-blow 6s ease-in-out infinite;
+}
+
+.weather-leaves:nth-child(2n) {
+  animation: leaves-blow 8s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.weather-rain-splash {
+  animation: rain-splash 0.5s ease-out infinite;
+}
+
+.weather-lightning {
+  animation: lightning-flash 8s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* Ambient effects for idle states */
+.weather-ambient {
+  animation: gentle-sway 8s ease-in-out infinite, subtle-fade 6s ease-in-out infinite;
 }
 
 /* Theme-specific overrides */
