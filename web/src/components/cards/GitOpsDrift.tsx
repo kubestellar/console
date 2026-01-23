@@ -261,10 +261,25 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
 function DriftItem({ drift }: { drift: GitOpsDriftType }) {
   const typeConfig = driftTypeConfig[drift.driftType]
   const TypeIcon = typeConfig.icon
+  const { drillToDrift } = useDrillDownActions()
+
+  const handleClick = () => {
+    drillToDrift(drift.cluster, {
+      resource: drift.resource,
+      kind: drift.kind,
+      namespace: drift.namespace,
+      driftType: drift.driftType,
+      severity: drift.severity,
+      gitVersion: drift.gitVersion,
+      details: drift.details,
+    })
+  }
 
   return (
     <div
-      className={`p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]}`}
+      onClick={handleClick}
+      className={`p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]} cursor-pointer hover:bg-secondary/50 transition-colors group`}
+      title={`Click to view drift details for ${drift.resource}`}
     >
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -280,9 +295,12 @@ function DriftItem({ drift }: { drift: GitOpsDriftType }) {
             </span>
           </div>
         </div>
-        <span className={`text-xs px-2 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
-          {typeConfig.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs px-2 py-0.5 rounded ${typeConfig.bg} ${typeConfig.color}`}>
+            {typeConfig.label}
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mt-2">
