@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { 
-  TrendingUp, TrendingDown, DollarSign, Clock, BarChart3, 
-  ChevronDown, ChevronRight, RefreshCw, ExternalLink, Settings 
+  TrendingUp, TrendingDown, Clock, BarChart3, 
+  ChevronDown, ChevronRight, ExternalLink 
 } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -381,7 +381,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
             sortDirection={sortDirection}
             limit={limit}
             onSortChange={setSortBy}
-            onDirectionChange={setSortDirection}
+            onSortDirectionChange={setSortDirection}
             onLimitChange={setLimit}
             sortOptions={SORT_OPTIONS}
           />
