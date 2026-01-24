@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
+import { BaseModal } from '../../lib/modals'
 
 const INSTALL_COMMAND = 'brew install kubestellar/tap/kkc-agent && kkc-agent'
 
@@ -143,49 +144,16 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     setShowKey(false)
   }
 
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  // Close on click outside
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-      onClose()
-    }
-  }
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!isOpen) return
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div ref={dialogRef} className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Key className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">API Key Settings</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="API Key Settings"
+        icon={Key}
+        onClose={onClose}
+        showBack={false}
+      />
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+      <BaseModal.Content>
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -377,15 +345,13 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
               )}
             </div>
           )}
-        </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border bg-secondary/20">
-          <p className="text-xs text-muted-foreground text-center">
-            API keys are stored securely on your local machine and never sent to our servers.
-          </p>
-        </div>
-      </div>
-    </div>
+      <BaseModal.Footer>
+        <p className="text-xs text-muted-foreground text-center flex-1">
+          API keys are stored securely on your local machine and never sent to our servers.
+        </p>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
