@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { X, LayoutDashboard, Server, Activity, AlertTriangle, GitBranch, Shield, Box, Gauge, Sparkles, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { LayoutDashboard, Server, Activity, AlertTriangle, GitBranch, Shield, Box, Gauge, Sparkles, Loader2, RefreshCw, ToggleLeft } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals'
 
 interface Card {
   id: string
@@ -48,22 +49,12 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
     explanation: string
   } | null>(null)
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
+  if (!card) return null
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen || !card) return null
+  const tabs = [
+    { id: 'select', label: 'Choose Card Type', icon: ToggleLeft },
+    { id: 'ai', label: 'Describe What You Need', icon: Sparkles },
+  ]
 
   const handleSelectReplace = () => {
     if (!selectedType) return
@@ -158,53 +149,22 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full max-w-2xl glass rounded-2xl overflow-hidden animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <div>
-            <h2 className="text-lg font-medium text-foreground">Replace Card</h2>
-            <p className="text-sm text-muted-foreground">
-              Replace "{card.title || card.card_type}" with a new card
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="Replace Card"
+        description={`Replace "${card.title || card.card_type}" with a new card`}
+        icon={RefreshCw}
+        onClose={onClose}
+        showBack={false}
+      />
 
-        {/* Tabs */}
-        <div className="flex border-b border-border/50">
-          <button
-            onClick={() => setActiveTab('select')}
-            className={cn(
-              'flex-1 px-4 py-3 text-sm font-medium transition-colors',
-              activeTab === 'select'
-                ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Choose Card Type
-          </button>
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={cn(
-              'flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2',
-              activeTab === 'ai'
-                ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Sparkles className="w-4 h-4" />
-            Describe What You Need
-          </button>
-        </div>
+      <BaseModal.Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as 'select' | 'ai')}
+      />
 
-        {/* Content */}
-        <div className="p-6 max-h-[50vh] overflow-y-auto">
+      <BaseModal.Content className="max-h-[50vh]">
           {activeTab === 'select' && (
             <div className="grid grid-cols-2 gap-3">
               {CARD_TYPES.filter((c) => c.type !== card.card_type).map((cardType) => {
@@ -326,32 +286,33 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
               </div>
             </div>
           )}
-        </div>
+        </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-          >
-            Cancel
-          </button>
-          {activeTab === 'select' && (
+        <BaseModal.Footer showKeyboardHints>
+          <div className="flex-1" />
+          <div className="flex items-center gap-3">
             <button
-              onClick={handleSelectReplace}
-              disabled={!selectedType}
-              className={cn(
-                'px-4 py-2 rounded-lg',
-                selectedType
-                  ? 'bg-purple-500 text-foreground hover:bg-purple-600'
-                  : 'bg-secondary text-muted-foreground cursor-not-allowed'
-              )}
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             >
-              Replace Card
+              Cancel
             </button>
-          )}
-        </div>
-      </div>
-    </div>
+            {activeTab === 'select' && (
+              <button
+                onClick={handleSelectReplace}
+                disabled={!selectedType}
+                className={cn(
+                  'px-4 py-2 rounded-lg',
+                  selectedType
+                    ? 'bg-purple-500 text-foreground hover:bg-purple-600'
+                    : 'bg-secondary text-muted-foreground cursor-not-allowed'
+                )}
+              >
+                Replace Card
+              </button>
+            )}
+          </div>
+        </BaseModal.Footer>
+    </BaseModal>
   )
 }
