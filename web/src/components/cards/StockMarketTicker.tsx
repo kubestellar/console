@@ -577,8 +577,26 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Add stock from search results
   const addStock = useCallback((stock: StockSearchResult) => {
     if (!activeSymbols.includes(stock.symbol)) {
+      // Optimistically add to stockData for instant visual feedback
+      const placeholderStock: StockData = {
+        symbol: stock.symbol,
+        name: stock.name,
+        price: 0,
+        change: 0,
+        changePercent: 0,
+        dayOpen: 0,
+        dayHigh: 0,
+        dayLow: 0,
+        volume: 0,
+        marketCap: 0,
+        week52High: 0,
+        week52Low: 0,
+        sparklineData: [],
+        lastUpdated: new Date(),
+      }
+      setStockData(prev => [...prev, placeholderStock])
       setActiveSymbols(prev => [...prev, stock.symbol])
-      
+
       // Add to saved stocks if not already there
       if (!savedStocks.find(s => s.symbol === stock.symbol)) {
         setSavedStocks(prev => [...prev, {
@@ -589,7 +607,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           favorite: true,
         }])
       }
-      
     }
     setStockSearchInput('')
     setShowStockDropdown(false)
@@ -641,8 +658,10 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const prevSymbolsRef = useRef<string[]>(activeSymbols)
   useEffect(() => {
     // Only refresh if symbols actually changed (not on initial mount)
-    if (prevSymbolsRef.current !== activeSymbols &&
-        JSON.stringify(prevSymbolsRef.current.sort()) !== JSON.stringify(activeSymbols.sort())) {
+    // Use spread to avoid mutating arrays with sort()
+    const prevSorted = [...prevSymbolsRef.current].sort()
+    const currSorted = [...activeSymbols].sort()
+    if (JSON.stringify(prevSorted) !== JSON.stringify(currSorted)) {
       handleRefresh()
     }
     prevSymbolsRef.current = activeSymbols
