@@ -367,6 +367,14 @@ func (s *Server) setupRoutes() {
 	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)
 	api.Delete("/workloads/:cluster/:namespace/:name", workloadHandlers.DeleteWorkload)
 
+	// Control Cluster routes (KubeStellar)
+	controlClusterHandlers := handlers.NewControlClusterHandlers(s.k8sClient, s.hub)
+	api.Get("/control-cluster/status", controlClusterHandlers.GetControlClusterStatus)
+	api.Get("/control-cluster/clusters", controlClusterHandlers.ListRegisteredClusters)
+	api.Get("/control-cluster/check/:cluster", controlClusterHandlers.CheckClusterType)
+	api.Get("/control-cluster/propagation/:namespace/:workload", controlClusterHandlers.GetPropagationStatus)
+	api.Get("/control-cluster/:cluster", controlClusterHandlers.GetControlClusterInfo)
+
 	// Feature requests and feedback routes
 	feedback := handlers.NewFeedbackHandler(s.store, handlers.FeedbackConfig{
 		GitHubToken:   s.config.FeedbackGitHubToken,

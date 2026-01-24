@@ -142,6 +142,8 @@ import { GatewayStatus } from './GatewayStatus'
 import { ServiceTopology } from './ServiceTopology'
 // Workload Deployment card
 import { WorkloadDeployment } from './WorkloadDeployment'
+// Control Cluster card
+import { ControlCluster } from './ControlCluster'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -304,6 +306,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   service_topology: ServiceTopology,
   // Workload Deployment card
   workload_deployment: WorkloadDeployment,
+  // Control Cluster card
+  control_cluster: ControlCluster,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -332,6 +336,8 @@ export const DEMO_DATA_CARDS = new Set([
   'service_topology',
   // Workload Deployment - demo until real workloads are listed
   'workload_deployment',
+  // Control Cluster - demo until KubeStellar is detected
+  'control_cluster',
   // ArgoCD cards - all use mock data
   'argocd_applications',
   'argocd_health',
@@ -395,6 +401,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Workload Deployment - wide for workload list
   workload_deployment: 6,
+
+  // Control Cluster - wide for cluster list
+  control_cluster: 6,
 
   // Medium cards (5-6 columns) - lists and tables
   event_stream: 6,

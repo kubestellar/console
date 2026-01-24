@@ -13,6 +13,7 @@ const CARD_CATALOG = {
     { type: 'cluster_costs', title: 'Cluster Costs', description: 'Resource cost estimation', visualization: 'bar' },
     { type: 'upgrade_status', title: 'Cluster Upgrade Status', description: 'Available cluster upgrades', visualization: 'status' },
     { type: 'cluster_resource_tree', title: 'Cluster Resource Tree', description: 'Hierarchical view of cluster resources with search and filters', visualization: 'table' },
+    { type: 'control_cluster', title: 'KubeStellar Control Cluster', description: 'Control plane status, managed clusters, and syncer health', visualization: 'status' },
   ],
   'Workloads': [
     { type: 'deployment_status', title: 'Deployment Status', description: 'Deployment health across clusters', visualization: 'donut' },
