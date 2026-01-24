@@ -1,12 +1,11 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
 import { Loader2, AlertTriangle, ChevronRight, Search, Filter, ChevronDown, Server } from 'lucide-react'
-import { usePods, useClusters } from '../../hooks/useMCP'
+import { usePods } from '../../hooks/useMCP'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useCardData, commonComparators } from '../../lib/cards'
 
 type SortByOption = 'restarts' | 'name'
 
@@ -25,114 +24,56 @@ const SORT_OPTIONS = [
 ]
 
 export function TopPods({ config }: TopPodsProps) {
-  const cluster = config?.cluster
-  const namespace = config?.namespace
-  const [sortBy, setSortBy] = useState<SortByOption>(config?.sortBy || 'restarts')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(config?.limit || 5)
-  const [localSearch, setLocalSearch] = useState('')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-
-  const {
-    selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
-  const { clusters } = useClusters()
+  const clusterConfig = config?.cluster
+  const namespaceConfig = config?.namespace
   const { drillToPod } = useDrillDownActions()
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
-    const reachable = clusters.filter(c => c.reachable !== false)
-    if (isAllClustersSelected) return reachable
-    return reachable.filter(c => globalSelectedClusters.includes(c.name))
-  }, [clusters, globalSelectedClusters, isAllClustersSelected])
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
-
   // Fetch more pods to allow client-side filtering and pagination
-  const { pods: rawPods, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePods(cluster, namespace, sortBy, 100)
+  const { pods: rawPods, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePods(clusterConfig, namespaceConfig, 'restarts', 100)
 
-  // Apply global filters (without limit - pagination handles that)
-  const filteredPods = useMemo(() => {
-    let filtered = rawPods
-
-    // Filter by global cluster selection (if card doesn't have a specific cluster configured)
-    if (!cluster && !isAllClustersSelected) {
-      filtered = filtered.filter(pod => globalSelectedClusters.includes(pod.cluster || ''))
-    }
-
-    // Apply local cluster filter (on top of global)
-    if (localClusterFilter.length > 0) {
-      filtered = filtered.filter(pod => pod.cluster && localClusterFilter.includes(pod.cluster))
-    }
-
-    // Apply custom text filter
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      filtered = filtered.filter(pod =>
-        pod.name.toLowerCase().includes(query) ||
-        pod.namespace.toLowerCase().includes(query) ||
-        (pod.cluster || '').toLowerCase().includes(query)
-      )
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(pod =>
-        pod.name.toLowerCase().includes(query) ||
-        pod.namespace.toLowerCase().includes(query) ||
-        (pod.cluster || '').toLowerCase().includes(query) ||
-        pod.status.toLowerCase().includes(query)
-      )
-    }
-
-    // Sort by selected field and direction
-    const sorted = [...filtered].sort((a, b) => {
-      let result = 0
-      if (sortBy === 'restarts') {
-        result = b.restarts - a.restarts
-      } else if (sortBy === 'name') {
-        result = a.name.localeCompare(b.name)
-      }
-      return sortDirection === 'asc' ? -result : result
-    })
-
-    return sorted
-  }, [rawPods, cluster, globalSelectedClusters, isAllClustersSelected, customFilter, localSearch, sortBy, sortDirection, localClusterFilter])
-
-  // Use pagination hook
-  const effectivePerPage = itemsPerPage === 'unlimited' ? 1000 : itemsPerPage
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: pods,
+    items: pods,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredPods, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<(typeof rawPods)[0], SortByOption>(rawPods, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster', 'status'],
+      clusterField: 'cluster',
+      storageKey: 'top-pods',
+    },
+    sort: {
+      defaultField: config?.sortBy || 'restarts',
+      defaultDirection: 'desc',
+      comparators: {
+        restarts: (a, b) => b.restarts - a.restarts,
+        name: commonComparators.string('name'),
+      },
+    },
+    defaultLimit: config?.limit || 5,
+  })
 
   if (isLoading && pods.length === 0) {
     return (
@@ -187,7 +128,7 @@ export function TopPods({ config }: TopPodsProps) {
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
                     <button
-                      onClick={() => setLocalClusterFilter([])}
+                      onClick={clearClusterFilter}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
                         localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
@@ -250,7 +191,8 @@ export function TopPods({ config }: TopPodsProps) {
       ) : (
         <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
           {pods.map((pod, index) => {
-            const displayIndex = (currentPage - 1) * perPage + index + 1
+            const effectivePerPage = typeof itemsPerPage === 'number' ? itemsPerPage : 5
+            const displayIndex = (currentPage - 1) * effectivePerPage + index + 1
             return (
             <div
               key={`${pod.cluster}-${pod.namespace}-${pod.name}`}
@@ -330,7 +272,7 @@ export function TopPods({ config }: TopPodsProps) {
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />
