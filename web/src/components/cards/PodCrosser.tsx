@@ -7,7 +7,7 @@ import { useCardExpanded } from './CardWrapper'
 const CANVAS_WIDTH = 280
 const CANVAS_HEIGHT = 320
 const CELL_SIZE = 32
-const COLS = Math.floor(CANVAS_WIDTH / CELL_SIZE)
+// Grid columns: Math.floor(CANVAS_WIDTH / CELL_SIZE) = 8
 const ROWS = 10
 const PLAYER_SIZE = 24
 

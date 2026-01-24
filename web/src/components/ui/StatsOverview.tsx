@@ -86,7 +86,9 @@ function StatBlock({ block, data, hasData }: StatBlockProps) {
       onClick={() => isClickable && data.onClick?.()}
     >
       {isDemo && (
-        <FlaskConical className="absolute -top-1 -right-1 w-3.5 h-3.5 text-yellow-400/50" title="Demo data" />
+        <span className="absolute -top-1 -right-1" title="Demo data">
+          <FlaskConical className="w-3.5 h-3.5 text-yellow-400/50" />
+        </span>
       )}
       <div className="flex items-center gap-2 mb-2">
         <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />

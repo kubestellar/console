@@ -157,8 +157,8 @@ const DEMO_POSTURE = {
 
 export function DataCompliance() {
   const location = useLocation()
-  const { clusters, isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
-  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
+  useGlobalFilters() // Keep hook for potential future use
 
   const {
     cards,
@@ -229,12 +229,6 @@ export function DataCompliance() {
     expandCards()
     setShowTemplates(false)
   }, [setCards, expandCards, setShowTemplates])
-
-  // Filter clusters
-  const filteredClusters = clusters.filter(c =>
-    isAllClustersSelected || globalSelectedClusters.includes(c.name)
-  )
-  const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
 
   // Use fixed demo posture data
   const posture = DEMO_POSTURE
