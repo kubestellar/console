@@ -17,6 +17,7 @@ import {
   WifiOff
 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { BaseModal } from '../../lib/modals'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { api } from '../../lib/api'
@@ -801,18 +802,16 @@ function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConfirmModa
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="glass rounded-xl p-6 w-full max-w-md">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-            <Trash2 className="w-5 h-5 text-red-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-white">Delete Namespace</h2>
-            <p className="text-sm text-muted-foreground">This action cannot be undone</p>
-          </div>
-        </div>
+    <BaseModal isOpen={true} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="Delete Namespace"
+        description="This action cannot be undone"
+        icon={Trash2}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content>
         <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
           <p className="text-sm text-red-300">
             You are about to delete namespace <strong>"{namespace.name}"</strong> from cluster <strong>"{namespace.cluster}"</strong>.
@@ -820,7 +819,7 @@ function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConfirmModa
           </p>
         </div>
 
-        <div className="mb-4">
+        <div>
           <label className="block text-sm font-medium text-muted-foreground mb-1">
             Type <span className="text-red-400 font-mono">{namespace.name}</span> to confirm
           </label>
@@ -832,8 +831,11 @@ function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConfirmModa
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500/50"
           />
         </div>
+      </BaseModal.Content>
 
-        <div className="flex justify-end gap-3">
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <div className="flex gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white transition-colors"
@@ -848,8 +850,8 @@ function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConfirmModa
             {deleting ? 'Deleting...' : 'Delete Namespace'}
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 
@@ -933,15 +935,15 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
   )
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="glass rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">Create Namespace</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={true} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="Create Namespace"
+        icon={Folder}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[60vh]">
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
             {error}
@@ -1099,8 +1101,11 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
             )}
           </div>
         </div>
+      </BaseModal.Content>
 
-        <div className="flex justify-end gap-3 mt-6">
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <div className="flex gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white transition-colors"
@@ -1115,8 +1120,8 @@ function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNamespaceM
             {creating ? 'Creating...' : 'Create'}
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 
@@ -1203,18 +1208,16 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="glass rounded-xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Grant Access</h2>
-            <p className="text-sm text-muted-foreground">Namespace: {namespace.name}</p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={true} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="Grant Access"
+        description={`Namespace: ${namespace.name}`}
+        icon={Shield}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content>
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
             {error}
@@ -1314,8 +1317,11 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
             </p>
           </div>
         </div>
+      </BaseModal.Content>
 
-        <div className="flex justify-end gap-3 mt-6">
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <div className="flex gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-muted-foreground hover:text-white transition-colors"
@@ -1330,7 +1336,7 @@ function GrantAccessModal({ namespace, existingAccess, onClose, onGranted }: Gra
             {granting ? 'Granting...' : 'Grant Access'}
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
