@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api, BackendUnavailableError } from '../lib/api'
+import { getDemoMode } from './useDemoMode'
 import type {
   ConsoleUser,
   K8sServiceAccount,
@@ -166,6 +167,32 @@ export function useK8sUsers(cluster?: string) {
   return { users, isLoading, error, refetch: fetchUsers }
 }
 
+// Demo data for K8s service accounts
+function getDemoK8sServiceAccounts(cluster?: string, namespace?: string): K8sServiceAccount[] {
+  const accounts: K8sServiceAccount[] = [
+    { name: 'default', namespace: 'default', cluster: 'prod-east', roles: ['view'] },
+    { name: 'admin-sa', namespace: 'default', cluster: 'prod-east', roles: ['admin', 'cluster-admin'] },
+    { name: 'jenkins', namespace: 'ci-cd', cluster: 'prod-east', roles: ['edit', 'deploy'] },
+    { name: 'prometheus', namespace: 'monitoring', cluster: 'prod-east', roles: ['cluster-view'] },
+    { name: 'grafana', namespace: 'monitoring', cluster: 'prod-east', roles: ['view'] },
+    { name: 'argocd', namespace: 'argocd', cluster: 'prod-east', roles: ['cluster-admin'] },
+    { name: 'default', namespace: 'default', cluster: 'staging', roles: ['view'] },
+    { name: 'developer-sa', namespace: 'development', cluster: 'staging', roles: ['edit'] },
+    { name: 'tester-sa', namespace: 'testing', cluster: 'staging', roles: ['view', 'pod-exec'] },
+    { name: 'default', namespace: 'default', cluster: 'dev-cluster', roles: ['view'] },
+    { name: 'local-admin', namespace: 'kube-system', cluster: 'dev-cluster', roles: ['cluster-admin'] },
+  ]
+
+  let result = accounts
+  if (cluster) {
+    result = result.filter(sa => sa.cluster === cluster)
+  }
+  if (namespace) {
+    result = result.filter(sa => sa.namespace === namespace)
+  }
+  return result
+}
+
 /**
  * Hook for Kubernetes service accounts
  */
@@ -175,6 +202,14 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchServiceAccounts = useCallback(async () => {
+    // Demo mode returns demo data
+    if (getDemoMode()) {
+      setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     try {
@@ -193,6 +228,8 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
           console.warn('Failed to load service accounts:', err.message)
         }
       }
+      // Fall back to demo data on any error
+      setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
     } finally {
       setIsLoading(false)
     }
