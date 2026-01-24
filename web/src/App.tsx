@@ -15,6 +15,7 @@ import { GitOps } from './components/gitops/GitOps'
 import { Alerts } from './components/alerts/Alerts'
 import { Cost } from './components/cost/Cost'
 import { Compliance } from './components/compliance/Compliance'
+import { DataCompliance } from './components/data-compliance/DataCompliance'
 import { GPUReservations } from './components/gpu/GPUReservations'
 import { Nodes } from './components/nodes/Nodes'
 import { Deployments } from './components/deployments/Deployments'
@@ -325,12 +326,37 @@ function App() {
           }
         />
         <Route
+          path="/security-posture"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <Compliance />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        {/* Legacy route for backwards compatibility */}
+        <Route
           path="/compliance"
           element={
             <ProtectedRoute>
               <OnboardedRoute>
                 <Layout>
                   <Compliance />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/data-compliance"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <DataCompliance />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>

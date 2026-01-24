@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Shield, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Database, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -14,7 +14,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -26,7 +25,7 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
-// Width class lookup for Tailwind (dynamic classes don't work)
+// Width class lookup for Tailwind
 const WIDTH_CLASSES: Record<number, string> = {
   3: 'col-span-3',
   4: 'col-span-4',
@@ -121,54 +120,46 @@ function DragPreviewCard({ card }: { card: DashboardCard }) {
   )
 }
 
-const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
+const DATA_COMPLIANCE_CARDS_KEY = 'data-compliance-dashboard-cards'
 
-// Default cards for the Compliance dashboard
-const DEFAULT_COMPLIANCE_CARDS = [
-  { type: 'opa_policies', title: 'OPA Gatekeeper', position: { w: 4, h: 3 } },
-  { type: 'kyverno_policies', title: 'Kyverno Policies', position: { w: 4, h: 3 } },
-  { type: 'security_issues', title: 'Security Issues', position: { w: 8, h: 4 } },
-  { type: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 6, h: 4 } },
+// Default cards for Data Compliance dashboard
+const DEFAULT_DATA_COMPLIANCE_CARDS = [
+  { type: 'namespace_rbac', title: 'Access Controls', position: { w: 6, h: 4 } },
+  { type: 'security_issues', title: 'Data Protection Issues', position: { w: 6, h: 4 } },
 ]
 
-// Mock compliance posture data
-function getCompliancePosture(clusterCount: number) {
-  const totalChecks = clusterCount * 45
-  const passing = Math.floor(totalChecks * 0.78)
-  const failing = Math.floor(totalChecks * 0.12)
-  const warning = totalChecks - passing - failing
-
+// Mock data compliance posture
+function getDataCompliancePosture(clusterCount: number) {
   return {
-    totalChecks,
-    passing,
-    failing,
-    warning,
-    score: Math.round((passing / totalChecks) * 100),
-    criticalFindings: Math.floor(clusterCount * 2.3),
-    highFindings: Math.floor(clusterCount * 5.1),
-    mediumFindings: Math.floor(clusterCount * 8.7),
-    lowFindings: Math.floor(clusterCount * 12.4),
-    // Tool-specific metrics
-    gatekeeperViolations: Math.floor(clusterCount * 3.2),
-    kyvernoViolations: Math.floor(clusterCount * 2.8),
-    kubescapeScore: 78 + Math.floor(Math.random() * 10),
-    falcoAlerts: Math.floor(clusterCount * 1.5),
-    trivyVulns: Math.floor(clusterCount * 12),
-    criticalCVEs: Math.floor(clusterCount * 1.8),
-    highCVEs: Math.floor(clusterCount * 4.2),
-    cisScore: 82 + Math.floor(Math.random() * 8),
-    nsaScore: 76 + Math.floor(Math.random() * 12),
-    pciScore: 71 + Math.floor(Math.random() * 15),
+    // Encryption
+    encryptedSecrets: Math.floor(clusterCount * 45),
+    unencryptedSecrets: Math.floor(clusterCount * 3),
+    encryptionScore: 94,
+    // Data residency
+    regionsCompliant: Math.floor(clusterCount * 0.9),
+    regionsTotal: clusterCount,
+    // Access control
+    rbacPolicies: Math.floor(clusterCount * 12),
+    excessivePermissions: Math.floor(clusterCount * 2),
+    // PII detection
+    piiDetected: Math.floor(clusterCount * 1.5),
+    piiProtected: Math.floor(clusterCount * 1.2),
+    // Audit
+    auditEnabled: Math.floor(clusterCount * 0.85),
+    retentionDays: 90,
+    // Framework scores
+    gdprScore: 82 + Math.floor(Math.random() * 10),
+    hipaaScore: 78 + Math.floor(Math.random() * 12),
+    pciScore: 85 + Math.floor(Math.random() * 8),
+    soc2Score: 80 + Math.floor(Math.random() * 10),
   }
 }
 
-export function Compliance() {
+export function DataCompliance() {
   const location = useLocation()
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
-  const { drillToPolicy: _drillToPolicy, drillToAllSecurity } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
     cards,
     setCards,
@@ -191,12 +182,11 @@ export function Compliance() {
     autoRefresh,
     setAutoRefresh,
   } = useDashboard({
-    storageKey: COMPLIANCE_CARDS_KEY,
-    defaultCards: DEFAULT_COMPLIANCE_CARDS,
+    storageKey: DATA_COMPLIANCE_CARDS_KEY,
+    defaultCards: DEFAULT_DATA_COMPLIANCE_CARDS,
     onRefresh: refetch,
   })
 
-  // Trigger refresh when navigating to this page
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -240,64 +230,63 @@ export function Compliance() {
     setShowTemplates(false)
   }, [setCards, expandCards, setShowTemplates])
 
-  // Filter clusters based on global selection
+  // Filter clusters
   const filteredClusters = clusters.filter(c =>
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
   )
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
 
-  // Calculate compliance posture
-  const posture = getCompliancePosture(reachableClusters.length || 1)
+  // Calculate data compliance posture
+  const posture = getDataCompliancePosture(reachableClusters.length || 1)
 
-  // Stats value getter for the configurable StatsOverview component
+  // Stats value getter
   const getStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
-      // Overall compliance
-      case 'score':
-        return { value: `${posture.score}%`, sublabel: 'compliance score', onClick: () => drillToAllSecurity(), isClickable: reachableClusters.length > 0 }
-      case 'total_checks':
-        return { value: posture.totalChecks, sublabel: 'total checks', onClick: () => drillToAllSecurity(), isClickable: posture.totalChecks > 0 }
-      case 'passing':
-        return { value: posture.passing, sublabel: 'passing', onClick: () => drillToAllSecurity('passing'), isClickable: posture.passing > 0 }
-      case 'failing':
-        return { value: posture.failing, sublabel: 'failing', onClick: () => drillToAllSecurity('failing'), isClickable: posture.failing > 0 }
-      case 'warning':
-        return { value: posture.warning, sublabel: 'warnings', onClick: () => drillToAllSecurity('warning'), isClickable: posture.warning > 0 }
-      case 'critical_findings':
-        return { value: posture.criticalFindings, sublabel: 'critical findings', onClick: () => drillToAllSecurity('critical'), isClickable: posture.criticalFindings > 0 }
+      // Encryption
+      case 'encryption_score':
+        return { value: `${posture.encryptionScore}%`, sublabel: 'encryption coverage', isClickable: false }
+      case 'encrypted_secrets':
+        return { value: posture.encryptedSecrets, sublabel: 'encrypted secrets', isClickable: false }
+      case 'unencrypted_secrets':
+        return { value: posture.unencryptedSecrets, sublabel: 'unencrypted', isClickable: false }
 
-      // Policy enforcement tools
-      case 'gatekeeper_violations':
-        return { value: posture.gatekeeperViolations, sublabel: 'Gatekeeper violations', isClickable: false }
-      case 'kyverno_violations':
-        return { value: posture.kyvernoViolations, sublabel: 'Kyverno violations', isClickable: false }
-      case 'kubescape_score':
-        return { value: `${posture.kubescapeScore}%`, sublabel: 'Kubescape score', isClickable: false }
+      // Data residency
+      case 'regions_compliant':
+        return { value: `${posture.regionsCompliant}/${posture.regionsTotal}`, sublabel: 'regions compliant', isClickable: false }
 
-      // Security scanning
-      case 'falco_alerts':
-        return { value: posture.falcoAlerts, sublabel: 'Falco alerts', isClickable: false }
-      case 'trivy_vulns':
-        return { value: posture.trivyVulns, sublabel: 'Trivy vulnerabilities', isClickable: false }
-      case 'critical_vulns':
-        return { value: posture.criticalCVEs, sublabel: 'critical CVEs', isClickable: false }
-      case 'high_vulns':
-        return { value: posture.highCVEs, sublabel: 'high CVEs', isClickable: false }
+      // Access control
+      case 'rbac_policies':
+        return { value: posture.rbacPolicies, sublabel: 'RBAC policies', isClickable: false }
+      case 'excessive_permissions':
+        return { value: posture.excessivePermissions, sublabel: 'excessive permissions', isClickable: false }
 
-      // Framework compliance
-      case 'cis_score':
-        return { value: `${posture.cisScore}%`, sublabel: 'CIS benchmark', isClickable: false }
-      case 'nsa_score':
-        return { value: `${posture.nsaScore}%`, sublabel: 'NSA hardening', isClickable: false }
+      // PII
+      case 'pii_detected':
+        return { value: posture.piiDetected, sublabel: 'PII instances', isClickable: false }
+      case 'pii_protected':
+        return { value: posture.piiProtected, sublabel: 'protected', isClickable: false }
+
+      // Audit
+      case 'audit_enabled':
+        return { value: `${Math.round(posture.auditEnabled * 100 / (reachableClusters.length || 1))}%`, sublabel: 'audit enabled', isClickable: false }
+      case 'retention_days':
+        return { value: posture.retentionDays, sublabel: 'day retention', isClickable: false }
+
+      // Framework scores
+      case 'gdpr_score':
+        return { value: `${posture.gdprScore}%`, sublabel: 'GDPR', isClickable: false }
+      case 'hipaa_score':
+        return { value: `${posture.hipaaScore}%`, sublabel: 'HIPAA', isClickable: false }
       case 'pci_score':
         return { value: `${posture.pciScore}%`, sublabel: 'PCI-DSS', isClickable: false }
+      case 'soc2_score':
+        return { value: `${posture.soc2Score}%`, sublabel: 'SOC 2', isClickable: false }
 
       default:
         return { value: '-' }
     }
-  }, [posture, reachableClusters, drillToAllSecurity])
+  }, [posture, reachableClusters])
 
-  // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
@@ -313,10 +302,10 @@ export function Compliance() {
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Shield className="w-6 h-6 text-purple-400" />
-                Security Posture
+                <Database className="w-6 h-6 text-blue-400" />
+                Data Compliance
               </h1>
-              <p className="text-muted-foreground">Security scanning, vulnerability assessment, and policy enforcement</p>
+              <p className="text-muted-foreground">GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance</p>
             </div>
             {isRefreshing && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
@@ -326,10 +315,10 @@ export function Compliance() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <label htmlFor="compliance-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
+            <label htmlFor="data-compliance-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
               <input
                 type="checkbox"
-                id="compliance-auto-refresh"
+                id="data-compliance-auto-refresh"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
                 className="rounded border-border w-3.5 h-3.5"
@@ -348,14 +337,14 @@ export function Compliance() {
         </div>
       </div>
 
-      {/* Configurable Stats Overview */}
+      {/* Stats Overview */}
       <StatsOverview
-        dashboardType="compliance"
+        dashboardType="data-compliance"
         getStatValue={getStatValue}
-        hasData={posture.totalChecks > 0}
+        hasData={reachableClusters.length > 0}
         isLoading={isLoading}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-compliance-stats-collapsed"
+        collapsedStorageKey="kubestellar-data-compliance-stats-collapsed"
       />
 
       {/* Cards Grid */}

@@ -42,6 +42,7 @@ export type DashboardStatsType =
   | 'network'
   | 'security'
   | 'compliance'
+  | 'data-compliance'
   | 'compute'
   | 'events'
   | 'cost'
@@ -162,6 +163,32 @@ export const COMPLIANCE_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'cis_score', name: 'CIS', icon: 'FileCheck', visible: false, color: 'blue' },
   { id: 'nsa_score', name: 'NSA', icon: 'FileCheck', visible: false, color: 'purple' },
   { id: 'pci_score', name: 'PCI-DSS', icon: 'CreditCard', visible: false, color: 'green' },
+]
+
+/**
+ * Default stat blocks for the Data Compliance dashboard
+ */
+export const DATA_COMPLIANCE_STAT_BLOCKS: StatBlockConfig[] = [
+  // Encryption
+  { id: 'encryption_score', name: 'Encryption', icon: 'Lock', visible: true, color: 'green' },
+  { id: 'encrypted_secrets', name: 'Encrypted', icon: 'Shield', visible: true, color: 'blue' },
+  { id: 'unencrypted_secrets', name: 'Unencrypted', icon: 'ShieldOff', visible: true, color: 'red' },
+  // Data residency
+  { id: 'regions_compliant', name: 'Regions', icon: 'Globe', visible: true, color: 'purple' },
+  // Access control
+  { id: 'rbac_policies', name: 'RBAC Policies', icon: 'Users', visible: false, color: 'blue' },
+  { id: 'excessive_permissions', name: 'Excessive Perms', icon: 'AlertTriangle', visible: true, color: 'orange' },
+  // PII detection
+  { id: 'pii_detected', name: 'PII Detected', icon: 'Eye', visible: true, color: 'yellow' },
+  { id: 'pii_protected', name: 'PII Protected', icon: 'EyeOff', visible: false, color: 'green' },
+  // Audit
+  { id: 'audit_enabled', name: 'Audit', icon: 'FileSearch', visible: true, color: 'blue' },
+  { id: 'retention_days', name: 'Retention', icon: 'Calendar', visible: false, color: 'purple' },
+  // Framework scores (data-focused)
+  { id: 'gdpr_score', name: 'GDPR', icon: 'FileCheck', visible: true, color: 'blue' },
+  { id: 'hipaa_score', name: 'HIPAA', icon: 'Heart', visible: true, color: 'red' },
+  { id: 'pci_score', name: 'PCI-DSS', icon: 'CreditCard', visible: false, color: 'green' },
+  { id: 'soc2_score', name: 'SOC 2', icon: 'Building', visible: false, color: 'purple' },
 ]
 
 /**
@@ -289,6 +316,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return SECURITY_STAT_BLOCKS
     case 'compliance':
       return COMPLIANCE_STAT_BLOCKS
+    case 'data-compliance':
+      return DATA_COMPLIANCE_STAT_BLOCKS
     case 'compute':
       return COMPUTE_STAT_BLOCKS
     case 'events':
@@ -449,7 +478,8 @@ const DASHBOARD_CATEGORIES: { type: DashboardStatsType; name: string; icon: stri
   { type: 'storage', name: 'Storage', icon: '💽' },
   { type: 'network', name: 'Network', icon: '🌐' },
   { type: 'security', name: 'Security', icon: '🛡️' },
-  { type: 'compliance', name: 'Compliance', icon: '📋' },
+  { type: 'compliance', name: 'Security Posture', icon: '🔒' },
+  { type: 'data-compliance', name: 'Data Compliance', icon: '📋' },
   { type: 'events', name: 'Events', icon: '📜' },
   { type: 'cost', name: 'Cost', icon: '💵' },
   { type: 'alerts', name: 'Alerts', icon: '🔴' },
@@ -470,6 +500,7 @@ function getStatBlocksForDashboard(dashboardType: DashboardStatsType): StatBlock
     case 'network': return NETWORK_STAT_BLOCKS
     case 'security': return SECURITY_STAT_BLOCKS
     case 'compliance': return COMPLIANCE_STAT_BLOCKS
+    case 'data-compliance': return DATA_COMPLIANCE_STAT_BLOCKS
     case 'compute': return COMPUTE_STAT_BLOCKS
     case 'events': return EVENTS_STAT_BLOCKS
     case 'cost': return COST_STAT_BLOCKS
