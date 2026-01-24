@@ -499,9 +499,6 @@ interface DashboardCategoryProps {
 function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onToggle }: DashboardCategoryProps) {
   if (availableBlocks.length === 0) return null
 
-  // Show scroll indicator when there are more than 4 items (roughly fills max-h-40)
-  const hasMoreItems = availableBlocks.length > 4
-
   return (
     <div className="border-b border-border/50 last:border-b-0">
       <button
@@ -518,16 +515,10 @@ function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onTog
         <span className="text-xs text-muted-foreground">{availableBlocks.length}</span>
       </button>
       {isExpanded && (
-        <div className="max-h-40 overflow-y-auto border-l-2 border-purple-500/30 ml-2">
+        <div className="border-l-2 border-purple-500/30 ml-2">
           {availableBlocks.map(block => (
             <AvailableStatItem key={block.id} block={block} onAdd={onAdd} />
           ))}
-          {/* Scroll hint at bottom of list when there are many items */}
-          {hasMoreItems && (
-            <div className="sticky bottom-0 text-center text-[10px] text-muted-foreground py-1 bg-gradient-to-t from-card to-transparent">
-              ↓ scroll for more
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -655,7 +646,7 @@ export function StatsConfigModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
         title={title}
         description="Drag to reorder. Click the eye icon to show/hide stats."
@@ -664,7 +655,7 @@ export function StatsConfigModal({
         showBack={false}
       />
 
-      <BaseModal.Content className="max-h-[50vh]">
+      <BaseModal.Content className="max-h-[65vh]">
         {/* Current Stats */}
         <div className="space-y-2">
           <DndContext
@@ -708,7 +699,7 @@ export function StatsConfigModal({
                 Done
               </button>
             </div>
-            <div className="space-y-0">
+            <div className="space-y-0 min-h-48 max-h-80 overflow-y-auto border border-border/50 rounded-lg">
               {hasAvailableStats ? (
                 DASHBOARD_CATEGORIES.map(category => {
                   const categoryBlocks = availableStatsByCategory.get(category.type)
