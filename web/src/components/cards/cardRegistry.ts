@@ -100,6 +100,14 @@ import { PodSweeper } from './PodSweeper'
 import { ContainerTetris } from './ContainerTetris'
 // Flappy Pod card
 import { FlappyPod } from './FlappyPod'
+// Kube-Man (Pac-Man) card
+import { KubeMan } from './KubeMan'
+// Kube Kong (Donkey Kong) card
+import { KubeKong } from './KubeKong'
+// Pod Pitfall card
+import { PodPitfall } from './PodPitfall'
+// Node Invaders (Space Invaders) card
+import { NodeInvaders } from './NodeInvaders'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -222,6 +230,12 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   container_tetris: ContainerTetris,
   // Flappy Pod card
   flappy_pod: FlappyPod,
+  // Kube-Man (Pac-Man) card
+  kube_man: KubeMan,
+  // Classic arcade games
+  kube_kong: KubeKong,
+  pod_pitfall: PodPitfall,
+  node_invaders: NodeInvaders,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -255,6 +269,16 @@ export const DEMO_DATA_CARDS = new Set([
   'kubecost_overview',
   // Policy management - kyverno is demo-only
   'kyverno_policies',
+  // Security posture cards - demo until tools are detected
+  'falco_alerts',
+  'trivy_scan',
+  'kubescape_scan',
+  'policy_violations',
+  'compliance_score',
+  // Data compliance cards - demo until tools are detected
+  'vault_secrets',
+  'external_secrets',
+  'cert_manager',
 ])
 
 /**
@@ -333,6 +357,12 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   container_tetris: 6,
   // Flappy Pod
   flappy_pod: 6,
+  // Kube-Man
+  kube_man: 6,
+  // Classic arcade games
+  kube_kong: 6,
+  pod_pitfall: 6,
+  node_invaders: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,

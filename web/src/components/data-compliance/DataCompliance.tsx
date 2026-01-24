@@ -130,31 +130,29 @@ const DEFAULT_DATA_COMPLIANCE_CARDS = [
   { type: 'namespace_rbac', title: 'Access Controls', position: { w: 6, h: 4 } },
 ]
 
-// Mock data compliance posture
-function getDataCompliancePosture(clusterCount: number) {
-  return {
-    // Encryption
-    encryptedSecrets: Math.floor(clusterCount * 45),
-    unencryptedSecrets: Math.floor(clusterCount * 3),
-    encryptionScore: 94,
-    // Data residency
-    regionsCompliant: Math.floor(clusterCount * 0.9),
-    regionsTotal: clusterCount,
-    // Access control
-    rbacPolicies: Math.floor(clusterCount * 12),
-    excessivePermissions: Math.floor(clusterCount * 2),
-    // PII detection
-    piiDetected: Math.floor(clusterCount * 1.5),
-    piiProtected: Math.floor(clusterCount * 1.2),
-    // Audit
-    auditEnabled: Math.floor(clusterCount * 0.85),
-    retentionDays: 90,
-    // Framework scores
-    gdprScore: 82 + Math.floor(Math.random() * 10),
-    hipaaScore: 78 + Math.floor(Math.random() * 12),
-    pciScore: 85 + Math.floor(Math.random() * 8),
-    soc2Score: 80 + Math.floor(Math.random() * 10),
-  }
+// Fixed demo data for data compliance posture
+const DEMO_POSTURE = {
+  // Encryption
+  encryptedSecrets: 156,
+  unencryptedSecrets: 8,
+  encryptionScore: 94,
+  // Data residency
+  regionsCompliant: 4,
+  regionsTotal: 5,
+  // Access control
+  rbacPolicies: 48,
+  excessivePermissions: 6,
+  // PII detection
+  piiDetected: 12,
+  piiProtected: 9,
+  // Audit
+  auditEnabled: 85,
+  retentionDays: 90,
+  // Framework scores
+  gdprScore: 86,
+  hipaaScore: 82,
+  pciScore: 88,
+  soc2Score: 84,
 }
 
 export function DataCompliance() {
@@ -238,56 +236,56 @@ export function DataCompliance() {
   )
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
 
-  // Calculate data compliance posture
-  const posture = getDataCompliancePosture(reachableClusters.length || 1)
+  // Use fixed demo posture data
+  const posture = DEMO_POSTURE
 
-  // Stats value getter
+  // Stats value getter - returns fixed demo data with isDemo flag
   const getStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       // Encryption
       case 'encryption_score':
-        return { value: `${posture.encryptionScore}%`, sublabel: 'encryption coverage', isClickable: false }
+        return { value: `${posture.encryptionScore}%`, sublabel: 'encryption coverage', isClickable: false, isDemo: true }
       case 'encrypted_secrets':
-        return { value: posture.encryptedSecrets, sublabel: 'encrypted secrets', isClickable: false }
+        return { value: posture.encryptedSecrets, sublabel: 'encrypted secrets', isClickable: false, isDemo: true }
       case 'unencrypted_secrets':
-        return { value: posture.unencryptedSecrets, sublabel: 'unencrypted', isClickable: false }
+        return { value: posture.unencryptedSecrets, sublabel: 'unencrypted', isClickable: false, isDemo: true }
 
       // Data residency
       case 'regions_compliant':
-        return { value: `${posture.regionsCompliant}/${posture.regionsTotal}`, sublabel: 'regions compliant', isClickable: false }
+        return { value: `${posture.regionsCompliant}/${posture.regionsTotal}`, sublabel: 'regions compliant', isClickable: false, isDemo: true }
 
       // Access control
       case 'rbac_policies':
-        return { value: posture.rbacPolicies, sublabel: 'RBAC policies', isClickable: false }
+        return { value: posture.rbacPolicies, sublabel: 'RBAC policies', isClickable: false, isDemo: true }
       case 'excessive_permissions':
-        return { value: posture.excessivePermissions, sublabel: 'excessive permissions', isClickable: false }
+        return { value: posture.excessivePermissions, sublabel: 'excessive permissions', isClickable: false, isDemo: true }
 
       // PII
       case 'pii_detected':
-        return { value: posture.piiDetected, sublabel: 'PII instances', isClickable: false }
+        return { value: posture.piiDetected, sublabel: 'PII instances', isClickable: false, isDemo: true }
       case 'pii_protected':
-        return { value: posture.piiProtected, sublabel: 'protected', isClickable: false }
+        return { value: posture.piiProtected, sublabel: 'protected', isClickable: false, isDemo: true }
 
       // Audit
       case 'audit_enabled':
-        return { value: `${Math.round(posture.auditEnabled * 100 / (reachableClusters.length || 1))}%`, sublabel: 'audit enabled', isClickable: false }
+        return { value: `${posture.auditEnabled}%`, sublabel: 'audit enabled', isClickable: false, isDemo: true }
       case 'retention_days':
-        return { value: posture.retentionDays, sublabel: 'day retention', isClickable: false }
+        return { value: posture.retentionDays, sublabel: 'day retention', isClickable: false, isDemo: true }
 
       // Framework scores
       case 'gdpr_score':
-        return { value: `${posture.gdprScore}%`, sublabel: 'GDPR', isClickable: false }
+        return { value: `${posture.gdprScore}%`, sublabel: 'GDPR', isClickable: false, isDemo: true }
       case 'hipaa_score':
-        return { value: `${posture.hipaaScore}%`, sublabel: 'HIPAA', isClickable: false }
+        return { value: `${posture.hipaaScore}%`, sublabel: 'HIPAA', isClickable: false, isDemo: true }
       case 'pci_score':
-        return { value: `${posture.pciScore}%`, sublabel: 'PCI-DSS', isClickable: false }
+        return { value: `${posture.pciScore}%`, sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
       case 'soc2_score':
-        return { value: `${posture.soc2Score}%`, sublabel: 'SOC 2', isClickable: false }
+        return { value: `${posture.soc2Score}%`, sublabel: 'SOC 2', isClickable: false, isDemo: true }
 
       default:
         return { value: '-' }
     }
-  }, [posture, reachableClusters])
+  }, [posture])
 
   const configureCardData = configuringCard ? {
     id: configuringCard.id,
@@ -347,10 +345,11 @@ export function DataCompliance() {
       <StatsOverview
         dashboardType="data-compliance"
         getStatValue={getStatValue}
-        hasData={reachableClusters.length > 0}
+        hasData={true}
         isLoading={isLoading}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-data-compliance-stats-collapsed"
+        isDemoData={true}
       />
 
       {/* Cards Grid */}

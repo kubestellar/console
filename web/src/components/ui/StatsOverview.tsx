@@ -4,7 +4,7 @@ import {
   FolderOpen, AlertCircle, AlertTriangle, AlertOctagon, Package, Ship, Settings, Clock,
   MoreHorizontal, Database, Workflow, Globe, Network, ArrowRightLeft, CircleDot,
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
-  List, DollarSign, ChevronDown, ChevronRight,
+  List, DollarSign, ChevronDown, ChevronRight, FlaskConical,
 } from 'lucide-react'
 import { StatsConfigModal, useStatsConfig, StatBlockConfig, DashboardStatsType } from './StatsConfig'
 import { Skeleton } from './Skeleton'
@@ -61,6 +61,8 @@ export interface StatBlockValue {
   sublabel?: string
   onClick?: () => void
   isClickable?: boolean
+  /** Whether this stat uses demo/mock data (shows yellow border + badge) */
+  isDemo?: boolean
 }
 
 interface StatBlockProps {
@@ -74,14 +76,18 @@ function StatBlock({ block, data, hasData }: StatBlockProps) {
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
   const isClickable = data.isClickable !== false && !!data.onClick
+  const isDemo = data.isDemo === true
 
   const displayValue = hasData ? data.value : '-'
 
   return (
     <div
-      className={`glass p-4 rounded-lg ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
+      className={`relative glass p-4 rounded-lg ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
     >
+      {isDemo && (
+        <FlaskConical className="absolute -top-1 -right-1 w-3.5 h-3.5 text-yellow-400/50" title="Demo data" />
+      )}
       <div className="flex items-center gap-2 mb-2">
         <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
         <span className="text-sm text-muted-foreground truncate">{block.name}</span>
@@ -117,6 +123,8 @@ interface StatsOverviewProps {
   title?: string
   /** Whether to show the configure button */
   showConfigButton?: boolean
+  /** Whether the stats are demo data (shows yellow border + badge) */
+  isDemoData?: boolean
 }
 
 /**
@@ -135,6 +143,7 @@ export function StatsOverview({
   className = '',
   title = 'Stats Overview',
   showConfigButton = true,
+  isDemoData = false,
 }: StatsOverviewProps) {
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType)
   const [showConfig, setShowConfig] = useState(false)
@@ -186,6 +195,12 @@ export function StatsOverview({
               <Activity className="w-4 h-4" />
               <span>{title}</span>
             </div>
+          )}
+          {isDemoData && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+              <FlaskConical className="w-2.5 h-2.5" />
+              Demo
+            </span>
           )}
           {lastUpdated && (
             <span className="text-xs text-muted-foreground/60">

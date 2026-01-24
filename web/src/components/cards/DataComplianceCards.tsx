@@ -5,7 +5,7 @@
  * - Cert-Manager: TLS certificate lifecycle management
  */
 
-import { Key, Lock, Shield, RefreshCw, CheckCircle2, AlertTriangle, Clock } from 'lucide-react'
+import { Key, Lock, Shield, RefreshCw, CheckCircle2, AlertTriangle, Clock, ExternalLink, AlertCircle } from 'lucide-react'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -29,13 +29,43 @@ export function VaultSecrets({ config: _config }: CardConfig) {
           <Key className="w-4 h-4 text-yellow-400" />
           <span>HashiCorp Vault</span>
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-          demoData.status === 'unsealed'
-            ? 'bg-green-500/20 text-green-400'
-            : 'bg-red-500/20 text-red-400'
-        }`}>
-          {demoData.status}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+            demoData.status === 'unsealed'
+              ? 'bg-green-500/20 text-green-400'
+              : 'bg-red-500/20 text-red-400'
+          }`}>
+            {demoData.status}
+          </span>
+          <a
+            href="https://www.vaultproject.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-yellow-400"
+            title="Vault Documentation"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+
+      {/* Integration notice */}
+      <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs">
+        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-yellow-400 font-medium">Vault Integration</p>
+          <p className="text-muted-foreground">
+            Install Vault for secrets management.{' '}
+            <a
+              href="https://developer.hashicorp.com/vault/docs/platform/k8s"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-yellow-400 hover:underline"
+            >
+              Install guide →
+            </a>
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -61,10 +91,6 @@ export function VaultSecrets({ config: _config }: CardConfig) {
         <span className="font-medium">Auth: </span>
         {demoData.authMethods.join(', ')}
       </div>
-
-      <p className="text-xs text-muted-foreground italic">
-        Demo data - Vault integration pending
-      </p>
     </div>
   )
 }
@@ -93,7 +119,37 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
           <RefreshCw className="w-4 h-4 text-blue-400" />
           <span>External Secrets</span>
         </div>
-        <span className="text-xs text-green-400 font-medium">{syncRate}% synced</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-green-400 font-medium">{syncRate}% synced</span>
+          <a
+            href="https://external-secrets.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-blue-400"
+            title="External Secrets Documentation"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+
+      {/* Integration notice */}
+      <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
+        <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-blue-400 font-medium">External Secrets Integration</p>
+          <p className="text-muted-foreground">
+            Install ESO for secrets synchronization.{' '}
+            <a
+              href="https://external-secrets.io/latest/introduction/getting-started/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:underline"
+            >
+              Install guide →
+            </a>
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -131,10 +187,6 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
           </div>
         ))}
       </div>
-
-      <p className="text-xs text-muted-foreground italic">
-        Demo data - ESO integration pending
-      </p>
     </div>
   )
 }
@@ -160,9 +212,39 @@ export function CertManager({ config: _config }: CardConfig) {
           <Lock className="w-4 h-4 text-green-400" />
           <span>Cert-Manager</span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {demoData.renewals24h} renewals/24h
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {demoData.renewals24h} renewals/24h
+          </span>
+          <a
+            href="https://cert-manager.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-green-400"
+            title="Cert-Manager Documentation"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+
+      {/* Integration notice */}
+      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
+        <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-green-400 font-medium">Cert-Manager Integration</p>
+          <p className="text-muted-foreground">
+            Install cert-manager for TLS automation.{' '}
+            <a
+              href="https://cert-manager.io/docs/installation/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-400 hover:underline"
+            >
+              Install guide →
+            </a>
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
@@ -199,10 +281,6 @@ export function CertManager({ config: _config }: CardConfig) {
           </div>
         ))}
       </div>
-
-      <p className="text-xs text-muted-foreground italic">
-        Demo data - cert-manager integration pending
-      </p>
     </div>
   )
 }

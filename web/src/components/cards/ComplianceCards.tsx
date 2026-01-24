@@ -3,7 +3,7 @@
  * when the respective tools are detected in the cluster.
  */
 
-import { Shield, Eye, Bug, Target, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Shield, Eye, Bug, Target, AlertTriangle, CheckCircle2, ExternalLink, AlertCircle } from 'lucide-react'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -20,10 +20,41 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Eye className="w-4 h-4 text-purple-400" />
-        <span>Runtime Security Monitoring</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Eye className="w-4 h-4 text-purple-400" />
+          <span>Falco</span>
+        </div>
+        <a
+          href="https://falco.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+          title="Falco Documentation"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
+
+      {/* Integration notice */}
+      <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
+        <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-purple-400 font-medium">Falco Integration</p>
+          <p className="text-muted-foreground">
+            Install Falco for runtime security monitoring.{' '}
+            <a
+              href="https://falco.org/docs/install-operate/installation/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:underline"
+            >
+              Install guide →
+            </a>
+          </p>
+        </div>
+      </div>
+
       <div className="space-y-2">
         {demoAlerts.map((alert, i) => (
           <div
@@ -42,9 +73,6 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground italic">
-        Demo data - Falco integration pending
-      </p>
     </div>
   )
 }
@@ -61,10 +89,41 @@ export function TrivyScan({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Bug className="w-4 h-4 text-cyan-400" />
-        <span>Container Vulnerability Scanning</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Bug className="w-4 h-4 text-cyan-400" />
+          <span>Trivy</span>
+        </div>
+        <a
+          href="https://aquasecurity.github.io/trivy/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-cyan-400"
+          title="Trivy Documentation"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
+
+      {/* Integration notice */}
+      <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
+        <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-cyan-400 font-medium">Trivy Integration</p>
+          <p className="text-muted-foreground">
+            Install Trivy Operator for vulnerability scanning.{' '}
+            <a
+              href="https://aquasecurity.github.io/trivy-operator/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cyan-400 hover:underline"
+            >
+              Install guide →
+            </a>
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-lg bg-red-500/10 text-center">
           <p className="text-xl font-bold text-red-400">{demoVulns.critical}</p>
@@ -83,9 +142,6 @@ export function TrivyScan({ config: _config }: CardConfig) {
           <p className="text-xs text-muted-foreground">Low</p>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground italic">
-        Demo data - Trivy integration pending
-      </p>
     </div>
   )
 }
@@ -102,10 +158,41 @@ export function KubescapeScan({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Target className="w-4 h-4 text-green-400" />
-        <span>Security Posture Management</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Target className="w-4 h-4 text-green-400" />
+          <span>Kubescape</span>
+        </div>
+        <a
+          href="https://kubescape.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-green-400"
+          title="Kubescape Documentation"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
+
+      {/* Integration notice */}
+      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
+        <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-green-400 font-medium">Kubescape Integration</p>
+          <p className="text-muted-foreground">
+            Install Kubescape for security posture management.{' '}
+            <a
+              href="https://kubescape.io/docs/install-operator/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-400 hover:underline"
+            >
+              Install guide →
+            </a>
+          </p>
+        </div>
+      </div>
+
       <div className="flex items-center justify-center py-2">
         <div className="relative w-20 h-20">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -129,9 +216,6 @@ export function KubescapeScan({ config: _config }: CardConfig) {
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground italic">
-        Demo data - Kubescape integration pending
-      </p>
     </div>
   )
 }
