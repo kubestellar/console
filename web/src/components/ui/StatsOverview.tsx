@@ -224,14 +224,19 @@ export function StatsOverview({
           ) : (
             // Real data
             <>
-              {visibleBlocks.map(block => (
-                <StatBlock
-                  key={block.id}
-                  block={block}
-                  data={getStatValue(block.id)}
-                  hasData={hasData}
-                />
-              ))}
+              {visibleBlocks.map(block => {
+                const data = getStatValue(block.id)
+                // Handle stats from other dashboards gracefully
+                const safeData = data?.value !== undefined ? data : { value: '-', sublabel: 'Not available' }
+                return (
+                  <StatBlock
+                    key={block.id}
+                    block={block}
+                    data={safeData}
+                    hasData={hasData && data?.value !== undefined}
+                  />
+                )
+              })}
             </>
           )}
         </div>

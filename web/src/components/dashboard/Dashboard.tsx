@@ -43,6 +43,7 @@ import { DashboardTemplate } from './templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -129,14 +130,17 @@ export function Dashboard() {
     cards: localCards,
   })
 
+  // Universal stats for cross-dashboard stat blocks
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
+
   // Stats calculations for StatsOverview
   const healthyClusters = clusters.filter(c => c.healthy).length
   const unhealthyClusters = clusters.filter(c => !c.healthy).length
   const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
   const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
 
-  // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  // Dashboard-specific stats value getter
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: clusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: clusters.length > 0 }
@@ -151,9 +155,15 @@ export function Dashboard() {
       case 'pods':
         return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       default:
-        return { value: 0 }
+        return { value: '-' }
     }
   }, [clusters, healthyClusters, unhealthyClusters, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods])
+
+  // Merged getter: dashboard-specific values first, then universal fallback
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Auto-refresh state (persisted in localStorage)
   const [autoRefresh, setAutoRefresh] = useState(() => {
