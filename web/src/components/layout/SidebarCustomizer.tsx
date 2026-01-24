@@ -399,11 +399,14 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                   </button>
 
                   {showRouteDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 py-2 rounded-lg bg-card border border-border shadow-xl z-50 max-h-[300px] overflow-y-auto">
+                    <div
+                      className="absolute top-full left-0 right-0 mt-1 py-2 rounded-lg bg-card border border-border shadow-xl z-50 max-h-[300px] overflow-y-auto overscroll-contain"
+                      onWheel={(e) => e.stopPropagation()}
+                    >
                       {/* Known routes grouped by category */}
                       {ROUTE_CATEGORIES.map(category => (
                         <div key={category}>
-                          <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-secondary/30 sticky top-0">
+                          <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-card sticky top-0 z-10">
                             {category}
                           </div>
                           {KNOWN_ROUTES.filter(r => r.category === category).map(route => {
