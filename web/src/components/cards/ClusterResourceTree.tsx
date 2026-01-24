@@ -66,6 +66,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   const [searchFilter, setSearchFilter] = useState('')
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
+  // Track which clusters are currently loading data
+  const [loadingClusters, setLoadingClusters] = useState<Set<string>>(new Set())
 
   // Per-cluster data cache - persists data for all expanded clusters
   const [clusterDataCache, setClusterDataCache] = useState<Map<string, ClusterDataCache>>(new Map())
@@ -98,8 +100,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   // Cache data for the selected cluster when it changes
   useEffect(() => {
     if (!selectedCluster) return
-    // Only cache if we have data and this is a new or refreshed cluster
-    if (allNodes && allNodes.length > 0 && allNamespaces && allNamespaces.length > 0) {
+    // Only cache if we have data (allow for empty namespaces but require nodes)
+    if (allNodes && allNodes.length > 0) {
       setClusterDataCache(prev => {
         const next = new Map(prev)
         next.set(selectedCluster, {
@@ -153,6 +155,12 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         })
         return next
       })
+      // Mark this cluster as no longer loading
+      setLoadingClusters(prev => {
+        const next = new Set(prev)
+        next.delete(selectedCluster)
+        return next
+      })
     }
   }, [selectedCluster, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, podIssues])
 
@@ -167,6 +175,15 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       const next = new Set(prev)
       if (next.has(nodeId)) {
         next.delete(nodeId)
+        // If collapsing a cluster, remove it from loading set
+        if (nodeId.startsWith('cluster:')) {
+          const clusterName = nodeId.replace('cluster:', '')
+          setLoadingClusters(prevLoading => {
+            const nextLoading = new Set(prevLoading)
+            nextLoading.delete(clusterName)
+            return nextLoading
+          })
+        }
       } else {
         next.add(nodeId)
       }
@@ -534,15 +551,19 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                   badgeColor="bg-secondary text-muted-foreground"
                   onClick={() => drillToCluster(cluster.name)}
                   onToggle={(expanding) => {
-                    if (expanding && !hasData) {
-                      // Only fetch if we don't have cached data yet
+                    if (expanding) {
+                      // Always fetch data when expanding (to get fresh data)
                       setSelectedCluster(cluster.name)
+                      if (!hasData) {
+                        // Mark as loading only if no cached data
+                        setLoadingClusters(prev => new Set(prev).add(cluster.name))
+                      }
                     }
                   }}
                   indent={1}
                 >
                   {/* Loading indicator when expanding but no data yet */}
-                  {clusterExpanded && !hasData && selectedCluster === cluster.name && (
+                  {clusterExpanded && !hasData && loadingClusters.has(cluster.name) && (
                     <div className="flex items-center gap-2 px-2 py-1.5 ml-8 text-xs text-muted-foreground">
                       <RefreshCw className="w-3 h-3 animate-spin" />
                       Loading resources...
