@@ -1,12 +1,11 @@
-import { useMemo, useState } from 'react'
 import { Layers, Globe, Server, ExternalLink, Search, ChevronRight } from 'lucide-react'
-import { useServices } from '../../hooks/useMCP'
+import { useServices, type Service } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useCardData } from '../../lib/cards'
 
 type SortByOption = 'type' | 'name' | 'namespace' | 'ports'
 
@@ -57,78 +56,58 @@ export function ServiceStatus() {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && services.length === 0
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
-  const [sortBy, setSortBy] = useState<SortByOption>('type')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(10)
-  const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter by selected clusters
-  const filteredServices = useMemo(() => {
-    let filtered = isAllClustersSelected
-      ? services
-      : services.filter(s => s.cluster && selectedClusters.includes(s.cluster))
+  const typeOrder: Record<string, number> = { 'LoadBalancer': 0, 'NodePort': 1, 'ClusterIP': 2, 'ExternalName': 3 }
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(query) ||
-        s.namespace?.toLowerCase().includes(query) ||
-        s.type?.toLowerCase().includes(query)
-      )
-    }
-
-    return filtered
-  }, [services, selectedClusters, isAllClustersSelected, searchQuery])
-
-  // Sort services
-  const sortedServices = useMemo(() => {
-    const sorted = [...filteredServices].sort((a, b) => {
-      let result = 0
-      switch (sortBy) {
-        case 'type':
-          // Order: LoadBalancer, NodePort, ClusterIP, ExternalName
-          const typeOrder: Record<string, number> = { 'LoadBalancer': 0, 'NodePort': 1, 'ClusterIP': 2, 'ExternalName': 3 }
-          result = (typeOrder[a.type || ''] ?? 4) - (typeOrder[b.type || ''] ?? 4)
-          break
-        case 'name':
-          result = a.name.localeCompare(b.name)
-          break
-        case 'namespace':
-          result = (a.namespace || '').localeCompare(b.namespace || '')
-          break
-        case 'ports':
-          result = (b.ports?.length || 0) - (a.ports?.length || 0)
-          break
-      }
-      return sortDirection === 'asc' ? result : -result
-    })
-    return sorted
-  }, [filteredServices, sortBy, sortDirection])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: displayServices,
+    items: displayServices,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedServices, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: searchQuery,
+      setSearch: setSearchQuery,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<Service, SortByOption>(services, {
+    filter: {
+      searchFields: ['name', 'namespace', 'type'],
+      clusterField: 'cluster',
+      storageKey: 'service-status',
+    },
+    sort: {
+      defaultField: 'type',
+      defaultDirection: 'asc',
+      comparators: {
+        type: (a, b) => (typeOrder[a.type || ''] ?? 4) - (typeOrder[b.type || ''] ?? 4),
+        name: (a, b) => a.name.localeCompare(b.name),
+        namespace: (a, b) => (a.namespace || '').localeCompare(b.namespace || ''),
+        ports: (a, b) => (b.ports?.length || 0) - (a.ports?.length || 0),
+      },
+    },
+    defaultLimit: 10,
+  })
 
-  // Stats
-  const stats = useMemo(() => ({
-    total: filteredServices.length,
-    loadBalancer: filteredServices.filter(s => s.type === 'LoadBalancer').length,
-    nodePort: filteredServices.filter(s => s.type === 'NodePort').length,
-    clusterIP: filteredServices.filter(s => s.type === 'ClusterIP').length,
-  }), [filteredServices])
+  // Stats - use totalItems from the hook (filtered count before pagination)
+  const stats = {
+    total: totalItems,
+    loadBalancer: services.filter(s => s.type === 'LoadBalancer').length,
+    nodePort: services.filter(s => s.type === 'NodePort').length,
+    clusterIP: services.filter(s => s.type === 'ClusterIP').length,
+  }
 
-  const hasRealData = !isLoading && filteredServices.length > 0
+  const hasRealData = !isLoading && services.length > 0
 
   if (isLoading) {
     return (
@@ -167,8 +146,8 @@ export function ServiceStatus() {
         </div>
         <div className="flex items-center gap-2">
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
             sortBy={sortBy}
             sortOptions={SORT_OPTIONS}
             onSortChange={setSortBy}
@@ -260,13 +239,13 @@ export function ServiceStatus() {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 10}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />
