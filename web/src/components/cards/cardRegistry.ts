@@ -41,6 +41,7 @@ import { NamespaceOverview } from './NamespaceOverview'
 import { NamespaceQuotas } from './NamespaceQuotas'
 import { NamespaceRBAC } from './NamespaceRBAC'
 import { NamespaceEvents } from './NamespaceEvents'
+import { NamespaceMonitor } from './NamespaceMonitor'
 // Operator-scoped cards
 import { OperatorStatus } from './OperatorStatus'
 import { OperatorSubscriptions } from './OperatorSubscriptions'
@@ -165,6 +166,7 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   namespace_quotas: NamespaceQuotas,
   namespace_rbac: NamespaceRBAC,
   namespace_events: NamespaceEvents,
+  namespace_monitor: NamespaceMonitor,
   // Operator-scoped cards
   operator_status: OperatorStatus,
   operator_subscriptions: OperatorSubscriptions,
@@ -333,6 +335,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   namespace_events: 6,
   namespace_quotas: 5,
   namespace_rbac: 6,
+  namespace_monitor: 8,
   gitops_drift: 6,
   argocd_applications: 6,
   argocd_sync_status: 6,

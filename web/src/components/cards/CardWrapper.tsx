@@ -133,6 +133,7 @@ const CARD_TITLES: Record<string, string> = {
   namespace_rbac: 'Namespace RBAC',
   namespace_quotas: 'Namespace Quotas',
   namespace_events: 'Namespace Events',
+  namespace_monitor: 'Namespace Monitor',
 
   // Operator cards
   operator_status: 'Operator Status',

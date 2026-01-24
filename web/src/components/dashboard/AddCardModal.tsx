@@ -61,6 +61,7 @@ const CARD_CATALOG = {
     { type: 'crd_health', title: 'CRD Health', description: 'Custom resource definitions status', visualization: 'status' },
   ],
   'Namespaces': [
+    { type: 'namespace_monitor', title: 'Namespace Monitor', description: 'Real-time resource monitoring with change detection and animations', visualization: 'table' },
     { type: 'namespace_overview', title: 'Namespace Overview', description: 'Namespace resources and health', visualization: 'status' },
     { type: 'namespace_quotas', title: 'Namespace Quotas', description: 'Resource quota usage', visualization: 'gauge' },
     { type: 'namespace_rbac', title: 'Namespace RBAC', description: 'Roles, bindings, service accounts', visualization: 'table' },
