@@ -43,16 +43,14 @@ const LARGE_EXPANDED_CARDS = new Set([
   'match_game',
 ])
 
-// Cards that should be nearly fullscreen when expanded (maps, large visualizations)
+// Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
 const FULLSCREEN_EXPANDED_CARDS = new Set([
   'cluster_locations',
+  'sudoku_game', // Games need fullscreen for the grid to fill properly
 ])
 
-// Cards that need maximum height but moderate width (games, interactive content)
-// These use 98vh height but limited width for better centering
-const TALL_EXPANDED_CARDS = new Set([
-  'sudoku_game',
-])
+/** Flash type for significant data changes */
+export type CardFlashType = 'none' | 'info' | 'warning' | 'error'
 
 interface CardWrapperProps {
   cardId?: string
@@ -76,6 +74,8 @@ interface CardWrapperProps {
   cardWidth?: number
   /** Whether the card is collapsed (showing only header) */
   isCollapsed?: boolean
+  /** Flash animation type when significant data changes occur */
+  flashType?: CardFlashType
   /** Callback when collapsed state changes */
   onCollapsedChange?: (collapsed: boolean) => void
   onSwap?: (newType: string) => void
@@ -182,6 +182,7 @@ export function CardWrapper({
   consecutiveFailures,
   cardWidth,
   isCollapsed: externalCollapsed,
+  flashType = 'none',
   onCollapsedChange,
   onSwap,
   onSwapCancel,
@@ -195,6 +196,27 @@ export function CardWrapper({
   children,
 }: CardWrapperProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  // Track animation key to re-trigger flash animation
+  const [flashKey, setFlashKey] = useState(0)
+  const prevFlashType = useRef(flashType)
+
+  // Re-trigger animation when flashType changes to a non-none value
+  useEffect(() => {
+    if (flashType !== 'none' && flashType !== prevFlashType.current) {
+      setFlashKey(k => k + 1)
+    }
+    prevFlashType.current = flashType
+  }, [flashType])
+
+  // Get flash animation class based on type
+  const getFlashClass = () => {
+    switch (flashType) {
+      case 'info': return 'animate-card-flash'
+      case 'warning': return 'animate-card-flash-warning'
+      case 'error': return 'animate-card-flash-error'
+      default: return ''
+    }
+  }
 
   // Use the shared collapse hook with localStorage persistence
   // cardId is required for persistence; fall back to cardType if not provided
@@ -332,12 +354,14 @@ export function CardWrapper({
     <>
       {/* Main card */}
       <div
+        key={flashKey}
         data-tour="card"
         className={cn(
           'glass rounded-xl overflow-hidden card-hover',
           'flex flex-col transition-all duration-200',
           isCollapsed ? 'h-auto' : 'h-full',
-          (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50'
+          (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
+          getFlashClass()
         )}
         onMouseEnter={() => setShowSummary(true)}
         onMouseLeave={() => setShowSummary(false)}
@@ -568,18 +592,15 @@ export function CardWrapper({
       {isExpanded && (
         <div className={cn(
           'fixed inset-0 z-50 flex items-center justify-center bg-black/80',
-          FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'p-2' :
-          TALL_EXPANDED_CARDS.has(cardType) ? 'p-4' : 'p-8'
+          FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'p-2' : 'p-8'
         )}>
           <div className={cn(
             'w-full glass rounded-2xl overflow-hidden animate-fade-in-up',
             FULLSCREEN_EXPANDED_CARDS.has(cardType)
               ? 'max-w-[98vw] max-h-[98vh]'
-              : TALL_EXPANDED_CARDS.has(cardType)
-                ? 'max-w-3xl max-h-[98vh]'
-                : LARGE_EXPANDED_CARDS.has(cardType)
-                  ? 'max-w-7xl max-h-[95vh]'
-                  : 'max-w-4xl max-h-[80vh]'
+              : LARGE_EXPANDED_CARDS.has(cardType)
+                ? 'max-w-7xl max-h-[95vh]'
+                : 'max-w-4xl max-h-[80vh]'
           )}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
               <h3 className="text-lg font-medium text-foreground">{title}</h3>
@@ -592,7 +613,7 @@ export function CardWrapper({
             </div>
             <div className={cn(
               'p-6 overflow-auto',
-              FULLSCREEN_EXPANDED_CARDS.has(cardType) || TALL_EXPANDED_CARDS.has(cardType)
+              FULLSCREEN_EXPANDED_CARDS.has(cardType)
                 ? 'max-h-[calc(98vh-80px)]'
                 : LARGE_EXPANDED_CARDS.has(cardType)
                   ? 'max-h-[calc(95vh-80px)]'

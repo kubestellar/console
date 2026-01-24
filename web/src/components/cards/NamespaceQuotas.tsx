@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, X, Zap, Search } from 'lucide-react'
+import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, Zap, Search } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import {
   useClusters,
@@ -139,21 +140,17 @@ function QuotaModal({
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card border border-border rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">
-            {editingQuota ? 'Edit ResourceQuota' : 'Create ResourceQuota'}
-          </h3>
-          <button onClick={onClose} className="p-1 hover:bg-secondary rounded">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title={editingQuota ? 'Edit ResourceQuota' : 'Create ResourceQuota'}
+        icon={Gauge}
+        onClose={onClose}
+        showBack={false}
+      />
 
-        <div className="p-4 space-y-4">
+      <BaseModal.Content className="max-h-[60vh]">
+        <div className="space-y-4">
           {error && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
               {error}
@@ -286,8 +283,11 @@ function QuotaModal({
             </div>
           </div>
         </div>
+      </BaseModal.Content>
 
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80"
@@ -303,8 +303,8 @@ function QuotaModal({
             {editingQuota ? 'Update' : 'Create'}
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 
@@ -858,37 +858,43 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       />
 
       {/* Delete Confirmation */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Delete ResourceQuota?</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Are you sure you want to delete the quota <span className="text-yellow-400">{deleteConfirm.name}</span> from{' '}
-              <span className="text-blue-400">{deleteConfirm.namespace}</span> in{' '}
-              <span className="text-foreground">{deleteConfirm.cluster}</span>?
-            </p>
-            <p className="text-sm text-red-400 mb-6">
-              This action cannot be undone. Pods and deployments will no longer be constrained by this quota.
-            </p>
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteQuota(deleteConfirm.cluster, deleteConfirm.namespace, deleteConfirm.name)}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                Delete
-              </button>
-            </div>
+      <BaseModal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="md">
+        <BaseModal.Header
+          title="Delete ResourceQuota?"
+          icon={Trash2}
+          onClose={() => setDeleteConfirm(null)}
+          showBack={false}
+        />
+        <BaseModal.Content>
+          <p className="text-sm text-muted-foreground mb-4">
+            Are you sure you want to delete the quota <span className="text-yellow-400">{deleteConfirm?.name}</span> from{' '}
+            <span className="text-blue-400">{deleteConfirm?.namespace}</span> in{' '}
+            <span className="text-foreground">{deleteConfirm?.cluster}</span>?
+          </p>
+          <p className="text-sm text-red-400">
+            This action cannot be undone. Pods and deployments will no longer be constrained by this quota.
+          </p>
+        </BaseModal.Content>
+        <BaseModal.Footer>
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDeleteConfirm(null)}
+              className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteConfirm && handleDeleteQuota(deleteConfirm.cluster, deleteConfirm.namespace, deleteConfirm.name)}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Delete
+            </button>
           </div>
-        </div>
-      )}
+        </BaseModal.Footer>
+      </BaseModal>
     </div>
   )
 }

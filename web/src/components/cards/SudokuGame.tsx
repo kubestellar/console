@@ -233,14 +233,14 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
   }, [])
 
   // Calculate cell size based on container - larger when maximized
-  // Threshold of 500px to detect expanded/modal state (tall modal gives ~900px+)
+  // Threshold of 500px to detect expanded/modal state (fullscreen modal gives ~900px+)
   const isMaximized = containerHeight > 500
-  // Use larger cells when maximized for playability (68px cells = 612px grid, fits in 768px modal)
-  const cellSize = isMaximized ? 'w-[68px] h-[68px] text-3xl' : 'w-6 h-6 text-[10px]'
-  const noteSize = isMaximized ? 'text-xs' : 'text-[5px]'
-  const numberPadSize = isMaximized ? 'h-14 text-xl' : 'h-6 text-[10px]'
-  const controlButtonSize = isMaximized ? 'px-5 py-3 text-base' : 'px-1 py-1 text-[10px]'
-  const iconSize = isMaximized ? 'w-5 h-5' : 'w-2.5 h-2.5'
+  // Use large cells when maximized for playability (88px cells = 792px grid, fills fullscreen modal well)
+  const cellSize = isMaximized ? 'w-[88px] h-[88px] text-4xl' : 'w-6 h-6 text-[10px]'
+  const noteSize = isMaximized ? 'text-base' : 'text-[5px]'
+  const numberPadSize = isMaximized ? 'h-16 text-2xl' : 'h-6 text-[10px]'
+  const controlButtonSize = isMaximized ? 'px-6 py-4 text-lg' : 'px-1 py-1 text-[10px]'
+  const iconSize = isMaximized ? 'w-6 h-6' : 'w-2.5 h-2.5'
 
   // Load saved state and best times
   useEffect(() => {
