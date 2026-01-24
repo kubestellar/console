@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { X, Trash2, Server, Bell, BellOff, Bot, Slack, Webhook } from 'lucide-react'
+import { Trash2, Server, Bell, BellOff, Bot, Slack, Webhook } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { BaseModal } from '../../lib/modals'
 import type {
   AlertRule,
   AlertCondition,
@@ -10,6 +11,7 @@ import type {
 } from '../../types/alerts'
 
 interface AlertRuleEditorProps {
+  isOpen?: boolean
   rule?: AlertRule // If editing existing rule
   onSave: (rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
@@ -29,7 +31,7 @@ const SEVERITY_OPTIONS: { value: AlertSeverity; label: string; color: string }[]
   { value: 'info', label: 'Info', color: 'bg-blue-500' },
 ]
 
-export function AlertRuleEditor({ rule, onSave, onCancel }: AlertRuleEditorProps) {
+export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: AlertRuleEditorProps) {
   const { clusters } = useClusters()
 
   // Form state
@@ -153,23 +155,16 @@ export function AlertRuleEditor({ rule, onSave, onCancel }: AlertRuleEditorProps
   const availableClusters = clusters.filter(c => c.reachable !== false)
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background border border-border rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
-          <h3 className="text-lg font-medium text-foreground">
-            {rule ? 'Edit Alert Rule' : 'Create Alert Rule'}
-          </h3>
-          <button
-            onClick={onCancel}
-            className="p-1 rounded hover:bg-secondary/50 text-muted-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onCancel} size="lg">
+      <BaseModal.Header
+        title={rule ? 'Edit Alert Rule' : 'Create Alert Rule'}
+        icon={Bell}
+        onClose={onCancel}
+        showBack={false}
+      />
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <BaseModal.Content className="max-h-[60vh]">
+        <div className="space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
             <div>
@@ -566,9 +561,11 @@ export function AlertRuleEditor({ rule, onSave, onCancel }: AlertRuleEditorProps
             </button>
           </div>
         </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border flex items-center justify-end gap-2 shrink-0">
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
           <button
             onClick={onCancel}
             className="px-4 py-2 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
@@ -582,7 +579,7 @@ export function AlertRuleEditor({ rule, onSave, onCancel }: AlertRuleEditorProps
             {rule ? 'Save Changes' : 'Create Rule'}
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
