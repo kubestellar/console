@@ -37,6 +37,7 @@ import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
 import { MissionSuggestions } from './MissionSuggestions'
 import { TemplatesModal } from './TemplatesModal'
+import { CreateDashboardModal } from './CreateDashboardModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { DashboardTemplate } from './templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -95,6 +96,7 @@ export function Dashboard() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [_dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
+  const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false)
 
   // Get context for modals that can be triggered from sidebar
   const {
@@ -250,11 +252,20 @@ export function Dashboard() {
     setDragOverDashboard(null)
   }
 
-  const handleCreateDashboard = async () => {
+  const handleCreateDashboard = () => {
+    setIsCreateDashboardOpen(true)
+  }
+
+  const handleCreateDashboardConfirm = async (name: string, template?: DashboardTemplate) => {
     try {
-      const name = `Dashboard ${dashboards.length + 1}`
       const newDashboard = await createDashboard(name)
       showToast(`Created "${newDashboard.name}"`, 'success')
+
+      // If a template was selected, apply it to the new dashboard
+      if (template) {
+        // TODO: Apply template cards to the new dashboard
+        // For now, this would require navigating to the new dashboard and applying template
+      }
     } catch (error) {
       console.error('Failed to create dashboard:', error)
       showToast('Failed to create dashboard', 'error')
@@ -820,6 +831,14 @@ export function Dashboard() {
         isOpen={isTemplatesModalOpen}
         onClose={closeTemplatesModal}
         onApplyTemplate={handleApplyTemplate}
+      />
+
+      {/* Create Dashboard Modal */}
+      <CreateDashboardModal
+        isOpen={isCreateDashboardOpen}
+        onClose={() => setIsCreateDashboardOpen(false)}
+        onCreate={handleCreateDashboardConfirm}
+        existingNames={dashboards.map(d => d.name)}
       />
     </div>
   )
