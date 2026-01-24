@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, X, ChevronRight, RefreshCw, Search } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Search } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -156,8 +156,6 @@ function PolicyDetailModal({
   policy: { name: string; kind: string; violations: number; mode: 'warn' | 'enforce' | 'dryrun' }
   onAddPolicy: () => void
 }) {
-  if (!isOpen) return null
-
   // Get violations for this policy
   const policyViolations = DEMO_VIOLATIONS.filter(v => v.policy === policy.name)
 
@@ -170,25 +168,18 @@ function PolicyDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-orange-400" />
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{policy.name}</h2>
-              <p className="text-sm text-muted-foreground">{policy.kind}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-secondary rounded transition-colors">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title={policy.name}
+        description={policy.kind}
+        icon={Shield}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[50vh]">
         {/* Policy Info */}
-        <div className="p-4 border-b border-border">
+        <div className="mb-4 pb-4 border-b border-border">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-1">Enforcement Mode</p>
@@ -206,62 +197,60 @@ function PolicyDetailModal({
         </div>
 
         {/* Violations List */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {policyViolations.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
-              <p>No violations for this policy</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {policyViolations.map((violation, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">{violation.name}</span>
-                    <span className="text-xs text-muted-foreground">{violation.kind}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">{violation.message}</p>
-                  <span className="text-xs text-muted-foreground">Namespace: <span className="text-foreground">{violation.namespace}</span></span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-border">
-          <a
-            href={`https://open-policy-agent.github.io/gatekeeper-library/website/${policy.kind.toLowerCase()}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
-          >
-            Policy Documentation
-            <ExternalLink className="w-3 h-3" />
-          </a>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                onClose()
-                onAddPolicy()
-              }}
-              className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-            >
-              Create Similar Policy
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-            >
-              Close
-            </button>
+        {policyViolations.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
+            <p>No violations for this policy</p>
           </div>
+        ) : (
+          <div className="space-y-2">
+            {policyViolations.map((violation, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-1">
+                  <span className="text-sm font-medium text-foreground">{violation.name}</span>
+                  <span className="text-xs text-muted-foreground">{violation.kind}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-1">{violation.message}</p>
+                <span className="text-xs text-muted-foreground">Namespace: <span className="text-foreground">{violation.namespace}</span></span>
+              </div>
+            ))}
+          </div>
+        )}
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <a
+          href={`https://open-policy-agent.github.io/gatekeeper-library/website/${policy.kind.toLowerCase()}/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+        >
+          Policy Documentation
+          <ExternalLink className="w-3 h-3" />
+        </a>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              onClose()
+              onAddPolicy()
+            }}
+            className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+          >
+            Create Similar Policy
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            Close
+          </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 
@@ -279,8 +268,6 @@ function ViolationsModal({
   violations: Violation[]
   onAddPolicy: () => void
 }) {
-  if (!isOpen) return null
-
   const severityCounts = {
     critical: violations.filter(v => v.severity === 'critical').length,
     warning: violations.filter(v => v.severity === 'warning').length,
@@ -296,25 +283,18 @@ function ViolationsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-orange-400" />
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">OPA Gatekeeper Violations</h2>
-              <p className="text-sm text-muted-foreground">{clusterName}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-secondary rounded transition-colors">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="OPA Gatekeeper Violations"
+        description={clusterName}
+        icon={Shield}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[50vh]">
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-3 p-4 border-b border-border">
+        <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-border">
           <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
             <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
             <p className="text-xs text-muted-foreground">Critical</p>
@@ -330,7 +310,7 @@ function ViolationsModal({
         </div>
 
         {/* Violations List - sorted by severity */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="space-y-2">
           {[...violations]
             .sort((a, b) => {
               const severityOrder = { critical: 0, warning: 1, info: 2 }
@@ -358,38 +338,38 @@ function ViolationsModal({
             </div>
           ))}
         </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-border">
-          <a
-            href="https://open-policy-agent.github.io/gatekeeper/website/docs/violations"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+      <BaseModal.Footer>
+        <a
+          href="https://open-policy-agent.github.io/gatekeeper/website/docs/violations"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+        >
+          Learn about violations
+          <ExternalLink className="w-3 h-3" />
+        </a>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              onClose()
+              onAddPolicy()
+            }}
+            className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
           >
-            Learn about violations
-            <ExternalLink className="w-3 h-3" />
-          </a>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                onClose()
-                onAddPolicy()
-              }}
-              className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-            >
-              Create Policy with Klaude
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
-            >
-              Close
-            </button>
-          </div>
+            Create Policy with Klaude
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+          >
+            Close
+          </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 
@@ -740,20 +720,17 @@ Let's start by discussing what kind of policy I need.`,
         </a>
       </div>
 
-      {/* Violations Modal - rendered via portal to escape card container */}
-      {showViolationsModal && createPortal(
-        <ViolationsModal
-          isOpen={showViolationsModal}
-          onClose={() => setShowViolationsModal(false)}
-          clusterName={selectedClusterForViolations}
-          violations={DEMO_VIOLATIONS}
-          onAddPolicy={() => handleAddPolicy()}
-        />,
-        document.body
-      )}
+      {/* Violations Modal */}
+      <ViolationsModal
+        isOpen={showViolationsModal}
+        onClose={() => setShowViolationsModal(false)}
+        clusterName={selectedClusterForViolations}
+        violations={DEMO_VIOLATIONS}
+        onAddPolicy={() => handleAddPolicy()}
+      />
 
-      {/* Policy Detail Modal - rendered via portal to escape card container */}
-      {selectedPolicy && showPolicyModal && createPortal(
+      {/* Policy Detail Modal */}
+      {selectedPolicy && (
         <PolicyDetailModal
           isOpen={showPolicyModal}
           onClose={() => {
@@ -762,8 +739,7 @@ Let's start by discussing what kind of policy I need.`,
           }}
           policy={selectedPolicy}
           onAddPolicy={() => handleAddPolicy(selectedPolicy.name)}
-        />,
-        document.body
+        />
       )}
     </div>
   )
