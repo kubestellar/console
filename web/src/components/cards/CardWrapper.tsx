@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
@@ -49,6 +49,17 @@ const FULLSCREEN_EXPANDED_CARDS = new Set([
   'cluster_locations',
   'sudoku_game', // Games need fullscreen for the grid to fill properly
 ])
+
+// Context to expose card expanded state to children
+interface CardExpandedContextType {
+  isExpanded: boolean
+}
+const CardExpandedContext = createContext<CardExpandedContextType>({ isExpanded: false })
+
+/** Hook for child components to know if their parent card is expanded */
+export function useCardExpanded() {
+  return useContext(CardExpandedContext)
+}
 
 /** Flash type for significant data changes */
 export type CardFlashType = 'none' | 'info' | 'warning' | 'error'
@@ -352,21 +363,22 @@ export function CardWrapper({
   void setLocalMessages
 
   return (
-    <>
-      {/* Main card */}
-      <div
-        key={flashKey}
-        data-tour="card"
-        className={cn(
-          'glass rounded-xl overflow-hidden card-hover',
-          'flex flex-col transition-all duration-200',
-          isCollapsed ? 'h-auto' : 'h-full',
-          (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
-          getFlashClass()
-        )}
-        onMouseEnter={() => setShowSummary(true)}
-        onMouseLeave={() => setShowSummary(false)}
-      >
+    <CardExpandedContext.Provider value={{ isExpanded }}>
+      <>
+        {/* Main card */}
+        <div
+          key={flashKey}
+          data-tour="card"
+          className={cn(
+            'glass rounded-xl overflow-hidden card-hover',
+            'flex flex-col transition-all duration-200',
+            isCollapsed ? 'h-auto' : 'h-full',
+            (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
+            getFlashClass()
+          )}
+          onMouseEnter={() => setShowSummary(true)}
+          onMouseLeave={() => setShowSummary(false)}
+        >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
@@ -612,6 +624,7 @@ export function CardWrapper({
           {children}
         </BaseModal.Content>
       </BaseModal>
-    </>
+      </>
+    </CardExpandedContext.Provider>
   )
 }

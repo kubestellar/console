@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { 
-  Play, Pause, Lightbulb, Pencil, Undo2, Redo2, 
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Play, Pause, Lightbulb, Pencil, Undo2, Redo2,
   Save, Trophy, Settings, Sparkles, X
 } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useCardExpanded } from './CardWrapper'
 
 // Types
 type Difficulty = 'easy' | 'medium' | 'hard' | 'expert'
@@ -215,32 +216,17 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [bestTimes, setBestTimes] = useState<BestTimes>({})
   const [showVictory, setShowVictory] = useState(false)
-  const [containerHeight, setContainerHeight] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Track container size for responsive scaling
-  useEffect(() => {
-    if (!containerRef.current) return
+  // Get expanded state from parent CardWrapper via context
+  const { isExpanded } = useCardExpanded()
 
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerHeight(entry.contentRect.height)
-      }
-    })
-
-    observer.observe(containerRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  // Calculate cell size based on container - larger when maximized
-  // Threshold of 500px to detect expanded/modal state (fullscreen modal gives ~900px+)
-  const isMaximized = containerHeight > 500
-  // Use large cells when maximized for playability (88px cells = 792px grid, fills fullscreen modal well)
-  const cellSize = isMaximized ? 'w-[88px] h-[88px] text-4xl' : 'w-6 h-6 text-[10px]'
-  const noteSize = isMaximized ? 'text-base' : 'text-[5px]'
-  const numberPadSize = isMaximized ? 'h-16 text-2xl' : 'h-6 text-[10px]'
-  const controlButtonSize = isMaximized ? 'px-6 py-4 text-lg' : 'px-1 py-1 text-[10px]'
-  const iconSize = isMaximized ? 'w-6 h-6' : 'w-2.5 h-2.5'
+  // Use large cells when expanded for playability (70px cells = 630px grid)
+  const isMaximized = isExpanded
+  const cellSize = isMaximized ? 'w-[70px] h-[70px] text-3xl' : 'w-6 h-6 text-[10px]'
+  const noteSize = isMaximized ? 'text-sm' : 'text-[5px]'
+  const numberPadSize = isMaximized ? 'h-12 text-xl' : 'h-6 text-[10px]'
+  const controlButtonSize = isMaximized ? 'px-5 py-3 text-base' : 'px-1 py-1 text-[10px]'
+  const iconSize = isMaximized ? 'w-5 h-5' : 'w-2.5 h-2.5'
 
   // Load saved state and best times
   useEffect(() => {
@@ -445,7 +431,7 @@ export function SudokuGame({ config: _config }: SudokuGameProps) {
   if (!gameState) return null
 
   return (
-    <div ref={containerRef} className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex-1 flex flex-col min-h-card content-loaded">
       {/* Header */}
       <div className={`flex items-center justify-between ${isMaximized ? 'mb-4' : 'mb-1.5'}`}>
         <div className={`flex items-center ${isMaximized ? 'gap-3' : 'gap-1.5'}`}>
