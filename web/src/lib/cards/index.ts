@@ -13,6 +13,7 @@ export {
 
 // Card Hooks
 export {
+  // Core hooks
   useCardFilters,
   useCardSort,
   useCardData,
@@ -20,6 +21,12 @@ export {
   useCardCollapseAll,
   useCardFlash,
   commonComparators,
+  // Variant hooks
+  useSingleSelectCluster,
+  useChartFilters,
+  useCascadingSelection,
+  useStatusFilter,
+  // Core types
   type SortDirection,
   type SortOption,
   type FilterConfig,
@@ -32,6 +39,15 @@ export {
   type CardFlashType,
   type UseCardFlashOptions,
   type UseCardFlashResult,
+  // Variant types
+  type SingleSelectConfig,
+  type UseSingleSelectResult,
+  type ChartFilterConfig,
+  type UseChartFiltersResult,
+  type CascadingSelectionConfig,
+  type UseCascadingSelectionResult,
+  type StatusFilterConfig,
+  type UseStatusFilterResult,
 } from './cardHooks'
 
 // Card UI Components

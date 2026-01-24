@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react'
 import { HardDrive, CheckCircle, AlertTriangle, Clock, Search, ChevronRight, AlertCircle } from 'lucide-react'
-import { usePVCs } from '../../hooks/useMCP'
+import { usePVCs, type PVC } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
+import { useSingleSelectCluster } from '../../lib/cards'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -60,65 +59,26 @@ function getStatusColor(status: string) {
 
 export function PVCStatus() {
   const { pvcs, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePVCs()
-  const { selectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
-  // Use persisted cluster selection - survives global filter changes
+
+  // Use shared single-select cluster hook
   const {
     selectedCluster,
     setSelectedCluster,
     availableClusters: filteredClusters,
     isOutsideGlobalFilter,
-  } = usePersistedClusterSelection({
+    filtered: filteredPVCs,
+    search: localSearch,
+    setSearch: setLocalSearch,
+  } = useSingleSelectCluster<PVC>(pvcs, {
     storageKey: 'pvc-status',
-    defaultValue: '',
-    allowAll: false,
+    clusterField: 'cluster',
+    searchFields: ['name', 'namespace', 'cluster', 'storageClass'],
   })
+
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
-  const [localSearch, setLocalSearch] = useState('')
-
-  // Apply global filters
-  const filteredPVCs = useMemo(() => {
-    let result = pvcs
-
-    // Filter by cluster selection (global)
-    if (!isAllClustersSelected) {
-      result = result.filter(p => p.cluster && selectedClusters.includes(p.cluster))
-    }
-
-    // Filter by local cluster selection
-    if (selectedCluster) {
-      result = result.filter(p => p.cluster === selectedCluster)
-    }
-
-    // Apply global status filter
-    result = filterByStatus(result)
-
-    // Apply custom text filter (global)
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        (p.namespace?.toLowerCase() || '').includes(query) ||
-        (p.cluster?.toLowerCase() || '').includes(query) ||
-        (p.storageClass?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        (p.namespace?.toLowerCase() || '').includes(query) ||
-        (p.cluster?.toLowerCase() || '').includes(query) ||
-        (p.storageClass?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    return result
-  }, [pvcs, selectedClusters, isAllClustersSelected, selectedCluster, filterByStatus, customFilter, localSearch])
 
   // Sort PVCs
   const sortedPVCs = useMemo(() => {

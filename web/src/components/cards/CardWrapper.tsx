@@ -181,6 +181,17 @@ const CARD_TITLES: Record<string, string> = {
   // Games
   sudoku_game: 'Sudoku Game',
   match_game: 'Kube Match',
+  solitaire: 'Kube Solitaire',
+  checkers: 'AI Checkers',
+  game_2048: 'Kube 2048',
+  kubedle: 'Kubedle',
+  pod_sweeper: 'Pod Sweeper',
+  container_tetris: 'Container Tetris',
+  flappy_pod: 'Flappy Pod',
+  kube_man: 'Kube-Man',
+  kube_kong: 'Kube Kong',
+  pod_pitfall: 'Pod Pitfall',
+  node_invaders: 'Node Invaders',
 }
 
 export function CardWrapper({

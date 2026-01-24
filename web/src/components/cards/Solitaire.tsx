@@ -116,6 +116,15 @@ function dealGame(): GameState {
   }
 }
 
+// Card sizing - small (in card), medium (expanded), large (fullscreen)
+type CardSize = 'small' | 'medium' | 'large'
+
+const CARD_SIZES: Record<CardSize, { w: number; h: number; text: string; icon: string; centerIcon: string; overlap: number }> = {
+  small: { w: 32, h: 44, text: 'text-[8px]', icon: 'w-2 h-2', centerIcon: 'w-4 h-4', overlap: -32 },
+  medium: { w: 56, h: 77, text: 'text-xs', icon: 'w-3 h-3', centerIcon: 'w-6 h-6', overlap: -56 },
+  large: { w: 80, h: 110, text: 'text-sm', icon: 'w-4 h-4', centerIcon: 'w-8 h-8', overlap: -80 },
+}
+
 // Card component
 function Card({
   card,
@@ -123,19 +132,22 @@ function Card({
   onDoubleClick,
   isDragging,
   isSelected,
-  isSmall,
+  size = 'medium',
 }: {
   card: PlayingCard | null
   onClick?: () => void
   onDoubleClick?: () => void
   isDragging?: boolean
   isSelected?: boolean
-  isSmall?: boolean
+  size?: CardSize
 }) {
+  const { w, h, text, icon, centerIcon } = CARD_SIZES[size]
+
   if (!card) {
     return (
       <div
-        className={`${isSmall ? 'w-8 h-11' : 'w-12 h-16'} rounded border-2 border-dashed border-border/30 bg-secondary/20`}
+        style={{ width: w, height: h }}
+        className="rounded border-2 border-dashed border-border/30 bg-secondary/20"
         onClick={onClick}
       />
     )
@@ -147,10 +159,11 @@ function Card({
     return (
       <div
         onClick={onClick}
-        className={`${isSmall ? 'w-8 h-11' : 'w-12 h-16'} rounded border border-border bg-gradient-to-br from-indigo-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-sm flex items-center justify-center`}
+        style={{ width: w, height: h }}
+        className="rounded border border-border bg-gradient-to-br from-indigo-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-sm flex items-center justify-center"
       >
-        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-          <span className="text-white/50 text-xs font-bold">K8s</span>
+        <div className={`${size === 'small' ? 'w-4 h-4' : size === 'medium' ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-white/10 flex items-center justify-center`}>
+          <span className={`text-white/50 font-bold ${size === 'small' ? 'text-[6px]' : size === 'medium' ? 'text-xs' : 'text-sm'}`}>K8s</span>
         </div>
       </div>
     )
@@ -160,7 +173,8 @@ function Card({
     <div
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className={`${isSmall ? 'w-8 h-11 text-[8px]' : 'w-12 h-16 text-xs'} rounded border bg-card cursor-pointer hover:brightness-110 transition-all shadow-sm p-0.5 flex flex-col justify-between ${
+      style={{ width: w, height: h }}
+      className={`${text} rounded border bg-card cursor-pointer hover:brightness-110 transition-all shadow-sm p-0.5 flex flex-col justify-between ${
         isDragging ? 'opacity-50' : ''
       } ${
         isSelected ? 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-background' : 'border-border'
@@ -168,14 +182,14 @@ function Card({
     >
       <div className={`flex items-center gap-0.5 ${color}`}>
         <span className="font-bold">{card.value}</span>
-        <Icon className={isSmall ? 'w-2 h-2' : 'w-3 h-3'} />
+        <Icon className={icon} />
       </div>
       <div className={`flex items-center justify-center ${color}`}>
-        <Icon className={isSmall ? 'w-4 h-4' : 'w-6 h-6'} />
+        <Icon className={centerIcon} />
       </div>
       <div className={`flex items-center gap-0.5 justify-end rotate-180 ${color}`}>
         <span className="font-bold">{card.value}</span>
-        <Icon className={isSmall ? 'w-2 h-2' : 'w-3 h-3'} />
+        <Icon className={icon} />
       </div>
     </div>
   )
@@ -185,27 +199,30 @@ function Card({
 function StockPile({
   cards,
   onClick,
-  isSmall,
+  size = 'medium',
 }: {
   cards: PlayingCard[]
   onClick: () => void
-  isSmall?: boolean
+  size?: CardSize
 }) {
+  const { w, h } = CARD_SIZES[size]
+
   if (cards.length === 0) {
     return (
       <div
         onClick={onClick}
-        className={`${isSmall ? 'w-8 h-11' : 'w-12 h-16'} rounded border-2 border-dashed border-green-500/50 bg-green-500/10 cursor-pointer hover:bg-green-500/20 transition-colors flex items-center justify-center`}
+        style={{ width: w, height: h }}
+        className="rounded border-2 border-dashed border-green-500/50 bg-green-500/10 cursor-pointer hover:bg-green-500/20 transition-colors flex items-center justify-center"
         title="Click to reset stock"
       >
-        <RotateCcw className={`${isSmall ? 'w-3 h-3' : 'w-4 h-4'} text-green-400`} />
+        <RotateCcw className={`${size === 'small' ? 'w-3 h-3' : size === 'medium' ? 'w-4 h-4' : 'w-5 h-5'} text-green-400`} />
       </div>
     )
   }
 
   return (
     <div onClick={onClick} className="cursor-pointer" title="Click to draw">
-      <Card card={{ ...cards[0], faceUp: false }} isSmall={isSmall} />
+      <Card card={{ ...cards[0], faceUp: false }} size={size} />
     </div>
   )
 }
@@ -311,7 +328,7 @@ export function Solitaire(_props: CardComponentProps) {
   }, [isPlaying, saveHistory])
 
   // Try to auto-move card to foundation
-  const tryAutoFoundation = useCallback((card: PlayingCard, source: string, cardIndex?: number): boolean => {
+  const tryAutoFoundation = useCallback((card: PlayingCard, source: string, _cardIndex?: number): boolean => {
     for (let i = 0; i < 4; i++) {
       if (canPlaceOnFoundation(card, game.foundations[i])) {
         saveHistory()
@@ -520,7 +537,10 @@ export function Solitaire(_props: CardComponentProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const isSmall = !isExpanded
+  // Determine card size based on expanded state
+  const cardSize: CardSize = isExpanded ? 'large' : 'small'
+  const { w: cardWidth, h: cardHeight, overlap } = CARD_SIZES[cardSize]
+  const gap = isExpanded ? 12 : 4
 
   return (
     <div className="h-full flex flex-col p-2 select-none">
@@ -560,91 +580,95 @@ export function Solitaire(_props: CardComponentProps) {
         </div>
       </div>
 
-      {/* Game area */}
-      <div className={`flex-1 overflow-auto ${isSmall ? 'space-y-1' : 'space-y-3'}`}>
-        {/* Top row: Stock, Waste, Foundations */}
-        <div className="flex items-start gap-2">
-          {/* Stock */}
-          <StockPile cards={game.stock} onClick={drawFromStock} isSmall={isSmall} />
+      {/* Game area - centered */}
+      <div className="flex-1 flex items-center justify-center overflow-auto">
+        <div className="flex flex-col" style={{ gap }}>
+          {/* Top row: Stock, Waste, Foundations */}
+          <div className="flex items-start" style={{ gap }}>
+            {/* Stock */}
+            <StockPile cards={game.stock} onClick={drawFromStock} size={cardSize} />
 
-          {/* Waste */}
-          <div className={isSmall ? 'w-8' : 'w-12'}>
-            {game.waste.length > 0 ? (
-              <Card
-                card={game.waste[game.waste.length - 1]}
-                onClick={() => handleCardClick('waste')}
-                onDoubleClick={() => handleDoubleClick('waste')}
-                isSelected={selectedCard?.source === 'waste'}
-                isSmall={isSmall}
-              />
-            ) : (
-              <Card card={null} isSmall={isSmall} />
-            )}
+            {/* Waste */}
+            <div style={{ width: cardWidth }}>
+              {game.waste.length > 0 ? (
+                <Card
+                  card={game.waste[game.waste.length - 1]}
+                  onClick={() => handleCardClick('waste')}
+                  onDoubleClick={() => handleDoubleClick('waste')}
+                  isSelected={selectedCard?.source === 'waste'}
+                  size={cardSize}
+                />
+              ) : (
+                <Card card={null} size={cardSize} />
+              )}
+            </div>
+
+            {/* Spacer */}
+            <div style={{ width: cardWidth }} />
+
+            {/* Foundations */}
+            {game.foundations.map((foundation, idx) => (
+              <div
+                key={idx}
+                onClick={() => handleCardClick(`foundation-${idx}`)}
+                className="cursor-pointer"
+              >
+                {foundation.length > 0 ? (
+                  <Card
+                    card={foundation[foundation.length - 1]}
+                    isSelected={selectedCard?.source === `foundation-${idx}`}
+                    size={cardSize}
+                  />
+                ) : (
+                  <div
+                    style={{ width: cardWidth, height: cardHeight }}
+                    className="rounded border-2 border-dashed border-border/50 bg-secondary/30 flex items-center justify-center"
+                    title={`${SUITS[idx]} foundation`}
+                  >
+                    {(() => {
+                      const { Icon, color } = SUIT_CONFIG[SUITS[idx]]
+                      return <Icon className={`${isExpanded ? 'w-6 h-6' : 'w-3 h-3'} ${color} opacity-30`} />
+                    })()}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Spacer */}
-          <div className={isSmall ? 'w-4' : 'w-8'} />
-
-          {/* Foundations */}
-          {game.foundations.map((foundation, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleCardClick(`foundation-${idx}`)}
-              className="cursor-pointer"
-            >
-              {foundation.length > 0 ? (
-                <Card
-                  card={foundation[foundation.length - 1]}
-                  isSelected={selectedCard?.source === `foundation-${idx}`}
-                  isSmall={isSmall}
-                />
-              ) : (
-                <div
-                  className={`${isSmall ? 'w-8 h-11' : 'w-12 h-16'} rounded border-2 border-dashed border-border/50 bg-secondary/30 flex items-center justify-center`}
-                  title={`${SUITS[idx]} foundation`}
-                >
-                  {(() => {
-                    const { Icon, color } = SUIT_CONFIG[SUITS[idx]]
-                    return <Icon className={`${isSmall ? 'w-3 h-3' : 'w-4 h-4'} ${color} opacity-30`} />
-                  })()}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Tableau */}
-        <div className="flex gap-1">
-          {game.tableau.map((column, colIdx) => (
-            <div key={colIdx} className="flex flex-col" style={{ minWidth: isSmall ? 32 : 48 }}>
-              {column.length === 0 ? (
-                <div
-                  onClick={() => handleCardClick(`tableau-${colIdx}`)}
-                  className={`${isSmall ? 'w-8 h-11' : 'w-12 h-16'} rounded border-2 border-dashed border-border/30 bg-secondary/20 cursor-pointer hover:border-primary/30`}
-                />
-              ) : (
-                column.map((card, cardIdx) => (
+          {/* Tableau */}
+          <div className="flex" style={{ gap }}>
+            {game.tableau.map((column, colIdx) => (
+              <div key={colIdx} className="flex flex-col" style={{ minWidth: cardWidth }}>
+                {column.length === 0 ? (
                   <div
-                    key={card.id}
-                    style={{ marginTop: cardIdx > 0 ? (isSmall ? -32 : -48) : 0 }}
-                    className="relative"
-                  >
-                    <Card
-                      card={card}
-                      onClick={() => card.faceUp && handleCardClick(`tableau-${colIdx}`, cardIdx)}
-                      onDoubleClick={() => card.faceUp && cardIdx === column.length - 1 && handleDoubleClick(`tableau-${colIdx}`, cardIdx)}
-                      isSelected={
-                        selectedCard?.source === `tableau-${colIdx}` &&
-                        selectedCard?.cardIndex !== undefined &&
-                        cardIdx >= selectedCard.cardIndex
-                      }
-                      isSmall={isSmall}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-          ))}
+                    onClick={() => handleCardClick(`tableau-${colIdx}`)}
+                    style={{ width: cardWidth, height: cardHeight }}
+                    className="rounded border-2 border-dashed border-border/30 bg-secondary/20 cursor-pointer hover:border-primary/30"
+                  />
+                ) : (
+                  column.map((card, cardIdx) => (
+                    <div
+                      key={card.id}
+                      style={{ marginTop: cardIdx > 0 ? overlap : 0 }}
+                      className="relative"
+                    >
+                      <Card
+                        card={card}
+                        onClick={() => card.faceUp && handleCardClick(`tableau-${colIdx}`, cardIdx)}
+                        onDoubleClick={() => card.faceUp && cardIdx === column.length - 1 && handleDoubleClick(`tableau-${colIdx}`, cardIdx)}
+                        isSelected={
+                          selectedCard?.source === `tableau-${colIdx}` &&
+                          selectedCard?.cardIndex !== undefined &&
+                          cardIdx >= selectedCard.cardIndex
+                        }
+                        size={cardSize}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

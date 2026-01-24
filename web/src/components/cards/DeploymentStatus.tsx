@@ -8,6 +8,7 @@ import { usePagination, Pagination } from '../ui/Pagination'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useStatusFilter } from '../../lib/cards'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -74,7 +75,11 @@ export function DeploymentStatus() {
 
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const { statusFilter, setStatusFilter } = useStatusFilter({
+    statuses: ['all', 'running', 'deploying', 'failed'] as const,
+    defaultStatus: 'all',
+    storageKey: 'deployment-status',
+  })
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')

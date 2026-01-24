@@ -41,7 +41,9 @@
     "github_activity": "GitHub Activity",
     "kubectl": "Kubectl Terminal",
     "sudoku_game": "Sudoku Game",
-    "match_game": "Kube Match"
+    "match_game": "Kube Match",
+    "solitaire": "Kube Solitaire",
+    "checkers": "AI Checkers"
   },
   "descriptions": {
     "cluster_health": "Monitor health status across all clusters",
@@ -64,7 +66,8 @@
     "github_activity": "Monitor GitHub repository activity, PRs, issues, releases, and contributors",
     "kubectl": "Interactive kubectl terminal with AI assistance",
     "sudoku_game": "Brain-training Sudoku puzzle with multiple difficulty levels",
-    "match_game": "Memory matching game with Kubernetes-themed cards"
+    "match_game": "Memory matching game with Kubernetes-themed cards",
+    "solitaire": "Classic Klondike solitaire with Kubernetes-themed suits"
   },
   "categories": {
     "core": "Core",
