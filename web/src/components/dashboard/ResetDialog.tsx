@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
-import { X, PlusCircle, RefreshCw, AlertTriangle } from 'lucide-react'
+import { PlusCircle, RefreshCw, AlertTriangle } from 'lucide-react'
 import { ResetMode } from '../../hooks/useDashboardReset'
+import { BaseModal } from '../../lib/modals'
 
 interface ResetDialogProps {
   isOpen: boolean
@@ -14,43 +14,18 @@ interface ResetDialogProps {
  * - Replace All: Reset to only default cards (remove customizations)
  */
 export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full max-w-md glass rounded-2xl overflow-hidden animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <div>
-            <h2 className="text-lg font-medium text-foreground">Reset Dashboard</h2>
-            <p className="text-sm text-muted-foreground">
-              Choose how to reset your dashboard cards
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+      <BaseModal.Header
+        title="Reset Dashboard"
+        description="Choose how to reset your dashboard cards"
+        icon={RefreshCw}
+        onClose={onClose}
+        showBack={false}
+      />
 
-        {/* Options */}
-        <div className="p-6 space-y-3">
+      <BaseModal.Content>
+        <div className="space-y-3">
           {/* Add Missing Option */}
           <button
             onClick={() => onReset('add_missing')}
@@ -93,17 +68,17 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
             </div>
           </button>
         </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex justify-end px-6 py-4 border-t border-border/50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+      <BaseModal.Footer showKeyboardHints>
+        <div className="flex-1" />
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+        >
+          Cancel
+        </button>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }

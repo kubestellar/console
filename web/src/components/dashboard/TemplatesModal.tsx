@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { X, Layout, ChevronRight, Check } from 'lucide-react'
+import { Layout, ChevronRight, Check } from 'lucide-react'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { BaseModal } from '../../lib/modals'
 
 interface TemplatesModalProps {
   isOpen: boolean
@@ -44,21 +45,6 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [hoveredTemplate, setHoveredTemplate] = useState<DashboardTemplate | null>(null)
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
   // Reset selection when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -76,34 +62,16 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
+      <BaseModal.Header
+        title="Dashboard Templates"
+        icon={Layout}
+        onClose={onClose}
+        showBack={false}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-6xl mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Layout className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-foreground">Dashboard Templates</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-1 overflow-hidden">
+      <BaseModal.Content noPadding className="flex overflow-hidden">
           {/* Category sidebar */}
           <div className="w-48 border-r border-border p-4 space-y-1">
             {TEMPLATE_CATEGORIES.map((category) => (
@@ -231,15 +199,16 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
               </div>
             )}
           </div>
-        </div>
+        </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            {selectedTemplate
-              ? `"${selectedTemplate.name}" will add ${selectedTemplate.cards.length} cards to your dashboard`
-              : 'Select a template to preview'}
-          </p>
+        <BaseModal.Footer showKeyboardHints>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">
+              {selectedTemplate
+                ? `"${selectedTemplate.name}" will add ${selectedTemplate.cards.length} cards to your dashboard`
+                : 'Select a template to preview'}
+            </p>
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -256,8 +225,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+        </BaseModal.Footer>
+    </BaseModal>
   )
 }

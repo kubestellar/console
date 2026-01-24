@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { X, Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, Settings, ToggleLeft } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals'
 
 interface Card {
   id: string
@@ -302,22 +303,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     }
   }, [card])
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen || !card) return null
+  if (!card) return null
 
   const fields = CARD_CONFIG_FIELDS[card.card_type] || CARD_CONFIG_FIELDS.default || []
   const cardBehaviors = CARD_BEHAVIORS[card.card_type] || CARD_BEHAVIORS.default || []
@@ -534,65 +520,29 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     return parts.join(' ')
   }
 
+  const tabs = [
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'behaviors', label: 'Behaviors', icon: ToggleLeft },
+    { id: 'ai', label: 'AI Configure', icon: Sparkles },
+  ]
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full max-w-2xl glass rounded-2xl overflow-hidden animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <div>
-            <h2 className="text-lg font-medium text-foreground">Configure Card</h2>
-            <p className="text-sm text-muted-foreground">
-              Customize "{card.title || card.card_type}"
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="Configure Card"
+        description={`Customize "${card.title || card.card_type}"`}
+        icon={Settings}
+        onClose={onClose}
+        showBack={false}
+      />
 
-        {/* Tabs */}
-        <div className="flex border-b border-border/50">
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={cn(
-              'flex-1 px-4 py-3 text-sm font-medium transition-colors',
-              activeTab === 'settings'
-                ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Settings
-          </button>
-          <button
-            onClick={() => setActiveTab('behaviors')}
-            className={cn(
-              'flex-1 px-4 py-3 text-sm font-medium transition-colors',
-              activeTab === 'behaviors'
-                ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Behaviors
-          </button>
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={cn(
-              'flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2',
-              activeTab === 'ai'
-                ? 'text-purple-400 border-b-2 border-purple-500'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Sparkles className="w-4 h-4" />
-            AI Configure
-          </button>
-        </div>
+      <BaseModal.Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as 'settings' | 'behaviors' | 'ai')}
+      />
 
-        {/* Content */}
-        <div className="p-6 max-h-[50vh] overflow-y-auto">
+      <BaseModal.Content className="max-h-[50vh]">
           {activeTab === 'settings' && (
             <div className="space-y-4">
               {/* Title field */}
@@ -801,24 +751,25 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
               </div>
             </div>
           )}
-        </div>
+        </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
+        <BaseModal.Footer showKeyboardHints>
+          <div className="flex-1" />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600"
+            >
+              Save Changes
+            </button>
+          </div>
+        </BaseModal.Footer>
+    </BaseModal>
   )
 }
