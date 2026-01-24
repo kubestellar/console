@@ -249,7 +249,7 @@ export function TourOverlay() {
     if (!isActive || !currentStep) return
 
     let isCancelled = false
-    const timeoutIds: NodeJS.Timeout[] = []
+    const timeoutIds: ReturnType<typeof setTimeout>[] = []
 
     // Function to position tooltip based on current target position
     const positionTooltip = () => {

@@ -284,7 +284,7 @@ export function MatchGame(_props: CardComponentProps) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1.5">
           <Trophy className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm font-semibold">Match Game</span>
+          <span className="text-sm font-semibold">Kube Match</span>
         </div>
         
         {/* Difficulty selector */}

@@ -41,7 +41,7 @@
     "github_activity": "GitHub Activity",
     "kubectl": "Kubectl Terminal",
     "sudoku_game": "Sudoku Game",
-    "match_game": "Match Game"
+    "match_game": "Kube Match"
   },
   "descriptions": {
     "cluster_health": "Monitor health status across all clusters",
@@ -64,7 +64,7 @@
     "github_activity": "Monitor GitHub repository activity, PRs, issues, releases, and contributors",
     "kubectl": "Interactive kubectl terminal with AI assistance",
     "sudoku_game": "Brain-training Sudoku puzzle with multiple difficulty levels",
-    "match_game": "Classic memory matching game with Kubernetes-themed cards"
+    "match_game": "Memory matching game with Kubernetes-themed cards"
   },
   "categories": {
     "core": "Core",

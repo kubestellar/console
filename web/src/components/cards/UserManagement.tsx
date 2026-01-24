@@ -19,6 +19,7 @@ import { useAuth } from '../../lib/auth'
 import { cn } from '../../lib/cn'
 import type { ConsoleUser, UserRole } from '../../types/users'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -132,18 +133,43 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     }
   }
 
-  // Only show spinner if no cached data exists
-  const hasData = summary !== null || users.length > 0
-  if (summaryLoading && !hasData) {
+  // Only show skeleton if no cached data exists
+  const hasData = summary !== null || allUsers.length > 0
+  const showSkeleton = (summaryLoading || usersLoading) && !hasData
+
+  if (showSkeleton) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="spinner w-6 h-6" />
+      <div className="h-full flex flex-col min-h-card">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton variant="text" width={130} height={20} />
+          <Skeleton variant="rounded" width={32} height={32} />
+        </div>
+        {/* Summary stats skeleton */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <Skeleton variant="rounded" height={80} />
+          <Skeleton variant="rounded" height={80} />
+          <Skeleton variant="rounded" height={80} />
+        </div>
+        {/* Search skeleton */}
+        <Skeleton variant="rounded" height={32} className="mb-4" />
+        {/* Tabs skeleton */}
+        <div className="flex gap-2 mb-4">
+          <Skeleton variant="rounded" width={100} height={32} />
+          <Skeleton variant="rounded" width={120} height={32} />
+        </div>
+        {/* User list skeleton */}
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={56} />
+          <Skeleton variant="rounded" height={56} />
+          <Skeleton variant="rounded" height={56} />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

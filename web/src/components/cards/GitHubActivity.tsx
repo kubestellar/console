@@ -274,16 +274,18 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=all&per_page=50&sort=updated`, { headers })
       ])
 
-      // Get open PR count from Link header
+      // Get open PR count from Link header or response body
+      let calculatedOpenPRCount = 0
       if (openPRsResponse.ok) {
         const linkHeader = openPRsResponse.headers.get('Link')
         if (linkHeader) {
           const match = linkHeader.match(/page=(\d+)>; rel="last"/)
-          setOpenPRCount(match ? parseInt(match[1], 10) : 1)
+          calculatedOpenPRCount = match ? parseInt(match[1], 10) : 1
         } else {
           const openPRs = await openPRsResponse.json()
-          setOpenPRCount(openPRs.length)
+          calculatedOpenPRCount = openPRs.length
         }
+        setOpenPRCount(calculatedOpenPRCount)
       }
 
       if (!recentPRsResponse.ok) throw new Error(`Failed to fetch PRs: ${recentPRsResponse.statusText}`)
@@ -296,24 +298,25 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         fetch(`https://api.github.com/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { headers })
       ])
 
-      // Get open issue count from Link header (note: includes PRs, so we use repo's open_issues_count instead)
-      // The repo API returns open_issues_count which is more accurate
+      // Get open issue count from Link header or response body
+      let calculatedOpenIssueCount = 0
       if (openIssuesResponse.ok) {
         const linkHeader = openIssuesResponse.headers.get('Link')
         if (linkHeader) {
           const match = linkHeader.match(/page=(\d+)>; rel="last"/)
-          // This count includes PRs, so we'll rely on repoData.open_issues_count - openPRCount
-          setOpenIssueCount(match ? parseInt(match[1], 10) : 1)
+          calculatedOpenIssueCount = match ? parseInt(match[1], 10) : 1
         } else {
           const openIssues = await openIssuesResponse.json()
-          setOpenIssueCount(openIssues.filter((i: any) => !i.pull_request).length)
+          calculatedOpenIssueCount = openIssues.filter((i: any) => !i.pull_request).length
         }
+        setOpenIssueCount(calculatedOpenIssueCount)
       }
 
       if (!recentIssuesResponse.ok) throw new Error(`Failed to fetch issues: ${recentIssuesResponse.statusText}`)
       const issuesData: GitHubIssue[] = await recentIssuesResponse.json()
       // Filter out pull requests (they come with issues endpoint but have pull_request field)
-      setIssues(issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request))
+      const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
+      setIssues(filteredIssues)
 
       // Fetch Releases
       const releasesResponse = await fetch(`https://api.github.com/repos/${targetRepo}/releases?per_page=10`, { headers })
@@ -327,15 +330,15 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const contributorsData = await contributorsResponse.json()
       setContributors(contributorsData)
 
-      // Cache the fetched data
+      // Cache the fetched data using the calculated counts
       setCachedData(targetRepo, {
         repoInfo: repoData,
         prs: prsData,
-        issues: issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request),
+        issues: filteredIssues,
         releases: releasesData,
         contributors: contributorsData,
-        openPRCount: openPRsResponse.ok ? (openPRsResponse.headers.get('Link')?.match(/page=(\d+)>; rel="last"/) ? parseInt(openPRsResponse.headers.get('Link')!.match(/page=(\d+)>; rel="last"/)![1], 10) : 1) : 0,
-        openIssueCount: openIssuesResponse.ok ? (openIssuesResponse.headers.get('Link')?.match(/page=(\d+)>; rel="last"/) ? parseInt(openIssuesResponse.headers.get('Link')!.match(/page=(\d+)>; rel="last"/)![1], 10) : 1) : 0,
+        openPRCount: calculatedOpenPRCount,
+        openIssueCount: calculatedOpenIssueCount,
       })
 
       setLastRefresh(new Date())
@@ -606,25 +609,69 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
 
   if (error) {
     return (
-      <div className="h-full flex flex-col p-2">
+      <div className="h-full flex flex-col content-loaded">
         {/* Header with settings */}
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">
-            GitHub Activity
-          </span>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={cn(
-              'p-1.5 rounded transition-colors',
-              showSettings ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
-            )}
-            title="Add repositories"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
+              GitHub Activity
+            </span>
+            <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+              Error
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className={cn(
+                'p-1.5 rounded transition-colors',
+                showSettings ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
+              )}
+              title="Add repositories"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <RefreshButton
+              isRefreshing={isRefreshing}
+              lastRefresh={lastRefresh}
+              onRefresh={refetch}
+            />
+          </div>
         </div>
 
-        {/* Always show saved repos list so user can switch */}
+        {/* Placeholder Stats Grid - shows even in error state */}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
+            <div className="flex items-center gap-2 mb-1">
+              <GitPullRequest className="w-4 h-4 text-blue-400" />
+              <span className="text-xs text-muted-foreground">Open PRs</span>
+            </div>
+            <div className="text-lg font-bold text-muted-foreground">--</div>
+          </div>
+          <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
+            <div className="flex items-center gap-2 mb-1">
+              <GitBranch className="w-4 h-4 text-green-400" />
+              <span className="text-xs text-muted-foreground">Merged PRs</span>
+            </div>
+            <div className="text-lg font-bold text-muted-foreground">--</div>
+          </div>
+          <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertCircle className="w-4 h-4 text-orange-400" />
+              <span className="text-xs text-muted-foreground">Open Issues</span>
+            </div>
+            <div className="text-lg font-bold text-muted-foreground">--</div>
+          </div>
+          <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
+            <div className="flex items-center gap-2 mb-1">
+              <Star className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs text-muted-foreground">Stars</span>
+            </div>
+            <div className="text-lg font-bold text-muted-foreground">--</div>
+          </div>
+        </div>
+
+        {/* Repository selector */}
         <div className="mb-3">
           <span className="text-xs text-muted-foreground block mb-2">Your repositories:</span>
           <div className="flex flex-wrap gap-1">
@@ -638,7 +685,7 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
                     : 'bg-secondary/50 border-border text-muted-foreground hover:bg-secondary hover:text-foreground'
                 )}
                 onClick={() => handleSelectRepo(repo)}
-                title={repo === currentRepo ? 'Currently selected (stale)' : `Switch to ${repo}`}
+                title={repo === currentRepo ? 'Currently selected (error)' : `Switch to ${repo}`}
               >
                 {repo === currentRepo && <AlertCircle className="w-3 h-3" />}
                 {repo}
@@ -707,17 +754,19 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
           </div>
         )}
 
-        {/* Error message - compact */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <p className="text-xs text-muted-foreground mb-2">{error}</p>
+        {/* Prominent error message */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-4 rounded-lg bg-red-500/5 border border-red-500/20">
+          <AlertCircle className="w-8 h-8 text-red-400 mb-3" />
+          <p className="text-sm text-foreground mb-2">Unable to load GitHub data</p>
+          <p className="text-xs text-muted-foreground mb-4 max-w-xs">{error}</p>
           <button
             onClick={refetch}
-            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
+            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Try again
           </button>
-          <p className="mt-2 text-xs text-muted-foreground/70">
-            Rate-limited? Add a GitHub token in settings.
+          <p className="mt-4 text-xs text-muted-foreground/70 max-w-xs">
+            Tip: GitHub has rate limits for unauthenticated requests. Add a personal access token via localStorage for higher limits.
           </p>
         </div>
       </div>

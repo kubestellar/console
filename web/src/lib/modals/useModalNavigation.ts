@@ -35,7 +35,16 @@ export function useModalNavigation({
   // Handle keyboard events
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
+      // Escape should always work, even in input fields
+      if (e.key === 'Escape') {
+        if (enableEscape) {
+          e.preventDefault()
+          onClose()
+        }
+        return
+      }
+
+      // Don't handle other keys if user is typing in an input
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -45,13 +54,6 @@ export function useModalNavigation({
       }
 
       switch (e.key) {
-        case 'Escape':
-          if (enableEscape) {
-            e.preventDefault()
-            onClose()
-          }
-          break
-
         case 'Backspace':
         case ' ': // Space
           if (enableBackspace && onBack) {

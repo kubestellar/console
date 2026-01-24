@@ -177,6 +177,10 @@ const CARD_TITLES: Record<string, string> = {
   
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
+
+  // Games
+  sudoku_game: 'Sudoku Game',
+  match_game: 'Kube Match',
 }
 
 export function CardWrapper({
@@ -262,7 +266,7 @@ export function CardWrapper({
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
 
-  const title = customTitle || CARD_TITLES[cardType] || cardType
+  const title = CARD_TITLES[cardType] || customTitle || cardType
   const newTitle = pendingSwap?.newTitle || CARD_TITLES[pendingSwap?.newType || ''] || pendingSwap?.newType
 
   // Countdown timer for pending swap

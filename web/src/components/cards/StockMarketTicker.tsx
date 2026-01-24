@@ -590,21 +590,18 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
         }])
       }
       
-      // Trigger refresh after delay to allow state to settle
-      setTimeout(() => handleRefresh(), 2000)
     }
     setStockSearchInput('')
     setShowStockDropdown(false)
     setStockSearchResults([])
-  }, [activeSymbols, savedStocks, handleRefresh])
+  }, [activeSymbols, savedStocks])
 
   // Remove stock from active list
   const removeStock = useCallback((symbol: string) => {
     setActiveSymbols(prev => prev.filter(s => s !== symbol))
-    
-    // Trigger refresh after delay to allow state to settle
-    setTimeout(() => handleRefresh(), 2000)
-  }, [handleRefresh])
+    // Also remove from stockData immediately for instant visual feedback
+    setStockData(prev => prev.filter(s => s.symbol !== symbol))
+  }, [])
 
   // Toggle favorite status
   const toggleFavorite = useCallback((symbol: string) => {
@@ -639,6 +636,17 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   useEffect(() => {
     handleRefresh()
   }, []) // Only on mount
+
+  // Refresh when active symbols change (for add/remove operations)
+  const prevSymbolsRef = useRef<string[]>(activeSymbols)
+  useEffect(() => {
+    // Only refresh if symbols actually changed (not on initial mount)
+    if (prevSymbolsRef.current !== activeSymbols &&
+        JSON.stringify(prevSymbolsRef.current.sort()) !== JSON.stringify(activeSymbols.sort())) {
+      handleRefresh()
+    }
+    prevSymbolsRef.current = activeSymbols
+  }, [activeSymbols, handleRefresh])
 
   // Sort stock data
   const sortedStocks = useMemo(() => {
@@ -827,11 +835,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
               expanded={expandedStocks.has(stock.symbol)}
               onToggle={() => toggleExpanded(stock.symbol)}
               onToggleFavorite={() => toggleFavorite(stock.symbol)}
-              onRemove={() => {
-                removeStock(stock.symbol)
-                // Trigger immediate refresh to update the display
-                setTimeout(() => handleRefresh(), 100)
-              }}
+              onRemove={() => removeStock(stock.symbol)}
               isFavorite={savedStocks.find(s => s.symbol === stock.symbol)?.favorite || false}
               canRemove={activeSymbols.length > 1}
             />

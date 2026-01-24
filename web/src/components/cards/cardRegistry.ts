@@ -78,7 +78,7 @@ import { GitHubActivity } from './GitHubActivity'
 import { Kubectl } from './Kubectl'
 // Sudoku game card
 import { SudokuGame } from './SudokuGame'
-// Match Game card
+// Kube Match card
 import { MatchGame } from './MatchGame'
 // Stock Market Ticker card
 import { StockMarketTicker } from './StockMarketTicker'
@@ -176,7 +176,7 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kubectl: Kubectl,
   // Sudoku game card
   sudoku_game: SudokuGame,
-  // Match Game card
+  // Kube Match card
   match_game: MatchGame,
   // Stock Market Ticker card
   stock_market_ticker: StockMarketTicker,
@@ -271,7 +271,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kubectl: 8,
   // Sudoku game card
   sudoku_game: 6,
-  // Match Game card
+  // Kube Match card
   match_game: 6,
   // Stock Market Ticker
   stock_market_ticker: 6,

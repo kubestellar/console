@@ -100,7 +100,7 @@ const CARD_CATALOG = {
     { type: 'github_activity', title: 'GitHub Activity', description: 'Monitor GitHub repository activity - PRs, issues, releases, and contributors', visualization: 'table' },
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
     { type: 'sudoku_game', title: 'Sudoku Game', description: 'Brain-training Sudoku puzzle with multiple difficulty levels, hints, and timer', visualization: 'status' },
-    { type: 'match_game', title: 'Match Game', description: 'Classic memory matching game with Kubernetes-themed cards', visualization: 'status' },
+    { type: 'match_game', title: 'Kube Match', description: 'Memory matching game with Kubernetes-themed cards', visualization: 'status' },
     { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
   ],
 } as const

@@ -1322,9 +1322,17 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 			}
 		}
 
-		// Get labels (filter out some verbose ones)
+		// Get labels (filter out some verbose ones, but keep topology labels for region detection)
 		info.Labels = make(map[string]string)
 		for k, v := range node.Labels {
+			// Always include topology labels needed for region/zone detection
+			if strings.HasPrefix(k, "topology.kubernetes.io/") ||
+				strings.HasPrefix(k, "failure-domain.beta.kubernetes.io/") ||
+				strings.Contains(k, "region") ||
+				strings.Contains(k, "zone") {
+				info.Labels[k] = v
+				continue
+			}
 			// Skip very long or system labels
 			if !strings.HasPrefix(k, "node.kubernetes.io/") &&
 				!strings.HasPrefix(k, "kubernetes.io/") &&
