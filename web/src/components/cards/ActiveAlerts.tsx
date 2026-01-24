@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Bell,
   AlertTriangle,
@@ -16,13 +16,13 @@ import {
 } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
-import { useClusters } from '../../hooks/useMCP'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { Pagination } from '../ui/Pagination'
+import { useCardData } from '../../lib/cards'
 
 // Format relative time
 function formatRelativeTime(dateString: string): string {
@@ -43,18 +43,11 @@ type SortField = 'severity' | 'time'
 
 export function ActiveAlerts() {
   const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
-  const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
-  const { clusters } = useClusters()
+  const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
   const { open } = useDrillDown()
   const { missions, setActiveMission, openSidebar } = useMissions()
 
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
   const [showAcknowledged, setShowAcknowledged] = useState(false)
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortField>('severity')
-  const [localSearch, setLocalSearch] = useState('')
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   // Combine active and acknowledged alerts when toggle is on
   const allAlertsToShow = useMemo(() => {
@@ -63,37 +56,6 @@ export function ActiveAlerts() {
     }
     return activeAlerts
   }, [activeAlerts, acknowledgedAlerts, showAcknowledged])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Get reachable clusters
-  const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
-
-  // Get available clusters for local filter
-  const availableClustersForFilter = useMemo(() => {
-    if (isAllClustersSelected) return reachableClusters
-    return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
 
   // Map AlertSeverity to global SeverityLevel for filtering
   const mapAlertSeverityToGlobal = (alertSeverity: AlertSeverity): SeverityLevel[] => {
@@ -105,19 +67,9 @@ export function ActiveAlerts() {
     }
   }
 
-  // Filter and sort alerts
-  const filteredAlerts = useMemo(() => {
+  // Pre-filter by severity and global custom filter (these are outside useCardData)
+  const severityFilteredAlerts = useMemo(() => {
     let result = allAlertsToShow
-
-    // Apply global cluster filter
-    if (!isAllClustersSelected) {
-      result = result.filter(a => !a.cluster || selectedClusters.includes(a.cluster))
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(a => !a.cluster || localClusterFilter.includes(a.cluster))
-    }
 
     // Apply global severity filter
     if (!isAllSeveritiesSelected) {
@@ -137,40 +89,56 @@ export function ActiveAlerts() {
       )
     }
 
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(a =>
-        a.ruleName.toLowerCase().includes(query) ||
-        a.message.toLowerCase().includes(query) ||
-        (a.cluster?.toLowerCase() || '').includes(query)
-      )
-    }
+    return result
+  }, [allAlertsToShow, selectedSeverities, isAllSeveritiesSelected, customFilter])
 
-    // Sort by selected field
-    return result.sort((a, b) => {
-      if (sortBy === 'severity') {
-        const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-        const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
-        if (severityDiff !== 0) return severityDiff
-        return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
-      } else {
-        return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
-      }
-    })
-  }, [allAlertsToShow, selectedClusters, isAllClustersSelected, localClusterFilter, sortBy, selectedSeverities, isAllSeveritiesSelected, customFilter, localSearch])
+  const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
 
-  // Apply pagination using usePagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: displayedAlerts,
+    items: displayedAlerts,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredAlerts, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+    },
+  } = useCardData<Alert, SortField>(severityFilteredAlerts, {
+    filter: {
+      searchFields: ['ruleName', 'message', 'cluster'],
+      clusterField: 'cluster',
+      storageKey: 'active-alerts',
+    },
+    sort: {
+      defaultField: 'severity',
+      defaultDirection: 'asc',
+      comparators: {
+        severity: (a, b) => {
+          const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
+          if (severityDiff !== 0) return severityDiff
+          return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
+        },
+        time: (a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime(),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const handleAlertClick = (alert: Alert) => {
     if (alert.cluster) {
@@ -265,8 +233,8 @@ export function ActiveAlerts() {
             )}
           </button>
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
             sortBy={sortBy}
             onSortChange={setSortBy}
             sortOptions={[
@@ -303,7 +271,7 @@ export function ActiveAlerts() {
               <div className="absolute top-full left-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                 <div className="p-1">
                   <button
-                    onClick={() => setLocalClusterFilter([])}
+                    onClick={clearClusterFilter}
                     className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
                       localClusterFilter.length === 0
                         ? 'bg-purple-500/20 text-purple-400'
@@ -462,13 +430,13 @@ export function ActiveAlerts() {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />
