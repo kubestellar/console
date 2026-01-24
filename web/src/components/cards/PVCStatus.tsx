@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { HardDrive, CheckCircle, AlertTriangle, Clock, Search, ChevronRight } from 'lucide-react'
-import { usePVCs, useClusters } from '../../hooks/useMCP'
+import { HardDrive, CheckCircle, AlertTriangle, Clock, Search, ChevronRight, AlertCircle } from 'lucide-react'
+import { usePVCs } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -59,20 +60,23 @@ function getStatusColor(status: string) {
 
 export function PVCStatus() {
   const { pvcs, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePVCs()
-  const { clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
-  const [selectedCluster, setSelectedCluster] = useState<string>('')
+  // Use persisted cluster selection - survives global filter changes
+  const {
+    selectedCluster,
+    setSelectedCluster,
+    availableClusters: filteredClusters,
+    isOutsideGlobalFilter,
+  } = usePersistedClusterSelection({
+    storageKey: 'pvc-status',
+    defaultValue: '',
+    allowAll: false,
+  })
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
   const [localSearch, setLocalSearch] = useState('')
-
-  // Filter clusters based on global selection
-  const filteredClusters = useMemo(() => {
-    if (isAllClustersSelected) return clusters
-    return clusters.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
 
   // Apply global filters
   const filteredPVCs = useMemo(() => {
@@ -209,13 +213,25 @@ export function PVCStatus() {
         <select
           value={selectedCluster}
           onChange={(e) => setSelectedCluster(e.target.value)}
-          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+          className={`w-full px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
+            isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
+          }`}
         >
           <option value="">All clusters</option>
           {filteredClusters.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
+          {/* Show the selected cluster even if outside global filter */}
+          {isOutsideGlobalFilter && selectedCluster && (
+            <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
+          )}
         </select>
+        {isOutsideGlobalFilter && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
+            <AlertCircle className="w-3 h-3" />
+            <span>Selection outside global filter</span>
+          </div>
+        )}
       </div>
 
       {/* Local Search */}

@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Anchor, CheckCircle, AlertTriangle, XCircle, Clock, Search, ChevronRight } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Anchor, CheckCircle, AlertTriangle, XCircle, Clock, Search, ChevronRight, AlertCircle } from 'lucide-react'
 import { useClusters, useHelmReleases } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -39,17 +40,25 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { isLoading: clustersLoading } = useClusters()
   const { drillToHelm } = useDrillDownActions()
-  const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
+  // Use persisted cluster selection - survives global filter changes
+  const {
+    selectedCluster,
+    setSelectedCluster,
+    availableClusters: clusters,
+    isOutsideGlobalFilter,
+  } = usePersistedClusterSelection({
+    storageKey: 'helm-release-status',
+    defaultValue: config?.cluster || '',
+    allowAll: false,
+  })
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [localSearch, setLocalSearch] = useState('')
   const {
-    selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
     customFilter,
     filterByStatus,
   } = useGlobalFilters()
@@ -73,32 +82,6 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     if (!selectedCluster) return allHelmReleases
     return allHelmReleases.filter(r => r.cluster === selectedCluster)
   }, [allHelmReleases, selectedCluster])
-
-  // Apply global filters to get available clusters
-  const clusters = useMemo(() => {
-    let result = allClusters
-
-    if (!isAllClustersSelected) {
-      result = result.filter(c => globalSelectedClusters.includes(c.name))
-    }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
-
-  // Reset selected cluster if it's no longer in the filtered list
-  useEffect(() => {
-    if (selectedCluster && clusters.length > 0 && !clusters.some(c => c.name === selectedCluster)) {
-      setSelectedCluster('')
-    }
-  }, [selectedCluster, clusters])
 
   // Transform API data to display format
   const allReleases = useMemo(() => {
@@ -276,33 +259,47 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
       </div>
 
       {/* Selectors */}
-      <div className="flex gap-2 mb-4">
-        <select
-          value={selectedCluster}
-          onChange={(e) => {
-            setSelectedCluster(e.target.value)
-            setSelectedNamespace('')
-          }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-          title="Filter Helm releases by cluster"
-        >
-          <option value="">All clusters</option>
-          {clusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-        </select>
-        <select
-          value={selectedNamespace}
-          onChange={(e) => setSelectedNamespace(e.target.value)}
-          disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
-          title={selectedCluster ? "Filter by namespace" : "Select a cluster first"}
-        >
-          <option value="">All namespaces</option>
-          {namespaces.map(ns => (
-            <option key={ns} value={ns}>{ns}</option>
-          ))}
-        </select>
+      <div className="mb-4">
+        <div className="flex gap-2">
+          <select
+            value={selectedCluster}
+            onChange={(e) => {
+              setSelectedCluster(e.target.value)
+              setSelectedNamespace('')
+            }}
+            className={`flex-1 px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
+              isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
+            }`}
+            title="Filter Helm releases by cluster"
+          >
+            <option value="">All clusters</option>
+            {clusters.map(c => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+            {/* Show the selected cluster even if outside global filter */}
+            {isOutsideGlobalFilter && selectedCluster && (
+              <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
+            )}
+          </select>
+          <select
+            value={selectedNamespace}
+            onChange={(e) => setSelectedNamespace(e.target.value)}
+            disabled={!selectedCluster}
+            className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
+            title={selectedCluster ? "Filter by namespace" : "Select a cluster first"}
+          >
+            <option value="">All namespaces</option>
+            {namespaces.map(ns => (
+              <option key={ns} value={ns}>{ns}</option>
+            ))}
+          </select>
+        </div>
+        {isOutsideGlobalFilter && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
+            <AlertCircle className="w-3 h-3" />
+            <span>Selection outside global filter</span>
+          </div>
+        )}
       </div>
 
       {clusters.length === 0 ? (

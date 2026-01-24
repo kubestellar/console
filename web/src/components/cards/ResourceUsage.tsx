@@ -1,53 +1,44 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Gauge } from '../charts'
-import { Cpu, MemoryStick } from 'lucide-react'
+import { Cpu, MemoryStick, AlertCircle } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
 import { RefreshButton } from '../ui/RefreshIndicator'
 
 export function ResourceUsage() {
   const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
+  // Use persisted cluster selection - survives global filter changes
   const {
-    selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
-  const [selectedCluster, setSelectedCluster] = useState<string>('')
+    selectedCluster,
+    setSelectedCluster,
+    availableClusters: filteredClusterNames,
+    isOutsideGlobalFilter,
+  } = usePersistedClusterSelection({
+    storageKey: 'resource-usage',
+    defaultValue: '',
+    allowAll: false,
+  })
 
-  // Filter clusters based on global selection (for dropdown options)
+  // Get full cluster data matching available cluster names
   const filteredClusters = useMemo(() => {
-    let result = allClusters
+    const availableNames = new Set(filteredClusterNames.map(c => c.name))
+    return allClusters.filter(c => availableNames.has(c.name))
+  }, [allClusters, filteredClusterNames])
 
-    if (!isAllClustersSelected) {
-      result = result.filter(c => globalSelectedClusters.includes(c.name))
-    }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
-
-  // Apply local cluster selection
+  // Apply local cluster selection for calculations
   const clusters = useMemo(() => {
     if (!selectedCluster) return filteredClusters
     return filteredClusters.filter(c => c.name === selectedCluster)
   }, [filteredClusters, selectedCluster])
 
   const gpuNodes = useMemo(() => {
-    // Only skip filtering if ALL of these are true: all clusters selected, no custom filter, no local selection
-    if (isAllClustersSelected && !customFilter.trim() && !selectedCluster) return allGPUNodes
+    // Filter GPU nodes to match the currently displayed clusters
     const clusterNames = clusters.map(c => c.name)
     return allGPUNodes.filter(n => clusterNames.includes(n.cluster.split('/')[0]))
-  }, [allGPUNodes, clusters, isAllClustersSelected, customFilter, selectedCluster])
+  }, [allGPUNodes, clusters])
 
   // Calculate totals from real cluster data
   const totals = useMemo(() => {
@@ -112,13 +103,25 @@ export function ResourceUsage() {
         <select
           value={selectedCluster}
           onChange={(e) => setSelectedCluster(e.target.value)}
-          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+          className={`w-full px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
+            isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
+          }`}
         >
           <option value="">All clusters</option>
-          {filteredClusters.map(c => (
+          {filteredClusterNames.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
+          {/* Show the selected cluster even if outside global filter */}
+          {isOutsideGlobalFilter && selectedCluster && (
+            <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
+          )}
         </select>
+        {isOutsideGlobalFilter && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
+            <AlertCircle className="w-3 h-3" />
+            <span>Selection outside global filter</span>
+          </div>
+        )}
       </div>
 
       <div

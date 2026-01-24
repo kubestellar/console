@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
-import { FileCode, CheckCircle, AlertTriangle, XCircle, Database, Search } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { FileCode, CheckCircle, AlertTriangle, XCircle, Database, Search, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -34,9 +35,18 @@ const SORT_OPTIONS = [
 ]
 
 export function CRDHealth({ config }: CRDHealthProps) {
-  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
-  // 'all' means show CRDs from all clusters
-  const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
+  const { isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  // Use persisted cluster selection - survives global filter changes
+  const {
+    selectedCluster,
+    setSelectedCluster,
+    availableClusters: clusters,
+    isOutsideGlobalFilter,
+  } = usePersistedClusterSelection({
+    storageKey: 'crd-health',
+    defaultValue: config?.cluster || 'all',
+    allowAll: true,
+  })
   const [filterGroup, setFilterGroup] = useState<string>('')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -45,34 +55,7 @@ export function CRDHealth({ config }: CRDHealthProps) {
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
   } = useGlobalFilters()
-
-  // Apply global filters
-  const clusters = useMemo(() => {
-    let result = allClusters
-
-    if (!isAllClustersSelected) {
-      result = result.filter(c => globalSelectedClusters.includes(c.name))
-    }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
-
-  // Reset selected cluster if it's no longer in the filtered list (but keep 'all')
-  useEffect(() => {
-    if (selectedCluster !== 'all' && selectedCluster && clusters.length > 0 && !clusters.some(c => c.name === selectedCluster)) {
-      setSelectedCluster('all')
-    }
-  }, [selectedCluster, clusters])
 
   // Generate cluster-specific CRD data
   const getClusterCRDs = useCallback((clusterName: string): CRD[] => {
@@ -239,16 +222,30 @@ export function CRDHealth({ config }: CRDHealthProps) {
       </div>
 
       {/* Cluster selector */}
-      <select
-        value={selectedCluster}
-        onChange={(e) => setSelectedCluster(e.target.value)}
-        className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
-      >
-        <option value="all">All Clusters</option>
-        {clusters.map(c => (
-          <option key={c.name} value={c.name}>{c.name}</option>
-        ))}
-      </select>
+      <div className="mb-4">
+        <select
+          value={selectedCluster}
+          onChange={(e) => setSelectedCluster(e.target.value)}
+          className={`w-full px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
+            isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
+          }`}
+        >
+          <option value="all">All Clusters</option>
+          {clusters.map(c => (
+            <option key={c.name} value={c.name}>{c.name}</option>
+          ))}
+          {/* Show the selected cluster even if outside global filter */}
+          {isOutsideGlobalFilter && (
+            <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
+          )}
+        </select>
+        {isOutsideGlobalFilter && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
+            <AlertCircle className="w-3 h-3" />
+            <span>Selection outside global filter</span>
+          </div>
+        )}
+      </div>
 
       {/* Local Search */}
       <div className="relative mb-4">
