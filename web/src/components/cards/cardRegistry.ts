@@ -72,6 +72,8 @@ import { OPAPolicies } from './OPAPolicies'
 import { KyvernoPolicies } from './KyvernoPolicies'
 // Compliance tool cards
 import { FalcoAlerts, TrivyScan, KubescapeScan, PolicyViolations, ComplianceScore } from './ComplianceCards'
+// Data compliance tool cards
+import { VaultSecrets, ExternalSecrets, CertManager } from './DataComplianceCards'
 // Weather card
 import { Weather } from './Weather'
 // GitHub Activity Monitoring card
@@ -94,6 +96,10 @@ import { StockMarketTicker } from './StockMarketTicker'
 import { Kubedle } from './Kubedle'
 // Pod Sweeper card
 import { PodSweeper } from './PodSweeper'
+// Container Tetris card
+import { ContainerTetris } from './ContainerTetris'
+// Flappy Pod card
+import { FlappyPod } from './FlappyPod'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -186,6 +192,10 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kubescape_scan: KubescapeScan,
   policy_violations: PolicyViolations,
   compliance_score: ComplianceScore,
+  // Data compliance tool cards
+  vault_secrets: VaultSecrets,
+  external_secrets: ExternalSecrets,
+  cert_manager: CertManager,
   // Weather card
   weather: Weather,
   // GitHub Activity Monitoring card
@@ -208,6 +218,10 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kubedle: Kubedle,
   // Pod Sweeper card
   pod_sweeper: PodSweeper,
+  // Container Tetris card
+  container_tetris: ContainerTetris,
+  // Flappy Pod card
+  flappy_pod: FlappyPod,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -292,6 +306,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kubescape_scan: 4,
   policy_violations: 6,
   compliance_score: 4,
+  vault_secrets: 4,
+  external_secrets: 4,
+  cert_manager: 4,
   klaude_issues: 6,
   klaude_kubeconfig_audit: 6,
   klaude_health_check: 6,
@@ -312,6 +329,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kubedle: 6,
   // Pod Sweeper
   pod_sweeper: 6,
+  // Container Tetris
+  container_tetris: 6,
+  // Flappy Pod
+  flappy_pod: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,

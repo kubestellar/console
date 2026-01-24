@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Database, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Database, RefreshCw, Hourglass, GripVertical, FlaskConical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -124,8 +124,10 @@ const DATA_COMPLIANCE_CARDS_KEY = 'data-compliance-dashboard-cards'
 
 // Default cards for Data Compliance dashboard
 const DEFAULT_DATA_COMPLIANCE_CARDS = [
+  { type: 'vault_secrets', title: 'HashiCorp Vault', position: { w: 4, h: 3 } },
+  { type: 'external_secrets', title: 'External Secrets', position: { w: 4, h: 3 } },
+  { type: 'cert_manager', title: 'Cert-Manager', position: { w: 4, h: 3 } },
   { type: 'namespace_rbac', title: 'Access Controls', position: { w: 6, h: 4 } },
-  { type: 'security_issues', title: 'Data Protection Issues', position: { w: 6, h: 4 } },
 ]
 
 // Mock data compliance posture
@@ -304,6 +306,10 @@ export function DataCompliance() {
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <Database className="w-6 h-6 text-blue-400" />
                 Data Compliance
+                <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                  <FlaskConical className="w-3 h-3" />
+                  Demo
+                </span>
               </h1>
               <p className="text-muted-foreground">GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance</p>
             </div>

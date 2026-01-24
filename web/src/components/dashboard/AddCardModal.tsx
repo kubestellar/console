@@ -91,7 +91,7 @@ const CARD_CATALOG = {
     { type: 'opencost_overview', title: 'OpenCost', description: 'Cost allocation by namespace using OpenCost (demo)', visualization: 'bar' },
     { type: 'kubecost_overview', title: 'Kubecost', description: 'Cost optimization and savings recommendations (demo)', visualization: 'bar' },
   ],
-  'Policy & Compliance': [
+  'Security Posture': [
     { type: 'opa_policies', title: 'OPA Gatekeeper', description: 'Policy enforcement with OPA Gatekeeper - shows installed status per cluster', visualization: 'status' },
     { type: 'kyverno_policies', title: 'Kyverno Policies', description: 'Kubernetes-native policy management with Kyverno', visualization: 'status' },
     { type: 'falco_alerts', title: 'Falco Alerts', description: 'Runtime security monitoring - syscall anomalies, container escapes, privilege escalation', visualization: 'events' },
@@ -99,6 +99,12 @@ const CARD_CATALOG = {
     { type: 'kubescape_scan', title: 'Kubescape', description: 'Security posture management and NSA/CISA hardening compliance', visualization: 'status' },
     { type: 'policy_violations', title: 'Policy Violations', description: 'Aggregated policy violations across all enforcement tools', visualization: 'table' },
     { type: 'compliance_score', title: 'Compliance Score', description: 'Overall compliance posture with drill-down by framework (CIS, NSA, PCI-DSS)', visualization: 'gauge' },
+  ],
+  'Data Compliance': [
+    { type: 'vault_secrets', title: 'HashiCorp Vault', description: 'Secrets management, dynamic credentials, and encryption-as-a-service', visualization: 'status' },
+    { type: 'external_secrets', title: 'External Secrets', description: 'Sync secrets from external providers (AWS, Azure, GCP, Vault)', visualization: 'status' },
+    { type: 'cert_manager', title: 'Cert-Manager', description: 'TLS certificate lifecycle management with automatic renewal', visualization: 'status' },
+    { type: 'namespace_rbac', title: 'Access Controls', description: 'RBAC policies and permission auditing per namespace', visualization: 'table' },
   ],
   'Workload Detection': [
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },
@@ -118,6 +124,10 @@ const CARD_CATALOG = {
     { type: 'solitaire', title: 'Kube Solitaire', description: 'Classic Klondike solitaire with Kubernetes-themed suits', visualization: 'status' },
     { type: 'checkers', title: 'AI Checkers', description: 'Play checkers against AI with adjustable difficulty - pods vs nodes', visualization: 'status' },
     { type: 'game_2048', title: 'Kube 2048', description: 'Merge pods to reach 2048 - swipe or use arrow keys', visualization: 'status' },
+    { type: 'kubedle', title: 'Kubedle', description: 'Wordle-style word guessing game with Kubernetes terms', visualization: 'status' },
+    { type: 'pod_sweeper', title: 'Pod Sweeper', description: 'Minesweeper-style game - find the corrupted pods without hitting them', visualization: 'status' },
+    { type: 'container_tetris', title: 'Container Tetris', description: 'Classic Tetris game - stack falling containers and clear lines', visualization: 'status' },
+    { type: 'flappy_pod', title: 'Flappy Pod', description: 'Navigate your pod through node walls - click or press Space to fly', visualization: 'status' },
     { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
   ],
 } as const
