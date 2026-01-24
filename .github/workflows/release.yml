@@ -179,6 +179,14 @@ jobs:
           VERSION="${{ needs.determine-version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if tag exists
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists, force updating..."
+            git tag -d "$VERSION"
+            git push origin ":refs/tags/$VERSION" || true
+          fi
+
           git tag -a "$VERSION" -m "Release $VERSION"
           git push origin "$VERSION"
 
