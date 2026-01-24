@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Send, Sparkles, Loader2, Bot, User, Copy, CheckCircle } from 'lucide-react'
+import { Send, Sparkles, Loader2, Bot, User, Copy, CheckCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals'
 
 export interface ChatMessage {
   id: string
@@ -88,8 +89,6 @@ export function CardChat({
     }
   }, [isOpen, messages])
 
-  if (!isOpen) return null
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
@@ -128,29 +127,18 @@ export function CardChat({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full max-w-2xl h-[80vh] glass rounded-2xl overflow-hidden animate-fade-in-up flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/20">
-              <Bot className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-medium text-foreground">Chat with Card</h2>
-              <p className="text-sm text-muted-foreground">{cardTitle}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="Chat with Card"
+        description={cardTitle}
+        icon={Bot}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="h-[50vh]">
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="h-full overflow-y-auto space-y-4">
           {messages.length === 0 && (
             <div className="text-center py-8">
               <Bot className="w-12 h-12 text-purple-400 mx-auto mb-4 opacity-50" />
@@ -240,9 +228,11 @@ export function CardChat({
 
           <div ref={messagesEndRef} />
         </div>
+      </BaseModal.Content>
 
-        {/* Quick prompts */}
-        <div className="px-4 py-2 border-t border-border/50 flex-shrink-0">
+      <BaseModal.Footer>
+        <div className="w-full space-y-3">
+          {/* Quick prompts */}
           <div className="flex flex-wrap gap-2">
             {quickPrompts.map((prompt, i) => (
               <button
@@ -254,10 +244,8 @@ export function CardChat({
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Input */}
-        <div className="px-4 py-3 border-t border-border/50 flex-shrink-0">
+          {/* Input */}
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <textarea
@@ -288,7 +276,7 @@ export function CardChat({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
