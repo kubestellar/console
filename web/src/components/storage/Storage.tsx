@@ -4,27 +4,17 @@ import { HardDrive, Database, Plus, LayoutGrid, ChevronDown, ChevronRight, Refre
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useShowCards } from '../../hooks/useShowCards'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, getDefaultCardWidth } from '../cards/cardRegistry'
@@ -35,6 +25,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 // PVC List Modal
 interface PVCListModalProps {
@@ -163,41 +154,17 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
   )
 }
 
-interface StorageCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
-
 const STORAGE_CARDS_KEY = 'kubestellar-storage-cards'
 
 // Default cards for the storage dashboard
-const DEFAULT_STORAGE_CARDS: StorageCard[] = [
-  { id: 'default-storage-overview', card_type: 'storage_overview', title: 'Storage Overview', config: {}, position: { w: 4, h: 3 } },
-  { id: 'default-pvc-status', card_type: 'pvc_status', title: 'PVC Status', config: {}, position: { w: 8, h: 3 } },
+const DEFAULT_STORAGE_CARDS = [
+  { type: 'storage_overview', title: 'Storage Overview', position: { w: 4, h: 3 } },
+  { type: 'pvc_status', title: 'PVC Status', position: { w: 8, h: 3 } },
 ]
-
-function loadStorageCards(): StorageCard[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_CARDS_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch {
-    // Fall through to return defaults
-  }
-  return DEFAULT_STORAGE_CARDS
-}
-
-function saveStorageCards(cards: StorageCard[]) {
-  localStorage.setItem(STORAGE_CARDS_KEY, JSON.stringify(cards))
-}
 
 // Sortable card component with drag handle
 interface SortableStorageCardProps {
-  card: StorageCard
+  card: DashboardCard
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
@@ -264,7 +231,7 @@ const SortableStorageCard = memo(function SortableStorageCard({
 })
 
 // Drag preview for overlay
-function StorageDragPreviewCard({ card }: { card: StorageCard }) {
+function StorageDragPreviewCard({ card }: { card: DashboardCard }) {
   const cardWidth = card.position?.w || 4
   return (
     <div
@@ -292,66 +259,43 @@ export function Storage() {
   const { pvcs } = usePVCs()
   const { drillToPVC, drillToResources } = useDrillDownActions()
 
-  // Card state
-  const [cards, setCards] = useState<StorageCard[]>(() => loadStorageCards())
-  // Stats collapsed state is now managed by StatsOverview component
-  const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-storage')
-  const [showAddCard, setShowAddCard] = useState(false)
-
-  // Reset functionality using shared hook
-  const { isCustomized, setCustomized, reset } = useDashboardReset({
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    setShowCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: STORAGE_CARDS_KEY,
     defaultCards: DEFAULT_STORAGE_CARDS,
-    setCards,
-    cards,
+    onRefresh: refetch,
   })
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [configuringCard, setConfiguringCard] = useState<StorageCard | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
+
   // PVC List Modal state
   const [showPVCModal, setShowPVCModal] = useState(false)
   const [pvcModalFilter, setPVCModalFilter] = useState<'Bound' | 'Pending' | 'all'>('all')
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
-  }
 
   // Combined loading/refreshing states (useClusters has shared cache so data persists)
   const isFetching = isLoading || isRefreshing
   // Only show skeletons when we have no data yet
   const showSkeletons = clusters.length === 0 && isLoading
-
-  // Save cards to localStorage when they change (mark as customized)
-  useEffect(() => {
-    saveStorageCards(cards)
-    setCustomized(true)
-  }, [cards, setCustomized])
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -359,69 +303,53 @@ export function Storage() {
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, setShowAddCard])
 
   // Trigger refresh when navigating to this page (location.key changes on each navigation)
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-
-    const interval = setInterval(() => {
-      refetch()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch])
-
   const handleRefresh = useCallback(() => {
     refetch()
   }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: StorageCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
+    // Custom handling for storage cards with special widths
+    const cardsToAdd = newCards.map(card => ({
+      type: card.type,
       title: card.title,
+      config: card.config,
       position: {
         w: getDefaultCardWidth(card.type),
         h: card.type === 'cluster_resource_tree' ? 5 : 3,
       },
     }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(cardsToAdd)
     expandCards()
     setShowAddCard(false)
-  }, [expandCards])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: StorageCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
@@ -429,7 +357,7 @@ export function Storage() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [])
+  }, [setCards, expandCards, setShowTemplates])
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -535,7 +463,7 @@ export function Storage() {
   }, [stats, hasDataToShow, formatStorage, formatStatValue, drillToResources, setPVCModalFilter, setShowPVCModal])
 
   // Transform card for ConfigureCardModal
-  const configureCard = configuringCard ? {
+  const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
@@ -667,7 +595,7 @@ export function Storage() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -689,7 +617,7 @@ export function Storage() {
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={!!configuringCard}
-        card={configureCard}
+        card={configureCardData}
         onClose={() => setConfiguringCard(null)}
         onSave={handleSaveCardConfig}
       />

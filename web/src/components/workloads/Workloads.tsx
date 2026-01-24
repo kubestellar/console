@@ -1,30 +1,20 @@
-import { useState, useEffect, useCallback, useMemo, memo } from 'react'
+import { useEffect, useCallback, useMemo, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Layers, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useShowCards } from '../../hooks/useShowCards'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -37,45 +27,22 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-
-interface WorkloadCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
 // Default cards for the workloads dashboard
-const DEFAULT_WORKLOAD_CARDS: WorkloadCard[] = [
-  { id: 'default-app-status', card_type: 'app_status', title: 'Workload Status', config: {}, position: { w: 4, h: 2 } },
-  { id: 'default-deployment-status', card_type: 'deployment_status', title: 'Deployment Status', config: {}, position: { w: 4, h: 2 } },
-  { id: 'default-deployment-progress', card_type: 'deployment_progress', title: 'Deployment Progress', config: {}, position: { w: 4, h: 2 } },
-  { id: 'default-pod-issues', card_type: 'pod_issues', title: 'Pod Issues', config: {}, position: { w: 6, h: 2 } },
-  { id: 'default-deployment-issues', card_type: 'deployment_issues', title: 'Deployment Issues', config: {}, position: { w: 6, h: 2 } },
+const DEFAULT_WORKLOAD_CARDS = [
+  { type: 'app_status', title: 'Workload Status', position: { w: 4, h: 2 } },
+  { type: 'deployment_status', title: 'Deployment Status', position: { w: 4, h: 2 } },
+  { type: 'deployment_progress', title: 'Deployment Progress', position: { w: 4, h: 2 } },
+  { type: 'pod_issues', title: 'Pod Issues', position: { w: 6, h: 2 } },
+  { type: 'deployment_issues', title: 'Deployment Issues', position: { w: 6, h: 2 } },
 ]
-
-function loadWorkloadCards(): WorkloadCard[] {
-  try {
-    const stored = localStorage.getItem(WORKLOADS_CARDS_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch {
-    // Fall through to return defaults
-  }
-  return DEFAULT_WORKLOAD_CARDS
-}
-
-function saveWorkloadCards(cards: WorkloadCard[]) {
-  localStorage.setItem(WORKLOADS_CARDS_KEY, JSON.stringify(cards))
-}
 
 // Sortable card component with drag handle
 interface SortableWorkloadCardProps {
-  card: WorkloadCard
+  card: DashboardCard
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
@@ -142,7 +109,7 @@ const SortableWorkloadCard = memo(function SortableWorkloadCard({
 })
 
 // Drag preview for overlay
-function WorkloadDragPreviewCard({ card }: { card: WorkloadCard }) {
+function WorkloadDragPreviewCard({ card }: { card: DashboardCard }) {
   const cardWidth = card.position?.w || 4
   return (
     <div
@@ -176,52 +143,39 @@ export function Workloads() {
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
 
-  // Card state
-  const [cards, setCards] = useState<WorkloadCard[]>(() => loadWorkloadCards())
-  // Stats collapsed state is now managed by StatsOverview component
-  const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-workloads')
-  const [showAddCard, setShowAddCard] = useState(false)
-
-  // Reset functionality using shared hook
-  const { isCustomized, setCustomized, reset } = useDashboardReset({
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    setShowCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: WORKLOADS_CARDS_KEY,
     defaultCards: DEFAULT_WORKLOAD_CARDS,
-    setCards,
-    cards,
+    onRefresh: () => {
+      refetchPodIssues()
+      refetchDeploymentIssues()
+      refetchDeployments()
+      refetchClusters()
+    },
   })
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [configuringCard, setConfiguringCard] = useState<WorkloadCard | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
-  }
 
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
@@ -230,30 +184,13 @@ export function Workloads() {
   // Only show skeletons when we have no data yet
   const showSkeletons = (allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading
 
-  // Save cards to localStorage when they change (mark as customized)
-  useEffect(() => {
-    saveWorkloadCards(cards)
-    setCustomized(true)
-  }, [cards, setCustomized])
-
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
     if (searchParams.get('addCard') === 'true') {
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams])
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-
-    const interval = setInterval(() => {
-      Promise.all([refetchPodIssues(), refetchDeploymentIssues(), refetchDeployments(), refetchClusters()])
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
+  }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
     refetchPodIssues()
@@ -263,42 +200,31 @@ export function Workloads() {
   }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: WorkloadCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
-      title: card.title,
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(newCards)
     expandCards()
     setShowAddCard(false)
-  }, [expandCards])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: WorkloadCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
@@ -306,7 +232,7 @@ export function Workloads() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [expandCards])
+  }, [setCards, expandCards, setShowTemplates])
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -453,7 +379,7 @@ export function Workloads() {
   }, [stats, apps, drillToAllNamespaces, drillToAllDeployments, drillToAllPods])
 
   // Transform card for ConfigureCardModal
-  const configureCard = configuringCard ? {
+  const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
@@ -585,7 +511,7 @@ export function Workloads() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -607,7 +533,7 @@ export function Workloads() {
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={!!configuringCard}
-        card={configureCard}
+        card={configureCardData}
         onClose={() => setConfiguringCard(null)}
         onSave={handleSaveCardConfig}
       />

@@ -4,26 +4,16 @@ import { DollarSign, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useShowCards } from '../../hooks/useShowCards'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
@@ -34,14 +24,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-
-interface CostCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 // Width class lookup for Tailwind (dynamic classes don't work)
 const WIDTH_CLASSES: Record<number, string> = {
@@ -59,7 +42,7 @@ const WIDTH_CLASSES: Record<number, string> = {
 
 // Sortable Card Component
 interface SortableCardProps {
-  card: CostCard
+  card: DashboardCard
   onRemove: () => void
   onConfigure: () => void
   onWidthChange: (width: number) => void
@@ -119,7 +102,7 @@ const SortableCard = memo(function SortableCard({
 })
 
 // Drag preview component
-function DragPreviewCard({ card }: { card: CostCard }) {
+function DragPreviewCard({ card }: { card: DashboardCard }) {
   const CardComponent = CARD_COMPONENTS[card.card_type]
   if (!CardComponent) return null
 
@@ -141,25 +124,13 @@ function DragPreviewCard({ card }: { card: CostCard }) {
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 
 // Default cards for the Cost dashboard
-const DEFAULT_COST_CARDS: CostCard[] = [
-  { id: 'cost-1', card_type: 'cluster_costs', config: {}, position: { w: 6, h: 4 } },
-  { id: 'cost-2', card_type: 'opencost_overview', config: {}, position: { w: 6, h: 4 } },
-  { id: 'cost-3', card_type: 'kubecost_overview', config: {}, position: { w: 6, h: 4 } },
-  { id: 'cost-4', card_type: 'resource_usage', config: {}, position: { w: 3, h: 2 } },
-  { id: 'cost-5', card_type: 'resource_capacity', config: {}, position: { w: 3, h: 2 } },
+const DEFAULT_COST_CARDS = [
+  { type: 'cluster_costs', position: { w: 6, h: 4 } },
+  { type: 'opencost_overview', position: { w: 6, h: 4 } },
+  { type: 'kubecost_overview', position: { w: 6, h: 4 } },
+  { type: 'resource_usage', position: { w: 3, h: 2 } },
+  { type: 'resource_capacity', position: { w: 3, h: 2 } },
 ]
-
-function loadCostCards(): CostCard[] {
-  try {
-    const stored = localStorage.getItem(COST_CARDS_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch {
-    // Fall through to return defaults
-  }
-  return DEFAULT_COST_CARDS
-}
 
 export function Cost() {
   const location = useLocation()
@@ -167,106 +138,70 @@ export function Cost() {
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { showCards, expandCards } = useShowCards('kubestellar-cost')
 
-  const [cards, setCards] = useState<CostCard[]>(() => loadCostCards())
-
-  const [showAddCard, setShowAddCard] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [configuringCard, setConfiguringCard] = useState<CostCard | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // Reset functionality using shared hook
-  const { isCustomized, setCustomized, reset } = useDashboardReset({
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: COST_CARDS_KEY,
     defaultCards: DEFAULT_COST_CARDS,
-    setCards,
-    cards,
+    onRefresh: refetch,
   })
-
-  // Save cards to localStorage (mark as customized)
-  useEffect(() => {
-    localStorage.setItem(COST_CARDS_KEY, JSON.stringify(cards))
-    setCustomized(true)
-  }, [cards, setCustomized])
-
-  // DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }, [])
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards(prev => {
-        const oldIndex = prev.findIndex(c => c.id === active.id)
-        const newIndex = prev.findIndex(c => c.id === over.id)
-        return arrayMove(prev, oldIndex, newIndex)
-      })
-    }
-  }, [])
 
   // Trigger refresh when navigating to this page
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-    const interval = setInterval(() => refetch(), 30000)
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch])
-
   const handleRefresh = useCallback(() => {
     refetch()
   }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: CostCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
-      title: card.title,
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(newCards)
     expandCards()
     setShowAddCard(false)
-  }, [expandCards])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 6, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: CostCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
@@ -274,7 +209,7 @@ export function Cost() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [expandCards])
+  }, [setCards, expandCards, setShowTemplates])
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -416,7 +351,7 @@ export function Cost() {
   }, [costStats, drillToCost])
 
   // Transform card for ConfigureCardModal
-  const configureCard = configuringCard ? {
+  const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
@@ -513,7 +448,7 @@ export function Cost() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -535,11 +470,9 @@ export function Cost() {
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={!!configuringCard}
-        card={configureCard}
+        card={configureCardData}
         onClose={() => setConfiguringCard(null)}
-        onSave={(cardId, config) => {
-          handleSaveCardConfig(cardId, config)
-        }}
+        onSave={handleSaveCardConfig}
       />
     </div>
   )

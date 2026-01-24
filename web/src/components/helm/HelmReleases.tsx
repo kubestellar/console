@@ -1,29 +1,19 @@
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Ship, RefreshCw, Hourglass, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useShowCards } from '../../hooks/useShowCards'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -34,44 +24,21 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-
-interface HelmCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 const HELM_CARDS_KEY = 'kubestellar-helm-cards'
 
 // Default cards for the helm releases dashboard
-const DEFAULT_HELM_CARDS: HelmCard[] = [
-  { id: 'default-helm-release-status', card_type: 'helm_release_status', title: 'Helm Releases', config: {}, position: { w: 6, h: 3 } },
-  { id: 'default-chart-versions', card_type: 'chart_versions', title: 'Chart Versions', config: {}, position: { w: 6, h: 3 } },
-  { id: 'default-helm-history', card_type: 'helm_history', title: 'Release History', config: {}, position: { w: 6, h: 3 } },
-  { id: 'default-helm-values-diff', card_type: 'helm_values_diff', title: 'Values Diff', config: {}, position: { w: 6, h: 3 } },
+const DEFAULT_HELM_CARDS = [
+  { type: 'helm_release_status', title: 'Helm Releases', position: { w: 6, h: 3 } },
+  { type: 'chart_versions', title: 'Chart Versions', position: { w: 6, h: 3 } },
+  { type: 'helm_history', title: 'Release History', position: { w: 6, h: 3 } },
+  { type: 'helm_values_diff', title: 'Values Diff', position: { w: 6, h: 3 } },
 ]
-
-function loadHelmCards(): HelmCard[] {
-  try {
-    const stored = localStorage.getItem(HELM_CARDS_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch {
-    // Fall through to return defaults
-  }
-  return DEFAULT_HELM_CARDS
-}
-
-function saveHelmCards(cards: HelmCard[]) {
-  localStorage.setItem(HELM_CARDS_KEY, JSON.stringify(cards))
-}
 
 // Sortable card component with drag handle
 interface SortableHelmCardProps {
-  card: HelmCard
+  card: DashboardCard
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
@@ -136,7 +103,7 @@ const SortableHelmCard = memo(function SortableHelmCard({
 })
 
 // Drag preview for overlay
-function HelmDragPreviewCard({ card }: { card: HelmCard }) {
+function HelmDragPreviewCard({ card }: { card: DashboardCard }) {
   const cardWidth = card.position?.w || 6
   return (
     <div
@@ -159,57 +126,34 @@ export function HelmReleases() {
   const { drillToHelm: _drillToHelm, drillToAllHelm, drillToAllClusters } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  // Card state
-  const [cards, setCards] = useState<HelmCard[]>(() => loadHelmCards())
-  const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-helm')
-  const [showAddCard, setShowAddCard] = useState(false)
-
-  // Reset functionality using shared hook
-  const { isCustomized, setCustomized, reset } = useDashboardReset({
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    setShowCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: HELM_CARDS_KEY,
     defaultCards: DEFAULT_HELM_CARDS,
-    setCards,
-    cards,
+    onRefresh: refetch,
   })
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [configuringCard, setConfiguringCard] = useState<HelmCard | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
-  }
-
-  // Save cards to localStorage when they change
-  useEffect(() => {
-    saveHelmCards(cards)
-    setCustomized(true)
-  }, [cards, setCustomized])
 
   // Handle addCard URL param
   useEffect(() => {
@@ -217,56 +161,38 @@ export function HelmReleases() {
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams])
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-    const interval = setInterval(() => refetch(), 30000)
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch])
+  }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
     refetch()
   }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: HelmCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
-      title: card.title,
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(newCards)
     expandCards()
     setShowAddCard(false)
-  }, [expandCards])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 6, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: HelmCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
@@ -274,7 +200,7 @@ export function HelmReleases() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [expandCards])
+  }, [setCards, expandCards, setShowTemplates])
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -295,7 +221,7 @@ export function HelmReleases() {
   }, [reachableClusters, drillToAllHelm, drillToAllClusters])
 
   // Transform card for ConfigureCardModal
-  const configureCard = configuringCard ? {
+  const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
@@ -425,7 +351,7 @@ export function HelmReleases() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -447,7 +373,7 @@ export function HelmReleases() {
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={!!configuringCard}
-        card={configureCard}
+        card={configureCardData}
         onClose={() => setConfiguringCard(null)}
         onSave={handleSaveCardConfig}
       />

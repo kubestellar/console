@@ -1,30 +1,20 @@
-import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { useEffect, useCallback, useRef, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useShowCards } from '../../hooks/useShowCards'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -34,45 +24,22 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-
-interface ComputeCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
 // Default cards for the compute dashboard
-const DEFAULT_COMPUTE_CARDS: ComputeCard[] = [
-  { id: 'default-compute-overview', card_type: 'compute_overview', title: 'Compute Overview', config: {}, position: { w: 4, h: 3 } },
-  { id: 'default-resource-usage', card_type: 'resource_usage', title: 'Resource Usage', config: {}, position: { w: 4, h: 2 } },
-  { id: 'default-resource-capacity', card_type: 'resource_capacity', title: 'Resource Capacity', config: {}, position: { w: 4, h: 2 } },
-  { id: 'default-cluster-metrics', card_type: 'cluster_metrics', title: 'Cluster Metrics', config: {}, position: { w: 4, h: 2 } },
-  { id: 'default-top-pods', card_type: 'top_pods', title: 'Top Resource Consumers', config: {}, position: { w: 8, h: 3 } },
+const DEFAULT_COMPUTE_CARDS = [
+  { type: 'compute_overview', title: 'Compute Overview', position: { w: 4, h: 3 } },
+  { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 2 } },
+  { type: 'resource_capacity', title: 'Resource Capacity', position: { w: 4, h: 2 } },
+  { type: 'cluster_metrics', title: 'Cluster Metrics', position: { w: 4, h: 2 } },
+  { type: 'top_pods', title: 'Top Resource Consumers', position: { w: 8, h: 3 } },
 ]
-
-function loadComputeCards(): ComputeCard[] {
-  try {
-    const stored = localStorage.getItem(COMPUTE_CARDS_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch {
-    // Fall through to return defaults
-  }
-  return DEFAULT_COMPUTE_CARDS
-}
-
-function saveComputeCards(cards: ComputeCard[]) {
-  localStorage.setItem(COMPUTE_CARDS_KEY, JSON.stringify(cards))
-}
 
 // Sortable card component with drag handle
 interface SortableComputeCardProps {
-  card: ComputeCard
+  card: DashboardCard
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
@@ -137,7 +104,7 @@ const SortableComputeCard = memo(function SortableComputeCard({
 })
 
 // Drag preview for overlay
-function ComputeDragPreviewCard({ card }: { card: ComputeCard }) {
+function ComputeDragPreviewCard({ card }: { card: DashboardCard }) {
   const cardWidth = card.position?.w || 4
   return (
     <div
@@ -165,62 +132,39 @@ export function Compute() {
   } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
 
-  // Card state
-  const [cards, setCards] = useState<ComputeCard[]>(() => loadComputeCards())
-  const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-compute')
-  const [showAddCard, setShowAddCard] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
-
-  // Reset functionality using shared hook
-  const { isCustomized, setCustomized, reset } = useDashboardReset({
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    setShowCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: COMPUTE_CARDS_KEY,
     defaultCards: DEFAULT_COMPUTE_CARDS,
-    setCards,
-    cards,
+    onRefresh: refetch,
   })
-  const [configuringCard, setConfiguringCard] = useState<ComputeCard | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
-  }
 
   // Combined loading/refreshing states (useClusters has shared cache so data persists)
   const isFetching = isLoading || isRefreshing
   // Only show skeletons when we have no data yet
   const showSkeletons = clusters.length === 0 && isLoading
-
-  // Save cards to localStorage when they change (mark as customized)
-  useEffect(() => {
-    saveComputeCards(cards)
-    setCustomized(true)
-  }, [cards, setCustomized])
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -228,65 +172,43 @@ export function Compute() {
       setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, setShowAddCard])
 
   // Trigger refresh when navigating to this page (location.key changes on each navigation)
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-
-    const interval = setInterval(() => {
-      refetch()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch])
-
   const handleRefresh = useCallback(() => {
     refetch()
   }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: ComputeCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
-      title: card.title,
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(newCards)
     expandCards()
     setShowAddCard(false)
-  }, [])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: ComputeCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
@@ -294,7 +216,7 @@ export function Compute() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [])
+  }, [setCards, expandCards, setShowTemplates])
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -392,7 +314,7 @@ export function Compute() {
   }, [stats, hasDataToShow, cpuUtilization, memoryUtilization, drillToResources])
 
   // Transform card for ConfigureCardModal
-  const configureCard = configuringCard ? {
+  const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
@@ -524,7 +446,7 @@ export function Compute() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -546,7 +468,7 @@ export function Compute() {
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={!!configuringCard}
-        card={configureCard}
+        card={configureCardData}
         onClose={() => setConfiguringCard(null)}
         onSave={handleSaveCardConfig}
       />

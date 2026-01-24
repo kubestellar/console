@@ -1,18 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Bell, RefreshCw, GripVertical, Hourglass } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   rectSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable'
@@ -27,52 +20,24 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import type { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-
-interface AlertCard {
-  id: string
-  card_type: string
-  title?: string
-  config: Record<string, unknown>
-  position?: { w: number; h: number }
-}
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
 
 // Default cards for the alerts dashboard
-const DEFAULT_ALERT_CARDS: AlertCard[] = [
-  { id: 'active_alerts_1', card_type: 'active_alerts', title: 'Active Alerts', config: {}, position: { w: 6, h: 2 } },
-  { id: 'alert_rules_1', card_type: 'alert_rules', title: 'Alert Rules', config: {}, position: { w: 6, h: 2 } },
-  { id: 'pod_issues_1', card_type: 'pod_issues', title: 'Pod Issues', config: {}, position: { w: 4, h: 2 } },
-  { id: 'deployment_issues_1', card_type: 'deployment_issues', title: 'Deployment Issues', config: {}, position: { w: 4, h: 2 } },
-  { id: 'security_issues_1', card_type: 'security_issues', title: 'Security Issues', config: {}, position: { w: 4, h: 2 } },
+const DEFAULT_ALERT_CARDS = [
+  { type: 'active_alerts', title: 'Active Alerts', position: { w: 6, h: 2 } },
+  { type: 'alert_rules', title: 'Alert Rules', position: { w: 6, h: 2 } },
+  { type: 'pod_issues', title: 'Pod Issues', position: { w: 4, h: 2 } },
+  { type: 'deployment_issues', title: 'Deployment Issues', position: { w: 4, h: 2 } },
+  { type: 'security_issues', title: 'Security Issues', position: { w: 4, h: 2 } },
 ]
-
-function loadCards(): AlertCard[] {
-  try {
-    const stored = localStorage.getItem(ALERTS_STORAGE_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-  } catch (e) {
-    console.error('Failed to load alert dashboard cards:', e)
-  }
-  return DEFAULT_ALERT_CARDS
-}
-
-function saveCards(cards: AlertCard[]) {
-  try {
-    localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(cards))
-  } catch (e) {
-    console.error('Failed to save alert dashboard cards:', e)
-  }
-}
 
 
 // Sortable card component
 function SortableCard({ card, onRemove, onReplace, onConfigure }: {
-  card: AlertCard
+  card: DashboardCard
   onRemove: (id: string) => void
   onReplace: (id: string) => void
   onConfigure: (id: string) => void
@@ -132,77 +97,70 @@ function SortableCard({ card, onRemove, onReplace, onConfigure }: {
 }
 
 export function Alerts() {
-  const [cards, setCards] = useState<AlertCard[]>(loadCards)
-  const [isAddCardOpen, setIsAddCardOpen] = useState(false)
-  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
-
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
   const { isRefreshing, refetch } = useClusters()
   const { drillToAlert } = useDrillDownActions()
 
-  // Reset hook for dashboard
-  const { reset, isCustomized } = useDashboardReset({
+  // Local state for last updated time
+  const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined)
+
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    expandCards,
+    dnd: { sensors, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: ALERTS_STORAGE_KEY,
     defaultCards: DEFAULT_ALERT_CARDS,
-    setCards,
-    cards,
+    onRefresh: () => {
+      refetch()
+      evaluateConditions()
+      setLastUpdated(new Date())
+    },
   })
 
-  // Sensors for drag and drop
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
-  // Save cards when they change
+  // Set initial lastUpdated on mount
   useEffect(() => {
-    saveCards(cards)
-  }, [cards])
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (over && active.id !== over.id) {
-      setCards((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
-  }
+    setLastUpdated(new Date())
+  }, [])
 
   const handleAddCards = useCallback((suggestions: Array<{
     type: string
     title: string
-    visualization: string
+    visualization?: string
     config: Record<string, unknown>
   }>) => {
-    const cardsToAdd: AlertCard[] = suggestions.map((s, idx) => ({
-      id: `${s.type}_${Date.now()}_${idx}`,
-      card_type: s.type,
-      title: s.title,
-      config: s.config,
-      position: { w: 4, h: 2 },
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
-    setIsAddCardOpen(false)
-  }, [])
+    addCards(suggestions)
+    setShowAddCard(false)
+  }, [addCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((id: string) => {
-    setCards(prev => prev.filter(card => card.id !== id))
-  }, [])
+    removeCard(id)
+  }, [removeCard])
 
   const handleReplaceCard = useCallback((id: string) => {
     handleRemoveCard(id)
-    setIsAddCardOpen(true)
-  }, [handleRemoveCard])
+    setShowAddCard(true)
+  }, [handleRemoveCard, setShowAddCard])
 
   const handleConfigureCard = useCallback((id: string) => {
     console.log('Configure card:', id)
   }, [])
 
   const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: AlertCard[] = template.cards.map((card, index) => ({
+    const newCards = template.cards.map((card, index) => ({
       id: `${card.card_type}_${Date.now()}_${index}`,
       card_type: card.card_type,
       title: card.title,
@@ -210,19 +168,16 @@ export function Alerts() {
       position: card.position,
     }))
     setCards(newCards)
-    setIsTemplatesOpen(false)
-  }, [])
+    expandCards()
+    setShowTemplates(false)
+  }, [setCards, expandCards, setShowTemplates])
 
   const handleRefresh = useCallback(() => {
     refetch()
     evaluateConditions()
-    setLastUpdated(new Date())
   }, [refetch, evaluateConditions])
 
   const enabledRulesCount = rules.filter(r => r.enabled).length
-
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined)
 
   // Stats value getter for the configurable StatsOverview component
   const getStatValue = useCallback((blockId: string): StatBlockValue => {
@@ -250,21 +205,6 @@ export function Alerts() {
     }
   }, [stats, enabledRulesCount, rules, drillToAlert])
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-    const interval = setInterval(() => {
-      refetch()
-      evaluateConditions()
-      setLastUpdated(new Date())
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch, evaluateConditions])
-
-  // Set initial lastUpdated on mount
-  useEffect(() => {
-    setLastUpdated(new Date())
-  }, [])
 
   return (
     <div className="pt-16">
@@ -361,22 +301,22 @@ export function Alerts() {
 
       {/* Floating action buttons */}
       <FloatingDashboardActions
-        onAddCard={() => setIsAddCardOpen(true)}
-        onOpenTemplates={() => setIsTemplatesOpen(true)}
-        onReset={reset}
+        onAddCard={() => setShowAddCard(true)}
+        onOpenTemplates={() => setShowTemplates(true)}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
       {/* Modals */}
       <AddCardModal
-        isOpen={isAddCardOpen}
-        onClose={() => setIsAddCardOpen(false)}
+        isOpen={showAddCard}
+        onClose={() => setShowAddCard(false)}
         onAddCards={handleAddCards}
       />
 
       <TemplatesModal
-        isOpen={isTemplatesOpen}
-        onClose={() => setIsTemplatesOpen(false)}
+        isOpen={showTemplates}
+        onClose={() => setShowTemplates(false)}
         onApplyTemplate={handleApplyTemplate}
       />
     </div>

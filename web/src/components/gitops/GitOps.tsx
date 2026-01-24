@@ -1,19 +1,11 @@
-import { useState, useMemo, useCallback, useEffect, memo, useRef } from 'react'
+import { useMemo, useCallback, useEffect, memo, useRef } from 'react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
@@ -21,8 +13,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
-import { useShowCards } from '../../hooks/useShowCards'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2, GripVertical, Hourglass } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
@@ -36,6 +26,8 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import type { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useState } from 'react'
 
 // GitOps app configuration (repos to monitor)
 interface GitOpsAppConfig {
@@ -68,15 +60,6 @@ interface DriftResult {
   error?: string
 }
 
-// Card interface for GitOps dashboard
-interface GitOpsCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
-
 // Width class lookup for Tailwind
 const WIDTH_CLASSES: Record<number, string> = {
   3: 'col-span-3',
@@ -94,17 +77,17 @@ const WIDTH_CLASSES: Record<number, string> = {
 const GITOPS_STORAGE_KEY = 'kubestellar-gitops-dashboard-cards'
 
 // Default cards for the GitOps dashboard
-const DEFAULT_GITOPS_CARDS: GitOpsCard[] = [
-  { id: 'gitops-1', card_type: 'argocd_applications', config: {}, position: { w: 6, h: 4 } },
-  { id: 'gitops-2', card_type: 'argocd_sync_status', config: {}, position: { w: 6, h: 3 } },
-  { id: 'gitops-3', card_type: 'helm_release_status', config: {}, position: { w: 6, h: 3 } },
-  { id: 'gitops-4', card_type: 'kustomization_status', config: {}, position: { w: 6, h: 3 } },
-  { id: 'gitops-5', card_type: 'gitops_drift', config: {}, position: { w: 6, h: 3 } },
+const DEFAULT_GITOPS_CARDS = [
+  { type: 'argocd_applications', title: 'ArgoCD Applications', position: { w: 6, h: 4 } },
+  { type: 'argocd_sync_status', title: 'ArgoCD Sync Status', position: { w: 6, h: 3 } },
+  { type: 'helm_release_status', title: 'Helm Releases', position: { w: 6, h: 3 } },
+  { type: 'kustomization_status', title: 'Kustomization Status', position: { w: 6, h: 3 } },
+  { type: 'gitops_drift', title: 'GitOps Drift', position: { w: 6, h: 3 } },
 ]
 
 // Sortable Card Component
 interface SortableCardProps {
-  card: GitOpsCard
+  card: DashboardCard
   onRemove: () => void
   onConfigure: () => void
   onWidthChange: (width: number) => void
@@ -164,7 +147,7 @@ const SortableCard = memo(function SortableCard({
 })
 
 // Drag preview component
-function DragPreviewCard({ card }: { card: GitOpsCard }) {
+function DragPreviewCard({ card }: { card: DashboardCard }) {
   const CardComponent = CARD_COMPONENTS[card.card_type]
   if (!CardComponent) return null
 
@@ -236,99 +219,71 @@ export function GitOps() {
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToHelm: _drillToHelm, drillToOperator: _drillToOperator, drillToAllHelm, drillToAllOperators } = useDrillDownActions()
   const { showToast } = useToast()
-  const { showCards, expandCards } = useShowCards('kubestellar-gitops')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [syncedApps, setSyncedApps] = useState<Set<string>>(new Set())
   const [syncDialogApp, setSyncDialogApp] = useState<GitOpsApp | null>(null)
   const [driftResults, setDriftResults] = useState<Map<string, DriftResult>>(new Map())
   const [isDetecting, setIsDetecting] = useState(true)
-  const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined)
 
-  // Card state
-  const [cards, setCards] = useState<GitOpsCard[]>(() => {
-    const saved = localStorage.getItem(GITOPS_STORAGE_KEY)
-    return saved ? JSON.parse(saved) : DEFAULT_GITOPS_CARDS
-  })
-  const [showAddCard, setShowAddCard] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
-  const [configuringCard, setConfiguringCard] = useState<GitOpsCard | null>(null)
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // Reset hook for dashboard
-  const { reset, isCustomized } = useDashboardReset({
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
     storageKey: GITOPS_STORAGE_KEY,
     defaultCards: DEFAULT_GITOPS_CARDS,
-    setCards,
-    cards,
+    onRefresh: () => {
+      refetch()
+      setLastUpdated(new Date())
+    },
   })
 
-  // Save cards to localStorage
-  useEffect(() => {
-    localStorage.setItem(GITOPS_STORAGE_KEY, JSON.stringify(cards))
-  }, [cards])
-
-  // DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }, [])
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards(prev => {
-        const oldIndex = prev.findIndex(c => c.id === active.id)
-        const newIndex = prev.findIndex(c => c.id === over.id)
-        return arrayMove(prev, oldIndex, newIndex)
-      })
-    }
-  }, [])
-
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: GitOpsCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
-      title: card.title,
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(newCards)
     expandCards()
     setShowAddCard(false)
-  }, [expandCards])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 6, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: GitOpsCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
@@ -336,17 +291,7 @@ export function GitOps() {
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [expandCards])
-
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-    const interval = setInterval(() => {
-      refetch()
-      setLastUpdated(new Date())
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch])
+  }, [setCards, expandCards, setShowTemplates])
 
   // Set initial lastUpdated on mount
   useEffect(() => {
@@ -568,7 +513,7 @@ export function GitOps() {
   }, [stats, helmCount, operatorSubs, drillToAllHelm, drillToAllOperators])
 
   // Transform card for ConfigureCardModal
-  const configureCard = configuringCard ? {
+  const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
@@ -815,7 +760,7 @@ export function GitOps() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -837,11 +782,9 @@ export function GitOps() {
       {/* Configure Card Modal */}
       <ConfigureCardModal
         isOpen={!!configuringCard}
-        card={configureCard}
+        card={configureCardData}
         onClose={() => setConfiguringCard(null)}
-        onSave={(cardId, config) => {
-          handleSaveCardConfig(cardId, config)
-        }}
+        onSave={handleSaveCardConfig}
       />
 
       {/* Sync Dialog */}

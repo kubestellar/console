@@ -1,22 +1,13 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { useShowCards } from '../../hooks/useShowCards'
 import { Pencil, X, Check, Loader2, Hourglass, WifiOff, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, ChevronDown, HardDrive, Network, FolderOpen, Plus, Trash2, Box, Layers, Server, List, GitBranch, Eye, Terminal, FileText, Info, Activity, Briefcase, Lock, Settings, LayoutGrid, Wrench, RefreshCw, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
   DragOverlay,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
@@ -28,8 +19,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
-import { getDefaultCards, DashboardType, DEFAULT_CLUSTERS_CARDS } from '../../lib/defaultCards'
-import { useDashboardReset } from '../../hooks/useDashboardReset'
+import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { ClusterDetailModal } from './ClusterDetailModal'
 import {
   RenameModal,
@@ -42,37 +32,22 @@ import { isClusterUnreachable } from './utils'
 import { formatK8sMemory } from '../../lib/formatters'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 
-interface ClusterCard {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  title?: string
-  position?: { w: number; h: number }
-}
-
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 
-function loadClusterCards(): ClusterCard[] {
-  try {
-    const stored = localStorage.getItem(CLUSTERS_CARDS_KEY)
-    if (stored) {
-      return JSON.parse(stored)
-    }
-    // Return default cards for clusters dashboard if nothing stored
-    return getDefaultCards('clusters' as DashboardType) as ClusterCard[]
-  } catch {
-    return getDefaultCards('clusters' as DashboardType) as ClusterCard[]
-  }
-}
-
-function saveClusterCards(cards: ClusterCard[]) {
-  localStorage.setItem(CLUSTERS_CARDS_KEY, JSON.stringify(cards))
-}
+// Default cards for the clusters dashboard
+const DEFAULT_CLUSTERS_CARDS = [
+  { type: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
+  { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 3 } },
+  { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 3 } },
+  { type: 'pod_issues', title: 'Pod Issues', position: { w: 6, h: 3 } },
+  { type: 'events_timeline', title: 'Events Timeline', position: { w: 6, h: 3 } },
+  { type: 'cluster_locations', title: 'Cluster Locations', position: { w: 8, h: 4 } },
+]
 
 // Sortable card component with drag handle
 interface SortableClusterCardProps {
-  card: ClusterCard
+  card: DashboardCard
   onConfigure: () => void
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
@@ -137,7 +112,7 @@ const SortableClusterCard = memo(function SortableClusterCard({
 })
 
 // Drag preview for overlay
-function DragPreviewCard({ card }: { card: ClusterCard }) {
+function DragPreviewCard({ card }: { card: DashboardCard }) {
   const cardWidth = card.position?.w || 4
   return (
     <div
@@ -1523,60 +1498,39 @@ export function Clusters() {
   const [newGroupClusters, setNewGroupClusters] = useState<string[]>([])
   const [showGroups, setShowGroups] = useState(false) // Collapsed by default so cluster cards are visible first
 
-  // Dashboard cards state
-  const [cards, setCards] = useState<ClusterCard[]>(loadClusterCards)
-  const [showAddCard, setShowAddCard] = useState(false)
-  const [showTemplates, setShowTemplates] = useState(false)
-
-  // Reset functionality using shared hook
-  const { isCustomized, setCustomized, reset } = useDashboardReset({
-    storageKey: CLUSTERS_CARDS_KEY,
-    defaultCards: DEFAULT_CLUSTERS_CARDS as ClusterCard[],
-    setCards,
-    cards,
-  })
-  const { showCards, setShowCards, expandCards } = useShowCards('kubestellar-clusters', false) // Collapsed by default so cluster cards are visible first
+  // Additional UI state
   const [showStats, setShowStats] = useState(true) // Stats overview visible by default
   const [showClusterGrid, setShowClusterGrid] = useState(true) // Cluster cards visible by default
-  const [configuringCard, setConfiguringCard] = useState<ClusterCard | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(true)
   const [showGPUModal, setShowGPUModal] = useState(false)
-  const [activeId, setActiveId] = useState<string | null>(null)
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    setActiveId(null)
-
-    if (over && active.id !== over.id) {
-      setCards((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
-  }
-
-  // Save cards to localStorage when they change (mark as customized)
-  useEffect(() => {
-    saveClusterCards(cards)
-    setCustomized(true)
-  }, [cards, setCustomized])
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
+  const {
+    cards,
+    setCards,
+    addCards,
+    removeCard,
+    configureCard,
+    updateCardWidth,
+    reset,
+    isCustomized,
+    showAddCard,
+    setShowAddCard,
+    showTemplates,
+    setShowTemplates,
+    configuringCard,
+    setConfiguringCard,
+    openConfigureCard,
+    showCards,
+    setShowCards,
+    expandCards,
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
+  } = useDashboard({
+    storageKey: CLUSTERS_CARDS_KEY,
+    defaultCards: DEFAULT_CLUSTERS_CARDS,
+    onRefresh: refetch,
+  })
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -1585,71 +1539,47 @@ export function Clusters() {
       searchParams.delete('addCard')
       setSearchParams(searchParams, { replace: true })
     }
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, setShowAddCard])
 
   // Trigger refresh when navigating to this page (location.key changes on each navigation)
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return
-
-    const interval = setInterval(() => {
-      refetch()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [autoRefresh, refetch])
-
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const cardsToAdd: ClusterCard[] = newCards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.type,
-      config: card.config,
-      title: card.title,
-      position: { w: 4, h: 2 },
-    }))
-    setCards(prev => [...prev, ...cardsToAdd])
+    addCards(newCards)
     expandCards()
     setShowAddCard(false)
-  }, [expandCards])
+  }, [addCards, expandCards, setShowAddCard])
 
   const handleRemoveCard = useCallback((cardId: string) => {
-    setCards(prev => prev.filter(c => c.id !== cardId))
-  }, [])
+    removeCard(cardId)
+  }, [removeCard])
 
   const handleConfigureCard = useCallback((cardId: string) => {
-    const card = cards.find(c => c.id === cardId)
-    if (card) setConfiguringCard(card)
-  }, [cards])
+    openConfigureCard(cardId, cards)
+  }, [openConfigureCard, cards])
 
   const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, config } : c
-    ))
+    configureCard(cardId, config)
     setConfiguringCard(null)
-  }, [])
+  }, [configureCard, setConfiguringCard])
 
   const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    setCards(prev => prev.map(c =>
-      c.id === cardId ? { ...c, position: { ...(c.position || { w: 4, h: 2 }), w: newWidth } } : c
-    ))
-  }, [])
+    updateCardWidth(cardId, newWidth)
+  }, [updateCardWidth])
 
   const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards: ClusterCard[] = template.cards.map(card => ({
-      id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const newCards = template.cards.map((card, i) => ({
+      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
       title: card.title,
-      position: { w: card.position?.w || 4, h: card.position?.h || 2 },
     }))
     setCards(newCards)
     expandCards()
     setShowTemplates(false)
-  }, [expandCards])
+  }, [setCards, expandCards, setShowTemplates])
 
   const handleRenameContext = async (oldName: string, newName: string) => {
     if (!isConnected) throw new Error('Local agent not connected')
@@ -2196,7 +2126,7 @@ export function Clusters() {
       <FloatingDashboardActions
         onAddCard={() => setShowAddCard(true)}
         onOpenTemplates={() => setShowTemplates(true)}
-        onReset={reset}
+        onResetToDefaults={reset}
         isCustomized={isCustomized}
       />
 
@@ -2247,7 +2177,7 @@ function CardConfigModal({
   onSave,
   onClose,
 }: {
-  card: ClusterCard
+  card: DashboardCard
   clusters: ClusterInfo[]
   onSave: (config: Record<string, unknown>) => void
   onClose: () => void
