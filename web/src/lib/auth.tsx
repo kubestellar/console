@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { api } from './api'
+import { dashboardSync } from './dashboards/dashboardSync'
 
 interface User {
   id: string
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token')
     setTokenState(null)
     setUser(null)
+    // Clear dashboard sync cache
+    dashboardSync.clearCache()
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {

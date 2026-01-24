@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   KeyboardSensor,
   PointerSensor,
@@ -8,7 +8,11 @@ import {
   DragStartEvent,
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { dashboardSync } from './dashboardSync'
 import { DashboardCard, DashboardCardPlacement, NewCardInput } from './types'
+
+// Re-export dashboardSync for use in auth context (clear cache on logout)
+export { dashboardSync } from './dashboardSync'
 
 // ============================================================================
 // useDashboardDnD - Drag and drop hook
@@ -98,6 +102,10 @@ export interface UseDashboardCardsResult {
   isCustomized: boolean
   /** Mark as customized */
   setCustomized: (value: boolean) => void
+  /** Whether currently syncing with backend */
+  isSyncing: boolean
+  /** Manually trigger a sync with backend */
+  syncWithBackend: () => Promise<void>
 }
 
 export function useDashboardCards(
@@ -116,7 +124,11 @@ export function useDashboardCards(
     [defaultCards]
   )
 
-  // Load cards from localStorage or use defaults
+  // Track if we've done initial sync
+  const hasSyncedRef = useRef(false)
+  const isInitialLoadRef = useRef(true)
+
+  // Load cards from localStorage initially (fast), then sync with backend
   const [cards, setCards] = useState<DashboardCard[]>(() => {
     try {
       const stored = localStorage.getItem(storageKey)
@@ -130,11 +142,47 @@ export function useDashboardCards(
   })
 
   const [isCustomized, setCustomized] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
-  // Save cards to localStorage when they change
+  // On mount, sync with backend if authenticated
   useEffect(() => {
+    if (hasSyncedRef.current) return
+    hasSyncedRef.current = true
+
+    const syncWithBackend = async () => {
+      if (!dashboardSync.isAuthenticated()) return
+
+      setIsSyncing(true)
+      try {
+        const backendCards = await dashboardSync.fullSync(storageKey)
+        if (backendCards && backendCards.length > 0) {
+          setCards(backendCards)
+        }
+      } catch (err) {
+        console.error('[useDashboardCards] Backend sync failed:', err)
+      } finally {
+        setIsSyncing(false)
+        isInitialLoadRef.current = false
+      }
+    }
+
+    syncWithBackend()
+  }, [storageKey])
+
+  // Save cards to localStorage and sync to backend when they change
+  useEffect(() => {
+    // Skip initial load to avoid re-saving what we just loaded
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
+      return
+    }
+
+    // Always save to localStorage (fast, works offline)
     localStorage.setItem(storageKey, JSON.stringify(cards))
     setCustomized(true)
+
+    // Sync to backend (debounced in the sync service)
+    dashboardSync.saveCards(storageKey, cards)
   }, [cards, storageKey])
 
   // Generate unique ID for new cards
@@ -176,6 +224,23 @@ export function useDashboardCards(
     setCustomized(false)
   }, [defaultCardInstances])
 
+  // Manual sync with backend
+  const syncWithBackend = useCallback(async () => {
+    if (!dashboardSync.isAuthenticated()) return
+
+    setIsSyncing(true)
+    try {
+      const backendCards = await dashboardSync.fullSync(storageKey)
+      if (backendCards && backendCards.length > 0) {
+        setCards(backendCards)
+      }
+    } catch (err) {
+      console.error('[useDashboardCards] Backend sync failed:', err)
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [storageKey])
+
   return {
     cards,
     setCards,
@@ -186,6 +251,8 @@ export function useDashboardCards(
     reset,
     isCustomized,
     setCustomized,
+    isSyncing,
+    syncWithBackend,
   }
 }
 
@@ -331,6 +398,10 @@ export interface UseDashboardResult
   /** Auto-refresh state */
   autoRefresh: boolean
   setAutoRefresh: (enabled: boolean) => void
+  /** Whether currently syncing with backend */
+  isSyncing: boolean
+  /** Manually trigger a sync with backend */
+  syncWithBackend: () => Promise<void>
 }
 
 export function useDashboard(options: UseDashboardOptions): UseDashboardResult {
