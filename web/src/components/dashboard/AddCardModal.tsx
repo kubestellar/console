@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { X, Sparkles, Plus, Loader2, LayoutGrid, Search } from 'lucide-react'
+import { useState } from 'react'
+import { Sparkles, Plus, Loader2, LayoutGrid, Search } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
@@ -698,32 +699,6 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(Object.keys(CARD_CATALOG)))
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      const originalOverflow = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = originalOverflow
-      }
-    }
-  }, [isOpen])
-
   const handleGenerate = async () => {
     if (!query.trim()) return
 
@@ -822,60 +797,27 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     setSelectedBrowseCards(new Set())
   }
 
-  if (!isOpen) return null
+  const tabs = [
+    { id: 'browse', label: 'Browse Cards', icon: LayoutGrid },
+    { id: 'ai', label: 'AI Suggestions', icon: Sparkles },
+  ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
+      <BaseModal.Header
+        title="Add Cards"
+        icon={Plus}
+        onClose={onClose}
+        showBack={false}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-6xl mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Plus className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-foreground">Add Cards</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-secondary rounded transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+      <BaseModal.Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as 'ai' | 'browse')}
+      />
 
-        {/* Tabs */}
-        <div className="flex border-b border-border">
-          <button
-            onClick={() => setActiveTab('browse')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'browse'
-                ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-            Browse Cards
-          </button>
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'ai'
-                ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            AI Suggestions
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 flex-1 overflow-y-auto">
+      <BaseModal.Content className="max-h-[60vh]">
           {/* Browse Tab */}
           {activeTab === 'browse' && (
             <div className="flex gap-4">
@@ -1175,11 +1117,13 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           )}
           </>
           )}
-        </div>
+      </BaseModal.Content>
 
-        {/* Footer - AI tab */}
-        {activeTab === 'ai' && suggestions.length > 0 && (
-          <div className="flex items-center justify-end gap-3 p-4 border-t border-border">
+      {/* Footer - AI tab */}
+      {activeTab === 'ai' && suggestions.length > 0 && (
+        <BaseModal.Footer>
+          <div className="flex-1" />
+          <div className="flex items-center gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -1195,8 +1139,8 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               Add {selectedCards.size} Card{selectedCards.size !== 1 ? 's' : ''}
             </button>
           </div>
-        )}
-      </div>
-    </div>
+        </BaseModal.Footer>
+      )}
+    </BaseModal>
   )
 }
