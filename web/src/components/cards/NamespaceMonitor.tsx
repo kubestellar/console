@@ -321,17 +321,23 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
 
   // Toggle cluster expansion
   const toggleCluster = useCallback((clusterName: string) => {
+    const isCurrentlyExpanded = expandedClusters.has(clusterName)
+
     setExpandedClusters(prev => {
       const next = new Set(prev)
       if (next.has(clusterName)) {
         next.delete(clusterName)
       } else {
         next.add(clusterName)
-        setSelectedCluster(clusterName)
       }
       return next
     })
-  }, [])
+
+    // Only set selected cluster when expanding (not collapsing)
+    if (!isCurrentlyExpanded) {
+      setSelectedCluster(clusterName)
+    }
+  }, [expandedClusters])
 
   // Toggle namespace expansion
   const toggleNamespace = useCallback((nsKey: string) => {
@@ -677,7 +683,10 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
                       namespaceList.map(ns => {
                         const nsKey = `${cluster.name}:${ns}`
                         const isNsExpanded = expandedNamespaces.has(nsKey)
-                        const data = namespaceData.get(ns)!
+                        const data = namespaceData.get(ns)
+
+                        // Skip if data not loaded yet
+                        if (!data) return null
 
                         return (
                           <div key={ns} className="mb-0.5">
