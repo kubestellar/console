@@ -140,6 +140,8 @@ import { ServiceImports } from './ServiceImports'
 import { GatewayStatus } from './GatewayStatus'
 // Service Topology card
 import { ServiceTopology } from './ServiceTopology'
+// Workload Deployment card
+import { WorkloadDeployment } from './WorkloadDeployment'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -300,6 +302,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   gateway_status: GatewayStatus,
   // Service Topology card
   service_topology: ServiceTopology,
+  // Workload Deployment card
+  workload_deployment: WorkloadDeployment,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -326,6 +330,8 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Service Topology - demo visualization
   'service_topology',
+  // Workload Deployment - demo until real workloads are listed
+  'workload_deployment',
   // ArgoCD cards - all use mock data
   'argocd_applications',
   'argocd_health',
@@ -386,6 +392,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Service Topology - wide for visualization
   service_topology: 8,
+
+  // Workload Deployment - wide for workload list
+  workload_deployment: 6,
 
   // Medium cards (5-6 columns) - lists and tables
   event_stream: 6,

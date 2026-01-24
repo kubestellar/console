@@ -21,6 +21,7 @@ const CARD_CATALOG = {
     { type: 'pod_issues', title: 'Pod Issues', description: 'Pods with errors or restarts', visualization: 'table' },
     { type: 'top_pods', title: 'Top Pods', description: 'Highest resource consuming pods', visualization: 'bar' },
     { type: 'app_status', title: 'Workload Status', description: 'Workload health overview', visualization: 'donut' },
+    { type: 'workload_deployment', title: 'Workload Deployment', description: 'Multi-cluster workload deployment with status and scaling', visualization: 'table' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },

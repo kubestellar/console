@@ -357,6 +357,16 @@ func (s *Server) setupRoutes() {
 	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
 	api.Get("/topology", topologyHandlers.GetTopology)
 
+	// Workload routes
+	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub)
+	api.Get("/workloads", workloadHandlers.ListWorkloads)
+	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
+	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
+	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
+	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
+	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)
+	api.Delete("/workloads/:cluster/:namespace/:name", workloadHandlers.DeleteWorkload)
+
 	// Feature requests and feedback routes
 	feedback := handlers.NewFeedbackHandler(s.store, handlers.FeedbackConfig{
 		GitHubToken:   s.config.FeedbackGitHubToken,
