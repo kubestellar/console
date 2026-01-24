@@ -18,6 +18,7 @@ export {
   useCardData,
   useCardCollapse,
   useCardCollapseAll,
+  useCardFlash,
   commonComparators,
   type SortDirection,
   type SortOption,
@@ -28,6 +29,9 @@ export {
   type UseCardSortResult,
   type UseCardDataResult,
   type UseCardCollapseResult,
+  type CardFlashType,
+  type UseCardFlashOptions,
+  type UseCardFlashResult,
 } from './cardHooks'
 
 // Card UI Components

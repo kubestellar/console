@@ -222,6 +222,71 @@
   animation: fade-in-up 0.5s ease-out forwards;
 }
 
+/* Card flash animation for significant data changes */
+@keyframes card-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
+    border-color: rgba(168, 85, 247, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(168, 85, 247, 0.4);
+    border-color: rgba(168, 85, 247, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    border-color: var(--glass-border);
+  }
+}
+
+@keyframes card-flash-warning {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+    border-color: rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(245, 158, 11, 0.4);
+    border-color: rgba(245, 158, 11, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    border-color: var(--glass-border);
+  }
+}
+
+@keyframes card-flash-error {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(239, 68, 68, 0.4);
+    border-color: rgba(239, 68, 68, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    border-color: var(--glass-border);
+  }
+}
+
+.animate-card-flash {
+  animation: card-flash 1s ease-out;
+}
+
+.animate-card-flash-warning {
+  animation: card-flash-warning 1s ease-out;
+}
+
+.animate-card-flash-error {
+  animation: card-flash-error 1s ease-out;
+}
+
+/* Disable card flash animations when reduce motion is enabled */
+.reduce-motion .animate-card-flash,
+.reduce-motion .animate-card-flash-warning,
+.reduce-motion .animate-card-flash-error {
+  animation: none;
+}
+
 /* Status indicators - use theme status colors */
 .status-healthy {
   background-color: var(--color-success);
