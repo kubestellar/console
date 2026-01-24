@@ -14,6 +14,7 @@ import {
   TrendingUp,
   FlaskConical,
 } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -778,107 +779,105 @@ export function GPUReservations() {
       )}
 
       {/* New Reservation Modal */}
-      {showNewReservationForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="glass p-6 rounded-lg w-full max-w-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-foreground">New GPU Reservation</h3>
-              <button
-                onClick={() => setShowNewReservationForm(false)}
-                className="p-1 rounded hover:bg-secondary transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <BaseModal isOpen={showNewReservationForm} onClose={() => setShowNewReservationForm(false)} size="md">
+        <BaseModal.Header
+          title="New GPU Reservation"
+          icon={Calendar}
+          onClose={() => setShowNewReservationForm(false)}
+          showBack={false}
+        />
+
+        <BaseModal.Content>
+          <form className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Reservation Name
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
+                placeholder="e.g., LLM Training Job"
+              />
             </div>
 
-            <form className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Reservation Name
+                  GPU Type
+                </label>
+                <select className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground">
+                  <option>A100-80GB</option>
+                  <option>A100-40GB</option>
+                  <option>V100</option>
+                  <option>T4</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  GPU Count
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  min="1"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
-                  placeholder="e.g., LLM Training Job"
+                  placeholder="1"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    GPU Type
-                  </label>
-                  <select className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground">
-                    <option>A100-80GB</option>
-                    <option>A100-40GB</option>
-                    <option>V100</option>
-                    <option>T4</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    GPU Count
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
-                    placeholder="1"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Purpose
+                  Start Date
                 </label>
-                <textarea
+                <input
+                  type="date"
                   className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
-                  rows={3}
-                  placeholder="Describe what you'll use the GPUs for..."
                 />
               </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowNewReservationForm(false)}
-                  className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
-                >
-                  Submit Request
-                </button>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
+                />
               </div>
-            </form>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Purpose
+              </label>
+              <textarea
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
+                rows={3}
+                placeholder="Describe what you'll use the GPUs for..."
+              />
+            </div>
+          </form>
+        </BaseModal.Content>
+
+        <BaseModal.Footer>
+          <div className="flex-1" />
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setShowNewReservationForm(false)}
+              className="px-4 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
+            >
+              Submit Request
+            </button>
           </div>
-        </div>
-      )}
+        </BaseModal.Footer>
+      </BaseModal>
     </div>
   )
 }
