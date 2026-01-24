@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { X, Cpu, MemoryStick, Database, HardDrive, Server, ChevronDown, ChevronRight } from 'lucide-react'
+import { Cpu, MemoryStick, Database, HardDrive, Server, ChevronDown, ChevronRight } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { Gauge } from '../charts/Gauge'
 
-interface BaseModalProps {
+interface ResourceModalProps {
   clusterName: string
   onClose: () => void
 }
@@ -15,7 +15,7 @@ function Skeleton({ className = '' }: { className?: string }) {
 
 // ==================== CPU Detail Modal ====================
 
-interface CPUDetailModalProps extends BaseModalProps {
+interface CPUDetailModalProps extends ResourceModalProps {
   totalCores: number
   allocatableCores: number
   requestedCores?: number
@@ -44,28 +44,17 @@ export function CPUDetailModal({
 
   const utilizationPercent = allocatableCores > 0 ? Math.round((requestedCores / allocatableCores) * 100) : 0
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
-      <div
-        className="fixed top-[10vh] left-1/2 -translate-x-1/2 glass p-6 rounded-lg w-[600px] max-h-[80vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-              <Cpu className="w-5 h-5 text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">CPU Resources</h2>
-              <p className="text-sm text-muted-foreground">{clusterName}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (
+    <BaseModal isOpen={true} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="CPU Resources"
+        description={clusterName}
+        icon={Cpu}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[70vh]">
         {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-24" />
@@ -174,15 +163,14 @@ export function CPUDetailModal({
             )}
           </>
         )}
-      </div>
-    </div>,
-    document.body
+      </BaseModal.Content>
+    </BaseModal>
   )
 }
 
 // ==================== Memory Detail Modal ====================
 
-interface MemoryDetailModalProps extends BaseModalProps {
+interface MemoryDetailModalProps extends ResourceModalProps {
   totalMemoryGB: number
   allocatableMemoryGB: number
   requestedMemoryGB?: number
@@ -216,28 +204,17 @@ export function MemoryDetailModal({
 
   const utilizationPercent = allocatableMemoryGB > 0 ? Math.round((requestedMemoryGB / allocatableMemoryGB) * 100) : 0
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
-      <div
-        className="fixed top-[10vh] left-1/2 -translate-x-1/2 glass p-6 rounded-lg w-[600px] max-h-[80vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-              <MemoryStick className="w-5 h-5 text-green-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Memory Resources</h2>
-              <p className="text-sm text-muted-foreground">{clusterName}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (
+    <BaseModal isOpen={true} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="Memory Resources"
+        description={clusterName}
+        icon={MemoryStick}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[70vh]">
         {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-24" />
@@ -344,15 +321,14 @@ export function MemoryDetailModal({
             )}
           </>
         )}
-      </div>
-    </div>,
-    document.body
+      </BaseModal.Content>
+    </BaseModal>
   )
 }
 
 // ==================== Storage Detail Modal ====================
 
-interface StorageDetailModalProps extends BaseModalProps {
+interface StorageDetailModalProps extends ResourceModalProps {
   totalStorageGB: number
   allocatableStorageGB: number
   usedStorageGB?: number
@@ -387,28 +363,17 @@ export function StorageDetailModal({
 
   const utilizationPercent = allocatableStorageGB > 0 ? Math.round((usedStorageGB / allocatableStorageGB) * 100) : 0
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
-      <div
-        className="fixed top-[10vh] left-1/2 -translate-x-1/2 glass p-6 rounded-lg w-[650px] max-h-[80vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-              <Database className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Storage Resources</h2>
-              <p className="text-sm text-muted-foreground">{clusterName}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (
+    <BaseModal isOpen={true} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="Storage Resources"
+        description={clusterName}
+        icon={Database}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[70vh]">
         {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-24" />
@@ -520,15 +485,14 @@ export function StorageDetailModal({
             )}
           </>
         )}
-      </div>
-    </div>,
-    document.body
+      </BaseModal.Content>
+    </BaseModal>
   )
 }
 
 // ==================== GPU Detail Modal ====================
 
-interface GPUDetailModalProps extends BaseModalProps {
+interface GPUDetailModalProps extends ResourceModalProps {
   gpuNodes: Array<{
     name: string
     gpuType: string
@@ -567,28 +531,17 @@ export function GPUDetailModal({
   const allocatedGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
   const utilizationPercent = totalGPUs > 0 ? Math.round((allocatedGPUs / totalGPUs) * 100) : 0
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
-      <div
-        className="fixed top-[10vh] left-1/2 -translate-x-1/2 glass p-6 rounded-lg w-[650px] max-h-[80vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-              <HardDrive className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">GPU Resources</h2>
-              <p className="text-sm text-muted-foreground">{clusterName}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  return (
+    <BaseModal isOpen={true} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="GPU Resources"
+        description={clusterName}
+        icon={HardDrive}
+        onClose={onClose}
+        showBack={false}
+      />
 
+      <BaseModal.Content className="max-h-[70vh]">
         {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-24" />
@@ -696,8 +649,7 @@ export function GPUDetailModal({
             </div>
           </>
         )}
-      </div>
-    </div>,
-    document.body
+      </BaseModal.Content>
+    </BaseModal>
   )
 }
