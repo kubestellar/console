@@ -113,6 +113,33 @@ import { PodPitfall } from './PodPitfall'
 import { NodeInvaders } from './NodeInvaders'
 // Pod Brothers (Mario Bros) card
 import { PodBrothers } from './PodBrothers'
+// Kube Kart (racing) card
+import { KubeKart } from './KubeKart'
+// Kube Pong card
+import { KubePong } from './KubePong'
+// Kube Snake card
+import { KubeSnake } from './KubeSnake'
+// Kube Galaga card
+import { KubeGalaga } from './KubeGalaga'
+// KubeCraft (Minecraft) card
+import { KubeCraft } from './KubeCraft'
+// Generic Iframe Embed card
+import { IframeEmbed } from './IframeEmbed'
+// Network Utilities card
+import { NetworkUtils } from './NetworkUtils'
+// Mobile Browser card
+import { MobileBrowser } from './MobileBrowser'
+// Kube Chess card
+import { KubeChess } from './KubeChess'
+// KubeCraft 3D card
+import { KubeCraft3D } from './KubeCraft3D'
+// MCS (Multi-Cluster Service) cards
+import { ServiceExports } from './ServiceExports'
+import { ServiceImports } from './ServiceImports'
+// Gateway API cards
+import { GatewayStatus } from './GatewayStatus'
+// Service Topology card
+import { ServiceTopology } from './ServiceTopology'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -252,6 +279,27 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   node_invaders: NodeInvaders,
   // Pod Brothers (Mario Bros) card
   pod_brothers: PodBrothers,
+  kube_kart: KubeKart,
+  kube_pong: KubePong,
+  kube_snake: KubeSnake,
+  kube_galaga: KubeGalaga,
+  kube_craft: KubeCraft,
+  // Generic Iframe Embed card
+  iframe_embed: IframeEmbed,
+  network_utils: NetworkUtils,
+  // Mobile Browser card
+  mobile_browser: MobileBrowser,
+  // Kube Chess card
+  kube_chess: KubeChess,
+  // KubeCraft 3D card
+  kube_craft_3d: KubeCraft3D,
+  // MCS (Multi-Cluster Service) cards
+  service_exports: ServiceExports,
+  service_imports: ServiceImports,
+  // Gateway API cards
+  gateway_status: GatewayStatus,
+  // Service Topology card
+  service_topology: ServiceTopology,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -271,6 +319,13 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
  * Used to show a demo banner when these cards are present.
  */
 export const DEMO_DATA_CARDS = new Set([
+  // MCS cards - demo until MCS is installed
+  'service_exports',
+  'service_imports',
+  // Gateway API cards - demo until Gateway API is installed
+  'gateway_status',
+  // Service Topology - demo visualization
+  'service_topology',
   // ArgoCD cards - all use mock data
   'argocd_applications',
   'argocd_health',
@@ -321,6 +376,16 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   active_alerts: 4,
   security_issues: 4,
   upgrade_status: 4,
+
+  // MCS cards
+  service_exports: 6,
+  service_imports: 6,
+
+  // Gateway API cards
+  gateway_status: 6,
+
+  // Service Topology - wide for visualization
+  service_topology: 8,
 
   // Medium cards (5-6 columns) - lists and tables
   event_stream: 6,
@@ -397,6 +462,16 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   pod_pitfall: 6,
   node_invaders: 6,
   pod_brothers: 6,
+  kube_kart: 5,
+  kube_pong: 5,
+  kube_snake: 5,
+  kube_galaga: 5,
+  kube_craft: 5,
+  iframe_embed: 6,
+  network_utils: 5,
+  mobile_browser: 5,
+  kube_chess: 5,
+  kube_craft_3d: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,

@@ -335,6 +335,28 @@ func (s *Server) setupRoutes() {
 	api.Post("/gitops/detect-drift", gitopsHandlers.DetectDrift)
 	api.Post("/gitops/sync", gitopsHandlers.Sync)
 
+	// MCS (Multi-Cluster Service) routes
+	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)
+	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
+	api.Get("/mcs/exports", mcsHandlers.ListServiceExports)
+	api.Get("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.GetServiceExport)
+	api.Post("/mcs/exports", mcsHandlers.CreateServiceExport)
+	api.Delete("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.DeleteServiceExport)
+	api.Get("/mcs/imports", mcsHandlers.ListServiceImports)
+	api.Get("/mcs/imports/:cluster/:namespace/:name", mcsHandlers.GetServiceImport)
+
+	// Gateway API routes
+	gatewayHandlers := handlers.NewGatewayHandlers(s.k8sClient, s.hub)
+	api.Get("/gateway/status", gatewayHandlers.GetGatewayAPIStatus)
+	api.Get("/gateway/gateways", gatewayHandlers.ListGateways)
+	api.Get("/gateway/gateways/:cluster/:namespace/:name", gatewayHandlers.GetGateway)
+	api.Get("/gateway/httproutes", gatewayHandlers.ListHTTPRoutes)
+	api.Get("/gateway/httproutes/:cluster/:namespace/:name", gatewayHandlers.GetHTTPRoute)
+
+	// Service Topology routes
+	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
+	api.Get("/topology", topologyHandlers.GetTopology)
+
 	// Feature requests and feedback routes
 	feedback := handlers.NewFeedbackHandler(s.store, handlers.FeedbackConfig{
 		GitHubToken:   s.config.FeedbackGitHubToken,
