@@ -515,7 +515,7 @@ function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onTog
         <span className="text-xs text-muted-foreground">{availableBlocks.length}</span>
       </button>
       {isExpanded && (
-        <div className="pb-2">
+        <div className="pb-2 max-h-40 overflow-y-auto">
           {availableBlocks.map(block => (
             <AvailableStatItem key={block.id} block={block} onAdd={onAdd} />
           ))}
@@ -699,7 +699,7 @@ export function StatsConfigModal({
                 Done
               </button>
             </div>
-            <div className="space-y-1 max-h-64 overflow-y-auto">
+            <div className="space-y-0">
               {hasAvailableStats ? (
                 DASHBOARD_CATEGORIES.map(category => {
                   const categoryBlocks = availableStatsByCategory.get(category.type)
