@@ -1,13 +1,12 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
 import { Shield, AlertTriangle, User, Network, Server, ChevronRight, Search, Filter, ChevronDown } from 'lucide-react'
-import { useSecurityIssues, SecurityIssue, useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { PaginatedList } from '../ui/PaginatedList'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { useCardData } from '../../lib/cards'
 
 type SortByOption = 'severity' | 'name' | 'cluster'
 
@@ -43,46 +42,57 @@ const getSeverityColor = (severity: string) => {
 }
 
 export function SecurityIssues({ config }: SecurityIssuesProps) {
-  const cluster = config?.cluster as string | undefined
-  const namespace = config?.namespace as string | undefined
-  const { issues: rawIssues, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useSecurityIssues(cluster, namespace)
-  const { filterItems, selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { clusters } = useClusters()
+  const clusterConfig = config?.cluster as string | undefined
+  const namespaceConfig = config?.namespace as string | undefined
+  const { issues: rawIssues, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useSecurityIssues(clusterConfig, namespaceConfig)
   const { drillToPod } = useDrillDownActions()
-  const [sortBy, setSortBy] = useState<SortByOption>('severity')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
 
-  // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
-    const reachable = clusters.filter(c => c.reachable !== false)
-    if (isAllClustersSelected) return reachable
-    return reachable.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
+  // Use shared card data hook for filtering, sorting, and pagination
+  const {
+    items: issues,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<SecurityIssue, SortByOption>(rawIssues, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster', 'issue', 'severity', 'details'],
+      clusterField: 'cluster',
+      storageKey: 'security-issues',
+    },
+    sort: {
+      defaultField: 'severity',
+      defaultDirection: 'desc',
+      comparators: {
+        severity: (a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5),
+        name: (a, b) => a.name.localeCompare(b.name),
+        cluster: (a, b) => (a.cluster || '').localeCompare(b.cluster || ''),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const handleIssueClick = (issue: SecurityIssue) => {
     drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
@@ -90,40 +100,6 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       severity: issue.severity,
     })
   }
-
-  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
-
-  const issues = useMemo(() => {
-    // Apply global filters (cluster + severity)
-    let filtered = filterItems(rawIssues)
-
-    // Apply local cluster filter (on top of global)
-    if (localClusterFilter.length > 0) {
-      filtered = filtered.filter(issue => issue.cluster && localClusterFilter.includes(issue.cluster))
-    }
-
-    // Apply local search
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(issue =>
-        issue.name.toLowerCase().includes(query) ||
-        issue.namespace.toLowerCase().includes(query) ||
-        (issue.cluster || '').toLowerCase().includes(query) ||
-        issue.issue.toLowerCase().includes(query) ||
-        issue.severity.toLowerCase().includes(query) ||
-        (issue.details || '').toLowerCase().includes(query)
-      )
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      let comparison = 0
-      if (sortBy === 'severity') comparison = (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5)
-      else if (sortBy === 'name') comparison = a.name.localeCompare(b.name)
-      else if (sortBy === 'cluster') comparison = (a.cluster || '').localeCompare(b.cluster || '')
-      return sortDirection === 'asc' ? comparison : -comparison
-    })
-    return sorted
-  }, [rawIssues, sortBy, sortDirection, filterItems, localSearch, localClusterFilter])
 
   const highCount = rawIssues.filter(i => i.severity === 'high').length
   const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
@@ -230,7 +206,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
                     <button
-                      onClick={() => setLocalClusterFilter([])}
+                      onClick={clearClusterFilter}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
                         localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
@@ -254,8 +230,8 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
             </div>
           )}
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
             sortBy={sortBy}
             sortOptions={SORT_OPTIONS}
             onSortChange={setSortBy}
@@ -285,55 +261,63 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
         />
       </div>
 
-      {/* Issues list with pagination */}
-      <div className="flex-1 overflow-y-auto">
-        <PaginatedList
-          items={issues}
-          pageSize={limit === 'unlimited' ? 1000 : limit}
-          pageSizeOptions={[]}
-          emptyMessage="No security issues"
-          renderItem={(issue: SecurityIssue, idx: number) => {
-            const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue)
-            const colors = getSeverityColor(issue.severity)
+      {/* Issues list */}
+      <div className="flex-1 space-y-3 overflow-y-auto min-h-card-content">
+        {issues.map((issue: SecurityIssue, idx: number) => {
+          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue)
+          const colors = getSeverityColor(issue.severity)
 
-            return (
-              <div
-                key={`${issue.name}-${issue.issue}-${idx}`}
-                className={`p-3 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer hover:opacity-80 transition-opacity`}
-                onClick={() => handleIssueClick(issue)}
-                title={`Click to view pod ${issue.name} with security issue: ${issue.issue}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
-                    <Icon className={`w-4 h-4 ${colors.text}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <ClusterBadge cluster={issue.cluster || 'default'} />
-                      <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 rounded ${colors.badge} ${colors.text}`} title={`Issue type: ${issue.issue}`}>
-                        {issue.issue}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${colors.badge} ${colors.text} capitalize`} title={`Severity level: ${issue.severity}`}>
-                        {issue.severity}
-                      </span>
-                    </div>
-                    {issue.details && (
-                      <p className="text-xs text-muted-foreground mt-1 truncate" title={issue.details}>
-                        {issue.details}
-                      </p>
-                    )}
-                  </div>
-                  <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
+          return (
+            <div
+              key={`${issue.name}-${issue.issue}-${idx}`}
+              className={`p-3 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer hover:opacity-80 transition-opacity`}
+              onClick={() => handleIssueClick(issue)}
+              title={`Click to view pod ${issue.name} with security issue: ${issue.issue}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
+                  <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClusterBadge cluster={issue.cluster || 'default'} />
+                    <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span className={`text-xs px-2 py-0.5 rounded ${colors.badge} ${colors.text}`} title={`Issue type: ${issue.issue}`}>
+                      {issue.issue}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${colors.badge} ${colors.text} capitalize`} title={`Severity level: ${issue.severity}`}>
+                      {issue.severity}
+                    </span>
+                  </div>
+                  {issue.details && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate" title={issue.details}>
+                      {issue.details}
+                    </p>
+                  )}
+                </div>
+                <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
               </div>
-            )
-          }}
-        />
+            </div>
+          )
+        })}
       </div>
+
+      {/* Pagination */}
+      {needsPagination && itemsPerPage !== 'unlimited' && (
+        <div className="pt-2 border-t border-border/50 mt-2">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
+            onPageChange={goToPage}
+            showItemsPerPage={false}
+          />
+        </div>
+      )}
 
       <LimitedAccessWarning hasError={!!error} className="mt-2" />
     </div>
