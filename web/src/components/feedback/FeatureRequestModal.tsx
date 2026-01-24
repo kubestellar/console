@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { X, Bug, Sparkles, Loader2, ExternalLink, Bell, Check, Clock, GitPullRequest, Eye, RefreshCw, MessageSquare, AlertTriangle } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import {
   useFeatureRequests,
   useNotifications,
@@ -163,8 +163,6 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
     }
   }
 
-  if (!isOpen) return null
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -220,8 +218,8 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
     }
   }
 
-  const modalContent = (
-    <>
+  return (
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="md">
       {/* Login Prompt Dialog */}
       {showLoginPrompt && (
         <>
@@ -259,32 +257,19 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
         </>
       )}
 
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-[9999]"
-        onClick={handleClose}
-      />
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-[9999] overflow-y-auto pointer-events-none">
-        <div className="flex min-h-full items-start justify-center p-4 pt-20">
-          <div
-            className="bg-background border border-border rounded-lg shadow-xl w-full max-w-lg my-8 pointer-events-auto"
-            onClick={e => e.stopPropagation()}
-          >
-          {/* Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">
-              Feedback
-            </h2>
-            <button
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground disabled:opacity-50"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+      {/* Header */}
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">
+          Feedback
+        </h2>
+        <button
+          onClick={handleClose}
+          disabled={isSubmitting}
+          className="p-1 rounded hover:bg-secondary/50 text-muted-foreground disabled:opacity-50"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
           {/* Tabs */}
           <div className="flex border-b border-border">
@@ -928,11 +913,6 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
               </div>
             </form>
           )}
-        </div>
-        </div>
-      </div>
-    </>
+    </BaseModal>
   )
-
-  return createPortal(modalContent, document.body)
 }
