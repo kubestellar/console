@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useMemo } from 'react'
 import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
@@ -108,18 +108,6 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const [showStorageDetail, setShowStorageDetail] = useState(false)
   const [showGPUDetail, setShowGPUDetail] = useState(false)
 
-  // ESC to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
   const clusterGPUs = gpuNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0]))
   const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
 
@@ -217,9 +205,9 @@ After I approve, help me execute the repairs step by step.`,
   }, [clusterGPUs])
 
   // Show modal immediately with loading state for data - don't block on isLoading
-  return createPortal(
-    <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose}>
-      <div className="fixed top-[5vh] left-1/2 -translate-x-1/2 glass p-6 rounded-lg w-[800px] h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+  return (
+    <BaseModal isOpen={true} onClose={onClose} size="xl">
+      <div className="p-6 h-[90vh] overflow-y-auto">
         {/* Header with status icons */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -845,7 +833,6 @@ After I approve, help me execute the repairs step by step.`,
           onClose={() => setShowGPUDetail(false)}
         />
       )}
-    </div>,
-    document.body
+    </BaseModal>
   )
 }
