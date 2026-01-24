@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown } from 'lucide-react'
+import { Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
@@ -589,39 +590,28 @@ export function CardWrapper({
       </div>
 
       {/* Expanded modal */}
-      {isExpanded && (
-        <div className={cn(
-          'fixed inset-0 z-50 flex items-center justify-center bg-black/80',
-          FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'p-2' : 'p-8'
+      <BaseModal
+        isOpen={isExpanded}
+        onClose={() => setIsExpanded(false)}
+        size={FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'full' : LARGE_EXPANDED_CARDS.has(cardType) ? 'xl' : 'lg'}
+      >
+        <BaseModal.Header
+          title={title}
+          icon={Maximize2}
+          onClose={() => setIsExpanded(false)}
+          showBack={false}
+        />
+        <BaseModal.Content className={cn(
+          'overflow-auto flex flex-col',
+          FULLSCREEN_EXPANDED_CARDS.has(cardType)
+            ? 'h-[calc(98vh-80px)]'
+            : LARGE_EXPANDED_CARDS.has(cardType)
+              ? 'h-[calc(95vh-80px)]'
+              : 'max-h-[calc(80vh-80px)]'
         )}>
-          <div className={cn(
-            'w-full glass rounded-2xl overflow-hidden animate-fade-in-up',
-            FULLSCREEN_EXPANDED_CARDS.has(cardType)
-              ? 'max-w-[98vw] max-h-[98vh]'
-              : LARGE_EXPANDED_CARDS.has(cardType)
-                ? 'max-w-7xl max-h-[95vh]'
-                : 'max-w-4xl max-h-[80vh]'
-          )}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-              <h3 className="text-lg font-medium text-foreground">{title}</h3>
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className={cn(
-              'p-6 overflow-auto',
-              FULLSCREEN_EXPANDED_CARDS.has(cardType)
-                ? 'max-h-[calc(98vh-80px)]'
-                : LARGE_EXPANDED_CARDS.has(cardType)
-                  ? 'max-h-[calc(95vh-80px)]'
-                  : 'max-h-[calc(80vh-80px)]'
-            )}>{children}</div>
-          </div>
-        </div>
-      )}
+          {children}
+        </BaseModal.Content>
+      </BaseModal>
     </>
   )
 }
