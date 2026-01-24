@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Settings, Check, GripVertical, Eye, EyeOff, Plus, Trash2, Search, ChevronRight, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -497,22 +497,10 @@ interface DashboardCategoryProps {
 }
 
 function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onToggle }: DashboardCategoryProps) {
-  const [showScrollHint, setShowScrollHint] = useState(true)
-  const scrollRef = useRef<HTMLDivElement>(null)
-
   if (availableBlocks.length === 0) return null
 
   // Show scroll indicator when there are more than 4 items (roughly fills max-h-40)
   const hasMoreItems = availableBlocks.length > 4
-
-  const handleScroll = () => {
-    if (!scrollRef.current) return
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-    // Hide hint when scrolled past 20% or near bottom
-    const scrolledPastThreshold = scrollTop > 20
-    const nearBottom = scrollTop + clientHeight >= scrollHeight - 10
-    setShowScrollHint(!scrolledPastThreshold && !nearBottom)
-  }
 
   return (
     <div className="border-b border-border/50 last:border-b-0">
@@ -530,20 +518,14 @@ function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onTog
         <span className="text-xs text-muted-foreground">{availableBlocks.length}</span>
       </button>
       {isExpanded && (
-        <div className="relative">
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="pb-2 max-h-40 overflow-y-auto"
-          >
-            {availableBlocks.map(block => (
-              <AvailableStatItem key={block.id} block={block} onAdd={onAdd} />
-            ))}
-          </div>
-          {/* Scroll indicator - fade gradient when there's more content */}
-          {hasMoreItems && showScrollHint && (
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background/80 to-transparent pointer-events-none flex items-end justify-center pb-1 transition-opacity">
-              <span className="text-[10px] text-muted-foreground/70">scroll for more ↓</span>
+        <div className="max-h-40 overflow-y-auto border-l-2 border-purple-500/30 ml-2">
+          {availableBlocks.map(block => (
+            <AvailableStatItem key={block.id} block={block} onAdd={onAdd} />
+          ))}
+          {/* Scroll hint at bottom of list when there are many items */}
+          {hasMoreItems && (
+            <div className="sticky bottom-0 text-center text-[10px] text-muted-foreground py-1 bg-gradient-to-t from-card to-transparent">
+              ↓ scroll for more
             </div>
           )}
         </div>
