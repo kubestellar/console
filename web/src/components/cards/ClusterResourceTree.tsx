@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, RefreshCw, Folder, FileKey, FileText, Gauge, User, Clock, Container } from 'lucide-react'
-import { useClusters, usePodIssues, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts } from '../../hooks/useMCP'
+import { useClusters, usePodIssues, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -40,6 +40,8 @@ interface NamespaceResources {
   configmaps: Array<{ name: string; namespace: string; dataCount: number }>
   secrets: Array<{ name: string; namespace: string; type: string }>
   serviceaccounts: Array<{ name: string; namespace: string }>
+  jobs: Array<{ name: string; namespace: string; status: string; completions: string; duration?: string }>
+  hpas: Array<{ name: string; namespace: string; reference: string; minReplicas: number; maxReplicas: number; currentReplicas: number }>
 }
 
 // Cache structure for per-cluster data
@@ -53,6 +55,8 @@ interface ClusterDataCache {
   configmaps: Array<{ name: string; namespace: string; dataCount: number }>
   secrets: Array<{ name: string; namespace: string; type: string }>
   serviceaccounts: Array<{ name: string; namespace: string }>
+  jobs: Array<{ name: string; namespace: string; status: string; completions: string; duration?: string }>
+  hpas: Array<{ name: string; namespace: string; reference: string; minReplicas: number; maxReplicas: number; currentReplicas: number }>
   podIssues: Array<{ name: string; namespace: string; status: string; reason?: string }>
 }
 
@@ -96,6 +100,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   const { configmaps: allConfigMaps } = useConfigMaps(selectedCluster || undefined)
   const { secrets: allSecrets } = useSecrets(selectedCluster || undefined)
   const { serviceAccounts: allServiceAccounts } = useServiceAccounts(selectedCluster || undefined)
+  const { jobs: allJobs } = useJobs(selectedCluster || undefined)
+  const { hpas: allHPAs } = useHPAs(selectedCluster || undefined)
 
   // Cache data for the selected cluster when it changes
   useEffect(() => {
@@ -146,6 +152,21 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
             name: sa.name,
             namespace: sa.namespace,
           })),
+          jobs: (allJobs || []).map(j => ({
+            name: j.name,
+            namespace: j.namespace,
+            status: j.status,
+            completions: j.completions,
+            duration: j.duration,
+          })),
+          hpas: (allHPAs || []).map(h => ({
+            name: h.name,
+            namespace: h.namespace,
+            reference: h.reference,
+            minReplicas: h.minReplicas,
+            maxReplicas: h.maxReplicas,
+            currentReplicas: h.currentReplicas,
+          })),
           podIssues: (podIssues || []).map(p => ({
             name: p.name,
             namespace: p.namespace,
@@ -162,7 +183,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         return next
       })
     }
-  }, [selectedCluster, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, podIssues])
+  }, [selectedCluster, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, allJobs, allHPAs, podIssues])
 
   // Helper to get cached data for a cluster
   const getClusterData = useCallback((clusterName: string): ClusterDataCache | null => {
@@ -217,6 +238,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         configmaps: [],
         secrets: [],
         serviceaccounts: [],
+        jobs: [],
+        hpas: [],
       })
     })
 
@@ -288,6 +311,35 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         nsData.serviceaccounts.push({
           name: sa.name,
           namespace: sa.namespace,
+        })
+      }
+    }
+
+    // Group Jobs
+    for (const j of clusterData.jobs) {
+      const nsData = map.get(j.namespace)
+      if (nsData) {
+        nsData.jobs.push({
+          name: j.name,
+          namespace: j.namespace,
+          status: j.status,
+          completions: j.completions,
+          duration: j.duration,
+        })
+      }
+    }
+
+    // Group HPAs
+    for (const h of clusterData.hpas) {
+      const nsData = map.get(h.namespace)
+      if (nsData) {
+        nsData.hpas.push({
+          name: h.name,
+          namespace: h.namespace,
+          reference: h.reference,
+          minReplicas: h.minReplicas,
+          maxReplicas: h.maxReplicas,
+          currentReplicas: h.currentReplicas,
         })
       }
     }
@@ -616,11 +668,14 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
 
                         // Apply lens filtering to namespace content
                         const showDeployments = (activeLens === 'all' || activeLens === 'workloads' || activeLens === 'issues') && nsData.deployments.length > 0
+                        const showPods = (activeLens === 'all' || activeLens === 'workloads' || activeLens === 'issues') && nsData.pods.length > 0
                         const showServices = (activeLens === 'all' || activeLens === 'network') && nsData.services.length > 0
                         const showPVCs = (activeLens === 'all' || activeLens === 'storage' || activeLens === 'issues') && nsData.pvcs.length > 0
-                        const showConfigMaps = activeLens === 'all' && nsData.configmaps.length > 0
-                        const showSecrets = activeLens === 'all' && nsData.secrets.length > 0
-                        const showServiceAccounts = activeLens === 'all' && nsData.serviceaccounts.length > 0
+                        const showConfigMaps = (activeLens === 'all' || activeLens === 'workloads') && nsData.configmaps.length > 0
+                        const showSecrets = (activeLens === 'all' || activeLens === 'workloads') && nsData.secrets.length > 0
+                        const showServiceAccounts = (activeLens === 'all' || activeLens === 'workloads') && nsData.serviceaccounts.length > 0
+                        const showJobs = (activeLens === 'all' || activeLens === 'workloads') && nsData.jobs.length > 0
+                        const showHPAs = (activeLens === 'all' || activeLens === 'workloads') && nsData.hpas.length > 0
 
                         return (
                           <TreeNode
@@ -680,6 +735,34 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     </TreeNode>
                                   )
                                 })}
+                              </TreeNode>
+                            )}
+
+                            {/* Standalone Pods section (shows all pods, not just those under deployments) */}
+                            {showPods && (
+                              <TreeNode
+                                id={`${nsId}:pods`}
+                                label="Pods"
+                                icon={ResourceIcon.pod}
+                                iconColor="text-teal-400"
+                                count={nsData.pods.length}
+                                badge={nsPodIssues > 0 ? nsPodIssues : undefined}
+                                badgeColor="bg-red-500/20 text-red-400"
+                                indent={4}
+                              >
+                                {nsData.pods.map(pod => (
+                                  <TreeNode
+                                    key={pod.name}
+                                    id={`${nsId}:pod:${pod.name}`}
+                                    label={pod.name}
+                                    icon={ResourceIcon.pod}
+                                    iconColor={pod.status === 'Running' || pod.status === 'Succeeded' ? 'text-green-400' : 'text-red-400'}
+                                    badge={pod.restarts > 0 ? `${pod.status} (${pod.restarts} restarts)` : pod.status}
+                                    badgeColor={pod.status === 'Running' || pod.status === 'Succeeded' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}
+                                    onClick={() => drillToPod(cluster.name, ns, pod.name, { status: pod.status, restarts: pod.restarts })}
+                                    indent={5}
+                                  />
+                                ))}
                               </TreeNode>
                             )}
 
@@ -802,6 +885,60 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     label={sa.name}
                                     icon={ResourceIcon.serviceaccount}
                                     iconColor="text-cyan-400"
+                                    indent={5}
+                                  />
+                                ))}
+                              </TreeNode>
+                            )}
+
+                            {/* Jobs */}
+                            {showJobs && (
+                              <TreeNode
+                                id={`${nsId}:jobs`}
+                                label="Jobs"
+                                icon={ResourceIcon.job}
+                                iconColor="text-amber-400"
+                                count={nsData.jobs.length}
+                                indent={4}
+                              >
+                                {nsData.jobs.map(job => {
+                                  const isComplete = job.status === 'Complete'
+                                  const isRunning = job.status === 'Running'
+                                  return (
+                                    <TreeNode
+                                      key={job.name}
+                                      id={`${nsId}:job:${job.name}`}
+                                      label={job.name}
+                                      icon={ResourceIcon.job}
+                                      iconColor={isComplete ? 'text-green-400' : isRunning ? 'text-amber-400' : 'text-red-400'}
+                                      badge={`${job.status} (${job.completions})`}
+                                      badgeColor={isComplete ? 'bg-green-500/20 text-green-400' : isRunning ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}
+                                      indent={5}
+                                    />
+                                  )
+                                })}
+                              </TreeNode>
+                            )}
+
+                            {/* HPAs */}
+                            {showHPAs && (
+                              <TreeNode
+                                id={`${nsId}:hpas`}
+                                label="HPAs"
+                                icon={ResourceIcon.hpa}
+                                iconColor="text-violet-400"
+                                count={nsData.hpas.length}
+                                indent={4}
+                              >
+                                {nsData.hpas.map(hpa => (
+                                  <TreeNode
+                                    key={hpa.name}
+                                    id={`${nsId}:hpa:${hpa.name}`}
+                                    label={hpa.name}
+                                    icon={ResourceIcon.hpa}
+                                    iconColor="text-violet-400"
+                                    badge={`${hpa.currentReplicas} (${hpa.minReplicas}-${hpa.maxReplicas})`}
+                                    badgeColor="bg-violet-500/20 text-violet-400"
                                     indent={5}
                                   />
                                 ))}
