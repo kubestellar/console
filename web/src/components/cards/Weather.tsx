@@ -147,25 +147,48 @@ function getCityName(zipcode: string): string {
 }
 
 // Generate hourly forecast for next 24 hours
+// Uses the same base condition as the daily forecast to ensure consistency
 function generateHourlyForecast(units: 'F' | 'C', zipcode: string): HourlyForecast[] {
   const conditions: Array<keyof typeof WEATHER_CONDITIONS> = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy']
   const hourly: HourlyForecast[] = []
   const now = new Date()
   const seed = hashZipcode(zipcode)
 
-  for (let i = 0; i < 24; i++) {
-    const hour = (now.getHours() + i) % 24
-    const conditionIndex = Math.floor(seededRandom(seed + i + 5000) * conditions.length)
-    const condition = conditions[conditionIndex]
-    
+  // Get today's and tomorrow's base conditions to match daily forecast
+  // Use same seed calculation as generateMockForecast for consistency
+  const todayConditionIndex = Math.floor(seededRandom(seed) * conditions.length)
+  const todayCondition = conditions[todayConditionIndex]
+  const tomorrowConditionIndex = Math.floor(seededRandom(seed + 1) * conditions.length)
+  const tomorrowCondition = conditions[tomorrowConditionIndex]
+
+  // Get base temps for today and tomorrow conditions
+  const getTempForCondition = (condition: keyof typeof WEATHER_CONDITIONS) => {
     let baseTemp = units === 'F' ? 72 : 22
     if (condition === 'snowy') baseTemp = units === 'F' ? 28 : -2
     if (condition === 'rainy') baseTemp = units === 'F' ? 55 : 13
     if (condition === 'sunny') baseTemp = units === 'F' ? 82 : 28
-    
+    return baseTemp
+  }
+
+  const currentHour = now.getHours()
+
+  for (let i = 0; i < 24; i++) {
+    const hour = (currentHour + i) % 24
+    const isNextDay = (currentHour + i) >= 24
+
+    // Use today's condition for remaining hours today, tomorrow's for after midnight
+    const baseCondition = isNextDay ? tomorrowCondition : todayCondition
+    const baseTemp = getTempForCondition(baseCondition)
+
+    // Small hourly variation in condition (mostly stays the same)
+    const hourlyConditionVariation = seededRandom(seed + i + 5000)
+    const condition = hourlyConditionVariation > 0.8
+      ? conditions[Math.floor(hourlyConditionVariation * conditions.length)]
+      : baseCondition
+
     // Temperature varies throughout the day
     const tempVariation = Math.sin((hour - 6) * Math.PI / 12) * 8 // Peak at 6 PM
-    
+
     hourly.push({
       hour: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`,
       time: hour,
@@ -236,12 +259,16 @@ function getConditionColor(condition: keyof typeof WEATHER_CONDITIONS) {
   return colorMap[condition]
 }
 
+// getCurrentWeather uses the SAME seed as daily forecast day 0 to ensure consistency
 function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   const conditions: Array<keyof typeof WEATHER_CONDITIONS> = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy']
   const seed = hashZipcode(zipcode)
-  const conditionIndex = Math.floor(seededRandom(seed) * conditions.length)
+
+  // Use same seed calculation as generateMockForecast for day 0 (today)
+  // This ensures the hero section matches the "Today" row in 7-day forecast
+  const conditionIndex = Math.floor(seededRandom(seed) * conditions.length) // Same as seed + 0
   const condition = conditions[conditionIndex]
-  
+
   let baseTemp = units === 'F' ? 72 : 22
   if (condition === 'snowy') baseTemp = units === 'F' ? 28 : -2
   if (condition === 'rainy') baseTemp = units === 'F' ? 55 : 13
@@ -253,13 +280,17 @@ function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   const sunsetHour = 18 + Math.floor(seededRandom(seed + 8100) * 2)
   const isDaytime = currentHour >= sunriseHour && currentHour < sunsetHour
 
+  // Temperature varies based on time of day for more realism
+  const tempVariation = Math.sin((currentHour - 6) * Math.PI / 12) * 4
+
   return {
     condition,
-    temperature: baseTemp + Math.floor(seededRandom(seed + 1000) * 5),
-    humidity: Math.floor(seededRandom(seed + 2000) * 40) + 40,
-    windSpeed: condition === 'windy' ? Math.floor(seededRandom(seed + 3000) * 20) + 15 : Math.floor(seededRandom(seed + 3000) * 15) + 2,
+    // Use same seed offsets as generateMockForecast for day 0
+    temperature: Math.round(baseTemp + tempVariation + seededRandom(seed + 100) * 5),
+    humidity: Math.floor(seededRandom(seed + 400) * 40) + 40, // Same offset as forecast humidity
+    windSpeed: condition === 'windy' ? Math.floor(seededRandom(seed + 500) * 20) + 15 : Math.floor(seededRandom(seed + 500) * 15) + 2,
     uvIndex: condition === 'sunny' ? Math.floor(seededRandom(seed + 4000) * 5) + 6 : Math.floor(seededRandom(seed + 4000) * 4) + 1,
-    feelsLike: baseTemp + Math.floor(seededRandom(seed + 1100) * 3) - 2,
+    feelsLike: Math.round(baseTemp + tempVariation + seededRandom(seed + 1100) * 3 - 2),
     visibility: Math.floor(seededRandom(seed + 5000) * 5) + 5,
     isDaytime,
     sunrise: formatTime(sunriseHour, seed + 8200),
@@ -267,12 +298,12 @@ function getCurrentWeather(units: 'F' | 'C', zipcode: string) {
   }
 }
 
-// Animated weather background components
+// Animated weather background components with smooth transitions
 function WeatherBackground({ condition }: { condition: keyof typeof WEATHER_CONDITIONS }) {
   const particles = Array.from({ length: condition === 'snowy' || condition === 'rainy' ? 50 : 0 })
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30 transition-opacity duration-500 ease-in-out">
       {condition === 'sunny' && (
         <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-yellow-400 weather-sun" />
       )}
@@ -321,6 +352,7 @@ function WeatherBackground({ condition }: { condition: keyof typeof WEATHER_COND
 
 export function Weather({ config }: { config?: WeatherConfig }) {
   const [zipcode, setZipcode] = useState(config?.zipcode || '10001')
+  const [currentCityName, setCurrentCityName] = useState(() => getCityName(config?.zipcode || '10001'))
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
   const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || 7)
   const [searchQuery, setSearchQuery] = useState('')
@@ -409,7 +441,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const selectCity = useCallback((city: GeocodingResult) => {
     // Use postal_code if available, otherwise generate a mock zipcode from coordinates
     const newZipcode = city.postal_code || `${String(Math.abs(Math.floor(city.latitude * 1000))).substring(0, 5)}`
+    // Format city name as "City, State (zipcode)" or "City, Country (zipcode)"
+    const statePart = city.admin1 || city.country
+    const formattedName = `${city.name}, ${statePart}`
     setZipcode(newZipcode)
+    setCurrentCityName(formattedName)
     setCitySearchInput('')
     setShowCityDropdown(false)
     setCitySearchResults([])
@@ -418,22 +454,22 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   // Save current location or toggle favorite
   const saveCurrentLocation = useCallback(() => {
     const existingLocation = savedLocations.find(loc => loc.zipcode === zipcode)
-    
+
     if (existingLocation) {
-      setSavedLocations(prev => prev.map(loc => 
+      setSavedLocations(prev => prev.map(loc =>
         loc.zipcode === zipcode ? { ...loc, favorite: !loc.favorite } : loc
       ))
     } else {
       const newLocation: SavedLocation = {
         zipcode,
-        cityName: getCityName(zipcode),
+        cityName: currentCityName, // Use the tracked city name
         temperature: currentWeather.temperature,
         condition: currentWeather.condition,
         favorite: true,
       }
       setSavedLocations(prev => [...prev, newLocation])
     }
-  }, [zipcode, currentWeather, savedLocations])
+  }, [zipcode, currentCityName, currentWeather, savedLocations])
 
   // Remove a saved location
   const removeSavedLocation = useCallback((zipcodeToRemove: string) => {
@@ -442,9 +478,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
   // Load a saved location
   const loadSavedLocation = useCallback((savedZipcode: string) => {
+    const savedLoc = savedLocations.find(loc => loc.zipcode === savedZipcode)
     setZipcode(savedZipcode)
+    if (savedLoc) {
+      setCurrentCityName(savedLoc.cityName)
+    }
     setShowSavedLocations(false)
-  }, [])
+  }, [savedLocations])
 
   // Refresh weather data
   const refreshWeather = useCallback(() => {
@@ -540,19 +580,19 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowConfig(!showConfig)}
-            className="p-1 rounded hover:bg-secondary/50 transition-colors"
-            title="Settings"
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${showConfig ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground'}`}
+            title="Search & Settings"
           >
-            <Settings className="w-4 h-4 text-muted-foreground" />
+            <Settings className="w-4 h-4" />
+            <span className="text-xs">Settings</span>
           </button>
           <button
-            onClick={saveCurrentLocation}
-            className={`p-1 rounded hover:bg-secondary/50 transition-colors ${
-              savedLocations.find(loc => loc.zipcode === zipcode)?.favorite ? 'text-yellow-400' : 'text-muted-foreground'
-            }`}
-            title={savedLocations.find(loc => loc.zipcode === zipcode)?.favorite ? 'Unfavorite' : 'Favorite'}
+            onClick={() => setShowSavedLocations(!showSavedLocations)}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${showSavedLocations ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground'}`}
+            title="My Locations"
           >
-            <Star className="w-4 h-4" fill={savedLocations.find(loc => loc.zipcode === zipcode)?.favorite ? 'currentColor' : 'none'} />
+            <Star className="w-4 h-4" />
+            <span className="text-xs">My Places ({savedLocations.length})</span>
           </button>
         </div>
         <RefreshButton
@@ -561,6 +601,70 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           onRefresh={refreshWeather}
         />
       </div>
+
+      {/* My Places Panel */}
+      {showSavedLocations && (
+        <div className="mb-3 p-3 rounded-xl bg-secondary/30 backdrop-blur-sm border border-border/30">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-foreground">My Saved Places</h3>
+            <button
+              onClick={saveCurrentLocation}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+            >
+              <Star className="w-3 h-3" />
+              {savedLocations.find(loc => loc.zipcode === zipcode) ? 'Saved' : 'Save Current'}
+            </button>
+          </div>
+
+          {savedLocations.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              <Star className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p>No saved locations yet</p>
+              <p className="text-xs mt-1">Click "Save Current" to add {currentCityName}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {savedLocations.map((location) => {
+                const isCurrentLocation = location.zipcode === zipcode
+                const locWeather = getCurrentWeather(units, location.zipcode)
+                const LocIcon = WEATHER_CONDITIONS[locWeather.condition].icon
+
+                return (
+                  <div
+                    key={location.zipcode}
+                    className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                      isCurrentLocation
+                        ? 'bg-primary/10 border border-primary/30'
+                        : 'bg-secondary/30 hover:bg-secondary/50'
+                    }`}
+                  >
+                    <button
+                      onClick={() => loadSavedLocation(location.zipcode)}
+                      className="flex-1 flex items-center gap-3 text-left"
+                    >
+                      <LocIcon className={`w-5 h-5 ${getConditionColor(locWeather.condition)}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{location.cityName}</div>
+                        <div className="text-xs text-muted-foreground">{locWeather.temperature}° • {WEATHER_CONDITIONS[locWeather.condition].label}</div>
+                      </div>
+                      {isCurrentLocation && (
+                        <span className="text-xs text-primary px-1.5 py-0.5 bg-primary/10 rounded">Current</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => removeSavedLocation(location.zipcode)}
+                      className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+                      title="Remove from saved"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Configuration Panel */}
       {showConfig && (
@@ -608,7 +712,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             <input
               type="text"
               value={zipcode}
-              onChange={(e) => setZipcode(e.target.value)}
+              onChange={(e) => {
+                const newZip = e.target.value
+                setZipcode(newZip)
+                // Update city name when manually entering zipcode
+                const knownCity = getCityName(newZip)
+                setCurrentCityName(knownCity.startsWith('Area') ? `Location ${newZip}` : knownCity)
+              }}
               className="w-full px-3 py-2 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground"
               placeholder="Enter zipcode"
             />
@@ -638,62 +748,6 @@ export function Weather({ config }: { config?: WeatherConfig }) {
               </select>
             </div>
           </div>
-          
-          {/* Saved Locations */}
-          {savedLocations.length > 0 && (
-            <div className="pt-2 border-t border-border/30">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs text-muted-foreground">Saved ({savedLocations.length})</label>
-                <button
-                  onClick={() => setShowSavedLocations(!showSavedLocations)}
-                  className="text-xs text-blue-400 hover:text-blue-300"
-                >
-                  {showSavedLocations ? 'Hide' : 'Show'}
-                </button>
-              </div>
-              {showSavedLocations && (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {[...savedLocations]
-                    .sort((a, b) => {
-                      if (a.favorite && !b.favorite) return -1
-                      if (!a.favorite && b.favorite) return 1
-                      return 0
-                    })
-                    .map((location) => {
-                    const condition = WEATHER_CONDITIONS[location.condition]
-                    const Icon = condition.icon
-                    
-                    return (
-                      <div
-                        key={location.zipcode}
-                        className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors group"
-                      >
-                        <button
-                          onClick={() => loadSavedLocation(location.zipcode)}
-                          className="flex items-center gap-2 flex-1 text-left"
-                        >
-                          <Icon className="w-4 h-4" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs font-medium">{location.cityName}</span>
-                              {location.favorite && <Star className="w-3 h-3 text-yellow-400" fill="currentColor" />}
-                            </div>
-                            <div className="text-xs text-muted-foreground">{location.temperature}°{units}</div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => removeSavedLocation(location.zipcode)}
-                          className="p-1 rounded hover:bg-destructive/20 transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                          <X className="w-3 h-3 text-destructive" />
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
           
           {/* Search and Controls in Config */}
           <div className="pt-2 border-t border-border/30">
@@ -725,18 +779,21 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       {/* Main Weather Display - iPhone Style */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-2">
         {/* Hero Section - Large Temperature Display (Reduced Height) */}
-        <div className={`relative rounded-3xl bg-gradient-to-b ${backgroundGradient} overflow-hidden shadow-lg`}>
+        <div
+          key={`weather-hero-${zipcode}`}
+          className={`relative rounded-3xl bg-gradient-to-b ${backgroundGradient} overflow-hidden shadow-lg weather-hero-animated weather-content-transition`}
+        >
           {/* Darker overlay for better text readability */}
           <div className="absolute inset-0 bg-black/30 z-0"></div>
-          
+
           {/* Subtle animated background */}
           <WeatherBackground condition={currentWeather.condition} />
-          
+
           <div className="relative z-10 text-white p-3">
             {/* Location */}
             <div className="flex items-center justify-center gap-2 mb-0.5">
               <MapPin className="w-4 h-4" />
-              <h2 className="text-base font-semibold">{getCityName(zipcode)}</h2>
+              <h2 className="text-base font-semibold">{currentCityName}</h2>
             </div>
             
             {/* Large Temperature - iOS Style (Further Reduced Size) */}
@@ -755,8 +812,28 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           </div>
         </div>
 
+        {/* Quick location switcher - only show if we have saved locations */}
+        {savedLocations.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Quick switch:</span>
+            {savedLocations.filter(loc => loc.zipcode !== zipcode).slice(0, 3).map((location) => {
+              const locWeather = getCurrentWeather(units, location.zipcode)
+              return (
+                <button
+                  key={location.zipcode}
+                  onClick={() => loadSavedLocation(location.zipcode)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-colors bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground border border-border/30"
+                >
+                  <span className="font-medium">{location.cityName.split(',')[0]}</span>
+                  <span className="opacity-70">{locWeather.temperature}°</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
         {/* Hourly Forecast - Horizontal Scroll */}
-        <div className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4">
+        <div key={`hourly-${zipcode}`} className="rounded-2xl bg-secondary/30 backdrop-blur-sm border border-border/20 p-4 weather-content-transition">
           <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
             <Calendar className="w-3 h-3" />
             <span>Hourly Forecast</span>

@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Maximize2, Minimize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown } from 'lucide-react'
+import { Maximize2, MoreVertical, Clock, X, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
@@ -34,6 +34,20 @@ const WIDTH_OPTIONS = [
   { value: 8, label: 'Wide', description: '2/3 width' },
   { value: 12, label: 'Full', description: 'Full width' },
 ]
+
+// Cards that need extra-large expanded modal (for maps, complex visualizations, etc.)
+// These use 95vh height and 7xl width instead of the default 80vh/4xl
+const LARGE_EXPANDED_CARDS = new Set([
+  'cluster_comparison',
+  'cluster_resource_tree',
+  'sudoku_game', // Games need larger space for playability
+  'match_game',
+])
+
+// Cards that should be nearly fullscreen when expanded (maps, large visualizations)
+const FULLSCREEN_EXPANDED_CARDS = new Set([
+  'cluster_locations',
+])
 
 interface CardWrapperProps {
   cardId?: string
@@ -547,8 +561,18 @@ export function CardWrapper({
 
       {/* Expanded modal */}
       {isExpanded && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-black/80">
-          <div className="w-full max-w-4xl max-h-[80vh] glass rounded-2xl overflow-hidden animate-fade-in-up">
+        <div className={cn(
+          'fixed inset-0 z-50 flex items-center justify-center bg-black/80',
+          FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'p-2' : 'p-8'
+        )}>
+          <div className={cn(
+            'w-full glass rounded-2xl overflow-hidden animate-fade-in-up',
+            FULLSCREEN_EXPANDED_CARDS.has(cardType)
+              ? 'max-w-[98vw] max-h-[98vh]'
+              : LARGE_EXPANDED_CARDS.has(cardType)
+                ? 'max-w-7xl max-h-[95vh]'
+                : 'max-w-4xl max-h-[80vh]'
+          )}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
               <h3 className="text-lg font-medium text-foreground">{title}</h3>
               <button
@@ -558,7 +582,14 @@ export function CardWrapper({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 overflow-auto max-h-[calc(80vh-80px)]">{children}</div>
+            <div className={cn(
+              'p-6 overflow-auto',
+              FULLSCREEN_EXPANDED_CARDS.has(cardType)
+                ? 'max-h-[calc(98vh-80px)]'
+                : LARGE_EXPANDED_CARDS.has(cardType)
+                  ? 'max-h-[calc(95vh-80px)]'
+                  : 'max-h-[calc(80vh-80px)]'
+            )}>{children}</div>
           </div>
         </div>
       )}
