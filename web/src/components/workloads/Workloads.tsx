@@ -19,6 +19,7 @@ import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -142,6 +143,7 @@ export function Workloads() {
   const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -356,8 +358,8 @@ export function Workloads() {
     totalDeploymentIssues: deploymentIssues.length,
   }), [apps, podIssues, deploymentIssues])
 
-  // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  // Dashboard-specific stats value getter
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'namespaces':
         return { value: stats.total, sublabel: 'active namespaces', onClick: () => drillToAllNamespaces(), isClickable: apps.length > 0 }
@@ -377,6 +379,12 @@ export function Workloads() {
         return { value: '-', sublabel: '' }
     }
   }, [stats, apps, drillToAllNamespaces, drillToAllDeployments, drillToAllPods])
+
+  // Merged getter: dashboard-specific values first, then universal fallback
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

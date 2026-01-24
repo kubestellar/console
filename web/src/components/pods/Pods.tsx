@@ -19,6 +19,7 @@ import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -130,6 +131,7 @@ export function Pods() {
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { drillToPod, drillToAllPods, drillToAllClusters } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -264,8 +266,8 @@ export function Pods() {
     }
   }, [clusters, filteredPodIssues, isAllClustersSelected, globalSelectedClusters])
 
-  // Stats value getter
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  // Dashboard-specific stats value getter
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total_pods':
         return { value: stats.totalPods, sublabel: 'total pods', onClick: () => drillToAllPods(), isClickable: stats.totalPods > 0 }
@@ -283,6 +285,12 @@ export function Pods() {
         return { value: '-', sublabel: '' }
     }
   }, [stats, drillToAllPods, drillToAllClusters])
+
+  // Merged getter: dashboard-specific values first, then universal fallback
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
