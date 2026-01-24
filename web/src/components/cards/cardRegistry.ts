@@ -111,6 +111,8 @@ import { KubeKong } from './KubeKong'
 import { PodPitfall } from './PodPitfall'
 // Node Invaders (Space Invaders) card
 import { NodeInvaders } from './NodeInvaders'
+// Pod Brothers (Mario Bros) card
+import { PodBrothers } from './PodBrothers'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -248,6 +250,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kube_kong: KubeKong,
   pod_pitfall: PodPitfall,
   node_invaders: NodeInvaders,
+  // Pod Brothers (Mario Bros) card
+  pod_brothers: PodBrothers,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -392,6 +396,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kube_kong: 6,
   pod_pitfall: 6,
   node_invaders: 6,
+  pod_brothers: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,
