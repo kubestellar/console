@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Settings, Check, GripVertical, Eye, EyeOff, Plus, Trash2, Search } from 'lucide-react'
+import { Settings, Check, GripVertical, Eye, EyeOff, Plus, Trash2, Search, ChevronRight, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   DndContext,
@@ -425,6 +425,49 @@ function SortableItem({ block, onToggleVisibility, onRemove, isCustom }: Sortabl
   )
 }
 
+/**
+ * Dashboard categories with display names and icons
+ */
+const DASHBOARD_CATEGORIES: { type: DashboardStatsType; name: string; icon: string }[] = [
+  { type: 'clusters', name: 'Clusters', icon: '🖥️' },
+  { type: 'workloads', name: 'Workloads', icon: '📦' },
+  { type: 'pods', name: 'Pods', icon: '🗂️' },
+  { type: 'compute', name: 'Compute', icon: '🔲' },
+  { type: 'gitops', name: 'GitOps', icon: '🚢' },
+  { type: 'storage', name: 'Storage', icon: '💽' },
+  { type: 'network', name: 'Network', icon: '🌐' },
+  { type: 'security', name: 'Security', icon: '🛡️' },
+  { type: 'compliance', name: 'Compliance', icon: '📋' },
+  { type: 'events', name: 'Events', icon: '📜' },
+  { type: 'cost', name: 'Cost', icon: '💵' },
+  { type: 'alerts', name: 'Alerts', icon: '🔴' },
+  { type: 'operators', name: 'Operators', icon: '⚙️' },
+  { type: 'dashboard', name: 'Main Dashboard', icon: '📊' },
+]
+
+/**
+ * Get stat blocks for a specific dashboard type
+ */
+function getStatBlocksForDashboard(dashboardType: DashboardStatsType): StatBlockConfig[] {
+  switch (dashboardType) {
+    case 'clusters': return CLUSTERS_STAT_BLOCKS
+    case 'workloads': return WORKLOADS_STAT_BLOCKS
+    case 'pods': return PODS_STAT_BLOCKS
+    case 'gitops': return GITOPS_STAT_BLOCKS
+    case 'storage': return STORAGE_STAT_BLOCKS
+    case 'network': return NETWORK_STAT_BLOCKS
+    case 'security': return SECURITY_STAT_BLOCKS
+    case 'compliance': return COMPLIANCE_STAT_BLOCKS
+    case 'compute': return COMPUTE_STAT_BLOCKS
+    case 'events': return EVENTS_STAT_BLOCKS
+    case 'cost': return COST_STAT_BLOCKS
+    case 'alerts': return ALERTS_STAT_BLOCKS
+    case 'dashboard': return DASHBOARD_STAT_BLOCKS
+    case 'operators': return OPERATORS_STAT_BLOCKS
+    default: return []
+  }
+}
+
 interface AvailableStatItemProps {
   block: StatBlockConfig
   onAdd: (block: StatBlockConfig) => void
@@ -434,7 +477,7 @@ function AvailableStatItem({ block, onAdd }: AvailableStatItemProps) {
   return (
     <button
       onClick={() => onAdd(block)}
-      className="flex items-center gap-3 p-2 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors w-full text-left"
+      className="flex items-center gap-3 p-2 pl-8 rounded-lg hover:bg-secondary/40 transition-colors w-full text-left"
     >
       <div className={`w-5 h-5 ${colorClasses[block.color] || 'text-foreground'}`}>
         <span className="text-sm">{iconEmojis[block.icon] || '📊'}</span>
@@ -442,6 +485,43 @@ function AvailableStatItem({ block, onAdd }: AvailableStatItemProps) {
       <span className="flex-1 text-sm text-foreground">{block.name}</span>
       <Plus className="w-4 h-4 text-muted-foreground" />
     </button>
+  )
+}
+
+interface DashboardCategoryProps {
+  category: { type: DashboardStatsType; name: string; icon: string }
+  availableBlocks: StatBlockConfig[]
+  onAdd: (block: StatBlockConfig) => void
+  isExpanded: boolean
+  onToggle: () => void
+}
+
+function DashboardCategory({ category, availableBlocks, onAdd, isExpanded, onToggle }: DashboardCategoryProps) {
+  if (availableBlocks.length === 0) return null
+
+  return (
+    <div className="border-b border-border/50 last:border-b-0">
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-2 w-full p-2 hover:bg-secondary/30 rounded-lg transition-colors"
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        )}
+        <span className="text-base">{category.icon}</span>
+        <span className="flex-1 text-sm font-medium text-foreground text-left">{category.name}</span>
+        <span className="text-xs text-muted-foreground">{availableBlocks.length}</span>
+      </button>
+      {isExpanded && (
+        <div className="pb-2">
+          {availableBlocks.map(block => (
+            <AvailableStatItem key={block.id} block={block} onAdd={onAdd} />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -465,14 +545,28 @@ export function StatsConfigModal({
   const [localBlocks, setLocalBlocks] = useState<StatBlockConfig[]>(blocks)
   const [showAddPanel, setShowAddPanel] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (isOpen) {
       setLocalBlocks(blocks)
       setShowAddPanel(false)
       setSearchQuery('')
+      setExpandedCategories(new Set())
     }
   }, [isOpen, blocks])
+
+  const toggleCategory = (type: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(type)) {
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
+      return next
+    })
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -482,21 +576,40 @@ export function StatsConfigModal({
   // Get IDs of blocks in the current dashboard defaults
   const defaultBlockIds = useMemo(() => new Set(defaultBlocks.map(b => b.id)), [defaultBlocks])
 
-  // Get available stats not already in the current list
-  const availableStats = useMemo(() => {
-    const currentIds = new Set(localBlocks.map(b => b.id))
-    return ALL_STAT_BLOCKS.filter(block => !currentIds.has(block.id))
-  }, [localBlocks])
+  // Get current block IDs to filter out already-added stats
+  const currentBlockIds = useMemo(() => new Set(localBlocks.map(b => b.id)), [localBlocks])
 
-  // Filter available stats by search query
-  const filteredAvailableStats = useMemo(() => {
-    if (!searchQuery.trim()) return availableStats
-    const query = searchQuery.toLowerCase()
-    return availableStats.filter(block =>
-      block.name.toLowerCase().includes(query) ||
-      block.id.toLowerCase().includes(query)
-    )
-  }, [availableStats, searchQuery])
+  // Get available stats per dashboard category, filtered by search
+  const availableStatsByCategory = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim()
+    const result: Map<DashboardStatsType, StatBlockConfig[]> = new Map()
+
+    for (const category of DASHBOARD_CATEGORIES) {
+      const blocks = getStatBlocksForDashboard(category.type)
+        .filter(block => !currentBlockIds.has(block.id))
+        .filter(block =>
+          !query ||
+          block.name.toLowerCase().includes(query) ||
+          block.id.toLowerCase().includes(query) ||
+          category.name.toLowerCase().includes(query)
+        )
+      if (blocks.length > 0) {
+        result.set(category.type, blocks)
+      }
+    }
+    return result
+  }, [currentBlockIds, searchQuery])
+
+  // Check if any stats are available
+  const hasAvailableStats = availableStatsByCategory.size > 0
+
+  // Auto-expand categories when searching
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      // Expand all categories that have matching results
+      setExpandedCategories(new Set(availableStatsByCategory.keys()))
+    }
+  }, [searchQuery, availableStatsByCategory])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -586,15 +699,22 @@ export function StatsConfigModal({
                 Done
               </button>
             </div>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {filteredAvailableStats.length > 0 ? (
-                filteredAvailableStats.map(block => (
-                  <AvailableStatItem
-                    key={block.id}
-                    block={block}
-                    onAdd={handleAddStat}
-                  />
-                ))
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {hasAvailableStats ? (
+                DASHBOARD_CATEGORIES.map(category => {
+                  const categoryBlocks = availableStatsByCategory.get(category.type)
+                  if (!categoryBlocks || categoryBlocks.length === 0) return null
+                  return (
+                    <DashboardCategory
+                      key={category.type}
+                      category={category}
+                      availableBlocks={categoryBlocks}
+                      onAdd={handleAddStat}
+                      isExpanded={expandedCategories.has(category.type)}
+                      onToggle={() => toggleCategory(category.type)}
+                    />
+                  )
+                })
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {searchQuery ? 'No stats match your search' : 'All stats are already added'}
