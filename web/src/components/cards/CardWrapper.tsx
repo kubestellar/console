@@ -40,13 +40,18 @@ const WIDTH_OPTIONS = [
 const LARGE_EXPANDED_CARDS = new Set([
   'cluster_comparison',
   'cluster_resource_tree',
-  'sudoku_game', // Games need larger space for playability
   'match_game',
 ])
 
 // Cards that should be nearly fullscreen when expanded (maps, large visualizations)
 const FULLSCREEN_EXPANDED_CARDS = new Set([
   'cluster_locations',
+])
+
+// Cards that need maximum height but moderate width (games, interactive content)
+// These use 98vh height but limited width for better centering
+const TALL_EXPANDED_CARDS = new Set([
+  'sudoku_game',
 ])
 
 interface CardWrapperProps {
@@ -563,15 +568,18 @@ export function CardWrapper({
       {isExpanded && (
         <div className={cn(
           'fixed inset-0 z-50 flex items-center justify-center bg-black/80',
-          FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'p-2' : 'p-8'
+          FULLSCREEN_EXPANDED_CARDS.has(cardType) ? 'p-2' :
+          TALL_EXPANDED_CARDS.has(cardType) ? 'p-4' : 'p-8'
         )}>
           <div className={cn(
             'w-full glass rounded-2xl overflow-hidden animate-fade-in-up',
             FULLSCREEN_EXPANDED_CARDS.has(cardType)
               ? 'max-w-[98vw] max-h-[98vh]'
-              : LARGE_EXPANDED_CARDS.has(cardType)
-                ? 'max-w-7xl max-h-[95vh]'
-                : 'max-w-4xl max-h-[80vh]'
+              : TALL_EXPANDED_CARDS.has(cardType)
+                ? 'max-w-3xl max-h-[98vh]'
+                : LARGE_EXPANDED_CARDS.has(cardType)
+                  ? 'max-w-7xl max-h-[95vh]'
+                  : 'max-w-4xl max-h-[80vh]'
           )}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
               <h3 className="text-lg font-medium text-foreground">{title}</h3>
@@ -584,7 +592,7 @@ export function CardWrapper({
             </div>
             <div className={cn(
               'p-6 overflow-auto',
-              FULLSCREEN_EXPANDED_CARDS.has(cardType)
+              FULLSCREEN_EXPANDED_CARDS.has(cardType) || TALL_EXPANDED_CARDS.has(cardType)
                 ? 'max-h-[calc(98vh-80px)]'
                 : LARGE_EXPANDED_CARDS.has(cardType)
                   ? 'max-h-[calc(95vh-80px)]'
