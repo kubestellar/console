@@ -125,9 +125,9 @@ const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
 
 // Default cards for the Compliance dashboard
 const DEFAULT_COMPLIANCE_CARDS = [
-  { type: 'opa_policies', title: 'OPA Policies', position: { w: 6, h: 4 } },
-  { type: 'kyverno_policies', title: 'Kyverno Policies', position: { w: 6, h: 4 } },
-  { type: 'security_issues', title: 'Security Issues', position: { w: 6, h: 4 } },
+  { type: 'opa_policies', title: 'OPA Gatekeeper', position: { w: 4, h: 3 } },
+  { type: 'kyverno_policies', title: 'Kyverno Policies', position: { w: 4, h: 3 } },
+  { type: 'security_issues', title: 'Security Issues', position: { w: 8, h: 4 } },
   { type: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 6, h: 4 } },
 ]
 
@@ -148,6 +148,17 @@ function getCompliancePosture(clusterCount: number) {
     highFindings: Math.floor(clusterCount * 5.1),
     mediumFindings: Math.floor(clusterCount * 8.7),
     lowFindings: Math.floor(clusterCount * 12.4),
+    // Tool-specific metrics
+    gatekeeperViolations: Math.floor(clusterCount * 3.2),
+    kyvernoViolations: Math.floor(clusterCount * 2.8),
+    kubescapeScore: 78 + Math.floor(Math.random() * 10),
+    falcoAlerts: Math.floor(clusterCount * 1.5),
+    trivyVulns: Math.floor(clusterCount * 12),
+    criticalCVEs: Math.floor(clusterCount * 1.8),
+    highCVEs: Math.floor(clusterCount * 4.2),
+    cisScore: 82 + Math.floor(Math.random() * 8),
+    nsaScore: 76 + Math.floor(Math.random() * 12),
+    pciScore: 71 + Math.floor(Math.random() * 15),
   }
 }
 
@@ -241,6 +252,7 @@ export function Compliance() {
   // Stats value getter for the configurable StatsOverview component
   const getStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
+      // Overall compliance
       case 'score':
         return { value: `${posture.score}%`, sublabel: 'compliance score', onClick: () => drillToAllSecurity(), isClickable: reachableClusters.length > 0 }
       case 'total_checks':
@@ -253,8 +265,35 @@ export function Compliance() {
         return { value: posture.warning, sublabel: 'warnings', onClick: () => drillToAllSecurity('warning'), isClickable: posture.warning > 0 }
       case 'critical_findings':
         return { value: posture.criticalFindings, sublabel: 'critical findings', onClick: () => drillToAllSecurity('critical'), isClickable: posture.criticalFindings > 0 }
+
+      // Policy enforcement tools
+      case 'gatekeeper_violations':
+        return { value: posture.gatekeeperViolations, sublabel: 'Gatekeeper violations', isClickable: false }
+      case 'kyverno_violations':
+        return { value: posture.kyvernoViolations, sublabel: 'Kyverno violations', isClickable: false }
+      case 'kubescape_score':
+        return { value: `${posture.kubescapeScore}%`, sublabel: 'Kubescape score', isClickable: false }
+
+      // Security scanning
+      case 'falco_alerts':
+        return { value: posture.falcoAlerts, sublabel: 'Falco alerts', isClickable: false }
+      case 'trivy_vulns':
+        return { value: posture.trivyVulns, sublabel: 'Trivy vulnerabilities', isClickable: false }
+      case 'critical_vulns':
+        return { value: posture.criticalCVEs, sublabel: 'critical CVEs', isClickable: false }
+      case 'high_vulns':
+        return { value: posture.highCVEs, sublabel: 'high CVEs', isClickable: false }
+
+      // Framework compliance
+      case 'cis_score':
+        return { value: `${posture.cisScore}%`, sublabel: 'CIS benchmark', isClickable: false }
+      case 'nsa_score':
+        return { value: `${posture.nsaScore}%`, sublabel: 'NSA hardening', isClickable: false }
+      case 'pci_score':
+        return { value: `${posture.pciScore}%`, sublabel: 'PCI-DSS', isClickable: false }
+
       default:
-        return { value: 0 }
+        return { value: '-' }
     }
   }, [posture, reachableClusters, drillToAllSecurity])
 
@@ -275,9 +314,9 @@ export function Compliance() {
             <div>
               <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                 <Shield className="w-6 h-6 text-purple-400" />
-                Compliance
+                Security Compliance
               </h1>
-              <p className="text-muted-foreground">Security posture and policy compliance across clusters</p>
+              <p className="text-muted-foreground">Security posture, vulnerability scanning, and policy enforcement</p>
             </div>
             {isRefreshing && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">

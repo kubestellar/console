@@ -46,8 +46,9 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 5 },
   { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 6 },
   { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 7 },
-  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 8 },
-  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 9 },
+  { id: 'compliance', name: 'Compliance', icon: 'ShieldCheck', href: '/compliance', type: 'link', order: 8 },
+  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 9 },
+  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 10 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
@@ -65,8 +66,8 @@ const DEFAULT_CONFIG: SidebarConfig = {
   collapsed: false,
 }
 
-const STORAGE_KEY = 'kubestellar-sidebar-config-v3'
-const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v2'
+const STORAGE_KEY = 'kubestellar-sidebar-config-v4'
+const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v3'
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']

@@ -70,6 +70,8 @@ import { KubecostOverview } from './KubecostOverview'
 // Policy management cards
 import { OPAPolicies } from './OPAPolicies'
 import { KyvernoPolicies } from './KyvernoPolicies'
+// Compliance tool cards
+import { FalcoAlerts, TrivyScan, KubescapeScan, PolicyViolations, ComplianceScore } from './ComplianceCards'
 // Weather card
 import { Weather } from './Weather'
 // GitHub Activity Monitoring card
@@ -80,8 +82,18 @@ import { Kubectl } from './Kubectl'
 import { SudokuGame } from './SudokuGame'
 // Kube Match card
 import { MatchGame } from './MatchGame'
+// Kube Solitaire card
+import { Solitaire } from './Solitaire'
+// AI Checkers card
+import { Checkers } from './Checkers'
+// Kube 2048 card
+import { Game2048 } from './Game2048'
 // Stock Market Ticker card
 import { StockMarketTicker } from './StockMarketTicker'
+// Kubedle card
+import { Kubedle } from './Kubedle'
+// Pod Sweeper card
+import { PodSweeper } from './PodSweeper'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -168,6 +180,12 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   // Policy management cards
   opa_policies: OPAPolicies,
   kyverno_policies: KyvernoPolicies,
+  // Compliance tool cards
+  falco_alerts: FalcoAlerts,
+  trivy_scan: TrivyScan,
+  kubescape_scan: KubescapeScan,
+  policy_violations: PolicyViolations,
+  compliance_score: ComplianceScore,
   // Weather card
   weather: Weather,
   // GitHub Activity Monitoring card
@@ -178,8 +196,18 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   sudoku_game: SudokuGame,
   // Kube Match card
   match_game: MatchGame,
+  // Kube Solitaire card
+  solitaire: Solitaire,
+  // AI Checkers card
+  checkers: Checkers,
+  // Kube 2048 card
+  game_2048: Game2048,
   // Stock Market Ticker card
   stock_market_ticker: StockMarketTicker,
+  // Kubedle card
+  kubedle: Kubedle,
+  // Pod Sweeper card
+  pod_sweeper: PodSweeper,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -259,6 +287,11 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   gpu_workloads: 6,
   opa_policies: 6,
   kyverno_policies: 6,
+  falco_alerts: 4,
+  trivy_scan: 4,
+  kubescape_scan: 4,
+  policy_violations: 6,
+  compliance_score: 4,
   klaude_issues: 6,
   klaude_kubeconfig_audit: 6,
   klaude_health_check: 6,
@@ -275,6 +308,10 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   match_game: 6,
   // Stock Market Ticker
   stock_market_ticker: 6,
+  // Kubedle
+  kubedle: 6,
+  // Pod Sweeper
+  pod_sweeper: 6,
 
   // Wide cards (7-8 columns) - charts and trends
   pod_health_trend: 8,
