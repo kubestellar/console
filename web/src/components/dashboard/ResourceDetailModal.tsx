@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  X,
   ExternalLink,
   Terminal,
   Trash2,
@@ -16,6 +15,7 @@ import {
   XCircle,
   Clock,
 } from 'lucide-react'
+import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 
 export type ResourceType = 'pod' | 'deployment' | 'service' | 'node' | 'event' | 'cluster' | 'namespace'
@@ -109,22 +109,8 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
     }
   }, [resource])
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen || !resource) return null
+  // Early return if no resource - must be before other computations that use resource
+  if (!resource) return null
 
   const actions = RESOURCE_ACTIONS[resource.type] || []
   const statusConfig = resource.status ? STATUS_CONFIG[resource.status] : null
@@ -201,45 +187,22 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full max-w-3xl glass rounded-2xl overflow-hidden animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              'p-2 rounded-lg',
-              statusConfig ? `${statusConfig.color} bg-current/10` : 'bg-secondary text-muted-foreground'
-            )}>
-              <StatusIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-medium text-foreground">{resource.name}</h2>
-                <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-                  {resource.type}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {resource.namespace && `${resource.namespace} · `}
-                {resource.cluster || 'current cluster'}
-                {resource.status && (
-                  <span className={cn('ml-2', statusConfig?.color)}>
-                    · {resource.status}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title={resource.name}
+        description={`${resource.namespace ? `${resource.namespace} · ` : ''}${resource.cluster || 'current cluster'}${resource.status ? ` · ${resource.status}` : ''}`}
+        icon={StatusIcon}
+        onClose={onClose}
+        showBack={false}
+        extra={
+          <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+            {resource.type}
+          </span>
+        }
+      />
 
-        {/* Tabs */}
-        <div className="flex border-b border-border/50">
+      {/* Tabs */}
+      <div className="flex border-b border-border/50">
           <button
             onClick={() => setActiveTab('details')}
             className={cn(
@@ -276,8 +239,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+      <BaseModal.Content className="max-h-[60vh]">
           {activeTab === 'details' && (
             <div className="space-y-4">
               {/* Basic info */}
@@ -463,10 +425,10 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
               </div>
             </div>
           )}
-        </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex justify-between gap-3 px-6 py-4 border-t border-border/50">
+      <BaseModal.Footer>
+        <div className="flex justify-between gap-3 w-full">
           <button
             onClick={() => window.open(`#/${resource.type}/${resource.name}`, '_blank')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -481,7 +443,7 @@ export function ResourceDetailModal({ isOpen, resource, onClose, onAction }: Res
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
