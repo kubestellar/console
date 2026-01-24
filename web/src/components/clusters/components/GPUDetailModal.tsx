@@ -1,6 +1,7 @@
-import { useMemo, useEffect } from 'react'
-import { X, Zap, Server, Layers, RefreshCw, Cpu, AlertCircle, HardDrive, CircuitBoard, Settings } from 'lucide-react'
+import { useMemo } from 'react'
+import { Zap, Server, Layers, RefreshCw, Cpu, AlertCircle, HardDrive, CircuitBoard, Settings } from 'lucide-react'
 import { GPUNode, NVIDIAOperatorStatus } from '../../../hooks/useMCP'
+import { BaseModal } from '../../../lib/modals'
 
 interface GPUDetailModalProps {
   gpuNodes: GPUNode[]
@@ -44,27 +45,11 @@ function getUtilizationColor(percentage: number): string {
   return 'text-green-400'
 }
 
-export function GPUDetailModal({ gpuNodes, isLoading, error, onRefresh, onClose, operatorStatus }: GPUDetailModalProps) {
-  // ESC to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+interface GPUDetailModalInternalProps extends GPUDetailModalProps {
+  isOpen?: boolean
+}
 
-  // Prevent background scrolling when modal is open
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = originalOverflow
-    }
-  }, [])
+export function GPUDetailModal({ isOpen = true, gpuNodes, isLoading, error, onRefresh, onClose, operatorStatus }: GPUDetailModalInternalProps) {
 
   // Calculate GPU type breakdown
   const gpuTypeInfo = useMemo(() => {
@@ -189,29 +174,25 @@ export function GPUDetailModal({ gpuNodes, isLoading, error, onRefresh, onClose,
   }, [gpuNodes])
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="glass p-6 rounded-lg w-[700px] max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Zap className="w-6 h-6 text-yellow-400" />
-            <h3 className="text-lg font-semibold text-foreground">GPU Resources</h3>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRefresh}
-              disabled={isLoading}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
-              title="Refresh GPU data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={onClose} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="GPU Resources"
+        icon={Zap}
+        onClose={onClose}
+        showBack={false}
+        extra={
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50"
+            title="Refresh GPU data"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+        }
+      />
 
+      <BaseModal.Content className="max-h-[60vh]">
         {/* Error state */}
         {error && (
           <div className="flex items-center gap-2 text-yellow-400 text-sm mb-4 p-3 bg-yellow-500/10 rounded-lg">
@@ -221,7 +202,7 @@ export function GPUDetailModal({ gpuNodes, isLoading, error, onRefresh, onClose,
         )}
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 space-y-6">
+        <div className="space-y-6">
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4">
             <div className="glass p-4 rounded-lg text-center">
@@ -517,7 +498,7 @@ export function GPUDetailModal({ gpuNodes, isLoading, error, onRefresh, onClose,
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </BaseModal.Content>
+    </BaseModal>
   )
 }

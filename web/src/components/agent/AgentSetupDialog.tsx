@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Download } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
+import { BaseModal } from '../../lib/modals'
 
 const DISMISSED_KEY = 'kkc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kkc-agent-setup-snoozed'
@@ -33,20 +35,6 @@ export function AgentSetupDialog() {
     setShow(true)
   }, [status, isConnected])
 
-  // ESC to dismiss
-  useEffect(() => {
-    if (!show) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        handleDismiss(false)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [show])
-
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(installCommand)
     setCopied(true)
@@ -65,18 +53,19 @@ export function AgentSetupDialog() {
     setShow(false)
   }
 
-  if (!show) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-xl bg-background p-6 shadow-2xl">
-        <h2 className="text-xl font-bold">Welcome to KubeStellar Console</h2>
-        <p className="mt-2 text-muted-foreground">
-          To access your local clusters and Claude Code, install our lightweight agent.
-        </p>
+    <BaseModal isOpen={show} onClose={() => handleDismiss(false)} size="md">
+      <BaseModal.Header
+        title="Welcome to KubeStellar Console"
+        description="To access your local clusters and Claude Code, install our lightweight agent."
+        icon={Download}
+        onClose={() => handleDismiss(false)}
+        showBack={false}
+      />
 
+      <BaseModal.Content>
         {/* Install Option */}
-        <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
           <div className="font-medium">Quick Install (recommended)</div>
           <p className="mt-1 text-sm text-muted-foreground">
             Copy this command and run it in your terminal:
@@ -99,34 +88,34 @@ export function AgentSetupDialog() {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex flex-col gap-3">
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleDismiss(false)}
-              className="flex-1 rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Continue with Demo Data
-            </button>
-            <button
-              onClick={handleSnooze}
-              className="flex-1 rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Remind Me Later
-            </button>
-          </div>
-          <button
-            onClick={() => handleDismiss(true)}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Don't show again
-          </button>
-        </div>
-
         <p className="mt-4 text-xs text-muted-foreground">
           You can install the agent anytime from Settings.
         </p>
-      </div>
-    </div>
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <button
+          onClick={() => handleDismiss(true)}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Don't show again
+        </button>
+        <div className="flex-1" />
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleDismiss(false)}
+            className="rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            Continue with Demo Data
+          </button>
+          <button
+            onClick={handleSnooze}
+            className="rounded border px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            Remind Me Later
+          </button>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
