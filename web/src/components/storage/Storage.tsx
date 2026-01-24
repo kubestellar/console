@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { HardDrive, Database, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, X, ExternalLink, GripVertical } from 'lucide-react'
+import { HardDrive, Database, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, ExternalLink, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -12,6 +12,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { BaseModal } from '../../lib/modals'
 import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -40,18 +41,6 @@ interface PVCListModalProps {
 function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSelectPVC }: PVCListModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
   // Filter by status and search query
   const filteredPVCs = pvcs.filter(pvc => {
     if (statusFilter !== 'all' && pvc.status !== statusFilter) return false
@@ -77,80 +66,67 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative glass rounded-lg w-[800px] max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <Database className={`w-5 h-5 ${statusFilter === 'Bound' ? 'text-green-400' : statusFilter === 'Pending' ? 'text-yellow-400' : 'text-blue-400'}`} />
-            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-            <span className="px-2 py-0.5 text-xs rounded-full bg-secondary text-muted-foreground">
-              {filteredPVCs.length} PVC{filteredPVCs.length !== 1 ? 's' : ''}
-            </span>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title={title}
+        description={`${filteredPVCs.length} PVC${filteredPVCs.length !== 1 ? 's' : ''}`}
+        icon={Database}
+        onClose={onClose}
+        showBack={false}
+      />
+
+      {/* Search */}
+      <div className="px-6 py-4 border-b border-border">
+        <input
+          type="text"
+          placeholder="Search by name, namespace, cluster, or storage class..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      </div>
+
+      <BaseModal.Content className="max-h-[60vh]">
+        {filteredPVCs.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No PVCs found matching the criteria
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="p-4 border-b border-border">
-          <input
-            type="text"
-            placeholder="Search by name, namespace, cluster, or storage class..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-        </div>
-
-        {/* PVC List */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {filteredPVCs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No PVCs found matching the criteria
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredPVCs.map((pvc, idx) => (
-                <div
-                  key={`${pvc.cluster}-${pvc.namespace}-${pvc.name}-${idx}`}
-                  onClick={() => onSelectPVC(pvc.cluster || 'default', pvc.namespace, pvc.name)}
-                  className="glass p-3 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Database className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{pvc.name}</span>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${getStatusColor(pvc.status)}`}>
-                            {pvc.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <span>Namespace: {pvc.namespace}</span>
-                          {pvc.storageClass && <span>• Storage Class: {pvc.storageClass}</span>}
-                          {pvc.capacity && <span>• {pvc.capacity}</span>}
-                        </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredPVCs.map((pvc, idx) => (
+              <div
+                key={`${pvc.cluster}-${pvc.namespace}-${pvc.name}-${idx}`}
+                onClick={() => onSelectPVC(pvc.cluster || 'default', pvc.namespace, pvc.name)}
+                className="glass p-3 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Database className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{pvc.name}</span>
+                        <span className={`px-1.5 py-0.5 text-xs rounded ${getStatusColor(pvc.status)}`}>
+                          {pvc.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <span>Namespace: {pvc.namespace}</span>
+                        {pvc.storageClass && <span>• Storage Class: {pvc.storageClass}</span>}
+                        {pvc.capacity && <span>• {pvc.capacity}</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {pvc.cluster && <ClusterBadge cluster={pvc.cluster} size="sm" />}
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {pvc.cluster && <ClusterBadge cluster={pvc.cluster} size="sm" />}
+                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </BaseModal.Content>
+    </BaseModal>
   )
 }
 
