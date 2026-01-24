@@ -604,12 +604,11 @@ export function Events() {
               </h1>
               <p className="text-muted-foreground">Cluster events and activity across your infrastructure</p>
             </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
+            {/* DEBUG: Always show + show actual value */}
+            <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
+              <Hourglass className="w-3 h-3" />
+              <span>Updating (refreshing={String(isRefreshing)})</span>
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <label htmlFor="events-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">

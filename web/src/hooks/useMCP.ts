@@ -6,6 +6,9 @@ import { getDemoMode, useDemoMode } from './useDemoMode'
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
 const REFRESH_INTERVAL_MS = 120000
 
+// Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)
+const MIN_REFRESH_INDICATOR_MS = 500
+
 // Types matching the backend MCP bridge
 export interface ClusterInfo {
   name: string
@@ -1004,9 +1007,42 @@ let fetchInProgress = false
 // Full refetch - updates shared cache with loading state
 // Deduplicates concurrent calls - only one fetch runs at a time
 async function fullFetchClusters() {
+  // If a fetch is already in progress, skip this call (deduplication)
+  // Check this BEFORE setting isRefreshing to avoid getting stuck
+  if (fetchInProgress) {
+    console.log('[fullFetchClusters] Fetch already in progress, skipping')
+    return
+  }
+  fetchInProgress = true
+
+  // If we have cached data, show refreshing; otherwise show loading
+  const hasCachedData = clusterCache.clusters.length > 0
+  const startTime = Date.now()
+
+  // Always set isRefreshing first so indicator shows
+  console.log('[fullFetchClusters] Setting isRefreshing=true')
+  if (hasCachedData) {
+    updateClusterCache({ isRefreshing: true })
+  } else {
+    updateClusterCache({ isLoading: true, isRefreshing: true })
+  }
+
+  // Helper to ensure minimum visible duration for refresh animation
+  const finishWithMinDuration = async (updates: Partial<typeof clusterCache>) => {
+    const elapsed = Date.now() - startTime
+    const minDuration = MIN_REFRESH_INDICATOR_MS
+    if (elapsed < minDuration) {
+      console.log('[fullFetchClusters] Waiting for minimum duration')
+      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+    }
+    console.log('[fullFetchClusters] Setting isRefreshing=false')
+    fetchInProgress = false
+    updateClusterCache(updates)
+  }
+
   // If demo mode is enabled, use demo data instead of fetching
   if (getDemoMode()) {
-    updateClusterCache({
+    await finishWithMinDuration({
       clusters: getDemoClusters(),
       isLoading: false,
       isRefreshing: false,
@@ -1018,34 +1054,8 @@ async function fullFetchClusters() {
   // Skip fetching if not authenticated (prevents errors on login page)
   const token = localStorage.getItem('token')
   if (!token) {
-    updateClusterCache({ isLoading: false, isRefreshing: false })
+    await finishWithMinDuration({ isLoading: false, isRefreshing: false })
     return
-  }
-
-  // If a fetch is already in progress, skip this call (deduplication)
-  if (fetchInProgress) {
-    return
-  }
-  fetchInProgress = true
-
-  // If we have cached data, show refreshing; otherwise show loading
-  const hasCachedData = clusterCache.clusters.length > 0
-  const startTime = Date.now()
-
-  if (hasCachedData) {
-    updateClusterCache({ isRefreshing: true })
-  } else {
-    updateClusterCache({ isLoading: true })
-  }
-
-  // Helper to ensure minimum visible duration for refresh animation
-  const finishWithMinDuration = async (updates: Partial<typeof clusterCache>) => {
-    const elapsed = Date.now() - startTime
-    const minDuration = hasCachedData ? 400 : 0 // Only delay when refreshing, not initial load
-    if (elapsed < minDuration) {
-      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
-    }
-    updateClusterCache(updates)
   }
 
   try {
@@ -1383,6 +1393,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
+      console.log('[usePods] Setting isRefreshing=true')
       setIsRefreshing(true)
       const hasCachedData = podsCache && podsCache.key === cacheKey
       if (!hasCachedData) {
@@ -1435,10 +1446,15 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
         setPods(getDemoPods())
       }
     } finally {
+      setIsLoading(false)
+      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setIsLoading(false)
+        setTimeout(() => {
+          setIsRefreshing(false)
+        }, MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, sortBy, limit, cacheKey])
 
@@ -1575,11 +1591,12 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
+      console.log('[usePodIssues] Setting isRefreshing=true')
+      // Always set isRefreshing first so indicator shows
+      setIsRefreshing(true)
       const hasCachedData = podIssuesCache && podIssuesCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
-      } else {
-        setIsRefreshing(true)
       }
     }
     try {
@@ -1607,10 +1624,15 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         setIssues(getDemoPodIssues())
       }
     } finally {
+      setIsLoading(false)
+      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setIsLoading(false)
+        setTimeout(() => {
+          setIsRefreshing(false)
+        }, MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, cacheKey])
 
@@ -1667,27 +1689,35 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
+      console.log('[useEvents] Setting isRefreshing=true')
+      // Always set isRefreshing first so indicator shows
+      setIsRefreshing(true)
       const hasCachedData = eventsCache && eventsCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
-      } else {
-        setIsRefreshing(true)
       }
     }
     try {
+      console.log('[useEvents] Starting fetch')
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       params.append('limit', limit.toString())
       const url = `/api/mcp/events?${params}`
 
-      // Use direct fetch to bypass the global circuit breaker
+      // Use direct fetch with timeout to prevent hanging
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const token = localStorage.getItem('token')
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
-      const response = await fetch(url, { method: 'GET', headers })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+      const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
+      clearTimeout(timeoutId)
+      console.log('[useEvents] Fetch completed with status:', response.status)
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
@@ -1703,7 +1733,9 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
+      console.log('[useEvents] Data updated successfully')
     } catch (err) {
+      console.log('[useEvents] Caught error:', err)
       // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
@@ -1712,10 +1744,18 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         setEvents(getDemoEvents())
       }
     } finally {
+      console.log('[useEvents] Finally block started')
+      setIsLoading(false)
+      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setIsLoading(false)
+        console.log('[useEvents] Scheduling isRefreshing=false after 500ms')
+        setTimeout(() => {
+          console.log('[useEvents] Setting isRefreshing=false')
+          setIsRefreshing(false)
+        }, MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, limit, cacheKey])
 
@@ -1772,11 +1812,12 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
+      console.log('[useDeploymentIssues] Setting isRefreshing=true')
+      // Always set isRefreshing first so indicator shows
+      setIsRefreshing(true)
       const hasCachedData = deploymentIssuesCache && deploymentIssuesCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
-      } else {
-        setIsRefreshing(true)
       }
     }
     try {
@@ -1804,10 +1845,15 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
         setIssues(getDemoDeploymentIssues())
       }
     } finally {
+      setIsLoading(false)
+      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setIsLoading(false)
+        setTimeout(() => {
+          setIsRefreshing(false)
+        }, MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, cacheKey])
 
@@ -1863,11 +1909,13 @@ export function useDeployments(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
-    if (!silent && (!deploymentsCache || deploymentsCache.key !== cacheKey)) {
-      // Only show loading if no cache
-      setIsLoading(true)
-    } else if (!silent) {
+    if (!silent) {
+      // Always set isRefreshing first so indicator shows
       setIsRefreshing(true)
+      if (!deploymentsCache || deploymentsCache.key !== cacheKey) {
+        // Also show loading if no cache
+        setIsLoading(true)
+      }
     }
     try {
       const params = new URLSearchParams()
@@ -1906,6 +1954,8 @@ export function useDeployments(cluster?: string, namespace?: string) {
     } finally {
       if (!silent) {
         setIsLoading(false)
+        // Keep isRefreshing true for minimum time so user can see it
+        await new Promise(resolve => setTimeout(resolve, MIN_REFRESH_INDICATOR_MS))
       }
       setIsRefreshing(false)
     }
@@ -1997,42 +2047,53 @@ export function useServices(cluster?: string, namespace?: string) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
-    // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
-      const demoServices = getDemoServices().filter(s =>
-        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-      )
-      setServices(demoServices)
-      setIsLoading(false)
-      setError(null)
-      setLastUpdated(new Date())
-      setConsecutiveFailures(0)
-      setLastRefresh(new Date())
-      return
-    }
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      // Only show loading if we have no data
+      console.log('[useServices] Setting isRefreshing=true')
+      setIsRefreshing(true)
+    }
+
+    // Check if we need loading state (no cached data)
+    if (!silent) {
       const hasCachedData = servicesCache && servicesCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
-      } else {
-        setIsRefreshing(true)
       }
     }
+
     try {
+      console.log('[useServices] Starting fetch, demo mode:', getDemoMode())
+      // If demo mode is enabled, use demo data
+      if (getDemoMode()) {
+        const demoServices = getDemoServices().filter(s =>
+          (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+        )
+        setServices(demoServices)
+        setError(null)
+        setLastUpdated(new Date())
+        setConsecutiveFailures(0)
+        setLastRefresh(new Date())
+        console.log('[useServices] Demo mode - returning from try')
+        return
+      }
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/services?${params}`
 
-      // Use direct fetch to bypass the global circuit breaker
+      // Use direct fetch with timeout to prevent hanging
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const token = localStorage.getItem('token')
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
-      const response = await fetch(url, { method: 'GET', headers })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+      const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
+      clearTimeout(timeoutId)
+      console.log('[useServices] Fetch completed with status:', response.status)
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
       }
@@ -2049,7 +2110,9 @@ export function useServices(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
+      console.log('[useServices] Data updated successfully')
     } catch (err) {
+      console.log('[useServices] Caught error:', err)
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
@@ -2063,10 +2126,18 @@ export function useServices(cluster?: string, namespace?: string) {
       }
       // Don't clear services on error - keep stale data
     } finally {
+      console.log('[useServices] Finally block started')
+      setIsLoading(false)
+      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setIsLoading(false)
+        console.log('[useServices] Scheduling isRefreshing=false after 500ms')
+        setTimeout(() => {
+          console.log('[useServices] Setting isRefreshing=false')
+          setIsRefreshing(false)
+        }, MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, cacheKey, services.length])
 
@@ -2646,6 +2717,9 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
+      console.log('[useWarningEvents] Setting isRefreshing=true')
+      // Always set isRefreshing first so indicator shows
+      setIsRefreshing(true)
       const hasCachedData = warningEventsCache && warningEventsCache.key === cacheKey
       if (!hasCachedData) {
         setIsLoading(true)
@@ -2685,10 +2759,15 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
         setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
       }
     } finally {
+      setIsLoading(false)
+      // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        setIsLoading(false)
+        setTimeout(() => {
+          setIsRefreshing(false)
+        }, MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, limit, cacheKey])
 

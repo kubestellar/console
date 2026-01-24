@@ -124,6 +124,11 @@ function NetworkDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Network() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch } = useServices()
+
+  // DEBUG: Log when servicesRefreshing changes
+  useEffect(() => {
+    console.log('[Network] servicesRefreshing changed to:', servicesRefreshing)
+  }, [servicesRefreshing])
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -173,6 +178,7 @@ export function Network() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
+    console.log('[Network] handleRefresh called, calling refetch()')
     refetch()
   }, [refetch])
 
@@ -280,12 +286,11 @@ export function Network() {
               </h1>
               <p className="text-muted-foreground">Monitor network resources across clusters</p>
             </div>
-            {servicesRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
+            {/* DEBUG: Always show + show actual value */}
+            <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
+              <Hourglass className="w-3 h-3" />
+              <span>Updating (refreshing={String(servicesRefreshing)})</span>
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <label htmlFor="network-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">

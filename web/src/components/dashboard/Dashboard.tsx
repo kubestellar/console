@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { GripVertical, AlertTriangle, X, RefreshCw } from 'lucide-react'
+import { GripVertical, AlertTriangle, X, RefreshCw, Hourglass } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -702,6 +702,12 @@ export function Dashboard() {
         <div className="flex items-center gap-4">
           {/* Refresh controls */}
           <div className="flex items-center gap-3">
+            {isRefreshing && (
+              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
+                <Hourglass className="w-3 h-3" />
+                <span>Updating</span>
+              </span>
+            )}
             <label htmlFor="dashboard-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
               <input
                 type="checkbox"

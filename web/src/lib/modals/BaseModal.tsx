@@ -35,6 +35,7 @@
  */
 
 import { ReactNode, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ChevronLeft } from 'lucide-react'
 import { useModalNavigation } from './useModalNavigation'
 import {
@@ -59,11 +60,11 @@ const SIZE_CLASSES: Record<ModalSize, string> = {
 }
 
 const HEIGHT_CLASSES: Record<ModalSize, string> = {
-  sm: 'max-h-[60vh]',
-  md: 'max-h-[70vh]',
-  lg: 'max-h-[80vh]',
-  xl: 'max-h-[85vh]',
-  full: 'max-h-[95vh]',
+  sm: 'max-h-[min(60vh,calc(100vh-2rem))]',
+  md: 'max-h-[min(70vh,calc(100vh-2rem))]',
+  lg: 'min-h-[80vh] max-h-[min(90vh,calc(100vh-2rem))]',
+  xl: 'max-h-[min(85vh,calc(100vh-2rem))]',
+  full: 'max-h-[calc(100vh-2rem)]',
 }
 
 // ============================================================================
@@ -93,24 +94,33 @@ export function BaseModal({
   if (!isOpen) return null
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (closeOnBackdrop && e.target === backdropRef.current) {
+    // Close if clicking on backdrop or centering wrapper (not on modal content)
+    if (closeOnBackdrop && e.target === e.currentTarget) {
       onClose()
     }
   }
 
-  return (
+  // Use React Portal to render modal at document.body level
+  // This ensures it appears above all other content regardless of parent z-index
+  return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] p-4 overflow-y-auto"
       onClick={handleBackdropClick}
     >
       <div
-        className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
-        onClick={(e) => e.stopPropagation()}
+        className="min-h-full flex items-center justify-center"
+        onClick={handleBackdropClick}
       >
-        {children}
+        <div
+          className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

@@ -219,7 +219,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg">
       {/* Login Prompt Dialog */}
       {showLoginPrompt && (
         <>
@@ -258,7 +258,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
       )}
 
       {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
+      <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
         <h2 className="text-lg font-semibold text-foreground">
           Feedback
         </h2>
@@ -271,8 +271,8 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
         </button>
       </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-border">
+      {/* Tabs */}
+      <div className="flex border-b border-border flex-shrink-0">
             <button
               onClick={() => setActiveTab('submit')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
@@ -300,27 +300,28 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
             </button>
           </div>
 
-          {/* Login banner for demo/unauthenticated users */}
-          {!canPerformActions && (
-            <button
-              onClick={() => setShowLoginPrompt(true)}
-              className="w-full px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between hover:bg-amber-500/20 transition-colors cursor-pointer"
-            >
+      {/* Login banner for demo/unauthenticated users */}
+      {!canPerformActions && (
+        <button
+          onClick={() => setShowLoginPrompt(true)}
+          className="w-full px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between hover:bg-amber-500/20 transition-colors cursor-pointer flex-shrink-0"
+        >
               <span className="text-xs text-amber-400">
                 Login with GitHub to submit feedback and manage requests
               </span>
-              <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400">
-                Login
-              </span>
-            </button>
-          )}
+          <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-400">
+            Login
+          </span>
+        </button>
+      )}
 
-          {/* Content */}
-          {activeTab === 'updates' ? (
-            /* Updates Tab */
-            <div>
+      {/* Content - scrollable area with fixed flex layout */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {activeTab === 'updates' ? (
+          /* Updates Tab */
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Sub-tabs for Queue vs Activity */}
-              <div className="flex border-b border-border/50">
+              <div className="flex border-b border-border/50 flex-shrink-0">
                 <button
                   onClick={() => setUpdatesSubTab('requests')}
                   className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${
@@ -349,7 +350,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
               </div>
 
               {/* Actions header */}
-              <div className="p-2 border-b border-border/50 flex items-center justify-between">
+              <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
                 {actionError ? (
                   <span className="text-xs text-red-400">{actionError}</span>
                 ) : (
@@ -370,22 +371,23 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                 </button>
               </div>
 
-              <div className="max-h-80 overflow-y-auto">
+              <div className="flex-1 min-h-0 flex flex-col">
                 {updatesSubTab === 'requests' ? (
                   /* Request Queue Sub-tab */
-                  requestsLoading && requests.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                      <p className="text-sm">Loading...</p>
-                    </div>
-                  ) : requests.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No requests in queue</p>
-                      <p className="text-xs mt-1">Submit a bug report or feature request to get started</p>
-                    </div>
-                  ) : (
-                    requests.map(request => {
+                  <div className="flex-1 overflow-y-auto">
+                    {requestsLoading && requests.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                        <p className="text-sm">Loading...</p>
+                      </div>
+                    ) : requests.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No requests in queue</p>
+                        <p className="text-xs mt-1">Submit a bug report or feature request to get started</p>
+                      </div>
+                    ) : (
+                      requests.map(request => {
                       const statusInfo = getStatusInfo(request.status, request.closed_by_user)
                       const isLoading = actionLoading === request.id
                       const showConfirm = confirmClose === request.id
@@ -685,13 +687,13 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                           </div>
                         </div>
                       )
-                    })
-                  )
+                    }))}
+                  </div>
                 ) : (
                   /* Activity Sub-tab */
-                  <>
+                  <div className="flex flex-col h-full">
                     {unreadCount > 0 && (
-                      <div className="p-2 border-b border-border/50 flex items-center justify-end">
+                      <div className="p-2 border-b border-border/50 flex items-center justify-end flex-shrink-0">
                         <button
                           onClick={() => markAllAsRead()}
                           className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
@@ -701,73 +703,75 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                         </button>
                       </div>
                     )}
-                    {notificationsLoading && notifications.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                        <p className="text-sm">Loading...</p>
-                      </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No activity yet</p>
-                        <p className="text-xs mt-1">Updates will appear here</p>
-                      </div>
-                    ) : (
-                      notifications.map(notification => {
-                        const status = getNotificationStatus(notification.notification_type)
-                        return (
-                          <div
-                            key={notification.id}
-                            onClick={() => handleNotificationClick(notification)}
-                            className={`p-3 border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors ${
-                              !notification.read ? 'bg-purple-500/5' : ''
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <span className="mt-0.5">
-                                {getNotificationIcon(notification.notification_type)}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`text-sm font-medium truncate ${
-                                    notification.read ? 'text-muted-foreground' : 'text-foreground'
-                                  }`}>
-                                    {notification.title}
-                                  </span>
-                                  <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${status.bgColor} ${status.color}`}>
-                                    {status.label}
-                                  </span>
-                                  {!notification.read && (
-                                    <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                                  {notification.message}
-                                </p>
-                                <div className="flex items-center gap-2 mt-1.5">
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {formatRelativeTime(notification.created_at)}
-                                  </span>
-                                  {notification.action_url && (
-                                    <span className="text-xs text-purple-400 flex items-center gap-1">
-                                      <ExternalLink className="w-3 h-3" />
-                                      View on GitHub
+                    <div className="flex-1 overflow-y-auto">
+                      {notificationsLoading && notifications.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                          <p className="text-sm">Loading...</p>
+                        </div>
+                      ) : notifications.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground">
+                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No activity yet</p>
+                          <p className="text-xs mt-1">Updates will appear here</p>
+                        </div>
+                      ) : (
+                        notifications.map(notification => {
+                          const status = getNotificationStatus(notification.notification_type)
+                          return (
+                            <div
+                              key={notification.id}
+                              onClick={() => handleNotificationClick(notification)}
+                              className={`p-3 border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors ${
+                                !notification.read ? 'bg-purple-500/5' : ''
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <span className="mt-0.5">
+                                  {getNotificationIcon(notification.notification_type)}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`text-sm font-medium truncate ${
+                                      notification.read ? 'text-muted-foreground' : 'text-foreground'
+                                    }`}>
+                                      {notification.title}
                                     </span>
-                                  )}
+                                    <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${status.bgColor} ${status.color}`}>
+                                      {status.label}
+                                    </span>
+                                    {!notification.read && (
+                                      <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                    {notification.message}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1.5">
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {formatRelativeTime(notification.created_at)}
+                                    </span>
+                                    {notification.action_url && (
+                                      <span className="text-xs text-purple-400 flex items-center gap-1">
+                                        <ExternalLink className="w-3 h-3" />
+                                        View on GitHub
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
           ) : success ? (
-            <div className="p-6 text-center">
+            <div className="p-6 text-center flex-1 overflow-y-auto min-h-0">
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-green-400" />
               </div>
@@ -794,8 +798,8 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
               )}
             </div>
           ) : (
-            <form onSubmit={handleSubmit}>
-              <div className="p-4 space-y-4">
+            <form id="feedback-form" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 space-y-4 flex-1 overflow-y-auto">
                 {/* Type Selection */}
                 <div className="flex gap-2">
                   <button
@@ -874,45 +878,59 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                   automatically and you'll receive a notification when ready.
                 </p>
               </div>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-border flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                {canPerformActions ? (
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit'
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPrompt(true)}
-                    className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center gap-2"
-                    title="Please login to submit feedback"
-                  >
-                    Login to Submit
-                  </button>
-                )}
-              </div>
             </form>
           )}
+      </div>
+
+      {/* Footer - always visible */}
+      <div className="p-4 border-t border-border flex justify-end gap-2 flex-shrink-0">
+        {activeTab === 'submit' && !success ? (
+          <>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            {canPerformActions ? (
+              <button
+                type="submit"
+                form="feedback-form"
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit'
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowLoginPrompt(true)}
+                className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center gap-2"
+                title="Please login to submit feedback"
+              >
+                Login to Submit
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+          >
+            Close
+          </button>
+        )}
+      </div>
     </BaseModal>
   )
 }
