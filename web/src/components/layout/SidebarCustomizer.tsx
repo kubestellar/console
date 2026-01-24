@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  X,
   Plus,
   Trash2,
   GripVertical,
@@ -35,6 +34,7 @@ import { useSidebarConfig, AVAILABLE_ICONS, SidebarItem } from '../../hooks/useS
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES } from '../dashboard/templates'
 import { cn } from '../../lib/cn'
+import { BaseModal } from '../../lib/modals'
 import * as Icons from 'lucide-react'
 
 const CARD_TYPE_LABELS: Record<string, string> = {
@@ -231,23 +231,6 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     }
   }, [isOpen, getAllDashboardsWithCards])
 
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
   const handleAddItem = () => {
     if (!newItemName || !newItemHref) return
 
@@ -339,24 +322,16 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-      <div className="w-full max-w-2xl max-h-[80vh] glass rounded-2xl overflow-hidden animate-fade-in-up">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
-          <div>
-            <h2 className="text-lg font-medium text-foreground">Customize Sidebar</h2>
-            <p className="text-sm text-muted-foreground">Add, remove, or reorder menu items</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
+      <BaseModal.Header
+        title="Customize Sidebar"
+        description="Add, remove, or reorder menu items"
+        icon={LayoutDashboard}
+        onClose={onClose}
+        showBack={false}
+      />
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+      <BaseModal.Content className="max-h-[60vh]">
           {/* Quick Actions */}
           <div className="flex gap-2 mb-6">
             <button
@@ -739,18 +714,17 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
               </button>
             </div>
           </div>
-        </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+        >
+          Done
+        </button>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
