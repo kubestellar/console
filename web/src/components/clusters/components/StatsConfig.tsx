@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Settings, X, Check, GripVertical, Eye, EyeOff } from 'lucide-react'
-import { createPortal } from 'react-dom'
+import { Settings, Check, GripVertical, Eye, EyeOff } from 'lucide-react'
+import { BaseModal } from '../../../lib/modals'
 import {
   DndContext,
   closestCenter,
@@ -159,32 +159,18 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
     setLocalBlocks(DEFAULT_STAT_BLOCKS)
   }
 
-  if (!isOpen) return null
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title="Configure Stats"
+        description="Drag to reorder. Click the eye icon to show/hide stats."
+        icon={Settings}
+        onClose={onClose}
+        showBack={false}
+      />
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-foreground">Configure Stats</h2>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-secondary rounded transition-colors">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Instructions */}
-        <div className="px-4 pt-4 pb-2">
-          <p className="text-xs text-muted-foreground">
-            Drag to reorder. Click the eye icon to show/hide stats.
-          </p>
-        </div>
-
-        {/* Sortable list */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <BaseModal.Content className="max-h-[50vh]">
+        <div className="space-y-2">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -201,34 +187,33 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
             </SortableContext>
           </DndContext>
         </div>
+      </BaseModal.Content>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-border">
+      <BaseModal.Footer>
+        <button
+          onClick={handleReset}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Reset to Default
+        </button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleReset}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Reset to Default
+            Cancel
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-            >
-              <Check className="w-4 h-4" />
-              Save
-            </button>
-          </div>
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+          >
+            <Check className="w-4 h-4" />
+            Save
+          </button>
         </div>
-      </div>
-    </div>,
-    document.body
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 
