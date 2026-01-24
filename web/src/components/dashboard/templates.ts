@@ -5,7 +5,7 @@ export interface DashboardTemplate {
   name: string
   description: string
   icon: string
-  category: 'cluster' | 'namespace' | 'gitops' | 'security' | 'gpu' | 'storage' | 'compute' | 'network' | 'klaude' | 'alerting' | 'cost' | 'custom'
+  category: 'cluster' | 'namespace' | 'workloads' | 'gitops' | 'security' | 'gpu' | 'storage' | 'compute' | 'network' | 'klaude' | 'alerting' | 'cost' | 'compliance' | 'custom'
   cards: Array<{
     card_type: string
     title?: string
@@ -320,12 +320,116 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'weather', position: { w: 6, h: 4 } },
     ],
   },
+
+  // Compliance templates (Task 10)
+  {
+    id: 'compliance-overview',
+    name: 'Compliance Overview',
+    description: 'Policy enforcement, security compliance, and audit readiness',
+    icon: '📋',
+    category: 'compliance',
+    cards: [
+      { card_type: 'compliance_score', title: 'Compliance Score', position: { w: 4, h: 2 } },
+      { card_type: 'opa_policies', position: { w: 4, h: 3 } },
+      { card_type: 'kyverno_policies', position: { w: 4, h: 3 } },
+      { card_type: 'kubescape_scan', position: { w: 4, h: 3 } },
+      { card_type: 'policy_violations', title: 'Policy Violations', position: { w: 8, h: 3 } },
+    ],
+  },
+  {
+    id: 'policy-enforcement',
+    name: 'Policy Enforcement',
+    description: 'OPA Gatekeeper, Kyverno, and Kubescape policy violations',
+    icon: '🛡️',
+    category: 'compliance',
+    cards: [
+      { card_type: 'opa_policies', position: { w: 4, h: 3 } },
+      { card_type: 'kyverno_policies', position: { w: 4, h: 3 } },
+      { card_type: 'kubescape_scan', position: { w: 4, h: 3 } },
+      { card_type: 'policy_violations', title: 'All Violations', position: { w: 12, h: 3 } },
+    ],
+  },
+  {
+    id: 'security-scanning',
+    name: 'Security Scanning',
+    description: 'Vulnerability scanning with Trivy and runtime monitoring with Falco',
+    icon: '🔍',
+    category: 'compliance',
+    cards: [
+      { card_type: 'trivy_scan', title: 'Trivy Vulnerabilities', position: { w: 6, h: 4 } },
+      { card_type: 'falco_alerts', title: 'Falco Alerts', position: { w: 6, h: 4 } },
+      { card_type: 'security_issues', position: { w: 6, h: 3 } },
+      { card_type: 'event_stream', title: 'Security Events', config: { filter: 'security' }, position: { w: 6, h: 3 } },
+    ],
+  },
+  {
+    id: 'audit-readiness',
+    name: 'Audit Readiness',
+    description: 'Prepare for compliance audits with CIS, NSA, and PCI-DSS frameworks',
+    icon: '✅',
+    category: 'compliance',
+    cards: [
+      { card_type: 'compliance_score', position: { w: 4, h: 2 } },
+      { card_type: 'kubescape_scan', title: 'CIS Benchmark', config: { framework: 'cis' }, position: { w: 4, h: 3 } },
+      { card_type: 'kubescape_scan', title: 'NSA Hardening', config: { framework: 'nsa' }, position: { w: 4, h: 3 } },
+      { card_type: 'namespace_rbac', title: 'RBAC Audit', position: { w: 6, h: 3 } },
+      { card_type: 'user_management', position: { w: 6, h: 3 } },
+    ],
+  },
+
+  // Workload-specific templates (Task 3)
+  {
+    id: 'prow-dashboard',
+    name: 'Prow CI Dashboard',
+    description: 'Monitor Prow CI/CD jobs, ProwJobs, and test results',
+    icon: '🚢',
+    category: 'workloads',
+    cards: [
+      { card_type: 'prow_jobs', title: 'Prow Jobs', position: { w: 6, h: 4 } },
+      { card_type: 'prow_status', title: 'Prow Status', position: { w: 6, h: 2 } },
+      { card_type: 'prow_history', title: 'Recent Jobs', position: { w: 6, h: 2 } },
+      { card_type: 'pod_issues', title: 'CI Pod Issues', config: { namespace: 'prow' }, position: { w: 6, h: 3 } },
+      { card_type: 'event_stream', title: 'Prow Events', config: { namespace: 'prow' }, position: { w: 6, h: 3 } },
+    ],
+  },
+  {
+    id: 'llm-inference',
+    name: 'LLM Inference Dashboard',
+    description: 'Monitor vLLM, LLM-d, and AI inference workloads',
+    icon: '🤖',
+    category: 'workloads',
+    cards: [
+      { card_type: 'llm_inference', title: 'LLM Inference Status', position: { w: 6, h: 3 } },
+      { card_type: 'llm_models', title: 'Deployed Models', position: { w: 6, h: 3 } },
+      { card_type: 'gpu_workloads', title: 'GPU Workloads', position: { w: 6, h: 3 } },
+      { card_type: 'gpu_usage_trend', position: { w: 6, h: 3 } },
+      { card_type: 'pod_issues', title: 'Inference Pod Issues', config: { labelSelector: 'app.kubernetes.io/name=vllm' }, position: { w: 6, h: 2 } },
+      { card_type: 'resource_usage', title: 'Inference Resource Usage', position: { w: 6, h: 2 } },
+    ],
+  },
+  {
+    id: 'ml-platform',
+    name: 'ML Platform Dashboard',
+    description: 'Monitor ML training jobs, notebooks, and model serving',
+    icon: '🧠',
+    category: 'workloads',
+    cards: [
+      { card_type: 'ml_jobs', title: 'Training Jobs', position: { w: 6, h: 3 } },
+      { card_type: 'ml_notebooks', title: 'Jupyter Notebooks', position: { w: 6, h: 3 } },
+      { card_type: 'llm_models', title: 'Model Registry', position: { w: 6, h: 3 } },
+      { card_type: 'gpu_overview', position: { w: 3, h: 2 } },
+      { card_type: 'gpu_status', position: { w: 3, h: 2 } },
+      { card_type: 'resource_capacity', position: { w: 6, h: 2 } },
+    ],
+  },
 ]
 
 export const TEMPLATE_CATEGORIES = [
   { id: 'cluster', name: 'Cluster', icon: '🌐' },
   { id: 'namespace', name: 'Namespace', icon: '📁' },
+  { id: 'workloads', name: 'Workloads', icon: '🏗️' },
   { id: 'alerting', name: 'Alerting', icon: '🔔' },
+  { id: 'compliance', name: 'Compliance', icon: '📋' },
   { id: 'cost', name: 'Cost Management', icon: '💰' },
   { id: 'storage', name: 'Storage', icon: '💾' },
   { id: 'compute', name: 'Compute', icon: '⚙️' },

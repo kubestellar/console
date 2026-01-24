@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, FileText, Layout, ChevronRight, Check, Sparkles } from 'lucide-react'
+import { LayoutDashboard, FileText, Layout, ChevronRight, Check, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
-import { DASHBOARD_TEMPLATES, DashboardTemplate } from './templates'
+import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 
 interface CreateDashboardModalProps {
   isOpen: boolean
@@ -19,6 +19,7 @@ export function CreateDashboardModal({
   const [name, setName] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Reset state when modal opens
@@ -27,6 +28,7 @@ export function CreateDashboardModal({
       setName('')
       setSelectedTemplate(null)
       setShowTemplates(false)
+      setExpandedCategory(null)
       // Focus input after animation
       setTimeout(() => inputRef.current?.focus(), 100)
     }
@@ -55,9 +57,6 @@ export function CreateDashboardModal({
       handleCreate()
     }
   }
-
-  // Featured templates (subset for quick selection)
-  const featuredTemplates = DASHBOARD_TEMPLATES.slice(0, 6)
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
@@ -146,41 +145,58 @@ export function CreateDashboardModal({
             )}
           </button>
 
-          {/* Template selection grid */}
+          {/* Template selection - categorized view */}
           {showTemplates && (
-            <div className="ml-14 space-y-2 animate-fade-in">
-              <p className="text-xs text-muted-foreground">Select a template:</p>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                {featuredTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    onClick={() => {
-                      setSelectedTemplate(template)
-                      setShowTemplates(false)
-                    }}
-                    className={`flex items-center gap-2 p-3 rounded-lg text-left transition-all ${
-                      selectedTemplate?.id === template.id
-                        ? 'bg-purple-500/30 border border-purple-500'
-                        : 'bg-secondary/50 border border-transparent hover:border-purple-500/30'
-                    }`}
-                  >
-                    <span className="text-lg">{template.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-medium text-foreground truncate">{template.name}</h4>
-                      <p className="text-[10px] text-muted-foreground">{template.cards.length} cards</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => {
-                  // TODO: Open full templates modal
-                }}
-                className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-              >
-                <Sparkles className="w-3 h-3" />
-                Browse all templates...
-              </button>
+            <div className="ml-14 space-y-2 animate-fade-in max-h-64 overflow-y-auto">
+              <p className="text-xs text-muted-foreground">Select a template by category:</p>
+
+              {TEMPLATE_CATEGORIES.map((category) => {
+                const categoryTemplates = DASHBOARD_TEMPLATES.filter(t => t.category === category.id)
+                if (categoryTemplates.length === 0) return null
+
+                const isExpanded = expandedCategory === category.id
+
+                return (
+                  <div key={category.id} className="space-y-1">
+                    {/* Category header */}
+                    <button
+                      onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                    >
+                      <span className="text-sm">{category.icon}</span>
+                      <span className="text-xs font-medium text-foreground flex-1 text-left">{category.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{categoryTemplates.length}</span>
+                      <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Templates in category */}
+                    {isExpanded && (
+                      <div className="grid grid-cols-2 gap-1.5 pl-2">
+                        {categoryTemplates.map((template) => (
+                          <button
+                            key={template.id}
+                            onClick={() => {
+                              setSelectedTemplate(template)
+                              setShowTemplates(false)
+                            }}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-left transition-all ${
+                              selectedTemplate?.id === template.id
+                                ? 'bg-purple-500/30 border border-purple-500'
+                                : 'bg-secondary/50 border border-transparent hover:border-purple-500/30'
+                            }`}
+                          >
+                            <span className="text-base">{template.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[11px] font-medium text-foreground truncate">{template.name}</h4>
+                              <p className="text-[9px] text-muted-foreground">{template.cards.length} cards</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

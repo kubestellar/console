@@ -144,12 +144,24 @@ export const SECURITY_STAT_BLOCKS: StatBlockConfig[] = [
  * Default stat blocks for the Compliance dashboard
  */
 export const COMPLIANCE_STAT_BLOCKS: StatBlockConfig[] = [
+  // Overall compliance
   { id: 'score', name: 'Score', icon: 'Percent', visible: true, color: 'purple' },
   { id: 'total_checks', name: 'Total Checks', icon: 'ClipboardList', visible: true, color: 'blue' },
   { id: 'passing', name: 'Passing', icon: 'CheckCircle2', visible: true, color: 'green' },
   { id: 'failing', name: 'Failing', icon: 'XCircle', visible: true, color: 'red' },
-  { id: 'warning', name: 'Warning', icon: 'AlertTriangle', visible: true, color: 'yellow' },
-  { id: 'critical_findings', name: 'Critical', icon: 'AlertCircle', visible: true, color: 'red' },
+  // Policy enforcement tools
+  { id: 'gatekeeper_violations', name: 'Gatekeeper', icon: 'Shield', visible: true, color: 'orange' },
+  { id: 'kyverno_violations', name: 'Kyverno', icon: 'Shield', visible: true, color: 'cyan' },
+  { id: 'kubescape_score', name: 'Kubescape', icon: 'Target', visible: true, color: 'blue' },
+  // Security scanning
+  { id: 'falco_alerts', name: 'Falco Alerts', icon: 'Eye', visible: true, color: 'red' },
+  { id: 'trivy_vulns', name: 'Trivy Vulns', icon: 'Bug', visible: true, color: 'yellow' },
+  { id: 'critical_vulns', name: 'Critical CVEs', icon: 'AlertCircle', visible: true, color: 'red' },
+  { id: 'high_vulns', name: 'High CVEs', icon: 'AlertTriangle', visible: true, color: 'orange' },
+  // Framework compliance
+  { id: 'cis_score', name: 'CIS', icon: 'FileCheck', visible: false, color: 'blue' },
+  { id: 'nsa_score', name: 'NSA', icon: 'FileCheck', visible: false, color: 'purple' },
+  { id: 'pci_score', name: 'PCI-DSS', icon: 'CreditCard', visible: false, color: 'green' },
 ]
 
 /**

@@ -269,12 +269,29 @@ export function Dashboard() {
   const handleCreateDashboardConfirm = async (name: string, template?: DashboardTemplate) => {
     try {
       const newDashboard = await createDashboard(name)
-      showToast(`Created "${newDashboard.name}"`, 'success')
 
-      // If a template was selected, apply it to the new dashboard
-      if (template) {
-        // TODO: Apply template cards to the new dashboard
-        // For now, this would require navigating to the new dashboard and applying template
+      // If a template was selected, apply template cards to the new dashboard
+      if (template && newDashboard.id) {
+        const templateCards = template.cards.map((tc, index) => ({
+          id: `template-${Date.now()}-${index}`,
+          card_type: tc.card_type,
+          config: tc.config || {},
+          position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h },
+          title: tc.title,
+        }))
+
+        // Persist template cards to the new dashboard
+        for (const card of templateCards) {
+          try {
+            await api.post(`/api/dashboards/${newDashboard.id}/cards`, card)
+          } catch (error) {
+            console.error('Failed to add template card:', error)
+          }
+        }
+
+        showToast(`Created "${newDashboard.name}" with ${templateCards.length} cards from "${template.name}"`, 'success')
+      } else {
+        showToast(`Created "${newDashboard.name}"`, 'success')
       }
     } catch (error) {
       console.error('Failed to create dashboard:', error)

@@ -91,9 +91,23 @@ const CARD_CATALOG = {
     { type: 'opencost_overview', title: 'OpenCost', description: 'Cost allocation by namespace using OpenCost (demo)', visualization: 'bar' },
     { type: 'kubecost_overview', title: 'Kubecost', description: 'Cost optimization and savings recommendations (demo)', visualization: 'bar' },
   ],
-  'Policy Management': [
+  'Policy & Compliance': [
     { type: 'opa_policies', title: 'OPA Gatekeeper', description: 'Policy enforcement with OPA Gatekeeper - shows installed status per cluster', visualization: 'status' },
-    { type: 'kyverno_policies', title: 'Kyverno Policies', description: 'Kubernetes-native policy management with Kyverno (demo)', visualization: 'status' },
+    { type: 'kyverno_policies', title: 'Kyverno Policies', description: 'Kubernetes-native policy management with Kyverno', visualization: 'status' },
+    { type: 'falco_alerts', title: 'Falco Alerts', description: 'Runtime security monitoring - syscall anomalies, container escapes, privilege escalation', visualization: 'events' },
+    { type: 'trivy_scan', title: 'Trivy Scanner', description: 'Vulnerability scanning for container images, IaC, and secrets', visualization: 'table' },
+    { type: 'kubescape_scan', title: 'Kubescape', description: 'Security posture management and NSA/CISA hardening compliance', visualization: 'status' },
+    { type: 'policy_violations', title: 'Policy Violations', description: 'Aggregated policy violations across all enforcement tools', visualization: 'table' },
+    { type: 'compliance_score', title: 'Compliance Score', description: 'Overall compliance posture with drill-down by framework (CIS, NSA, PCI-DSS)', visualization: 'gauge' },
+  ],
+  'Workload Detection': [
+    { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },
+    { type: 'prow_status', title: 'Prow Status', description: 'Prow controller health and job queue metrics', visualization: 'status' },
+    { type: 'prow_history', title: 'Prow History', description: 'Recent Prow job runs with pass/fail trends', visualization: 'events' },
+    { type: 'llm_inference', title: 'LLM Inference', description: 'vLLM, LLM-d, and TGI inference server status', visualization: 'status' },
+    { type: 'llm_models', title: 'LLM Models', description: 'Deployed language models with memory and GPU allocation', visualization: 'table' },
+    { type: 'ml_jobs', title: 'ML Training Jobs', description: 'Kubeflow, Ray, or custom ML training job status', visualization: 'table' },
+    { type: 'ml_notebooks', title: 'Jupyter Notebooks', description: 'Running Jupyter notebook servers and resource usage', visualization: 'table' },
   ],
   'Misc': [
     { type: 'weather', title: 'Weather', description: 'Weather conditions with multi-day forecasts and animated backgrounds', visualization: 'status' },
@@ -101,6 +115,9 @@ const CARD_CATALOG = {
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
     { type: 'sudoku_game', title: 'Sudoku Game', description: 'Brain-training Sudoku puzzle with multiple difficulty levels, hints, and timer', visualization: 'status' },
     { type: 'match_game', title: 'Kube Match', description: 'Memory matching game with Kubernetes-themed cards', visualization: 'status' },
+    { type: 'solitaire', title: 'Kube Solitaire', description: 'Classic Klondike solitaire with Kubernetes-themed suits', visualization: 'status' },
+    { type: 'checkers', title: 'AI Checkers', description: 'Play checkers against AI with adjustable difficulty - pods vs nodes', visualization: 'status' },
+    { type: 'game_2048', title: 'Kube 2048', description: 'Merge pods to reach 2048 - swipe or use arrow keys', visualization: 'status' },
     { type: 'stock_market_ticker', title: 'Stock Market Ticker', description: 'Track multiple stocks with real-time sparkline charts and iPhone-style design', visualization: 'timeseries' },
   ],
 } as const
