@@ -7,7 +7,8 @@ const isE2ECoverage = process.env.VITE_COVERAGE === 'true'
 // https://vite.dev/config/
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0'),
+    // VITE_APP_VERSION should be set during CI/CD to the release tag (e.g., v0.3.6-nightly.20260124)
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || process.env.npm_package_version || '0.1.0'),
     __COMMIT_HASH__: JSON.stringify(process.env.VITE_COMMIT_HASH || 'dev'),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     __DEV_MODE__: JSON.stringify(process.env.VITE_DEV_MODE === 'true'),

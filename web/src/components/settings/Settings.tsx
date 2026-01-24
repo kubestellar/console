@@ -9,6 +9,7 @@ import { useAccessibility } from '../../hooks/useAccessibility'
 import { CanIChecker } from '../rbac/CanIChecker'
 import { themeGroups } from '../../lib/themes'
 import { APIKeySettings } from '../agent/APIKeySettings'
+import { UpdateSettings } from './UpdateSettings'
 
 export function Settings() {
   const { user, refreshUser } = useAuth()
@@ -291,6 +292,9 @@ export function Settings() {
             </div>
           )}
         </div>
+
+        {/* System Updates */}
+        <UpdateSettings />
 
         {/* API Keys */}
         <div className="glass rounded-xl p-6">

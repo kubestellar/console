@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Search, Server, Box, Activity, Command, Sun, Moon, Monitor, Coins, Globe, Filter, Check, AlertTriangle, Plus, Folder, X, Trash2, Wifi, WifiOff, Users } from 'lucide-react'
+import { Search, Server, Box, Activity, Command, Sun, Moon, Monitor, Coins, Globe, Filter, Check, AlertTriangle, Plus, Folder, X, Trash2, Wifi, WifiOff, Users, Download } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
@@ -9,6 +9,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useMissions } from '../../hooks/useMissions'
+import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../hooks/useGlobalFilters'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { languages } from '../../lib/i18n'
@@ -108,6 +109,7 @@ export function Navbar() {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const [showAgentStatus, setShowAgentStatus] = useState(false)
+  const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
   const [tokenAnimating, setTokenAnimating] = useState(false)
   const previousTokensRef = useRef<number>(usage.used)
   const searchRef = useRef<HTMLDivElement>(null)
@@ -116,6 +118,8 @@ export function Navbar() {
   const languageRef = useRef<HTMLDivElement>(null)
   const clusterRef = useRef<HTMLDivElement>(null)
   const agentRef = useRef<HTMLDivElement>(null)
+  const updateRef = useRef<HTMLDivElement>(null)
+  const { hasUpdate, latestRelease, skipVersion, checkForUpdates } = useVersionCheck()
 
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
 
@@ -145,6 +149,11 @@ export function Navbar() {
     previousTokensRef.current = usage.used
   }, [usage.used])
 
+  // Check for updates on mount (respects rate limiting)
+  useEffect(() => {
+    checkForUpdates()
+  }, [checkForUpdates])
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -162,6 +171,9 @@ export function Navbar() {
       }
       if (agentRef.current && !agentRef.current.contains(event.target as Node)) {
         setShowAgentStatus(false)
+      }
+      if (updateRef.current && !updateRef.current.contains(event.target as Node)) {
+        setShowUpdateDropdown(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -634,6 +646,54 @@ export function Navbar() {
             </div>
           )}
         </div>
+
+        {/* Update Indicator */}
+        {hasUpdate && latestRelease && (
+          <div className="relative" ref={updateRef}>
+            <button
+              onClick={() => setShowUpdateDropdown(!showUpdateDropdown)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+              title={`Update available: ${latestRelease.tag}`}
+            >
+              <Download className="w-4 h-4" />
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            </button>
+
+            {showUpdateDropdown && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl z-50">
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Download className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-foreground">Update Available</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {latestRelease.tag}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        navigate('/settings')
+                        setShowUpdateDropdown(false)
+                      }}
+                      className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => {
+                        skipVersion(latestRelease.tag)
+                        setShowUpdateDropdown(false)
+                      }}
+                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Agent Status Indicator */}
         <div className="relative" ref={agentRef}>
