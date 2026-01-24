@@ -1,14 +1,13 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
 import { MemoryStick, ImageOff, Clock, RefreshCw, ChevronRight, Search, Filter, ChevronDown, Server } from 'lucide-react'
-import { usePodIssues, PodIssue, useClusters } from '../../hooks/useMCP'
+import { usePodIssues, PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useCardData, commonComparators } from '../../lib/cards'
 
 type SortByOption = 'status' | 'name' | 'restarts' | 'cluster'
 
@@ -56,99 +55,54 @@ export function PodIssues() {
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawIssues.length === 0
   const { drillToPod } = useDrillDownActions()
-  const { filterByCluster, filterByStatus, customFilter, selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { clusters } = useClusters()
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
-    const reachable = clusters.filter(c => c.reachable !== false)
-    if (isAllClustersSelected) return reachable
-    return reachable.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
-
-  // Filter and sort issues
-  const filteredAndSorted = useMemo(() => {
-    // Apply global filters
-    let filtered = filterByCluster(rawIssues)
-    filtered = filterByStatus(filtered)
-
-    // Apply local cluster filter (on top of global)
-    if (localClusterFilter.length > 0) {
-      filtered = filtered.filter(issue => issue.cluster && localClusterFilter.includes(issue.cluster))
-    }
-
-    // Apply custom text filter
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      filtered = filtered.filter(issue =>
-        issue.name.toLowerCase().includes(query) ||
-        issue.namespace.toLowerCase().includes(query) ||
-        (issue.cluster || '').toLowerCase().includes(query) ||
-        issue.status.toLowerCase().includes(query)
-      )
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(issue =>
-        issue.name.toLowerCase().includes(query) ||
-        issue.namespace.toLowerCase().includes(query) ||
-        (issue.cluster || '').toLowerCase().includes(query) ||
-        issue.status.toLowerCase().includes(query) ||
-        issue.issues.some(i => i.toLowerCase().includes(query))
-      )
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      let result = 0
-      if (sortBy === 'status') result = a.status.localeCompare(b.status)
-      else if (sortBy === 'name') result = a.name.localeCompare(b.name)
-      else if (sortBy === 'restarts') result = b.restarts - a.restarts
-      else if (sortBy === 'cluster') result = (a.cluster || '').localeCompare(b.cluster || '')
-      return sortDirection === 'asc' ? result : -result
-    })
-    return sorted
-  }, [rawIssues, sortBy, sortDirection, filterByCluster, filterByStatus, customFilter, localSearch, localClusterFilter])
-
-  // Use pagination hook
-  const effectivePerPage = itemsPerPage === 'unlimited' ? 1000 : itemsPerPage
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: issues,
+    items: issues,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredAndSorted, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<PodIssue, SortByOption>(rawIssues, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster', 'status'],
+      clusterField: 'cluster',
+      statusField: 'status',
+      customPredicate: (issue, query) => issue.issues.some(i => i.toLowerCase().includes(query)),
+      storageKey: 'pod-issues',
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc',
+      comparators: {
+        status: commonComparators.string('status'),
+        name: commonComparators.string('name'),
+        restarts: (a, b) => b.restarts - a.restarts, // Higher restarts first
+        cluster: (a, b) => (a.cluster || '').localeCompare(b.cluster || ''),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   if (isLoading) {
     return (
@@ -239,7 +193,7 @@ export function PodIssues() {
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
                     <button
-                      onClick={() => setLocalClusterFilter([])}
+                      onClick={clearClusterFilter}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
                         localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
@@ -350,7 +304,7 @@ export function PodIssues() {
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />
