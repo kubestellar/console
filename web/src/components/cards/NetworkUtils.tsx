@@ -389,7 +389,7 @@ export function NetworkUtils() {
                           <AlertTriangle className="w-3 h-3 text-muted-foreground" />
                         )}
                         <span className={getStatusColor(latest?.latency ?? null, latest?.status || '')}>
-                          {latest?.latency !== null ? `${latest.latency}ms` : latest?.status || 'Not tested'}
+                          {latest?.latency != null ? `${latest.latency}ms` : latest?.status || 'Not tested'}
                         </span>
                       </div>
                       {avg !== null && (
