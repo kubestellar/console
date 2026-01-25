@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CardWrapper } from './CardWrapper'
 import {
   Activity, Globe, Server, Wifi, WifiOff, Clock,
   Play, Square, Trash2, Plus, CheckCircle, XCircle,
@@ -28,7 +27,18 @@ interface NetworkInfo {
 }
 
 const STORAGE_KEY = 'network_utils_hosts'
+const PING_INTERVAL_KEY = 'network_utils_ping_interval'
 const PING_TIMEOUT = 5000
+
+// Ping interval options in milliseconds
+const PING_INTERVALS = [
+  { value: 1000, label: '1s' },
+  { value: 2000, label: '2s' },
+  { value: 3000, label: '3s' },
+  { value: 5000, label: '5s' },
+  { value: 10000, label: '10s' },
+  { value: 30000, label: '30s' },
+]
 
 // Default hosts to ping
 const DEFAULT_HOSTS = [
@@ -51,6 +61,14 @@ export function NetworkUtils() {
   const [pingResults, setPingResults] = useState<Map<string, PingResult[]>>(new Map())
   const [isPinging, setIsPinging] = useState(false)
   const [continuousPing, setContinuousPing] = useState(false)
+  const [pingInterval, setPingInterval] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(PING_INTERVAL_KEY)
+      return saved ? parseInt(saved) : 3000
+    } catch {
+      return 3000
+    }
+  })
   const [hostInput, setHostInput] = useState('')
   const [portInput, setPortInput] = useState('443')
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({ online: navigator.onLine })
@@ -173,11 +191,20 @@ export function NetworkUtils() {
     setIsPinging(false)
   }, [savedHosts, pingHost, isPinging])
 
-  // Handle continuous ping
+  // Save ping interval to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(PING_INTERVAL_KEY, String(pingInterval))
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [pingInterval])
+
+  // Handle continuous ping with adjustable interval
   useEffect(() => {
     if (continuousPing) {
       pingAllHosts()
-      pingIntervalRef.current = window.setInterval(pingAllHosts, 3000)
+      pingIntervalRef.current = window.setInterval(pingAllHosts, pingInterval)
     } else {
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current)
@@ -190,7 +217,7 @@ export function NetworkUtils() {
         clearInterval(pingIntervalRef.current)
       }
     }
-  }, [continuousPing, pingAllHosts])
+  }, [continuousPing, pingAllHosts, pingInterval])
 
   // Add host
   const addHost = useCallback((type: 'ping' | 'port') => {
@@ -255,8 +282,7 @@ export function NetworkUtils() {
   const portHosts = savedHosts.filter(h => h.type === 'port')
 
   return (
-    <CardWrapper cardType="network_utils" title="Network Utils">
-      <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col">
         {/* Network status bar */}
         <div className="flex items-center justify-between mb-3 p-2 rounded-lg bg-secondary/30">
           <div className="flex items-center gap-2">
@@ -337,21 +363,34 @@ export function NetworkUtils() {
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    Start Continuous
+                    Start
                   </>
                 )}
               </button>
+              {/* Ping interval selector */}
+              <select
+                value={pingInterval}
+                onChange={(e) => setPingInterval(Number(e.target.value))}
+                className="px-2 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                title="Ping interval"
+              >
+                {PING_INTERVALS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={pingAllHosts}
                 disabled={isPinging || continuousPing}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded disabled:opacity-50"
+                title="Ping once"
               >
                 {isPinging ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Activity className="w-4 h-4" />
                 )}
-                Ping Once
               </button>
             </div>
 
@@ -566,7 +605,6 @@ export function NetworkUtils() {
             </div>
           </div>
         )}
-      </div>
-    </CardWrapper>
+    </div>
   )
 }
