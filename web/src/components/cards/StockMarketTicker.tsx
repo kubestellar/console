@@ -68,14 +68,16 @@ const SORT_OPTIONS = [
 // Default stock symbols to track
 const DEFAULT_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA']
 
-// Fetch real stock data from Yahoo Finance API (via proxy to avoid CORS)
+// CORS proxy to bypass browser restrictions for Yahoo Finance API
+const CORS_PROXY = 'https://corsproxy.io/?'
+
+// Fetch real stock data from Yahoo Finance API (via CORS proxy)
 async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
   try {
-    // Using yfinance2 API or similar free API
-    // For demo, using a fallback to Yahoo Finance query API
     const symbolsString = symbols.join(',')
+    const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsString}&fields=symbol,longName,regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,fiftyTwoWeekHigh,fiftyTwoWeekLow`
     const response = await fetch(
-      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbolsString}&fields=symbol,longName,regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,marketCap,fiftyTwoWeekHigh,fiftyTwoWeekLow`
+      `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`
     )
     
     if (!response.ok) {
@@ -164,11 +166,12 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
   if (!query || query.length < 1) {
     return []
   }
-  
+
   try {
-    // Using Yahoo Finance search API
+    // Using Yahoo Finance search API via CORS proxy
+    const yahooSearchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
     const response = await fetch(
-      `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
+      `${CORS_PROXY}${encodeURIComponent(yahooSearchUrl)}`
     )
     
     if (!response.ok) {
@@ -481,7 +484,8 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const [expandedStocks, setExpandedStocks] = useState<Set<string>>(new Set())
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [useLiveData, setUseLiveData] = useState(true)
+  // Default to demo mode - live data uses CORS proxy which may have rate limits
+  const [useLiveData, setUseLiveData] = useState(false)
   
   // Search and saved stocks state
   const [stockSearchInput, setStockSearchInput] = useState('')
