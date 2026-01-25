@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
-  Wrench, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
-  Cpu, BrainCircuit, Notebook, BarChart3, Layers, Activity, AlertCircle,
-  Play, Pause, RefreshCw, Zap
+  CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
+  Cpu, Layers, AlertCircle, Play, Pause, RefreshCw
 } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -111,15 +110,11 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Wrench className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">Prow Jobs</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-            {jobs.length} jobs
-          </span>
-        </div>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+          {jobs.length} jobs
+        </span>
         <CardControls
           limit={limit}
           onLimitChange={setLimit}
@@ -206,15 +201,11 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Status badge */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">Prow Status</span>
-          <span className={`text-xs px-1.5 py-0.5 rounded ${status.healthy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-            {status.healthy ? 'Healthy' : 'Unhealthy'}
-          </span>
-        </div>
+        <span className={`text-xs px-1.5 py-0.5 rounded ${status.healthy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+          {status.healthy ? 'Healthy' : 'Unhealthy'}
+        </span>
       </div>
 
       {/* Integration notice */}
@@ -300,12 +291,8 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">Prow History</span>
-        </div>
+      {/* Controls */}
+      <div className="flex items-center justify-end mb-4">
         <CardControls
           limit={limit}
           onLimitChange={setLimit}
@@ -435,15 +422,11 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">LLM Inference</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-            {servers.filter(s => s.status === 'running').length} running
-          </span>
-        </div>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+          {servers.filter(s => s.status === 'running').length} running
+        </span>
         <CardControls limit={limit} onLimitChange={setLimit} />
       </div>
 
@@ -541,15 +524,11 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-medium text-muted-foreground">LLM Models</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
-            {models.filter(m => m.status === 'loaded').length} loaded
-          </span>
-        </div>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+          {models.filter(m => m.status === 'loaded').length} loaded
+        </span>
         <CardControls limit={limit} onLimitChange={setLimit} />
       </div>
 
@@ -664,15 +643,11 @@ export function MLJobs({ config: _config }: MLJobsProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm font-medium text-muted-foreground">ML Training Jobs</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-            {jobs.filter(j => j.status === 'running').length} running
-          </span>
-        </div>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+          {jobs.filter(j => j.status === 'running').length} running
+        </span>
         <CardControls limit={limit} onLimitChange={setLimit} />
       </div>
 
@@ -772,15 +747,11 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Notebook className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-muted-foreground">Jupyter Notebooks</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
-            {notebooks.filter(n => n.status === 'running').length} active
-          </span>
-        </div>
+        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+          {notebooks.filter(n => n.status === 'running').length} active
+        </span>
         <CardControls limit={limit} onLimitChange={setLimit} />
       </div>
 

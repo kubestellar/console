@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Network, Server, Globe, Shield, ExternalLink } from 'lucide-react'
+import { Server, Globe, Shield, ExternalLink } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -74,11 +74,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   if (!selectedCluster) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Network className="w-4 h-4 text-cyan-400" />
-            <span className="text-sm font-medium text-muted-foreground">Cluster Network</span>
-          </div>
+        <div className="flex items-center justify-end mb-4">
           <select
             value={selectedCluster}
             onChange={(e) => setSelectedCluster(e.target.value)}
@@ -99,10 +95,9 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Network className="w-4 h-4 text-cyan-400" />
           <span className="text-sm font-medium text-foreground">{selectedCluster}</span>
           <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>

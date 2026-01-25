@@ -214,11 +214,9 @@ export function ResourceTrend() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Resource Trend</span>
           {filteredClusters.length < availableClustersForFilter.length && filteredClusters.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />

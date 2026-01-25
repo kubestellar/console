@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Search } from 'lucide-react'
+import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Search, Filter, ChevronDown, Server } from 'lucide-react'
 import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -8,6 +8,7 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useChartFilters } from '../../lib/cards'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -51,6 +52,19 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   useClusters() // Keep hook for cache warming
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPod } = useDrillDownActions()
+
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'gpu-workloads',
+  })
 
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -103,6 +117,14 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       })
     }
 
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      filtered = filtered.filter(pod => {
+        const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
+        return localClusterFilter.some(c => normalizedPodCluster === c)
+      })
+    }
+
     // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
@@ -115,7 +137,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     }
 
     return filtered
-  }, [allPods, gpuNodes, selectedClusters, isAllClustersSelected, localSearch])
+  }, [allPods, gpuNodes, selectedClusters, isAllClustersSelected, localClusterFilter, localSearch])
 
   // Sort workloads
   const sortedWorkloads = useMemo(() => {
@@ -213,11 +235,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   if (gpuNodes.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-muted-foreground">GPU Workloads</span>
-          </div>
+        <div className="flex items-center justify-end mb-3">
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={gpuFailed}
@@ -239,18 +257,66 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-3">
+        {summary.failed > 0 ? (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+            {summary.failed} failed
+          </span>
+        ) : <div />}
         <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">GPU Workloads</span>
-          {summary.failed > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-              {summary.failed} failed
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length > 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}

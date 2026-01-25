@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Search } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Search } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
 
 interface KyvernoPoliciesProps {
@@ -103,28 +103,22 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-medium text-muted-foreground">Kyverno</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <a
-            href="https://kyverno.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="Kyverno Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            size="sm"
-          />
-        </div>
+      {/* Controls */}
+      <div className="flex items-center justify-end gap-1 mb-3">
+        <a
+          href="https://kyverno.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+          title="Kyverno Documentation"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          size="sm"
+        />
       </div>
 
       {/* Integration notice */}

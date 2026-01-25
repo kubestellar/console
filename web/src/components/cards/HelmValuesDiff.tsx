@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { FileJson, ChevronRight, Plus, Edit, Search, RotateCcw } from 'lucide-react'
+import { ChevronRight, Plus, Edit, Search, RotateCcw } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -192,17 +192,13 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <FileJson className="w-4 h-4 text-amber-400" />
-          <span className="text-sm font-medium text-muted-foreground">Helm Values Diff</span>
-          {valueEntries.length > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
-              {valueEntries.length} values
-            </span>
-          )}
-        </div>
+        {valueEntries.length > 0 ? (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+            {valueEntries.length} values
+          </span>
+        ) : <div />}
         <RefreshButton
           isRefreshing={valuesRefreshing || valuesLoading}
           isFailed={isFailed}

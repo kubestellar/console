@@ -511,17 +511,13 @@ Let's start by discussing what kind of policy I need.`,
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">OPA Gatekeeper</span>
-          {installedCount > 0 && (
-            <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-500/20 text-green-400">
-              {installedCount} cluster{installedCount !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
+        {installedCount > 0 ? (
+          <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-500/20 text-green-400">
+            {installedCount} cluster{installedCount !== 1 ? 's' : ''}
+          </span>
+        ) : <div />}
         <div className="flex items-center gap-1">
           <a
             href="https://open-policy-agent.github.io/gatekeeper/website/docs/"

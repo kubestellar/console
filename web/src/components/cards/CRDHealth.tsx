@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { FileCode, CheckCircle, AlertTriangle, XCircle, Database, Search, AlertCircle } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, Database, Search, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
@@ -194,31 +194,25 @@ export function CRDHealth({ config }: CRDHealthProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <FileCode className="w-4 h-4 text-teal-400" />
-          <span className="text-sm font-medium text-muted-foreground">CRD Health</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            isFailed={isFailed}
-            consecutiveFailures={consecutiveFailures}
-            lastRefresh={lastRefresh}
-            onRefresh={refetch}
-            size="sm"
-          />
-        </div>
+      {/* Controls */}
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <CardControls
+          limit={limit}
+          onLimitChange={setLimit}
+          sortBy={sortBy}
+          sortOptions={SORT_OPTIONS}
+          onSortChange={setSortBy}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+        />
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Cluster selector */}

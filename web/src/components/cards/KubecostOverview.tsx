@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DollarSign, TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart, ChevronRight } from 'lucide-react'
+import { TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart, ChevronRight } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 
@@ -47,28 +47,22 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm font-medium text-muted-foreground">Kubecost</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <a
-            href="https://www.kubecost.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="Kubecost Website"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            size="sm"
-          />
-        </div>
+      {/* Controls */}
+      <div className="flex items-center justify-end gap-1 mb-3">
+        <a
+          href="https://www.kubecost.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+          title="Kubecost Website"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          size="sm"
+        />
       </div>
 
       {/* Integration notice */}

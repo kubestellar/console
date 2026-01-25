@@ -415,24 +415,9 @@ export function WorkloadDeployment({ onRefresh, isRefreshing = false }: Workload
   const workloadStatuses: (WorkloadStatus | 'All')[] = ['All', 'Running', 'Degraded', 'Pending', 'Failed']
 
   return (
-    <div className={cn(
-      "h-full flex flex-col rounded-lg",
-      isDemo && "ring-2 ring-yellow-400/50"
-    )}>
-      {/* Demo badge */}
-      {isDemo && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-3 py-1 text-xs text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          Demo data - Drag workloads to deploy to clusters
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <Box className="h-5 w-5 text-blue-500" />
-          <h3 className="font-medium text-gray-900 dark:text-gray-100">Workload Deployment</h3>
-        </div>
+    <div className="h-full flex flex-col">
+      {/* Controls */}
+      <div className="flex items-center justify-end p-3 border-b border-gray-200 dark:border-gray-700">
         <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshing || isLoading} />
       </div>
 

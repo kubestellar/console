@@ -7,7 +7,7 @@ Last Updated: 2026-01-23
 | Category | Count |
 |----------|-------|
 | Dashboard Pages | 20 (1 main + 19 dedicated) |
-| Card Types | 65 |
+| Card Types | 109 |
 | Cards with Drill-Down | 40 |
 | Drill-Down Views | 22 |
 | Modal Dialogs | 19 |
@@ -55,9 +55,9 @@ Last Updated: 2026-01-23
 
 ---
 
-## 2. Card Types (60 Total)
+## 2. Card Types (109 Total)
 
-### Category: Cluster Health (7 cards)
+### Category: Cluster Health (8 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
 | 1 | `cluster_health` | Cluster Health | status |
@@ -67,128 +67,188 @@ Last Updated: 2026-01-23
 | 5 | `cluster_costs` | Cluster Costs | bar |
 | 6 | `upgrade_status` | Cluster Upgrade Status | status |
 | 7 | `cluster_resource_tree` | Cluster Resource Tree | table |
+| 8 | `cluster_locations` | Cluster Locations | map |
 
-### Category: Workloads (6 cards)
+### Category: Workloads (7 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 8 | `deployment_status` | Deployment Status | donut |
-| 9 | `deployment_issues` | Deployment Issues | table |
-| 10 | `deployment_progress` | Deployment Progress | gauge |
-| 11 | `pod_issues` | Pod Issues | table |
-| 12 | `top_pods` | Top Pods | bar |
-| 13 | `app_status` | Workload Status | donut |
+| 9 | `deployment_status` | Deployment Status | donut |
+| 10 | `deployment_issues` | Deployment Issues | table |
+| 11 | `deployment_progress` | Deployment Progress | gauge |
+| 12 | `pod_issues` | Pod Issues | table |
+| 13 | `top_pods` | Top Pods | bar |
+| 14 | `app_status` | Workload Status | donut |
+| 15 | `workload_deployment` | Workload Deployment | table |
 
 ### Category: Compute (8 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 14 | `compute_overview` | Compute Overview | status |
-| 15 | `resource_usage` | Resource Usage | gauge |
-| 16 | `resource_capacity` | Resource Capacity | bar |
-| 17 | `gpu_overview` | GPU Overview | gauge |
-| 18 | `gpu_status` | GPU Status | donut |
-| 19 | `gpu_inventory` | GPU Inventory | table |
-| 20 | `gpu_workloads` | GPU Workloads | table |
-| 21 | `gpu_usage_trend` | GPU Usage Trend | timeseries |
+| 16 | `compute_overview` | Compute Overview | status |
+| 17 | `resource_usage` | Resource Usage | gauge |
+| 18 | `resource_capacity` | Resource Capacity | bar |
+| 19 | `gpu_overview` | GPU Overview | gauge |
+| 20 | `gpu_status` | GPU Status | donut |
+| 21 | `gpu_inventory` | GPU Inventory | table |
+| 22 | `gpu_workloads` | GPU Workloads | table |
+| 23 | `gpu_usage_trend` | GPU Usage Trend | timeseries |
 
 ### Category: Storage (2 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 22 | `storage_overview` | Storage Overview | status |
-| 23 | `pvc_status` | PVC Status | table |
+| 24 | `storage_overview` | Storage Overview | status |
+| 25 | `pvc_status` | PVC Status | table |
 
-### Category: Network (3 cards)
+### Category: Network (7 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 24 | `network_overview` | Network Overview | status |
-| 25 | `service_status` | Service Status | table |
-| 26 | `cluster_network` | Cluster Network | status |
+| 26 | `network_overview` | Network Overview | status |
+| 27 | `service_status` | Service Status | table |
+| 28 | `cluster_network` | Cluster Network | status |
+| 29 | `service_exports` | Service Exports (MCS) | table |
+| 30 | `service_imports` | Service Imports (MCS) | table |
+| 31 | `gateway_status` | Gateway API Status | status |
+| 32 | `service_topology` | Service Topology | diagram |
 
 ### Category: GitOps (7 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 27 | `helm_release_status` | Helm Releases | status |
-| 28 | `helm_history` | Helm History | events |
-| 29 | `helm_values_diff` | Helm Values Diff | table |
-| 30 | `chart_versions` | Helm Chart Versions | table |
-| 31 | `kustomization_status` | Kustomization Status | status |
-| 32 | `overlay_comparison` | Overlay Comparison | table |
-| 33 | `gitops_drift` | GitOps Drift | status |
+| 33 | `helm_release_status` | Helm Releases | status |
+| 34 | `helm_history` | Helm History | events |
+| 35 | `helm_values_diff` | Helm Values Diff | table |
+| 36 | `chart_versions` | Helm Chart Versions | table |
+| 37 | `kustomization_status` | Kustomization Status | status |
+| 38 | `overlay_comparison` | Overlay Comparison | table |
+| 39 | `gitops_drift` | GitOps Drift | status |
 
 ### Category: ArgoCD (3 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 34 | `argocd_applications` | ArgoCD Applications | status |
-| 35 | `argocd_sync_status` | ArgoCD Sync Status | donut |
-| 36 | `argocd_health` | ArgoCD Health | status |
+| 40 | `argocd_applications` | ArgoCD Applications | status |
+| 41 | `argocd_sync_status` | ArgoCD Sync Status | donut |
+| 42 | `argocd_health` | ArgoCD Health | status |
 
 ### Category: Operators (3 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 37 | `operator_status` | OLM Operators | status |
-| 38 | `operator_subscriptions` | Operator Subscriptions | table |
-| 39 | `crd_health` | CRD Health | status |
+| 43 | `operator_status` | OLM Operators | status |
+| 44 | `operator_subscriptions` | Operator Subscriptions | table |
+| 45 | `crd_health` | CRD Health | status |
 
-### Category: Namespaces (4 cards)
+### Category: Namespaces (5 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 40 | `namespace_overview` | Namespace Overview | status |
-| 41 | `namespace_quotas` | Namespace Quotas | gauge |
-| 42 | `namespace_rbac` | Namespace RBAC | table |
-| 43 | `namespace_events` | Namespace Events | events |
+| 46 | `namespace_overview` | Namespace Overview | status |
+| 47 | `namespace_quotas` | Namespace Quotas | gauge |
+| 48 | `namespace_rbac` | Namespace RBAC | table |
+| 49 | `namespace_events` | Namespace Events | events |
+| 50 | `namespace_monitor` | Namespace Monitor | status |
 
 ### Category: Security & Events (3 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 44 | `security_issues` | Security Issues | table |
-| 45 | `event_stream` | Event Stream | events |
-| 46 | `user_management` | User Management | table |
+| 51 | `security_issues` | Security Issues | table |
+| 52 | `event_stream` | Event Stream | events |
+| 53 | `user_management` | User Management | table |
 
 ### Category: Live Trends (4 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 47 | `events_timeline` | Events Timeline | timeseries |
-| 48 | `pod_health_trend` | Pod Health Trend | timeseries |
-| 49 | `resource_trend` | Resource Trend | timeseries |
-| 50 | `gpu_utilization` | GPU Utilization | timeseries |
+| 54 | `events_timeline` | Events Timeline | timeseries |
+| 55 | `pod_health_trend` | Pod Health Trend | timeseries |
+| 56 | `resource_trend` | Resource Trend | timeseries |
+| 57 | `gpu_utilization` | GPU Utilization | timeseries |
 
 ### Category: Klaude AI (3 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 51 | `klaude_issues` | Klaude Issues | status |
-| 52 | `klaude_kubeconfig_audit` | Klaude Kubeconfig Audit | status |
-| 53 | `klaude_health_check` | Klaude Health Check | gauge |
+| 58 | `klaude_issues` | Klaude Issues | status |
+| 59 | `klaude_kubeconfig_audit` | Klaude Kubeconfig Audit | status |
+| 60 | `klaude_health_check` | Klaude Health Check | gauge |
 
 ### Category: Alerting (2 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 54 | `active_alerts` | Active Alerts | status |
-| 55 | `alert_rules` | Alert Rules | table |
+| 61 | `active_alerts` | Active Alerts | status |
+| 62 | `alert_rules` | Alert Rules | table |
 
-### Category: Cost Management (3 cards)
+### Category: Cost Management (2 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 56 | `cluster_costs` | Cluster Costs | bar |
-| 57 | `opencost_overview` | OpenCost | bar |
-| 58 | `kubecost_overview` | Kubecost | bar |
+| 63 | `opencost_overview` | OpenCost | bar |
+| 64 | `kubecost_overview` | Kubecost | bar |
 
 ### Category: Policy Management (2 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 59 | `opa_policies` | OPA Gatekeeper | status |
-| 60 | `kyverno_policies` | Kyverno Policies | status |
+| 65 | `opa_policies` | OPA Gatekeeper | status |
+| 66 | `kyverno_policies` | Kyverno Policies | status |
+
+### Category: Compliance & Security Posture (5 cards)
+| # | Type | Title | Visualization |
+|---|------|-------|---------------|
+| 67 | `falco_alerts` | Falco Alerts | status |
+| 68 | `trivy_scan` | Trivy Scan | status |
+| 69 | `kubescape_scan` | Kubescape Scan | status |
+| 70 | `policy_violations` | Policy Violations | table |
+| 71 | `compliance_score` | Compliance Score | gauge |
+
+### Category: Data Compliance (3 cards)
+| # | Type | Title | Visualization |
+|---|------|-------|---------------|
+| 72 | `vault_secrets` | Vault Secrets | status |
+| 73 | `external_secrets` | External Secrets | status |
+| 74 | `cert_manager` | Cert Manager | status |
+
+### Category: Workload Detection (7 cards)
+| # | Type | Title | Visualization |
+|---|------|-------|---------------|
+| 75 | `prow_jobs` | Prow Jobs | table |
+| 76 | `prow_status` | Prow Status | status |
+| 77 | `prow_history` | Prow History | events |
+| 78 | `llm_inference` | LLM Inference | table |
+| 79 | `llm_models` | LLM Models | table |
+| 80 | `ml_jobs` | ML Training Jobs | table |
+| 81 | `ml_notebooks` | Jupyter Notebooks | table |
 
 ### Category: External Integrations (2 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 61 | `github_activity` | GitHub Activity | table |
-| 62 | `weather` | Weather | status |
+| 82 | `github_activity` | GitHub Activity | table |
+| 83 | `weather` | Weather | status |
 
-### Category: Utilities & Fun (3 cards)
+### Category: Utilities (5 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 63 | `kubectl` | Kubectl Terminal | interactive |
-| 64 | `sudoku_game` | Sudoku Game | interactive |
-| 65 | `match_game` | Match Game | interactive |
+| 84 | `kubectl` | Kubectl Terminal | interactive |
+| 85 | `iframe_embed` | Iframe Embed | interactive |
+| 86 | `network_utils` | Network Utils | interactive |
+| 87 | `mobile_browser` | Mobile Browser | interactive |
+| 88 | `stock_market_ticker` | Stock Market Ticker | status |
+
+### Category: Games (21 cards)
+| # | Type | Title | Visualization |
+|---|------|-------|---------------|
+| 89 | `sudoku_game` | Sudoku Game | interactive |
+| 90 | `match_game` | Kube Match | interactive |
+| 91 | `solitaire` | Kube Solitaire | interactive |
+| 92 | `checkers` | AI Checkers | interactive |
+| 93 | `game_2048` | Kube 2048 | interactive |
+| 94 | `kubedle` | Kubedle | interactive |
+| 95 | `pod_sweeper` | Pod Sweeper | interactive |
+| 96 | `container_tetris` | Container Tetris | interactive |
+| 97 | `flappy_pod` | Flappy Pod | interactive |
+| 98 | `kube_man` | Kube-Man | interactive |
+| 99 | `kube_kong` | Kube Kong | interactive |
+| 100 | `pod_pitfall` | Pod Pitfall | interactive |
+| 101 | `node_invaders` | Node Invaders | interactive |
+| 102 | `pod_brothers` | Pod Brothers | interactive |
+| 103 | `kube_kart` | Kube Kart | interactive |
+| 104 | `kube_pong` | Kube Pong | interactive |
+| 105 | `kube_snake` | Kube Snake | interactive |
+| 106 | `kube_galaga` | Kube Galaga | interactive |
+| 107 | `kube_craft` | KubeCraft | interactive |
+| 108 | `kube_chess` | Kube Chess | interactive |
+| 109 | `kube_craft_3d` | KubeCraft 3D | interactive |
 
 ---
 

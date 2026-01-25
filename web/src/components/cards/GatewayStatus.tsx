@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Network, CheckCircle2, Clock, XCircle, Search, AlertCircle, ExternalLink, Globe, ArrowRight } from 'lucide-react'
+import { CheckCircle2, Clock, XCircle, Search, AlertCircle, ExternalLink, Globe, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 
@@ -162,28 +162,22 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Network className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">Gateway API</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <a
-            href="https://gateway-api.sigs.k8s.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="Gateway API Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            size="sm"
-          />
-        </div>
+      {/* Controls */}
+      <div className="flex items-center justify-end gap-1 mb-3">
+        <a
+          href="https://gateway-api.sigs.k8s.io/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+          title="Gateway API Documentation"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          size="sm"
+        />
       </div>
 
       {/* Gateway API Integration Notice */}

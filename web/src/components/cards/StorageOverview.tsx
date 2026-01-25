@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
-import { HardDrive, Database, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
+import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
+import { useChartFilters } from '../../lib/cards'
 
 export function StorageOverview() {
   const { clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
@@ -18,17 +19,42 @@ export function StorageOverview() {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
 
-  // Filter clusters by selection
-  const filteredClusters = useMemo(() => {
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'storage-overview',
+  })
+
+  // Filter clusters by global selection first
+  const globalFilteredClusters = useMemo(() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
   }, [clusters, selectedClusters, isAllClustersSelected])
 
+  // Apply local cluster filter
+  const filteredClusters = useMemo(() => {
+    if (localClusterFilter.length === 0) return globalFilteredClusters
+    return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
+  }, [globalFilteredClusters, localClusterFilter])
+
   // Filter PVCs by selection
   const filteredPVCs = useMemo(() => {
-    if (isAllClustersSelected) return pvcs
-    return pvcs.filter(p => p.cluster && selectedClusters.includes(p.cluster))
-  }, [pvcs, selectedClusters, isAllClustersSelected])
+    let result = pvcs
+    if (!isAllClustersSelected) {
+      result = result.filter(p => p.cluster && selectedClusters.includes(p.cluster))
+    }
+    if (localClusterFilter.length > 0) {
+      result = result.filter(p => p.cluster && localClusterFilter.includes(p.cluster))
+    }
+    return result
+  }, [pvcs, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   // Calculate storage stats
   const stats = useMemo(() => {
@@ -70,25 +96,75 @@ export function StorageOverview() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-4">
+        {hasRealData ? (
+          <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded" title="Showing live data from clusters">
+            Live
+          </span>
+        ) : <div />}
         <div className="flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Storage Overview</span>
-          {hasRealData && (
-            <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded" title="Showing live data from clusters">
-              Live
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
             </span>
           )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length > 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
-        <RefreshButton
-          isRefreshing={isRefreshing}
-          isFailed={isFailed}
-          consecutiveFailures={consecutiveFailures}
-          lastRefresh={lastRefresh}
-          onRefresh={refetch}
-          size="sm"
-        />
       </div>
 
       {/* Main stats */}

@@ -1,4 +1,4 @@
-import { Layers, Globe, Server, ExternalLink, Search, ChevronRight } from 'lucide-react'
+import { Globe, Server, ExternalLink, Search, ChevronRight } from 'lucide-react'
 import { useServices, type Service } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls } from '../ui/CardControls'
@@ -133,17 +133,14 @@ export function ServiceStatus() {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      {/* Header */}
+      {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-medium text-foreground">Service Status</span>
-          {hasRealData && (
-            <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-              Live
-            </span>
-          )}
-        </div>
+        {hasRealData && (
+          <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
+            Live
+          </span>
+        )}
+        {!hasRealData && <div />}
         <div className="flex items-center gap-2">
           <CardControls
             limit={itemsPerPage}
