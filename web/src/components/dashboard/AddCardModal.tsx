@@ -843,7 +843,12 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
         }
       }
     }
-    onAddCards(cardsToAdd)
+    try {
+      onAddCards(cardsToAdd)
+    } catch (error) {
+      console.error('Error adding cards:', error)
+    }
+    // Always close and reset state
     onClose()
     setBrowseSearch('')
     setSelectedBrowseCards(new Set())
@@ -973,55 +978,6 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                   )})}
 
                 </div>
-
-                {/* Browse footer */}
-                {(() => {
-                  // Calculate total available cards (not already added)
-                  const allAvailableCards = Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type))
-                  const uniqueAvailableTypes = new Set(allAvailableCards.map(c => c.type))
-                  const totalAvailable = uniqueAvailableTypes.size
-
-                  return (
-                    <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        {selectedBrowseCards.size > 0
-                          ? `${selectedBrowseCards.size} card${selectedBrowseCards.size !== 1 ? 's' : ''} selected`
-                          : `${totalAvailable} cards available`}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {totalAvailable > 0 && selectedBrowseCards.size !== totalAvailable && (
-                          <button
-                            onClick={() => {
-                              const newSelected = new Set(selectedBrowseCards)
-                              uniqueAvailableTypes.forEach(type => newSelected.add(type))
-                              setSelectedBrowseCards(newSelected)
-                            }}
-                            className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
-                          >
-                            Select All ({totalAvailable})
-                          </button>
-                        )}
-                        {selectedBrowseCards.size > 0 && (
-                          <>
-                            <button
-                              onClick={() => setSelectedBrowseCards(new Set())}
-                              className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              Clear
-                            </button>
-                            <button
-                              onClick={handleAddBrowseCards}
-                              className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium flex items-center gap-2"
-                            >
-                              <Plus className="w-4 h-4" />
-                              Add {selectedBrowseCards.size} Card{selectedBrowseCards.size !== 1 ? 's' : ''}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })()}
               </div>
 
               {/* Right side - Preview Panel (always rendered) */}
@@ -1170,6 +1126,56 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
           </>
           )}
       </BaseModal.Content>
+
+      {/* Footer - Browse tab */}
+      {activeTab === 'browse' && (() => {
+        // Calculate total available cards (not already added)
+        const allAvailableCards = Object.values(filteredCatalog).flat().filter(c => !existingCardTypes.includes(c.type))
+        const uniqueAvailableTypes = new Set(allAvailableCards.map(c => c.type))
+        const totalAvailable = uniqueAvailableTypes.size
+
+        return (
+          <BaseModal.Footer>
+            <span className="text-sm text-muted-foreground">
+              {selectedBrowseCards.size > 0
+                ? `${selectedBrowseCards.size} card${selectedBrowseCards.size !== 1 ? 's' : ''} selected`
+                : `${totalAvailable} cards available`}
+            </span>
+            <div className="flex-1" />
+            <div className="flex items-center gap-2">
+              {totalAvailable > 0 && selectedBrowseCards.size !== totalAvailable && (
+                <button
+                  onClick={() => {
+                    const newSelected = new Set(selectedBrowseCards)
+                    uniqueAvailableTypes.forEach(type => newSelected.add(type))
+                    setSelectedBrowseCards(newSelected)
+                  }}
+                  className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
+                >
+                  Select All ({totalAvailable})
+                </button>
+              )}
+              {selectedBrowseCards.size > 0 && (
+                <>
+                  <button
+                    onClick={() => setSelectedBrowseCards(new Set())}
+                    className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={handleAddBrowseCards}
+                    className="px-4 py-2 bg-gradient-ks text-foreground rounded-lg font-medium flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add {selectedBrowseCards.size} Card{selectedBrowseCards.size !== 1 ? 's' : ''}
+                  </button>
+                </>
+              )}
+            </div>
+          </BaseModal.Footer>
+        )
+      })()}
 
       {/* Footer - AI tab */}
       {activeTab === 'ai' && suggestions.length > 0 && (
