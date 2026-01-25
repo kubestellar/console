@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './MissionSidebar'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
+import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
@@ -29,6 +30,9 @@ export function Layout({ children }: LayoutProps) {
 
   // Track navigation for behavior analysis
   useNavigationHistory()
+
+  // Persist and restore last route and scroll position
+  useLastRoute()
 
   return (
     <TourProvider>
