@@ -11,19 +11,19 @@ import { useDrillDownActions } from './useDrillDown'
  * (as long as the underlying data is available from useClusters).
  */
 export function useUniversalStats() {
-  const { clusters, isLoading } = useClusters()
+  const { deduplicatedClusters, isLoading } = useClusters()
   const { drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
 
-  // Computed values from cluster data
-  const totalClusters = clusters.length
-  const healthyClusters = clusters.filter(c => c.healthy).length
-  const unhealthyClusters = clusters.filter(c => !c.healthy).length
-  const unreachableClusters = clusters.filter(c => c.reachable === false).length
-  const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
-  const totalMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
-  const totalStorageGB = clusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
+  // Computed values from deduplicated cluster data (avoids double-counting same server with different contexts)
+  const totalClusters = deduplicatedClusters.length
+  const healthyClusters = deduplicatedClusters.filter(c => c.healthy).length
+  const unhealthyClusters = deduplicatedClusters.filter(c => !c.healthy).length
+  const unreachableClusters = deduplicatedClusters.filter(c => c.reachable === false).length
+  const totalNodes = deduplicatedClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const totalPods = deduplicatedClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+  const totalCPUs = deduplicatedClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
+  const totalMemoryGB = deduplicatedClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
+  const totalStorageGB = deduplicatedClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
   const totalGPUs = 0 // GPU data requires separate API call
 
   // Create a lookup for stat values that can be derived from cluster data
@@ -85,7 +85,7 @@ export function useUniversalStats() {
   return {
     getStatValue,
     isLoading,
-    clusters,
+    clusters: deduplicatedClusters,
   }
 }
 

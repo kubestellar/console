@@ -10,15 +10,37 @@ interface Props {
 }
 
 export function ResourcesDrillDown({ data: _data }: Props) {
-  const { clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCluster } = useDrillDownActions()
 
-  // Calculate per-cluster GPU data
+  // Build a map of raw cluster names to deduplicated primary names
+  const clusterNameMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    clusters.forEach(c => {
+      map[c.name] = c.name // Primary maps to itself
+      c.aliases?.forEach(alias => {
+        map[alias] = c.name // Aliases map to primary
+      })
+    })
+    return map
+  }, [clusters])
+
+  // Calculate per-cluster GPU data (mapping aliases to primary cluster names)
+  // Also deduplicate GPU nodes by name to avoid counting same physical node twice
   const clusterGPUs = useMemo(() => {
     const map: Record<string, { total: number; allocated: number }> = {}
+    const seenNodes = new Set<string>() // Track seen node names to avoid duplicates
+
     gpuNodes.forEach(node => {
-      const cluster = node.cluster || 'unknown'
+      // Skip if we've already counted this physical node
+      const nodeKey = node.name
+      if (seenNodes.has(nodeKey)) return
+      seenNodes.add(nodeKey)
+
+      const rawCluster = node.cluster || 'unknown'
+      // Map to deduplicated primary name if possible
+      const cluster = clusterNameMap[rawCluster] || rawCluster
       if (!map[cluster]) {
         map[cluster] = { total: 0, allocated: 0 }
       }
@@ -26,15 +48,20 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       map[cluster].allocated += node.gpuAllocated
     })
     return map
-  }, [gpuNodes])
+  }, [gpuNodes, clusterNameMap])
 
-  // Calculate totals
+  // Calculate totals (using deduplicated GPU counts from clusterGPUs map)
   const totals = useMemo(() => {
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
     const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
-    const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-    const allocatedGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+    // Use aggregated GPU counts from clusterGPUs (already deduplicated)
+    let totalGPUs = 0
+    let allocatedGPUs = 0
+    Object.values(clusterGPUs).forEach(gpu => {
+      totalGPUs += gpu.total
+      allocatedGPUs += gpu.allocated
+    })
     // Estimate memory based on CPU (would need actual metrics in production)
     const totalMemoryGB = totalCPUs * 4
 
@@ -46,7 +73,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       gpus: totalGPUs,
       gpusAllocated: allocatedGPUs,
     }
-  }, [clusters, gpuNodes])
+  }, [clusters, clusterGPUs])
 
   if (isLoading) {
     return (
@@ -118,7 +145,9 @@ export function ResourcesDrillDown({ data: _data }: Props) {
             const memoryGB = (cluster.cpuCores || 0) * 4
             const memoryPercent = 65 // Estimated
             const gpuData = clusterGPUs[cluster.name] || { total: 0, allocated: 0 }
-            const gpuPercent = gpuData.total > 0 ? Math.round((gpuData.allocated / gpuData.total) * 100) : 0
+            // Cap at 100% - allocated should never exceed total (data issue if it does)
+            const rawGpuPercent = gpuData.total > 0 ? Math.round((gpuData.allocated / gpuData.total) * 100) : 0
+            const gpuPercent = Math.min(rawGpuPercent, 100)
 
             return (
               <div

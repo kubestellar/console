@@ -1450,7 +1450,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 }
 
 export function Clusters() {
-  const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
   const { isConnected } = useLocalAgent()

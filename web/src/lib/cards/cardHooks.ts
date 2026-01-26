@@ -83,7 +83,7 @@ export function useCardFilters<T>(
     selectedClusters,
     isAllClustersSelected,
   } = useGlobalFilters()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters } = useClusters()
 
   // Local state with localStorage persistence for cluster filter
   const [search, setSearch] = useState('')
@@ -122,12 +122,12 @@ export function useCardFilters<T>(
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Available clusters for local filter (respects global filter)
+  // Available clusters for local filter (respects global filter, uses deduplicated clusters)
   const availableClusters = useMemo(() => {
-    const reachable = clusters.filter(c => c.reachable !== false)
+    const reachable = deduplicatedClusters.filter(c => c.reachable !== false)
     if (isAllClustersSelected) return reachable
     return reachable.filter(c => selectedClusters.includes(c.name))
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
   const toggleClusterFilter = useCallback((clusterName: string) => {
     if (localClusterFilter.includes(clusterName)) {
@@ -691,7 +691,7 @@ export function useSingleSelectCluster<T>(
     selectedClusters,
     isAllClustersSelected,
   } = useGlobalFilters()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters } = useClusters()
 
   const [search, setSearch] = useState('')
 
@@ -719,10 +719,10 @@ export function useSingleSelectCluster<T>(
     }
   }, [storageKey])
 
-  // Get reachable clusters
+  // Get reachable clusters (using deduplicated clusters)
   const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+    return deduplicatedClusters.filter(c => c.reachable !== false)
+  }, [deduplicatedClusters])
 
   // Available clusters for selection (respects global filter)
   const availableClusters = useMemo(() => {
@@ -845,7 +845,7 @@ export function useChartFilters(
 ): UseChartFiltersResult {
   const { storageKey } = config
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters } = useClusters()
 
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     if (!storageKey) return []
@@ -882,10 +882,10 @@ export function useChartFilters(
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Get reachable clusters
+  // Get reachable clusters (using deduplicated clusters)
   const reachableClusters = useMemo(() => {
-    return clusters.filter(c => c.reachable !== false)
-  }, [clusters])
+    return deduplicatedClusters.filter(c => c.reachable !== false)
+  }, [deduplicatedClusters])
 
   // Available clusters for filtering (respects global filter)
   const availableClusters = useMemo(() => {
@@ -965,7 +965,7 @@ export function useCascadingSelection(
 ): UseCascadingSelectionResult {
   const { storageKey } = config
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
 
   // Track local selection state for global filter sync
   const savedLocalFirst = useRef<string>('')

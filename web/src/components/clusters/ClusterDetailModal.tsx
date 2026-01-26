@@ -85,7 +85,7 @@ interface ClusterDetailModalProps {
 
 export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename }: ClusterDetailModalProps) {
   const { health, isLoading } = useClusterHealth(clusterName)
-  const { clusters } = useClusters()
+  const { deduplicatedClusters, clusters: rawClusters } = useClusters()
   const { issues: podIssues } = usePodIssues(clusterName)
   const { issues: deploymentIssues } = useDeploymentIssues(clusterName)
   const { nodes: gpuNodes } = useGPUNodes(clusterName)
@@ -96,7 +96,44 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const { startMission } = useMissions()
 
   // Get cached cluster info for distribution detection
-  const clusterInfo = useMemo(() => clusters.find(c => c.name === clusterName), [clusters, clusterName])
+  // First try deduplicated clusters, then raw clusters, also check aliases
+  const clusterInfo = useMemo(() => {
+    // Direct match in deduplicated clusters
+    let found = deduplicatedClusters.find(c => c.name === clusterName)
+    if (found) return found
+    // Check if clusterName is an alias
+    found = deduplicatedClusters.find(c => c.aliases?.includes(clusterName))
+    if (found) return found
+    // Fallback to raw clusters
+    return rawClusters.find(c => c.name === clusterName)
+  }, [deduplicatedClusters, rawClusters, clusterName])
+
+  // Build a map of raw cluster names to deduplicated primary names for GPU deduplication
+  const clusterNameMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    deduplicatedClusters.forEach(c => {
+      map[c.name] = c.name // Primary maps to itself
+      c.aliases?.forEach(alias => {
+        map[alias] = c.name // Aliases map to primary
+      })
+    })
+    return map
+  }, [deduplicatedClusters])
+
+  // Deduplicate GPU nodes by name to avoid counting same physical node twice
+  const deduplicatedGpuNodes = useMemo(() => {
+    const seenNodes = new Map<string, typeof gpuNodes[0]>()
+    gpuNodes.forEach(node => {
+      const nodeKey = node.name
+      if (!seenNodes.has(nodeKey)) {
+        // Map the cluster name to the primary name
+        const mappedCluster = clusterNameMap[node.cluster] || node.cluster
+        seenNodes.set(nodeKey, { ...node, cluster: mappedCluster })
+      }
+    })
+    return Array.from(seenNodes.values())
+  }, [gpuNodes, clusterNameMap])
+
   const [showAllNamespaces, setShowAllNamespaces] = useState(false)
   const [showPodsByNamespace, setShowPodsByNamespace] = useState(false)
   const [showNodeDetails, setShowNodeDetails] = useState(false)
@@ -108,7 +145,13 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   const [showStorageDetail, setShowStorageDetail] = useState(false)
   const [showGPUDetail, setShowGPUDetail] = useState(false)
 
-  const clusterGPUs = gpuNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0]))
+  // Filter GPU nodes to only those belonging to this cluster (using deduplicated nodes)
+  const clusterGPUs = deduplicatedGpuNodes.filter(n => {
+    const primaryClusterName = clusterInfo?.name || clusterName
+    return n.cluster === primaryClusterName ||
+           n.cluster === clusterName ||
+           n.cluster.includes(primaryClusterName.split('/')[0])
+  })
   const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
 
   // Klaude diagnose/repair handlers
@@ -224,7 +267,17 @@ After I approve, help me execute the repairs step by step.`,
                 <AlertTriangle className="w-4 h-4" />
               </span>
             )}
-            <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
+            <div className="flex flex-col">
+              <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
+              {clusterInfo?.aliases && clusterInfo.aliases.length > 0 && (
+                <div className="text-xs text-muted-foreground mt-0.5" title={`Also known as: ${clusterInfo.aliases.join(', ')}`}>
+                  aka: {clusterInfo.aliases.length <= 2
+                    ? clusterInfo.aliases.map(a => a.split('/').pop()).join(', ')
+                    : `${clusterInfo.aliases.slice(0, 2).map(a => a.split('/').pop()).join(', ')} +${clusterInfo.aliases.length - 2} more`
+                  }
+                </div>
+              )}
+            </div>
             {(() => {
               // Use cached distribution if available, otherwise detect from name/server
               // Prefer clusterInfo.server over health.apiServer since it's more reliably populated

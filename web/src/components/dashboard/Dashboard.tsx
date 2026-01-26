@@ -132,7 +132,8 @@ export function Dashboard() {
   const { recordCardRemoved, recordCardAdded, recordCardReplaced, recordCardConfigured } = useCardHistory()
 
   // Cluster data for refresh functionality and stats - most cards depend on this
-  const { clusters, isRefreshing, lastUpdated, refetch, isLoading: isClustersLoading } = useClusters()
+  // Use deduplicated clusters to avoid double-counting same server with different contexts
+  const { deduplicatedClusters: clusters, isRefreshing, lastUpdated, refetch, isLoading: isClustersLoading } = useClusters()
   const { drillToCluster: _drillToCluster, drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
 
   // Reset hook for dashboard

@@ -105,13 +105,13 @@ const GROUPS_STORAGE_KEY = 'globalFilter:clusterGroups'
 const DEFAULT_GROUPS: ClusterGroup[] = []
 
 export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
-  const { clusters } = useClusters()
-  const availableClusters = useMemo(() => clusters.map(c => c.name), [clusters])
+  const { deduplicatedClusters } = useClusters()
+  const availableClusters = useMemo(() => deduplicatedClusters.map(c => c.name), [deduplicatedClusters])
   const clusterInfoMap = useMemo(() => {
     const map: Record<string, ClusterInfo> = {}
-    clusters.forEach(c => { map[c.name] = c })
+    deduplicatedClusters.forEach(c => { map[c.name] = c })
     return map
-  }, [clusters])
+  }, [deduplicatedClusters])
 
   // Initialize clusters from localStorage or default to all
   const [selectedClusters, setSelectedClustersState] = useState<string[]>(() => {

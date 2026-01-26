@@ -124,7 +124,7 @@ function ComputeDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Compute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
-  const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const {
     selectedClusters: globalSelectedClusters,

@@ -14,7 +14,7 @@ import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 
 export function Sidebar() {
   const { config, toggleCollapsed, reorderItems } = useSidebarConfig()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
   const navigate = useNavigate()
@@ -26,10 +26,10 @@ export function Sidebar() {
   const [dragSection, setDragSection] = useState<'primary' | 'secondary' | null>(null)
   const dragCounter = useRef(0)
 
-  // Cluster status counts
-  const healthyClusters = clusters.filter((c) => c.healthy === true && c.reachable !== false).length
-  const unhealthyClusters = clusters.filter((c) => c.healthy === false && c.reachable !== false).length
-  const unreachableClusters = clusters.filter((c) => c.reachable === false).length
+  // Cluster status counts (using deduplicated clusters to avoid double-counting same server with different contexts)
+  const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
+  const unhealthyClusters = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false).length
+  const unreachableClusters = deduplicatedClusters.filter((c) => c.reachable === false).length
 
   // Handle Add Card click - work with current dashboard
   const handleAddCardClick = () => {

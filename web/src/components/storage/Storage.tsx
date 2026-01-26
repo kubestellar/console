@@ -227,7 +227,7 @@ function StorageDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Storage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
-  const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
