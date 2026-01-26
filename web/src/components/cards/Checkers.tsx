@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Box, Server, Crown, RotateCcw, Trophy, Play, Brain, Loader2 } from 'lucide-react'
+import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 
@@ -672,11 +672,6 @@ export function Checkers(_props: CardComponentProps) {
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Brain className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-semibold">AI Checkers</span>
-        </div>
-
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Box className="w-3 h-3 text-blue-400" />

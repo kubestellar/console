@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw, Pause, Play, Trophy } from 'lucide-react'
+import { RotateCcw, Pause, Play } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 
@@ -354,11 +354,6 @@ export function ContainerTetris(_props: CardComponentProps) {
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Trophy className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-semibold">Container Tetris</span>
-        </div>
-
         <div className="flex items-center gap-3 text-xs">
           <div className="text-center">
             <div className="text-muted-foreground">Score</div>
@@ -394,8 +389,8 @@ export function ContainerTetris(_props: CardComponentProps) {
         </div>
       </div>
 
-      {/* Game area */}
-      <div className="flex-1 flex items-center justify-center gap-4">
+      {/* Game area - relative container for overlays */}
+      <div className="flex-1 flex items-center justify-center gap-4 relative">
         {/* Main board */}
         <div className="border border-border rounded overflow-hidden bg-zinc-900">
           {displayBoard.map((row, rowIdx) => (
@@ -440,50 +435,50 @@ export function ContainerTetris(_props: CardComponentProps) {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Start overlay */}
-      {!isPlaying && !gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <button
-            onClick={startGame}
-            className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
-          >
-            Start Game
-          </button>
-        </div>
-      )}
-
-      {/* Paused overlay */}
-      {isPaused && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center">
-            <div className="text-xl font-bold text-foreground mb-4">Paused</div>
-            <button
-              onClick={togglePause}
-              className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
-            >
-              Resume
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Game over overlay */}
-      {gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center">
-            <div className="text-xl font-bold text-foreground mb-2">Game Over!</div>
-            <div className="text-muted-foreground mb-4">Score: {score}</div>
+        {/* Start overlay - only covers game area */}
+        {!isPlaying && !gameOver && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
             <button
               onClick={startGame}
               className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
             >
-              Play Again
+              Start Game
             </button>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Paused overlay - only covers game area */}
+        {isPaused && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <div className="text-xl font-bold text-foreground mb-4">Paused</div>
+              <button
+                onClick={togglePause}
+                className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
+              >
+                Resume
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Game over overlay - only covers game area */}
+        {gameOver && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <div className="text-xl font-bold text-foreground mb-2">Game Over!</div>
+              <div className="text-muted-foreground mb-4">Score: {score}</div>
+              <button
+                onClick={startGame}
+                className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 font-semibold"
+              >
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

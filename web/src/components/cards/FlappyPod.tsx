@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw, Trophy, Box } from 'lucide-react'
+import { RotateCcw, Trophy } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 
@@ -231,11 +231,6 @@ export function FlappyPod(_props: CardComponentProps) {
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Box className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-semibold">Flappy Pod</span>
-        </div>
-
         <div className="flex items-center gap-3 text-xs">
           <div className="text-center">
             <div className="text-muted-foreground">Score</div>
@@ -256,9 +251,9 @@ export function FlappyPod(_props: CardComponentProps) {
         </button>
       </div>
 
-      {/* Game area */}
+      {/* Game area - relative container for overlays */}
       <div
-        className="flex-1 flex items-center justify-center"
+        className="flex-1 flex items-center justify-center relative"
         onClick={handleClick}
       >
         <canvas
@@ -267,41 +262,40 @@ export function FlappyPod(_props: CardComponentProps) {
           height={gameHeight}
           className="border border-border rounded cursor-pointer"
         />
+
+        {/* Start overlay - only covers game area */}
+        {!isPlaying && !gameOver && (
+          <div
+            className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg cursor-pointer"
+            onClick={handleClick}
+          >
+            <div className="text-center">
+              <div className="text-muted-foreground mb-4">Click or press Space to fly!</div>
+              <div className="text-sm text-muted-foreground">Avoid the node walls</div>
+            </div>
+          </div>
+        )}
+
+        {/* Game over overlay - only covers game area */}
+        {gameOver && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+              <div className="text-xl font-bold text-foreground mb-2">Game Over!</div>
+              <div className="text-muted-foreground mb-1">Score: {score}</div>
+              {score === highScore && score > 0 && (
+                <div className="text-yellow-400 text-sm mb-4">New High Score!</div>
+              )}
+              <button
+                onClick={startGame}
+                className="px-6 py-3 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 font-semibold"
+              >
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Start overlay */}
-      {!isPlaying && !gameOver && (
-        <div
-          className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg cursor-pointer"
-          onClick={handleClick}
-        >
-          <div className="text-center">
-            <div className="text-xl font-bold text-foreground mb-2">Flappy Pod</div>
-            <div className="text-muted-foreground mb-4">Click or press Space to fly!</div>
-            <div className="text-sm text-muted-foreground">Avoid the node walls</div>
-          </div>
-        </div>
-      )}
-
-      {/* Game over overlay */}
-      {gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center">
-            <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-            <div className="text-xl font-bold text-foreground mb-2">Game Over!</div>
-            <div className="text-muted-foreground mb-1">Score: {score}</div>
-            {score === highScore && score > 0 && (
-              <div className="text-yellow-400 text-sm mb-4">New High Score!</div>
-            )}
-            <button
-              onClick={startGame}
-              className="px-6 py-3 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 font-semibold"
-            >
-              Play Again
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

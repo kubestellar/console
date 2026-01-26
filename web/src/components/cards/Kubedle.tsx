@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { RotateCcw, Trophy, HelpCircle, BarChart3, X } from 'lucide-react'
+import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 
@@ -244,13 +244,9 @@ export function Kubedle(_props: CardComponentProps) {
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-1.5">
-          <Trophy className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-semibold">Kubedle</span>
-          {practiceMode && (
-            <span className="text-xs text-muted-foreground">(Practice)</span>
-          )}
-        </div>
+        {practiceMode && (
+          <span className="text-xs text-muted-foreground">(Practice)</span>
+        )}
 
         <div className="flex items-center gap-1">
           <button

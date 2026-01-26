@@ -430,52 +430,55 @@ export function NodeInvaders(_props: CardComponentProps) {
         </button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
+      {/* Game area - relative container for overlays */}
+      <div className="flex-1 flex items-center justify-center relative">
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH * scale}
           height={CANVAS_HEIGHT * scale}
           className="border border-border rounded"
         />
+
+        {/* Start overlay - only covers game area */}
+        {!isPlaying && !gameOver && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <div className="text-xl font-bold text-cyan-400 mb-2">NODE INVADERS</div>
+              <div className="text-muted-foreground mb-2 text-sm">Defend your cluster!</div>
+              <div className="text-muted-foreground mb-4 text-xs">Arrow keys to move, Space to shoot</div>
+              <button
+                onClick={startGame}
+                className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
+              >
+                Start Game
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Game over overlay - only covers game area */}
+        {gameOver && (
+          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              {won ? (
+                <>
+                  <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+                  <div className="text-xl font-bold text-yellow-400 mb-2">Cluster Defended!</div>
+                </>
+              ) : (
+                <div className="text-xl font-bold text-red-400 mb-2">Cluster Overrun!</div>
+              )}
+              <div className="text-muted-foreground mb-4">Score: {score}</div>
+              <button
+                onClick={startGame}
+                className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
+              >
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {!isPlaying && !gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center">
-            <div className="text-xl font-bold text-cyan-400 mb-2">NODE INVADERS</div>
-            <div className="text-muted-foreground mb-2 text-sm">Defend your cluster!</div>
-            <div className="text-muted-foreground mb-4 text-xs">Arrow keys to move, Space to shoot</div>
-            <button
-              onClick={startGame}
-              className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
-            >
-              Start Game
-            </button>
-          </div>
-        </div>
-      )}
-
-      {gameOver && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-          <div className="text-center">
-            {won ? (
-              <>
-                <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                <div className="text-xl font-bold text-yellow-400 mb-2">Cluster Defended!</div>
-              </>
-            ) : (
-              <div className="text-xl font-bold text-red-400 mb-2">Cluster Overrun!</div>
-            )}
-            <div className="text-muted-foreground mb-4">Score: {score}</div>
-            <button
-              onClick={startGame}
-              className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
-            >
-              Play Again
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

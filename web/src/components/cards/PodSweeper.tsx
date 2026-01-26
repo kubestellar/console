@@ -244,11 +244,6 @@ export function PodSweeper(_props: CardComponentProps) {
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Bomb className="w-4 h-4 text-red-400" />
-          <span className="text-sm font-semibold">Pod Sweeper</span>
-        </div>
-
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1 text-red-400">
             <Flag className="w-3 h-3" />

@@ -546,11 +546,6 @@ export function Solitaire(_props: CardComponentProps) {
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Trophy className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm font-semibold">Kube Solitaire</span>
-        </div>
-
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Moves: {moves}</span>
           <span>Time: {formatTime(time)}</span>
