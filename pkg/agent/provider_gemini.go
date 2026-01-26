@@ -42,7 +42,8 @@ func (g *GeminiProvider) Description() string {
 
 func (g *GeminiProvider) IsAvailable() bool {
 	// Check dynamically in case key was added via settings
-	return GetConfigManager().GetAPIKey("gemini") != ""
+	// Also checks cached validity - returns false if key is known to be invalid
+	return GetConfigManager().IsKeyAvailable("gemini")
 }
 
 // Chat sends a message and returns the complete response

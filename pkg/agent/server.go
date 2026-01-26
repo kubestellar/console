@@ -192,6 +192,9 @@ func (s *Server) Start() error {
 	log.Printf("Health: http://%s/health", addr)
 	log.Printf("WebSocket: ws://%s/ws", addr)
 
+	// Validate all configured API keys on startup (run in background to not delay startup)
+	go s.ValidateAllKeys()
+
 	return http.ListenAndServe(addr, mux)
 }
 
@@ -493,10 +496,20 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string) prot
 		return s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available - API key may be missing", agentName))
 	}
 
+	// Convert protocol history to provider history
+	var history []ChatMessage
+	for _, msg := range req.History {
+		history = append(history, ChatMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
+
 	// Execute chat (non-streaming for WebSocket single response)
 	chatReq := &ChatRequest{
 		SessionID: req.SessionID,
 		Prompt:    req.Prompt,
+		History:   history,
 	}
 
 	resp, err := provider.Chat(context.Background(), chatReq)
@@ -761,6 +774,9 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Invalidate cached validity
+	cm.InvalidateKeyValidity(provider)
+
 	// Refresh provider availability
 	s.refreshProviderAvailability()
 
@@ -800,6 +816,8 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 			// Test if the key is valid
 			valid, err := s.validateAPIKey(p.name)
 			status.Valid = &valid
+			// Cache the validity for IsAvailable() checks
+			cm.SetKeyValidity(p.name, valid)
 			if err != nil {
 				status.Error = err.Error()
 			}
@@ -856,6 +874,9 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cache validity (we validated before saving)
+	cm.SetKeyValidity(req.Provider, true)
+
 	// Save model if provided
 	if req.Model != "" {
 		if err := cm.SetModel(req.Provider, req.Model); err != nil {
@@ -909,9 +930,40 @@ func (s *Server) refreshProviderAvailability() {
 	GetConfigManager().Load()
 }
 
+// ValidateAllKeys validates all configured API keys and caches results
+// This should be called on server startup to detect invalid keys early
+func (s *Server) ValidateAllKeys() {
+	cm := GetConfigManager()
+	providers := []string{"claude", "openai", "gemini"}
+
+	for _, provider := range providers {
+		if cm.HasAPIKey(provider) {
+			// Check if we already know the validity
+			if valid := cm.IsKeyValid(provider); valid != nil {
+				continue // Already validated
+			}
+			// Validate the key
+			log.Printf("Validating %s API key...", provider)
+			valid, err := s.validateAPIKey(provider)
+			if err != nil {
+				// Network or other error - don't cache, will try again later
+				log.Printf("Warning: %s API key validation error (will retry): %v", provider, err)
+			} else {
+				// Cache the validity result
+				cm.SetKeyValidity(provider, valid)
+				if valid {
+					log.Printf("%s API key is valid", provider)
+				} else {
+					log.Printf("Warning: %s API key is INVALID", provider)
+				}
+			}
+		}
+	}
+}
+
 // validateClaudeKey tests an Anthropic API key
 func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, "POST", claudeAPIURL, strings.NewReader(`{"model":"claude-haiku-4-20250514","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}`))
+	req, err := http.NewRequestWithContext(ctx, "POST", claudeAPIURL, strings.NewReader(`{"model":"claude-3-haiku-20240307","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}`))
 	if err != nil {
 		return false, err
 	}
@@ -925,15 +977,16 @@ func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 	}
 	defer resp.Body.Close()
 
-	// 200 = valid, 401 = invalid key, other = some other error
+	// 200 = valid, 401 = invalid key (return false with no error)
+	// For other errors, return error so we don't cache invalid state
 	if resp.StatusCode == http.StatusOK {
 		return true, nil
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
-		return false, fmt.Errorf("invalid API key")
+		return false, nil // Invalid key - no error so it gets cached
 	}
 	body, _ := io.ReadAll(resp.Body)
-	return false, fmt.Errorf("API error: %s", string(body))
+	return false, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
 }
 
 // validateOpenAIKey tests an OpenAI API key

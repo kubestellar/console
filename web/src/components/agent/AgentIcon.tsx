@@ -31,9 +31,28 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       )
     case 'bob':
       return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          {/* Bob icon - stylized B */}
-          <path d="M7 4h6c2.2 0 4 1.8 4 4 0 1.5-.8 2.8-2 3.4 1.5.7 2.5 2.2 2.5 4.1 0 2.5-2 4.5-4.5 4.5H7V4zm3 6h2.5c.8 0 1.5-.7 1.5-1.5S13.3 7 12.5 7H10v3zm0 7h3c1.1 0 2-.9 2-2s-.9-2-2-2h-3v4z" fill="#6366F1" />
+        <svg className={className} viewBox="0 0 100 100" fill="none">
+          {/* Bob icon - robot with hard hat and code brackets */}
+          {/* Hard hat */}
+          <ellipse cx="50" cy="22" rx="32" ry="18" fill="#4F46E5" />
+          <rect x="18" y="20" width="64" height="8" rx="2" fill="#3730A3" />
+          {/* Robot head/body */}
+          <rect x="20" y="28" width="60" height="55" rx="12" fill="#F9FAFB" stroke="#E5E7EB" strokeWidth="2" />
+          {/* Eyes */}
+          <circle cx="38" cy="48" r="8" fill="#1F2937" />
+          <circle cx="62" cy="48" r="8" fill="#4F46E5" />
+          <circle cx="40" cy="46" r="2" fill="white" />
+          <circle cx="64" cy="46" r="2" fill="white" />
+          {/* Code brackets </> */}
+          <path d="M35 62 L25 70 L35 78" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M65 62 L75 70 L65 78" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M45 60 L55 80" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round" fill="none" />
+          {/* Side panels (ears) */}
+          <rect x="8" y="40" width="12" height="20" rx="3" fill="#9CA3AF" />
+          <rect x="80" y="40" width="12" height="20" rx="3" fill="#9CA3AF" />
+          {/* Hands at bottom */}
+          <path d="M25 83 L25 92 Q25 96 29 96 L38 96" stroke="#9CA3AF" strokeWidth="6" strokeLinecap="round" fill="none" />
+          <path d="M75 83 L75 92 Q75 96 71 96 L62 96" stroke="#9CA3AF" strokeWidth="6" strokeLinecap="round" fill="none" />
         </svg>
       )
     case 'anthropic-local':

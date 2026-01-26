@@ -12,7 +12,6 @@ import {
   Clock,
   MessageSquare,
   Trash2,
-  Bot,
   User,
   ArrowUpCircle,
   Search,
@@ -28,10 +27,12 @@ import {
   Settings,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 import { useMissions, Mission, MissionStatus } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
 import { AgentSelector } from '../agent/AgentSelector'
-import { AgentBadge } from '../agent/AgentIcon'
+import { AgentBadge, AgentIcon } from '../agent/AgentIcon'
 
 // Rotating status messages for agent thinking
 const THINKING_MESSAGES = [
@@ -161,13 +162,17 @@ function MissionListItem({ mission, isActive, onClick, onDismiss, isCollapsed, o
 }
 
 function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFullScreen?: boolean }) {
-  const { sendMessage, cancelMission, rateMission, setActiveMission } = useMissions()
+  const { sendMessage, cancelMission, rateMission, setActiveMission, selectedAgent } = useMissions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
   const lastMessageCountRef = useRef(mission.messages.length)
+  // Command history for up/down arrow navigation
+  const [commandHistory, setCommandHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const savedInputRef = useRef('')
 
   // Check if user is at bottom of scroll container
   const isAtBottom = useCallback(() => {
@@ -201,16 +206,46 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
   }, [mission.status])
 
   const handleSend = () => {
-    if (!input.trim() || mission.status === 'running') return
+    if (!input.trim()) return
+    // Add to command history
+    setCommandHistory(prev => [...prev, input.trim()])
+    setHistoryIndex(-1)
+    savedInputRef.current = ''
     sendMessage(mission.id, input.trim())
     setInput('')
+    // Keep focus on input after sending
+    setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
+    } else if (e.key === 'ArrowUp' && commandHistory.length > 0) {
+      // Up arrow shows older commands (going back in history)
+      e.preventDefault()
+      if (historyIndex === -1) {
+        // Save current input before navigating history
+        savedInputRef.current = input
+        setHistoryIndex(commandHistory.length - 1)
+        setInput(commandHistory[commandHistory.length - 1])
+      } else if (historyIndex > 0) {
+        setHistoryIndex(historyIndex - 1)
+        setInput(commandHistory[historyIndex - 1])
+      }
+    } else if (e.key === 'ArrowDown' && historyIndex !== -1) {
+      // Down arrow shows newer commands (going forward in history)
+      e.preventDefault()
+      if (historyIndex < commandHistory.length - 1) {
+        setHistoryIndex(historyIndex + 1)
+        setInput(commandHistory[historyIndex + 1])
+      } else {
+        // Return to saved input
+        setHistoryIndex(-1)
+        setInput(savedInputRef.current)
+      }
     }
+    // All other keys (including space) pass through to the input normally
   }
 
   const config = STATUS_CONFIG[mission.status]
@@ -233,7 +268,14 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
           <p className="text-xs text-muted-foreground flex-1">{mission.description}</p>
           {mission.agent && (
             <AgentBadge
-              provider={mission.agent === 'claude' ? 'anthropic' : mission.agent === 'openai' ? 'openai' : 'google'}
+              provider={
+                mission.agent === 'claude' ? 'anthropic' :
+                mission.agent === 'openai' ? 'openai' :
+                mission.agent === 'gemini' ? 'google' :
+                mission.agent === 'bob' ? 'bob' :
+                mission.agent === 'claude-code' ? 'anthropic-local' :
+                mission.agent // fallback to agent name as provider
+              }
               name={mission.agent}
             />
           )}
@@ -266,7 +308,17 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
               {msg.role === 'user' ? (
                 <User className="w-4 h-4 text-primary" />
               ) : msg.role === 'assistant' ? (
-                <Bot className="w-4 h-4 text-purple-400" />
+                <AgentIcon
+                  provider={
+                    (msg.agent || mission.agent) === 'claude' ? 'anthropic' :
+                    (msg.agent || mission.agent) === 'openai' ? 'openai' :
+                    (msg.agent || mission.agent) === 'gemini' ? 'google' :
+                    (msg.agent || mission.agent) === 'bob' ? 'bob' :
+                    (msg.agent || mission.agent) === 'claude-code' ? 'anthropic-local' :
+                    (msg.agent || mission.agent || 'anthropic')
+                  }
+                  className="w-4 h-4"
+                />
               ) : (
                 <AlertCircle className="w-4 h-4 text-yellow-400" />
               )}
@@ -284,6 +336,7 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
                   msg.role === 'system' ? 'text-yellow-200' : 'text-foreground'
                 )}>
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
                     components={{
                       a: ({ href, children }) => {
                         // Internal links use react-router Link styled as button
@@ -307,7 +360,7 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
                       }
                     }}
                   >
-                    {msg.content}
+                    {msg.content.replace(/\r\n/g, '\n')}
                   </ReactMarkdown>
                 </div>
               ) : (
@@ -320,11 +373,22 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
           </div>
         ))}
 
-        {/* Typing indicator when agent is working */}
+        {/* Typing indicator when agent is working - uses currently selected agent */}
         {mission.status === 'running' && (
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-purple-500/20">
-              <Bot className="w-4 h-4 text-purple-400" />
+              <AgentIcon
+                provider={
+                  // Use selectedAgent (currently processing) instead of mission.agent (original)
+                  (selectedAgent || mission.agent) === 'claude' ? 'anthropic' :
+                  (selectedAgent || mission.agent) === 'openai' ? 'openai' :
+                  (selectedAgent || mission.agent) === 'gemini' ? 'google' :
+                  (selectedAgent || mission.agent) === 'bob' ? 'bob' :
+                  (selectedAgent || mission.agent) === 'claude-code' ? 'anthropic-local' :
+                  (selectedAgent || mission.agent || 'anthropic')
+                }
+                className="w-4 h-4"
+              />
             </div>
             <div className="rounded-lg bg-secondary/50 flex items-center gap-2 pr-3">
               {/* Show rotating messages if no specific currentStep */}
@@ -347,15 +411,36 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
       {/* Input / Actions */}
       <div className="p-4 border-t border-border flex-shrink-0 bg-card">
         {mission.status === 'running' ? (
-          <div className="flex items-center justify-end py-2">
-            <button
-              onClick={() => cancelMission(mission.id)}
-              className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
-            >
-              Cancel
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type next message..."
+                className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Send (will queue until current response completes)"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center justify-end">
+              <button
+                onClick={() => cancelMission(mission.id)}
+                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        ) : mission.status === 'completed' || mission.status === 'failed' ? (
+        ) : mission.status === 'completed' ? (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className={cn('text-sm', config.color)}>{config.label}</span>
@@ -398,6 +483,31 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
               </div>
             </div>
           </div>
+        ) : mission.status === 'failed' ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className={cn(config.color)}>{config.label}</span>
+              <span className="text-muted-foreground">Switch agent above and retry</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Retry with message..."
+                className="flex-1 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex gap-2">
             <input
@@ -424,7 +534,7 @@ function MissionChat({ mission, isFullScreen = false }: { mission: Mission; isFu
 }
 
 export function MissionSidebar() {
-  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen } = useMissions()
+  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent } = useMissions()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
 
   // Exit fullscreen on Escape key
@@ -459,6 +569,18 @@ export function MissionSidebar() {
     })
   }
 
+  // Helper to get provider string for AgentIcon
+  const getAgentProvider = (agent: string | null | undefined) => {
+    switch (agent) {
+      case 'claude': return 'anthropic'
+      case 'openai': return 'openai'
+      case 'gemini': return 'google'
+      case 'bob': return 'bob'
+      case 'claude-code': return 'anthropic-local'
+      default: return agent || 'anthropic'
+    }
+  }
+
   if (!isSidebarOpen) {
     return null
   }
@@ -476,7 +598,7 @@ export function MissionSidebar() {
         </button>
 
         <div className="flex flex-col items-center gap-2">
-          <Bot className="w-5 h-5 text-primary" />
+          <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5 text-primary" />
           {missions.length > 0 && (
             <span className="text-xs font-medium text-foreground">{missions.length}</span>
           )}
@@ -508,7 +630,7 @@ export function MissionSidebar() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-primary" />
+          <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
           <h2 className="font-semibold text-foreground">AI Missions</h2>
           {needsAttention > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded-full">
@@ -558,7 +680,7 @@ export function MissionSidebar() {
 
       {missions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-          <Bot className="w-12 h-12 text-muted-foreground/50 mb-4" />
+          <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-12 h-12 opacity-50 mb-4" />
           <p className="text-muted-foreground">No active missions</p>
           <p className="text-xs text-muted-foreground/70 mt-1">
             Start a mission from any card's AI action
@@ -605,13 +727,25 @@ export function MissionSidebar() {
 
 // Toggle button for the sidebar (shown when sidebar is closed)
 export function MissionSidebarToggle() {
-  const { missions, isSidebarOpen, openSidebar } = useMissions()
+  const { missions, isSidebarOpen, openSidebar, selectedAgent } = useMissions()
 
   const needsAttention = missions.filter(m =>
     m.status === 'waiting_input' || m.status === 'failed'
   ).length
 
   const runningCount = missions.filter(m => m.status === 'running').length
+
+  // Helper to get provider string for AgentIcon
+  const getAgentProvider = (agent: string | null | undefined) => {
+    switch (agent) {
+      case 'claude': return 'anthropic'
+      case 'openai': return 'openai'
+      case 'gemini': return 'google'
+      case 'bob': return 'bob'
+      case 'claude-code': return 'anthropic-local'
+      default: return agent || 'anthropic'
+    }
+  }
 
   // Always show toggle when sidebar is closed (even with no missions)
   if (isSidebarOpen) {
@@ -630,7 +764,7 @@ export function MissionSidebarToggle() {
       )}
       title="Open AI Missions"
     >
-      <Bot className="w-5 h-5" />
+      <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
       {runningCount > 0 && (
         <Loader2 className="w-4 h-4 animate-spin" />
       )}

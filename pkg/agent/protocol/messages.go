@@ -149,11 +149,18 @@ type AgentSelectedPayload struct {
 	Previous string `json:"previous,omitempty"`
 }
 
+// ChatMessage represents a message in conversation history
+type ChatMessage struct {
+	Role    string `json:"role"`    // "user" or "assistant"
+	Content string `json:"content"`
+}
+
 // ChatRequest is the payload for chat messages (multi-agent)
 type ChatRequest struct {
-	Agent     string `json:"agent,omitempty"` // Optional - uses selected agent if empty
-	Prompt    string `json:"prompt"`
-	SessionID string `json:"sessionId,omitempty"`
+	Agent     string        `json:"agent,omitempty"`   // Optional - uses selected agent if empty
+	Prompt    string        `json:"prompt"`
+	SessionID string        `json:"sessionId,omitempty"`
+	History   []ChatMessage `json:"history,omitempty"` // Previous messages for context
 }
 
 // ChatStreamPayload is a streaming response chunk from chat

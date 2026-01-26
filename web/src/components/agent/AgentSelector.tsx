@@ -13,13 +13,18 @@ interface AgentSelectorProps {
 }
 
 export function AgentSelector({ compact = false, className = '', showSettings = true }: AgentSelectorProps) {
-  const { agents, selectedAgent, agentsLoading, selectAgent } = useMissions()
+  const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent } = useMissions()
   const [isOpen, setIsOpen] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const currentAgent = agents.find(a => a.name === selectedAgent) || agents[0]
   const hasAvailableAgents = agents.some(a => a.available)
+
+  // Connect to agent WebSocket on mount to load agents list
+  useEffect(() => {
+    connectToAgent()
+  }, [connectToAgent])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -125,7 +130,7 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
       )}
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 right-0 w-64 rounded-lg bg-card border border-border shadow-lg py-1 overflow-hidden">
+        <div className="absolute z-50 top-full mt-1 right-0 w-64 rounded-lg bg-card border border-border shadow-lg py-1 overflow-hidden">
           {agents.map((agent: AgentInfo) => (
             <button
               key={agent.name}

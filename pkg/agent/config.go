@@ -30,9 +30,11 @@ type AgentKeyConfig struct {
 
 // ConfigManager handles reading and writing the local config file
 type ConfigManager struct {
-	mu         sync.RWMutex
-	configPath string
-	config     *AgentConfig
+	mu            sync.RWMutex
+	configPath    string
+	config        *AgentConfig
+	keyValidity   map[string]bool // Cache of key validity (true=valid, false=invalid)
+	validityMu    sync.RWMutex    // Separate mutex for validity cache
 }
 
 var (
@@ -49,8 +51,9 @@ func GetConfigManager() *ConfigManager {
 		}
 		configPath := filepath.Join(homeDir, configDirName, configFileName)
 		globalConfigManager = &ConfigManager{
-			configPath: configPath,
-			config:     &AgentConfig{Agents: make(map[string]AgentKeyConfig)},
+			configPath:  configPath,
+			config:      &AgentConfig{Agents: make(map[string]AgentKeyConfig)},
+			keyValidity: make(map[string]bool),
 		}
 		// Load existing config if present
 		globalConfigManager.Load()
@@ -185,6 +188,43 @@ func (cm *ConfigManager) HasAPIKey(provider string) bool {
 func (cm *ConfigManager) IsFromEnv(provider string) bool {
 	envKey := getEnvKeyForProvider(provider)
 	return os.Getenv(envKey) != ""
+}
+
+// IsKeyValid returns whether a key is known to be valid (true), invalid (false), or unknown (nil)
+func (cm *ConfigManager) IsKeyValid(provider string) *bool {
+	cm.validityMu.RLock()
+	defer cm.validityMu.RUnlock()
+
+	if valid, ok := cm.keyValidity[provider]; ok {
+		return &valid
+	}
+	return nil
+}
+
+// SetKeyValidity caches the validity status of a key
+func (cm *ConfigManager) SetKeyValidity(provider string, valid bool) {
+	cm.validityMu.Lock()
+	defer cm.validityMu.Unlock()
+	cm.keyValidity[provider] = valid
+}
+
+// InvalidateKeyValidity removes the cached validity for a provider
+func (cm *ConfigManager) InvalidateKeyValidity(provider string) {
+	cm.validityMu.Lock()
+	defer cm.validityMu.Unlock()
+	delete(cm.keyValidity, provider)
+}
+
+// IsKeyAvailable returns true if the key is configured AND (validity unknown OR valid)
+func (cm *ConfigManager) IsKeyAvailable(provider string) bool {
+	if !cm.HasAPIKey(provider) {
+		return false
+	}
+	// If we know the key is invalid, return false
+	if valid := cm.IsKeyValid(provider); valid != nil && !*valid {
+		return false
+	}
+	return true
 }
 
 // GetDefaultAgent returns the configured default agent

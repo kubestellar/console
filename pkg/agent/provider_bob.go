@@ -25,6 +25,39 @@ type bobResponse struct {
 	} `json:"usage"`
 }
 
+// cleanBobOutput removes debug lines and markers from Bob CLI output
+func cleanBobOutput(content string) string {
+	lines := strings.Split(content, "\n")
+	var cleanLines []string
+	skipNext := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip debug lines
+		if strings.Contains(line, "loaded global modes") ||
+			strings.Contains(line, "loaded project modes") ||
+			trimmed == "---output---" ||
+			strings.HasPrefix(trimmed, "{\"type\":") ||
+			strings.HasPrefix(trimmed, "{\"error\":") {
+			continue
+		}
+
+		// Skip JSON stats block at the end
+		if strings.HasPrefix(trimmed, "{") && strings.Contains(trimmed, "\"usage\"") {
+			skipNext = true
+			continue
+		}
+		if skipNext {
+			continue
+		}
+
+		cleanLines = append(cleanLines, line)
+	}
+
+	return strings.TrimSpace(strings.Join(cleanLines, "\n"))
+}
+
 // BobProvider uses the local Bob CLI installation (Claude OEM)
 type BobProvider struct {
 	cliPath string
@@ -112,16 +145,49 @@ func (b *BobProvider) IsAvailable() bool {
 	return b.cliPath != ""
 }
 
+// buildPromptWithHistory creates a prompt that includes conversation history for context
+func (b *BobProvider) buildPromptWithHistory(req *ChatRequest) string {
+	if len(req.History) == 0 {
+		return req.Prompt
+	}
+
+	// Build a prompt that includes history for context
+	var sb strings.Builder
+	sb.WriteString("Previous conversation for context:\n\n")
+
+	for _, msg := range req.History {
+		switch msg.Role {
+		case "user":
+			sb.WriteString("User: ")
+		case "assistant":
+			sb.WriteString("Assistant: ")
+		case "system":
+			sb.WriteString("System: ")
+		}
+		sb.WriteString(msg.Content)
+		sb.WriteString("\n\n")
+	}
+
+	sb.WriteString("---\n\nNow respond to the user's latest message:\n\n")
+	sb.WriteString("User: ")
+	sb.WriteString(req.Prompt)
+
+	return sb.String()
+}
+
 // Chat executes a prompt using the Bob CLI
 func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if b.cliPath == "" {
 		return nil, fmt.Errorf("bob CLI not found")
 	}
 
+	// Build prompt with history for context
+	fullPrompt := b.buildPromptWithHistory(req)
+
 	// Build command: bob "prompt" -o json
 	// Note: Using positional prompt (recommended) instead of -p flag (deprecated)
 	args := []string{
-		req.Prompt,
+		fullPrompt,
 		"-o", "json",
 	}
 
@@ -159,16 +225,51 @@ func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse
 	var content string
 	var inputTokens, outputTokens int
 
-	if err := json.Unmarshal([]byte(output), &cliResp); err != nil {
-		// Fall back to raw output if JSON parsing fails
-		log.Printf("Warning: failed to parse bob CLI JSON response: %v", err)
-		content = strings.TrimSpace(output)
-	} else {
-		content = cliResp.Result
-		// Total input includes cache tokens
-		inputTokens = cliResp.Usage.InputTokens + cliResp.Usage.CacheCreationInputTokens + cliResp.Usage.CacheReadInputTokens
-		outputTokens = cliResp.Usage.OutputTokens
+	// First, try to extract content from ---output--- markers (most reliable)
+	outputMarker := "---output---"
+	startIdx := strings.Index(output, outputMarker)
+	if startIdx >= 0 {
+		afterMarker := output[startIdx+len(outputMarker):]
+		// Find the end marker or the JSON stats block at the end
+		endIdx := strings.Index(afterMarker, outputMarker)
+		if endIdx < 0 {
+			// Look for JSON stats at end (starts with newline + {)
+			endIdx = strings.LastIndex(afterMarker, "\n{")
+			if endIdx < 0 {
+				endIdx = strings.LastIndex(afterMarker, "{")
+			}
+		}
+		if endIdx > 0 {
+			content = strings.TrimSpace(afterMarker[:endIdx])
+		} else {
+			content = strings.TrimSpace(afterMarker)
+		}
 	}
+
+	// Try to find JSON stats at the end for token usage
+	jsonStart := strings.LastIndex(output, "\n{")
+	if jsonStart < 0 {
+		jsonStart = strings.LastIndex(output, "{")
+	}
+	if jsonStart >= 0 {
+		jsonOutput := output[jsonStart:]
+		if err := json.Unmarshal([]byte(strings.TrimSpace(jsonOutput)), &cliResp); err == nil {
+			inputTokens = cliResp.Usage.InputTokens + cliResp.Usage.CacheCreationInputTokens + cliResp.Usage.CacheReadInputTokens
+			outputTokens = cliResp.Usage.OutputTokens
+			// If we didn't get content from markers, try from JSON
+			if content == "" && cliResp.Result != "" {
+				content = cliResp.Result
+			}
+		}
+	}
+
+	// Final fallback: use cleaned raw output
+	if content == "" {
+		content = output
+	}
+
+	// Always clean the content to remove debug lines and markers
+	content = cleanBobOutput(content)
 
 	return &ChatResponse{
 		Content: content,

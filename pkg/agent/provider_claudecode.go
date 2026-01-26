@@ -108,17 +108,52 @@ func (c *ClaudeCodeProvider) IsAvailable() bool {
 	return c.cliPath != ""
 }
 
+// buildPromptWithHistory creates a prompt that includes conversation history for context
+func (c *ClaudeCodeProvider) buildPromptWithHistory(req *ChatRequest) string {
+	if len(req.History) == 0 {
+		return req.Prompt
+	}
+
+	// Build a prompt that includes history for context
+	var sb strings.Builder
+	sb.WriteString("Previous conversation for context:\n\n")
+
+	for _, msg := range req.History {
+		switch msg.Role {
+		case "user":
+			sb.WriteString("User: ")
+		case "assistant":
+			sb.WriteString("Assistant: ")
+		case "system":
+			sb.WriteString("System: ")
+		}
+		sb.WriteString(msg.Content)
+		sb.WriteString("\n\n")
+	}
+
+	sb.WriteString("---\n\nNow respond to the user's latest message:\n\n")
+	sb.WriteString("User: ")
+	sb.WriteString(req.Prompt)
+
+	return sb.String()
+}
+
 // Chat executes a prompt using the Claude Code CLI
 func (c *ClaudeCodeProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	if c.cliPath == "" {
 		return nil, fmt.Errorf("claude CLI not found")
 	}
 
+	// Build prompt with history for context
+	fullPrompt := c.buildPromptWithHistory(req)
+
 	// Build command with print mode (-p) for non-interactive use
+	// -p is a boolean flag, prompt is positional argument at the end
 	// Use --output-format json to get token usage
 	args := []string{
-		"-p", req.Prompt,
+		"-p",
 		"--output-format", "json",
+		fullPrompt, // Prompt must be positional argument
 	}
 
 	cmd := exec.CommandContext(ctx, c.cliPath, args...)

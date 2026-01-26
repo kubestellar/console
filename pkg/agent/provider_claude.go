@@ -43,7 +43,8 @@ func (c *ClaudeProvider) Description() string {
 
 func (c *ClaudeProvider) IsAvailable() bool {
 	// Check dynamically in case key was added via settings
-	return GetConfigManager().GetAPIKey("claude") != ""
+	// Also checks cached validity - returns false if key is known to be invalid
+	return GetConfigManager().IsKeyAvailable("claude")
 }
 
 // Chat sends a message and returns the complete response

@@ -39,6 +39,8 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.1.1",
     "recharts": "^3.6.0",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
     "three": "^0.169.0"
   },

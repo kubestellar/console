@@ -42,7 +42,8 @@ func (o *OpenAIProvider) Description() string {
 
 func (o *OpenAIProvider) IsAvailable() bool {
 	// Check dynamically in case key was added via settings
-	return GetConfigManager().GetAPIKey("openai") != ""
+	// Also checks cached validity - returns false if key is known to be invalid
+	return GetConfigManager().IsKeyAvailable("openai")
 }
 
 // Chat sends a message and returns the complete response

@@ -8,6 +8,8 @@ export interface MissionMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: Date
+  /** Agent that generated this message (for assistant messages) */
+  agent?: string
 }
 
 export type MissionFeedback = 'positive' | 'negative' | null
@@ -65,6 +67,7 @@ interface MissionContextValue {
   setActiveMission: (missionId: string | null) => void
   markMissionAsRead: (missionId: string) => void
   selectAgent: (agentName: string) => void
+  connectToAgent: () => void
   toggleSidebar: () => void
   openSidebar: () => void
   closeSidebar: () => void
@@ -402,6 +405,7 @@ The AI missions feature requires the local KKC agent to be running.
               role: 'assistant' as const,
               content: chatPayload.content || (payload as { output?: string }).output || 'Task completed.',
               timestamp: new Date(),
+              agent: chatPayload.agent || m.agent,
             }
           ]
         }
@@ -539,6 +543,15 @@ The AI missions feature requires the local KKC agent to be running.
       const requestId = `claude-${Date.now()}`
       pendingRequests.current.set(requestId, missionId)
 
+      // Get the mission to access its message history
+      const mission = missions.find(m => m.id === missionId)
+      const history = mission?.messages
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content,
+        })) || []
+
       wsRef.current?.send(JSON.stringify({
         id: requestId,
         type: 'chat',
@@ -546,6 +559,7 @@ The AI missions feature requires the local KKC agent to be running.
           prompt: content,
           sessionId: missionId,
           agent: selectedAgent || undefined,
+          history: history, // Include conversation history for context
         }
       }))
     }).catch(() => {
@@ -566,7 +580,7 @@ The AI missions feature requires the local KKC agent to be running.
         } : m
       ))
     })
-  }, [ensureConnection])
+  }, [ensureConnection, missions, selectedAgent])
 
   // Cancel a running mission
   const cancelMission = useCallback((missionId: string) => {
@@ -647,6 +661,13 @@ The AI missions feature requires the local KKC agent to be running.
     })
   }, [ensureConnection])
 
+  // Connect to agent (for AgentSelector in navbar)
+  const connectToAgent = useCallback(() => {
+    ensureConnection().catch(err => {
+      console.error('[Missions] Failed to connect to agent:', err)
+    })
+  }, [ensureConnection])
+
   // Sidebar controls
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), [])
   const openSidebar = useCallback(() => {
@@ -696,6 +717,7 @@ The AI missions feature requires the local KKC agent to be running.
       setActiveMission,
       markMissionAsRead,
       selectAgent,
+      connectToAgent,
       toggleSidebar,
       openSidebar,
       closeSidebar,
