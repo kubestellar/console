@@ -28,6 +28,8 @@ import { CardHistory } from './components/history/CardHistory'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { UserManagementPage } from './pages/UserManagement'
 import { NamespaceManager } from './components/namespaces/NamespaceManager'
+import { Arcade } from './components/arcade/Arcade'
+import { Deploy } from './components/deploy/Deploy'
 import { Layout } from './components/layout/Layout'
 import { DrillDownModal } from './components/drilldown/DrillDownModal'
 import { AuthProvider, useAuth } from './lib/auth'
@@ -38,6 +40,7 @@ import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
 import { MissionProvider } from './hooks/useMissions'
 import { ToastProvider } from './components/ui/Toast'
 import { AlertsProvider } from './contexts/AlertsContext'
+import { RewardsProvider } from './hooks/useRewards'
 
 // Wrapper for CardHistory that provides the restore functionality
 function CardHistoryWithRestore() {
@@ -91,6 +94,7 @@ function App() {
   return (
     <ThemeProvider>
     <AuthProvider>
+      <RewardsProvider>
       <ToastProvider>
       <GlobalFiltersProvider>
       <MissionProvider>
@@ -422,6 +426,30 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/arcade"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <Arcade />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/deploy"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <Deploy />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </DrillDownProvider>
@@ -430,6 +458,7 @@ function App() {
       </MissionProvider>
       </GlobalFiltersProvider>
       </ToastProvider>
+      </RewardsProvider>
     </AuthProvider>
     </ThemeProvider>
   )

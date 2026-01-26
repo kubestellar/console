@@ -3,6 +3,26 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 const LAST_ROUTE_KEY = 'kubestellar-last-route'
 const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
+const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
+
+/**
+ * Get the first dashboard route from sidebar configuration.
+ * Falls back to '/' if no sidebar config exists.
+ */
+function getFirstDashboardRoute(): string {
+  try {
+    const sidebarConfig = localStorage.getItem(SIDEBAR_CONFIG_KEY)
+    if (sidebarConfig) {
+      const config = JSON.parse(sidebarConfig)
+      if (config.primaryNav && config.primaryNav.length > 0) {
+        return config.primaryNav[0].href || '/'
+      }
+    }
+  } catch {
+    // Fall through to default
+  }
+  return '/'
+}
 
 interface ScrollPositions {
   [path: string]: number
@@ -89,6 +109,12 @@ export function useLastRoute() {
         setTimeout(() => {
           restoreScrollPosition(lastRoute)
         }, 100)
+      } else {
+        // No saved route or it's root - navigate to first dashboard in sidebar
+        const firstDashboard = getFirstDashboardRoute()
+        if (firstDashboard && firstDashboard !== '/') {
+          navigate(firstDashboard, { replace: true })
+        }
       }
     } catch {
       // Ignore localStorage errors

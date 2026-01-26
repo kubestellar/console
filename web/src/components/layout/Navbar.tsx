@@ -16,7 +16,7 @@ import { languages } from '../../lib/i18n'
 import { TourTrigger } from '../onboarding/Tour'
 import { UserProfileDropdown } from './UserProfileDropdown'
 import { AlertBadge } from '../ui/AlertBadge'
-import { FeatureRequestButton } from '../feedback'
+import { FeatureRequestButton, FeedbackModal } from '../feedback'
 import { cn } from '../../lib/cn'
 
 interface SearchResult {
@@ -111,6 +111,7 @@ export function Navbar() {
   const [showAgentStatus, setShowAgentStatus] = useState(false)
   const [showUpdateDropdown, setShowUpdateDropdown] = useState(false)
   const [tokenAnimating, setTokenAnimating] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
   const previousTokensRef = useRef<number>(usage.used)
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -1032,8 +1033,12 @@ export function Navbar() {
           user={user}
           onLogout={logout}
           onPreferences={() => navigate('/settings')}
+          onFeedback={() => setShowFeedback(true)}
         />
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
     </nav>
   )
 }

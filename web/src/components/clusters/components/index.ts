@@ -1,7 +1,7 @@
 export { RenameModal } from './RenameModal'
 export { StatsOverview, type ClusterStats } from './StatsOverview'
 export { FilterTabs, type FilterType, type SortByType } from './FilterTabs'
-export { ClusterGrid } from './ClusterGrid'
+export { ClusterGrid, type ClusterLayoutMode } from './ClusterGrid'
 export { ClusterGroups, type ClusterGroup } from './ClusterGroups'
 export { NamespaceResources } from './NamespaceResources'
 export { GPUDetailModal } from './GPUDetailModal'

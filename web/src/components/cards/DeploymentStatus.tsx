@@ -3,7 +3,7 @@ import { CheckCircle, Clock, XCircle, ChevronRight, Search, Filter, ChevronDown,
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDeployments } from '../../hooks/useMCP'
+import { useCachedDeployments } from '../../hooks/useCachedData'
 import { usePagination, Pagination } from '../ui/Pagination'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -67,7 +67,7 @@ export function DeploymentStatus() {
     isFailed,
     consecutiveFailures,
     lastRefresh
-  } = useDeployments()
+  } = useCachedDeployments()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && allDeployments.length === 0
@@ -373,14 +373,14 @@ export function DeploymentStatus() {
                 className="p-2.5 rounded-lg bg-secondary/30 border border-border/50 cursor-pointer hover:bg-secondary/50 hover:border-border transition-colors group"
                 title={`Click to view details for ${deployment.name}`}
               >
-                <div className="flex items-start justify-between mb-1.5">
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-0.5">
+                <div className="flex items-start justify-between mb-1.5 gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
                       <ClusterBadge cluster={clusterName} />
-                      <span className="text-xs text-muted-foreground">{deployment.namespace}</span>
-                      <StatusIcon className={`w-3.5 h-3.5 ${config.color}`} />
+                      <span className="text-xs text-muted-foreground truncate">{deployment.namespace}</span>
+                      <StatusIcon className={`w-3.5 h-3.5 shrink-0 ${config.color}`} />
                     </div>
-                    <span className="text-sm font-medium text-foreground">
+                    <span className="text-sm font-medium text-foreground truncate block">
                       {deployment.name}
                     </span>
                   </div>

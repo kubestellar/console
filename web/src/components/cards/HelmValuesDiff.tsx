@@ -191,7 +191,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
         {valueEntries.length > 0 ? (
@@ -261,12 +261,12 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
                 })
               }
             }}
-            className="flex items-center gap-2 mb-4 p-2 -mx-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group"
+            className="flex items-center gap-2 mb-4 p-2 -mx-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group min-w-0 overflow-hidden"
           >
-            <ClusterBadge cluster={selectedCluster} />
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-foreground group-hover:text-amber-400">{selectedRelease}</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground group-hover:text-amber-400 truncate min-w-0">{selectedRelease}</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
 
           {/* Local Search */}

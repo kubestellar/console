@@ -27,6 +27,7 @@ import {
   FilterTabs,
   ClusterGrid,
   GPUDetailModal,
+  type ClusterLayoutMode,
 } from './components'
 import { isClusterUnreachable } from './utils'
 import { formatK8sMemory } from '../../lib/formatters'
@@ -1492,6 +1493,10 @@ export function Clusters() {
   }, [searchParams, setSearchParams])
   const [sortBy, setSortBy] = useState<'name' | 'nodes' | 'pods' | 'health'>('name')
   const [sortAsc, setSortAsc] = useState(true)
+  const [layoutMode, setLayoutMode] = useState<ClusterLayoutMode>(() => {
+    const stored = localStorage.getItem('kubestellar-cluster-layout-mode')
+    return (stored as ClusterLayoutMode) || 'grid'
+  })
   const [renamingCluster, setRenamingCluster] = useState<string | null>(null)
   const [showGroupForm, setShowGroupForm] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
@@ -1869,9 +1874,15 @@ export function Clusters() {
               onSortByChange={setSortBy}
               sortAsc={sortAsc}
               onSortAscChange={setSortAsc}
+              layoutMode={layoutMode}
+              onLayoutModeChange={(mode) => {
+                setLayoutMode(mode)
+                localStorage.setItem('kubestellar-cluster-layout-mode', mode)
+              }}
             />
             <ClusterGrid
               clusters={filteredClusters}
+              layoutMode={layoutMode}
               gpuByCluster={gpuByCluster}
               isConnected={isConnected}
               permissionsLoading={permissionsLoading}

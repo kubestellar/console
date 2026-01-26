@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin } from 'lucide-react'
+import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 
 interface UserProfileDropdownProps {
   user: {
@@ -11,11 +12,20 @@ interface UserProfileDropdownProps {
   } | null
   onLogout: () => void
   onPreferences?: () => void
+  onFeedback?: () => void
 }
 
-export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { totalCoins, awardCoins } = useRewards()
+
+  const handleLinkedInShare = () => {
+    const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
+    window.open(linkedInUrl, '_blank', 'width=600,height=600')
+    awardCoins('linkedin_share')
+    setIsOpen(false)
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -114,10 +124,34 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 {user.role || 'User'}
               </span>
             </div>
+            <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
+              <Coins className="w-4 h-4 text-yellow-500" />
+              <span className="text-muted-foreground">Coins:</span>
+              <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
+            </div>
           </div>
 
           {/* Actions */}
           <div className="p-2">
+            <button
+              onClick={() => {
+                setIsOpen(false)
+                onFeedback?.()
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
+            >
+              <Lightbulb className="w-4 h-4 text-yellow-500" />
+              <span>Feedback</span>
+              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">+Coins</span>
+            </button>
+            <button
+              onClick={handleLinkedInShare}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
+            >
+              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+              <span>Share on LinkedIn</span>
+              <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
+            </button>
             <button
               onClick={() => {
                 setIsOpen(false)

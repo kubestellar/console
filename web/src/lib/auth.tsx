@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         github_id: '12345',
         github_login: 'demo-user',
         email: 'demo@example.com',
-        avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+        avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
         role: 'viewer',
         onboarded: true,
       })
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         github_id: '12345',
         github_login: 'demo-user',
         email: 'demo@example.com',
-        avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+        avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
         role: 'viewer', // Demo users get viewer role, not admin
         onboarded: true,
       })

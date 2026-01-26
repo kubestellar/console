@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, RefreshCw, Folder, FileKey, FileText, Gauge, User, Clock, Container } from 'lucide-react'
-import { useClusters, usePodIssues, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs } from '../../hooks/useMCP'
+import { useClusters, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs } from '../../hooks/useMCP'
+import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -91,7 +92,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   }, [clusters, selectedClusters, isAllClustersSelected, searchFilter])
 
   // Fetch data for the selected cluster (only when a cluster is expanded)
-  const { issues: podIssues } = usePodIssues(selectedCluster || undefined)
+  const { issues: podIssues } = useCachedPodIssues(selectedCluster || undefined)
   const { nodes: allNodes } = useNodes(selectedCluster || undefined)
   const { namespaces: allNamespaces } = useNamespaces(selectedCluster || undefined)
   const { deployments: allDeployments } = useDeployments(selectedCluster || undefined)

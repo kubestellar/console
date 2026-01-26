@@ -114,7 +114,7 @@ export function ClusterBadge({ cluster, size = 'sm', className, showIcon = true 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded border font-medium cursor-default',
+        'inline-flex items-center gap-1 rounded border font-medium cursor-default max-w-full',
         info.colors.bg,
         info.colors.text,
         info.colors.border,
@@ -123,8 +123,8 @@ export function ClusterBadge({ cluster, size = 'sm', className, showIcon = true 
       )}
       title={tooltip}
     >
-      {showIcon && <Server className={size === 'sm' ? 'w-2.5 h-2.5' : size === 'lg' ? 'w-3.5 h-3.5' : 'w-3 h-3'} />}
-      {cluster}
+      {showIcon && <Server className={size === 'sm' ? 'w-2.5 h-2.5 shrink-0' : size === 'lg' ? 'w-3.5 h-3.5 shrink-0' : 'w-3 h-3 shrink-0'} />}
+      <span className="truncate">{cluster}</span>
     </span>
   )
 }

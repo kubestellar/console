@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, ChevronRight, ChevronDown, Server } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { useDeployments } from '../../hooks/useMCP'
+import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { usePagination, Pagination } from '../ui/Pagination'
@@ -66,7 +66,7 @@ function extractVersion(image?: string): string {
 export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const cluster = config?.cluster
   const namespace = config?.namespace
-  const { deployments, isLoading, error, refetch, isRefreshing } = useDeployments(cluster, namespace)
+  const { deployments, isLoading, error, refetch, isRefreshing } = useCachedDeployments(cluster, namespace)
   const { drillToDeployment } = useDrillDownActions()
   const {
     selectedClusters,

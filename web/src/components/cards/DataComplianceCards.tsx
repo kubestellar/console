@@ -6,6 +6,7 @@
  */
 
 import { Shield, CheckCircle2, AlertTriangle, Clock, AlertCircle } from 'lucide-react'
+import { useCertManager } from '../../hooks/useCertManager'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -163,78 +164,128 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
 
 // Cert-Manager TLS Certificates Card
 export function CertManager({ config: _config }: CardConfig) {
-  const demoData = {
-    total: 67,
-    valid: 62,
-    expiringSoon: 3,
-    expired: 2,
-    issuers: [
-      { name: "Let's Encrypt", type: 'ClusterIssuer', certs: 45 },
-      { name: 'Internal CA', type: 'Issuer', certs: 22 },
-    ],
-    renewals24h: 5,
+  const { status, issuers, isLoading } = useCertManager()
+
+  // Show install notice if cert-manager is not detected
+  if (!isLoading && !status.installed) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-green-400 font-medium">Cert-Manager Integration</p>
+            <p className="text-muted-foreground">
+              Install cert-manager for TLS automation.{' '}
+              <a
+                href="https://cert-manager.io/docs/installation/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-400 hover:underline"
+              >
+                Install guide →
+              </a>
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground text-center py-4">
+          No cert-manager installation detected
+        </p>
+      </div>
+    )
   }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="animate-pulse grid grid-cols-4 gap-1.5">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-2 rounded-lg bg-secondary/30 h-16" />
+          ))}
+        </div>
+        <div className="animate-pulse space-y-1.5">
+          <div className="h-4 w-16 bg-secondary/30 rounded" />
+          <div className="h-12 bg-secondary/30 rounded" />
+          <div className="h-12 bg-secondary/30 rounded" />
+        </div>
+      </div>
+    )
+  }
+
+  // Top issuers by certificate count
+  const topIssuers = [...issuers]
+    .sort((a, b) => b.certificateCount - a.certificateCount)
+    .slice(0, 3)
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-end">
         <span className="text-xs text-muted-foreground">
-          {demoData.renewals24h} renewals/24h
+          {status.recentRenewals} renewals/24h
         </span>
-      </div>
-
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-green-400 font-medium">Cert-Manager Integration</p>
-          <p className="text-muted-foreground">
-            Install cert-manager for TLS automation.{' '}
-            <a
-              href="https://cert-manager.io/docs/installation/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-green-400 hover:underline"
-            >
-              Install guide →
-            </a>
-          </p>
-        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
         <div className="p-2 rounded-lg bg-green-500/10">
-          <p className="text-lg font-bold text-green-400">{demoData.valid}</p>
+          <p className="text-lg font-bold text-green-400">{status.validCertificates}</p>
           <p className="text-muted-foreground">Valid</p>
         </div>
         <div className="p-2 rounded-lg bg-yellow-500/10">
-          <p className="text-lg font-bold text-yellow-400">{demoData.expiringSoon}</p>
+          <p className="text-lg font-bold text-yellow-400">{status.expiringSoon}</p>
           <p className="text-muted-foreground">Expiring</p>
         </div>
         <div className="p-2 rounded-lg bg-red-500/10">
-          <p className="text-lg font-bold text-red-400">{demoData.expired}</p>
+          <p className="text-lg font-bold text-red-400">{status.expired}</p>
           <p className="text-muted-foreground">Expired</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30">
-          <p className="text-lg font-bold text-foreground">{demoData.total}</p>
+          <p className="text-lg font-bold text-foreground">{status.totalCertificates}</p>
           <p className="text-muted-foreground">Total</p>
         </div>
       </div>
 
+      {/* Pending/Failed summary if any */}
+      {(status.pending > 0 || status.failed > 0) && (
+        <div className="flex items-center gap-2 text-xs">
+          {status.pending > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+              {status.pending} pending
+            </span>
+          )}
+          {status.failed > 0 && (
+            <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">
+              {status.failed} failed
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground">Issuers</p>
-        {demoData.issuers.map((issuer, i) => (
-          <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
-            <div className="flex items-center gap-2">
-              <Shield className="w-3 h-3 text-muted-foreground" />
-              <span className="text-xs text-foreground">{issuer.name}</span>
+        <p className="text-xs font-medium text-muted-foreground">
+          Issuers ({issuers.length})
+        </p>
+        {topIssuers.length > 0 ? (
+          topIssuers.map((issuer) => (
+            <div key={issuer.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+              <div className="flex items-center gap-2">
+                <Shield className={`w-3 h-3 ${
+                  issuer.status === 'ready' ? 'text-green-400' :
+                  issuer.status === 'not-ready' ? 'text-red-400' :
+                  'text-muted-foreground'
+                }`} />
+                <span className="text-xs text-foreground truncate max-w-[120px]">{issuer.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">{issuer.kind}</span>
+                <span className="text-xs font-medium text-foreground">{issuer.certificateCount}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">{issuer.type}</span>
-              <span className="text-xs font-medium text-foreground">{issuer.certs}</span>
-            </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground text-center py-2">
+            No issuers found
+          </p>
+        )}
       </div>
     </div>
   )

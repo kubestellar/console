@@ -255,9 +255,9 @@ export function EventStream() {
                   <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
+                  <div className="flex items-center gap-2 mb-0.5 min-w-0">
                     <ClusterBadge cluster={event.cluster || 'default'} />
-                    <span className="text-xs text-muted-foreground truncate" title={`Namespace: ${event.namespace}`}>{event.namespace}</span>
+                    <span className="text-xs text-muted-foreground truncate min-w-0" title={`Namespace: ${event.namespace}`}>{event.namespace}</span>
                   </div>
                   <p className="text-sm text-foreground truncate" title={event.message}>{event.message}</p>
                   <p className="text-xs text-muted-foreground truncate" title={`Resource: ${event.object}`}>

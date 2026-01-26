@@ -105,7 +105,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
   }, {} as Record<string, number>)
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-end mb-4">
         <RefreshButton
@@ -119,16 +119,17 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
       </div>
 
       {/* Cluster selector */}
-      <div className="flex flex-wrap gap-1 mb-4">
+      <div className="flex flex-wrap gap-1 mb-4 overflow-hidden">
         {allClusters.map(c => (
           <button
             key={c.name}
             onClick={() => toggleCluster(c.name)}
-            className={`px-2 py-1 text-xs rounded-full transition-colors ${
+            className={`px-2 py-1 text-xs rounded-full transition-colors max-w-[120px] truncate ${
               selectedClusters.includes(c.name) || (selectedClusters.length === 0 && clustersToCompare.includes(c))
                 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             }`}
+            title={c.name}
           >
             {c.name}
           </button>
@@ -136,13 +137,13 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
       </div>
 
       {/* Comparison table */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
+      <div className="flex-1 overflow-auto min-w-0">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr className="border-b border-border/50">
-              <th className="text-left py-2 text-muted-foreground font-medium">Metric</th>
+              <th className="text-left py-2 text-muted-foreground font-medium w-20">Metric</th>
               {clustersToCompare.map(c => (
-                <th key={c.name} className="text-right py-2 px-2">
+                <th key={c.name} className="text-right py-2 px-2 max-w-[100px]">
                   <button
                     onClick={() => drillToCluster(c.name, {
                       nodeCount: c.nodeCount,
@@ -151,12 +152,13 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
                       gpuCount: gpuByCluster[c.name] || 0,
                       healthy: c.healthy,
                     })}
-                    className="flex items-center justify-end gap-1 w-full hover:text-purple-400 transition-colors group"
+                    className="flex items-center justify-end gap-1 w-full hover:text-purple-400 transition-colors group min-w-0"
+                    title={c.name}
                   >
-                    <Server className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-foreground font-medium group-hover:text-purple-400">{c.name}</span>
-                    <div className={`w-1.5 h-1.5 rounded-full ${c.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <Server className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <span className="text-foreground font-medium group-hover:text-purple-400 truncate">{c.name}</span>
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </button>
                 </th>
               ))}

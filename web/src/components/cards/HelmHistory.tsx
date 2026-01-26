@@ -222,7 +222,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -302,13 +302,13 @@ export function HelmHistory({ config }: HelmHistoryProps) {
               history: rawHistory,
               currentRevision: rawHistory.find(h => h.status === 'deployed')?.revision,
             })}
-            className="group flex items-center gap-2 mb-4 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
+            className="group flex items-center gap-2 mb-4 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer min-w-0 max-w-full overflow-hidden"
             title={`Click to view details for ${selectedRelease}`}
           >
-            <ClusterBadge cluster={selectedCluster} />
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm text-foreground group-hover:text-primary transition-colors">{selectedRelease}</span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
+            <span className="text-muted-foreground shrink-0">/</span>
+            <span className="text-sm text-foreground group-hover:text-primary transition-colors truncate min-w-0">{selectedRelease}</span>
+            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </button>
 
           {/* Local Search */}
@@ -374,12 +374,12 @@ export function HelmHistory({ config }: HelmHistoryProps) {
                               <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground truncate">
                             <span>{entry.chart}</span>
                             {entry.description && (
                               <>
                                 <span className="mx-2">•</span>
-                                <span>{entry.description}</span>
+                                <span className="truncate">{entry.description}</span>
                               </>
                             )}
                           </div>

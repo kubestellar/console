@@ -111,6 +111,8 @@ import { KubeKong } from './KubeKong'
 import { PodPitfall } from './PodPitfall'
 // Node Invaders (Space Invaders) card
 import { NodeInvaders } from './NodeInvaders'
+// Pod Crosser (Frogger) card
+import { PodCrosser } from './PodCrosser'
 // Pod Brothers (Mario Bros) card
 import { PodBrothers } from './PodBrothers'
 // Kube Kart (racing) card
@@ -279,6 +281,7 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kube_kong: KubeKong,
   pod_pitfall: PodPitfall,
   node_invaders: NodeInvaders,
+  pod_crosser: PodCrosser,
   // Pod Brothers (Mario Bros) card
   pod_brothers: PodBrothers,
   kube_kart: KubeKart,
@@ -353,9 +356,9 @@ export const DEMO_DATA_CARDS = new Set([
   'policy_violations',
   'compliance_score',
   // Data compliance cards - demo until tools are detected
+  // Note: cert_manager now uses real data via useCertManager hook
   'vault_secrets',
   'external_secrets',
-  'cert_manager',
   // Workload detection cards - demo until tools are detected
   // Note: prow_jobs, prow_status, prow_history now use real data via useProw hook
   // Note: llm_inference, llm_models now use real data via useLLMd hook
@@ -390,6 +393,8 @@ export const LIVE_DATA_CARDS = new Set([
   // llm-d inference cards with real data
   'llm_inference',
   'llm_models',
+  // cert-manager card with real data
+  'cert_manager',
 ])
 
 /**
@@ -496,6 +501,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kube_kong: 6,
   pod_pitfall: 6,
   node_invaders: 6,
+  pod_crosser: 6,
   pod_brothers: 6,
   kube_kart: 5,
   kube_pong: 5,

@@ -50,6 +50,8 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 9 },
   { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 10 },
   { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 11 },
+  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 12 },
+  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 13 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
@@ -177,9 +179,11 @@ export function useSidebarConfig() {
 
   const addItem = useCallback((item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections') => {
     setConfig((prev) => {
+      // Generate unique ID using timestamp + random string to avoid collisions when adding multiple items
+      const uniqueId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const newItem: SidebarItem = {
         ...item,
-        id: `custom-${Date.now()}`,
+        id: uniqueId,
         isCustom: true,
         order: target === 'primary'
           ? prev.primaryNav.length
@@ -194,6 +198,44 @@ export function useSidebarConfig() {
         return { ...prev, secondaryNav: [...prev.secondaryNav, newItem] }
       } else {
         return { ...prev, sections: [...prev.sections, newItem] }
+      }
+    })
+  }, [])
+
+  // Add multiple items at once to avoid React batching issues
+  const addItems = useCallback((items: Array<{ item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections' }>) => {
+    setConfig((prev) => {
+      let newPrimaryNav = [...prev.primaryNav]
+      let newSecondaryNav = [...prev.secondaryNav]
+      let newSections = [...prev.sections]
+
+      items.forEach(({ item, target }) => {
+        const uniqueId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        const newItem: SidebarItem = {
+          ...item,
+          id: uniqueId,
+          isCustom: true,
+          order: target === 'primary'
+            ? newPrimaryNav.length
+            : target === 'secondary'
+              ? newSecondaryNav.length
+              : newSections.length,
+        }
+
+        if (target === 'primary') {
+          newPrimaryNav = [...newPrimaryNav, newItem]
+        } else if (target === 'secondary') {
+          newSecondaryNav = [...newSecondaryNav, newItem]
+        } else {
+          newSections = [...newSections, newItem]
+        }
+      })
+
+      return {
+        ...prev,
+        primaryNav: newPrimaryNav,
+        secondaryNav: newSecondaryNav,
+        sections: newSections,
       }
     })
   }, [])
@@ -290,6 +332,7 @@ export function useSidebarConfig() {
   return {
     config,
     addItem,
+    addItems,
     removeItem,
     updateItem,
     reorderItems,
@@ -306,5 +349,5 @@ export const AVAILABLE_ICONS = [
   'History', 'Settings', 'Plus', 'Zap', 'Database', 'Cloud', 'Lock',
   'Key', 'Users', 'Bell', 'AlertTriangle', 'CheckCircle', 'XCircle',
   'RefreshCw', 'Search', 'Filter', 'Layers', 'Globe', 'Terminal',
-  'Code', 'Cpu', 'HardDrive', 'Wifi', 'Monitor', 'Folder',
+  'Code', 'Cpu', 'HardDrive', 'Wifi', 'Monitor', 'Folder', 'Gamepad2',
 ]

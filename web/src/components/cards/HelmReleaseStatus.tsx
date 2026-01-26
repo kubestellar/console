@@ -232,7 +232,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Controls - single row */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
@@ -406,11 +406,11 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                       <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground">
-                    {release.cluster && <ClusterBadge cluster={release.cluster} size="sm" />}
-                    <span title={`Chart: ${release.chart}, Version: ${release.version}`}>{release.chart}@{release.version}</span>
-                    <span title={`Helm revision: ${release.revision}`}>Rev {release.revision}</span>
-                    <span className="ml-auto" title={`Last updated: ${new Date(release.updated).toLocaleString()}`}>{formatTime(release.updated)}</span>
+                  <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground min-w-0">
+                    {release.cluster && <div className="shrink-0"><ClusterBadge cluster={release.cluster} size="sm" /></div>}
+                    <span className="truncate" title={`Chart: ${release.chart}, Version: ${release.version}`}>{release.chart}@{release.version}</span>
+                    <span className="shrink-0 whitespace-nowrap" title={`Helm revision: ${release.revision}`}>Rev {release.revision}</span>
+                    <span className="ml-auto shrink-0 whitespace-nowrap" title={`Last updated: ${new Date(release.updated).toLocaleString()}`}>{formatTime(release.updated)}</span>
                   </div>
                 </div>
               )

@@ -12,6 +12,7 @@ import {
   Loader2,
   LayoutDashboard,
   Square,
+  Search,
 } from 'lucide-react'
 import {
   DndContext,
@@ -30,7 +31,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useSidebarConfig, AVAILABLE_ICONS, SidebarItem } from '../../hooks/useSidebarConfig'
+import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES } from '../dashboard/templates'
 import { cn } from '../../lib/cn'
@@ -140,6 +141,8 @@ const KNOWN_ROUTES: KnownRoute[] = [
   { href: '/gpu-reservations', name: 'GPU Reservations', description: 'Schedule and manage GPU reservations with calendar and quota management', icon: 'Zap', category: 'Core Dashboards' },
   { href: '/storage', name: 'Storage', description: 'Persistent volumes, storage classes, and capacity management', icon: 'HardDrive', category: 'Core Dashboards' },
   { href: '/network', name: 'Network', description: 'Network policies, ingress, and service mesh configuration', icon: 'Network', category: 'Core Dashboards' },
+  { href: '/arcade', name: 'Arcade', description: 'Kubernetes-themed arcade games for taking a break', icon: 'Gamepad2', category: 'Core Dashboards' },
+  { href: '/deploy', name: 'KubeStellar Deploy', description: 'Deployment monitoring, GitOps, Helm releases, and ArgoCD', icon: 'Rocket', category: 'Core Dashboards' },
   // Resource Pages
   { href: '/namespaces', name: 'Namespaces', description: 'Namespace management and resource allocation', icon: 'FolderTree', category: 'Resources' },
   { href: '/nodes', name: 'Nodes', description: 'Cluster node health and resource usage', icon: 'HardDrive', category: 'Resources' },
@@ -171,6 +174,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   const {
     config,
     addItem,
+    addItems,
     removeItem,
     reorderItems,
     toggleClusterStatus,
@@ -209,15 +213,13 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
 
   const { getAllDashboardsWithCards } = useDashboards()
 
-  const [newItemName, setNewItemName] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationResult, setGenerationResult] = useState<string | null>(null)
-  const [newItemIcon, setNewItemIcon] = useState('Zap')
-  const [newItemHref, setNewItemHref] = useState('')
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedKnownRoute, setSelectedKnownRoute] = useState<string>('')
+  const [selectedKnownRoutes, setSelectedKnownRoutes] = useState<Set<string>>(new Set())
   const [showRouteDropdown, setShowRouteDropdown] = useState(false)
+  const [routeSearch, setRouteSearch] = useState('')
   const [expandedSection, setExpandedSection] = useState<string | null>('primary')
   const [dashboardsWithCards, setDashboardsWithCards] = useState<Dashboard[]>([])
   const [isLoadingDashboards, setIsLoadingDashboards] = useState(false)
@@ -232,36 +234,46 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     }
   }, [isOpen, getAllDashboardsWithCards])
 
-  const handleAddItem = () => {
-    if (!newItemName || !newItemHref) return
+  // Handle adding all selected routes
+  const handleAddSelectedRoutes = () => {
+    if (selectedKnownRoutes.size === 0) return
 
-    addItem(
-      {
-        name: newItemName,
-        icon: newItemIcon,
-        href: newItemHref.startsWith('/') ? newItemHref : `/${newItemHref}`,
-        type: 'link',
-      },
-      newItemTarget
-    )
+    // Collect all items to add in a single batch to avoid React state batching issues
+    const itemsToAdd: Array<{ item: { name: string; icon: string; href: string; type: 'link' }, target: 'primary' | 'secondary' }> = []
 
-    setNewItemName('')
-    setNewItemHref('')
-    setNewItemIcon('Zap')
-    setSelectedKnownRoute('')
+    selectedKnownRoutes.forEach(routeHref => {
+      const route = KNOWN_ROUTES.find(r => r.href === routeHref)
+      if (route) {
+        itemsToAdd.push({
+          item: {
+            name: route.name,
+            icon: route.icon,
+            href: route.href,
+            type: 'link',
+          },
+          target: newItemTarget,
+        })
+      }
+    })
+
+    // Add all items at once
+    if (itemsToAdd.length > 0) {
+      addItems(itemsToAdd)
+    }
+
+    setSelectedKnownRoutes(new Set())
     setShowAddForm(false)
   }
 
-  // Handle selecting a known route
-  const handleSelectKnownRoute = (routeHref: string) => {
-    const route = KNOWN_ROUTES.find(r => r.href === routeHref)
-    if (route) {
-      setSelectedKnownRoute(routeHref)
-      setNewItemName(route.name)
-      setNewItemHref(route.href)
-      setNewItemIcon(route.icon)
+  // Toggle selection of a known route
+  const toggleKnownRoute = (routeHref: string) => {
+    const newSelected = new Set(selectedKnownRoutes)
+    if (newSelected.has(routeHref)) {
+      newSelected.delete(routeHref)
+    } else {
+      newSelected.add(routeHref)
     }
-    setShowRouteDropdown(false)
+    setSelectedKnownRoutes(newSelected)
   }
 
   const handleGenerateFromBehavior = async () => {
@@ -378,148 +390,173 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
           {/* Add Item Form */}
           {showAddForm && (
             <div className="mb-6 p-4 rounded-lg bg-secondary/30 border border-border/50">
-              <h3 className="text-sm font-medium text-foreground mb-3">Add New Menu Item</h3>
+              <h3 className="text-sm font-medium text-foreground mb-3">Add Dashboards to Sidebar</h3>
 
-              {/* Route Selection - Dropdown with descriptions */}
+              {/* Route Selection - Multi-select dropdown */}
               <div className="mb-4">
-                <label className="text-xs text-muted-foreground mb-1 block">Select a Dashboard Route</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Select Dashboards</label>
                 <div className="relative">
                   <button
                     onClick={() => setShowRouteDropdown(!showRouteDropdown)}
                     className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-secondary border border-border text-sm text-left"
                   >
-                    {selectedKnownRoute ? (
+                    {selectedKnownRoutes.size > 0 ? (
                       <span className="text-foreground">
-                        {KNOWN_ROUTES.find(r => r.href === selectedKnownRoute)?.name}
-                        <span className="text-muted-foreground ml-2">({selectedKnownRoute})</span>
+                        {selectedKnownRoutes.size} dashboard{selectedKnownRoutes.size !== 1 ? 's' : ''} selected
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">Select a dashboard to add...</span>
+                      <span className="text-muted-foreground">Select dashboards to add...</span>
                     )}
                     <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', showRouteDropdown && 'rotate-180')} />
                   </button>
 
                   {showRouteDropdown && (
                     <div
-                      className="absolute top-full left-0 right-0 mt-1 py-2 rounded-lg bg-card border border-border shadow-xl z-50 max-h-[300px] overflow-y-auto overscroll-contain"
+                      className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-card border border-border shadow-xl z-50 max-h-[350px] flex flex-col overscroll-contain"
                       onWheel={(e) => e.stopPropagation()}
                     >
+                      {/* Search input - sticky at top */}
+                      <div className="p-2 border-b border-border sticky top-0 bg-card z-20">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <input
+                            type="text"
+                            value={routeSearch}
+                            onChange={(e) => setRouteSearch(e.target.value)}
+                            placeholder="Search dashboards..."
+                            className="w-full pl-8 pr-3 py-1.5 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
                       {/* Known routes grouped by category */}
-                      {ROUTE_CATEGORIES.map(category => (
-                        <div key={category}>
-                          <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-card sticky top-0 z-10">
-                            {category}
-                          </div>
-                          {KNOWN_ROUTES.filter(r => r.category === category).map(route => {
-                            const isAlreadyAdded = config.primaryNav.some(item => item.href === route.href) ||
-                                                    config.secondaryNav.some(item => item.href === route.href)
+                      <div className="overflow-y-auto py-2">
+                        {(() => {
+                          const searchLower = routeSearch.toLowerCase()
+                          const filteredCategories = ROUTE_CATEGORIES.filter(category => {
+                            const routes = KNOWN_ROUTES.filter(r => r.category === category)
+                            if (!searchLower) return true
+                            return routes.some(r =>
+                              r.name.toLowerCase().includes(searchLower) ||
+                              r.description.toLowerCase().includes(searchLower) ||
+                              r.href.toLowerCase().includes(searchLower)
+                            )
+                          })
+
+                          if (filteredCategories.length === 0) {
                             return (
-                              <button
-                                key={route.href}
-                                onClick={() => handleSelectKnownRoute(route.href)}
-                                disabled={isAlreadyAdded}
-                                className={cn(
-                                  'w-full px-3 py-2 text-left transition-colors',
-                                  isAlreadyAdded
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : 'hover:bg-secondary/50',
-                                  selectedKnownRoute === route.href && 'bg-purple-500/10'
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
-                                  <span className={cn(
-                                    'text-sm font-medium',
-                                    selectedKnownRoute === route.href ? 'text-purple-400' : 'text-foreground'
-                                  )}>
-                                    {route.name}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground ml-auto">{route.href}</span>
-                                  {isAlreadyAdded && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Added</span>
+                              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                                No dashboards found matching "{routeSearch}"
+                              </div>
+                            )
+                          }
+
+                          return filteredCategories.map(category => {
+                            const routes = KNOWN_ROUTES.filter(r => r.category === category)
+                            const filteredRoutes = searchLower
+                              ? routes.filter(r =>
+                                  r.name.toLowerCase().includes(searchLower) ||
+                                  r.description.toLowerCase().includes(searchLower) ||
+                                  r.href.toLowerCase().includes(searchLower)
+                                )
+                              : routes
+
+                            if (filteredRoutes.length === 0) return null
+
+                            // Get available routes in category (not already added)
+                            const availableRoutes = filteredRoutes.filter(r =>
+                              !config.primaryNav.some(item => item.href === r.href) &&
+                              !config.secondaryNav.some(item => item.href === r.href)
+                            )
+                            const allCategorySelected = availableRoutes.length > 0 &&
+                              availableRoutes.every(r => selectedKnownRoutes.has(r.href))
+
+                            return (
+                              <div key={category}>
+                                <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-card sticky top-0 z-10 flex items-center justify-between">
+                                  <span>{category}</span>
+                                  {availableRoutes.length > 0 && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const newSelected = new Set(selectedKnownRoutes)
+                                        if (allCategorySelected) {
+                                          availableRoutes.forEach(r => newSelected.delete(r.href))
+                                        } else {
+                                          availableRoutes.forEach(r => newSelected.add(r.href))
+                                        }
+                                        setSelectedKnownRoutes(newSelected)
+                                      }}
+                                      className={cn(
+                                        'text-[10px] px-1.5 py-0.5 rounded',
+                                        allCategorySelected
+                                          ? 'bg-purple-500/30 text-purple-300'
+                                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
+                                      )}
+                                    >
+                                      {allCategorySelected ? 'Deselect All' : 'Select All'}
+                                    </button>
                                   )}
                                 </div>
-                                <p className="text-xs text-muted-foreground pl-6 mt-0.5">{route.description}</p>
-                              </button>
+                                {filteredRoutes.map(route => {
+                                  const isAlreadyAdded = config.primaryNav.some(item => item.href === route.href) ||
+                                                          config.secondaryNav.some(item => item.href === route.href)
+                                  const isSelected = selectedKnownRoutes.has(route.href)
+                                  return (
+                                    <button
+                                      key={route.href}
+                                      onClick={() => !isAlreadyAdded && toggleKnownRoute(route.href)}
+                                      disabled={isAlreadyAdded}
+                                      className={cn(
+                                        'w-full px-3 py-2 text-left transition-colors',
+                                        isAlreadyAdded
+                                          ? 'opacity-50 cursor-not-allowed'
+                                          : 'hover:bg-secondary/50',
+                                        isSelected && 'bg-purple-500/10'
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {/* Checkbox */}
+                                        <div className={cn(
+                                          'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
+                                          isAlreadyAdded ? 'border-green-500/50 bg-green-500/20' :
+                                          isSelected ? 'border-purple-500 bg-purple-500' : 'border-border bg-secondary'
+                                        )}>
+                                          {(isSelected || isAlreadyAdded) && (
+                                            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                                              <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                          )}
+                                        </div>
+                                        {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
+                                        <span className={cn(
+                                          'text-sm font-medium',
+                                          isSelected ? 'text-purple-400' : 'text-foreground'
+                                        )}>
+                                          {route.name}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground ml-auto">{route.href}</span>
+                                        {isAlreadyAdded && (
+                                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Added</span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-muted-foreground pl-10 mt-0.5">{route.description}</p>
+                                    </button>
+                                  )
+                                })}
+                              </div>
                             )
-                          })}
-                        </div>
-                      ))}
+                          })
+                        })()}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Name, Route (read-only), Icon, and Section fields */}
-              {selectedKnownRoute && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Name</label>
-                    <input
-                      type="text"
-                      value={newItemName}
-                      onChange={(e) => setNewItemName(e.target.value)}
-                      placeholder="Menu item name"
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Route</label>
-                    <div className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary/50 border border-border text-muted-foreground text-sm">
-                      {newItemHref}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Icon</label>
-                    <select
-                      value={newItemIcon}
-                      onChange={(e) => setNewItemIcon(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-                    >
-                      {AVAILABLE_ICONS.map((icon) => (
-                        <option key={icon} value={icon}>{icon}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Section</label>
-                    <select
-                      value={newItemTarget}
-                      onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-                    >
-                      <option value="primary">Primary Navigation</option>
-                      <option value="secondary">Secondary Navigation</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  onClick={() => {
-                    setShowAddForm(false)
-                    setSelectedKnownRoute('')
-                    setNewItemName('')
-                    setNewItemHref('')
-                    setNewItemIcon('Zap')
-                  }}
-                  className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddItem}
-                  disabled={!newItemName || !newItemHref}
-                  className="px-3 py-1.5 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add Item
-                </button>
-              </div>
-
-              {/* Note about adding custom dashboards */}
-              <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
-                Need a custom dashboard? See the <a href="https://github.com/kubestellar/console/blob/main/CONTRIBUTING.md#adding-a-new-dashboard" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">developer guide</a> for instructions on adding new dashboards to the source.
+              {/* Tip */}
+              <p className="text-xs text-muted-foreground">
+                Select dashboards from the dropdown above. The Add button appears in the header when items are selected.
               </p>
             </div>
           )}
@@ -721,13 +758,37 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
       </BaseModal.Content>
 
       <BaseModal.Footer>
-        <div className="flex-1" />
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
-        >
-          Done
-        </button>
+        {/* Add controls - only show when form is open and items are selected */}
+        {showAddForm && selectedKnownRoutes.size > 0 ? (
+          <>
+            <select
+              value={newItemTarget}
+              onChange={(e) => setNewItemTarget(e.target.value as 'primary' | 'secondary')}
+              className="px-2 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm"
+            >
+              <option value="primary">Primary Nav</option>
+              <option value="secondary">Secondary Nav</option>
+            </select>
+            <div className="flex-1" />
+            <button
+              onClick={handleAddSelectedRoutes}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add {selectedKnownRoutes.size} Dashboard{selectedKnownRoutes.size !== 1 ? 's' : ''}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex-1" />
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+            >
+              Close
+            </button>
+          </>
+        )}
       </BaseModal.Footer>
     </BaseModal>
   )

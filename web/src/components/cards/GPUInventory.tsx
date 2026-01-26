@@ -168,7 +168,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
   }
 
   return (
-    <div className="h-full flex flex-col content-loaded">
+    <div className="h-full flex flex-col content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -289,16 +289,18 @@ export function GPUInventory({ config }: GPUInventoryProps) {
             })}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
-            <div className="flex items-center gap-2 mb-2">
-              <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground truncate group-hover:text-purple-400">{node.name}</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-2 mb-2 min-w-0">
+              <Server className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium text-foreground truncate min-w-0 flex-1 group-hover:text-purple-400">{node.name}</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <ClusterBadge cluster={node.cluster} size="sm" />
-              <div className="flex items-center gap-2">
-                <span className="text-purple-400">{node.gpuType}</span>
-                <span className="font-mono">
+            <div className="flex items-center justify-between text-xs gap-2 min-w-0">
+              <div className="min-w-0 flex-1">
+                <ClusterBadge cluster={node.cluster} size="sm" />
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-purple-400 truncate max-w-[80px]">{node.gpuType}</span>
+                <span className="font-mono shrink-0 whitespace-nowrap">
                   {node.gpuAllocated}/{node.gpuCount}
                 </span>
               </div>

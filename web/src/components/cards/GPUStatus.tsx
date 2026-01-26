@@ -171,7 +171,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   }
 
   return (
-    <div className="h-full flex flex-col content-loaded">
+    <div className="h-full flex flex-col content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -278,10 +278,12 @@ export function GPUStatus({ config }: GPUStatusProps) {
             })}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
           >
-            <div className="flex items-center justify-between mb-2">
-              <ClusterBadge cluster={stats.clusterName} size="sm" />
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${
+            <div className="flex items-center justify-between mb-2 gap-2 min-w-0">
+              <div className="min-w-0 flex-1">
+                <ClusterBadge cluster={stats.clusterName} size="sm" />
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-xs px-1.5 py-0.5 rounded whitespace-nowrap ${
                   stats.utilization > 80 ? 'bg-red-500/20 text-red-400' :
                   stats.utilization > 50 ? 'bg-yellow-500/20 text-yellow-400' :
                   'bg-green-500/20 text-green-400'
@@ -291,9 +293,9 @@ export function GPUStatus({ config }: GPUStatusProps) {
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-              <span className="truncate max-w-[60%]">{stats.types.join(', ')}</span>
-              <span>{stats.used}/{stats.total} GPUs</span>
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2 gap-2 min-w-0">
+              <span className="truncate min-w-0 flex-1">{stats.types.join(', ')}</span>
+              <span className="shrink-0">{stats.used}/{stats.total} GPUs</span>
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
               <div

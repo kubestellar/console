@@ -244,6 +244,15 @@ function ModalFooter({
 
   const hints = keyboardHints || defaultHints
 
+  // When keyboard hints are disabled, render children directly for full layout control
+  if (!showKeyboardHints) {
+    return (
+      <div className={`px-4 py-3 border-t border-border flex items-center ${className}`}>
+        {children}
+      </div>
+    )
+  }
+
   return (
     <div className={`px-4 py-3 border-t border-border flex items-center justify-between ${className}`}>
       {/* Children (custom content) */}
@@ -252,19 +261,17 @@ function ModalFooter({
       </div>
 
       {/* Keyboard hints */}
-      {showKeyboardHints && (
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {hints.map((hint, index) => (
-            <span key={hint.key} className="flex items-center gap-1">
-              {index > 0 && <span className="mx-1">•</span>}
-              <kbd className="px-2 py-0.5 rounded bg-card border border-border font-mono">
-                {hint.key}
-              </kbd>
-              <span>{hint.label}</span>
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        {hints.map((hint, index) => (
+          <span key={hint.key} className="flex items-center gap-1">
+            {index > 0 && <span className="mx-1">•</span>}
+            <kbd className="px-2 py-0.5 rounded bg-card border border-border font-mono">
+              {hint.key}
+            </kbd>
+            <span>{hint.label}</span>
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

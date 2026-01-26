@@ -224,6 +224,238 @@ const CARD_BEHAVIORS: Record<string, Array<{ key: string; label: string; descrip
     { key: 'autoRefresh', label: 'Auto-refresh', description: 'Refresh user list periodically', default: false },
     { key: 'showInactive', label: 'Show inactive', description: 'Display inactive users', default: false },
   ],
+  // GPU Workloads
+  gpu_workloads: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update GPU workloads periodically', default: true },
+    { key: 'showUtilization', label: 'Show utilization', description: 'Display per-workload GPU utilization', default: true },
+    { key: 'groupByNamespace', label: 'Group by namespace', description: 'Group workloads by namespace', default: false },
+  ],
+  // Live data trend cards
+  events_timeline: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Poll for new events continuously', default: true },
+    { key: 'showWarningsOnly', label: 'Warnings only', description: 'Only show warning and error events', default: false },
+    { key: 'highlightRecent', label: 'Highlight recent', description: 'Highlight events from last 5 minutes', default: true },
+  ],
+  pod_health_trend: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update pod health trend periodically', default: true },
+    { key: 'showRestarts', label: 'Show restarts', description: 'Include restart counts in trend', default: true },
+    { key: 'alertOnDegradation', label: 'Alert on degradation', description: 'Notify when pod health degrades', default: false },
+  ],
+  resource_trend: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update resource trends periodically', default: true },
+    { key: 'showCPU', label: 'Show CPU', description: 'Display CPU usage trend', default: true },
+    { key: 'showMemory', label: 'Show memory', description: 'Display memory usage trend', default: true },
+    { key: 'alertOnSpike', label: 'Alert on spike', description: 'Notify on unusual resource spikes', default: false },
+  ],
+  gpu_utilization: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update GPU utilization periodically', default: true },
+    { key: 'showPerGPU', label: 'Show per-GPU', description: 'Display utilization per GPU device', default: false },
+    { key: 'alertOnLow', label: 'Alert on low utilization', description: 'Notify when GPUs are underutilized', default: false },
+  ],
+  gpu_usage_trend: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update GPU usage trend periodically', default: true },
+    { key: 'showMemory', label: 'Show memory', description: 'Display GPU memory usage trend', default: true },
+    { key: 'showCompute', label: 'Show compute', description: 'Display GPU compute utilization trend', default: true },
+  ],
+  cluster_resource_tree: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Refresh resource tree periodically', default: true },
+    { key: 'expandAll', label: 'Expand all', description: 'Auto-expand all tree nodes', default: false },
+    { key: 'showCounts', label: 'Show counts', description: 'Display resource counts per node', default: true },
+  ],
+  // Dashboard-specific cards
+  storage_overview: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update storage metrics periodically', default: true },
+    { key: 'showCapacity', label: 'Show capacity', description: 'Display storage capacity usage', default: true },
+    { key: 'alertOnFull', label: 'Alert on full', description: 'Notify when storage nears capacity', default: false },
+  ],
+  pvc_status: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update PVC status periodically', default: true },
+    { key: 'showPending', label: 'Show pending', description: 'Display pending PVCs', default: true },
+    { key: 'alertOnPending', label: 'Alert on pending', description: 'Notify when PVCs are stuck pending', default: false },
+  ],
+  network_overview: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update network metrics periodically', default: true },
+    { key: 'showBandwidth', label: 'Show bandwidth', description: 'Display bandwidth usage', default: true },
+    { key: 'showLatency', label: 'Show latency', description: 'Display network latency metrics', default: false },
+  ],
+  service_status: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update service status periodically', default: true },
+    { key: 'showEndpoints', label: 'Show endpoints', description: 'Display service endpoints', default: true },
+    { key: 'alertOnNoEndpoints', label: 'Alert on no endpoints', description: 'Notify when services have no endpoints', default: false },
+  ],
+  compute_overview: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update compute metrics periodically', default: true },
+    { key: 'showNodes', label: 'Show nodes', description: 'Display node-level metrics', default: true },
+    { key: 'alertOnPressure', label: 'Alert on pressure', description: 'Notify when nodes are under pressure', default: false },
+  ],
+  // Cluster cards
+  cluster_locations: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update cluster locations periodically', default: true },
+    { key: 'showRegions', label: 'Show regions', description: 'Display cluster regions on map', default: true },
+    { key: 'showStatus', label: 'Show status', description: 'Display cluster health on map', default: true },
+  ],
+  // Namespace cards
+  namespace_monitor: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update namespace metrics periodically', default: true },
+    { key: 'showResources', label: 'Show resources', description: 'Display resource usage per namespace', default: true },
+    { key: 'alertOnQuota', label: 'Alert on quota', description: 'Notify when approaching quota limits', default: false },
+  ],
+  // Klaude AI mission cards
+  klaude_issues: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Scan for issues periodically', default: true },
+    { key: 'includeWarnings', label: 'Include warnings', description: 'Include warning-level issues', default: true },
+    { key: 'alertOnCritical', label: 'Alert on critical', description: 'Notify on critical issues found', default: false },
+  ],
+  klaude_kubeconfig_audit: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Audit kubeconfig periodically', default: false },
+    { key: 'showExpired', label: 'Show expired', description: 'Highlight expired contexts', default: true },
+    { key: 'showUnused', label: 'Show unused', description: 'Display unused contexts', default: false },
+  ],
+  klaude_health_check: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Run health checks periodically', default: true },
+    { key: 'deepScan', label: 'Deep scan', description: 'Perform comprehensive health analysis', default: false },
+    { key: 'alertOnUnhealthy', label: 'Alert on unhealthy', description: 'Notify when clusters are unhealthy', default: false },
+  ],
+  // Alerting cards
+  active_alerts: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Poll for new alerts periodically', default: true },
+    { key: 'criticalOnly', label: 'Critical only', description: 'Only show critical/firing alerts', default: false },
+    { key: 'groupByCluster', label: 'Group by cluster', description: 'Group alerts by source cluster', default: false },
+    { key: 'soundOnAlert', label: 'Sound on alert', description: 'Play sound for new critical alerts', default: false },
+  ],
+  alert_rules: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Refresh alert rules periodically', default: false },
+    { key: 'showDisabled', label: 'Show disabled', description: 'Display disabled alert rules', default: false },
+    { key: 'groupBySource', label: 'Group by source', description: 'Group rules by alert source', default: true },
+  ],
+  // Cost management cards
+  opencost_overview: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update cost data periodically', default: true },
+    { key: 'showTrend', label: 'Show trend', description: 'Display cost trend over time', default: true },
+    { key: 'alertOnBudget', label: 'Alert on budget', description: 'Notify when approaching budget limits', default: false },
+  ],
+  kubecost_overview: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update cost data periodically', default: true },
+    { key: 'showBreakdown', label: 'Show breakdown', description: 'Display cost breakdown by namespace', default: true },
+    { key: 'alertOnSpike', label: 'Alert on spike', description: 'Notify on unusual cost increases', default: false },
+  ],
+  // Policy management cards
+  opa_policies: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Check policy status periodically', default: true },
+    { key: 'showViolations', label: 'Show violations', description: 'Display policy violations', default: true },
+    { key: 'alertOnViolation', label: 'Alert on violation', description: 'Notify on new policy violations', default: false },
+  ],
+  kyverno_policies: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Check policy status periodically', default: true },
+    { key: 'showViolations', label: 'Show violations', description: 'Display policy violations', default: true },
+    { key: 'showAuditOnly', label: 'Show audit only', description: 'Include audit-mode policies', default: true },
+  ],
+  // Compliance tool cards
+  falco_alerts: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Poll for new Falco alerts', default: true },
+    { key: 'criticalOnly', label: 'Critical only', description: 'Only show high-priority alerts', default: false },
+    { key: 'alertOnNew', label: 'Alert on new', description: 'Notify on new security alerts', default: false },
+  ],
+  trivy_scan: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Refresh scan results periodically', default: true },
+    { key: 'criticalOnly', label: 'Critical only', description: 'Only show critical vulnerabilities', default: false },
+    { key: 'showFixed', label: 'Show fixed', description: 'Include vulnerabilities with fixes available', default: true },
+  ],
+  kubescape_scan: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Refresh scan results periodically', default: true },
+    { key: 'showFailedOnly', label: 'Show failed only', description: 'Only show failed controls', default: false },
+    { key: 'groupByFramework', label: 'Group by framework', description: 'Group results by compliance framework', default: true },
+  ],
+  policy_violations: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Check for violations periodically', default: true },
+    { key: 'showResolved', label: 'Show resolved', description: 'Include resolved violations', default: false },
+    { key: 'alertOnNew', label: 'Alert on new', description: 'Notify on new violations', default: false },
+  ],
+  compliance_score: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update compliance score periodically', default: true },
+    { key: 'showTrend', label: 'Show trend', description: 'Display score trend over time', default: true },
+    { key: 'alertOnDrop', label: 'Alert on drop', description: 'Notify when compliance score drops', default: false },
+  ],
+  // Data compliance tool cards
+  vault_secrets: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Check vault secrets periodically', default: true },
+    { key: 'showExpiring', label: 'Show expiring', description: 'Highlight secrets nearing expiration', default: true },
+    { key: 'alertOnExpiry', label: 'Alert on expiry', description: 'Notify when secrets are expiring', default: false },
+  ],
+  external_secrets: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Check sync status periodically', default: true },
+    { key: 'showFailed', label: 'Show failed', description: 'Highlight failed secret syncs', default: true },
+    { key: 'alertOnFailure', label: 'Alert on failure', description: 'Notify on sync failures', default: false },
+  ],
+  cert_manager: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Check certificate status periodically', default: true },
+    { key: 'showExpiring', label: 'Show expiring', description: 'Highlight expiring certificates', default: true },
+    { key: 'alertOnExpiry', label: 'Alert on expiry', description: 'Notify when certificates are expiring', default: true },
+  ],
+  // Workload detection cards
+  prow_jobs: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Poll for job updates', default: true },
+    { key: 'showFailedOnly', label: 'Show failed only', description: 'Only display failed jobs', default: false },
+    { key: 'alertOnFailure', label: 'Alert on failure', description: 'Notify when jobs fail', default: false },
+  ],
+  prow_status: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update Prow status periodically', default: true },
+    { key: 'showQueue', label: 'Show queue', description: 'Display job queue status', default: true },
+  ],
+  prow_history: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Refresh job history periodically', default: false },
+    { key: 'showAllRuns', label: 'Show all runs', description: 'Display complete job history', default: false },
+    { key: 'groupByJob', label: 'Group by job', description: 'Group history by job name', default: true },
+  ],
+  llm_inference: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update inference metrics periodically', default: true },
+    { key: 'showLatency', label: 'Show latency', description: 'Display inference latency metrics', default: true },
+    { key: 'showThroughput', label: 'Show throughput', description: 'Display tokens per second', default: true },
+  ],
+  llm_models: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update model status periodically', default: true },
+    { key: 'showMemory', label: 'Show memory', description: 'Display model memory usage', default: true },
+    { key: 'alertOnError', label: 'Alert on error', description: 'Notify when models have errors', default: false },
+  ],
+  ml_jobs: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Poll for ML job updates', default: true },
+    { key: 'showRunning', label: 'Show running', description: 'Prioritize running jobs', default: true },
+    { key: 'alertOnComplete', label: 'Alert on complete', description: 'Notify when jobs complete', default: false },
+  ],
+  ml_notebooks: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update notebook status periodically', default: true },
+    { key: 'showIdle', label: 'Show idle', description: 'Display idle notebooks', default: false },
+    { key: 'alertOnIdle', label: 'Alert on idle', description: 'Notify when notebooks are idle for too long', default: false },
+  ],
+  // MCS (Multi-Cluster Service) cards
+  service_exports: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update service exports periodically', default: true },
+    { key: 'showConflicts', label: 'Show conflicts', description: 'Highlight export conflicts', default: true },
+    { key: 'alertOnConflict', label: 'Alert on conflict', description: 'Notify when export conflicts detected', default: false },
+  ],
+  service_imports: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update service imports periodically', default: true },
+    { key: 'showUnresolved', label: 'Show unresolved', description: 'Highlight unresolved imports', default: true },
+    { key: 'alertOnUnresolved', label: 'Alert on unresolved', description: 'Notify when imports cannot be resolved', default: false },
+  ],
+  // Gateway API cards
+  gateway_status: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update gateway status periodically', default: true },
+    { key: 'showRoutes', label: 'Show routes', description: 'Display attached routes', default: true },
+    { key: 'alertOnUnhealthy', label: 'Alert on unhealthy', description: 'Notify when gateways are unhealthy', default: false },
+  ],
+  // Service Topology card
+  service_topology: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update topology periodically', default: true },
+    { key: 'showConnections', label: 'Show connections', description: 'Display service connections', default: true },
+    { key: 'animateTraffic', label: 'Animate traffic', description: 'Animate traffic flow between services', default: false },
+  ],
+  // Workload Deployment card
+  workload_deployment: [
+    { key: 'autoRefresh', label: 'Auto-refresh', description: 'Update workload status periodically', default: true },
+    { key: 'showProgress', label: 'Show progress', description: 'Display deployment progress', default: true },
+    { key: 'alertOnStalled', label: 'Alert on stalled', description: 'Notify when deployments are stalled', default: false },
+  ],
   default: [
     { key: 'autoRefresh', label: 'Auto-refresh', description: 'Automatically refresh this card', default: true },
     { key: 'showDetails', label: 'Show details', description: 'Display detailed information', default: true },

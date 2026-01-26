@@ -164,7 +164,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -221,12 +221,12 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
 
       {/* Scope badge (if selected) */}
       {selectedCluster && (
-        <div className="flex items-center gap-2 mb-4">
-          <ClusterBadge cluster={selectedCluster} />
+        <div className="flex items-center gap-2 mb-4 min-w-0 overflow-hidden">
+          <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
           {selectedNamespace && (
             <>
-              <span className="text-muted-foreground">/</span>
-              <span className="text-sm text-foreground">{selectedNamespace}</span>
+              <span className="text-muted-foreground shrink-0">/</span>
+              <span className="text-sm text-foreground truncate min-w-0">{selectedNamespace}</span>
             </>
           )}
         </div>
@@ -265,19 +265,19 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
               <div
                 key={`${event.cluster}-${event.namespace}-${event.object}-${idx}`}
                 onClick={() => drillToEvents(event.cluster || '', event.namespace, event.object)}
-                className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20 cursor-pointer hover:bg-${color}-500/20 transition-colors group`}
+                className={`p-3 rounded-lg bg-${color}-500/10 border border-${color}-500/20 cursor-pointer hover:bg-${color}-500/20 transition-colors group overflow-hidden`}
               >
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2 min-w-0">
                   <Icon className={`w-4 h-4 text-${color}-400 mt-0.5 flex-shrink-0`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1 min-w-0">
                       {event.cluster && (
-                        <ClusterBadge cluster={event.cluster} size="sm" />
+                        <div className="shrink-0"><ClusterBadge cluster={event.cluster} size="sm" /></div>
                       )}
-                      <span className="text-xs text-muted-foreground">{event.namespace}</span>
-                      <span className="text-xs text-muted-foreground">/</span>
-                      <span className="text-sm text-foreground truncate group-hover:text-orange-400">{event.object}</span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <span className="text-xs text-muted-foreground shrink-0">{event.namespace}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">/</span>
+                      <span className="text-sm text-foreground truncate min-w-0 flex-1 group-hover:text-orange-400">{event.object}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{event.message}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">

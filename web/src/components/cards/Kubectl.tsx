@@ -448,15 +448,15 @@ data:
   ).reverse()
 
   return (
-    <div className="h-full flex flex-col min-h-card">
+    <div className="h-full flex flex-col min-h-card overflow-hidden">
       {/* Header with controls */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-4 gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {clusters.length > 0 && (
             <select
               value={selectedContext}
               onChange={(e) => setSelectedContext(e.target.value)}
-              className="text-xs bg-secondary border border-border/50 rounded px-2 py-1 text-foreground"
+              className="text-xs bg-secondary border border-border/50 rounded px-2 py-1 text-foreground max-w-[150px] truncate"
               title="Select cluster context"
             >
               {clusters.map(cluster => (

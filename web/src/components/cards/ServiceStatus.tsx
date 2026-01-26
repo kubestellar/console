@@ -1,5 +1,6 @@
 import { Globe, Server, ExternalLink, Search, ChevronRight, Filter, ChevronDown, Check } from 'lucide-react'
-import { useServices, type Service } from '../../hooks/useMCP'
+import type { Service } from '../../hooks/useMCP'
+import { useCachedServices } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
@@ -52,7 +53,7 @@ export function ServiceStatus() {
     isFailed,
     consecutiveFailures,
     lastRefresh
-  } = useServices()
+  } = useCachedServices()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && services.length === 0
@@ -261,27 +262,27 @@ export function ServiceStatus() {
                 ports: service.ports,
                 clusterIP: service.clusterIP,
               })}
-              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+              className="flex items-center justify-between p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group gap-2"
             >
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 {getTypeIcon(service.type || 'ClusterIP')}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-sm text-foreground truncate group-hover:text-cyan-400">{service.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {service.namespace} • {service.cluster}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {service.ports && service.ports.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground truncate max-w-[80px]">
                     {service.ports.join(', ')}
                   </span>
                 )}
-                <span className={`px-1.5 py-0.5 rounded text-xs ${getTypeColor(service.type || 'ClusterIP')}`}>
+                <span className={`px-1.5 py-0.5 rounded text-xs shrink-0 ${getTypeColor(service.type || 'ClusterIP')}`}>
                   {service.type || 'ClusterIP'}
                 </span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </div>
             </div>
           ))

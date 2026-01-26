@@ -80,12 +80,12 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
 
   if (!clusterName) {
     return (
-      <div className="h-full flex flex-col min-h-card">
+      <div className="h-full flex flex-col min-h-card overflow-hidden">
         <div className="flex items-center justify-end mb-4">
           <select
             value={internalCluster}
             onChange={(e) => setInternalCluster(e.target.value)}
-            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground max-w-full truncate"
           >
             <option value="">Select cluster...</option>
             {clusters.map(c => (
@@ -101,19 +101,19 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{clusterName}</span>
-          <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-sm font-medium text-foreground truncate">{clusterName}</span>
+          <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex items-center gap-2">
           {!selectedCluster && (
             <select
               value={internalCluster}
               onChange={(e) => setInternalCluster(e.target.value)}
-              className="px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground"
+              className="px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground max-w-[150px] truncate"
             >
               {clusters.map(c => (
                 <option key={c.name} value={c.name}>{c.name}</option>
@@ -224,10 +224,10 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
 
       {/* Server info */}
       {cluster?.server && (
-        <div className="mt-4 pt-3 border-t border-border/50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Network className="w-3 h-3" />
-            <span className="truncate">{cluster.server}</span>
+        <div className="mt-4 pt-3 border-t border-border/50 min-w-0">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+            <Network className="w-3 h-3 shrink-0" />
+            <span className="truncate min-w-0">{cluster.server}</span>
           </div>
         </div>
       )}

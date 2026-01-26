@@ -10,7 +10,8 @@ import { usePagination, Pagination } from '../ui/Pagination'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { useProwJobs, ProwJob } from '../../hooks/useProw'
+import { useCachedProwJobs } from '../../hooks/useCachedData'
+import type { ProwJob } from '../../hooks/useProw'
 
 // =============================================================================
 // SHARED TYPES AND UTILITIES
@@ -36,7 +37,7 @@ interface ProwJobsProps {
 }
 
 export function ProwJobs({ config: _config }: ProwJobsProps) {
-  // Fetch real ProwJobs from the prow cluster
+  // Fetch real ProwJobs from the prow cluster with caching
   const {
     jobs,
     isLoading,
@@ -47,7 +48,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     lastRefresh,
     formatTimeAgo,
     error,
-  } = useProwJobs('prow', 'prow')
+  } = useCachedProwJobs('prow', 'prow')
 
   // Debug logging
   console.log('[ProwJobs] render:', { jobsCount: jobs.length, isLoading, isRefreshing, isFailed, error })
@@ -238,7 +239,7 @@ interface ProwStatusProps {
 }
 
 export function ProwStatus({ config: _config }: ProwStatusProps) {
-  const { status, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useProwJobs('prow', 'prow')
+  const { status, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useCachedProwJobs('prow', 'prow')
 
   if (isLoading) {
     return (
@@ -313,7 +314,7 @@ interface ProwHistoryProps {
 }
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
-  const { jobs, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, formatTimeAgo } = useProwJobs('prow', 'prow')
+  const { jobs, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
   // Filter to only completed jobs for history view
@@ -411,7 +412,8 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
 // LLM INFERENCE CARDS
 // =============================================================================
 
-import { useLLMdServers, useLLMdModels, LLMdServer, LLMdComponentType } from '../../hooks/useLLMd'
+import { useCachedLLMdServers, useCachedLLMdModels } from '../../hooks/useCachedData'
+import type { LLMdServer, LLMdComponentType } from '../../hooks/useLLMd'
 
 // Clusters known to have llm-d stacks
 const LLMD_CLUSTERS = ['vllm-d', 'platform-eval']
@@ -440,7 +442,7 @@ const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label
 ]
 
 export function LLMInference({ config: _config }: LLMInferenceProps) {
-  const { servers, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, error } = useLLMdServers(LLMD_CLUSTERS)
+  const { servers, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, error } = useCachedLLMdServers(LLMD_CLUSTERS)
 
   // Debug logging
   console.log('[LLMInference] render:', { serversCount: servers.length, isLoading, isRefreshing, isFailed, error })
@@ -813,7 +815,7 @@ interface LLMModelsProps {
 }
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
-  const { models, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useLLMdModels(LLMD_CLUSTERS)
+  const { models, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useCachedLLMdModels(LLMD_CLUSTERS)
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit

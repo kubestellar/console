@@ -5,7 +5,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useDeployments } from '../../hooks/useMCP'
+import { useCachedDeployments } from '../../hooks/useCachedData'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useChartFilters } from '../../lib/cards'
 
@@ -30,7 +30,7 @@ interface AppData {
 
 export function AppStatus(_props: AppStatusProps) {
   const { drillToDeployment } = useDrillDownActions()
-  const { deployments, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useDeployments()
+  const { deployments, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -270,12 +270,12 @@ export function AppStatus(_props: AppStatusProps) {
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
             title={`Click to view details for ${app.name}`}
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span title="Workload"><Box className="w-4 h-4 text-purple-400" /></span>
-                <span className="text-sm font-medium text-foreground" title={app.name}>{app.name}</span>
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span title="Workload"><Box className="w-4 h-4 text-purple-400 shrink-0" /></span>
+                <span className="text-sm font-medium text-foreground truncate" title={app.name}>{app.name}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-muted-foreground" title={`Deployed to ${total} cluster${total !== 1 ? 's' : ''}`}>
                   {total} cluster{total !== 1 ? 's' : ''}
                 </span>
@@ -306,7 +306,7 @@ export function AppStatus(_props: AppStatusProps) {
             </div>
 
             {/* Cluster badges */}
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-1 mt-2 overflow-hidden">
               {app.clusters.map((cluster) => (
                 <ClusterBadge key={cluster} cluster={cluster} showIcon={false} />
               ))}

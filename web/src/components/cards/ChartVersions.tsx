@@ -337,17 +337,17 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
                   key={`${chart.cluster}-${chart.namespace}-${chart.name}-${idx}`}
                   className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <Package className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm text-foreground font-medium">{chart.name}</span>
+                  <div className="flex items-center justify-between mb-1 gap-2 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Package className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="text-sm text-foreground font-medium truncate">{chart.name}</span>
                     </div>
                     {chart.cluster && <ClusterBadge cluster={chart.cluster} size="sm" />}
                   </div>
-                  <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground">
-                    <span title={`Chart: ${chart.chart}`}>{chart.chart}</span>
-                    {chart.version && <span title={`Version: ${chart.version}`}>v{chart.version}</span>}
-                    <span title={`Namespace: ${chart.namespace}`}>{chart.namespace}</span>
+                  <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground min-w-0 overflow-hidden">
+                    <span className="truncate" title={`Chart: ${chart.chart}`}>{chart.chart}</span>
+                    {chart.version && <span className="shrink-0" title={`Version: ${chart.version}`}>v{chart.version}</span>}
+                    <span className="truncate" title={`Namespace: ${chart.namespace}`}>{chart.namespace}</span>
                   </div>
                 </div>
               ))

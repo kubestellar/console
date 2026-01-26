@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Globe, Server, Layers, ExternalLink, Filter, ChevronDown } from 'lucide-react'
-import { useClusters, useServices } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedServices } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -8,7 +9,7 @@ import { useChartFilters } from '../../lib/cards'
 
 export function NetworkOverview() {
   const { clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
-  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, refetch: refetchServices } = useServices()
+  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, refetch: refetchServices } = useCachedServices()
 
   const isRefreshing = clustersRefreshing || servicesRefreshing
   const refetch = () => {
@@ -248,12 +249,12 @@ export function NetworkOverview() {
               return (
                 <div
                   key={name}
-                  className={`flex items-center justify-between p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
+                  className={`flex items-center justify-between gap-2 p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
                   onClick={() => svc && drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)}
                   title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${svc ? ' - Click to view' : ''}`}
                 >
-                  <span className="text-sm text-foreground truncate">{name}</span>
-                  <span className="text-xs text-muted-foreground">{count} services</span>
+                  <span className="text-sm text-foreground truncate min-w-0 flex-1">{name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{count} services</span>
                 </div>
               )
             })}
