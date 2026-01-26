@@ -368,6 +368,8 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
+  // User management - uses demo data when API unavailable
+  'user_management',
 ])
 
 /**
