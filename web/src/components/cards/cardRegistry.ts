@@ -81,6 +81,8 @@ import { ProwJobs, ProwStatus, ProwHistory, LLMInference, LLMModels, MLJobs, MLN
 import { Weather } from './Weather'
 // GitHub Activity Monitoring card
 import { GitHubActivity } from './GitHubActivity'
+// RSS Feed card
+import { RSSFeed } from './RSSFeed'
 // Kubectl card
 import { Kubectl } from './Kubectl'
 // Sudoku game card
@@ -253,6 +255,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   weather: Weather,
   // GitHub Activity Monitoring card
   github_activity: GitHubActivity,
+  // RSS Feed card
+  rss_feed: RSSFeed,
   // Kubectl card
   kubectl: Kubectl,
   // Sudoku game card
@@ -479,6 +483,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   weather: 6,
   // GitHub Activity Monitoring card
   github_activity: 8,
+  // RSS Feed card
+  rss_feed: 6,
   // Kubectl card - interactive terminal
   kubectl: 8,
   // Sudoku game card
