@@ -30,7 +30,7 @@ import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
@@ -92,7 +92,20 @@ export function Dashboard() {
   const [isReplaceCardOpen, setIsReplaceCardOpen] = useState(false)
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
-  const [localCards, setLocalCards] = useState<Card[]>(() => dashboardCache?.cards || [])
+  const [localCards, setLocalCards] = useState<Card[]>(() => {
+    // Priority: cache > localStorage > empty
+    if (dashboardCache?.cards?.length) return dashboardCache.cards
+    try {
+      const stored = localStorage.getItem(DASHBOARD_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return []
+  })
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -309,10 +322,19 @@ export function Dashboard() {
     }
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep cache in sync when cards are modified locally
+  // Keep cache and localStorage in sync when cards are modified locally
   useEffect(() => {
-    if (dashboardCache && localCards.length > 0) {
-      dashboardCache = { ...dashboardCache, cards: localCards, timestamp: Date.now() }
+    if (localCards.length > 0) {
+      // Update memory cache
+      if (dashboardCache) {
+        dashboardCache = { ...dashboardCache, cards: localCards, timestamp: Date.now() }
+      }
+      // Persist to localStorage for quick restore on page refresh
+      try {
+        localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(localCards))
+      } catch {
+        // Ignore storage errors (quota exceeded, etc.)
+      }
     }
   }, [localCards])
 
@@ -914,6 +936,7 @@ const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, 
         lastSummary={card.last_summary}
         title={card.title}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isLive={LIVE_DATA_CARDS.has(card.card_type)}
         cardWidth={card.position.w}
         onConfigure={onConfigure}
         onReplace={onReplace}

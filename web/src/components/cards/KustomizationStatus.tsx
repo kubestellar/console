@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Layers, CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, Search, ChevronRight } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, Search, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -193,8 +193,6 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-pink-400" />
-          <span className="text-sm font-medium text-muted-foreground">Kustomizations</span>
           {notReadyCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
               {notReadyCount} failing

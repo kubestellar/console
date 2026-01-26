@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Network, ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import type { TopologyNode, TopologyEdge, TopologyHealthStatus } from '../../types/topology'
@@ -131,11 +131,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Network className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">Service Topology</span>
-        </div>
+      <div className="flex items-center justify-end mb-2">
         <div className="flex items-center gap-1">
           <button
             onClick={handleZoomOut}

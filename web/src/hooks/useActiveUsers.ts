@@ -14,6 +14,9 @@ let sharedInfo: ActiveUsersInfo = {
   totalConnections: 0,
 }
 let pollStarted = false
+let pollInterval: ReturnType<typeof setInterval> | null = null
+let consecutiveFailures = 0
+const MAX_FAILURES = 3
 let subscribers = new Set<(info: ActiveUsersInfo) => void>()
 
 // Notify all subscribers
@@ -23,14 +26,26 @@ function notifySubscribers() {
 
 // Fetch active users from API
 async function fetchActiveUsers() {
+  // Stop trying after too many consecutive failures
+  if (consecutiveFailures >= MAX_FAILURES) {
+    if (pollInterval) {
+      clearInterval(pollInterval)
+      pollInterval = null
+      pollStarted = false
+    }
+    return
+  }
+
   try {
     const { data } = await api.get<ActiveUsersInfo>('/api/active-users')
+    consecutiveFailures = 0 // Reset on success
     if (data.activeUsers !== sharedInfo.activeUsers ||
         data.totalConnections !== sharedInfo.totalConnections) {
       sharedInfo = data
       notifySubscribers()
     }
   } catch {
+    consecutiveFailures++
     // API not available, keep current state
   }
 }
@@ -39,12 +54,13 @@ async function fetchActiveUsers() {
 function startPolling() {
   if (pollStarted) return
   pollStarted = true
+  consecutiveFailures = 0 // Reset failures on new start
 
   // Initial fetch
   fetchActiveUsers()
 
-  // Poll at interval
-  setInterval(fetchActiveUsers, POLL_INTERVAL)
+  // Poll at interval (keep reference to clear if needed)
+  pollInterval = setInterval(fetchActiveUsers, POLL_INTERVAL)
 }
 
 /**

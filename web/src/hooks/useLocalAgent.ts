@@ -85,7 +85,6 @@ class AgentManager {
   start() {
     if (this.isStarted) return
     this.isStarted = true
-    console.log('[AgentManager] Starting singleton polling')
     this.addEvent('connecting', 'Attempting to connect to local agent...')
     this.checkAgent()
     this.currentPollInterval = POLL_INTERVAL
@@ -99,7 +98,6 @@ class AgentManager {
     }
     this.isStarted = false
     this.isChecking = false // Reset so next start can check immediately
-    console.log('[AgentManager] Stopped polling')
   }
 
   private adjustPollInterval(interval: number) {
@@ -108,7 +106,6 @@ class AgentManager {
     if (this.pollInterval) {
       clearInterval(this.pollInterval)
       this.pollInterval = setInterval(() => this.checkAgent(), interval)
-      console.log(`[AgentManager] Adjusted poll interval to ${interval}ms`)
     }
   }
 
@@ -168,7 +165,6 @@ class AgentManager {
   async checkAgent() {
     // Skip if already checking (prevent overlapping requests)
     if (this.isChecking) {
-      console.log('[AgentManager] Skipping check - already in progress')
       return
     }
     this.isChecking = true
@@ -193,28 +189,19 @@ class AgentManager {
           status: 'connected',
           error: null,
         })
-        console.log('[AgentManager] Connected successfully')
       } else {
         throw new Error(`Agent returned ${response.status}`)
       }
     } catch {
       this.failureCount++
-      // Only log on final failure attempt (suppress intermediate noise)
-      if (this.failureCount === FAILURE_THRESHOLD) {
-        console.log(`[AgentManager] Agent check failed after ${FAILURE_THRESHOLD} attempts`)
-      }
       // Only mark as disconnected after multiple consecutive failures
       if (this.failureCount >= FAILURE_THRESHOLD) {
         const wasConnected = this.state.status === 'connected'
         const wasConnecting = this.state.status === 'connecting'
         if (wasConnected) {
           this.addEvent('disconnected', 'Lost connection to local agent')
-          console.log(
-            `[AgentManager] Transitioning to disconnected after ${this.failureCount} failures`
-          )
         } else if (wasConnecting) {
           this.addEvent('error', 'Failed to connect - local agent not available')
-          console.log('[AgentManager] Agent not available, using demo mode')
         }
         this.setState({
           status: 'disconnected',
@@ -253,7 +240,6 @@ class AgentManager {
         dataErrorCount: recentErrors,
         lastDataError: `${endpoint}: ${error}`,
       })
-      console.log(`[AgentManager] Transitioning to degraded - ${recentErrors} data errors in last minute`)
     } else if (this.state.status === 'degraded') {
       // Update error count while degraded
       this.setState({
@@ -279,7 +265,6 @@ class AgentManager {
           dataErrorCount: 0,
           lastDataError: null,
         })
-        console.log('[AgentManager] Recovered from degraded state')
       }
     }
   }

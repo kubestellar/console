@@ -172,9 +172,6 @@ export function GPUUsageTrend() {
     }
   }, [filteredNodes])
 
-  // Check if we have real data
-  const hasRealData = !isLoading && filteredNodes.length > 0
-
   // Get time range config
   const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]
 
@@ -258,11 +255,7 @@ export function GPUUsageTrend() {
   if (gpuNodes.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-muted-foreground">GPU Usage Trend</span>
-          </div>
+        <div className="flex items-center justify-end mb-3">
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={isFailed}
@@ -287,17 +280,10 @@ export function GPUUsageTrend() {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">GPU Usage Trend</span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
               {localClusterFilter.length}/{availableClustersForFilter.length}
-            </span>
-          )}
-          {hasRealData && (
-            <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-              Live
             </span>
           )}
         </div>
@@ -328,7 +314,7 @@ export function GPUUsageTrend() {
         </div>
 
         {/* Cluster Filter */}
-        {availableClustersForFilter.length > 1 && (
+        {availableClustersForFilter.length >= 1 && (
           <div ref={clusterFilterRef} className="relative">
             <button
               onClick={() => setShowClusterFilter(!showClusterFilter)}

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { GitBranch, CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle, Search } from 'lucide-react'
+import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle, Search, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -8,6 +8,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useChartFilters } from '../../lib/cards'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -126,6 +127,20 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToArgoApp } = useDrillDownActions()
+
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'argocd-applications',
+  })
+
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
   const [sortBy, setSortBy] = useState<SortByOption>('syncStatus')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -133,9 +148,13 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   const [localSearch, setLocalSearch] = useState('')
 
   const filteredClusters = useMemo(() => {
-    if (isAllClustersSelected) return clusters.map(c => c.name)
-    return selectedClusters
-  }, [clusters, selectedClusters, isAllClustersSelected])
+    let clusterNames = isAllClustersSelected ? clusters.map(c => c.name) : selectedClusters
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      clusterNames = clusterNames.filter(c => localClusterFilter.includes(c))
+    }
+    return clusterNames
+  }, [clusters, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   const filteredAndSorted = useMemo(() => {
     const allApps = getMockArgoApplications(filteredClusters)
@@ -234,13 +253,63 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">ArgoCD Applications</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-            {totalItems}
+          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+            {totalItems} apps
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <a
             href="https://argo-cd.readthedocs.io/"
             target="_blank"

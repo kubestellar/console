@@ -3,7 +3,7 @@
  * when the respective tools are detected in the cluster.
  */
 
-import { Shield, Eye, Bug, Target, AlertTriangle, CheckCircle2, ExternalLink, AlertCircle } from 'lucide-react'
+import { AlertTriangle, AlertCircle } from 'lucide-react'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -20,22 +20,6 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Eye className="w-4 h-4 text-purple-400" />
-          <span>Falco</span>
-        </div>
-        <a
-          href="https://falco.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-          title="Falco Documentation"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      </div>
-
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
@@ -89,22 +73,6 @@ export function TrivyScan({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Bug className="w-4 h-4 text-cyan-400" />
-          <span>Trivy</span>
-        </div>
-        <a
-          href="https://aquasecurity.github.io/trivy/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-cyan-400"
-          title="Trivy Documentation"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      </div>
-
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
@@ -158,22 +126,6 @@ export function KubescapeScan({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Target className="w-4 h-4 text-green-400" />
-          <span>Kubescape</span>
-        </div>
-        <a
-          href="https://kubescape.io/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-green-400"
-          title="Kubescape Documentation"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      </div>
-
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
         <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
@@ -230,10 +182,6 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Shield className="w-4 h-4 text-orange-400" />
-        <span>Policy Violations</span>
-      </div>
       <div className="space-y-2">
         {violations.map((v, i) => (
           <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
@@ -258,10 +206,6 @@ export function ComplianceScore({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <CheckCircle2 className="w-4 h-4 text-green-400" />
-        <span>Overall Compliance</span>
-      </div>
       <div className="flex items-center justify-center py-4">
         <div className="relative w-24 h-24">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">

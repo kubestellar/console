@@ -1,11 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
-  Cpu, Layers, AlertCircle, Play, Pause, RefreshCw
+  Cpu, Layers, AlertCircle, Play, Pause, RefreshCw, Filter, ChevronDown, Server,
+  Activity, Network, Box
 } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { usePagination, Pagination } from '../ui/Pagination'
+import { useClusters } from '../../hooks/useMCP'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { RefreshButton } from '../ui/RefreshIndicator'
+import { useProwJobs, ProwJob } from '../../hooks/useProw'
 
 // =============================================================================
 // SHARED TYPES AND UTILITIES
@@ -26,38 +31,48 @@ function useDemoData<T>(data: T): DemoState & { data: T } {
 // PROW CARDS
 // =============================================================================
 
-// Demo data for Prow jobs
-const DEMO_PROW_JOBS = [
-  { name: 'pull-kubernetes-e2e', type: 'presubmit', state: 'success', duration: '45m', pr: '#12345', started: '10m ago' },
-  { name: 'pull-kubernetes-unit', type: 'presubmit', state: 'success', duration: '12m', pr: '#12346', started: '15m ago' },
-  { name: 'pull-kubernetes-verify', type: 'presubmit', state: 'pending', duration: '-', pr: '#12347', started: '2m ago' },
-  { name: 'ci-kubernetes-e2e-gce', type: 'periodic', state: 'failure', duration: '1h 23m', pr: '-', started: '30m ago' },
-  { name: 'post-kubernetes-push-image', type: 'postsubmit', state: 'success', duration: '8m', pr: '-', started: '1h ago' },
-  { name: 'pull-kubernetes-integration', type: 'presubmit', state: 'aborted', duration: '5m', pr: '#12344', started: '20m ago' },
-]
-
-const DEMO_PROW_STATUS = {
-  healthy: true,
-  version: 'v0.0.0-20240115',
-  pendingJobs: 12,
-  runningJobs: 8,
-  queuedJobs: 24,
-  prowJobsLastHour: 156,
-  successRate: 94.2,
-}
-
 interface ProwJobsProps {
   config?: Record<string, unknown>
 }
 
 export function ProwJobs({ config: _config }: ProwJobsProps) {
-  const { data: jobs, isLoading } = useDemoData(DEMO_PROW_JOBS)
+  // Fetch real ProwJobs from the prow cluster
+  const {
+    jobs,
+    isLoading,
+    isRefreshing,
+    refetch,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh,
+    formatTimeAgo,
+    error,
+  } = useProwJobs('prow', 'prow')
+
+  // Debug logging
+  console.log('[ProwJobs] render:', { jobsCount: jobs.length, isLoading, isRefreshing, isFailed, error })
+
   const [sortBy, setSortBy] = useState<'name' | 'state' | 'started'>('started')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [typeFilter, setTypeFilter] = useState<ProwJob['type'] | 'all'>('all')
+  const [stateFilter, setStateFilter] = useState<ProwJob['state'] | 'all'>('all')
 
+  // Filter and sort jobs
   const sortedJobs = useMemo(() => {
-    return [...jobs].sort((a, b) => {
+    let filtered = [...jobs]
+
+    // Apply type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(j => j.type === typeFilter)
+    }
+
+    // Apply state filter
+    if (stateFilter !== 'all') {
+      filtered = filtered.filter(j => j.state === stateFilter)
+    }
+
+    return filtered.sort((a, b) => {
       let compare = 0
       switch (sortBy) {
         case 'name':
@@ -67,13 +82,12 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
           compare = a.state.localeCompare(b.state)
           break
         case 'started':
-          // Simple string compare for demo - would use real timestamps in production
-          compare = a.started.localeCompare(b.started)
+          compare = new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
           break
       }
       return sortDirection === 'asc' ? compare : -compare
     })
-  }, [jobs, sortBy, sortDirection])
+  }, [jobs, sortBy, sortDirection, typeFilter, stateFilter])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
   const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(sortedJobs, effectivePerPage)
@@ -81,8 +95,11 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   const getStateIcon = (state: string) => {
     switch (state) {
       case 'success': return <CheckCircle className="w-3.5 h-3.5 text-green-400" />
-      case 'failure': return <XCircle className="w-3.5 h-3.5 text-red-400" />
-      case 'pending': return <Clock className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+      case 'failure':
+      case 'error': return <XCircle className="w-3.5 h-3.5 text-red-400" />
+      case 'pending':
+      case 'triggered': return <Clock className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+      case 'running': return <Play className="w-3.5 h-3.5 text-blue-400" />
       case 'aborted': return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
       default: return <Clock className="w-3.5 h-3.5 text-gray-400" />
     }
@@ -93,6 +110,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       presubmit: 'bg-blue-500/20 text-blue-400',
       postsubmit: 'bg-green-500/20 text-green-400',
       periodic: 'bg-purple-500/20 text-purple-400',
+      batch: 'bg-cyan-500/20 text-cyan-400',
     }
     return colors[type] || 'bg-gray-500/20 text-gray-400'
   }
@@ -112,42 +130,69 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-          {jobs.length} jobs
-        </span>
-        <CardControls
-          limit={limit}
-          onLimitChange={setLimit}
-          sortBy={sortBy}
-          sortOptions={[
-            { value: 'name', label: 'Name' },
-            { value: 'state', label: 'State' },
-            { value: 'started', label: 'Started' },
-          ]}
-          onSortChange={setSortBy}
-          sortDirection={sortDirection}
-          onSortDirectionChange={setSortDirection}
-        />
-      </div>
-
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-orange-400 font-medium">Prow Integration</p>
-          <p className="text-muted-foreground">
-            Connect to Prow for CI/CD job monitoring.{' '}
-            <a href="https://docs.prow.k8s.io/docs/getting-started-deploy/" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">
-              Install guide <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+            {sortedJobs.length} jobs
+          </span>
+          {jobs.filter(j => j.state === 'running').length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1">
+              <Play className="w-3 h-3" />
+              {jobs.filter(j => j.state === 'running').length} running
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Type Filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as ProwJob['type'] | 'all')}
+            className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
+          >
+            <option value="all">All Types</option>
+            <option value="periodic">Periodic</option>
+            <option value="presubmit">Presubmit</option>
+            <option value="postsubmit">Postsubmit</option>
+          </select>
+          {/* State Filter */}
+          <select
+            value={stateFilter}
+            onChange={(e) => setStateFilter(e.target.value as ProwJob['state'] | 'all')}
+            className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground"
+          >
+            <option value="all">All States</option>
+            <option value="success">Success</option>
+            <option value="failure">Failure</option>
+            <option value="running">Running</option>
+            <option value="pending">Pending</option>
+          </select>
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={[
+              { value: 'name', label: 'Name' },
+              { value: 'state', label: 'State' },
+              { value: 'started', label: 'Started' },
+            ]}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 
       {/* Jobs list */}
       <div className="flex-1 overflow-y-auto space-y-2">
-        {paginatedItems.map((job, idx) => (
-          <div key={idx} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+        {paginatedItems.map((job) => (
+          <div key={job.id} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {getStateIcon(job.state)}
@@ -156,11 +201,16 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
                   {job.type}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">{job.started}</span>
+              <span className="text-xs text-muted-foreground">{formatTimeAgo(job.startTime)}</span>
             </div>
             <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-              {job.pr !== '-' && <span>PR: {job.pr}</span>}
+              {job.pr && <span>PR: #{job.pr}</span>}
               <span>Duration: {job.duration}</span>
+              {job.url && (
+                <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-1">
+                  Logs <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
             </div>
           </div>
         ))}
@@ -188,7 +238,7 @@ interface ProwStatusProps {
 }
 
 export function ProwStatus({ config: _config }: ProwStatusProps) {
-  const { data: status, isLoading } = useDemoData(DEMO_PROW_STATUS)
+  const { status, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useProwJobs('prow', 'prow')
 
   if (isLoading) {
     return (
@@ -206,20 +256,14 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
         <span className={`text-xs px-1.5 py-0.5 rounded ${status.healthy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
           {status.healthy ? 'Healthy' : 'Unhealthy'}
         </span>
-      </div>
-
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-orange-400 font-medium">Prow Integration</p>
-          <p className="text-muted-foreground">
-            Connect to Prow for CI/CD metrics.{' '}
-            <a href="https://docs.prow.k8s.io/docs/getting-started-deploy/" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">
-              Install guide <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
-        </div>
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Stats grid */}
@@ -243,41 +287,42 @@ export function ProwStatus({ config: _config }: ProwStatusProps) {
           </div>
         </div>
         <div className="p-3 rounded-lg bg-secondary/30">
-          <div className="text-2xl font-bold text-purple-400">{status.queuedJobs}</div>
-          <div className="text-xs text-muted-foreground">Queued</div>
+          <div className="flex items-center gap-2">
+            <div className="text-lg font-bold text-green-400">{status.successJobs}</div>
+            <span className="text-xs text-muted-foreground">success</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-lg font-bold text-red-400">{status.failedJobs}</div>
+            <span className="text-xs text-muted-foreground">failed</span>
+          </div>
         </div>
       </div>
 
-      {/* Version */}
+      {/* Footer */}
       <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        Prow {status.version}
+        <a href="https://prow2.kubestellar.io" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-1">
+          Open Prow Dashboard <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
     </div>
   )
 }
-
-// Demo data for Prow history
-const DEMO_PROW_HISTORY = [
-  { name: 'pull-kubernetes-e2e', result: 'success', time: '10m ago' },
-  { name: 'pull-kubernetes-unit', result: 'success', time: '15m ago' },
-  { name: 'ci-kubernetes-e2e-gce', result: 'failure', time: '30m ago' },
-  { name: 'post-kubernetes-push', result: 'success', time: '45m ago' },
-  { name: 'pull-kubernetes-verify', result: 'success', time: '1h ago' },
-  { name: 'ci-kubernetes-integration', result: 'failure', time: '1h 15m ago' },
-  { name: 'pull-kubernetes-e2e', result: 'success', time: '1h 30m ago' },
-  { name: 'periodic-kubernetes-soak', result: 'success', time: '2h ago' },
-]
 
 interface ProwHistoryProps {
   config?: Record<string, unknown>
 }
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
-  const { data: history, isLoading } = useDemoData(DEMO_PROW_HISTORY)
+  const { jobs, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, formatTimeAgo } = useProwJobs('prow', 'prow')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
+  // Filter to only completed jobs for history view
+  const completedJobs = useMemo(() => {
+    return jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted')
+  }, [jobs])
+
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(history, effectivePerPage)
+  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(completedJobs, effectivePerPage)
 
   if (isLoading) {
     return (
@@ -293,23 +338,19 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
       <div className="flex items-center justify-end mb-4">
-        <CardControls
-          limit={limit}
-          onLimitChange={setLimit}
-        />
-      </div>
-
-      {/* Integration notice */}
-      <div className="flex items-start gap-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-orange-400 font-medium">Prow Integration</p>
-          <p className="text-muted-foreground">
-            Connect to Prow for job history.{' '}
-            <a href="https://docs.prow.k8s.io/docs/getting-started-deploy/" target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:underline">
-              Install guide <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </p>
+        <div className="flex items-center gap-2">
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+          />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
       </div>
 
@@ -317,21 +358,31 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       <div className="flex-1 overflow-y-auto relative">
         <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
         <div className="space-y-2">
-          {paginatedItems.map((entry, idx) => (
-            <div key={idx} className="relative pl-6 group">
+          {paginatedItems.map((job) => (
+            <div key={job.id} className="relative pl-6 group">
               <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
-                entry.result === 'success' ? 'bg-green-500' : 'bg-red-500'
+                job.state === 'success' ? 'bg-green-500' : job.state === 'aborted' ? 'bg-yellow-500' : 'bg-red-500'
               }`}>
-                {entry.result === 'success' ? (
+                {job.state === 'success' ? (
                   <CheckCircle className="w-2.5 h-2.5 text-white" />
+                ) : job.state === 'aborted' ? (
+                  <AlertTriangle className="w-2.5 h-2.5 text-white" />
                 ) : (
                   <XCircle className="w-2.5 h-2.5 text-white" />
                 )}
               </div>
-              <div className="p-2 rounded-lg bg-secondary/30">
+              <div className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground truncate">{entry.name}</span>
-                  <span className="text-xs text-muted-foreground">{entry.time}</span>
+                  <span className="text-sm font-medium text-foreground truncate">{job.name}</span>
+                  <span className="text-xs text-muted-foreground">{formatTimeAgo(job.startTime)}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                  <span>{job.duration}</span>
+                  {job.url && (
+                    <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-1">
+                      Logs <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -360,32 +411,126 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
 // LLM INFERENCE CARDS
 // =============================================================================
 
-const DEMO_LLM_SERVERS = [
-  { name: 'vllm-llama3-70b', type: 'vLLM', model: 'Llama 3 70B', status: 'running', gpu: '4x A100', requests: '1.2K/min', latency: '45ms' },
-  { name: 'tgi-mixtral-8x7b', type: 'TGI', model: 'Mixtral 8x7B', status: 'running', gpu: '2x A100', requests: '890/min', latency: '62ms' },
-  { name: 'llm-d-codellama', type: 'LLM-d', model: 'CodeLlama 34B', status: 'running', gpu: '2x A100', requests: '456/min', latency: '38ms' },
-  { name: 'vllm-phi3-mini', type: 'vLLM', model: 'Phi-3 Mini', status: 'scaling', gpu: '1x A10G', requests: '-', latency: '-' },
-  { name: 'triton-embedding', type: 'Triton', model: 'E5-Large', status: 'running', gpu: '1x T4', requests: '2.4K/min', latency: '8ms' },
-]
+import { useLLMdServers, useLLMdModels, LLMdServer, LLMdComponentType } from '../../hooks/useLLMd'
 
-const DEMO_LLM_MODELS = [
-  { name: 'Llama 3 70B', size: '140GB', gpuMem: '320GB', instances: 2, status: 'loaded' },
-  { name: 'Mixtral 8x7B', size: '87GB', gpuMem: '176GB', instances: 1, status: 'loaded' },
-  { name: 'CodeLlama 34B', size: '68GB', gpuMem: '140GB', instances: 1, status: 'loaded' },
-  { name: 'Phi-3 Mini', size: '7.6GB', gpuMem: '16GB', instances: 0, status: 'downloading' },
-  { name: 'E5-Large', size: '1.3GB', gpuMem: '4GB', instances: 3, status: 'loaded' },
-]
+// Clusters known to have llm-d stacks
+const LLMD_CLUSTERS = ['vllm-d', 'platform-eval']
 
 interface LLMInferenceProps {
   config?: Record<string, unknown>
 }
 
+type LLMdSortByOption = 'name' | 'status' | 'namespace' | 'type' | 'component'
+
+const LLMD_SORT_OPTIONS = [
+  { value: 'status' as const, label: 'Status' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'namespace' as const, label: 'Namespace' },
+  { value: 'type' as const, label: 'Type' },
+  { value: 'component' as const, label: 'Component' },
+]
+
+const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'model', label: 'Models' },
+  { value: 'epp', label: 'EPP' },
+  { value: 'gateway', label: 'Gateway' },
+  { value: 'prometheus', label: 'Prometheus' },
+  { value: 'autoscale', label: 'Auto-scale' },
+]
+
 export function LLMInference({ config: _config }: LLMInferenceProps) {
-  const { data: servers, isLoading } = useDemoData(DEMO_LLM_SERVERS)
+  const { servers, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, error } = useLLMdServers(LLMD_CLUSTERS)
+
+  // Debug logging
+  console.log('[LLMInference] render:', { serversCount: servers.length, isLoading, isRefreshing, isFailed, error })
+  const { clusters: allClusters } = useClusters()
+  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [sortBy, setSortBy] = useState<LLMdSortByOption>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [componentFilter, setComponentFilter] = useState<LLMdComponentType | 'all' | 'autoscale'>('all')
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('kubestellar-card-filter:llm-inference')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const [showComponentFilter, setShowComponentFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+  const componentFilterRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+      if (componentFilterRef.current && !componentFilterRef.current.contains(event.target as Node)) {
+        setShowComponentFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('kubestellar-card-filter:llm-inference', JSON.stringify(localClusterFilter))
+  }, [localClusterFilter])
+
+  const toggleClusterFilter = (clusterName: string) => {
+    setLocalClusterFilter(prev => prev.includes(clusterName) ? prev.filter(c => c !== clusterName) : [...prev, clusterName])
+  }
+  const clearClusterFilter = () => setLocalClusterFilter([])
+
+  const availableClustersForFilter = useMemo(() => {
+    const reachable = allClusters.filter(c => c.reachable !== false)
+    if (isAllClustersSelected) return reachable
+    return reachable.filter(c => globalSelectedClusters.includes(c.name))
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected])
+
+  const filteredServers = useMemo(() => {
+    let result = localClusterFilter.length === 0 ? servers : servers.filter(s => localClusterFilter.includes(s.cluster))
+
+    // Apply component filter
+    if (componentFilter !== 'all') {
+      if (componentFilter === 'autoscale') {
+        result = result.filter(s => s.hasAutoscaler)
+      } else {
+        result = result.filter(s => s.componentType === componentFilter)
+      }
+    }
+
+    // Sort by selected field
+    const statusOrder: Record<string, number> = { running: 0, scaling: 1, stopped: 2, error: 3 }
+    const componentOrder: Record<string, number> = { model: 0, epp: 1, gateway: 2, prometheus: 3, autoscaler: 4, other: 5 }
+    result = [...result].sort((a, b) => {
+      let cmp = 0
+      switch (sortBy) {
+        case 'status':
+          cmp = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
+          break
+        case 'name':
+          cmp = a.name.localeCompare(b.name)
+          break
+        case 'namespace':
+          cmp = a.namespace.localeCompare(b.namespace)
+          break
+        case 'component':
+          cmp = (componentOrder[a.componentType] ?? 99) - (componentOrder[b.componentType] ?? 99)
+          break
+        case 'type':
+          cmp = a.type.localeCompare(b.type)
+          break
+      }
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+
+    return result
+  }, [servers, localClusterFilter, componentFilter, sortBy, sortDirection])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(servers, effectivePerPage)
+  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(filteredServers, effectivePerPage)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -400,14 +545,38 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     }
   }
 
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = (type: LLMdServer['type']) => {
     const colors: Record<string, string> = {
-      'vLLM': 'bg-purple-500/20 text-purple-400',
-      'TGI': 'bg-blue-500/20 text-blue-400',
-      'LLM-d': 'bg-cyan-500/20 text-cyan-400',
-      'Triton': 'bg-green-500/20 text-green-400',
+      'vllm': 'bg-purple-500/20 text-purple-400',
+      'tgi': 'bg-blue-500/20 text-blue-400',
+      'llm-d': 'bg-cyan-500/20 text-cyan-400',
+      'triton': 'bg-green-500/20 text-green-400',
+      'unknown': 'bg-gray-500/20 text-gray-400',
     }
     return colors[type] || 'bg-gray-500/20 text-gray-400'
+  }
+
+  const getTypeLabel = (type: LLMdServer['type']) => {
+    const labels: Record<string, string> = {
+      'vllm': 'vLLM',
+      'tgi': 'TGI',
+      'llm-d': 'llm-d',
+      'triton': 'Triton',
+      'unknown': 'Unknown',
+    }
+    return labels[type] || type
+  }
+
+  const getComponentBadge = (componentType: LLMdComponentType) => {
+    const config: Record<LLMdComponentType, { bg: string, text: string, label: string }> = {
+      'model': { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Model' },
+      'epp': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', label: 'EPP' },
+      'gateway': { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Gateway' },
+      'prometheus': { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Prometheus' },
+      'autoscaler': { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Autoscaler' },
+      'other': { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Other' },
+    }
+    return config[componentType] || config['other']
   }
 
   if (isLoading) {
@@ -424,17 +593,106 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-          {servers.filter(s => s.status === 'running').length} running
-        </span>
-        <CardControls limit={limit} onLimitChange={setLimit} />
+        <div className="flex items-center gap-2">
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClustersForFilter.length}
+            </span>
+          )}
+          {componentFilter !== 'all' && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Box className="w-3 h-3" />
+              {COMPONENT_FILTERS.find(f => f.value === componentFilter)?.label}
+            </span>
+          )}
+          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+            {filteredServers.filter(s => s.status === 'running').length} running
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Component type filter */}
+          <div ref={componentFilterRef} className="relative">
+            <button
+              onClick={() => setShowComponentFilter(!showComponentFilter)}
+              className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                componentFilter !== 'all'
+                  ? 'bg-cyan-500/20 border-cyan-500/30 text-cyan-400'
+                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Filter by component type"
+            >
+              <Box className="w-3 h-3" />
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showComponentFilter && (
+              <div className="absolute top-full right-0 mt-1 w-40 rounded-lg bg-card border border-border shadow-lg z-50">
+                <div className="p-1">
+                  {COMPONENT_FILTERS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setComponentFilter(opt.value)
+                        setShowComponentFilter(false)
+                      }}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        componentFilter === opt.value
+                          ? 'bg-cyan-500/20 text-cyan-400'
+                          : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Cluster filter */}
+          {availableClustersForFilter.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button onClick={clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
+                    {availableClustersForFilter.map(cluster => (
+                      <button key={cluster.name} onClick={() => toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={LLMD_SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton isRefreshing={isRefreshing} isFailed={isFailed} consecutiveFailures={consecutiveFailures} lastRefresh={lastRefresh} onRefresh={refetch} size="sm" />
+        </div>
       </div>
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs mb-4">
         <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-purple-400 font-medium">LLM Inference Detection</p>
+          <p className="text-purple-400 font-medium">llm-d Inference Detection</p>
           <p className="text-muted-foreground">
             Auto-detects vLLM, TGI, LLM-d, and Triton inference servers.{' '}
             <a href="https://docs.vllm.ai/en/latest/getting_started/installation.html" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
@@ -446,29 +704,91 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
       {/* Server list */}
       <div className="flex-1 overflow-y-auto space-y-2">
-        {paginatedItems.map((server, idx) => (
-          <div key={idx} className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{server.name}</span>
-                <span className={`text-xs px-1.5 py-0.5 rounded ${getTypeBadge(server.type)}`}>
-                  {server.type}
-                </span>
-              </div>
-              {getStatusBadge(server.status)}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {server.model}</span>
-              <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {server.gpu}</span>
-            </div>
-            {server.status === 'running' && (
-              <div className="flex items-center gap-4 mt-2 text-xs">
-                <span className="text-green-400">{server.requests}</span>
-                <span className="text-blue-400">p50: {server.latency}</span>
-              </div>
+        {paginatedItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+            <Cpu className="w-8 h-8 mb-2 opacity-50" />
+            <p className="text-sm">{error ? `Error: ${error}` : 'No inference servers found'}</p>
+            <p className="text-xs">
+              {isFailed ? `Failed after ${consecutiveFailures} attempts` : 'Scanning vllm-d and platform-eval clusters'}
+            </p>
+            {servers.length === 0 && !isLoading && !error && (
+              <button onClick={() => refetch()} className="mt-2 text-xs text-purple-400 hover:underline">
+                Retry
+              </button>
             )}
           </div>
-        ))}
+        ) : paginatedItems.map((server) => {
+          const compBadge = getComponentBadge(server.componentType)
+          return (
+            <div key={server.id} className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-medium text-foreground truncate" title={server.name}>{server.name}</span>
+                  {/* Component type badge */}
+                  <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${compBadge.bg} ${compBadge.text}`}>
+                    {compBadge.label}
+                  </span>
+                  {/* Server type badge (vLLM, TGI, etc.) for model components */}
+                  {server.componentType === 'model' && server.type !== 'unknown' && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${getTypeBadge(server.type)}`}>
+                      {getTypeLabel(server.type)}
+                    </span>
+                  )}
+                  {/* Autoscaler badge */}
+                  {server.hasAutoscaler && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 flex-shrink-0" title={server.autoscalerType === 'va' ? 'VariantAutoscaling' : server.autoscalerType === 'both' ? 'HPA + VariantAutoscaling' : 'HorizontalPodAutoscaler'}>
+                      {server.autoscalerType === 'va' ? 'VA' : server.autoscalerType === 'both' ? 'HPA+VA' : 'HPA'}
+                    </span>
+                  )}
+                </div>
+                {getStatusBadge(server.status)}
+              </div>
+              <div className="flex items-center gap-2 text-xs mb-2">
+                <span className="px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{server.namespace}</span>
+                <span className="text-muted-foreground/60">on {server.cluster}</span>
+                {/* Gateway status indicator */}
+                {server.gatewayStatus && (
+                  <span
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                      server.gatewayStatus === 'running'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-gray-500/20 text-gray-400'
+                    }`}
+                    title={`Gateway (${server.gatewayType || 'envoy'}): ${server.gatewayStatus}`}
+                  >
+                    <Network className="w-3 h-3" />
+                    {server.gatewayType === 'istio' ? 'Istio' : server.gatewayType === 'kgateway' ? 'KGateway' : 'GW'}
+                  </span>
+                )}
+                {/* Prometheus status indicator */}
+                {server.prometheusStatus && (
+                  <span
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                      server.prometheusStatus === 'running'
+                        ? 'bg-orange-500/20 text-orange-400'
+                        : 'bg-gray-500/20 text-gray-400'
+                    }`}
+                    title={`Prometheus: ${server.prometheusStatus}`}
+                  >
+                    <Activity className="w-3 h-3" />
+                    Prom
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  {server.componentType === 'model' && (
+                    <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {server.model}</span>
+                  )}
+                  {server.gpu && server.gpuCount && (
+                    <span className="flex items-center gap-1"><Cpu className="w-3 h-3" /> {server.gpuCount}x {server.gpu}</span>
+                  )}
+                </div>
+                <span className="text-muted-foreground/60">{server.readyReplicas}/{server.replicas} replicas</span>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Pagination */}
@@ -493,7 +813,7 @@ interface LLMModelsProps {
 }
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
-  const { data: models, isLoading } = useDemoData(DEMO_LLM_MODELS)
+  const { models, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useLLMdModels(LLMD_CLUSTERS)
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
@@ -505,6 +825,8 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
         return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Loaded</span>
       case 'downloading':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1"><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Downloading</span>
+      case 'stopped':
+        return <span className="text-xs px-1.5 py-0.5 rounded bg-gray-500/20 text-gray-400">Stopped</span>
       case 'error':
         return <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">Error</span>
       default:
@@ -529,44 +851,53 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
         <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
           {models.filter(m => m.status === 'loaded').length} loaded
         </span>
-        <CardControls limit={limit} onLimitChange={setLimit} />
+        <div className="flex items-center gap-2">
+          <CardControls limit={limit} onLimitChange={setLimit} />
+          <RefreshButton isRefreshing={isRefreshing} isFailed={isFailed} consecutiveFailures={consecutiveFailures} lastRefresh={lastRefresh} onRefresh={refetch} size="sm" />
+        </div>
       </div>
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs mb-4">
         <AlertCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-cyan-400 font-medium">Model Detection</p>
+          <p className="text-cyan-400 font-medium">InferencePool Detection</p>
           <p className="text-muted-foreground">
-            Scans for deployed LLM models across inference servers.
+            Scans for InferencePool resources on llm-d clusters.
           </p>
         </div>
       </div>
 
       {/* Model list */}
       <div className="flex-1 overflow-y-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-muted-foreground border-b border-border/50">
-              <th className="text-left py-2">Model</th>
-              <th className="text-right py-2">Size</th>
-              <th className="text-right py-2">GPU Mem</th>
-              <th className="text-right py-2">Instances</th>
-              <th className="text-right py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedItems.map((model, idx) => (
-              <tr key={idx} className="border-b border-border/30 hover:bg-secondary/30">
-                <td className="py-2 font-medium text-foreground">{model.name}</td>
-                <td className="py-2 text-right text-muted-foreground">{model.size}</td>
-                <td className="py-2 text-right text-muted-foreground">{model.gpuMem}</td>
-                <td className="py-2 text-right text-muted-foreground">{model.instances}</td>
-                <td className="py-2 text-right">{getStatusBadge(model.status)}</td>
+        {paginatedItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+            <Layers className="w-8 h-8 mb-2 opacity-50" />
+            <p className="text-sm">No InferencePools found</p>
+            <p className="text-xs">Scanning vllm-d and platform-eval clusters</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-muted-foreground border-b border-border/50">
+                <th className="text-left py-2">Model</th>
+                <th className="text-left py-2">Namespace</th>
+                <th className="text-left py-2">Cluster</th>
+                <th className="text-right py-2">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedItems.map((model) => (
+                <tr key={model.id} className="border-b border-border/30 hover:bg-secondary/30">
+                  <td className="py-2 font-medium text-foreground truncate max-w-[150px]" title={model.name}>{model.name}</td>
+                  <td className="py-2 text-muted-foreground">{model.namespace}</td>
+                  <td className="py-2 text-muted-foreground">{model.cluster}</td>
+                  <td className="py-2 text-right">{getStatusBadge(model.status)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Pagination */}
@@ -591,11 +922,11 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
 // =============================================================================
 
 const DEMO_ML_JOBS = [
-  { name: 'train-gpt-finetune', framework: 'PyTorch', status: 'running', gpus: 8, progress: 67, eta: '2h 15m' },
-  { name: 'eval-llama-benchmark', framework: 'Ray', status: 'running', gpus: 4, progress: 89, eta: '25m' },
-  { name: 'pretrain-vision-model', framework: 'JAX', status: 'queued', gpus: 16, progress: 0, eta: '-' },
-  { name: 'rlhf-reward-model', framework: 'DeepSpeed', status: 'running', gpus: 8, progress: 34, eta: '5h 45m' },
-  { name: 'inference-optimization', framework: 'TensorRT', status: 'completed', gpus: 2, progress: 100, eta: '-' },
+  { name: 'train-gpt-finetune', framework: 'PyTorch', status: 'running', gpus: 8, progress: 67, eta: '2h 15m', cluster: 'gpu-cluster-1' },
+  { name: 'eval-llama-benchmark', framework: 'Ray', status: 'running', gpus: 4, progress: 89, eta: '25m', cluster: 'gpu-cluster-1' },
+  { name: 'pretrain-vision-model', framework: 'JAX', status: 'queued', gpus: 16, progress: 0, eta: '-', cluster: 'us-east-1' },
+  { name: 'rlhf-reward-model', framework: 'DeepSpeed', status: 'running', gpus: 8, progress: 34, eta: '5h 45m', cluster: 'us-west-2' },
+  { name: 'inference-optimization', framework: 'TensorRT', status: 'completed', gpus: 2, progress: 100, eta: '-', cluster: 'eu-central-1' },
 ]
 
 const DEMO_NOTEBOOKS = [
@@ -611,10 +942,50 @@ interface MLJobsProps {
 
 export function MLJobs({ config: _config }: MLJobsProps) {
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
+  const { clusters: allClusters, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('kubestellar-card-filter:ml-jobs')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('kubestellar-card-filter:ml-jobs', JSON.stringify(localClusterFilter))
+  }, [localClusterFilter])
+
+  const toggleClusterFilter = (clusterName: string) => {
+    setLocalClusterFilter(prev => prev.includes(clusterName) ? prev.filter(c => c !== clusterName) : [...prev, clusterName])
+  }
+  const clearClusterFilter = () => setLocalClusterFilter([])
+
+  const availableClustersForFilter = useMemo(() => {
+    const reachable = allClusters.filter(c => c.reachable !== false)
+    if (isAllClustersSelected) return reachable
+    return reachable.filter(c => globalSelectedClusters.includes(c.name))
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected])
+
+  const filteredJobs = useMemo(() => {
+    if (localClusterFilter.length === 0) return jobs
+    return jobs.filter(j => localClusterFilter.includes(j.cluster))
+  }, [jobs, localClusterFilter])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(jobs, effectivePerPage)
+  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(filteredJobs, effectivePerPage)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -645,10 +1016,47 @@ export function MLJobs({ config: _config }: MLJobsProps) {
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-          {jobs.filter(j => j.status === 'running').length} running
-        </span>
-        <CardControls limit={limit} onLimitChange={setLimit} />
+        <div className="flex items-center gap-2">
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClustersForFilter.length}
+            </span>
+          )}
+          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+            {filteredJobs.filter(j => j.status === 'running').length} running
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {availableClustersForFilter.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button onClick={clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
+                    {availableClustersForFilter.map(cluster => (
+                      <button key={cluster.name} onClick={() => toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <CardControls limit={limit} onLimitChange={setLimit} />
+          <RefreshButton isRefreshing={isRefreshing} isFailed={isFailed} consecutiveFailures={consecutiveFailures} lastRefresh={lastRefresh} onRefresh={refetch} size="sm" />
+        </div>
       </div>
 
       {/* Integration notice */}

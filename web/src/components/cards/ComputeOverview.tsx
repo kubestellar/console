@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
-import { Cpu, MemoryStick, Zap, Server, Box } from 'lucide-react'
+import { Cpu, MemoryStick, Zap, Server, Box, Filter, ChevronDown } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatMemoryStat } from '../../lib/formatStats'
+import { useChartFilters } from '../../lib/cards'
 
 export function ComputeOverview() {
   const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
@@ -12,17 +13,42 @@ export function ComputeOverview() {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
 
-  // Filter clusters by selection
-  const filteredClusters = useMemo(() => {
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'compute-overview',
+  })
+
+  // Filter clusters by global selection first
+  const globalFilteredClusters = useMemo(() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
   }, [clusters, selectedClusters, isAllClustersSelected])
 
+  // Apply local cluster filter
+  const filteredClusters = useMemo(() => {
+    if (localClusterFilter.length === 0) return globalFilteredClusters
+    return globalFilteredClusters.filter(c => localClusterFilter.includes(c.name))
+  }, [globalFilteredClusters, localClusterFilter])
+
   // Filter GPU nodes by selection
   const filteredGPUNodes = useMemo(() => {
-    if (isAllClustersSelected) return gpuNodes
-    return gpuNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-  }, [gpuNodes, selectedClusters, isAllClustersSelected])
+    let result = gpuNodes
+    if (!isAllClustersSelected) {
+      result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+    }
+    if (localClusterFilter.length > 0) {
+      result = result.filter(n => localClusterFilter.some(c => n.cluster.startsWith(c)))
+    }
+    return result
+  }, [gpuNodes, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   // Calculate compute stats
   const stats = useMemo(() => {
@@ -71,25 +97,70 @@ export function ComputeOverview() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Controls */}
+      <div className="flex items-center justify-end mb-4">
         <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-foreground">Compute Overview</span>
-          {hasRealData && (
-            <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded" title="Showing live data from clusters">
-              Live
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
             </span>
           )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
         </div>
-        <RefreshButton
-          isRefreshing={isRefreshing}
-          isFailed={isFailed}
-          consecutiveFailures={consecutiveFailures}
-          lastRefresh={lastRefresh}
-          onRefresh={refetch}
-          size="sm"
-        />
       </div>
 
       {/* Main resources */}

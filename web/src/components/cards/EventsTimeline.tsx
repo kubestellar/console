@@ -9,7 +9,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { useEvents, useClusters } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
@@ -84,7 +85,7 @@ export function EventsTimeline() {
     isFailed,
     consecutiveFailures,
     lastRefresh
-  } = useEvents(undefined, undefined, 100)
+  } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && events.length === 0
@@ -150,9 +151,6 @@ export function EventsTimeline() {
     return result
   }, [events, selectedClusters, isAllClustersSelected, clusterInfoMap, localClusterFilter])
 
-  // Check if we have real data (events with timestamps)
-  const hasRealData = filteredEvents.length > 0 && filteredEvents.some(e => e.lastSeen || e.firstSeen)
-
   // Get time range config
   const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]
 
@@ -181,93 +179,84 @@ export function EventsTimeline() {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Controls - single row: Time Range → Cluster Filter → Refresh */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Events Timeline</span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
               {filteredClusterCount}/{availableClustersForFilter.length}
             </span>
           )}
-          {hasRealData && (
-            <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-              Live
-            </span>
-          )}
         </div>
-        <RefreshButton
-          isRefreshing={isRefreshing}
-          isFailed={isFailed}
-          consecutiveFailures={consecutiveFailures}
-          lastRefresh={lastRefresh}
-          onRefresh={() => refetch()}
-        />
-      </div>
-
-      {/* Filter controls */}
-      <div className="flex items-center gap-2 mb-3">
-        {/* Time Range Filter */}
-        <div className="flex items-center gap-1">
-          <Clock className="w-3 h-3 text-muted-foreground" />
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground cursor-pointer"
-            title="Select time range"
-          >
-            {TIME_RANGE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Cluster Filter */}
-        {availableClustersForFilter.length > 1 && (
-          <div ref={clusterFilterRef} className="relative">
-            <button
-              onClick={() => setShowClusterFilter(!showClusterFilter)}
-              className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                localClusterFilter.length > 0
-                  ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-              }`}
-              title="Filter by cluster"
+        <div className="flex items-center gap-2">
+          {/* Time Range Filter */}
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-muted-foreground" />
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              className="px-2 py-1 text-xs rounded-lg bg-secondary border border-border text-foreground cursor-pointer"
+              title="Select time range"
             >
-              <Filter className="w-3 h-3" />
-              <span>{localClusterFilter.length > 0 ? `${localClusterFilter.length} clusters` : 'All clusters'}</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
+              {TIME_RANGE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
 
-            {showClusterFilter && (
-              <div className="absolute top-full left-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                <div className="p-1">
-                  <button
-                    onClick={() => setLocalClusterFilter([])}
-                    className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                      localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                    }`}
-                  >
-                    All clusters
-                  </button>
-                  {availableClustersForFilter.map(cluster => (
+          {/* Cluster Filter */}
+          {availableClustersForFilter.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
                     <button
-                      key={cluster.name}
-                      onClick={() => toggleClusterFilter(cluster.name)}
+                      onClick={() => setLocalClusterFilter([])}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
                     >
-                      {cluster.name}
+                      All clusters
                     </button>
-                  ))}
+                    {availableClustersForFilter.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={() => refetch()}
+          />
+        </div>
       </div>
 
       {/* Stats row */}

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Download, CheckCircle2, XCircle, Search, AlertCircle, ExternalLink, Globe } from 'lucide-react'
+import { CheckCircle2, XCircle, Search, AlertCircle, ExternalLink, Globe } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import type { ServiceImport, ServiceImportType } from '../../types/mcs'
@@ -120,11 +120,7 @@ export function ServiceImports({ config: _config }: ServiceImportsProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Download className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-medium text-muted-foreground">Service Imports</span>
-        </div>
+      <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-1">
           <a
             href="https://github.com/kubernetes-sigs/mcs-api"

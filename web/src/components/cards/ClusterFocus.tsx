@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Server, Activity, Box, Cpu, HardDrive, Network, AlertTriangle } from 'lucide-react'
-import { useClusters, useGPUNodes, usePodIssues, useDeploymentIssues } from '../../hooks/useMCP'
+import { Activity, Box, Cpu, HardDrive, Network, AlertTriangle } from 'lucide-react'
+import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -16,8 +17,8 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const selectedCluster = config?.cluster
   const { clusters: allClusters, isLoading: clustersLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
-  const { issues: podIssues } = usePodIssues(selectedCluster)
-  const { issues: deploymentIssues } = useDeploymentIssues(selectedCluster)
+  const { issues: podIssues } = useCachedPodIssues(selectedCluster)
+  const { issues: deploymentIssues } = useCachedDeploymentIssues(selectedCluster)
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
   const {
@@ -80,11 +81,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   if (!clusterName) {
     return (
       <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-muted-foreground">Cluster Focus</span>
-          </div>
+        <div className="flex items-center justify-end mb-4">
           <select
             value={internalCluster}
             onChange={(e) => setInternalCluster(e.target.value)}
@@ -108,7 +105,6 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Server className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-foreground">{clusterName}</span>
           <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>

@@ -116,10 +116,10 @@ const CARD_CATALOG = {
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },
     { type: 'prow_status', title: 'Prow Status', description: 'Prow controller health and job queue metrics', visualization: 'status' },
     { type: 'prow_history', title: 'Prow History', description: 'Recent Prow job runs with pass/fail trends', visualization: 'events' },
-    { type: 'llm_inference', title: 'LLM Inference', description: 'vLLM, LLM-d, and TGI inference server status', visualization: 'status' },
-    { type: 'llm_models', title: 'LLM Models', description: 'Deployed language models with memory and GPU allocation', visualization: 'table' },
+    { type: 'llm_inference', title: 'llm-d inference', description: 'vLLM, llm-d, and TGI inference server status', visualization: 'status' },
+    { type: 'llm_models', title: 'llm-d models', description: 'Deployed language models with memory and GPU allocation', visualization: 'table' },
     { type: 'ml_jobs', title: 'ML Training Jobs', description: 'Kubeflow, Ray, or custom ML training job status', visualization: 'table' },
-    { type: 'ml_notebooks', title: 'Jupyter Notebooks', description: 'Running Jupyter notebook servers and resource usage', visualization: 'table' },
+    { type: 'ml_notebooks', title: 'ML Notebooks', description: 'Running Jupyter notebook servers and resource usage', visualization: 'table' },
   ],
   'Arcade': [
     { type: 'kube_man', title: 'Kube-Man', description: 'Classic Pac-Man arcade game - eat dots and avoid ghosts in the cluster maze', visualization: 'status' },
@@ -1143,18 +1143,6 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
             </span>
             <div className="flex-1" />
             <div className="flex items-center gap-2">
-              {totalAvailable > 0 && selectedBrowseCards.size !== totalAvailable && (
-                <button
-                  onClick={() => {
-                    const newSelected = new Set(selectedBrowseCards)
-                    uniqueAvailableTypes.forEach(type => newSelected.add(type))
-                    setSelectedBrowseCards(newSelected)
-                  }}
-                  className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
-                >
-                  Select All ({totalAvailable})
-                </button>
-              )}
               {selectedBrowseCards.size > 0 && (
                 <>
                   <button

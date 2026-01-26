@@ -75,6 +75,7 @@ export function NetworkUtils() {
 
   const pingIntervalRef = useRef<number | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const isPingingRef = useRef(false) // Ref to track pinging state for stable callback
 
   // Update network info
   useEffect(() => {
@@ -172,7 +173,9 @@ export function NetworkUtils() {
 
   // Ping all saved hosts
   const pingAllHosts = useCallback(async () => {
-    if (isPinging) return
+    // Use ref for guard to prevent callback reference from changing
+    if (isPingingRef.current) return
+    isPingingRef.current = true
     setIsPinging(true)
 
     const pingHosts = savedHosts.filter(h => h.type === 'ping')
@@ -188,8 +191,9 @@ export function NetworkUtils() {
       })
     }
 
+    isPingingRef.current = false
     setIsPinging(false)
-  }, [savedHosts, pingHost, isPinging])
+  }, [savedHosts, pingHost]) // Removed isPinging from deps - use ref instead
 
   // Save ping interval to localStorage
   useEffect(() => {

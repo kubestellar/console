@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink } from 'lucide-react'
+import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { isClusterUnreachable, isClusterLoading } from '../utils'
@@ -53,9 +53,6 @@ export const ClusterGrid = memo(function ClusterGrid({
         // Show refreshing state when manual refresh is in progress (works for all clusters including unreachable)
         const refreshing = cluster.refreshing === true
 
-        // Determine status: initialLoading > unreachable > refreshing > healthy
-        const status = initialLoading ? 'loading' : unreachable ? 'warning' : 'healthy'
-
         // Use cached distribution if available, otherwise detect from name/server/namespaces/user
         const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
           detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
@@ -92,12 +89,19 @@ export const ClusterGrid = memo(function ClusterGrid({
             </div>
             <div className="flex items-start justify-between mb-4 relative z-10">
               <div className="flex items-center gap-3">
-                {unreachable ? (
+                {/* Status icon: loading spinner, yellow wifi for unreachable, orange alert for unhealthy, green check for healthy */}
+                {initialLoading ? (
+                  <StatusIndicator status="loading" size="lg" showLabel={false} />
+                ) : unreachable ? (
                   <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center" title="Offline - check network connection">
                     <WifiOff className="w-4 h-4 text-yellow-400" />
                   </div>
+                ) : cluster.healthy === false ? (
+                  <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center" title="Unhealthy - cluster has issues">
+                    <AlertCircle className="w-4 h-4 text-orange-400" />
+                  </div>
                 ) : (
-                  <StatusIndicator status={status} size="lg" showLabel={false} />
+                  <StatusIndicator status="healthy" size="lg" showLabel={false} />
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -152,22 +156,22 @@ export const ClusterGrid = memo(function ClusterGrid({
                     <Star className="w-3.5 h-3.5 fill-current" />
                   </span>
                 )}
-                {refreshing && !unreachable && (
-                  <span
-                    className="flex items-center px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400"
-                    title="Refreshing cluster data..."
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  </span>
-                )}
-                {unreachable && onRefreshCluster && (
+                {/* Always show refresh button when handler is available */}
+                {onRefreshCluster && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       onRefreshCluster(cluster.name)
                     }}
-                    className="flex items-center px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors"
-                    title="Retry connection"
+                    disabled={refreshing}
+                    className={`flex items-center px-1.5 py-0.5 rounded transition-colors ${
+                      refreshing
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : unreachable
+                        ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                        : 'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    }`}
+                    title={refreshing ? 'Refreshing...' : unreachable ? 'Retry connection' : 'Refresh cluster data'}
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
                   </button>

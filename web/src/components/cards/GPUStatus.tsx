@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Cpu, Activity, ChevronRight } from 'lucide-react'
+import { Activity, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -8,6 +8,7 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useChartFilters } from '../../lib/cards'
 
 interface GPUStatusProps {
   config?: Record<string, unknown>
@@ -35,6 +36,19 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
 
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'gpu-status',
+  })
+
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
 
@@ -50,17 +64,20 @@ export function GPUStatus({ config }: GPUStatusProps) {
     return Array.from(types).sort()
   }, [rawNodes])
 
-  // Filter nodes by global cluster selection and GPU type
+  // Filter nodes by global cluster selection, local filter, and GPU type
   const filteredNodes = useMemo(() => {
     let result = rawNodes
     if (!isAllClustersSelected) {
       result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
     }
+    if (localClusterFilter.length > 0) {
+      result = result.filter(n => localClusterFilter.some(c => n.cluster.startsWith(c)))
+    }
     if (selectedGpuType !== 'all') {
       result = result.filter(n => n.gpuType.toLowerCase().includes(selectedGpuType.toLowerCase()))
     }
     return result
-  }, [rawNodes, selectedClusters, isAllClustersSelected, selectedGpuType])
+  }, [rawNodes, selectedClusters, isAllClustersSelected, selectedGpuType, localClusterFilter])
 
   // Calculate cluster-level stats from filtered nodes
   const clusterStatsList = useMemo(() => {
@@ -133,8 +150,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   if (filteredNodes.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">GPU Status</span>
+        <div className="flex items-center justify-end mb-3">
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={isFailed}
@@ -159,13 +175,63 @@ export function GPUStatus({ config }: GPUStatusProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Cpu className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">GPU Status</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
             {totalItems} clusters
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}

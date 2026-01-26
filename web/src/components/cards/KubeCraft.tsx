@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CardWrapper } from './CardWrapper'
+
 import { Save, Download, Trash2, Grid, Sun, Moon } from 'lucide-react'
 
 // Game constants
@@ -308,7 +308,7 @@ export function KubeCraft() {
   }, [render])
 
   return (
-    <CardWrapper cardType="kube_craft" title="KubeCraft">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Block palette */}
         <div className="flex flex-wrap gap-1 justify-center">
@@ -398,6 +398,6 @@ export function KubeCraft() {
 
         <p className="text-xs text-muted-foreground">Click and drag to build! Select a block type above.</p>
       </div>
-    </CardWrapper>
+    </div>
   )
 }

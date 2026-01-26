@@ -574,11 +574,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   return (
     <div className="h-full flex flex-col min-h-0 relative">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Namespace Monitor</span>
-        </div>
+      <div className="flex items-center justify-end mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           {/* Changes indicator */}
           <button

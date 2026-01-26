@@ -262,3 +262,79 @@ export function updateAccessibilitySetting<K extends keyof AccessibilitySettings
   saveAccessibilitySettings(updated)
   return updated
 }
+
+/**
+ * Severity levels for alerts, issues, and risk assessment
+ * Ordered from most to least severe
+ */
+export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'none'
+
+/**
+ * Standard severity color configuration
+ * Use these for consistent severity-based styling across all cards
+ */
+export const SEVERITY_COLORS: Record<SeverityLevel, {
+  text: string
+  bg: string
+  border: string
+  solid: string
+}> = {
+  critical: {
+    text: 'text-red-500',
+    bg: 'bg-red-600/20',
+    border: 'border-red-600/30',
+    solid: 'bg-red-600',
+  },
+  high: {
+    text: 'text-red-400',
+    bg: 'bg-red-500/20',
+    border: 'border-red-500/30',
+    solid: 'bg-red-500',
+  },
+  medium: {
+    text: 'text-orange-400',
+    bg: 'bg-orange-500/20',
+    border: 'border-orange-500/30',
+    solid: 'bg-orange-500',
+  },
+  low: {
+    text: 'text-yellow-400',
+    bg: 'bg-yellow-500/20',
+    border: 'border-yellow-500/30',
+    solid: 'bg-yellow-500',
+  },
+  info: {
+    text: 'text-blue-400',
+    bg: 'bg-blue-500/20',
+    border: 'border-blue-500/30',
+    solid: 'bg-blue-500',
+  },
+  none: {
+    text: 'text-gray-400',
+    bg: 'bg-gray-500/20',
+    border: 'border-gray-500/30',
+    solid: 'bg-gray-500',
+  },
+}
+
+/**
+ * Get severity colors for a given severity level
+ * Returns a safe default if severity is not recognized
+ */
+export function getSeverityColors(severity: string): typeof SEVERITY_COLORS['info'] {
+  const normalized = severity.toLowerCase().trim()
+
+  if (normalized in SEVERITY_COLORS) {
+    return SEVERITY_COLORS[normalized as SeverityLevel]
+  }
+
+  // Map common aliases
+  if (['error', 'danger', 'fatal', 'emergency'].includes(normalized)) {
+    return SEVERITY_COLORS.critical
+  }
+  if (['warn', 'warning', 'caution'].includes(normalized)) {
+    return SEVERITY_COLORS.medium
+  }
+
+  return SEVERITY_COLORS.info
+}

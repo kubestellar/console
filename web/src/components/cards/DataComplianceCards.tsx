@@ -5,7 +5,7 @@
  * - Cert-Manager: TLS certificate lifecycle management
  */
 
-import { Key, Lock, Shield, RefreshCw, CheckCircle2, AlertTriangle, Clock, ExternalLink, AlertCircle } from 'lucide-react'
+import { Shield, CheckCircle2, AlertTriangle, Clock, AlertCircle } from 'lucide-react'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -24,29 +24,14 @@ export function VaultSecrets({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Key className="w-4 h-4 text-yellow-400" />
-          <span>HashiCorp Vault</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-            demoData.status === 'unsealed'
-              ? 'bg-green-500/20 text-green-400'
-              : 'bg-red-500/20 text-red-400'
-          }`}>
-            {demoData.status}
-          </span>
-          <a
-            href="https://www.vaultproject.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-yellow-400"
-            title="Vault Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
+      <div className="flex items-center justify-end">
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          demoData.status === 'unsealed'
+            ? 'bg-green-500/20 text-green-400'
+            : 'bg-red-500/20 text-red-400'
+        }`}>
+          {demoData.status}
+        </span>
       </div>
 
       {/* Integration notice */}
@@ -114,23 +99,8 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <RefreshCw className="w-4 h-4 text-blue-400" />
-          <span>External Secrets</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-green-400 font-medium">{syncRate}% synced</span>
-          <a
-            href="https://external-secrets.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-blue-400"
-            title="External Secrets Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
+      <div className="flex items-center justify-end">
+        <span className="text-xs text-green-400 font-medium">{syncRate}% synced</span>
       </div>
 
       {/* Integration notice */}
@@ -207,25 +177,10 @@ export function CertManager({ config: _config }: CardConfig) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Lock className="w-4 h-4 text-green-400" />
-          <span>Cert-Manager</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {demoData.renewals24h} renewals/24h
-          </span>
-          <a
-            href="https://cert-manager.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-green-400"
-            title="Cert-Manager Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
+      <div className="flex items-center justify-end">
+        <span className="text-xs text-muted-foreground">
+          {demoData.renewals24h} renewals/24h
+        </span>
       </div>
 
       {/* Integration notice */}

@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { GitBranch, CheckCircle, RefreshCw, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
+import { CheckCircle, RefreshCw, AlertTriangle, ExternalLink, AlertCircle, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useChartFilters } from '../../lib/cards'
 
 interface ArgoCDSyncStatusProps {
   config?: Record<string, unknown>
@@ -22,10 +23,27 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
   const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'argocd-sync-status',
+  })
+
   const filteredClusterCount = useMemo(() => {
-    if (isAllClustersSelected) return clusters.length
-    return selectedClusters.length
-  }, [clusters, selectedClusters, isAllClustersSelected])
+    let count = isAllClustersSelected ? clusters.length : selectedClusters.length
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      count = localClusterFilter.length
+    }
+    return count
+  }, [clusters, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   const stats = useMemo(() => {
     return getMockSyncStatusData(filteredClusterCount)
@@ -55,12 +73,60 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">Sync Status</span>
-        </div>
+      <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-1">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <a
             href="https://argo-cd.readthedocs.io/"
             target="_blank"

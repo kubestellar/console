@@ -1,5 +1,6 @@
 import { AlertTriangle, AlertCircle, Clock, Scale, ChevronRight, Search, Filter, ChevronDown, Server } from 'lucide-react'
-import { useDeploymentIssues, DeploymentIssue } from '../../hooks/useMCP'
+import { useCachedDeploymentIssues } from '../../hooks/useCachedData'
+import type { DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
@@ -40,7 +41,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
     isFailed,
     consecutiveFailures,
     lastRefresh
-  } = useDeploymentIssues(clusterConfig, namespaceConfig)
+  } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawIssues.length === 0
@@ -124,8 +125,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   if (issues.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card content-loaded">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">Deployment Issues</span>
+        <div className="flex items-center justify-end mb-3">
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={isFailed}
@@ -162,9 +162,8 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Deployment Issues</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400" title={`${rawIssues.length} deployments with issues`}>
-            {rawIssues.length}
+            {rawIssues.length} issues
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -175,7 +174,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}
-          {availableClustersForFilter.length > 1 && (
+          {availableClustersForFilter.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
                 onClick={() => setShowClusterFilter(!showClusterFilter)}

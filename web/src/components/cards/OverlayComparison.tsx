@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { GitCompare, Plus, Minus, Edit, Layers, ChevronRight } from 'lucide-react'
+import { Plus, Minus, Edit, Layers, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -107,8 +107,6 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <GitCompare className="w-4 h-4 text-fuchsia-400" />
-          <span className="text-sm font-medium text-muted-foreground">Overlay Comparison</span>
           {diffs.length > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-400">
               {diffs.length} changes

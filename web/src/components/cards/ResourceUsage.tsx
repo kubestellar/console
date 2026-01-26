@@ -1,43 +1,32 @@
 import { useMemo } from 'react'
 import { Gauge } from '../charts'
-import { Cpu, MemoryStick, AlertCircle } from 'lucide-react'
+import { Cpu, MemoryStick, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
+import { useChartFilters } from '../../lib/cards'
 import { RefreshButton } from '../ui/RefreshIndicator'
 
 export function ResourceUsage() {
-  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
-  // Use persisted cluster selection - survives global filter changes
+
+  // Use chart filters hook for cluster filtering
   const {
-    selectedCluster,
-    setSelectedCluster,
-    availableClusters: filteredClusterNames,
-    isOutsideGlobalFilter,
-  } = usePersistedClusterSelection({
-    storageKey: 'resource-usage',
-    defaultValue: '',
-    allowAll: false,
-  })
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    filteredClusters: clusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({ storageKey: 'resource-usage' })
 
-  // Get full cluster data matching available cluster names
-  const filteredClusters = useMemo(() => {
-    const availableNames = new Set(filteredClusterNames.map(c => c.name))
-    return allClusters.filter(c => availableNames.has(c.name))
-  }, [allClusters, filteredClusterNames])
-
-  // Apply local cluster selection for calculations
-  const clusters = useMemo(() => {
-    if (!selectedCluster) return filteredClusters
-    return filteredClusters.filter(c => c.name === selectedCluster)
-  }, [filteredClusters, selectedCluster])
-
+  // Filter GPU nodes to match the currently displayed clusters
   const gpuNodes = useMemo(() => {
-    // Filter GPU nodes to match the currently displayed clusters
-    const clusterNames = clusters.map(c => c.name)
-    return allGPUNodes.filter(n => clusterNames.includes(n.cluster.split('/')[0]))
+    const clusterNames = new Set(clusters.map(c => c.name))
+    return allGPUNodes.filter(n => clusterNames.has(n.cluster.split('/')[0]))
   }, [allGPUNodes, clusters])
 
   // Calculate totals from real cluster data
@@ -79,14 +68,67 @@ export function ResourceUsage() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Controls - single row: Cluster count → Cluster Filter → Refresh */}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-muted-foreground">
-          Resource Usage
-        </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
-          </span>
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {clusters.length}/{availableClusters.length}
+            </span>
+          )}
+          {localClusterFilter.length === 0 && (
+            <span className="text-xs text-muted-foreground">
+              {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Cluster Filter */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={isFailed}
@@ -96,32 +138,6 @@ export function ResourceUsage() {
             size="sm"
           />
         </div>
-      </div>
-
-      {/* Cluster Filter */}
-      <div className="mb-4">
-        <select
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className={`w-full px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
-            isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
-          }`}
-        >
-          <option value="">All clusters</option>
-          {filteredClusterNames.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-          {/* Show the selected cluster even if outside global filter */}
-          {isOutsideGlobalFilter && selectedCluster && (
-            <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
-          )}
-        </select>
-        {isOutsideGlobalFilter && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
-            <AlertCircle className="w-3 h-3" />
-            <span>Selection outside global filter</span>
-          </div>
-        )}
       </div>
 
       <div

@@ -7,6 +7,7 @@ import { Pagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { useCardData } from '../../lib/cards'
+import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
 
 type SortByOption = 'severity' | 'name' | 'cluster'
 
@@ -29,16 +30,9 @@ const getIssueIcon = (issue: string): { icon: typeof Shield; tooltip: string } =
 }
 
 const getSeverityColor = (severity: string) => {
-  switch (severity) {
-    case 'high':
-      return { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', badge: 'bg-red-500/20' }
-    case 'medium':
-      return { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', badge: 'bg-orange-500/20' }
-    case 'low':
-      return { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', badge: 'bg-yellow-500/20' }
-    default:
-      return { bg: 'bg-gray-500/10', border: 'border-gray-500/20', text: 'text-gray-400', badge: 'bg-gray-500/20' }
-  }
+  const level = (severity.toLowerCase() as SeverityLevel) || 'none'
+  const colors = SEVERITY_COLORS[level] || SEVERITY_COLORS.none
+  return { bg: colors.bg, border: colors.border, text: colors.text, badge: colors.bg }
 }
 
 export function SecurityIssues({ config }: SecurityIssuesProps) {
@@ -142,8 +136,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   if (issues.length === 0) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">Security Issues</span>
+        <div className="flex items-center justify-end mb-3">
           <RefreshButton
             isRefreshing={isRefreshing}
             lastRefresh={lastRefresh}
@@ -167,7 +160,6 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Security Issues</span>
           {highCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${highCount} high severity security issues requiring immediate attention`}>
               {highCount} high
@@ -187,7 +179,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}
-          {availableClustersForFilter.length > 1 && (
+          {availableClustersForFilter.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
                 onClick={() => setShowClusterFilter(!showClusterFilter)}

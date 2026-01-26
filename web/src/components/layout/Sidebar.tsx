@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff } from 'lucide-react'
+import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
 import { SidebarCustomizer } from './SidebarCustomizer'
@@ -13,12 +13,18 @@ import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendation
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 
 export function Sidebar() {
-  const { config, toggleCollapsed } = useSidebarConfig()
+  const { config, toggleCollapsed, reorderItems } = useSidebarConfig()
   const { clusters } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Drag and drop state
+  const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null)
+  const [dragSection, setDragSection] = useState<'primary' | 'secondary' | null>(null)
+  const dragCounter = useRef(0)
 
   // Cluster status counts
   const healthyClusters = clusters.filter((c) => c.healthy === true && c.reachable !== false).length
@@ -69,27 +75,121 @@ export function Sidebar() {
     navigate('/')
   }
 
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent, itemId: string, section: 'primary' | 'secondary') => {
+    setDraggedItem(itemId)
+    setDragSection(section)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', itemId)
+    // Add some delay for visual feedback
+    requestAnimationFrame(() => {
+      const target = e.target as HTMLElement
+      target.style.opacity = '0.5'
+    })
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    const target = e.target as HTMLElement
+    target.style.opacity = '1'
+    setDraggedItem(null)
+    setDragOverItem(null)
+    setDragSection(null)
+    dragCounter.current = 0
+  }
+
+  const handleDragEnter = (e: React.DragEvent, itemId: string) => {
+    e.preventDefault()
+    dragCounter.current++
+    if (itemId !== draggedItem) {
+      setDragOverItem(itemId)
+    }
+  }
+
+  const handleDragLeave = () => {
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setDragOverItem(null)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = (e: React.DragEvent, targetId: string, section: 'primary' | 'secondary') => {
+    e.preventDefault()
+    dragCounter.current = 0
+
+    if (!draggedItem || draggedItem === targetId || section !== dragSection) {
+      setDraggedItem(null)
+      setDragOverItem(null)
+      setDragSection(null)
+      return
+    }
+
+    const items = section === 'primary' ? [...config.primaryNav] : [...config.secondaryNav]
+    const draggedIndex = items.findIndex(item => item.id === draggedItem)
+    const targetIndex = items.findIndex(item => item.id === targetId)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    // Remove dragged item and insert at target position
+    const [removed] = items.splice(draggedIndex, 1)
+    items.splice(targetIndex, 0, removed)
+
+    // Update order numbers
+    const reorderedItems = items.map((item, index) => ({ ...item, order: index }))
+    reorderItems(reorderedItems, section)
+
+    setDraggedItem(null)
+    setDragOverItem(null)
+    setDragSection(null)
+  }
+
   const renderIcon = (iconName: string, className?: string) => {
     const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
     return IconComponent ? <IconComponent className={className} /> : null
   }
 
-  const renderNavItem = (item: SidebarItem) => (
-    <NavLink
+  const renderNavItem = (item: SidebarItem, section: 'primary' | 'secondary') => (
+    <div
       key={item.id}
-      to={item.href}
-      className={({ isActive }) => cn(
-        'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
-        isActive
-          ? 'bg-purple-500/20 text-purple-400'
-          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
-        config.collapsed ? 'justify-center p-3' : 'px-3 py-2'
+      draggable={!config.collapsed}
+      onDragStart={(e) => handleDragStart(e, item.id, section)}
+      onDragEnd={handleDragEnd}
+      onDragEnter={(e) => handleDragEnter(e, item.id)}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={(e) => handleDrop(e, item.id, section)}
+      className={cn(
+        'group relative transition-all duration-150',
+        dragOverItem === item.id && dragSection === section && 'before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:bg-purple-500 before:rounded-full',
+        draggedItem === item.id && 'opacity-50'
       )}
-      title={config.collapsed ? item.name : undefined}
     >
-      {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
-      {!config.collapsed && item.name}
-    </NavLink>
+      <NavLink
+        to={item.href}
+        className={({ isActive }) => cn(
+          'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
+          isActive
+            ? 'bg-purple-500/20 text-purple-400'
+            : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
+          config.collapsed ? 'justify-center p-3' : 'px-3 py-2',
+          !config.collapsed && 'pl-2'
+        )}
+        title={config.collapsed ? item.name : undefined}
+      >
+        {!config.collapsed && (
+          <GripVertical
+            className="w-3.5 h-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
+            onMouseDown={(e) => e.stopPropagation()}
+          />
+        )}
+        {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
+        {!config.collapsed && item.name}
+      </NavLink>
+    </div>
   )
 
   return (
@@ -108,7 +208,7 @@ export function Sidebar() {
 
         {/* Primary navigation */}
         <nav className="space-y-1">
-          {config.primaryNav.map(renderNavItem)}
+          {config.primaryNav.map(item => renderNavItem(item, 'primary'))}
         </nav>
 
         {/* Divider */}
@@ -116,7 +216,7 @@ export function Sidebar() {
 
         {/* Secondary navigation */}
         <nav className="space-y-1">
-          {config.secondaryNav.map(renderNavItem)}
+          {config.secondaryNav.map(item => renderNavItem(item, 'secondary'))}
         </nav>
 
         {/* Snoozed card swaps */}

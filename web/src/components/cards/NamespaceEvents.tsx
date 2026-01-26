@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Activity, AlertTriangle, Info, AlertCircle, Clock, Search, ChevronRight } from 'lucide-react'
+import { AlertTriangle, Info, AlertCircle, Clock, Search, ChevronRight } from 'lucide-react'
 import { useClusters, useWarningEvents, useNamespaces } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -168,11 +168,9 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">Namespace Events</span>
           {totalItems > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-              {totalItems}
+              {totalItems} events
             </span>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CardWrapper } from './CardWrapper'
+
 import { Play, RotateCcw, Pause, Trophy, Heart, Star } from 'lucide-react'
 
 // Game constants
@@ -480,7 +480,7 @@ export function PodBrothers() {
   }
 
   return (
-    <CardWrapper cardType="pod_brothers" title="Pod Brothers">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Stats bar */}
         <div className="flex items-center justify-between w-full max-w-[480px] text-sm">
@@ -581,6 +581,6 @@ export function PodBrothers() {
           </div>
         )}
       </div>
-    </CardWrapper>
+    </div>
   )
 }

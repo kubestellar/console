@@ -77,8 +77,9 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   const [clusterDataCache, setClusterDataCache] = useState<Map<string, ClusterDataCache>>(new Map())
 
   // Get filtered clusters based on global filter
+  // Include all clusters (don't filter by reachability - show clusters with unknown status)
   const filteredClusters = useMemo(() => {
-    let result = clusters.filter(c => c.reachable !== false)
+    let result = clusters
     if (!isAllClustersSelected) {
       result = result.filter(c => selectedClusters.includes(c.name))
     }
@@ -510,10 +511,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       {/* Header */}
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Resource Tree</span>
           {selectedCluster && (
-            <span className="text-xs text-muted-foreground">• {selectedCluster}</span>
+            <span className="text-xs text-muted-foreground">{selectedCluster}</span>
           )}
         </div>
         <RefreshButton

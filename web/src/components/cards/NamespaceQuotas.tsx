@@ -551,8 +551,6 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Gauge className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm font-medium text-muted-foreground">Namespace Quotas</span>
           {isFetchingData && (
             <Loader2 className="w-3 h-3 text-yellow-400 animate-spin" />
           )}

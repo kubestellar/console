@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api, BackendUnavailableError } from '../lib/api'
+import { api, isBackendUnavailable } from '../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from './useLocalAgent'
 import { getDemoMode, useDemoMode } from './useDemoMode'
+import { kubectlProxy } from '../lib/kubectlProxy'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
 const REFRESH_INTERVAL_MS = 120000
@@ -98,6 +99,16 @@ export interface PodInfo {
   labels?: Record<string, string>
   annotations?: Record<string, string>
   containers?: ContainerInfo[]
+  // Resource requests (sum of all containers)
+  cpuRequestMillis?: number    // CPU request in millicores
+  cpuLimitMillis?: number      // CPU limit in millicores
+  memoryRequestBytes?: number  // Memory request in bytes
+  memoryLimitBytes?: number    // Memory limit in bytes
+  gpuRequest?: number          // Total GPU request
+  // Actual resource usage (from metrics API, if available)
+  cpuUsageMillis?: number      // Actual CPU usage in millicores
+  memoryUsageBytes?: number    // Actual memory usage in bytes
+  metricsAvailable?: boolean   // Whether metrics API data is available
 }
 
 export interface PodIssue {
@@ -593,9 +604,47 @@ function updateClusterCache(updates: Partial<ClusterCache>) {
   notifyClusterSubscribers()
 }
 
+// Share metrics between clusters pointing to the same server
+// This handles cases where short-named aliases (e.g., "prow") point to the same
+// server as full-context clusters that have metric data
+function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): ClusterInfo[] {
+  // Build a map of server -> clusters with metrics
+  const serverMetrics = new Map<string, ClusterInfo>()
+
+  // First pass: find clusters that have metrics for each server
+  for (const cluster of clusters) {
+    if (!cluster.server) continue
+    const existing = serverMetrics.get(cluster.server)
+    // Prefer cluster with cpuCores data
+    if (!existing || (cluster.cpuCores && !existing.cpuCores)) {
+      serverMetrics.set(cluster.server, cluster)
+    }
+  }
+
+  // Second pass: copy metrics to clusters missing them
+  return clusters.map(cluster => {
+    if (!cluster.server) return cluster
+    // Skip if cluster already has metrics
+    if (cluster.cpuCores) return cluster
+
+    const source = serverMetrics.get(cluster.server)
+    if (!source || !source.cpuCores) return cluster
+
+    // Copy metrics from the source cluster
+    return {
+      ...cluster,
+      cpuCores: source.cpuCores,
+      memoryBytes: cluster.memoryBytes ?? source.memoryBytes,
+      memoryGB: cluster.memoryGB ?? source.memoryGB,
+      storageBytes: cluster.storageBytes ?? source.storageBytes,
+      storageGB: cluster.storageGB ?? source.storageGB,
+    }
+  })
+}
+
 // Update a single cluster in the shared cache (debounced to prevent flashing)
 function updateSingleClusterInCache(clusterName: string, updates: Partial<ClusterInfo>) {
-  const updatedClusters = clusterCache.clusters.map(c => {
+  let updatedClusters = clusterCache.clusters.map(c => {
     if (c.name !== clusterName) return c
 
     // Merge updates with existing data
@@ -618,12 +667,27 @@ function updateSingleClusterInCache(clusterName: string, updates: Partial<Cluste
         }
       }
 
+      // Don't set reachable to false if we have valid cached node data
+      // This prevents transient health check failures from immediately marking clusters as offline
+      if (key === 'reachable' && value === false) {
+        const hasValidCachedData = typeof c.nodeCount === 'number' && c.nodeCount > 0
+        if (hasValidCachedData) {
+          return // Skip, keep cluster reachable since we have valid data
+        }
+      }
+
       // Apply the update
       (merged as Record<string, unknown>)[key] = value
     })
 
     return merged
   })
+
+  // Share metrics between clusters pointing to the same server
+  // This ensures aliases (like "prow") get metrics from their full-context counterparts
+  if (updates.cpuCores || updates.memoryGB || updates.storageGB) {
+    updatedClusters = shareMetricsBetweenSameServerClusters(updatedClusters)
+  }
 
   clusterCache = {
     ...clusterCache,
@@ -666,9 +730,9 @@ const WS_BACKEND_RECHECK_INTERVAL = 120000 // Re-check backend every 2 minutes
 
 // Connect to shared WebSocket for kubeconfig change notifications
 function connectSharedWebSocket() {
-  // Don't attempt WebSocket if not authenticated
+  // Don't attempt WebSocket if not authenticated or using demo token
   const token = localStorage.getItem('token')
-  if (!token) {
+  if (!token || token === 'demo-token') {
     return
   }
 
@@ -680,7 +744,13 @@ function connectSharedWebSocket() {
 
   const now = Date.now()
 
-  // Skip if backend is known unavailable (with periodic re-check)
+  // Skip if backend is known unavailable from HTTP checks (prevents initial WebSocket error)
+  if (isBackendUnavailable()) {
+    wsBackendUnavailable = true
+    return
+  }
+
+  // Skip if backend WebSocket is known unavailable (with periodic re-check)
   if (wsBackendUnavailable && now - wsLastBackendCheck < WS_BACKEND_RECHECK_INTERVAL) {
     return
   }
@@ -704,13 +774,11 @@ function connectSharedWebSocket() {
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
-      console.log('[WebSocket] Connection opened, sending auth...')
       // Send authentication message - backend requires this within 5 seconds
       const token = localStorage.getItem('token')
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
-        console.warn('[WebSocket] No auth token available, connection will be rejected')
         ws.close()
         return
       }
@@ -720,49 +788,35 @@ function connectSharedWebSocket() {
       try {
         const msg = JSON.parse(event.data)
         if (msg.type === 'authenticated') {
-          console.log('[WebSocket] Authenticated successfully')
           sharedWebSocket.ws = ws
           sharedWebSocket.connecting = false
           sharedWebSocket.reconnectAttempts = 0 // Reset on successful connection
           wsBackendUnavailable = false // Backend is available
         } else if (msg.type === 'error') {
-          console.error('[WebSocket] Server error:', msg.data?.message || 'Unknown error')
           ws.close()
         } else if (msg.type === 'kubeconfig_changed') {
-          console.log('[WebSocket] Kubeconfig changed, refreshing clusters...')
           // Reset failure tracking on fresh kubeconfig
           clusterCache.consecutiveFailures = 0
           clusterCache.isFailed = false
           fullFetchClusters()
         }
-      } catch (e) {
-        console.error('[WebSocket] Failed to parse message:', e)
+      } catch {
+        // Silently ignore parse errors
       }
     }
 
     ws.onerror = () => {
-      // Only log on first attempt to avoid console spam
-      if (sharedWebSocket.reconnectAttempts === 0) {
-        console.warn('[WebSocket] Connection error - backend may be unavailable')
-      }
+      // Silently handle connection errors - backend unavailability is expected in demo mode
       sharedWebSocket.connecting = false
     }
 
-    ws.onclose = (event) => {
-      // Only log meaningful closes, not connection failures
-      if (event.code !== 1006) {
-        console.log('[WebSocket] Connection closed:', event.code, event.reason)
-      }
+    ws.onclose = () => {
       sharedWebSocket.ws = null
       sharedWebSocket.connecting = false
 
-      // Exponential backoff for reconnection
+      // Exponential backoff for reconnection (silent)
       if (sharedWebSocket.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
         const delay = RECONNECT_BASE_DELAY_MS * Math.pow(2, sharedWebSocket.reconnectAttempts)
-        // Only log reconnect attempts on first few tries
-        if (sharedWebSocket.reconnectAttempts < 2) {
-          console.log(`[WebSocket] Will attempt reconnect in ${delay}ms (attempt ${sharedWebSocket.reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`)
-        }
 
         // Clear any existing reconnect timeout
         if (sharedWebSocket.reconnectTimeout) {
@@ -775,8 +829,8 @@ function connectSharedWebSocket() {
         }, delay)
       }
     }
-  } catch (e) {
-    console.error('[WebSocket] Failed to create connection:', e)
+  } catch {
+    // Silently handle connection creation errors
     sharedWebSocket.connecting = false
   }
 }
@@ -799,6 +853,7 @@ function cleanupSharedWebSocket() {
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     initialFetchStarted = false
+    healthCheckFailures = 0 // Reset health check failures on HMR
     cleanupSharedWebSocket()
     clusterCache = {
       clusters: [],
@@ -855,22 +910,77 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   return null
 }
 
-// Fetch health for a single cluster from backend (with short timeout for progressive loading)
-async function fetchSingleClusterHealth(clusterName: string): Promise<ClusterHealth | null> {
+// Track consecutive health check failures to avoid spamming
+let healthCheckFailures = 0
+const MAX_HEALTH_CHECK_FAILURES = 3
+
+// Per-cluster failure tracking to prevent transient errors from showing "-"
+// Track first failure timestamp - only mark unreachable after 5 minutes of consecutive failures
+const clusterHealthFailureStart = new Map<string, number>() // timestamp of first failure
+const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes before marking as offline
+
+// Helper to check if cluster has been failing long enough to mark offline
+function shouldMarkOffline(clusterName: string): boolean {
+  const firstFailure = clusterHealthFailureStart.get(clusterName)
+  if (!firstFailure) return false
+  return Date.now() - firstFailure >= OFFLINE_THRESHOLD_MS
+}
+
+// Helper to record a failure (only sets timestamp if not already set)
+function recordClusterFailure(clusterName: string): void {
+  if (!clusterHealthFailureStart.has(clusterName)) {
+    clusterHealthFailureStart.set(clusterName, Date.now())
+  }
+}
+
+// Helper to clear failure tracking on success
+function clearClusterFailure(clusterName: string): void {
+  clusterHealthFailureStart.delete(clusterName)
+}
+
+// Fetch health for a single cluster - uses WebSocket kubectl proxy when agent available
+async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: string): Promise<ClusterHealth | null> {
+  // Try local agent's WebSocket kubectl proxy first (if available)
+  // This bypasses the backend failure counter since WebSocket is independent
+  if (!isAgentUnavailable()) {
+    try {
+      // Use kubectlProxy to get health via kubectl commands over WebSocket
+      // Use the kubectl context (full path) if provided, otherwise fall back to name
+      const health = await kubectlProxy.getClusterHealth(kubectlContext || clusterName)
+      if (health) {
+        reportAgentDataSuccess()
+        // Return health data even if cluster is unreachable (has errorMessage)
+        return health
+      }
+    } catch {
+      // Agent WebSocket failed, will try backend below
+    }
+  }
+
+  // Skip backend if we've had too many consecutive failures or using demo token
+  const token = localStorage.getItem('token')
+  if (healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES || !token || token === 'demo-token') {
+    return null
+  }
+
+  // Fall back to backend API
   try {
-    const token = localStorage.getItem('token')
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
       {
-        signal: AbortSignal.timeout(10000), // 10 second timeout per cluster (increased for slow networks)
+        signal: AbortSignal.timeout(10000),
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       }
     )
     if (response.ok) {
+      healthCheckFailures = 0 // Reset on success
       return await response.json()
     }
+    // Non-OK response (e.g., 500) - track failure
+    healthCheckFailures++
   } catch {
-    // Timeout or error - cluster is likely unreachable
+    // Timeout or error - track failure
+    healthCheckFailures++
   }
   return null
 }
@@ -891,11 +1001,41 @@ function detectDistributionFromNamespaces(namespaces: string[]): string | undefi
   return undefined
 }
 
+// Track backend API failures for distribution detection separately
+let distributionDetectionFailures = 0
+const MAX_DISTRIBUTION_FAILURES = 2
+
 // Detect cluster distribution by checking for system namespaces
-// Tries multiple endpoints as fallbacks: pods -> events -> deployments
-async function detectClusterDistribution(clusterName: string): Promise<{ distribution?: string; namespaces?: string[] }> {
+// Uses kubectl via WebSocket when available, falls back to backend API
+async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
+  // Try kubectl via WebSocket first (if agent available)
+  // Use the kubectl context (full path) if provided, otherwise fall back to name
+  if (!isAgentUnavailable()) {
+    try {
+      const response = await kubectlProxy.exec(
+        ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
+        { context: kubectlContext || clusterName, timeout: 10000 }
+      )
+      if (response.exitCode === 0 && response.output) {
+        const namespaces = response.output.split(/\s+/).filter(Boolean)
+        const distribution = detectDistributionFromNamespaces(namespaces)
+        return { distribution, namespaces }
+      }
+    } catch {
+      // WebSocket failed, continue to backend fallback
+    }
+  }
+
   const token = localStorage.getItem('token')
-  const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
+
+  // Skip backend if using demo token, too many failures, or health checks failing
+  if (!token || token === 'demo-token' ||
+      distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES ||
+      healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES) {
+    return {}
+  }
+
+  const headers: Record<string, string> = { 'Authorization': `Bearer ${token}` }
 
   // Helper to extract namespaces from API response
   const extractNamespaces = (items: Array<{ namespace?: string }>): string[] => {
@@ -911,12 +1051,19 @@ async function detectClusterDistribution(clusterName: string): Promise<{ distrib
       { signal: AbortSignal.timeout(5000), headers }
     )
     if (response.ok) {
+      distributionDetectionFailures = 0 // Reset on success
       const data = await response.json()
       const namespaces = extractNamespaces(data.pods || [])
       const distribution = detectDistributionFromNamespaces(namespaces)
       if (distribution) return { distribution, namespaces }
+    } else {
+      distributionDetectionFailures++
+      if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
     }
-  } catch { /* continue to fallback */ }
+  } catch {
+    distributionDetectionFailures++
+    if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
+  }
 
   // Fallback: try events endpoint
   try {
@@ -925,12 +1072,19 @@ async function detectClusterDistribution(clusterName: string): Promise<{ distrib
       { signal: AbortSignal.timeout(5000), headers }
     )
     if (response.ok) {
+      distributionDetectionFailures = 0
       const data = await response.json()
       const namespaces = extractNamespaces(data.events || [])
       const distribution = detectDistributionFromNamespaces(namespaces)
       if (distribution) return { distribution, namespaces }
+    } else {
+      distributionDetectionFailures++
+      if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
     }
-  } catch { /* continue to fallback */ }
+  } catch {
+    distributionDetectionFailures++
+    if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
+  }
 
   // Fallback: try deployments endpoint
   try {
@@ -939,66 +1093,154 @@ async function detectClusterDistribution(clusterName: string): Promise<{ distrib
       { signal: AbortSignal.timeout(5000), headers }
     )
     if (response.ok) {
+      distributionDetectionFailures = 0
       const data = await response.json()
       const namespaces = extractNamespaces(data.deployments || [])
       const distribution = detectDistributionFromNamespaces(namespaces)
       if (distribution) return { distribution, namespaces }
+    } else {
+      distributionDetectionFailures++
     }
-  } catch { /* ignore */ }
+  } catch {
+    distributionDetectionFailures++
+  }
 
   return {}
 }
 
-// Progressive health check - fetches health for each cluster individually
-// Updates shared cache so all consumers see the same data
-async function checkHealthProgressively(clusterList: ClusterInfo[]) {
-  // Fire off all health checks in parallel - each updates shared cache when done
-  clusterList.forEach(async (cluster) => {
-    const health = await fetchSingleClusterHealth(cluster.name)
+// Process a single cluster's health check
+async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
+    // Use cluster.context for kubectl commands (full context path), cluster.name for cache key
+    console.log(`[HealthCheck] Processing: name="${cluster.name}", context="${cluster.context}"`)
+    const health = await fetchSingleClusterHealth(cluster.name, cluster.context)
 
     if (health) {
-      // Health data available - cluster is reachable if we got a response
-      // Only mark unreachable if explicitly set to false by backend
-      const isReachable = health.reachable !== false
+      console.log(`[HealthCheck] Result for "${cluster.name}": healthy=${health.healthy}, nodeCount=${health.nodeCount}`)
+      // Health data available - check if cluster is reachable
+      // If we have node data, the cluster is definitely reachable (we connected successfully)
+      const hasValidData = health.nodeCount !== undefined && health.nodeCount > 0
+      const isReachable = hasValidData || health.reachable !== false
 
-      // Detect cluster distribution (async, non-blocking update)
-      detectClusterDistribution(cluster.name).then(({ distribution, namespaces }) => {
-        if (distribution || namespaces) {
-          updateSingleClusterInCache(cluster.name, { distribution, namespaces })
+      if (isReachable) {
+        // Cluster is reachable - clear failure tracking and update with fresh data
+        clearClusterFailure(cluster.name)
+
+        // Detect cluster distribution (async, non-blocking update)
+        // Use cluster.context for kubectl commands
+        detectClusterDistribution(cluster.name, cluster.context).then(({ distribution, namespaces }) => {
+          if (distribution || namespaces) {
+            updateSingleClusterInCache(cluster.name, { distribution, namespaces })
+          }
+        })
+
+        updateSingleClusterInCache(cluster.name, {
+          // If we have nodes, consider healthy based on actual node readiness
+          // healthy: true means all nodes are ready; false means some aren't ready but cluster is reachable
+          healthy: hasValidData ? health.healthy : false,
+          reachable: true,  // We definitely reached the cluster if we have data
+          nodeCount: health.nodeCount,
+          podCount: health.podCount,
+          cpuCores: health.cpuCores,
+          cpuRequestsCores: health.cpuRequestsCores,
+          // Memory/storage metrics
+          memoryBytes: health.memoryBytes,
+          memoryGB: health.memoryGB,
+          memoryRequestsGB: health.memoryRequestsGB,
+          storageBytes: health.storageBytes,
+          storageGB: health.storageGB,
+          pvcCount: health.pvcCount,
+          pvcBoundCount: health.pvcBoundCount,
+          errorType: undefined,
+          errorMessage: undefined,
+          refreshing: false,
+        })
+      } else {
+        // Cluster reported as unreachable - track failure start time
+        recordClusterFailure(cluster.name)
+
+        // Only mark as unreachable after 5 minutes of consecutive failures
+        // This prevents transient network issues from immediately showing "-"
+        if (shouldMarkOffline(cluster.name)) {
+          updateSingleClusterInCache(cluster.name, {
+            healthy: false,
+            reachable: false,
+            errorType: health.errorType,
+            errorMessage: health.errorMessage,
+            refreshing: false,
+          })
+        } else {
+          // Transient failure - keep existing cached values, just clear refreshing
+          updateSingleClusterInCache(cluster.name, {
+            refreshing: false,
+          })
         }
-      })
-
-      updateSingleClusterInCache(cluster.name, {
-        healthy: health.healthy,
-        reachable: isReachable,
-        nodeCount: health.nodeCount,
-        podCount: health.podCount,
-        cpuCores: health.cpuCores,
-        cpuRequestsCores: health.cpuRequestsCores,
-        // Memory/storage metrics
-        memoryBytes: health.memoryBytes,
-        memoryGB: health.memoryGB,
-        memoryRequestsGB: health.memoryRequestsGB,
-        storageBytes: health.storageBytes,
-        storageGB: health.storageGB,
-        pvcCount: health.pvcCount,
-        pvcBoundCount: health.pvcBoundCount,
-        errorType: health.errorType,
-        errorMessage: health.errorMessage,
-        refreshing: false,
-      })
+      }
     } else {
-      // No health data or timeout - cluster is unreachable
-      updateSingleClusterInCache(cluster.name, {
-        healthy: false,
-        reachable: false,
-        nodeCount: 0,
-        podCount: 0,
-        errorType: 'timeout',
-        refreshing: false,
-      })
+      // No health data - could be backend error or agent unavailable
+      // Track failure start time but don't immediately mark as unreachable
+      recordClusterFailure(cluster.name)
+
+      if (shouldMarkOffline(cluster.name)) {
+        // 5+ minutes of failures - mark as unreachable
+        updateSingleClusterInCache(cluster.name, {
+          healthy: false,
+          reachable: false,
+          errorMessage: 'Unable to connect after 5 minutes',
+          refreshing: false,
+        })
+      } else {
+        // Transient failure - keep existing cached values
+        updateSingleClusterInCache(cluster.name, {
+          refreshing: false,
+        })
+      }
     }
-  })
+}
+
+// Concurrency limit for health checks - rolling concurrency for 100+ clusters
+// Keep at 2 to avoid overwhelming the KKC agent WebSocket connection
+const HEALTH_CHECK_CONCURRENCY = 2
+
+// Progressive health check with rolling concurrency
+// Uses continuous processing: as soon as one finishes, the next starts
+// This is much more efficient than strict batches for large cluster counts
+async function checkHealthProgressively(clusterList: ClusterInfo[]) {
+  if (clusterList.length === 0) return
+
+  const queue = [...clusterList]
+  const inProgress = new Set<string>()
+  let completed = 0
+
+  // Process next cluster from queue
+  const processNext = async (): Promise<void> => {
+    while (queue.length > 0 && inProgress.size < HEALTH_CHECK_CONCURRENCY) {
+      const cluster = queue.shift()!
+      const key = cluster.name
+      inProgress.add(key)
+
+      // Don't await here - let multiple run in parallel
+      processClusterHealth(cluster)
+        .finally(() => {
+          inProgress.delete(key)
+          completed++
+          // Start next one immediately when one finishes
+          if (queue.length > 0) {
+            processNext()
+          }
+        })
+    }
+  }
+
+  // Start initial batch up to concurrency limit
+  const initialBatch = Math.min(HEALTH_CHECK_CONCURRENCY, clusterList.length)
+  for (let i = 0; i < initialBatch; i++) {
+    processNext()
+  }
+
+  // Wait for all to complete (non-blocking check)
+  while (completed < clusterList.length) {
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
 }
 
 // Track if a fetch is in progress to prevent duplicate requests
@@ -1010,7 +1252,6 @@ async function fullFetchClusters() {
   // If a fetch is already in progress, skip this call (deduplication)
   // Check this BEFORE setting isRefreshing to avoid getting stuck
   if (fetchInProgress) {
-    console.log('[fullFetchClusters] Fetch already in progress, skipping')
     return
   }
   fetchInProgress = true
@@ -1020,7 +1261,6 @@ async function fullFetchClusters() {
   const startTime = Date.now()
 
   // Always set isRefreshing first so indicator shows
-  console.log('[fullFetchClusters] Setting isRefreshing=true')
   if (hasCachedData) {
     updateClusterCache({ isRefreshing: true })
   } else {
@@ -1032,10 +1272,8 @@ async function fullFetchClusters() {
     const elapsed = Date.now() - startTime
     const minDuration = MIN_REFRESH_INDICATOR_MS
     if (elapsed < minDuration) {
-      console.log('[fullFetchClusters] Waiting for minimum duration')
       await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
     }
-    console.log('[fullFetchClusters] Setting isRefreshing=false')
     fetchInProgress = false
     updateClusterCache(updates)
   }
@@ -1081,7 +1319,8 @@ async function fullFetchClusters() {
               memoryGB: existing.memoryGB,
               storageGB: existing.storageGB,
               healthy: existing.healthy,
-              reachable: existing.reachable,
+              // If we have node data, cluster is reachable - don't preserve false reachable status
+              reachable: existing.nodeCount > 0 ? true : existing.reachable,
             } : {}),
             refreshing: false, // Keep false during background polling - no visual indicator
           }
@@ -1125,7 +1364,8 @@ async function fullFetchClusters() {
             memoryGB: existing.memoryGB,
             storageGB: existing.storageGB,
             healthy: existing.healthy,
-            reachable: existing.reachable,
+            // If we have node data, cluster is reachable - don't preserve false reachable status
+            reachable: existing.nodeCount > 0 ? true : existing.reachable,
           } : {}),
         }
       }
@@ -1145,17 +1385,16 @@ async function fullFetchClusters() {
     // Check health progressively (non-blocking) - will update each cluster's data including cpuCores
     checkHealthProgressively(data.clusters || [])
   } catch (err) {
-    // Don't show error message for expected failures (backend unavailable or timeout)
-    const isExpectedFailure = err instanceof BackendUnavailableError ||
-      (err instanceof Error && err.message.includes('Request timeout'))
+    // Always fall back gracefully to demo clusters - never show blocking errors
+    // This ensures the UI always has data to display
     const newFailures = clusterCache.consecutiveFailures + 1
     await finishWithMinDuration({
-      error: isExpectedFailure ? null : 'Failed to fetch clusters',
+      error: null, // Never set error - always fall back to demo data gracefully
       clusters: clusterCache.clusters.length > 0 ? clusterCache.clusters : getDemoClusters(),
       isLoading: false,
       isRefreshing: false,
       consecutiveFailures: newFailures,
-      isFailed: isExpectedFailure ? false : newFailures >= 3,
+      isFailed: false, // Don't mark as failed - we have demo data
       lastRefresh: new Date(),
     })
     fetchInProgress = false
@@ -1165,6 +1404,13 @@ async function fullFetchClusters() {
 // Refresh health for a single cluster (exported for use in components)
 // Keeps cached values visible while refreshing - only updates surgically when new data is available
 export async function refreshSingleCluster(clusterName: string): Promise<void> {
+  // Clear failure tracking on manual refresh - user is explicitly requesting fresh data
+  clearClusterFailure(clusterName)
+
+  // Look up the cluster's context for kubectl commands
+  const clusterInfo = clusterCache.clusters.find(c => c.name === clusterName)
+  const kubectlContext = clusterInfo?.context
+
   // Mark the cluster as refreshing immediately (no debounce - user needs to see the spinner)
   clusterCache = {
     ...clusterCache,
@@ -1174,7 +1420,7 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
   }
   notifyClusterSubscribers() // Immediate notification for user feedback
 
-  const health = await fetchSingleClusterHealth(clusterName)
+  const health = await fetchSingleClusterHealth(clusterName, kubectlContext)
 
   if (health) {
     // Health data available - cluster is reachable if we got a response
@@ -1200,14 +1446,25 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
       refreshing: false,
     })
   } else {
-    // No health data or timeout - cluster is unreachable
-    // Keep existing cached values for nodes/pods/cpus, just update reachability status
-    updateSingleClusterInCache(clusterName, {
-      healthy: false,
-      reachable: false,
-      errorType: 'timeout',
-      refreshing: false,
-    })
+    // No health data or timeout - track failure start time
+    recordClusterFailure(clusterName)
+
+    if (shouldMarkOffline(clusterName)) {
+      // 5+ minutes of failures - mark as unreachable
+      updateSingleClusterInCache(clusterName, {
+        healthy: false,
+        reachable: false,
+        errorType: 'timeout',
+        errorMessage: 'Unable to connect after 5 minutes',
+        refreshing: false,
+      })
+    } else {
+      // Transient failure - keep showing previous data
+      // Just clear the refreshing state
+      updateSingleClusterInCache(clusterName, {
+        refreshing: false,
+      })
+    }
   }
 }
 
@@ -1238,8 +1495,9 @@ export function useClusters() {
 
   // Re-fetch when demo mode changes
   useEffect(() => {
-    // Reset fetch flag to allow re-fetching
+    // Reset fetch flag and failure tracking to allow re-fetching
     initialFetchStarted = false
+    healthCheckFailures = 0
     fullFetchClusters()
     // Also refetch GPU nodes
     fetchGPUNodes()
@@ -1289,38 +1547,151 @@ export function useClusters() {
   }
 }
 
-// Hook to get cluster health
+// Hook to get cluster health - uses kubectl proxy for direct cluster access
+// Preserves previous data during transient failures (stale-while-revalidate pattern)
 export function useClusterHealth(cluster?: string) {
+  // Use a ref to store previous good health data for stale-while-revalidate
+  const prevHealthRef = useRef<ClusterHealth | null>(null)
   const [health, setHealth] = useState<ClusterHealth | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Try to get cached data from shared cluster cache on mount
+  const getCachedHealth = useCallback((): ClusterHealth | null => {
+    if (!cluster) return null
+    const cached = clusterCache.clusters.find(c => c.name === cluster)
+    if (cached && cached.nodeCount !== undefined) {
+      return {
+        cluster: cached.name,
+        healthy: cached.healthy ?? false,
+        reachable: cached.reachable ?? true,
+        nodeCount: cached.nodeCount ?? 0,
+        readyNodes: cached.nodeCount ?? 0,
+        podCount: cached.podCount ?? 0,
+        cpuCores: cached.cpuCores,
+        memoryGB: cached.memoryGB,
+        storageGB: cached.storageGB,
+      }
+    }
+    return null
+  }, [cluster])
+
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
     if (getDemoMode()) {
-      setHealth(getDemoHealth(cluster))
+      const demoHealth = getDemoHealth(cluster)
+      prevHealthRef.current = demoHealth
+      setHealth(demoHealth)
       setIsLoading(false)
       setError(null)
       return
     }
 
+    if (!cluster) {
+      setIsLoading(false)
+      return
+    }
+
+    // Set loading but keep displaying previous data (stale-while-revalidate)
     setIsLoading(true)
+
     try {
-      const url = cluster ? `/api/mcp/clusters/${cluster}/health` : '/api/mcp/clusters/health'
-      const { data } = await api.get<ClusterHealth>(url)
-      setHealth(data)
-      setError(null)
+      // Look up the cluster's context for kubectl commands
+      const clusterInfo = clusterCache.clusters.find(c => c.name === cluster)
+      const kubectlContext = clusterInfo?.context
+
+      // Use fetchSingleClusterHealth which tries kubectl proxy first, then falls back to API
+      const data = await fetchSingleClusterHealth(cluster, kubectlContext)
+      if (data) {
+        if (data.reachable !== false) {
+          // Success - clear failure tracking and update health
+          clearClusterFailure(cluster)
+          prevHealthRef.current = data
+          setHealth(data)
+          setError(null)
+        } else {
+          // Cluster reported as unreachable - track failure start time
+          recordClusterFailure(cluster)
+
+          if (shouldMarkOffline(cluster)) {
+            // 5+ minutes of failures - show unreachable status
+            setHealth(data)
+            setError(null)
+          } else {
+            // Transient failure - keep showing previous good data if available
+            if (prevHealthRef.current) {
+              setHealth(prevHealthRef.current)
+            } else {
+              // No previous data - use cached data from shared cache if available
+              const cached = getCachedHealth()
+              if (cached) {
+                setHealth(cached)
+              } else {
+                setHealth(data) // Fall back to showing unreachable
+              }
+            }
+            setError(null)
+          }
+        }
+      } else {
+        // No health data available - track failure start time
+        recordClusterFailure(cluster)
+
+        if (shouldMarkOffline(cluster)) {
+          // 5+ minutes of failures - mark as unreachable
+          setHealth({
+            cluster,
+            healthy: false,
+            reachable: false,
+            nodeCount: 0,
+            readyNodes: 0,
+            podCount: 0,
+            errorMessage: 'Unable to connect after 5 minutes',
+          })
+        } else {
+          // Transient failure - keep showing previous good data
+          if (prevHealthRef.current) {
+            setHealth(prevHealthRef.current)
+          } else {
+            const cached = getCachedHealth()
+            if (cached) {
+              setHealth(cached)
+            }
+            // If no cached data, keep current state (might be null on first load)
+          }
+        }
+        setError(null)
+      }
     } catch (err) {
-      setError('Failed to fetch cluster health')
-      setHealth(getDemoHealth(cluster))
+      // Exception - track failure start time
+      recordClusterFailure(cluster)
+
+      if (shouldMarkOffline(cluster)) {
+        setError('Failed to fetch cluster health')
+        setHealth(getDemoHealth(cluster))
+      } else {
+        // Keep previous data on transient error
+        if (prevHealthRef.current) {
+          setHealth(prevHealthRef.current)
+        }
+        setError(null)
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster])
+  }, [cluster, getCachedHealth])
 
   useEffect(() => {
+    // Try to initialize with cached data immediately
+    const cached = getCachedHealth()
+    if (cached) {
+      prevHealthRef.current = cached
+      setHealth(cached)
+      setIsLoading(false)
+    }
+    // Then fetch fresh data
     refetch()
-  }, [refetch])
+  }, [refetch, getCachedHealth])
 
   return { health, isLoading, error, refetch }
 }
@@ -1391,9 +1762,15 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip backend fetch in demo mode or when backend is unavailable
+    const token = localStorage.getItem('token')
+    if (!token || token === 'demo-token' || isBackendUnavailable()) {
+      setIsLoading(false)
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      console.log('[usePods] Setting isRefreshing=true')
       setIsRefreshing(true)
       const hasCachedData = podsCache && podsCache.key === cacheKey
       if (!hasCachedData) {
@@ -1407,11 +1784,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       const url = `/api/mcp/pods?${params}`
 
       // Use direct fetch to bypass the global circuit breaker
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -1591,7 +1964,6 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      console.log('[usePodIssues] Setting isRefreshing=true')
       // Always set isRefreshing first so indicator shows
       setIsRefreshing(true)
       const hasCachedData = podIssuesCache && podIssuesCache.key === cacheKey
@@ -1687,9 +2059,17 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip backend fetch in demo mode - use cached or demo data
+    const token = localStorage.getItem('token')
+    if (!token || token === 'demo-token') {
+      if (!eventsCache) {
+        setEvents(getDemoEvents())
+      }
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      console.log('[useEvents] Setting isRefreshing=true')
       // Always set isRefreshing first so indicator shows
       setIsRefreshing(true)
       const hasCachedData = eventsCache && eventsCache.key === cacheKey
@@ -1698,7 +2078,6 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       }
     }
     try {
-      console.log('[useEvents] Starting fetch')
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
@@ -1706,17 +2085,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       const url = `/api/mcp/events?${params}`
 
       // Use direct fetch with timeout to prevent hanging
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
       const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
       clearTimeout(timeoutId)
-      console.log('[useEvents] Fetch completed with status:', response.status)
+      // console.log('[useEvents] Fetch completed with status:', response.status)
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -1733,9 +2108,9 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-      console.log('[useEvents] Data updated successfully')
+      // console.log('[useEvents] Data updated successfully')
     } catch (err) {
-      console.log('[useEvents] Caught error:', err)
+      // console.log('[useEvents] Caught error:', err)
       // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
@@ -1744,13 +2119,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         setEvents(getDemoEvents())
       }
     } finally {
-      console.log('[useEvents] Finally block started')
+      // console.log('[useEvents] Finally block started')
       setIsLoading(false)
       // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        console.log('[useEvents] Scheduling isRefreshing=false after 500ms')
+        // console.log('[useEvents] Scheduling isRefreshing=false after 500ms')
         setTimeout(() => {
-          console.log('[useEvents] Setting isRefreshing=false')
+          // console.log('[useEvents] Setting isRefreshing=false')
           setIsRefreshing(false)
         }, MIN_REFRESH_INDICATOR_MS)
       } else {
@@ -1812,7 +2187,6 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      console.log('[useDeploymentIssues] Setting isRefreshing=true')
       // Always set isRefreshing first so indicator shows
       setIsRefreshing(true)
       const hasCachedData = deploymentIssuesCache && deploymentIssuesCache.key === cacheKey
@@ -1923,12 +2297,20 @@ export function useDeployments(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/deployments?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        if (!deploymentsCache) {
+          setDeployments(getDemoDeployments())
+        }
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -2049,7 +2431,6 @@ export function useServices(cluster?: string, namespace?: string) {
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      console.log('[useServices] Setting isRefreshing=true')
       setIsRefreshing(true)
     }
 
@@ -2062,7 +2443,6 @@ export function useServices(cluster?: string, namespace?: string) {
     }
 
     try {
-      console.log('[useServices] Starting fetch, demo mode:', getDemoMode())
       // If demo mode is enabled, use demo data
       if (getDemoMode()) {
         const demoServices = getDemoServices().filter(s =>
@@ -2073,7 +2453,6 @@ export function useServices(cluster?: string, namespace?: string) {
         setLastUpdated(new Date())
         setConsecutiveFailures(0)
         setLastRefresh(new Date())
-        console.log('[useServices] Demo mode - returning from try')
         return
       }
       const params = new URLSearchParams()
@@ -2081,18 +2460,26 @@ export function useServices(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/services?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        const demoServices = getDemoServices().filter(s =>
+          (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+        )
+        setServices(demoServices)
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
       // Use direct fetch with timeout to prevent hanging
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
       const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
       clearTimeout(timeoutId)
-      console.log('[useServices] Fetch completed with status:', response.status)
 
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -2110,9 +2497,7 @@ export function useServices(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-      console.log('[useServices] Data updated successfully')
     } catch (err) {
-      console.log('[useServices] Caught error:', err)
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
@@ -2126,13 +2511,10 @@ export function useServices(cluster?: string, namespace?: string) {
       }
       // Don't clear services on error - keep stale data
     } finally {
-      console.log('[useServices] Finally block started')
       setIsLoading(false)
       // Keep isRefreshing true for minimum time so user can see it, then reset
       if (!silent) {
-        console.log('[useServices] Scheduling isRefreshing=false after 500ms')
         setTimeout(() => {
-          console.log('[useServices] Setting isRefreshing=false')
           setIsRefreshing(false)
         }, MIN_REFRESH_INDICATOR_MS)
       } else {
@@ -2717,7 +3099,6 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
-      console.log('[useWarningEvents] Setting isRefreshing=true')
       // Always set isRefreshing first so indicator shows
       setIsRefreshing(true)
       const hasCachedData = warningEventsCache && warningEventsCache.key === cacheKey
@@ -2732,12 +3113,20 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       params.append('limit', limit.toString())
       const url = `/api/mcp/events/warnings?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        if (!warningEventsCache) {
+          setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
+        }
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -2865,9 +3254,9 @@ async function fetchGPUNodes(cluster?: string) {
     return
   }
 
-  // Skip fetching if not authenticated (prevents errors on login page)
+  // Skip fetching if not authenticated or using demo token
   const token = localStorage.getItem('token')
-  if (!token) {
+  if (!token || token === 'demo-token') {
     updateGPUNodeCache({ isLoading: false, isRefreshing: false })
     return
   }
@@ -3000,12 +3389,17 @@ export function useNodes(cluster?: string) {
       if (cluster) params.append('cluster', cluster)
       const url = `/api/mcp/nodes?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setNodes(getDemoNodes().filter(n => !cluster || n.cluster === cluster))
+        setIsLoading(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -3108,12 +3502,19 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/security-issues?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setIssues(getDemoSecurityIssues())
+        setIsLoading(false)
+        setIsRefreshing(false)
+        setIsUsingDemoData(true)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -3200,12 +3601,18 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/gitops/drifts?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setDrifts(getDemoGitOpsDrifts())
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -4603,12 +5010,18 @@ export function useHelmReleases(cluster?: string) {
       if (cluster) params.append('cluster', cluster)
       const url = `/api/gitops/helm-releases?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        notifyListeners(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -4730,12 +5143,17 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       if (namespace) params.append('namespace', namespace)
       const url = `/api/gitops/helm-history?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -4852,12 +5270,17 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       if (namespace) params.append('namespace', namespace)
       const url = `/api/gitops/helm-values?${params}`
 
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
       // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = localStorage.getItem('token')
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, {
         method: 'GET',
         headers,
@@ -4947,6 +5370,14 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
     } else {
       // No cache - fetch fresh data using direct fetch (bypasses circuit breaker)
       const doFetch = async () => {
+        // Skip API calls when using demo token
+        const token = localStorage.getItem('token')
+        if (!token || token === 'demo-token') {
+          setIsLoading(false)
+          setIsRefreshing(false)
+          return
+        }
+
         setIsLoading(true)
         setIsRefreshing(true)
         try {
@@ -4958,10 +5389,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
 
           // Use direct fetch to bypass the global circuit breaker
           const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-          const token = localStorage.getItem('token')
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`
-          }
+          headers['Authorization'] = `Bearer ${token}`
           const response = await fetch(url, {
             method: 'GET',
             headers,

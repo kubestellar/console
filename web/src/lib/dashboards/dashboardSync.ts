@@ -1,4 +1,4 @@
-import { api, BackendUnavailableError, UnauthenticatedError } from '../api'
+import { api } from '../api'
 import { DashboardCard } from './types'
 
 // ============================================================================
@@ -106,10 +106,8 @@ class DashboardSyncService {
       this.dashboardCache.set(name, dashboard)
       return dashboard
     } catch (err) {
-      if (err instanceof UnauthenticatedError || err instanceof BackendUnavailableError) {
-        return null
-      }
-      console.error('[DashboardSync] Failed to get/create dashboard:', err)
+      // Silently fail - backend unavailability is expected in demo mode
+      // The UI will work with localStorage-only persistence
       return null
     }
   }
@@ -127,10 +125,7 @@ class DashboardSyncService {
       const { data } = await api.get<DashboardWithCards>(`/api/dashboards/${dashboard.id}`)
       return data.cards.map(toFrontendCard)
     } catch (err) {
-      if (err instanceof UnauthenticatedError || err instanceof BackendUnavailableError) {
-        return null
-      }
-      console.error('[DashboardSync] Failed to fetch cards:', err)
+      // Silently fail - backend unavailability is expected in demo mode
       return null
     }
   }
@@ -176,8 +171,8 @@ class DashboardSyncService {
         if (!frontendCardMap.has(backendCard.id)) {
           try {
             await api.delete(`/api/cards/${backendCard.id}`)
-          } catch (err) {
-            console.error('[DashboardSync] Failed to delete card:', err)
+          } catch {
+            // Silently fail - backend may be unavailable
           }
         }
       }
@@ -193,8 +188,8 @@ class DashboardSyncService {
               card_type: card.card_type,
               position: card.position ? { ...card.position, x: 0, y: 0 } : { w: 4, h: 2, x: 0, y: 0 },
             })
-          } catch (err) {
-            console.error('[DashboardSync] Failed to update card:', err)
+          } catch {
+            // Silently fail - backend may be unavailable
           }
         } else {
           // Create new card - but only if ID doesn't start with "default-"
@@ -206,14 +201,14 @@ class DashboardSyncService {
                 config: card.config || {},
                 position: card.position ? { ...card.position, x: 0, y: 0 } : { w: 4, h: 2, x: 0, y: 0 },
               })
-            } catch (err) {
-              console.error('[DashboardSync] Failed to create card:', err)
+            } catch {
+              // Silently fail - backend may be unavailable
             }
           }
         }
       }
-    } catch (err) {
-      console.error('[DashboardSync] Sync failed:', err)
+    } catch {
+      // Silently fail - backend may be unavailable
     } finally {
       this.syncInProgress.delete(storageKey)
     }

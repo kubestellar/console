@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CardWrapper } from './CardWrapper'
+
 import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react'
 
 // Game constants
@@ -511,7 +511,7 @@ export function KubeKart() {
   }
 
   return (
-    <CardWrapper cardType="kube_kart" title="Kube Kart">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Stats bar */}
         <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
@@ -628,6 +628,6 @@ export function KubeKart() {
           </div>
         )}
       </div>
-    </CardWrapper>
+    </div>
   )
 }

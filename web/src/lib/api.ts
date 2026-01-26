@@ -1,7 +1,6 @@
 const API_BASE = ''
 const DEFAULT_TIMEOUT = 5000 // 5 seconds default timeout
 const BACKEND_CHECK_INTERVAL = 30000 // 30 seconds between backend checks when unavailable
-const BACKEND_FAILURE_THRESHOLD = 2 // Consecutive failures before marking unavailable
 
 // Error class for unauthenticated requests
 export class UnauthenticatedError extends Error {
@@ -19,43 +18,122 @@ export class BackendUnavailableError extends Error {
   }
 }
 
-// Backend availability tracking
-let backendFailureCount = 0
+// Backend availability tracking with localStorage persistence
+const BACKEND_STATUS_KEY = 'kkc-backend-status'
 let backendLastCheckTime = 0
-let backendAvailable = true // Assume available initially
+let backendAvailable: boolean | null = null // null = unknown, true = available, false = unavailable
+let backendCheckPromise: Promise<boolean> | null = null
+
+// Initialize from localStorage
+try {
+  const stored = localStorage.getItem(BACKEND_STATUS_KEY)
+  if (stored) {
+    const { available, timestamp } = JSON.parse(stored)
+    // Use cached status if checked within the last 5 minutes
+    if (Date.now() - timestamp < 300000) {
+      backendAvailable = available
+      backendLastCheckTime = timestamp
+    }
+  }
+} catch {
+  // Ignore localStorage errors
+}
+
+/**
+ * Check backend availability - only makes ONE request, all others wait
+ * Caches result in localStorage to avoid repeated checks across page loads
+ * @param forceCheck - If true, ignores cache and always checks (used by login)
+ */
+export async function checkBackendAvailability(forceCheck = false): Promise<boolean> {
+  // If we already know the status and it was checked recently, return it
+  if (!forceCheck && backendAvailable !== null) {
+    const now = Date.now()
+    if (backendAvailable || now - backendLastCheckTime < BACKEND_CHECK_INTERVAL) {
+      return backendAvailable
+    }
+  }
+
+  // If a check is already in progress, wait for it
+  if (backendCheckPromise) {
+    return backendCheckPromise
+  }
+
+  // Start a new check
+  backendCheckPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(2000),
+      })
+      // Backend is available if it responds at all (even 401 unauthorized)
+      // Only 5xx or network errors indicate backend is down
+      backendAvailable = response.status < 500
+      backendLastCheckTime = Date.now()
+      // Cache to localStorage
+      try {
+        localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
+          available: backendAvailable,
+          timestamp: backendLastCheckTime,
+        }))
+      } catch { /* ignore */ }
+      return backendAvailable
+    } catch {
+      backendAvailable = false
+      backendLastCheckTime = Date.now()
+      // Cache to localStorage
+      try {
+        localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
+          available: false,
+          timestamp: backendLastCheckTime,
+        }))
+      } catch { /* ignore */ }
+      return false
+    } finally {
+      backendCheckPromise = null
+    }
+  })()
+
+  return backendCheckPromise
+}
 
 function markBackendFailure(): void {
-  backendFailureCount++
-  if (backendFailureCount >= BACKEND_FAILURE_THRESHOLD && backendAvailable) {
-    backendAvailable = false
-    backendLastCheckTime = Date.now()
-    console.log('[API] Backend marked as unavailable after consecutive failures')
-  }
+  backendAvailable = false
+  backendLastCheckTime = Date.now()
+  try {
+    localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
+      available: false,
+      timestamp: backendLastCheckTime,
+    }))
+  } catch { /* ignore */ }
 }
 
 function markBackendSuccess(): void {
-  if (!backendAvailable) {
-    console.log('[API] Backend connection restored')
-  }
-  backendFailureCount = 0
   backendAvailable = true
+  backendLastCheckTime = Date.now()
+  try {
+    localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
+      available: true,
+      timestamp: backendLastCheckTime,
+    }))
+  } catch { /* ignore */ }
 }
 
 /**
  * Check if the backend is known to be unavailable.
- * If unavailable, only allow checks periodically to see if it's back.
+ * Returns true if backend is definitely unavailable (checked recently and failed).
+ * Returns false if backend is available or status is unknown.
  */
 export function isBackendUnavailable(): boolean {
-  if (backendAvailable) return false
+  if (backendAvailable === null) return false // Unknown - allow first request
+  if (backendAvailable) return false // Available
 
-  // Allow a check if enough time has passed
+  // Check if enough time has passed for a recheck
   const now = Date.now()
   if (now - backendLastCheckTime >= BACKEND_CHECK_INTERVAL) {
-    backendLastCheckTime = now
-    return false // Allow this request through to check if backend is back
+    return false // Allow a recheck
   }
 
-  return true
+  return true // Known unavailable
 }
 
 class ApiClient {
@@ -71,7 +149,9 @@ class ApiClient {
   }
 
   private hasToken(): boolean {
-    return !!localStorage.getItem('token')
+    const token = localStorage.getItem('token')
+    // Demo token doesn't count as a real token for backend API calls
+    return !!token && token !== 'demo-token'
   }
 
   private createAbortController(timeout: number): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {
@@ -86,8 +166,9 @@ class ApiClient {
       throw new UnauthenticatedError()
     }
 
-    // Skip if backend is known to be unavailable
-    if (isBackendUnavailable()) {
+    // Check backend availability - waits for single health check on first load
+    const available = await checkBackendAvailability()
+    if (!available) {
       throw new BackendUnavailableError()
     }
 
@@ -104,11 +185,10 @@ class ApiClient {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '')
-        if (response.status === 401) {
-          console.warn('[API] Unauthorized - token may be expired')
+        // 5xx errors from Vite proxy indicate backend is down (proxy can't connect)
+        if (response.status >= 500) {
+          markBackendFailure()
         }
-        // Note: 5xx errors don't mark backend unavailable - the backend IS responding,
-        // just with an error for that specific endpoint. Only network failures count.
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -129,8 +209,9 @@ class ApiClient {
   }
 
   async post<T = any>(path: string, body?: any, options?: { timeout?: number }): Promise<{ data: T }> {
-    // Skip if backend is known to be unavailable
-    if (isBackendUnavailable()) {
+    // Check backend availability
+    const available = await checkBackendAvailability()
+    if (!available) {
       throw new BackendUnavailableError()
     }
 
@@ -146,6 +227,9 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        if (response.status >= 500) {
+          markBackendFailure()
+        }
         throw new Error(`API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -165,8 +249,9 @@ class ApiClient {
   }
 
   async put<T = any>(path: string, body?: any, options?: { timeout?: number }): Promise<{ data: T }> {
-    // Skip if backend is known to be unavailable
-    if (isBackendUnavailable()) {
+    // Check backend availability
+    const available = await checkBackendAvailability()
+    if (!available) {
       throw new BackendUnavailableError()
     }
 
@@ -182,6 +267,9 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        if (response.status >= 500) {
+          markBackendFailure()
+        }
         throw new Error(`API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -201,8 +289,9 @@ class ApiClient {
   }
 
   async delete(path: string, options?: { timeout?: number }): Promise<void> {
-    // Skip if backend is known to be unavailable
-    if (isBackendUnavailable()) {
+    // Check backend availability
+    const available = await checkBackendAvailability()
+    if (!available) {
       throw new BackendUnavailableError()
     }
 
@@ -217,6 +306,9 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        if (response.status >= 500) {
+          markBackendFailure()
+        }
         throw new Error(`API error: ${response.status}`)
       }
       markBackendSuccess()

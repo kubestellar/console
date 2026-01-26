@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { GitBranch, CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
@@ -64,11 +64,7 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-orange-400" />
-          <span className="text-sm font-medium text-muted-foreground">App Health</span>
-        </div>
+      <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-1">
           <a
             href="https://argo-cd.readthedocs.io/"

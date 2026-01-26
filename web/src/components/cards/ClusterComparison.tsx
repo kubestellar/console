@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { GitCompare, Server, Activity, Box, Cpu, ChevronRight } from 'lucide-react'
+import { Server, Activity, Box, Cpu, ChevronRight } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -107,11 +107,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <GitCompare className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">Cluster Comparison</span>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <RefreshButton
           isRefreshing={isRefreshing}
           isFailed={isFailed}

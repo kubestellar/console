@@ -357,13 +357,39 @@ export const DEMO_DATA_CARDS = new Set([
   'external_secrets',
   'cert_manager',
   // Workload detection cards - demo until tools are detected
+  // Note: prow_jobs, prow_status, prow_history now use real data via useProw hook
+  // Note: llm_inference, llm_models now use real data via useLLMd hook
+  'ml_jobs',
+  'ml_notebooks',
+])
+
+/**
+ * Cards that display live/real-time data streams.
+ * These show a "Live" badge in the title when showing real data (not demo).
+ * Primarily time-series, trend, and event streaming cards.
+ */
+export const LIVE_DATA_CARDS = new Set([
+  // Time-series trend cards
+  'pod_health_trend',
+  'resource_trend',
+  'gpu_usage_trend',
+  // Real-time status cards
+  'cluster_metrics',
+  'events_timeline',
+  'gpu_utilization',
+  // Overview cards with live data
+  'service_status',
+  'storage_overview',
+  'network_overview',
+  'compute_overview',
+  'pvc_status',
+  // Prow CI/CD cards with real data
   'prow_jobs',
   'prow_status',
   'prow_history',
+  // llm-d inference cards with real data
   'llm_inference',
   'llm_models',
-  'ml_jobs',
-  'ml_notebooks',
 ])
 
 /**

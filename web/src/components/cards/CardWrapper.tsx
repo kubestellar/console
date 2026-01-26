@@ -1,12 +1,19 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, createContext, useContext } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
-import { Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown } from 'lucide-react'
+import {
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown,
+  // Card icons
+  AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2,
+} from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { ChatMessage } from './CardChat'
+
+// Minimum duration to show spin animation (ensures at least one full rotation)
+const MIN_SPIN_DURATION = 500
 
 // Format relative time (e.g., "2m ago", "1h ago")
 function formatTimeAgo(date: Date): string {
@@ -61,6 +68,56 @@ export function useCardExpanded() {
   return useContext(CardExpandedContext)
 }
 
+// Stagger mount delays across cards to prevent rendering all at once
+let mountIndex = 0
+const MOUNT_DELAY_BASE = 16 // ~1 frame at 60fps
+const MOUNT_DELAY_INCREMENT = 8 // stagger by half frame increments
+
+/**
+ * Hook for lazy mounting - only renders content when visible in viewport.
+ * This prevents mounting 100+ cards at once when adding many cards.
+ * Also staggers the rendering of visible cards to spread work across frames.
+ */
+function useLazyMount(rootMargin = '100px') {
+  const [isVisible, setIsVisible] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  // Track which mount batch this card is in
+  const mountOrderRef = useRef<number>(-1)
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+
+    // If already visible, no need to observe
+    if (isVisible) return
+
+    // Assign mount order on first effect
+    if (mountOrderRef.current === -1) {
+      mountOrderRef.current = mountIndex++
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // Stagger the visibility change to spread work across frames
+          const delay = MOUNT_DELAY_BASE + (mountOrderRef.current % 20) * MOUNT_DELAY_INCREMENT
+          setTimeout(() => {
+            setIsVisible(true)
+          }, delay)
+          // Stop observing immediately - we don't unmount on scroll away
+          observer.disconnect()
+        }
+      },
+      { rootMargin }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [isVisible, rootMargin])
+
+  return { ref, isVisible }
+}
+
 /** Flash type for significant data changes */
 export type CardFlashType = 'none' | 'info' | 'warning' | 'error'
 
@@ -68,6 +125,10 @@ interface CardWrapperProps {
   cardId?: string
   cardType: string
   title?: string
+  /** Icon to display next to the card title */
+  icon?: ComponentType<{ className?: string }>
+  /** Icon color class (e.g., 'text-purple-400') - defaults to title color */
+  iconColor?: string
   lastSummary?: string
   pendingSwap?: PendingSwap
   chatMessages?: ChatMessage[]
@@ -78,6 +139,8 @@ interface CardWrapperProps {
   lastUpdated?: Date | null
   /** Whether this card uses demo/mock data instead of real data */
   isDemoData?: boolean
+  /** Whether this card is showing live/real-time data (for time-series/trend cards) */
+  isLive?: boolean
   /** Whether data refresh has failed 3+ times consecutively */
   isFailed?: boolean
   /** Number of consecutive refresh failures */
@@ -179,6 +242,17 @@ const CARD_TITLES: Record<string, string> = {
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
 
+  // Prow CI/CD cards
+  prow_jobs: 'Prow Jobs',
+  prow_status: 'Prow Status',
+  prow_history: 'Prow History',
+
+  // ML/AI workload cards
+  llm_inference: 'llm-d inference',
+  llm_models: 'llm-d models',
+  ml_jobs: 'ML Jobs',
+  ml_notebooks: 'ML Notebooks',
+
   // Games
   sudoku_game: 'Sudoku Game',
   match_game: 'Kube Match',
@@ -195,10 +269,172 @@ const CARD_TITLES: Record<string, string> = {
   node_invaders: 'Node Invaders',
 }
 
+// Card icons with their colors - displayed in the card header next to the title
+const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, color: string }> = {
+  // Core cluster cards
+  cluster_health: { icon: Activity, color: 'text-green-400' },
+  cluster_focus: { icon: Server, color: 'text-purple-400' },
+  cluster_network: { icon: Network, color: 'text-cyan-400' },
+  cluster_comparison: { icon: Layers, color: 'text-blue-400' },
+  cluster_costs: { icon: TrendingUp, color: 'text-emerald-400' },
+  cluster_metrics: { icon: Activity, color: 'text-purple-400' },
+  cluster_locations: { icon: Globe, color: 'text-blue-400' },
+
+  // Workload and deployment cards
+  app_status: { icon: Box, color: 'text-purple-400' },
+  deployment_progress: { icon: Clock, color: 'text-blue-400' },
+  deployment_status: { icon: Box, color: 'text-purple-400' },
+  deployment_issues: { icon: AlertTriangle, color: 'text-orange-400' },
+
+  // Pod and resource cards
+  pod_issues: { icon: AlertTriangle, color: 'text-orange-400' },
+  top_pods: { icon: Box, color: 'text-purple-400' },
+  resource_capacity: { icon: Gauge, color: 'text-blue-400' },
+  resource_usage: { icon: Gauge, color: 'text-purple-400' },
+  pod_health_trend: { icon: Box, color: 'text-purple-400' },
+  resource_trend: { icon: TrendingUp, color: 'text-blue-400' },
+
+  // Events
+  event_stream: { icon: Activity, color: 'text-blue-400' },
+  events_timeline: { icon: Clock, color: 'text-purple-400' },
+
+  // Namespace cards
+  namespace_overview: { icon: Layers, color: 'text-purple-400' },
+  namespace_analysis: { icon: Layers, color: 'text-purple-400' },
+  namespace_rbac: { icon: Shield, color: 'text-yellow-400' },
+  namespace_quotas: { icon: Gauge, color: 'text-yellow-400' },
+  namespace_events: { icon: Activity, color: 'text-blue-400' },
+  namespace_monitor: { icon: Activity, color: 'text-purple-400' },
+
+  // Operator cards
+  operator_status: { icon: Package, color: 'text-purple-400' },
+  operator_subscriptions: { icon: Package, color: 'text-purple-400' },
+  crd_health: { icon: Database, color: 'text-teal-400' },
+
+  // Helm/GitOps cards
+  gitops_drift: { icon: GitBranch, color: 'text-purple-400' },
+  helm_release_status: { icon: Package, color: 'text-blue-400' },
+  helm_releases: { icon: Package, color: 'text-blue-400' },
+  helm_history: { icon: Clock, color: 'text-purple-400' },
+  helm_values_diff: { icon: FileCode, color: 'text-yellow-400' },
+  kustomization_status: { icon: Layers, color: 'text-purple-400' },
+  overlay_comparison: { icon: Layers, color: 'text-blue-400' },
+  chart_versions: { icon: Package, color: 'text-emerald-400' },
+
+  // ArgoCD cards
+  argocd_applications: { icon: GitBranch, color: 'text-orange-400' },
+  argocd_sync_status: { icon: GitBranch, color: 'text-orange-400' },
+  argocd_health: { icon: Activity, color: 'text-orange-400' },
+
+  // GPU cards
+  gpu_overview: { icon: Cpu, color: 'text-green-400' },
+  gpu_status: { icon: Cpu, color: 'text-green-400' },
+  gpu_inventory: { icon: Cpu, color: 'text-green-400' },
+  gpu_workloads: { icon: Cpu, color: 'text-green-400' },
+  gpu_usage_trend: { icon: Cpu, color: 'text-green-400' },
+  gpu_utilization: { icon: Cpu, color: 'text-green-400' },
+
+  // Security and RBAC
+  security_issues: { icon: Shield, color: 'text-red-400' },
+  rbac_overview: { icon: Shield, color: 'text-yellow-400' },
+  policy_violations: { icon: AlertTriangle, color: 'text-red-400' },
+  opa_policies: { icon: Shield, color: 'text-purple-400' },
+  kyverno_policies: { icon: Shield, color: 'text-blue-400' },
+  alert_rules: { icon: AlertCircle, color: 'text-orange-400' },
+  active_alerts: { icon: AlertTriangle, color: 'text-red-400' },
+
+  // Storage
+  pvc_status: { icon: HardDrive, color: 'text-blue-400' },
+  storage_overview: { icon: Database, color: 'text-purple-400' },
+
+  // Network
+  network_overview: { icon: Network, color: 'text-cyan-400' },
+  service_status: { icon: Server, color: 'text-purple-400' },
+  service_topology: { icon: Network, color: 'text-blue-400' },
+  service_exports: { icon: Server, color: 'text-green-400' },
+  service_imports: { icon: Server, color: 'text-blue-400' },
+  gateway_status: { icon: Network, color: 'text-purple-400' },
+
+  // Compute
+  compute_overview: { icon: Cpu, color: 'text-purple-400' },
+
+  // Other
+  upgrade_status: { icon: TrendingUp, color: 'text-blue-400' },
+  user_management: { icon: Users, color: 'text-purple-400' },
+  github_activity: { icon: Activity, color: 'text-purple-400' },
+  kubectl: { icon: Terminal, color: 'text-green-400' },
+  weather: { icon: Globe, color: 'text-blue-400' },
+  stock_market_ticker: { icon: TrendingUp, color: 'text-green-400' },
+
+  // Klaude AI cards
+  klaude_issues: { icon: Wand2, color: 'text-purple-400' },
+  klaude_kubeconfig_audit: { icon: Wand2, color: 'text-purple-400' },
+  klaude_health_check: { icon: Wand2, color: 'text-purple-400' },
+
+  // Cost cards
+  opencost_overview: { icon: TrendingUp, color: 'text-emerald-400' },
+  kubecost_overview: { icon: TrendingUp, color: 'text-emerald-400' },
+
+  // Compliance and security tools
+  falco_alerts: { icon: AlertTriangle, color: 'text-red-400' },
+  trivy_scan: { icon: Shield, color: 'text-blue-400' },
+  kubescape_scan: { icon: Shield, color: 'text-purple-400' },
+  compliance_score: { icon: Shield, color: 'text-green-400' },
+
+  // Data compliance
+  vault_secrets: { icon: Shield, color: 'text-yellow-400' },
+  external_secrets: { icon: Shield, color: 'text-blue-400' },
+  cert_manager: { icon: Shield, color: 'text-green-400' },
+
+  // Prow CI cards
+  prow_jobs: { icon: Activity, color: 'text-blue-400' },
+  prow_status: { icon: Activity, color: 'text-green-400' },
+  prow_history: { icon: Clock, color: 'text-purple-400' },
+
+  // ML/AI workload cards
+  llm_inference: { icon: Cpu, color: 'text-purple-400' },
+  llm_models: { icon: Database, color: 'text-blue-400' },
+  ml_jobs: { icon: Activity, color: 'text-orange-400' },
+  ml_notebooks: { icon: FileCode, color: 'text-purple-400' },
+
+  // Workload deployment
+  workload_deployment: { icon: Box, color: 'text-blue-400' },
+
+  // Games
+  sudoku_game: { icon: Puzzle, color: 'text-purple-400' },
+  match_game: { icon: Puzzle, color: 'text-purple-400' },
+  solitaire: { icon: Gamepad2, color: 'text-red-400' },
+  checkers: { icon: Crown, color: 'text-amber-400' },
+  game_2048: { icon: Gamepad2, color: 'text-orange-400' },
+  kubedle: { icon: Target, color: 'text-green-400' },
+  pod_sweeper: { icon: Zap, color: 'text-red-400' },
+  container_tetris: { icon: Gamepad2, color: 'text-cyan-400' },
+  flappy_pod: { icon: Bird, color: 'text-yellow-400' },
+  kube_man: { icon: Ghost, color: 'text-yellow-400' },
+  kube_kong: { icon: Gamepad2, color: 'text-red-400' },
+  pod_pitfall: { icon: Rocket, color: 'text-green-400' },
+  node_invaders: { icon: Rocket, color: 'text-purple-400' },
+  pod_brothers: { icon: Gamepad2, color: 'text-red-400' },
+  kube_kart: { icon: Gamepad2, color: 'text-green-400' },
+  kube_pong: { icon: Gamepad2, color: 'text-cyan-400' },
+  kube_snake: { icon: Gamepad2, color: 'text-green-400' },
+  kube_galaga: { icon: Rocket, color: 'text-blue-400' },
+  kube_craft: { icon: Puzzle, color: 'text-brown-400' },
+  kube_chess: { icon: Crown, color: 'text-amber-400' },
+  kube_craft_3d: { icon: Puzzle, color: 'text-green-400' },
+
+  // Utilities
+  iframe_embed: { icon: Globe, color: 'text-blue-400' },
+  network_utils: { icon: Network, color: 'text-cyan-400' },
+  mobile_browser: { icon: Globe, color: 'text-purple-400' },
+}
+
 export function CardWrapper({
   cardId,
   cardType,
   title: customTitle,
+  icon: Icon,
+  iconColor,
   lastSummary,
   pendingSwap,
   chatMessages: externalMessages,
@@ -206,6 +442,7 @@ export function CardWrapper({
   isRefreshing,
   lastUpdated,
   isDemoData,
+  isLive,
   isFailed,
   consecutiveFailures,
   cardWidth,
@@ -224,9 +461,37 @@ export function CardWrapper({
   children,
 }: CardWrapperProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  // Lazy mounting - only render children when card is visible in viewport
+  const { ref: lazyRef, isVisible } = useLazyMount('200px')
   // Track animation key to re-trigger flash animation
   const [flashKey, setFlashKey] = useState(0)
   const prevFlashType = useRef(flashType)
+
+  // Track visual spinning state separately to ensure minimum spin duration
+  const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
+  const spinStartRef = useRef<number | null>(null)
+
+  // Handle minimum spin duration for refresh button
+  useEffect(() => {
+    if (isRefreshing) {
+      setIsVisuallySpinning(true)
+      spinStartRef.current = Date.now()
+    } else if (spinStartRef.current !== null) {
+      const elapsed = Date.now() - spinStartRef.current
+      const remaining = Math.max(0, MIN_SPIN_DURATION - elapsed)
+
+      if (remaining > 0) {
+        const timeout = setTimeout(() => {
+          setIsVisuallySpinning(false)
+          spinStartRef.current = null
+        }, remaining)
+        return () => clearTimeout(timeout)
+      } else {
+        setIsVisuallySpinning(false)
+        spinStartRef.current = null
+      }
+    }
+  }, [isRefreshing])
 
   // Re-trigger animation when flashType changes to a non-none value
   useEffect(() => {
@@ -280,6 +545,11 @@ export function CardWrapper({
 
   const title = CARD_TITLES[cardType] || customTitle || cardType
   const newTitle = pendingSwap?.newTitle || CARD_TITLES[pendingSwap?.newType || ''] || pendingSwap?.newType
+
+  // Get icon from prop or registry
+  const cardIconConfig = CARD_ICONS[cardType]
+  const ResolvedIcon = Icon || cardIconConfig?.icon
+  const resolvedIconColor = iconColor || cardIconConfig?.color || 'text-foreground'
 
   // Countdown timer for pending swap
   useEffect(() => {
@@ -383,6 +653,7 @@ export function CardWrapper({
       <>
         {/* Main card */}
         <div
+          ref={lazyRef}
           key={flashKey}
           data-tour="card"
           className={cn(
@@ -399,6 +670,7 @@ export function CardWrapper({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             {dragHandle}
+            {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4', resolvedIconColor)} />}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
             {/* Demo data indicator - shows if global demo mode is on OR card uses demo data */}
             {(isDemoMode || isDemoData) && (
@@ -407,6 +679,15 @@ export function CardWrapper({
                 title={isDemoMode ? "Demo mode enabled - showing sample data" : "This card displays demo data"}
               >
                 Demo
+              </span>
+            )}
+            {/* Live data indicator - for time-series/trend cards with real data */}
+            {isLive && !isDemoMode && !isDemoData && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
+                title="Showing live data"
+              >
+                Live
               </span>
             )}
             {/* Failure indicator */}
@@ -419,11 +700,11 @@ export function CardWrapper({
               </span>
             )}
             {/* Refresh indicator */}
-            {isRefreshing && !isFailed && (
+            {isVisuallySpinning && !isFailed && (
               <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
             )}
             {/* Last updated indicator */}
-            {!isRefreshing && !isFailed && lastUpdated && (
+            {!isVisuallySpinning && !isFailed && lastUpdated && (
               <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
                 {formatTimeAgo(lastUpdated)}
               </span>
@@ -442,10 +723,10 @@ export function CardWrapper({
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                disabled={isRefreshing}
+                disabled={isRefreshing || isVisuallySpinning}
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
-                  isRefreshing
+                  isVisuallySpinning
                     ? 'text-blue-400 cursor-not-allowed'
                     : isFailed
                     ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
@@ -453,7 +734,7 @@ export function CardWrapper({
                 )}
                 title={isFailed ? `Refresh failed ${consecutiveFailures} times - click to retry` : 'Refresh data'}
               >
-                <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+                <RefreshCw className={cn('w-4 h-4', isVisuallySpinning && 'animate-spin')} />
               </button>
             )}
             <button
@@ -567,9 +848,18 @@ export function CardWrapper({
           </div>
         </div>
 
-        {/* Content - hidden when collapsed */}
+        {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
         {!isCollapsed && (
-          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">{children}</div>
+          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">
+            {(isVisible || isExpanded) ? children : (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                <div className="animate-pulse flex flex-col items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-secondary/50" />
+                  <div className="w-24 h-2 rounded bg-secondary/50" />
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Pending swap notification - hidden when collapsed */}

@@ -171,11 +171,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">User Management</span>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <RefreshButton
           isRefreshing={isRefreshing}
           onRefresh={refetch}

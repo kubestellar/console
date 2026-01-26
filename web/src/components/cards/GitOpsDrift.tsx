@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search, ChevronRight } from 'lucide-react'
-import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
+import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -47,8 +47,8 @@ const driftTypeConfig = {
 
 const severityColors = {
   high: 'border-l-red-500',
-  medium: 'border-l-yellow-500',
-  low: 'border-l-blue-500',
+  medium: 'border-l-orange-500',
+  low: 'border-l-yellow-500',
 }
 
 export function GitOpsDrift({ config }: GitOpsDriftProps) {
@@ -56,11 +56,56 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const namespace = config?.namespace
 
   const { drifts, isLoading: isLoadingHook, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useGitOpsDrifts(cluster, namespace)
+  const { clusters: allClusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
   const [localSearch, setLocalSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('severity')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('kubestellar-card-filter:gitops-drift')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Save cluster filter to localStorage
+  useEffect(() => {
+    localStorage.setItem('kubestellar-card-filter:gitops-drift', JSON.stringify(localClusterFilter))
+  }, [localClusterFilter])
+
+  const toggleClusterFilter = (clusterName: string) => {
+    setLocalClusterFilter(prev => {
+      if (prev.includes(clusterName)) {
+        return prev.filter(c => c !== clusterName)
+      }
+      return [...prev, clusterName]
+    })
+  }
+
+  const clearClusterFilter = () => {
+    setLocalClusterFilter([])
+  }
+
+  // Get available clusters for local filter (respects global filter)
+  const availableClustersForFilter = useMemo(() => {
+    const reachable = allClusters.filter(c => c.reachable !== false)
+    if (isAllClustersSelected) return reachable
+    return reachable.filter(c => selectedClusters.includes(c.name))
+  }, [allClusters, selectedClusters, isAllClustersSelected])
 
   // Only show skeleton when no cached data exists - prevents flickering
   const isLoading = isLoadingHook && drifts.length === 0
@@ -103,6 +148,11 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       )
     }
 
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      result = result.filter(d => localClusterFilter.includes(d.cluster))
+    }
+
     // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
@@ -136,7 +186,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     })
 
     return sorted
-  }, [drifts, cluster, selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter, localSearch, sortBy, sortDirection])
+  }, [drifts, cluster, selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter, localSearch, localClusterFilter, sortBy, sortDirection])
 
   // Apply pagination using usePagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -174,12 +224,12 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">
-            GitOps Drift
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClustersForFilter.length}
+            </span>
+          )}
           {highSeverityCount > 0 && (
             <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
@@ -190,6 +240,51 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
             <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
               {totalDrifts} drift{totalDrifts !== 1 ? 's' : ''}
             </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Cluster Filter */}
+          {availableClustersForFilter.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClustersForFilter.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
           <CardControls
             limit={limit}

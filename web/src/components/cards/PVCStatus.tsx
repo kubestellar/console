@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { HardDrive, CheckCircle, AlertTriangle, Clock, Search, ChevronRight, AlertCircle } from 'lucide-react'
-import { usePVCs, type PVC } from '../../hooks/useMCP'
+import { CheckCircle, AlertTriangle, Clock, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
+import { usePVCs } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useSingleSelectCluster } from '../../lib/cards'
+import { useChartFilters } from '../../lib/cards'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -61,24 +61,49 @@ export function PVCStatus() {
   const { pvcs, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = usePVCs()
   const { drillToPVC } = useDrillDownActions()
 
-  // Use shared single-select cluster hook
+  // Local cluster filter
   const {
-    selectedCluster,
-    setSelectedCluster,
-    availableClusters: filteredClusters,
-    isOutsideGlobalFilter,
-    filtered: filteredPVCs,
-    search: localSearch,
-    setSearch: setLocalSearch,
-  } = useSingleSelectCluster<PVC>(pvcs, {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
     storageKey: 'pvc-status',
-    clusterField: 'cluster',
-    searchFields: ['name', 'namespace', 'cluster', 'storageClass'],
   })
 
+  const [localSearch, setLocalSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
+
+  // Filter PVCs
+  const filteredPVCs = useMemo(() => {
+    let result = pvcs
+
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      result = result.filter(pvc => {
+        const clusterName = pvc.cluster || ''
+        return localClusterFilter.includes(clusterName)
+      })
+    }
+
+    // Apply search filter
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(pvc =>
+        pvc.name.toLowerCase().includes(query) ||
+        pvc.namespace.toLowerCase().includes(query) ||
+        (pvc.cluster?.toLowerCase() || '').includes(query) ||
+        (pvc.storageClass?.toLowerCase() || '').includes(query)
+      )
+    }
+
+    return result
+  }, [pvcs, localClusterFilter, localSearch])
 
   // Sort PVCs
   const sortedPVCs = useMemo(() => {
@@ -125,7 +150,6 @@ export function PVCStatus() {
     failed: filteredPVCs.filter(p => !['Bound', 'Pending'].includes(p.status)).length,
   }), [filteredPVCs])
 
-  const hasRealData = !isLoading && filteredPVCs.length > 0
   const showSkeleton = isLoading && pvcs.length === 0
 
   if (showSkeleton) {
@@ -138,60 +162,76 @@ export function PVCStatus() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Controls */}
+      <div className="flex items-center justify-end mb-4">
         <div className="flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">PVC Status</span>
-          {hasRealData && (
-            <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-              Live
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
             </span>
           )}
-        </div>
-        <CardControls
-          limit={limit}
-          onLimitChange={setLimit}
-          sortBy={sortBy}
-          sortOptions={SORT_OPTIONS}
-          onSortChange={setSortBy}
-          sortDirection={sortDirection}
-          onSortDirectionChange={setSortDirection}
-        />
-        <RefreshButton
-          isRefreshing={isRefreshing}
-          isFailed={isFailed}
-          consecutiveFailures={consecutiveFailures}
-          lastRefresh={lastRefresh}
-          onRefresh={refetch}
-          size="sm"
-        />
-      </div>
+          {/* Cluster Filter */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
 
-      {/* Cluster Filter */}
-      <div className="mb-4">
-        <select
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className={`w-full px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
-            isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
-          }`}
-        >
-          <option value="">All clusters</option>
-          {filteredClusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-          {/* Show the selected cluster even if outside global filter */}
-          {isOutsideGlobalFilter && selectedCluster && (
-            <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-        </select>
-        {isOutsideGlobalFilter && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
-            <AlertCircle className="w-3 h-3" />
-            <span>Selection outside global filter</span>
-          </div>
-        )}
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            isFailed={isFailed}
+            consecutiveFailures={consecutiveFailures}
+            lastRefresh={lastRefresh}
+            onRefresh={refetch}
+            size="sm"
+          />
+        </div>
       </div>
 
       {/* Local Search */}

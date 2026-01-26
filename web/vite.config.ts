@@ -1,17 +1,45 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import istanbul from 'vite-plugin-istanbul'
+import { execSync } from 'child_process'
 
 const isE2ECoverage = process.env.VITE_COVERAGE === 'true'
 
+// Get git version from tags (e.g., v0.3.6-nightly.20260124)
+function getGitVersion(): string {
+  try {
+    // git describe gives: v0.3.6-nightly.20260124-11-g23946568
+    // We extract just the tag part for display
+    const describe = execSync('git describe --tags --always', { encoding: 'utf-8' }).trim()
+    // If it's a clean tag (no commits since), return as-is
+    // If it has commits since tag, extract the base tag
+    const match = describe.match(/^(v[\d.]+(?:-[^-]+)?(?:\.[^-]+)?)/)
+    return match ? match[1] : describe
+  } catch {
+    return '0.0.0'
+  }
+}
+
+// Get git commit hash at build time
+function getGitCommitHash(): string {
+  try {
+    return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
+  } catch {
+    return 'unknown'
+  }
+}
+
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
-    // VITE_APP_VERSION should be set during CI/CD to the release tag (e.g., v0.3.6-nightly.20260124)
-    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || process.env.npm_package_version || '0.1.0'),
-    __COMMIT_HASH__: JSON.stringify(process.env.VITE_COMMIT_HASH || 'dev'),
+    // Version from git tags, can be overridden by VITE_APP_VERSION for CI/CD
+    __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || getGitVersion()),
+    __COMMIT_HASH__: JSON.stringify(process.env.VITE_COMMIT_HASH || getGitCommitHash()),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
-    __DEV_MODE__: JSON.stringify(process.env.VITE_DEV_MODE === 'true'),
+    // Dev mode is true in development unless explicitly overridden
+    __DEV_MODE__: process.env.VITE_DEV_MODE !== undefined
+      ? JSON.stringify(process.env.VITE_DEV_MODE === 'true')
+      : JSON.stringify(mode === 'development'),
   },
   plugins: [
     react(),
@@ -27,6 +55,7 @@ export default defineConfig({
   ].filter(Boolean),
   server: {
     port: 5174,
+    strictPort: true, // Fail if port 5174 is already in use
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
@@ -50,4 +79,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

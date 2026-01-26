@@ -612,14 +612,9 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       <div className="h-full flex flex-col content-loaded">
         {/* Header with settings */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              GitHub Activity
-            </span>
-            <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-              Error
-            </span>
-          </div>
+          <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+            Error
+          </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}

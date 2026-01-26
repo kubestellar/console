@@ -1,4 +1,4 @@
-import { Globe, Server, ExternalLink, Search, ChevronRight } from 'lucide-react'
+import { Globe, Server, ExternalLink, Search, ChevronRight, Filter, ChevronDown, Check } from 'lucide-react'
 import { useServices, type Service } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardControls } from '../ui/CardControls'
@@ -73,6 +73,13 @@ export function ServiceStatus() {
     filters: {
       search: searchQuery,
       setSearch: setSearchQuery,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
     },
     sorting: {
       sortBy,
@@ -107,8 +114,6 @@ export function ServiceStatus() {
     clusterIP: services.filter(s => s.type === 'ClusterIP').length,
   }
 
-  const hasRealData = !isLoading && services.length > 0
-
   if (isLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
@@ -135,13 +140,61 @@ export function ServiceStatus() {
     <div className="h-full flex flex-col content-loaded">
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        {hasRealData && (
-          <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-            Live
-          </span>
-        )}
-        {!hasRealData && <div />}
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full flex items-center justify-between px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                      {localClusterFilter.length === 0 && <Check className="w-3 h-3" />}
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full flex items-center justify-between px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                        {localClusterFilter.includes(cluster.name) && <Check className="w-3 h-3" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <CardControls
             limit={itemsPerPage}
             onLimitChange={setItemsPerPage}

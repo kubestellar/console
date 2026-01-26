@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Shield, Users, Key, Lock, ChevronRight, Loader2, Search } from 'lucide-react'
+import { Users, Key, Lock, ChevronRight, Loader2, Search } from 'lucide-react'
 import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -185,8 +185,6 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">Namespace RBAC</span>
           {isFetchingRBAC && (
             <Loader2 className="w-3 h-3 text-purple-400 animate-spin" />
           )}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Terminal, Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
@@ -452,23 +452,19 @@ data:
       {/* Header with controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Terminal className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-medium text-muted-foreground">kubectl</span>
           {clusters.length > 0 && (
-            <div className="relative">
-              <select
-                value={selectedContext}
-                onChange={(e) => setSelectedContext(e.target.value)}
-                className="text-xs bg-secondary border border-border/50 rounded px-2 py-1 text-foreground"
-                title="Select cluster context"
-              >
-                {clusters.map(cluster => (
-                  <option key={cluster.name} value={cluster.name}>
-                    {cluster.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={selectedContext}
+              onChange={(e) => setSelectedContext(e.target.value)}
+              className="text-xs bg-secondary border border-border/50 rounded px-2 py-1 text-foreground"
+              title="Select cluster context"
+            >
+              {clusters.map(cluster => (
+                <option key={cluster.name} value={cluster.name}>
+                  {cluster.name}
+                </option>
+              ))}
+            </select>
           )}
         </div>
         <div className="flex items-center gap-1">

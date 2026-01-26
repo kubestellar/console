@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DollarSign, Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 'lucide-react'
+import { Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 'lucide-react'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 
@@ -34,11 +34,7 @@ export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-muted-foreground">OpenCost</span>
-        </div>
+      <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-1">
           <a
             href="https://www.opencost.io/"

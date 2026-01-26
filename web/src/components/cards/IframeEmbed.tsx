@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CardWrapper, useCardExpanded } from './CardWrapper'
+import { useCardExpanded } from './CardWrapper'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import {
   ExternalLink, Settings, X, AlertTriangle, Loader2,
@@ -174,7 +174,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
   const displayHeight = isExpanded ? 600 : height
 
   return (
-    <CardWrapper cardType="iframe_embed" title={title}>
+    <div className="h-full flex flex-col">
       <div className="h-full flex flex-col">
         {/* Header controls */}
         <div className="flex items-center justify-between mb-2">
@@ -405,6 +405,6 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
           </div>
         )}
       </div>
-    </CardWrapper>
+    </div>
   )
 }

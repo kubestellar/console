@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
 import {
-  Settings,
   Plus,
   Bell,
   BellOff,
@@ -141,8 +140,6 @@ export function AlertRulesCard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Settings className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Alert Rules</span>
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {enabledCount} active
           </span>

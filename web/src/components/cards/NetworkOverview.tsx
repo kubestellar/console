@@ -81,8 +81,6 @@ export function NetworkOverview() {
     }
   }, [filteredServices])
 
-  const hasRealData = !isLoading && filteredClusters.length > 0
-
   if (isLoading && !clusters.length) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -95,11 +93,7 @@ export function NetworkOverview() {
     <div className="h-full flex flex-col">
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
-        {hasRealData ? (
-          <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded" title="Showing live data from clusters">
-            Live
-          </span>
-        ) : <div />}
+        <div />
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}
           {localClusterFilter.length > 0 && (
@@ -110,7 +104,7 @@ export function NetworkOverview() {
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length > 1 && (
+          {availableClusters.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
                 onClick={() => setShowClusterFilter(!showClusterFilter)}

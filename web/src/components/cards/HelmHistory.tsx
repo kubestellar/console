@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { History, CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, Search, ChevronRight } from 'lucide-react'
+import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, Search, ChevronRight } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmHistory } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -226,8 +226,6 @@ export function HelmHistory({ config }: HelmHistoryProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <History className="w-4 h-4 text-violet-400" />
-          <span className="text-sm font-medium text-muted-foreground">Helm History</span>
           {totalItems > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400">
               {totalItems} revisions

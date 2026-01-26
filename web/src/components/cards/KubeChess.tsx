@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { CardWrapper, useCardExpanded } from './CardWrapper'
+import { useCardExpanded } from './CardWrapper'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
 
 // Chess piece types
@@ -668,7 +668,7 @@ export function KubeChess() {
   }
 
   return (
-    <CardWrapper cardType="kube_chess" title="Kube Chess">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Status */}
         <div className="flex items-center justify-between w-full max-w-xs">
@@ -798,6 +798,6 @@ export function KubeChess() {
           </div>
         )}
       </div>
-    </CardWrapper>
+    </div>
   )
 }

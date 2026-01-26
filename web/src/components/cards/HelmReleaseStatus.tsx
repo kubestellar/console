@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { Anchor, CheckCircle, AlertTriangle, XCircle, Clock, Search, ChevronRight, AlertCircle } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, Clock, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useHelmReleases } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
+import { useChartFilters } from '../../lib/cards'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -42,17 +42,19 @@ const SORT_OPTIONS = [
 export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   const { isLoading: clustersLoading } = useClusters()
   const { drillToHelm } = useDrillDownActions()
-  // Use persisted cluster selection - survives global filter changes
+
+  // Use chart filters hook for cluster filtering
   const {
-    selectedCluster,
-    setSelectedCluster,
-    availableClusters: clusters,
-    isOutsideGlobalFilter,
-  } = usePersistedClusterSelection({
-    storageKey: 'helm-release-status',
-    defaultValue: config?.cluster || '',
-    allowAll: false,
-  })
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    filteredClusters: clusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({ storageKey: 'helm-release-status' })
+
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -77,11 +79,11 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   // Only show loading skeleton when no data exists (not during refresh)
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
 
-  // Filter by selected cluster locally (no API call)
+  // Filter by selected clusters locally (no API call)
   const helmReleases = useMemo(() => {
-    if (!selectedCluster) return allHelmReleases
-    return allHelmReleases.filter(r => r.cluster === selectedCluster)
-  }, [allHelmReleases, selectedCluster])
+    const clusterNames = new Set(clusters.map(c => c.name))
+    return allHelmReleases.filter(r => r.cluster && clusterNames.has(r.cluster))
+  }, [allHelmReleases, clusters])
 
   // Transform API data to display format
   const allReleases = useMemo(() => {
@@ -231,13 +233,61 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Controls - single row */}
+      <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <Anchor className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-muted-foreground">Helm Releases</span>
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {clusters.length}/{availableClusters.length}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster Filter */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -258,51 +308,22 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
         </div>
       </div>
 
-      {/* Selectors */}
+      {/* Namespace selector */}
       <div className="mb-4">
-        <div className="flex gap-2">
-          <select
-            value={selectedCluster}
-            onChange={(e) => {
-              setSelectedCluster(e.target.value)
-              setSelectedNamespace('')
-            }}
-            className={`flex-1 px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
-              isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
-            }`}
-            title="Filter Helm releases by cluster"
-          >
-            <option value="">All clusters</option>
-            {clusters.map(c => (
-              <option key={c.name} value={c.name}>{c.name}</option>
-            ))}
-            {/* Show the selected cluster even if outside global filter */}
-            {isOutsideGlobalFilter && selectedCluster && (
-              <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
-            )}
-          </select>
-          <select
-            value={selectedNamespace}
-            onChange={(e) => setSelectedNamespace(e.target.value)}
-            disabled={!selectedCluster}
-            className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
-            title={selectedCluster ? "Filter by namespace" : "Select a cluster first"}
-          >
-            <option value="">All namespaces</option>
-            {namespaces.map(ns => (
-              <option key={ns} value={ns}>{ns}</option>
-            ))}
-          </select>
-        </div>
-        {isOutsideGlobalFilter && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
-            <AlertCircle className="w-3 h-3" />
-            <span>Selection outside global filter</span>
-          </div>
-        )}
+        <select
+          value={selectedNamespace}
+          onChange={(e) => setSelectedNamespace(e.target.value)}
+          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
+          title="Filter by namespace"
+        >
+          <option value="">All namespaces</option>
+          {namespaces.map(ns => (
+            <option key={ns} value={ns}>{ns}</option>
+          ))}
+        </select>
       </div>
 
-      {clusters.length === 0 ? (
+      {availableClusters.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
           No clusters available
         </div>
@@ -310,8 +331,10 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
         <>
           {/* Scope badge */}
           <div className="flex items-center gap-2 mb-4">
-            {selectedCluster ? (
-              <ClusterBadge cluster={selectedCluster} />
+            {localClusterFilter.length === 1 ? (
+              <ClusterBadge cluster={localClusterFilter[0]} />
+            ) : localClusterFilter.length > 1 ? (
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{localClusterFilter.length} clusters</span>
             ) : (
               <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">All clusters</span>
             )}
@@ -360,7 +383,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
               return (
                 <div
                   key={idx}
-                  onClick={() => drillToHelm(release.cluster || selectedCluster || '', release.namespace, release.name, {
+                  onClick={() => drillToHelm(release.cluster || '', release.namespace, release.name, {
                     chart: release.chart,
                     version: release.version,
                     appVersion: release.appVersion,
@@ -410,7 +433,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} releases{selectedCluster ? (selectedNamespace ? ` in ${selectedCluster}/${selectedNamespace}` : ` in ${selectedCluster}`) : ' across all clusters'}
+            {totalItems} release{totalItems !== 1 ? 's' : ''}{localClusterFilter.length === 1 ? (selectedNamespace ? ` in ${localClusterFilter[0]}/${selectedNamespace}` : ` in ${localClusterFilter[0]}`) : ` across ${clusters.length} cluster${clusters.length !== 1 ? 's' : ''}`}
           </div>
         </>
       )}

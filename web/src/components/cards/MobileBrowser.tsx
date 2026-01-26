@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CardWrapper } from './CardWrapper'
 import {
   ChevronLeft, ChevronRight, Grid3X3,
   Plus, X, Lock, Bookmark, Star,
@@ -198,8 +197,8 @@ export function MobileBrowser() {
   const formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <CardWrapper cardType="mobile_browser" title="Mobile Browser">
-      <div className="flex flex-col items-center">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
         {/* iPhone Frame */}
         <div
           className="relative bg-black rounded-[40px] p-2 shadow-2xl"
@@ -490,11 +489,7 @@ export function MobileBrowser() {
           </div>
         </div>
 
-        {/* Instructions */}
-        <p className="text-xs text-muted-foreground mt-3 text-center max-w-[350px]">
-          Browse websites in mobile view. Some sites may block iframe embedding.
-        </p>
       </div>
-    </CardWrapper>
+    </div>
   )
 }

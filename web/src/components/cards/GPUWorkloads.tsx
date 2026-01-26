@@ -274,7 +274,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length > 1 && (
+          {availableClusters.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
                 onClick={() => setShowClusterFilter(!showClusterFilter)}

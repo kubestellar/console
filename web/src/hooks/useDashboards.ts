@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api, BackendUnavailableError } from '../lib/api'
+import { api } from '../lib/api'
 
 export interface DashboardCard {
   id: string
@@ -29,14 +29,9 @@ export function useDashboards() {
       const { data } = await api.get<Dashboard[]>('/api/dashboards')
       setDashboards(data || [])
       setError(null)
-    } catch (err) {
-      // Don't log or set error for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure) {
-        console.error('Failed to load dashboards:', err)
-        setError('Failed to load dashboards')
-      }
+    } catch {
+      // Silently fail - backend unavailability is expected in demo mode
+      // The UI will work with localStorage-only persistence
     } finally {
       setIsLoading(false)
     }
@@ -52,7 +47,7 @@ export function useDashboards() {
       setDashboards((prev) => [...prev, data])
       return data
     } catch (err) {
-      console.error('Failed to create dashboard:', err)
+      // Silently fail - backend may be unavailable in demo mode
       throw err
     }
   }, [])
@@ -63,7 +58,7 @@ export function useDashboards() {
       setDashboards((prev) => prev.map((d) => (d.id === id ? data : d)))
       return data
     } catch (err) {
-      console.error('Failed to update dashboard:', err)
+      // Silently fail - backend may be unavailable in demo mode
       throw err
     }
   }, [])
@@ -73,7 +68,7 @@ export function useDashboards() {
       await api.delete(`/api/dashboards/${id}`)
       setDashboards((prev) => prev.filter((d) => d.id !== id))
     } catch (err) {
-      console.error('Failed to delete dashboard:', err)
+      // Silently fail - backend may be unavailable in demo mode
       throw err
     }
   }, [])
@@ -85,7 +80,7 @@ export function useDashboards() {
       })
       return data
     } catch (err) {
-      console.error('Failed to move card:', err)
+      // Silently fail - backend may be unavailable in demo mode
       throw err
     }
   }, [])
@@ -94,8 +89,8 @@ export function useDashboards() {
     try {
       const { data } = await api.get<Dashboard>(`/api/dashboards/${dashboardId}`)
       return data
-    } catch (err) {
-      console.error('Failed to get dashboard with cards:', err)
+    } catch {
+      // Silently fail - backend may be unavailable in demo mode
       return null
     }
   }, [])
@@ -113,8 +108,8 @@ export function useDashboards() {
         })
       )
       return dashboardsWithCards
-    } catch (err) {
-      console.error('Failed to get all dashboards with cards:', err)
+    } catch {
+      // Silently fail - backend may be unavailable in demo mode
       return []
     }
   }, [getDashboardWithCards])

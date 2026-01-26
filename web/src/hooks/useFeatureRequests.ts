@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api, BackendUnavailableError } from '../lib/api'
+import { api } from '../lib/api'
 
 // Check if user is in demo mode (demo-token)
 function isDemoUser(): boolean {
@@ -251,16 +251,8 @@ export function useFeatureRequests(currentUserId?: string) {
       const sorted = currentUserId ? sortRequests(data || [], currentUserId) : (data || [])
       setRequests(sorted)
       setError(null)
-    } catch (err) {
-      // Don't log or set error for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure) {
-        if (err instanceof Error && err.message) {
-          console.warn('Failed to load feature requests:', err.message)
-        }
-        setError('Failed to load requests')
-      }
+    } catch {
+      // Silently fail - backend may be unavailable in demo mode
     } finally {
       setIsLoading(false)
     }
@@ -302,7 +294,7 @@ export function useFeatureRequests(currentUserId?: string) {
       setRequests(prev => [data, ...prev])
       return data
     } catch (err) {
-      console.error('Failed to create feature request:', err)
+      // Silently fail - backend may be unavailable
       throw err
     } finally {
       setIsSubmitting(false)
@@ -314,7 +306,7 @@ export function useFeatureRequests(currentUserId?: string) {
       const { data } = await api.get<FeatureRequest>(`/api/feedback/requests/${id}`)
       return data
     } catch (err) {
-      console.error('Failed to get feature request:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -324,7 +316,7 @@ export function useFeatureRequests(currentUserId?: string) {
       const { data } = await api.post<PRFeedback>(`/api/feedback/requests/${requestId}/feedback`, input)
       return data
     } catch (err) {
-      console.error('Failed to submit feedback:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -336,7 +328,7 @@ export function useFeatureRequests(currentUserId?: string) {
       setRequests(prev => prev.map(r => r.id === requestId ? data : r))
       return data
     } catch (err) {
-      console.error('Failed to request update:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -348,7 +340,7 @@ export function useFeatureRequests(currentUserId?: string) {
       setRequests(prev => prev.map(r => r.id === requestId ? data : r))
       return data
     } catch (err) {
-      console.error('Failed to close request:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -413,7 +405,7 @@ export function useNotifications() {
       )
       setUnreadCount(prev => Math.max(0, prev - unreadForRequest.length))
     } catch (err) {
-      console.error('Failed to mark request notifications as read:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [notifications])
@@ -427,13 +419,8 @@ export function useNotifications() {
     try {
       const { data } = await api.get<Notification[]>('/api/notifications')
       setNotifications(data || [])
-    } catch (err) {
-      // Don't log for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure && err instanceof Error && err.message) {
-        console.warn('Failed to load notifications:', err.message)
-      }
+    } catch {
+      // Silently fail - backend may be unavailable
     }
   }, [])
 
@@ -446,13 +433,8 @@ export function useNotifications() {
     try {
       const { data } = await api.get<{ count: number }>('/api/notifications/unread-count')
       setUnreadCount(data.count)
-    } catch (err) {
-      // Don't log for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure && err instanceof Error && err.message) {
-        console.warn('Failed to load unread count:', err.message)
-      }
+    } catch {
+      // Silently fail - backend may be unavailable
     }
   }, [])
 
@@ -497,7 +479,7 @@ export function useNotifications() {
       )
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (err) {
-      console.error('Failed to mark notification as read:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -514,7 +496,7 @@ export function useNotifications() {
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       setUnreadCount(0)
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])

@@ -1449,7 +1449,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 }
 
 export function Clusters() {
-  const { clusters, isLoading, isRefreshing, lastUpdated, error, refetch } = useClusters()
+  const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
   const { isConnected } = useLocalAgent()
@@ -1767,22 +1767,8 @@ export function Clusters() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="pt-16">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Server className="w-6 h-6 text-purple-400" />
-            Clusters
-          </h1>
-          <p className="text-muted-foreground">Manage your Kubernetes clusters</p>
-        </div>
-        <div className="p-6 rounded-lg border border-red-500/20 bg-red-500/10">
-          <p className="text-red-400">{error}</p>
-        </div>
-      </div>
-    )
-  }
+  // Note: We no longer block on errors - always show demo data gracefully
+  // The error variable is kept for potential future use but UI always renders
 
   return (
     <div className="pt-16">

@@ -192,13 +192,37 @@ export function useDashboardCards(
   )
 
   const addCards = useCallback((newCards: NewCardInput[]) => {
+    // Batch card additions to prevent UI freeze when adding many cards
+    const BATCH_SIZE = 5 // Add 5 cards at a time
+    const BATCH_DELAY = 50 // 50ms between batches
+
     const cardsToAdd: DashboardCard[] = newCards.map(card => ({
       id: generateId(),
       card_type: card.type,
       config: card.config || {},
       title: card.title,
     }))
-    setCards(prev => [...prev, ...cardsToAdd])
+
+    // If small number of cards, add all at once
+    if (cardsToAdd.length <= BATCH_SIZE) {
+      setCards(prev => [...prev, ...cardsToAdd])
+      return
+    }
+
+    // For many cards, add in batches to keep UI responsive
+    let currentIndex = 0
+    const addBatch = () => {
+      const batch = cardsToAdd.slice(currentIndex, currentIndex + BATCH_SIZE)
+      if (batch.length === 0) return
+
+      setCards(prev => [...prev, ...batch])
+      currentIndex += BATCH_SIZE
+
+      if (currentIndex < cardsToAdd.length) {
+        setTimeout(addBatch, BATCH_DELAY)
+      }
+    }
+    addBatch()
   }, [generateId])
 
   const removeCard = useCallback((id: string) => {

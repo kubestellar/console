@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { Package, CheckCircle, AlertTriangle, XCircle, RefreshCw, ArrowUpCircle, Search, ChevronRight, AlertCircle } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, RefreshCw, ArrowUpCircle, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useOperators, Operator } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { usePersistedClusterSelection } from '../../hooks/usePersistedClusterSelection'
+import { useChartFilters } from '../../lib/cards'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -25,54 +25,50 @@ const SORT_OPTIONS = [
   { value: 'version' as const, label: 'Version' },
 ]
 
-export function OperatorStatus({ config }: OperatorStatusProps) {
+export function OperatorStatus({ config: _config }: OperatorStatusProps) {
   const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { drillToOperator } = useDrillDownActions()
-  // Use persisted cluster selection - survives global filter changes
+
+  // Use chart filters hook for cluster filtering
   const {
-    selectedCluster,
-    setSelectedCluster,
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
     availableClusters,
-    isOutsideGlobalFilter,
-  } = usePersistedClusterSelection({
-    storageKey: 'operator-status',
-    defaultValue: config?.cluster || 'all',
-    allowAll: true,
-  })
+    filteredClusters: clusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({ storageKey: 'operator-status' })
+
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [localSearch, setLocalSearch] = useState('')
   const {
-    selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
     customFilter,
     filterByStatus,
   } = useGlobalFilters()
 
-  // Use availableClusters from the persisted selection hook (already respects global filter)
-  const clusters = availableClusters
-
-  // Fetch operators - pass undefined when 'all' to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing: operatorsRefreshing, refetch: refetchOperators } = useOperators(selectedCluster === 'all' ? undefined : selectedCluster || undefined)
+  // Fetch operators - pass undefined to get all clusters
+  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing: operatorsRefreshing, refetch: refetchOperators } = useOperators(undefined)
 
   const isRefreshing = clustersRefreshing || operatorsRefreshing
   const refetch = () => {
     refetchClusters()
-    if (selectedCluster) refetchOperators()
+    refetchOperators()
   }
 
   // Apply filters and sorting to operators
   const filteredAndSorted = useMemo(() => {
     let result = rawOperators
 
-    // Apply global cluster filter when showing all clusters
-    if (selectedCluster === 'all' && !isAllClustersSelected) {
-      result = result.filter(op => {
-        const clusterName = op.cluster?.split('/')[0] || ''
-        return globalSelectedClusters.includes(clusterName) || globalSelectedClusters.includes(op.cluster || '')
-      })
-    }
+    // Apply cluster filter (from useChartFilters)
+    const clusterNames = new Set(clusters.map(c => c.name))
+    result = result.filter(op => {
+      const clusterName = op.cluster?.split('/')[0] || ''
+      return clusterNames.has(clusterName) || clusterNames.has(op.cluster || '')
+    })
 
     // Apply status filter
     result = filterByStatus(result)
@@ -119,7 +115,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
     })
 
     return result
-  }, [rawOperators, filterByStatus, customFilter, localSearch, sortBy, sortDirection, selectedCluster, isAllClustersSelected, globalSelectedClusters])
+  }, [rawOperators, clusters, filterByStatus, customFilter, localSearch, sortBy, sortDirection])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -181,18 +177,66 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
+      {/* Controls - single row */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Package className="w-4 h-4 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">OLM Operators</span>
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {clusters.length}/{availableClusters.length}
+            </span>
+          )}
           {totalItems > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-              {totalItems}
+              {totalItems} operators
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster Filter */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -213,42 +257,20 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
         </div>
       </div>
 
-      {/* Cluster selector */}
-      <div className="mb-4">
-        <select
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className={`w-full px-3 py-1.5 rounded-lg bg-secondary border text-sm text-foreground ${
-            isOutsideGlobalFilter ? 'border-orange-500/50' : 'border-border'
-          }`}
-        >
-          <option value="all">All Clusters</option>
-          {clusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-          {/* Show the selected cluster even if outside global filter */}
-          {isOutsideGlobalFilter && (
-            <option value={selectedCluster}>{selectedCluster} (filtered out)</option>
-          )}
-        </select>
-        {isOutsideGlobalFilter && (
-          <div className="flex items-center gap-1 mt-1 text-xs text-orange-400">
-            <AlertCircle className="w-3 h-3" />
-            <span>Selection outside global filter</span>
-          </div>
-        )}
-      </div>
-
-      {selectedCluster && (
+      {availableClusters.length > 0 && (
         <>
           {/* Scope badge */}
           <div className="flex items-center gap-2 mb-4">
-            {selectedCluster === 'all' ? (
+            {localClusterFilter.length === 1 ? (
+              <ClusterBadge cluster={localClusterFilter[0]} />
+            ) : localClusterFilter.length > 1 ? (
               <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
-                All Clusters {!isAllClustersSelected && `(${globalSelectedClusters.length} selected)`}
+                {localClusterFilter.length} clusters selected
               </span>
             ) : (
-              <ClusterBadge cluster={selectedCluster} />
+              <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
+                All Clusters ({clusters.length})
+              </span>
             )}
           </div>
 
@@ -289,7 +311,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
               return (
                 <div
                   key={`${op.cluster || 'default'}-${op.namespace}-${op.name}`}
-                  onClick={() => drillToOperator(op.cluster || selectedCluster || '', op.namespace, op.name, {
+                  onClick={() => drillToOperator(op.cluster || '', op.namespace, op.name, {
                     status: op.status,
                     version: op.version,
                     upgradeAvailable: op.upgradeAvailable,
@@ -342,7 +364,7 @@ export function OperatorStatus({ config }: OperatorStatusProps) {
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} operators {selectedCluster === 'all' ? 'across all clusters' : `on ${selectedCluster}`}
+            {totalItems} operator{totalItems !== 1 ? 's' : ''} {localClusterFilter.length === 1 ? `on ${localClusterFilter[0]}` : `across ${clusters.length} cluster${clusters.length !== 1 ? 's' : ''}`}
           </div>
         </>
       )}

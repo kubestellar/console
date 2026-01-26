@@ -360,11 +360,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm font-medium text-foreground">Cluster Locations</span>
-        </div>
+      <div className="flex items-center justify-end mb-2">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowFilters(!showFilters)}

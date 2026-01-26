@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Cpu, HardDrive, Zap, Database, Loader2 } from 'lucide-react'
+import { Cpu, HardDrive, Zap, Loader2, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useGPUNodes, GPUNode } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -7,6 +7,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useChartFilters } from '../../lib/cards'
 
 interface ResourceCapacityProps {
   config?: Record<string, unknown>
@@ -31,58 +32,55 @@ const SORT_OPTIONS = [
   { value: 'percent' as const, label: 'Usage %' },
 ]
 
-export function ResourceCapacity({ config }: ResourceCapacityProps) {
+export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
-    customFilter,
   } = useGlobalFilters()
 
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
-  const [selectedCluster, setSelectedCluster] = useState<string>(
-    (config?.cluster as string) || ''
-  )
 
-  // Apply global filters to get available clusters
-  const availableClusters = useMemo(() => {
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'resource-capacity',
+  })
+
+  // Filter clusters by global selection first, then apply local filter
+  const clusters = useMemo(() => {
     let result = allClusters
-
     if (!isAllClustersSelected) {
       result = result.filter(c => globalSelectedClusters.includes(c.name))
     }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query)
-      )
+    if (localClusterFilter.length > 0) {
+      result = result.filter(c => localClusterFilter.includes(c.name))
     }
-
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, localClusterFilter])
 
-  // Filter to selected cluster or show all available
-  const clusters = useMemo(() => {
-    if (selectedCluster) {
-      return availableClusters.filter(c => c.name === selectedCluster)
-    }
-    return availableClusters
-  }, [availableClusters, selectedCluster])
-
-  // Filter GPU nodes by selected cluster(s)
+  // Filter GPU nodes by selection
   const filteredGPUNodes = useMemo(() => {
-    if (selectedCluster) {
-      return gpuNodes.filter(n => n.cluster === selectedCluster)
+    let result = gpuNodes
+    if (!isAllClustersSelected) {
+      result = result.filter(n => globalSelectedClusters.includes(n.cluster))
     }
-    if (isAllClustersSelected) return gpuNodes
-    return gpuNodes.filter(n => globalSelectedClusters.includes(n.cluster))
-  }, [gpuNodes, globalSelectedClusters, isAllClustersSelected, selectedCluster])
+    if (localClusterFilter.length > 0) {
+      result = result.filter(n => localClusterFilter.includes(n.cluster))
+    }
+    return result
+  }, [gpuNodes, globalSelectedClusters, isAllClustersSelected, localClusterFilter])
 
   // Calculate real totals from cluster data
   const totals = useMemo(() => {
@@ -213,13 +211,62 @@ export function ResourceCapacity({ config }: ResourceCapacityProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Database className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-muted-foreground">Resources Requested</span>
           {isRefreshing && (
             <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />
           )}
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -238,20 +285,6 @@ export function ResourceCapacity({ config }: ResourceCapacityProps) {
             size="sm"
           />
         </div>
-      </div>
-
-      {/* Cluster filter */}
-      <div className="mb-3">
-        <select
-          value={selectedCluster}
-          onChange={(e) => setSelectedCluster(e.target.value)}
-          className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-        >
-          <option value="">All clusters</option>
-          {availableClusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-        </select>
       </div>
 
       {/* Resource metrics */}

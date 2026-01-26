@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
-import { useClusters, usePodIssues, useDeploymentIssues, useNamespaces } from '../../hooks/useMCP'
+import { useClusters, useNamespaces } from '../../hooks/useMCP'
+import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -44,8 +45,8 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  const { issues: allPodIssues } = usePodIssues(selectedCluster)
-  const { issues: allDeploymentIssues } = useDeploymentIssues(selectedCluster)
+  const { issues: allPodIssues } = useCachedPodIssues(selectedCluster)
+  const { issues: allDeploymentIssues } = useCachedDeploymentIssues(selectedCluster)
 
   // Fetch namespaces for the selected cluster
   const { namespaces } = useNamespaces(selectedCluster || undefined)
@@ -83,11 +84,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-muted-foreground">Namespace Overview</span>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <RefreshButton
           isRefreshing={isRefreshing}
           isFailed={isFailed}

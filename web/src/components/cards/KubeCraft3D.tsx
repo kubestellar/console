@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CardWrapper, useCardExpanded } from './CardWrapper'
+import { useCardExpanded } from './CardWrapper'
 import * as THREE from 'three'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'
 import { Play, Pause, RotateCcw, Sun, Moon } from 'lucide-react'
@@ -467,7 +467,7 @@ export function KubeCraft3D() {
   const height = isExpanded ? 500 : 350
 
   return (
-    <CardWrapper cardType="kube_craft_3d" title="KubeCraft 3D">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col gap-3">
         {/* Block palette */}
         <div className="flex flex-wrap gap-1 justify-center">
@@ -494,6 +494,13 @@ export function KubeCraft3D() {
             className="cursor-crosshair"
           />
 
+          {/* ESC hint shown during gameplay */}
+          {isLocked && (
+            <div className="absolute top-2 left-2 px-2 py-1 bg-black/40 rounded text-xs text-white/60 pointer-events-none">
+              ESC to pause
+            </div>
+          )}
+
           {/* Overlay when not playing */}
           {!isLocked && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -512,7 +519,7 @@ export function KubeCraft3D() {
                   Left click to break, Right click to place
                 </p>
                 <p className="text-xs text-white/50 mt-2">
-                  Press ESC to pause
+                  ESC to pause (your world is saved)
                 </p>
               </div>
             </div>
@@ -548,6 +555,6 @@ export function KubeCraft3D() {
           Build in 3D! Select a block type and click to play.
         </p>
       </div>
-    </CardWrapper>
+    </div>
   )
 }

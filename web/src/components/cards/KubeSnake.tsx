@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CardWrapper } from './CardWrapper'
+
 import { Play, RotateCcw, Pause, Trophy, Apple, Zap } from 'lucide-react'
 
 // Game constants
@@ -297,7 +297,7 @@ export function KubeSnake() {
   }
 
   return (
-    <CardWrapper cardType="kube_snake" title="Kube Snake">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Stats bar */}
         <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
@@ -387,6 +387,6 @@ export function KubeSnake() {
 
         <p className="text-xs text-muted-foreground">Eat pods to grow longer!</p>
       </div>
-    </CardWrapper>
+    </div>
   )
 }

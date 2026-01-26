@@ -1,7 +1,8 @@
 import { useMemo, useState, useCallback } from 'react'
-import { Bot, Stethoscope, FileSearch, AlertCircle, Play, CheckCircle, Clock, ChevronRight, Key, Settings } from 'lucide-react'
+import { Stethoscope, AlertCircle, Play, CheckCircle, Clock, ChevronRight, Key, Settings } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
-import { useClusters, usePodIssues, useDeploymentIssues } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { cn } from '../../lib/cn'
@@ -90,8 +91,8 @@ interface KlaudeMissionCardProps {
 export function KlaudeIssuesCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
-  const { issues: allPodIssues, isRefreshing: podRefreshing, refetch: refetchPods } = usePodIssues()
-  const { issues: allDeploymentIssues, isRefreshing: depRefreshing, refetch: refetchDeps } = useDeploymentIssues()
+  const { issues: allPodIssues, isRefreshing: podRefreshing, refetch: refetchPods } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isRefreshing: depRefreshing, refetch: refetchDeps } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
@@ -197,16 +198,14 @@ Please:
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-purple-400" />
-          <span className="text-sm font-medium text-muted-foreground">Klaude Issues</span>
-        </div>
-        <div className="flex items-center gap-2">
           {runningRepairMission && (
             <span className="flex items-center gap-1 text-xs text-purple-400">
               <Clock className="w-3 h-3 animate-pulse" />
               Fixing...
             </span>
           )}
+        </div>
+        <div className="flex items-center gap-2">
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={isFailed}
@@ -376,11 +375,7 @@ Please:
         onGoToSettings={goToSettings}
       />
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <FileSearch className="w-5 h-5 text-cyan-400" />
-          <span className="text-sm font-medium text-muted-foreground">Kubeconfig Audit</span>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <RefreshButton
           isRefreshing={isRefreshing || isLoading}
           isFailed={isFailed}
@@ -472,8 +467,8 @@ Please:
 export function KlaudeHealthCheckCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
-  const { issues: allPodIssues } = usePodIssues()
-  const { issues: allDeploymentIssues } = useDeploymentIssues()
+  const { issues: allPodIssues } = useCachedPodIssues()
+  const { issues: allDeploymentIssues } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToPod } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -586,11 +581,7 @@ Please provide:
         onGoToSettings={goToSettings}
       />
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Stethoscope className="w-5 h-5 text-green-400" />
-          <span className="text-sm font-medium text-muted-foreground">Health Check</span>
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <RefreshButton
           isRefreshing={isRefreshing || isLoading}
           isFailed={isFailed}

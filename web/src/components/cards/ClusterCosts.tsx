@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
-import { DollarSign, Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, Search, ChevronRight } from 'lucide-react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, Search, ChevronRight, Filter } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -172,6 +172,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     () => loadPersistedOverrides(config?.clusterProviders)
   )
   const [localSearch, setLocalSearch] = useState('')
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('kubestellar-card-filter:cluster-costs')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   // Persist provider overrides to localStorage
   useEffect(() => {
@@ -181,6 +189,35 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       localStorage.removeItem(PROVIDER_OVERRIDES_KEY)
     }
   }, [clusterProviderOverrides])
+
+  // Close cluster filter dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Save cluster filter to localStorage
+  useEffect(() => {
+    localStorage.setItem('kubestellar-card-filter:cluster-costs', JSON.stringify(localClusterFilter))
+  }, [localClusterFilter])
+
+  const toggleClusterFilter = (clusterName: string) => {
+    setLocalClusterFilter(prev => {
+      if (prev.includes(clusterName)) {
+        return prev.filter(c => c !== clusterName)
+      }
+      return [...prev, clusterName]
+    })
+  }
+
+  const clearClusterFilter = () => {
+    setLocalClusterFilter([])
+  }
 
   // Auto-detect cloud provider from cluster names
   const detectedProvider = useMemo((): CloudProvider | null => {
@@ -213,7 +250,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     }
   }, [detectedProvider, config?.provider])
 
-  // Apply global filters and local search
+  // Get available clusters for local filter (respects global filter)
+  const availableClustersForFilter = useMemo(() => {
+    let result = allClusters.filter(c => c.reachable !== false)
+    if (!isAllClustersSelected) {
+      result = result.filter(c => globalSelectedClusters.includes(c.name))
+    }
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected])
+
+  // Apply global filters, local cluster filter, and local search
   const clusters = useMemo(() => {
     let result = allClusters
 
@@ -229,6 +275,11 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       )
     }
 
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      result = result.filter(c => localClusterFilter.includes(c.name))
+    }
+
     // Apply local search filter
     if (localSearch.trim()) {
       const query = localSearch.toLowerCase()
@@ -239,7 +290,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, localSearch])
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, localClusterFilter, localSearch])
 
   // Get pricing from selected provider or custom config
   const pricing = CLOUD_PRICING[selectedProvider]
@@ -335,10 +386,57 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-medium text-muted-foreground">Cluster Costs</span>
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClustersForFilter.length}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
+          {/* Cluster Filter */}
+          {availableClustersForFilter.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClustersForFilter.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {/* Info button */}
           <button
             onClick={() => setShowRatesInfo(!showRatesInfo)}

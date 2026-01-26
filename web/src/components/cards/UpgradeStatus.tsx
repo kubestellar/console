@@ -374,11 +374,9 @@ Please proceed step by step and ask for confirmation before making any changes.`
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <ArrowUp className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm font-medium text-muted-foreground">Upgrade Status</span>
           {pendingUpgrades > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-              {pendingUpgrades} available
+              {pendingUpgrades} upgrades available
             </span>
           )}
         </div>

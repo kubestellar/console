@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api, BackendUnavailableError } from '../lib/api'
+import { api } from '../lib/api'
 import { getDemoMode } from './useDemoMode'
 import type {
   ConsoleUser,
@@ -36,16 +36,8 @@ export function useConsoleUsers() {
     try {
       const { data } = await api.get<ConsoleUser[]>('/api/users')
       setUsers(data || [])
-    } catch (err) {
-      // Don't log or set error for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure) {
-        setError('Failed to load users')
-        if (err instanceof Error && err.message) {
-          console.warn('Failed to load users:', err.message)
-        }
-      }
+    } catch {
+      // Silently fail - backend unavailability is expected in demo mode
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -64,7 +56,7 @@ export function useConsoleUsers() {
       )
       return true
     } catch (err) {
-      console.error('Failed to update user role:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -75,7 +67,7 @@ export function useConsoleUsers() {
       setUsers((prev) => prev.filter((u) => u.id !== userId))
       return true
     } catch (err) {
-      console.error('Failed to delete user:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -113,16 +105,8 @@ export function useUserManagementSummary() {
     try {
       const { data } = await api.get<UserManagementSummary>('/api/users/summary')
       setSummary(data)
-    } catch (err) {
-      // Don't log or set error for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure) {
-        setError('Failed to load summary')
-        if (err instanceof Error && err.message) {
-          console.warn('Failed to load user summary:', err.message)
-        }
-      }
+    } catch {
+      // Silently fail - backend unavailability is expected in demo mode
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -152,9 +136,8 @@ export function useK8sUsers(cluster?: string) {
     try {
       const { data } = await api.get<K8sUser[]>(`/api/rbac/users?cluster=${cluster}`)
       setUsers(data || [])
-    } catch (err) {
-      setError('Failed to load K8s users')
-      console.error('Failed to load K8s users:', err)
+    } catch {
+      // Silently fail - backend may be unavailable
     } finally {
       setIsLoading(false)
     }
@@ -218,17 +201,8 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       if (namespace) params.set('namespace', namespace)
       const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`)
       setServiceAccounts(data || [])
-    } catch (err) {
-      // Don't log or set error for expected failures (backend unavailable or timeout)
-      const isExpectedFailure = err instanceof BackendUnavailableError ||
-        (err instanceof Error && err.message.includes('Request timeout'))
-      if (!isExpectedFailure) {
-        setError('Failed to load service accounts')
-        if (err instanceof Error && err.message) {
-          console.warn('Failed to load service accounts:', err.message)
-        }
-      }
-      // Fall back to demo data on any error
+    } catch {
+      // Silently fail - fall back to demo data
       setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
     } finally {
       setIsLoading(false)
@@ -245,7 +219,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       setServiceAccounts((prev) => [...prev, data])
       return data
     } catch (err) {
-      console.error('Failed to create service account:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [])
@@ -278,9 +252,8 @@ export function useK8sRoles(cluster: string, namespace?: string, includeSystem?:
       if (includeSystem) params.set('includeSystem', 'true')
       const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`)
       setRoles(data || [])
-    } catch (err) {
-      setError('Failed to load roles')
-      console.error('Failed to load roles:', err)
+    } catch {
+      // Silently fail - backend may be unavailable
     } finally {
       setIsLoading(false)
     }
@@ -312,9 +285,8 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
       if (includeSystem) params.set('includeSystem', 'true')
       const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`)
       setBindings(data || [])
-    } catch (err) {
-      setError('Failed to load role bindings')
-      console.error('Failed to load role bindings:', err)
+    } catch {
+      // Silently fail - backend may be unavailable
     } finally {
       setIsLoading(false)
     }
@@ -330,7 +302,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
       await fetchBindings()
       return true
     } catch (err) {
-      console.error('Failed to create role binding:', err)
+      // Silently fail - backend may be unavailable
       throw err
     }
   }, [fetchBindings])
@@ -361,9 +333,8 @@ export function useClusterPermissions(cluster?: string) {
         `/api/rbac/permissions${params}`
       )
       setPermissions(Array.isArray(data) ? data : [data])
-    } catch (err) {
-      setError('Failed to load permissions')
-      console.error('Failed to load permissions:', err)
+    } catch {
+      // Silently fail - backend may be unavailable
     } finally {
       setIsLoading(false)
     }

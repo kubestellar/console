@@ -1,5 +1,6 @@
 import { MemoryStick, ImageOff, Clock, RefreshCw, ChevronRight, Search, Filter, ChevronDown, Server } from 'lucide-react'
-import { usePodIssues, PodIssue } from '../../hooks/useMCP'
+import { useCachedPodIssues } from '../../hooks/useCachedData'
+import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
@@ -41,6 +42,7 @@ const getStatusColors = (status: string) => {
 }
 
 export function PodIssues() {
+  // Using unified cache for pod issues across all clusters
   const {
     issues: rawIssues,
     isLoading: hookLoading,
@@ -50,7 +52,7 @@ export function PodIssues() {
     isFailed,
     consecutiveFailures,
     lastRefresh
-  } = usePodIssues()
+  } = useCachedPodIssues()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawIssues.length === 0
@@ -123,8 +125,7 @@ export function PodIssues() {
   if (issues.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-muted-foreground">Pod Issues</span>
+        <div className="flex items-center justify-end mb-3">
           <RefreshButton
             isRefreshing={isRefreshing}
             isFailed={isFailed}
@@ -161,9 +162,8 @@ export function PodIssues() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Pod Issues</span>
           <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400" title={`${rawIssues.length} pods with issues`}>
-            {rawIssues.length}
+            {rawIssues.length} issues
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -174,7 +174,7 @@ export function PodIssues() {
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}
-          {availableClustersForFilter.length > 1 && (
+          {availableClustersForFilter.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
                 onClick={() => setShowClusterFilter(!showClusterFilter)}

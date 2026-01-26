@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { CardWrapper } from './CardWrapper'
+
 import { Play, RotateCcw, Pause, Trophy, Cpu, User } from 'lucide-react'
 
 // Game constants
@@ -306,7 +306,7 @@ export function KubePong() {
   }
 
   return (
-    <CardWrapper cardType="kube_pong" title="Kube Pong">
+    <div className="h-full flex flex-col">
       <div className="flex flex-col items-center gap-3">
         {/* Stats bar */}
         <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
@@ -420,6 +420,6 @@ export function KubePong() {
 
         <p className="text-xs text-muted-foreground">First to {WINNING_SCORE} wins!</p>
       </div>
-    </CardWrapper>
+    </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout } from 'lucide-react'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from './AddCardModal'
 import { TemplatesModal } from './TemplatesModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
@@ -155,6 +155,7 @@ export function DashboardCards({
                     onConfigure={() => handleConfigureCard(card.id)}
                     onRemove={() => onRemoveCard(card.id)}
                     isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+                    isLive={LIVE_DATA_CARDS.has(card.card_type)}
                   >
                     <CardComponent config={card.config} />
                   </CardWrapper>

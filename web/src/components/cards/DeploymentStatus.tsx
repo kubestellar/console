@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, Clock, XCircle, ChevronRight, Search, Filter } from 'lucide-react'
+import { CheckCircle, Clock, XCircle, ChevronRight, Search, Filter, ChevronDown, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -8,7 +8,7 @@ import { usePagination, Pagination } from '../ui/Pagination'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
-import { useStatusFilter } from '../../lib/cards'
+import { useStatusFilter, useChartFilters } from '../../lib/cards'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -84,6 +84,19 @@ export function DeploymentStatus() {
   const [sortBy, setSortBy] = useState<SortByOption>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'deployment-status',
+  })
+
   // Apply global filters first
   const globalFilteredDeployments = useMemo(() => {
     let result = allDeployments
@@ -110,8 +123,16 @@ export function DeploymentStatus() {
       )
     }
 
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      result = result.filter(d => {
+        const clusterName = d.cluster?.split('/').pop() || d.cluster || ''
+        return localClusterFilter.includes(clusterName)
+      })
+    }
+
     return result
-  }, [allDeployments, selectedClusters, isAllClustersSelected, globalFilterByStatus, globalCustomFilter])
+  }, [allDeployments, selectedClusters, isAllClustersSelected, globalFilterByStatus, globalCustomFilter, localClusterFilter])
 
   // Status counts (for all deployments)
   const statusCounts = useMemo(() => ({
@@ -220,6 +241,58 @@ export function DeploymentStatus() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}

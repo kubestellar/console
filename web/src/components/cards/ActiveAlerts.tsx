@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
-  Bell,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -198,11 +197,9 @@ export function ActiveAlerts() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Bell className="w-4 h-4 text-red-400" />
-          <span className="text-sm font-medium text-foreground">Active Alerts</span>
           {stats.firing > 0 && (
             <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-              {stats.firing}
+              {stats.firing} firing
             </span>
           )}
           {localClusterFilter.length > 0 && (
@@ -246,7 +243,7 @@ export function ActiveAlerts() {
       </div>
 
       {/* Cluster Filter */}
-      {availableClustersForFilter.length > 1 && (
+      {availableClustersForFilter.length >= 1 && (
         <div className="flex items-center gap-2 mb-3">
           <div ref={clusterFilterRef} className="relative">
             <button

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Server, CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, Search } from 'lucide-react'
+import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, Search } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -214,9 +214,8 @@ export function ClusterHealth() {
       {/* Header with refresh */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span title="Kubernetes clusters"><Server className="w-4 h-4 text-purple-400" /></span>
-          <span className="text-sm font-medium text-muted-foreground" title={`${rawClusters.length} total clusters configured`}>
-            {rawClusters.length} Clusters
+          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400" title={`${rawClusters.length} total clusters configured`}>
+            {rawClusters.length} clusters
           </span>
           <RefreshButton
             isRefreshing={isRefreshing}

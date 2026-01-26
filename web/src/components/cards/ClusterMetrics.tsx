@@ -228,31 +228,10 @@ export function ClusterMetrics() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with metric selector */}
+      {/* Header with metric value and selector */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-medium text-foreground">{config.label}</h4>
-            {clusters.length < availableClustersForFilter.length && clusters.length > 0 && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-                <Server className="w-3 h-3" />
-                {clusters.length}/{availableClustersForFilter.length}
-              </span>
-            )}
-            {hasRealData && (
-              <span className="text-xs text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
-                Live
-              </span>
-            )}
-            <RefreshButton
-              isRefreshing={isRefreshing}
-              isFailed={isFailed}
-              consecutiveFailures={consecutiveFailures}
-              lastRefresh={lastRefresh}
-              onRefresh={refetch}
-              size="sm"
-            />
-          </div>
+          <h4 className="text-sm font-medium text-foreground">{config.label}</h4>
           <p className="text-2xl font-bold text-foreground">
             {selectedMetric === 'memory' ? realValues.memory.toFixed(1) : Math.round(currentValue)}<span className="text-sm text-muted-foreground">{config.unit}</span>
           </p>
@@ -274,8 +253,16 @@ export function ClusterMetrics() {
         </div>
       </div>
 
-      {/* Filter controls */}
+      {/* Controls - single row: Cluster count → Time Range → Cluster Filter → Chart Mode → Refresh */}
       <div className="flex items-center gap-2 mb-3">
+        {/* Cluster count indicator */}
+        {localClusterFilter.length > 0 && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+            <Server className="w-3 h-3" />
+            {clusters.length}/{availableClustersForFilter.length}
+          </span>
+        )}
+
         {/* Time Range Filter */}
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3 text-muted-foreground" />
@@ -292,7 +279,7 @@ export function ClusterMetrics() {
         </div>
 
         {/* Cluster Filter */}
-        {availableClustersForFilter.length > 1 && (
+        {availableClustersForFilter.length >= 1 && (
           <div ref={clusterFilterRef} className="relative">
             <button
               onClick={() => setShowClusterFilter(!showClusterFilter)}
@@ -304,12 +291,11 @@ export function ClusterMetrics() {
               title="Filter by cluster"
             >
               <Filter className="w-3 h-3" />
-              <span>{localClusterFilter.length > 0 ? `${localClusterFilter.length} clusters` : 'All clusters'}</span>
               <ChevronDown className="w-3 h-3" />
             </button>
 
             {showClusterFilter && (
-              <div className="absolute top-full left-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                 <div className="p-1">
                   <button
                     onClick={clearClusterFilter}
@@ -337,7 +323,7 @@ export function ClusterMetrics() {
         )}
 
         {/* Chart Mode Toggle */}
-        {clusters.length > 1 && (
+        {clusters.length >= 1 && (
           <div className="flex items-center gap-1 ml-auto">
             <button
               onClick={() => setChartMode('total')}
@@ -365,6 +351,15 @@ export function ClusterMetrics() {
             </button>
           </div>
         )}
+
+        <RefreshButton
+          isRefreshing={isRefreshing}
+          isFailed={isFailed}
+          consecutiveFailures={consecutiveFailures}
+          lastRefresh={lastRefresh}
+          onRefresh={refetch}
+          size="sm"
+        />
       </div>
 
       {/* Chart */}
