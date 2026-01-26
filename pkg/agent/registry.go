@@ -197,6 +197,12 @@ func InitializeProviders() error {
 	// Register Gemini (Google)
 	registry.Register(NewGeminiProvider())
 
+	// Register Bob (Claude OEM - local CLI)
+	registry.Register(NewBobProvider())
+
+	// Register Claude Code (local CLI)
+	registry.Register(NewClaudeCodeProvider())
+
 	// Set default agent based on environment or availability
 	if defaultAgent := os.Getenv("DEFAULT_AGENT"); defaultAgent != "" {
 		if err := registry.SetDefault(defaultAgent); err != nil {

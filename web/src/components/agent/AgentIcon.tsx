@@ -29,6 +29,21 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
           <path d="M12 8l1.5 3.5L17 13l-3.5 1.5L12 18l-1.5-3.5L7 13l3.5-1.5L12 8z" fill="#34A853" />
         </svg>
       )
+    case 'bob':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          {/* Bob icon - stylized B */}
+          <path d="M7 4h6c2.2 0 4 1.8 4 4 0 1.5-.8 2.8-2 3.4 1.5.7 2.5 2.2 2.5 4.1 0 2.5-2 4.5-4.5 4.5H7V4zm3 6h2.5c.8 0 1.5-.7 1.5-1.5S13.3 7 12.5 7H10v3zm0 7h3c1.1 0 2-.9 2-2s-.9-2-2-2h-3v4z" fill="#6366F1" />
+        </svg>
+      )
+    case 'anthropic-local':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          {/* Claude Code local icon - A with terminal prompt */}
+          <path d="M12.04 2L1 22h5.48l2.49-4.71h6.06L17.52 22H23L12.04 2zm-.09 5.65l2.67 5.05H9.28l2.67-5.05z" fill="#D97706" />
+          <circle cx="18" cy="6" r="4" fill="#22C55E" />
+        </svg>
+      )
     default:
       // Generic AI/robot icon
       return (

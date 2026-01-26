@@ -1,6 +1,6 @@
 // Agent-related TypeScript types for multi-agent support
 
-export type AgentProvider = 'anthropic' | 'openai' | 'google'
+export type AgentProvider = 'anthropic' | 'openai' | 'google' | 'bob' | 'anthropic-local'
 
 export interface AgentInfo {
   name: string
