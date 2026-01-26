@@ -113,10 +113,20 @@ export function Onboarding() {
         question_key,
         answer: Array.isArray(answer) ? answer.join(',') : answer,
       }))
-      await api.post('/api/onboarding/responses', responses)
 
-      // Complete onboarding
-      await api.post('/api/onboarding/complete', {})
+      // Check if demo mode (no backend available)
+      const token = localStorage.getItem('token')
+      const isDemoMode = token === 'demo-token'
+
+      if (isDemoMode) {
+        // Demo mode: save onboarding responses to localStorage
+        localStorage.setItem('demo-onboarding-responses', JSON.stringify(responses))
+        localStorage.setItem('demo-user-onboarded', 'true')
+      } else {
+        // Real user: save to backend
+        await api.post('/api/onboarding/responses', responses)
+        await api.post('/api/onboarding/complete', {})
+      }
 
       // Refresh user to get updated onboarded status
       await refreshUser()
@@ -124,6 +134,13 @@ export function Onboarding() {
       navigate('/')
     } catch (error) {
       console.error('Failed to complete onboarding:', error)
+      // For demo mode, still allow navigation even if there's an error
+      const token = localStorage.getItem('token')
+      if (token === 'demo-token') {
+        localStorage.setItem('demo-user-onboarded', 'true')
+        await refreshUser()
+        navigate('/')
+      }
     } finally {
       setIsSubmitting(false)
     }

@@ -13,8 +13,8 @@ declare const __COMMIT_HASH__: string
 
 const GITHUB_API_URL =
   'https://api.github.com/repos/kubestellar/console/releases'
-const CACHE_TTL_MS = 15 * 60 * 1000 // 15 minutes
-const MIN_CHECK_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes cache
+const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between checks
 
 /**
  * Parse a release tag to determine its type and extract date.
@@ -206,7 +206,9 @@ function loadSkippedVersions(): string[] {
  * Hook for checking version updates from GitHub releases.
  *
  * Features:
- * - Fetches releases with 15-minute cache
+ * - Uses 30-minute cache to minimize API calls
+ * - Only auto-fetches when cache is stale (>30 minutes)
+ * - User can manually refresh via forceCheck for immediate updates
  * - Supports stable (weekly) and unstable (nightly) channels
  * - Handles rate limiting with ETag conditional requests
  * - Allows skipping specific versions
@@ -270,6 +272,18 @@ export function useVersionCheck() {
         headers['If-None-Match'] = cache.etag
       }
 
+      // Use GitHub token if available (base64 encoded in localStorage)
+      const storedToken = localStorage.getItem('github_token')
+      if (storedToken) {
+        try {
+          const token = atob(storedToken)
+          headers['Authorization'] = `Bearer ${token}`
+        } catch {
+          // Token not base64 encoded (old format), use as-is
+          headers['Authorization'] = `Bearer ${storedToken}`
+        }
+      }
+
       const response = await fetch(GITHUB_API_URL, { headers })
 
       // Handle rate limiting
@@ -326,15 +340,23 @@ export function useVersionCheck() {
 
   /**
    * Check for updates (respects minimum check interval).
+   * Only fetches if cache is stale (older than 30 minutes).
+   * User must manually refresh for more frequent updates.
    */
   const checkForUpdates = useCallback(async (): Promise<void> => {
-    // Enforce minimum check interval unless forced
-    if (lastChecked && Date.now() - lastChecked < MIN_CHECK_INTERVAL_MS) {
-      // Still use cached data
-      const cache = loadCache()
-      if (cache) {
-        setReleases(cache.data.map(parseRelease))
+    // Always try to use cached data first
+    const cache = loadCache()
+    if (cache) {
+      setReleases(cache.data.map(parseRelease))
+
+      // Only fetch if cache is older than MIN_CHECK_INTERVAL
+      if (Date.now() - cache.timestamp < MIN_CHECK_INTERVAL_MS) {
+        return // Cache is fresh, don't fetch
       }
+    }
+
+    // Also enforce lastChecked interval as backup
+    if (lastChecked && Date.now() - lastChecked < MIN_CHECK_INTERVAL_MS) {
       return
     }
 

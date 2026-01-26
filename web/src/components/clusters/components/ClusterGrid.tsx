@@ -118,9 +118,23 @@ const FullClusterCard = memo(function FullClusterCard({
                 <span className="flex-shrink-0" title={providerLabel}>
                   <CloudProviderIcon provider={provider} size={18} />
                 </span>
-                <h3 className="font-semibold text-foreground truncate">
+                <h3
+                  className="font-semibold text-foreground truncate"
+                  title={cluster.aliases && cluster.aliases.length > 0
+                    ? `${cluster.context || cluster.name}\n\naka: ${cluster.aliases.join(', ')}`
+                    : cluster.context || cluster.name
+                  }
+                >
                   {cluster.context || cluster.name.split('/').pop()}
                 </h3>
+                {cluster.aliases && cluster.aliases.length > 0 && (
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
+                    title={`Also known as: ${cluster.aliases.join(', ')}`}
+                  >
+                    +{cluster.aliases.length} alias{cluster.aliases.length > 1 ? 'es' : ''}
+                  </span>
+                )}
                 {isConnected && (cluster.source === 'kubeconfig' || !cluster.source) && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onRenameCluster() }}
@@ -270,9 +284,23 @@ const ListClusterCard = memo(function ListClusterCard({
           {/* Provider and name */}
           <div className="flex items-center gap-2 min-w-0 flex-shrink-0 w-48">
             <CloudProviderIcon provider={provider} size={16} />
-            <span className="font-medium text-foreground truncate" title={cluster.context || cluster.name}>
+            <span
+              className="font-medium text-foreground truncate"
+              title={cluster.aliases && cluster.aliases.length > 0
+                ? `${cluster.context || cluster.name}\n\naka: ${cluster.aliases.join(', ')}`
+                : cluster.context || cluster.name
+              }
+            >
               {cluster.context || cluster.name.split('/').pop()}
             </span>
+            {cluster.aliases && cluster.aliases.length > 0 && (
+              <span
+                className="text-[10px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
+                title={`Also known as: ${cluster.aliases.join(', ')}`}
+              >
+                +{cluster.aliases.length}
+              </span>
+            )}
             {cluster.isCurrent && (
               <span title="Current context"><Star className="w-3 h-3 text-primary fill-current flex-shrink-0" /></span>
             )}
@@ -377,9 +405,23 @@ const CompactClusterCard = memo(function CompactClusterCard({
             <div className="w-2 h-2 rounded-full bg-green-400" />
           )}
           <CloudProviderIcon provider={provider} size={14} />
-          <span className="text-xs font-medium text-foreground truncate flex-1" title={cluster.context || cluster.name}>
+          <span
+            className="text-xs font-medium text-foreground truncate flex-1"
+            title={cluster.aliases && cluster.aliases.length > 0
+              ? `${cluster.context || cluster.name}\n\naka: ${cluster.aliases.join(', ')}`
+              : cluster.context || cluster.name
+            }
+          >
             {cluster.context || cluster.name.split('/').pop()}
           </span>
+          {cluster.aliases && cluster.aliases.length > 0 && (
+            <span
+              className="text-[8px] px-1 rounded bg-purple-500/20 text-purple-400 flex-shrink-0"
+              title={`Also known as: ${cluster.aliases.join(', ')}`}
+            >
+              +{cluster.aliases.length}
+            </span>
+          )}
           {cluster.isCurrent && (
             <Star className="w-3 h-3 text-primary fill-current flex-shrink-0" />
           )}

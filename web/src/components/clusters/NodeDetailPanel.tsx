@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { X, Server, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Server, ChevronDown, ChevronUp, Wrench, Sparkles } from 'lucide-react'
 import { NodeInfo } from '../../hooks/useMCP'
 import { ConditionBadges, hasConditionIssues, getConditionIssuesSummary } from '../shared/ConditionBadges'
 import { useMissions } from '../../hooks/useMissions'
 import { cn } from '../../lib/cn'
-import { KlaudeIcon } from '../ui/KlaudeIcon'
 import { formatK8sMemory, formatK8sStorage } from '../../lib/formatters'
 
 interface NodeDetailPanelProps {
@@ -193,8 +192,11 @@ Please proceed step by step and ask for confirmation before making any changes.`
               : 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
           )}
         >
-          <KlaudeIcon size="sm" />
-          Klaude Repair
+          <div className="relative">
+            <Wrench className="w-3.5 h-3.5" />
+            <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
+          </div>
+          Repair
         </button>
       </div>
     </div>

@@ -47,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Demo token - set demo user directly without API call
     if (effectiveToken === 'demo-token') {
+      // Check if demo user has completed onboarding (stored in localStorage)
+      const demoOnboarded = localStorage.getItem('demo-user-onboarded') === 'true'
       setUser({
         id: 'demo-user',
         github_id: '12345',
@@ -54,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'demo@example.com',
         avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
         role: 'viewer',
-        onboarded: true,
+        onboarded: demoOnboarded,
       })
       return
     }
@@ -87,6 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Demo mode provides read-only viewer access, not admin
       localStorage.setItem('token', 'demo-token')
       setTokenState('demo-token')
+      // Check if demo user has completed onboarding (stored in localStorage)
+      const demoOnboarded = localStorage.getItem('demo-user-onboarded') === 'true'
       setUser({
         id: 'demo-user',
         github_id: '12345',
@@ -94,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'demo@example.com',
         avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
         role: 'viewer', // Demo users get viewer role, not admin
-        onboarded: true,
+        onboarded: demoOnboarded,
       })
       return
     }

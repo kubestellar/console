@@ -47,6 +47,7 @@ interface AlertsContextValue {
   stats: AlertStats
   rules: AlertRule[]
   acknowledgeAlert: (alertId: string, acknowledgedBy?: string) => void
+  acknowledgeAlerts: (alertIds: string[], acknowledgedBy?: string) => void
   resolveAlert: (alertId: string) => void
   deleteAlert: (alertId: string) => void
   runAIDiagnosis: (alertId: string) => string | null
@@ -176,6 +177,18 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       prev.map(alert =>
         alert.id === alertId
           ? { ...alert, acknowledgedAt: new Date().toISOString(), acknowledgedBy }
+          : alert
+      )
+    )
+  }, [])
+
+  // Acknowledge multiple alerts at once
+  const acknowledgeAlerts = useCallback((alertIds: string[], acknowledgedBy?: string) => {
+    const now = new Date().toISOString()
+    setAlerts(prev =>
+      prev.map(alert =>
+        alertIds.includes(alert.id)
+          ? { ...alert, acknowledgedAt: now, acknowledgedBy }
           : alert
       )
     )
@@ -558,6 +571,7 @@ Please provide:
     stats,
     rules,
     acknowledgeAlert,
+    acknowledgeAlerts,
     resolveAlert,
     deleteAlert,
     runAIDiagnosis,

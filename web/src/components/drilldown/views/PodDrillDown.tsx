@@ -4,7 +4,7 @@ import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw } from 'lucide-react'
+import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { KlaudeIcon } from '../../ui/KlaudeIcon'
 
@@ -2291,7 +2291,10 @@ Please proceed step by step and ask for confirmation before making any changes.`
                 </>
               ) : (
                 <>
-                  <KlaudeIcon />
+                  <div className="relative">
+                    <Stethoscope className="w-4 h-4" />
+                    <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
+                  </div>
                   <span>{aiAnalysis ? 'Re-analyze' : 'Diagnose'}</span>
                 </>
               )}
@@ -2304,7 +2307,10 @@ Please proceed step by step and ask for confirmation before making any changes.`
                 'shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]'
               )}
             >
-              <KlaudeIcon />
+              <div className="relative">
+                <Wrench className="w-4 h-4" />
+                <Sparkles className="absolute -top-0.5 -right-0.5 w-2 h-2 text-purple-400 animate-pulse" />
+              </div>
               <span>Repair</span>
             </button>
           </div>

@@ -2,7 +2,7 @@
  * Feedback Modal - allows users to submit bugs or feature requests
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -59,6 +59,36 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setDescription('')
     onClose()
   }
+
+  // Keyboard navigation - ESC to close, Space to close when not typing
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC always closes
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleClose()
+        return
+      }
+
+      // Space closes only if not typing in an input
+      if (e.key === ' ') {
+        if (
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement ||
+          (e.target instanceof HTMLElement && e.target.isContentEditable)
+        ) {
+          return
+        }
+        e.preventDefault()
+        handleClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
 
   if (!isOpen) return null
 

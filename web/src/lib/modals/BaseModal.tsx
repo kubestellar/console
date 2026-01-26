@@ -82,12 +82,12 @@ export function BaseModal({
 }: BaseModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null)
 
-  // Set up keyboard navigation
+  // Set up keyboard navigation (ESC and Space/Backspace to close)
   useModalNavigation({
     isOpen,
     onClose,
     enableEscape: closeOnEscape,
-    enableBackspace: false,
+    enableBackspace: true,
     disableBodyScroll: true,
   })
 
@@ -240,6 +240,7 @@ function ModalFooter({
 }: ModalFooterProps) {
   const defaultHints = [
     { key: 'Esc', label: 'close' },
+    { key: 'Space', label: 'close' },
   ]
 
   const hints = keyboardHints || defaultHints

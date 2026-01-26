@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
+import { getDemoMode } from './useDemoMode'
 
 export interface TokenUsage {
   used: number
@@ -24,6 +25,9 @@ const DEFAULT_SETTINGS = {
   stopThreshold: 1.0, // 100%
 }
 
+// Demo mode token usage - simulate realistic usage
+const DEMO_TOKEN_USAGE = 1247832 // ~25% of 5M limit
+
 // Singleton state - shared across all hook instances
 let sharedUsage: TokenUsage = {
   used: 0,
@@ -39,6 +43,10 @@ if (typeof window !== 'undefined') {
   if (settings) {
     const parsedSettings = JSON.parse(settings)
     sharedUsage = { ...sharedUsage, ...parsedSettings }
+  }
+  // Set demo usage if in demo mode
+  if (getDemoMode()) {
+    sharedUsage.used = DEMO_TOKEN_USAGE
   }
 }
 
@@ -67,6 +75,14 @@ function updateSharedUsage(updates: Partial<TokenUsage>, forceNotify = false) {
 
 // Fetch token usage from local agent (singleton - only runs once)
 async function fetchTokenUsage() {
+  // Use demo data when in demo mode
+  if (getDemoMode()) {
+    // Simulate slow token accumulation in demo mode
+    const randomIncrease = Math.floor(Math.random() * 5000) // 0-5000 tokens
+    updateSharedUsage({ used: DEMO_TOKEN_USAGE + randomIncrease })
+    return
+  }
+
   // Skip if agent is known to be unavailable (uses shared state from useLocalAgent)
   if (isAgentUnavailable()) {
     return
@@ -87,7 +103,9 @@ async function fetchTokenUsage() {
       const data = await response.json()
       if (data.claude?.tokenUsage?.today) {
         const todayTokens = data.claude.tokenUsage.today
-        updateSharedUsage({ used: todayTokens.output })
+        // Track both input and output tokens
+        const totalUsed = (todayTokens.input || 0) + (todayTokens.output || 0)
+        updateSharedUsage({ used: totalUsed })
       }
     } else {
       reportAgentDataError('/health (token)', `HTTP ${response.status}`)

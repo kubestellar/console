@@ -147,6 +147,7 @@ const CARD_CATALOG = {
   'Utilities': [
     { type: 'network_utils', title: 'Network Utils', description: 'Ping hosts, check ports, and view network information', visualization: 'status' },
     { type: 'mobile_browser', title: 'Mobile Browser', description: 'iPhone-style mobile web browser with tabs and bookmarks', visualization: 'status' },
+    { type: 'rss_feed', title: 'RSS Feed', description: 'Read RSS feeds from Reddit, Hacker News, tech blogs, and more', visualization: 'events' },
     { type: 'iframe_embed', title: 'Iframe Embed', description: 'Embed external dashboards like Grafana, Prometheus, or Kibana', visualization: 'status' },
   ],
   'Misc': [

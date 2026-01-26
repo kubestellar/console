@@ -5,6 +5,8 @@ import App from './App.tsx'
 import './index.css'
 // Initialize i18n before rendering
 import './lib/i18n'
+// Import cache migration utility
+import { migrateFromLocalStorage } from './lib/cache'
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn
@@ -48,7 +50,14 @@ enableMocking()
   .catch((error) => {
     console.warn('MSW initialization failed:', error)
   })
-  .finally(() => {
+  .finally(async () => {
+    // Migrate old localStorage cache to IndexedDB (one-time migration)
+    try {
+      await migrateFromLocalStorage()
+    } catch (e) {
+      console.warn('[Cache] Migration failed:', e)
+    }
+
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>
         <BrowserRouter>

@@ -2,8 +2,10 @@
  * Unified Caching Layer for Dashboard Cards
  *
  * This module provides a single, consistent caching pattern that all cards should use.
- * It combines the best features from existing patterns:
- * - localStorage persistence with versioning
+ * Uses IndexedDB for large data storage (50MB+ quota) with localStorage fallback.
+ *
+ * Features:
+ * - IndexedDB persistence for large data (no more quota issues)
  * - Stale-while-revalidate (show cached data while fetching)
  * - Subscriber pattern for multi-component updates
  * - Configurable refresh rates by data category
@@ -27,10 +29,14 @@ import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 // ============================================================================
 
 /** Cache version - increment when cache structure changes to invalidate old caches */
-const CACHE_VERSION = 2
+const CACHE_VERSION = 3
 
-/** Storage key prefixes */
-const STORAGE_PREFIX = 'klaude_cache:'
+/** IndexedDB configuration */
+const DB_NAME = 'klaude_cache'
+const DB_VERSION = 1
+const STORE_NAME = 'cache'
+
+/** Storage key prefixes (for localStorage metadata only) */
 const META_PREFIX = 'klaude_meta:'
 
 /** Maximum consecutive failures before marking as failed */
@@ -77,6 +83,7 @@ export type RefreshCategory = keyof typeof REFRESH_RATES
 // ============================================================================
 
 interface CacheEntry<T> {
+  key: string
   data: T
   timestamp: number
   version: number
@@ -101,6 +108,193 @@ interface CacheState<T> {
 type Subscriber = () => void
 
 // ============================================================================
+// IndexedDB Storage Layer
+// ============================================================================
+
+class IndexedDBStorage {
+  private db: IDBDatabase | null = null
+  private dbPromise: Promise<IDBDatabase> | null = null
+  private isSupported: boolean = true
+
+  constructor() {
+    // Check if IndexedDB is available
+    this.isSupported = typeof indexedDB !== 'undefined'
+    if (this.isSupported) {
+      this.initDB()
+    }
+  }
+
+  private initDB(): Promise<IDBDatabase> {
+    if (this.dbPromise) return this.dbPromise
+
+    this.dbPromise = new Promise((resolve, reject) => {
+      try {
+        const request = indexedDB.open(DB_NAME, DB_VERSION)
+
+        request.onerror = () => {
+          console.warn('[Cache] IndexedDB open failed:', request.error)
+          this.isSupported = false
+          reject(request.error)
+        }
+
+        request.onsuccess = () => {
+          this.db = request.result
+          resolve(this.db)
+        }
+
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result
+
+          // Create cache store if it doesn't exist
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'key' })
+            store.createIndex('timestamp', 'timestamp', { unique: false })
+          }
+        }
+      } catch (e) {
+        console.warn('[Cache] IndexedDB not available:', e)
+        this.isSupported = false
+        reject(e)
+      }
+    })
+
+    return this.dbPromise
+  }
+
+  async get<T>(key: string): Promise<CacheEntry<T> | null> {
+    if (!this.isSupported) return null
+
+    try {
+      const db = await this.initDB()
+      return new Promise((resolve) => {
+        const transaction = db.transaction(STORE_NAME, 'readonly')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.get(key)
+
+        request.onsuccess = () => {
+          const entry = request.result as CacheEntry<T> | undefined
+          if (entry && entry.version === CACHE_VERSION) {
+            resolve(entry)
+          } else {
+            resolve(null)
+          }
+        }
+
+        request.onerror = () => {
+          console.warn('[Cache] IndexedDB get failed:', request.error)
+          resolve(null)
+        }
+      })
+    } catch {
+      return null
+    }
+  }
+
+  async set<T>(key: string, data: T): Promise<void> {
+    if (!this.isSupported) return
+
+    try {
+      const db = await this.initDB()
+      const entry: CacheEntry<T> = {
+        key,
+        data,
+        timestamp: Date.now(),
+        version: CACHE_VERSION,
+      }
+
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.put(entry)
+
+        request.onsuccess = () => resolve()
+        request.onerror = () => {
+          console.warn('[Cache] IndexedDB set failed:', request.error)
+          reject(request.error)
+        }
+      })
+    } catch (e) {
+      console.warn('[Cache] IndexedDB set error:', e)
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    if (!this.isSupported) return
+
+    try {
+      const db = await this.initDB()
+      return new Promise((resolve) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.delete(key)
+
+        request.onsuccess = () => resolve()
+        request.onerror = () => {
+          console.warn('[Cache] IndexedDB delete failed:', request.error)
+          resolve()
+        }
+      })
+    } catch {
+      // Ignore
+    }
+  }
+
+  async clear(): Promise<void> {
+    if (!this.isSupported) return
+
+    try {
+      const db = await this.initDB()
+      return new Promise((resolve) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.clear()
+
+        request.onsuccess = () => {
+          console.log('[Cache] IndexedDB cleared')
+          resolve()
+        }
+        request.onerror = () => {
+          console.warn('[Cache] IndexedDB clear failed:', request.error)
+          resolve()
+        }
+      })
+    } catch {
+      // Ignore
+    }
+  }
+
+  async getStats(): Promise<{ keys: string[]; count: number }> {
+    if (!this.isSupported) return { keys: [], count: 0 }
+
+    try {
+      const db = await this.initDB()
+      return new Promise((resolve) => {
+        const transaction = db.transaction(STORE_NAME, 'readonly')
+        const store = transaction.objectStore(STORE_NAME)
+        const keys: string[] = []
+
+        const request = store.openCursor()
+        request.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result
+          if (cursor) {
+            keys.push(cursor.key as string)
+            cursor.continue()
+          } else {
+            resolve({ keys, count: keys.length })
+          }
+        }
+        request.onerror = () => resolve({ keys: [], count: 0 })
+      })
+    } catch {
+      return { keys: [], count: 0 }
+    }
+  }
+}
+
+// Singleton IndexedDB storage instance
+const idbStorage = new IndexedDBStorage()
+
+// ============================================================================
 // Cache Store (Module-level singleton)
 // ============================================================================
 
@@ -109,55 +303,61 @@ class CacheStore<T> {
   private subscribers = new Set<Subscriber>()
   private fetchingRef = false
   private refreshTimeoutRef: ReturnType<typeof setTimeout> | null = null
+  private initialDataLoaded = false
 
   constructor(
     private key: string,
     private initialData: T,
     private persist: boolean = true
   ) {
-    // Initialize from localStorage if available
-    const cached = this.loadFromStorage()
+    // Initialize with initial data, then async load from IndexedDB
     const meta = this.loadMeta()
 
     this.state = {
-      data: cached?.data ?? initialData,
-      isLoading: !cached,
+      data: initialData,
+      isLoading: true,
       isRefreshing: false,
       error: meta.lastError ?? null,
       isFailed: meta.consecutiveFailures >= MAX_FAILURES,
       consecutiveFailures: meta.consecutiveFailures,
-      lastRefresh: cached?.timestamp ?? null,
+      lastRefresh: null,
+    }
+
+    // Async load from IndexedDB
+    if (this.persist) {
+      this.loadFromStorage()
     }
   }
 
-  // Storage operations
-  private loadFromStorage(): CacheEntry<T> | null {
-    if (!this.persist) return null
+  // Storage operations (async via IndexedDB)
+  private async loadFromStorage(): Promise<void> {
+    if (!this.persist || this.initialDataLoaded) return
+
     try {
-      const stored = localStorage.getItem(STORAGE_PREFIX + this.key)
-      if (!stored) return null
-      const entry = JSON.parse(stored) as CacheEntry<T>
-      if (entry.version !== CACHE_VERSION) return null
-      return entry
+      const entry = await idbStorage.get<T>(this.key)
+      if (entry) {
+        this.initialDataLoaded = true
+        this.setState({
+          data: entry.data,
+          isLoading: false,
+          lastRefresh: entry.timestamp,
+        })
+      }
     } catch {
-      return null
+      // Ignore errors, will use initial data
     }
   }
 
-  private saveToStorage(data: T): void {
+  private async saveToStorage(data: T): Promise<void> {
     if (!this.persist) return
     try {
-      const entry: CacheEntry<T> = {
-        data,
-        timestamp: Date.now(),
-        version: CACHE_VERSION,
-      }
-      localStorage.setItem(STORAGE_PREFIX + this.key, JSON.stringify(entry))
+      await idbStorage.set(this.key, data)
     } catch (e) {
       console.warn(`[Cache] Failed to save ${this.key}:`, e)
     }
   }
 
+  // Metadata stored in localStorage (small, sync access needed)
   private loadMeta(): CacheMeta {
     try {
       const stored = localStorage.getItem(META_PREFIX + this.key)
@@ -172,7 +372,7 @@ class CacheStore<T> {
     try {
       localStorage.setItem(META_PREFIX + this.key, JSON.stringify(meta))
     } catch {
-      // Ignore
+      // Ignore - localStorage might be full but that's okay for metadata
     }
   }
 
@@ -198,7 +398,7 @@ class CacheStore<T> {
     if (this.fetchingRef) return
     this.fetchingRef = true
 
-    const hasCachedData = this.state.data !== this.initialData
+    const hasCachedData = this.state.data !== this.initialData || this.initialDataLoaded
     const startTime = Date.now()
 
     this.setState({
@@ -216,9 +416,10 @@ class CacheStore<T> {
         await new Promise(r => setTimeout(r, MIN_REFRESH_INDICATOR_MS - elapsed))
       }
 
-      this.saveToStorage(finalData)
+      await this.saveToStorage(finalData)
       this.saveMeta({ consecutiveFailures: 0, lastSuccessfulRefresh: Date.now() })
 
+      this.initialDataLoaded = true
       this.setState({
         data: finalData,
         isLoading: false,
@@ -251,9 +452,10 @@ class CacheStore<T> {
   }
 
   // Clear cache
-  clear(): void {
-    localStorage.removeItem(STORAGE_PREFIX + this.key)
+  async clear(): Promise<void> {
+    await idbStorage.delete(this.key)
     localStorage.removeItem(META_PREFIX + this.key)
+    this.initialDataLoaded = false
     this.setState({
       data: this.initialData,
       isLoading: true,
@@ -302,7 +504,7 @@ export interface UseCacheOptions<T> {
   refreshInterval?: number
   /** Initial data when cache is empty */
   initialData: T
-  /** Whether to persist to localStorage (default: true) */
+  /** Whether to persist to IndexedDB (default: true) */
   persist?: boolean
   /** Whether to auto-refresh at interval (default: true) */
   autoRefresh?: boolean
@@ -378,7 +580,7 @@ export function useCache<T>({
   }, [enabled, store])
 
   const clearAndRefetch = useCallback(async () => {
-    store.clear()
+    await store.clear()
     await refetch()
   }, [store, refetch])
 
@@ -448,43 +650,38 @@ export function useObjectCache<T extends Record<string, unknown>>(
 // Utilities
 // ============================================================================
 
-/** Clear all caches */
-export function clearAllCaches(): void {
+/** Clear all caches (both IndexedDB and localStorage metadata) */
+export async function clearAllCaches(): Promise<void> {
+  // Clear IndexedDB
+  await idbStorage.clear()
+
+  // Clear localStorage metadata
   const keysToRemove: string[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key && (key.startsWith(STORAGE_PREFIX) || key.startsWith(META_PREFIX))) {
+    if (key && key.startsWith(META_PREFIX)) {
       keysToRemove.push(key)
     }
   }
   keysToRemove.forEach(key => localStorage.removeItem(key))
+
+  // Clear registry
   cacheRegistry.clear()
 }
 
 /** Get cache statistics */
-export function getCacheStats(): { keys: string[]; totalSize: number; entries: number } {
-  const keys: string[] = []
-  let totalSize = 0
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key && key.startsWith(STORAGE_PREFIX)) {
-      keys.push(key.replace(STORAGE_PREFIX, ''))
-      const value = localStorage.getItem(key)
-      if (value) totalSize += value.length
-    }
-  }
-
-  return { keys, totalSize, entries: cacheRegistry.size }
+export async function getCacheStats(): Promise<{ keys: string[]; count: number; entries: number }> {
+  const stats = await idbStorage.getStats()
+  return { ...stats, entries: cacheRegistry.size }
 }
 
 /** Invalidate a specific cache (force refetch on next use) */
-export function invalidateCache(key: string): void {
+export async function invalidateCache(key: string): Promise<void> {
   const store = cacheRegistry.get(key)
   if (store) {
-    (store as CacheStore<unknown>).clear()
+    await (store as CacheStore<unknown>).clear()
   }
-  localStorage.removeItem(STORAGE_PREFIX + key)
+  await idbStorage.delete(key)
   localStorage.removeItem(META_PREFIX + key)
 }
 
@@ -497,3 +694,55 @@ export async function prefetchCache<T>(
   const store = getOrCreateCache(key, initialData, true)
   await store.fetch(fetcher)
 }
+
+/** Migrate old localStorage cache to IndexedDB (run once on app startup) */
+export async function migrateFromLocalStorage(): Promise<void> {
+  const OLD_PREFIX = 'klaude_cache:'
+  const keysToMigrate: string[] = []
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith(OLD_PREFIX)) {
+      keysToMigrate.push(key)
+    }
+  }
+
+  for (const fullKey of keysToMigrate) {
+    try {
+      const stored = localStorage.getItem(fullKey)
+      if (stored) {
+        const entry = JSON.parse(stored)
+        const key = fullKey.replace(OLD_PREFIX, '')
+        // Only migrate if data looks valid
+        if (entry.data !== undefined) {
+          await idbStorage.set(key, entry.data)
+          console.log(`[Cache] Migrated ${key} to IndexedDB`)
+        }
+      }
+      // Remove old localStorage entry after migration
+      localStorage.removeItem(fullKey)
+    } catch (e) {
+      console.warn(`[Cache] Failed to migrate ${fullKey}:`, e)
+      // Remove corrupted entry
+      localStorage.removeItem(fullKey)
+    }
+  }
+
+  // Also clean up kubectl-history which was a major source of quota issues
+  localStorage.removeItem('kubectl-history')
+
+  if (keysToMigrate.length > 0) {
+    console.log(`[Cache] Migrated ${keysToMigrate.length} entries from localStorage to IndexedDB`)
+  }
+}
+
+// Re-export storage hooks for easy importing
+export {
+  useLocalPreference,
+  useClusterFilterPreference,
+  useSortPreference,
+  useCollapsedPreference,
+  useIndexedData,
+  getStorageStats,
+  clearAllStorage,
+} from './hooks'
