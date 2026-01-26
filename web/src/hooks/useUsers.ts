@@ -14,6 +14,94 @@ import type {
   CreateRoleBindingRequest,
 } from '../types/users'
 
+// Demo data for console users
+function getDemoConsoleUsers(): ConsoleUser[] {
+  return [
+    {
+      id: '1',
+      github_id: '12345',
+      github_login: 'admin-user',
+      email: 'admin@example.com',
+      avatar_url: 'https://avatars.githubusercontent.com/u/12345?v=4',
+      role: 'admin',
+      onboarded: true,
+      created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+      last_login: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: '2',
+      github_id: '23456',
+      github_login: 'developer-jane',
+      email: 'jane@example.com',
+      avatar_url: 'https://avatars.githubusercontent.com/u/23456?v=4',
+      role: 'editor',
+      onboarded: true,
+      created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      last_login: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: '3',
+      github_id: '34567',
+      github_login: 'viewer-bob',
+      email: 'bob@example.com',
+      role: 'viewer',
+      onboarded: true,
+      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      last_login: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: '4',
+      github_id: '45678',
+      github_login: 'ops-engineer',
+      email: 'ops@example.com',
+      avatar_url: 'https://avatars.githubusercontent.com/u/45678?v=4',
+      role: 'editor',
+      onboarded: true,
+      created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+      last_login: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+}
+
+// Demo data for user management summary
+function getDemoUserManagementSummary(): UserManagementSummary {
+  return {
+    consoleUsers: {
+      total: 4,
+      admins: 1,
+      editors: 2,
+      viewers: 1,
+    },
+    k8sServiceAccounts: {
+      total: 11,
+      clusters: ['prod-east', 'staging', 'dev-cluster'],
+    },
+    currentUserPermissions: [
+      {
+        cluster: 'prod-east',
+        isClusterAdmin: true,
+        canCreateServiceAccounts: true,
+        canManageRBAC: true,
+        canViewSecrets: true,
+      },
+      {
+        cluster: 'staging',
+        isClusterAdmin: false,
+        canCreateServiceAccounts: true,
+        canManageRBAC: false,
+        canViewSecrets: false,
+      },
+      {
+        cluster: 'dev-cluster',
+        isClusterAdmin: true,
+        canCreateServiceAccounts: true,
+        canManageRBAC: true,
+        canViewSecrets: true,
+      },
+    ],
+  }
+}
+
 /**
  * Hook for managing console users
  */
@@ -24,6 +112,15 @@ export function useConsoleUsers() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
+    // Demo mode returns demo data immediately
+    if (getDemoMode()) {
+      setUsers(getDemoConsoleUsers())
+      setIsLoading(false)
+      setIsRefreshing(false)
+      setError(null)
+      return
+    }
+
     // Only show loading spinner if no cached data
     setIsRefreshing(true)
     setUsers(prev => {
@@ -37,7 +134,8 @@ export function useConsoleUsers() {
       const { data } = await api.get<ConsoleUser[]>('/api/users')
       setUsers(data || [])
     } catch {
-      // Silently fail - backend unavailability is expected in demo mode
+      // Fall back to demo data if API fails
+      setUsers(getDemoConsoleUsers())
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -93,6 +191,15 @@ export function useUserManagementSummary() {
   const [error, setError] = useState<string | null>(null)
 
   const fetchSummary = useCallback(async () => {
+    // Demo mode returns demo data immediately
+    if (getDemoMode()) {
+      setSummary(getDemoUserManagementSummary())
+      setIsLoading(false)
+      setIsRefreshing(false)
+      setError(null)
+      return
+    }
+
     // Only show loading spinner if no cached data
     setIsRefreshing(true)
     setSummary(prev => {
@@ -106,7 +213,8 @@ export function useUserManagementSummary() {
       const { data } = await api.get<UserManagementSummary>('/api/users/summary')
       setSummary(data)
     } catch {
-      // Silently fail - backend unavailability is expected in demo mode
+      // Fall back to demo data if API fails
+      setSummary(getDemoUserManagementSummary())
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
