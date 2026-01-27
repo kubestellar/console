@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/k8s"
 )
 
 // Version is set by ldflags during build
@@ -41,6 +42,7 @@ type Server struct {
 	config         Config
 	upgrader       websocket.Upgrader
 	kubectl        *KubectlProxy
+	k8sClient      *k8s.MultiClusterClient // For rich cluster data queries
 	registry       *Registry
 	clients        map[*websocket.Conn]bool
 	clientsMux     sync.RWMutex
@@ -62,6 +64,13 @@ func NewServer(cfg Config) (*Server, error) {
 	kubectl, err := NewKubectlProxy(cfg.Kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize kubectl proxy: %w", err)
+	}
+
+	// Initialize k8s client for rich cluster data queries
+	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
+	if err != nil {
+		log.Printf("Warning: failed to initialize k8s client: %v", err)
+		// Don't fail - kubectl functionality still works
 	}
 
 	// Initialize AI providers
@@ -93,6 +102,7 @@ func NewServer(cfg Config) (*Server, error) {
 	server := &Server{
 		config:         cfg,
 		kubectl:        kubectl,
+		k8sClient:      k8sClient,
 		registry:       GetRegistry(),
 		clients:        make(map[*websocket.Conn]bool),
 		allowedOrigins: allowedOrigins,
@@ -163,6 +173,12 @@ func (s *Server) Start() error {
 
 	// Clusters endpoint - returns fresh kubeconfig contexts
 	mux.HandleFunc("/clusters", s.handleClustersHTTP)
+
+	// Cluster data endpoints - direct k8s queries without backend
+	mux.HandleFunc("/gpu-nodes", s.handleGPUNodesHTTP)
+	mux.HandleFunc("/nodes", s.handleNodesHTTP)
+	mux.HandleFunc("/pods", s.handlePodsHTTP)
+	mux.HandleFunc("/cluster-health", s.handleClusterHealthHTTP)
 
 	// Rename context endpoint
 	mux.HandleFunc("/rename-context", s.handleRenameContextHTTP)
@@ -271,6 +287,195 @@ func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 	s.kubectl.Reload()
 	clusters, current := s.kubectl.ListContexts()
 	json.NewEncoder(w).Encode(protocol.ClustersPayload{Clusters: clusters, Current: current})
+}
+
+// handleGPUNodesHTTP returns GPU nodes across all clusters
+func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+
+	cluster := r.URL.Query().Get("cluster")
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	var allNodes []k8s.GPUNode
+
+	if cluster != "" {
+		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			return
+		}
+		allNodes = nodes
+	} else {
+		// Query all clusters
+		clusters, err := s.k8sClient.ListClusters(ctx)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			return
+		}
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		for _, cl := range clusters {
+			wg.Add(1)
+			go func(clusterName string) {
+				defer wg.Done()
+				clusterCtx, clusterCancel := context.WithTimeout(ctx, 15*time.Second)
+				defer clusterCancel()
+				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
+				if err == nil && len(nodes) > 0 {
+					mu.Lock()
+					allNodes = append(allNodes, nodes...)
+					mu.Unlock()
+				}
+			}(cl.Name)
+		}
+		wg.Wait()
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": allNodes, "source": "agent"})
+}
+
+// handleNodesHTTP returns nodes for a cluster
+func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+
+	cluster := r.URL.Query().Get("cluster")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	nodes, err := s.k8sClient.GetNodes(ctx, cluster)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": nodes, "source": "agent"})
+}
+
+// handlePodsHTTP returns pods for a cluster/namespace
+func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+
+	cluster := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"pods": []interface{}{}, "error": err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"pods": pods, "source": "agent"})
+}
+
+// handleClusterHealthHTTP returns health info for a cluster
+func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.k8sClient == nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "k8s client not initialized"})
+		return
+	}
+
+	cluster := r.URL.Query().Get("cluster")
+	if cluster == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "cluster parameter required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(health)
+}
+
+// setCORSHeaders sets common CORS headers for HTTP endpoints
+func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 }
 
 // handleRenameContextHTTP renames a kubeconfig context

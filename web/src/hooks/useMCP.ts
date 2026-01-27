@@ -1618,14 +1618,21 @@ export function useClusters() {
     }
   }, [])
 
-  // Re-fetch when demo mode changes
+  // Re-fetch when demo mode changes (not on initial mount)
+  const initialMountRef = useRef(true)
   useEffect(() => {
+    console.log('[GPU] isDemoMode effect:', { isDemoMode, isInitialMount: initialMountRef.current })
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    console.log('[GPU] isDemoMode changed, refetching')
     // Reset fetch flag and failure tracking to allow re-fetching
     initialFetchStarted = false
     healthCheckFailures = 0
     fullFetchClusters()
     // Also refetch GPU nodes
-    fetchGPUNodes()
+    fetchGPUNodes(undefined, 'isDemoMode-change')
   }, [isDemoMode])
 
   // Trigger initial fetch only once (shared across all hook instances)
@@ -3344,7 +3351,9 @@ function loadGPUCacheFromStorage(): GPUNodeCache {
 
 function saveGPUCacheToStorage(cache: GPUNodeCache) {
   try {
-    if (cache.nodes.length > 0) {
+    // Never save demo data to localStorage - only save real cluster data
+    // Demo data has cluster names like "vllm-gpu-cluster" which don't match real clusters
+    if (cache.nodes.length > 0 && !getDemoMode()) {
       localStorage.setItem(GPU_CACHE_KEY, JSON.stringify({
         nodes: cache.nodes,
         lastUpdated: cache.lastUpdated?.toISOString(),
@@ -3364,9 +3373,27 @@ function notifyGPUNodeSubscribers() {
 }
 
 function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
-  gpuNodeCache = { ...gpuNodeCache, ...updates }
-  // Persist to localStorage when nodes are updated
-  if (updates.nodes !== undefined) {
+  const prevCount = gpuNodeCache.nodes.length
+
+  // CRITICAL: Never allow clearing nodes if we have good data
+  // This prevents any code path from accidentally wiping the cache
+  if (updates.nodes !== undefined && updates.nodes.length === 0 && prevCount > 0) {
+    console.warn('[GPU Cache] BLOCKED: Attempt to clear', prevCount, 'nodes - preserving existing data')
+    console.trace('[GPU Cache] Stack trace for blocked clear')
+    // Remove nodes from updates to preserve existing data
+    const { nodes: _ignored, ...safeUpdates } = updates
+    gpuNodeCache = { ...gpuNodeCache, ...safeUpdates }
+  } else {
+    gpuNodeCache = { ...gpuNodeCache, ...updates }
+  }
+
+  const newCount = gpuNodeCache.nodes.length
+  if (updates.nodes !== undefined && updates.nodes.length > 0) {
+    console.log('[GPU Cache] Nodes updated:', prevCount, '->', newCount)
+  }
+
+  // Persist to localStorage when nodes are updated (and we have data)
+  if (updates.nodes !== undefined && gpuNodeCache.nodes.length > 0) {
     saveGPUCacheToStorage(gpuNodeCache)
   }
   notifyGPUNodeSubscribers()
@@ -3374,9 +3401,13 @@ function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
 
 // Fetch GPU nodes (shared across all consumers)
 let gpuFetchInProgress = false
-async function fetchGPUNodes(cluster?: string) {
+async function fetchGPUNodes(cluster?: string, source?: string) {
+  const token = localStorage.getItem('token')
+  console.log('[GPU] fetchGPUNodes:', { source, cluster, demoMode: getDemoMode(), hasToken: !!token, inProgress: gpuFetchInProgress })
+
   // If demo mode is enabled, use demo data instead of fetching
   if (getDemoMode()) {
+    console.log('[GPU] Using demo data (demo mode enabled)')
     updateGPUNodeCache({
       nodes: getDemoGPUNodes(),
       lastUpdated: new Date(),
@@ -3389,15 +3420,20 @@ async function fetchGPUNodes(cluster?: string) {
     return
   }
 
-  // Skip fetching if not authenticated or using demo token
-  const token = localStorage.getItem('token')
-  if (!token || token === 'demo-token') {
-    updateGPUNodeCache({ isLoading: false, isRefreshing: false })
+  // Note: We don't skip for demo token because local agent works without auth
+
+  if (gpuFetchInProgress) {
+    console.log('[GPU] Fetch already in progress, skipping')
     return
   }
-
-  if (gpuFetchInProgress) return
   gpuFetchInProgress = true
+
+  // Clear localStorage cache when fetching real data to prevent stale demo data
+  try {
+    localStorage.removeItem(GPU_CACHE_KEY)
+  } catch {
+    // Ignore storage errors
+  }
 
   // Show loading only if no cached data, otherwise show refreshing
   if (gpuNodeCache.nodes.length === 0) {
@@ -3409,21 +3445,65 @@ async function fetchGPUNodes(cluster?: string) {
   try {
     const params = new URLSearchParams()
     if (cluster) params.append('cluster', cluster)
-    const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
-    const newNodes = data.nodes || []
 
-    // If API returns empty but we have cached data, preserve the cache
-    // This prevents GPU count from going to zero during network issues or slow refreshes
-    if (newNodes.length === 0 && gpuNodeCache.nodes.length > 0) {
-      updateGPUNodeCache({
-        lastUpdated: new Date(),
-        isLoading: false,
-        isRefreshing: false,
-        error: null,
-        consecutiveFailures: 0,
-        lastRefresh: new Date(),
-      })
-    } else {
+    let newNodes: GPUNode[] = []
+
+    // Try local agent first (works without backend running)
+    if (!isAgentUnavailable()) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout for large clusters
+        const response = await fetch(`${LOCAL_AGENT_URL}/gpu-nodes?${params}`, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' },
+        })
+        clearTimeout(timeoutId)
+        if (response.ok) {
+          const data = await response.json()
+          newNodes = data.nodes || []
+          reportAgentDataSuccess()
+        } else {
+          throw new Error('Local agent returned error')
+        }
+      } catch {
+        // Agent failed, will try backend below
+      }
+    }
+
+    // If agent didn't return data, try backend API as fallback (only if authenticated)
+    if (newNodes.length === 0 && token && token !== 'demo-token') {
+      try {
+        const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
+        newNodes = data.nodes || []
+      } catch {
+        // Both failed, will fall through to error handling
+        if (gpuNodeCache.nodes.length === 0) {
+          throw new Error('Both local agent and backend failed')
+        }
+        // If we have cached data, just keep it
+      }
+    }
+
+    // Update with new data, but protect against replacing good data with empty results
+    // This prevents a failed refresh from wiping out valid cached GPU info
+    const currentCacheHasData = gpuNodeCache.nodes.length > 0
+    const newDataHasContent = newNodes.length > 0
+
+    // Only update cache if:
+    // 1. We got new data (newNodes.length > 0), OR
+    // 2. Cache was already empty (nothing to preserve)
+    // Never replace good cached data with empty results
+    const shouldUpdateCache = newDataHasContent || !currentCacheHasData
+
+    console.log('[GPU] Update decision:', {
+      newNodesCount: newNodes.length,
+      cacheCount: gpuNodeCache.nodes.length,
+      shouldUpdateCache,
+      reason: !shouldUpdateCache ? 'preserving cache' : (newDataHasContent ? 'got new data' : 'cache was empty')
+    })
+
+    if (shouldUpdateCache && newDataHasContent) {
+      console.log('[GPU] Updating cache with', newNodes.length, 'nodes')
       updateGPUNodeCache({
         nodes: newNodes,
         lastUpdated: new Date(),
@@ -3433,11 +3513,23 @@ async function fetchGPUNodes(cluster?: string) {
         consecutiveFailures: 0,
         lastRefresh: new Date(),
       })
+    } else {
+      console.log('[GPU] Preserving cache - empty fetch result or no change needed')
+      updateGPUNodeCache({
+        isLoading: false,
+        isRefreshing: false,
+        lastRefresh: new Date(),
+        // Only set error if we had no cache and got no data
+        error: !currentCacheHasData && !newDataHasContent ? 'No GPU nodes found' : null,
+      })
     }
   } catch (err) {
+    console.log('[GPU] Fetch error:', err)
     const newFailures = gpuNodeCache.consecutiveFailures + 1
-    // On error, preserve existing cached data or use demo data
-    if (gpuNodeCache.nodes.length === 0) {
+    // On error, preserve existing cached data
+    // Only use demo data if demo mode is explicitly enabled
+    if (gpuNodeCache.nodes.length === 0 && getDemoMode()) {
+      console.log('[GPU] No cache, using demo data (demo mode enabled)')
       updateGPUNodeCache({
         nodes: getDemoGPUNodes(),
         isLoading: false,
@@ -3447,11 +3539,12 @@ async function fetchGPUNodes(cluster?: string) {
         lastRefresh: new Date(),
       })
     } else {
-      // Preserve existing cache on error
+      console.log('[GPU] Preserving cache on error (or no demo data fallback)')
+      // Preserve existing cache on error, or just clear loading state if no cache
       updateGPUNodeCache({
         isLoading: false,
         isRefreshing: false,
-        error: 'Failed to refresh GPU nodes',
+        error: gpuNodeCache.nodes.length === 0 ? 'Failed to fetch GPU nodes' : 'Failed to refresh GPU nodes',
         consecutiveFailures: newFailures,
         lastRefresh: new Date(),
       })
@@ -3493,19 +3586,35 @@ export function useGPUNodes(cluster?: string) {
     state.nodes.forEach(node => {
       const nodeKey = node.name
       const existing = seenNodes.get(nodeKey)
+
+      // Prefer short cluster names (without '/') over long context paths
+      // Short names like 'vllm-d' match filtering better than 'default/api-fmaas-vllm-d-...'
+      const isShortName = !node.cluster.includes('/')
+      const existingIsShortName = existing ? !existing.cluster.includes('/') : false
+
       if (!existing) {
         // First time seeing this node - ensure gpuAllocated doesn't exceed gpuCount
         seenNodes.set(nodeKey, {
           ...node,
           gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
         })
+      } else if (isShortName && !existingIsShortName) {
+        // New entry has short cluster name, existing has long - prefer short
+        seenNodes.set(nodeKey, {
+          ...node,
+          gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+        })
+      } else if (!isShortName && existingIsShortName) {
+        // Existing has short name, keep it - don't replace
       } else {
-        // Already seen this node - keep the one with more reasonable data
-        // Prefer entry where gpuAllocated <= gpuCount
+        // Both have same type of name - keep the one with more reasonable data
         const existingValid = existing.gpuAllocated <= existing.gpuCount
         const newValid = node.gpuAllocated <= node.gpuCount
         if (newValid && !existingValid) {
-          seenNodes.set(nodeKey, node)
+          seenNodes.set(nodeKey, {
+            ...node,
+            gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+          })
         }
       }
     })

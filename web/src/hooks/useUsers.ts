@@ -7,6 +7,7 @@ import type {
   K8sRole,
   K8sRoleBinding,
   K8sUser,
+  OpenShiftUser,
   ClusterPermissions,
   UserManagementSummary,
   UserRole,
@@ -133,9 +134,11 @@ export function useConsoleUsers() {
     try {
       const { data } = await api.get<ConsoleUser[]>('/api/users')
       setUsers(data || [])
-    } catch {
-      // Fall back to demo data if API fails
-      setUsers(getDemoConsoleUsers())
+    } catch (err) {
+      // Don't fall back to demo data - show error state
+      // Users will be empty, but the current user is displayed from auth context
+      setError(err instanceof Error ? err.message : 'Failed to load users')
+      setUsers([])
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -213,7 +216,8 @@ export function useUserManagementSummary() {
       const { data } = await api.get<UserManagementSummary>('/api/users/summary')
       setSummary(data)
     } catch {
-      // Fall back to demo data if API fails
+      // Fall back to demo data for summary if API unavailable
+      // (summary includes K8s cluster stats which benefit from demo visualization)
       setSummary(getDemoUserManagementSummary())
     } finally {
       setIsLoading(false)
@@ -228,8 +232,167 @@ export function useUserManagementSummary() {
   return { summary, isLoading, isRefreshing, error, refetch: fetchSummary }
 }
 
+// Demo data for OpenShift users
+function getDemoOpenShiftUsers(cluster?: string): OpenShiftUser[] {
+  if (!cluster) return []
+
+  return [
+    {
+      name: 'admin',
+      fullName: 'Cluster Admin',
+      identities: ['htpasswd:admin'],
+      groups: ['system:cluster-admins', 'system:authenticated'],
+      cluster,
+      createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      name: 'developer',
+      fullName: 'Dev User',
+      identities: ['htpasswd:developer'],
+      groups: ['developers', 'system:authenticated'],
+      cluster,
+      createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      name: 'ops-user',
+      fullName: 'Operations Engineer',
+      identities: ['ldap:ops-user'],
+      groups: ['operations', 'system:authenticated'],
+      cluster,
+      createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      name: 'viewer',
+      identities: ['htpasswd:viewer'],
+      groups: ['viewers', 'system:authenticated'],
+      cluster,
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+}
+
+// Demo data for all OpenShift users across multiple clusters
+// Note: Keeping for future use when we want demo data for all clusters mode
+function _getDemoAllOpenShiftUsers(clusters: string[]): OpenShiftUser[] {
+  const allUsers: OpenShiftUser[] = []
+  clusters.forEach(cluster => {
+    allUsers.push(...getDemoOpenShiftUsers(cluster))
+  })
+  return allUsers
+}
+void _getDemoAllOpenShiftUsers // prevent unused warning
+
 /**
- * Hook for Kubernetes RBAC users
+ * Hook for OpenShift users (users.user.openshift.io)
+ */
+export function useOpenShiftUsers(cluster?: string) {
+  const [users, setUsers] = useState<OpenShiftUser[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchUsers = useCallback(async () => {
+    if (!cluster) {
+      setUsers([])
+      return
+    }
+
+    // Clear old data immediately when fetching for new cluster
+    setUsers([])
+    setIsLoading(true)
+    setError(null)
+    try {
+      // Always try API first - agent may be connected even in demo mode
+      const { data } = await api.get<OpenShiftUser[]>(`/api/openshift/users?cluster=${cluster}`)
+      setUsers(data || [])
+    } catch {
+      // Fall back to demo data when API is unavailable (backend not running, no auth, etc.)
+      setUsers(getDemoOpenShiftUsers(cluster))
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
+  return { users, isLoading, error, refetch: fetchUsers }
+}
+
+/**
+ * Hook for fetching OpenShift users from ALL clusters at once
+ * Returns all users with cluster field populated, for local filtering
+ */
+export function useAllOpenShiftUsers(clusters: Array<{ name: string }>) {
+  const [users, setUsers] = useState<OpenShiftUser[]>([])
+  const [isLoading, setIsLoading] = useState(true) // true initially
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [failedClusters, setFailedClusters] = useState<string[]>([])
+
+  const fetchAllUsers = useCallback(async () => {
+    if (clusters.length === 0) {
+      setUsers([])
+      setIsLoading(false)
+      return
+    }
+
+    // Only show loading spinner on initial load, use refreshing for subsequent fetches
+    setUsers(prev => {
+      if (prev.length === 0) {
+        setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
+      return prev
+    })
+    setError(null)
+    setFailedClusters([])
+
+    const allUsers: OpenShiftUser[] = []
+    const failed: string[] = []
+
+    // Fetch from all clusters in parallel
+    const results = await Promise.allSettled(
+      clusters.map(async (cluster) => {
+        try {
+          const { data } = await api.get<OpenShiftUser[]>(`/api/openshift/users?cluster=${cluster.name}`)
+          return { cluster: cluster.name, users: data || [] }
+        } catch {
+          // Mark cluster as failed but don't break the whole fetch
+          return { cluster: cluster.name, users: [] as OpenShiftUser[], failed: true }
+        }
+      })
+    )
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const { cluster, users: clusterUsers, failed: clusterFailed } = result.value as { cluster: string; users: OpenShiftUser[]; failed?: boolean }
+        if (clusterFailed) {
+          failed.push(cluster)
+          // Add demo data for failed clusters
+          allUsers.push(...getDemoOpenShiftUsers(cluster))
+        } else {
+          allUsers.push(...clusterUsers)
+        }
+      }
+    })
+
+    setUsers(allUsers)
+    setFailedClusters(failed)
+    setIsLoading(false)
+    setIsRefreshing(false)
+  }, [clusters])
+
+  useEffect(() => {
+    fetchAllUsers()
+  }, [fetchAllUsers])
+
+  return { users, isLoading, isRefreshing, error, failedClusters, refetch: fetchAllUsers }
+}
+
+/**
+ * Hook for Kubernetes RBAC users (legacy - use useOpenShiftUsers for OpenShift clusters)
  */
 export function useK8sUsers(cluster?: string) {
   const [users, setUsers] = useState<K8sUser[]>([])
@@ -258,31 +421,38 @@ export function useK8sUsers(cluster?: string) {
   return { users, isLoading, error, refetch: fetchUsers }
 }
 
-// Demo data for K8s service accounts
+// Demo data for K8s service accounts - generates for the specified cluster
 function getDemoK8sServiceAccounts(cluster?: string, namespace?: string): K8sServiceAccount[] {
+  // If no cluster specified, return empty (user needs to select a cluster)
+  if (!cluster) return []
+
+  // Generate demo SAs for the selected cluster with varied namespaces
   const accounts: K8sServiceAccount[] = [
-    { name: 'default', namespace: 'default', cluster: 'prod-east', roles: ['view'] },
-    { name: 'admin-sa', namespace: 'default', cluster: 'prod-east', roles: ['admin', 'cluster-admin'] },
-    { name: 'jenkins', namespace: 'ci-cd', cluster: 'prod-east', roles: ['edit', 'deploy'] },
-    { name: 'prometheus', namespace: 'monitoring', cluster: 'prod-east', roles: ['cluster-view'] },
-    { name: 'grafana', namespace: 'monitoring', cluster: 'prod-east', roles: ['view'] },
-    { name: 'argocd', namespace: 'argocd', cluster: 'prod-east', roles: ['cluster-admin'] },
-    { name: 'default', namespace: 'default', cluster: 'staging', roles: ['view'] },
-    { name: 'developer-sa', namespace: 'development', cluster: 'staging', roles: ['edit'] },
-    { name: 'tester-sa', namespace: 'testing', cluster: 'staging', roles: ['view', 'pod-exec'] },
-    { name: 'default', namespace: 'default', cluster: 'dev-cluster', roles: ['view'] },
-    { name: 'local-admin', namespace: 'kube-system', cluster: 'dev-cluster', roles: ['cluster-admin'] },
+    { name: 'default', namespace: 'default', cluster, roles: ['view'] },
+    { name: 'admin-sa', namespace: 'default', cluster, roles: ['admin', 'cluster-admin'] },
+    { name: 'prometheus', namespace: 'monitoring', cluster, roles: ['cluster-view'] },
+    { name: 'grafana', namespace: 'monitoring', cluster, roles: ['view'] },
+    { name: 'argocd', namespace: 'argocd', cluster, roles: ['cluster-admin'] },
+    { name: 'builder', namespace: 'kube-system', cluster, roles: ['edit'] },
   ]
 
-  let result = accounts
-  if (cluster) {
-    result = result.filter(sa => sa.cluster === cluster)
-  }
+  // Filter by namespace only if specified
   if (namespace) {
-    result = result.filter(sa => sa.namespace === namespace)
+    return accounts.filter(sa => sa.namespace === namespace)
   }
-  return result
+  return accounts
 }
+
+// Demo data for all service accounts across multiple clusters
+// Note: Keeping for future use when we want demo data for all clusters mode
+function _getDemoAllK8sServiceAccounts(clusters: string[]): K8sServiceAccount[] {
+  const allSAs: K8sServiceAccount[] = []
+  clusters.forEach(cluster => {
+    allSAs.push(...getDemoK8sServiceAccounts(cluster))
+  })
+  return allSAs
+}
+void _getDemoAllK8sServiceAccounts // prevent unused warning
 
 /**
  * Hook for Kubernetes service accounts
@@ -293,24 +463,33 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchServiceAccounts = useCallback(async () => {
-    // Demo mode returns demo data
-    if (getDemoMode()) {
-      setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
+    // Don't fetch if no cluster is selected - fetching all clusters is too slow
+    if (!cluster) {
+      setServiceAccounts([])
       setIsLoading(false)
       setError(null)
       return
     }
 
+    // Clear old data immediately when fetching for new cluster/namespace
+    setServiceAccounts([])
     setIsLoading(true)
     setError(null)
     try {
+      // Always try API first - agent may be connected even in demo mode
       const params = new URLSearchParams()
-      if (cluster) params.set('cluster', cluster)
+      params.set('cluster', cluster)
       if (namespace) params.set('namespace', namespace)
       const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`)
       setServiceAccounts(data || [])
-    } catch {
-      // Silently fail - fall back to demo data
+      setError(null)
+    } catch (err) {
+      // Set error message for unreachable clusters
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch service accounts'
+      if (errorMsg.includes('connection refused') || errorMsg.includes('unreachable')) {
+        setError(`Cluster ${cluster} is not reachable from the backend`)
+      }
+      // Fall back to demo data when API is unavailable
       setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
     } finally {
       setIsLoading(false)
@@ -339,6 +518,78 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     refetch: fetchServiceAccounts,
     createServiceAccount,
   }
+}
+
+/**
+ * Hook for fetching service accounts from ALL clusters at once
+ * Returns all SAs with cluster field populated, for local filtering
+ */
+export function useAllK8sServiceAccounts(clusters: Array<{ name: string }>) {
+  const [serviceAccounts, setServiceAccounts] = useState<K8sServiceAccount[]>([])
+  const [isLoading, setIsLoading] = useState(true) // true initially
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [failedClusters, setFailedClusters] = useState<string[]>([])
+
+  const fetchAllServiceAccounts = useCallback(async () => {
+    if (clusters.length === 0) {
+      setServiceAccounts([])
+      setIsLoading(false)
+      return
+    }
+
+    // Only show loading spinner on initial load, use refreshing for subsequent fetches
+    setServiceAccounts(prev => {
+      if (prev.length === 0) {
+        setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
+      return prev
+    })
+    setError(null)
+    setFailedClusters([])
+
+    const allSAs: K8sServiceAccount[] = []
+    const failed: string[] = []
+
+    // Fetch from all clusters in parallel
+    const results = await Promise.allSettled(
+      clusters.map(async (cluster) => {
+        try {
+          const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`)
+          return { cluster: cluster.name, sas: data || [] }
+        } catch {
+          // Mark cluster as failed but don't break the whole fetch
+          return { cluster: cluster.name, sas: [] as K8sServiceAccount[], failed: true }
+        }
+      })
+    )
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const { cluster, sas, failed: clusterFailed } = result.value as { cluster: string; sas: K8sServiceAccount[]; failed?: boolean }
+        if (clusterFailed) {
+          failed.push(cluster)
+          // Add demo data for failed clusters
+          allSAs.push(...getDemoK8sServiceAccounts(cluster))
+        } else {
+          allSAs.push(...sas)
+        }
+      }
+    })
+
+    setServiceAccounts(allSAs)
+    setFailedClusters(failed)
+    setIsLoading(false)
+    setIsRefreshing(false)
+  }, [clusters])
+
+  useEffect(() => {
+    fetchAllServiceAccounts()
+  }, [fetchAllServiceAccounts])
+
+  return { serviceAccounts, isLoading, isRefreshing, error, failedClusters, refetch: fetchAllServiceAccounts }
 }
 
 /**

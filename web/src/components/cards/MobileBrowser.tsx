@@ -21,17 +21,16 @@ interface SavedBookmark {
 const STORAGE_KEY = 'mobile_browser_state'
 const BOOKMARKS_KEY = 'mobile_browser_bookmarks'
 
-// Mobile viewport dimensions (iPhone 14 Pro aspect ratio)
+// Device dimensions (iPhone-like mobile view)
 const MOBILE_WIDTH = 375
 const MOBILE_HEIGHT = 667
 
 // Popular mobile-friendly sites
 const QUICK_LINKS = [
+  { title: 'KubeStellar', url: 'https://kubestellar.io', icon: '⭐' },
   { title: 'Google', url: 'https://www.google.com', icon: '🔍' },
   { title: 'GitHub', url: 'https://github.com', icon: '🐙' },
-  { title: 'Reddit', url: 'https://www.reddit.com', icon: '🔴' },
   { title: 'Wikipedia', url: 'https://en.m.wikipedia.org', icon: '📚' },
-  { title: 'Twitter/X', url: 'https://mobile.twitter.com', icon: '🐦' },
   { title: 'YouTube', url: 'https://m.youtube.com', icon: '▶️' },
   { title: 'News', url: 'https://news.ycombinator.com', icon: '📰' },
   { title: 'Stack Overflow', url: 'https://stackoverflow.com', icon: '💻' },
@@ -44,10 +43,10 @@ export function MobileBrowser() {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
-        return parsed.tabs || [{ id: '1', url: '', title: 'New Tab' }]
+        return parsed.tabs || [{ id: '1', url: 'https://kubestellar.io', title: 'KubeStellar' }]
       }
     } catch { /* ignore */ }
-    return [{ id: '1', url: '', title: 'New Tab' }]
+    return [{ id: '1', url: 'https://kubestellar.io', title: 'KubeStellar' }]
   })
   const [activeTabId, setActiveTabId] = useState(() => {
     try {

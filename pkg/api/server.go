@@ -271,6 +271,7 @@ func (s *Server) setupRoutes() {
 	api.Delete("/users/:id", rbac.DeleteConsoleUser)
 	api.Get("/users/summary", rbac.GetUserManagementSummary)
 	api.Get("/rbac/users", rbac.ListK8sUsers)
+	api.Get("/openshift/users", rbac.ListOpenShiftUsers)
 	api.Get("/rbac/service-accounts", rbac.ListK8sServiceAccounts)
 	api.Get("/rbac/roles", rbac.ListK8sRoles)
 	api.Get("/rbac/bindings", rbac.ListK8sRoleBindings)

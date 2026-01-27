@@ -187,6 +187,8 @@ type NodeInfo struct {
 	MemoryCapacity    string            `json:"memoryCapacity"`
 	StorageCapacity   string            `json:"storageCapacity,omitempty"`
 	PodCapacity       string            `json:"podCapacity"`
+	GPUCount          int               `json:"gpuCount"`
+	GPUType           string            `json:"gpuType,omitempty"`
 	Conditions        []NodeCondition   `json:"conditions"`
 	Labels            map[string]string `json:"labels,omitempty"`
 	Taints            []string          `json:"taints,omitempty"`
@@ -1097,6 +1099,31 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 		return nil, err
 	}
 
+	// Fetch all pods once upfront to calculate GPU allocations per node
+	// This is much faster than querying pods per-node for large clusters
+	allPods, _ := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	gpuAllocationByNode := make(map[string]int)
+	if allPods != nil {
+		for _, pod := range allPods.Items {
+			nodeName := pod.Spec.NodeName
+			if nodeName == "" {
+				continue
+			}
+			for _, container := range pod.Spec.Containers {
+				// Check GPU requests
+				if gpuReq, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
+					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
+				}
+				if gpuReq, ok := container.Resources.Requests["amd.com/gpu"]; ok {
+					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
+				}
+				if gpuReq, ok := container.Resources.Requests["gpu.intel.com/i915"]; ok {
+					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
+				}
+			}
+		}
+	}
+
 	var gpuNodes []GPUNode
 	for _, node := range nodes.Items {
 		// Check for nvidia.com/gpu in allocatable resources
@@ -1197,30 +1224,8 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 			migStrategy = strategyLabel
 		}
 
-		// Get allocated GPUs by checking pods on this node
-		pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("spec.nodeName=%s", node.Name),
-		})
-
-		allocated := 0
-		if err == nil {
-			for _, pod := range pods.Items {
-				for _, container := range pod.Spec.Containers {
-					// Check NVIDIA GPU requests
-					if gpuReq, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
-						allocated += int(gpuReq.Value())
-					}
-					// Check AMD GPU requests
-					if gpuReq, ok := container.Resources.Requests["amd.com/gpu"]; ok {
-						allocated += int(gpuReq.Value())
-					}
-					// Check Intel GPU requests
-					if gpuReq, ok := container.Resources.Requests["gpu.intel.com/i915"]; ok {
-						allocated += int(gpuReq.Value())
-					}
-				}
-			}
-		}
+		// Get allocated GPUs from pre-computed map
+		allocated := gpuAllocationByNode[node.Name]
 
 		gpuNodes = append(gpuNodes, GPUNode{
 			Name:               node.Name,
@@ -1302,6 +1307,21 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 		}
 		if pods, ok := node.Status.Capacity["pods"]; ok {
 			info.PodCapacity = pods.String()
+		}
+
+		// Get GPU count from allocatable resources (nvidia, amd, intel)
+		if gpu, ok := node.Status.Allocatable["nvidia.com/gpu"]; ok {
+			info.GPUCount = int(gpu.Value())
+			// Get GPU type from labels
+			if gpuType, ok := node.Labels["nvidia.com/gpu.product"]; ok {
+				info.GPUType = gpuType
+			}
+		} else if gpu, ok := node.Status.Allocatable["amd.com/gpu"]; ok {
+			info.GPUCount = int(gpu.Value())
+			info.GPUType = "AMD GPU"
+		} else if gpu, ok := node.Status.Allocatable["gpu.intel.com/i915"]; ok {
+			info.GPUCount = int(gpu.Value())
+			info.GPUType = "Intel GPU"
 		}
 
 		// Get conditions

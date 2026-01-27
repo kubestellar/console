@@ -17,12 +17,22 @@ export interface ConsoleUser {
 // Kubernetes subject kinds
 export type K8sSubjectKind = 'User' | 'Group' | 'ServiceAccount'
 
-// Kubernetes user/subject
+// Kubernetes user/subject (RBAC)
 export interface K8sUser {
   kind: K8sSubjectKind
   name: string
   namespace?: string
   cluster: string
+}
+
+// OpenShift User (users.user.openshift.io)
+export interface OpenShiftUser {
+  name: string
+  fullName?: string
+  identities?: string[]
+  groups?: string[]
+  cluster: string
+  createdAt?: string
 }
 
 // Kubernetes role

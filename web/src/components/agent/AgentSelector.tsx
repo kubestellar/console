@@ -18,8 +18,15 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const currentAgent = agents.find(a => a.name === selectedAgent) || agents[0]
-  const hasAvailableAgents = agents.some(a => a.available)
+  // CLI-based agents (bob, claude-code) should be hidden when not available
+  // API-based agents (claude, openai, gemini) should still show so users can configure them
+  const CLI_BASED_PROVIDERS = ['bob', 'anthropic-local']
+  const visibleAgents = agents.filter(a =>
+    a.available || !CLI_BASED_PROVIDERS.includes(a.provider)
+  )
+
+  const currentAgent = visibleAgents.find(a => a.name === selectedAgent) || visibleAgents[0]
+  const hasAvailableAgents = visibleAgents.some(a => a.available)
 
   // Connect to agent WebSocket on mount to load agents list
   useEffect(() => {
@@ -59,7 +66,7 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
     )
   }
 
-  if (agents.length === 0 || !hasAvailableAgents) {
+  if (visibleAgents.length === 0 || !hasAvailableAgents) {
     return (
       <>
         <button
@@ -79,7 +86,7 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
   }
 
   // If only one agent, just show it (no selector needed)
-  if (agents.length === 1) {
+  if (visibleAgents.length === 1) {
     return (
       <div className={cn('flex items-center gap-2', className)}>
         <AgentIcon provider={currentAgent.provider} className="w-5 h-5" />
@@ -131,7 +138,7 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
 
       {isOpen && (
         <div className="absolute z-50 top-full mt-1 right-0 w-64 rounded-lg bg-card border border-border shadow-lg py-1 overflow-hidden">
-          {agents.map((agent: AgentInfo) => (
+          {visibleAgents.map((agent: AgentInfo) => (
             <button
               key={agent.name}
               onClick={() => agent.available && handleSelect(agent.name)}

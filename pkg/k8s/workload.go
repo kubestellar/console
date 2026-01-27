@@ -395,18 +395,21 @@ func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alp
 		if err == nil {
 			cap.NodeCount = len(nodes)
 
-			// Use capacity from first node as representative
-			// (GetNodes returns NodeInfo with string capacities)
+			// Sum up resources from all nodes
+			var totalGPUs int
+			for _, node := range nodes {
+				totalGPUs += node.GPUCount
+				// Use first node with GPU type as representative
+				if cap.GPUType == "" && node.GPUType != "" {
+					cap.GPUType = node.GPUType
+				}
+			}
+			cap.GPUCount = totalGPUs
+
+			// Use capacity from first node as representative for CPU/Memory
 			if len(nodes) > 0 {
 				cap.CPUCapacity = nodes[0].CPUCapacity
 				cap.MemCapacity = nodes[0].MemoryCapacity
-				// Check for GPU labels
-				for _, node := range nodes {
-					if gpuType, ok := node.Labels["nvidia.com/gpu.product"]; ok {
-						cap.GPUType = gpuType
-						break
-					}
-				}
 			}
 		}
 

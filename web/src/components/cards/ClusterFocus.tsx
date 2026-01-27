@@ -54,7 +54,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
 
   const clusterGPUs = useMemo(() => {
     return gpuNodes
-      .filter(n => n.cluster.split('/')[0] === clusterName)
+      .filter(n => n.cluster === clusterName || n.cluster.includes(clusterName))
       .reduce((sum, n) => sum + n.gpuCount, 0)
   }, [gpuNodes, clusterName])
 

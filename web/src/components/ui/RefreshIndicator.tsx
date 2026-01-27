@@ -4,7 +4,8 @@ import { cn } from '../../lib/cn'
 import { formatLastSeen } from '../../lib/errorClassifier'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
-const MIN_SPIN_DURATION = 500
+// Must match animation duration (1s) defined in index.css for animate-spin-min
+const MIN_SPIN_DURATION = 1000
 
 interface RefreshIndicatorProps {
   isRefreshing: boolean

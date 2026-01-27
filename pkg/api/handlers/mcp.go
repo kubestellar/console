@@ -272,7 +272,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allNodes []k8s.GPUNode
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 30 * time.Second // Increased for large GPU clusters
 
 			for _, cl := range clusters {
 				wg.Add(1)

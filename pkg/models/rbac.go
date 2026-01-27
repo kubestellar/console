@@ -38,6 +38,16 @@ type K8sUser struct {
 	Cluster   string         `json:"cluster"`
 }
 
+// OpenShiftUser represents an OpenShift user (users.user.openshift.io)
+type OpenShiftUser struct {
+	Name       string   `json:"name"`
+	FullName   string   `json:"fullName,omitempty"`
+	Identities []string `json:"identities,omitempty"`
+	Groups     []string `json:"groups,omitempty"`
+	Cluster    string   `json:"cluster"`
+	CreatedAt  string   `json:"createdAt,omitempty"`
+}
+
 // K8sRole represents a Kubernetes Role or ClusterRole
 type K8sRole struct {
 	Name        string `json:"name"`

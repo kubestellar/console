@@ -9,6 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kubestellar/console/pkg/models"
 )
@@ -739,6 +741,69 @@ func (m *MultiClusterClient) DeleteNamespace(ctx context.Context, contextName, n
 	}
 
 	return client.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+// OpenShiftUserGVR is the GroupVersionResource for OpenShift users
+var OpenShiftUserGVR = schema.GroupVersionResource{
+	Group:    "user.openshift.io",
+	Version:  "v1",
+	Resource: "users",
+}
+
+// ListOpenShiftUsers returns all OpenShift users (users.user.openshift.io) from a cluster
+func (m *MultiClusterClient) ListOpenShiftUsers(ctx context.Context, contextName string) ([]models.OpenShiftUser, error) {
+	dynamicClient, err := m.GetDynamicClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := dynamicClient.Resource(OpenShiftUserGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		// OpenShift User CRD might not be installed (non-OpenShift cluster)
+		return []models.OpenShiftUser{}, nil
+	}
+
+	var users []models.OpenShiftUser
+	for _, item := range list.Items {
+		user := parseOpenShiftUser(item, contextName)
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+// parseOpenShiftUser extracts user info from an unstructured OpenShift User object
+func parseOpenShiftUser(item unstructured.Unstructured, cluster string) models.OpenShiftUser {
+	user := models.OpenShiftUser{
+		Cluster: cluster,
+	}
+
+	// Get name from metadata
+	if name, found, _ := unstructured.NestedString(item.Object, "metadata", "name"); found {
+		user.Name = name
+	}
+
+	// Get creationTimestamp from metadata
+	if createdAt, found, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp"); found {
+		user.CreatedAt = createdAt
+	}
+
+	// Get fullName
+	if fullName, found, _ := unstructured.NestedString(item.Object, "fullName"); found {
+		user.FullName = fullName
+	}
+
+	// Get identities (array of strings)
+	if identities, found, _ := unstructured.NestedStringSlice(item.Object, "identities"); found {
+		user.Identities = identities
+	}
+
+	// Get groups (array of strings)
+	if groups, found, _ := unstructured.NestedStringSlice(item.Object, "groups"); found {
+		user.Groups = groups
+	}
+
+	return user
 }
 
 // GrantNamespaceAccess creates a RoleBinding to grant access to a namespace
