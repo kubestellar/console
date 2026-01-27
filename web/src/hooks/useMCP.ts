@@ -880,6 +880,9 @@ function updateSingleClusterInCache(clusterName: string, updates: Partial<Cluste
 // Track if initial fetch has been triggered (to avoid duplicate fetches)
 let initialFetchStarted = false
 
+// Module-level health check interval (shared across all hook instances)
+let healthCheckIntervalId: ReturnType<typeof setInterval> | null = null
+
 // Shared WebSocket connection state - prevents multiple connections
 const sharedWebSocket: {
   ws: WebSocket | null
@@ -1702,6 +1705,17 @@ export function useClusters() {
       initialFetchStarted = true
       fullFetchClusters()
 
+      // Set up periodic health check polling (only once, shared across all hook instances)
+      if (!healthCheckIntervalId) {
+        healthCheckIntervalId = setInterval(() => {
+          // Only poll if we have clusters and not in demo mode
+          if (clusterCache.clusters.length > 0 && !getDemoMode()) {
+            // Perform health checks for all clusters without showing refresh indicator
+            checkHealthProgressively(clusterCache.clusters)
+          }
+        }, HEALTH_CHECK_INTERVAL_MS)
+      }
+
       // Connect to WebSocket for real-time kubeconfig change notifications
       // Only attempt WebSocket on localhost (dev mode) - deployed versions don't have a backend
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -1719,22 +1733,6 @@ export function useClusters() {
       if (!sharedWebSocket.connecting && !sharedWebSocket.ws) {
         connectSharedWebSocket()
       }
-    }
-  }, [])
-
-  // Periodic health check polling for cluster status updates
-  useEffect(() => {
-    // Set up interval for health checks every 30 seconds
-    const healthCheckInterval = setInterval(() => {
-      // Only poll if we have clusters and not in demo mode
-      if (clusterCache.clusters.length > 0 && !getDemoMode()) {
-        // Perform health checks for all clusters without showing refresh indicator
-        checkHealthProgressively(clusterCache.clusters)
-      }
-    }, HEALTH_CHECK_INTERVAL_MS)
-
-    return () => {
-      clearInterval(healthCheckInterval)
     }
   }, [])
 
