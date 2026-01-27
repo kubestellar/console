@@ -1659,6 +1659,15 @@ export function useClusters() {
         connectSharedWebSocket()
       }
     }
+
+    // Set up periodic polling every 60 seconds for dynamic cluster updates
+    const pollInterval = setInterval(() => {
+      fullFetchClusters()
+    }, 60000)
+
+    return () => {
+      clearInterval(pollInterval)
+    }
   }, [])
 
   // Refetch function that consumers can call
@@ -3603,8 +3612,14 @@ export function useGPUNodes(cluster?: string) {
       fetchGPUNodes(cluster)
     }
 
+    // Set up periodic polling every 30 seconds for dynamic updates
+    const pollInterval = setInterval(() => {
+      fetchGPUNodes(cluster, 'poll')
+    }, 30000)
+
     return () => {
       gpuNodeSubscribers.delete(handleUpdate)
+      clearInterval(pollInterval)
     }
   }, [cluster])
 
