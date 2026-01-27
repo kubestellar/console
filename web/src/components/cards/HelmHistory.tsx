@@ -26,7 +26,7 @@ const SORT_OPTIONS = [
 ]
 
 export function HelmHistory({ config }: HelmHistoryProps) {
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const [sortBy, setSortBy] = useState<SortByOption>('revision')

@@ -41,7 +41,7 @@ function flattenValues(obj: Record<string, unknown>, prefix = ''): ValueEntry[] 
 }
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const [localSearch, setLocalSearch] = useState('')

@@ -376,7 +376,7 @@ function ViolationsModal({
 }
 
 export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { startMission } = useMissions()
 

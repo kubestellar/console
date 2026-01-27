@@ -8,7 +8,7 @@ import { formatStat, formatMemoryStat } from '../../lib/formatStats'
 import { useChartFilters } from '../../lib/cards'
 
 export function ComputeOverview() {
-  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()

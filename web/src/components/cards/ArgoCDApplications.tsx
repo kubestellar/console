@@ -124,7 +124,7 @@ const healthStatusConfig = {
 }
 
 export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
-  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToArgoApp } = useDrillDownActions()
 

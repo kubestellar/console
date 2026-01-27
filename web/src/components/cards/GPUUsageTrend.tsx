@@ -48,7 +48,7 @@ export function GPUUsageTrend() {
     consecutiveFailures,
     lastRefresh
   } = useGPUNodes()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && gpuNodes.length === 0

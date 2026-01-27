@@ -56,7 +56,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const namespace = config?.namespace
 
   const { drifts, isLoading: isLoadingHook, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh } = useGitOpsDrifts(cluster, namespace)
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
   const [localSearch, setLocalSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortByOption>('severity')

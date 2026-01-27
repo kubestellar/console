@@ -29,7 +29,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     consecutiveFailures,
     lastRefresh
   } = useGPUNodes()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0

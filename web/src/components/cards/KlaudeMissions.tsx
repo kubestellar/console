@@ -303,7 +303,7 @@ Please:
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function KlaudeKubeconfigAuditCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -466,7 +466,7 @@ Please:
 // Card 3: Cluster Health Check - Overall health assessment
 export function KlaudeHealthCheckCard(_props: KlaudeMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { issues: allPodIssues } = useCachedPodIssues()
   const { issues: allDeploymentIssues } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()

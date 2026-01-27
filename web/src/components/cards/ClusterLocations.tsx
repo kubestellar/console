@@ -212,7 +212,7 @@ function extractRegion(cluster: ClusterInfo): string | null {
 type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
-  const { clusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const {
     selectedClusters: globalSelectedClusters,

@@ -89,7 +89,7 @@ export function EventsTimeline() {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && events.length === 0
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])

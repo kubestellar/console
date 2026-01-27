@@ -446,7 +446,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
   // Debug logging
   console.log('[LLMInference] render:', { serversCount: servers.length, isLoading, isRefreshing, isFailed, error })
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [sortBy, setSortBy] = useState<LLMdSortByOption>('status')
@@ -944,7 +944,7 @@ interface MLJobsProps {
 
 export function MLJobs({ config: _config }: MLJobsProps) {
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
-  const { clusters: allClusters, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {

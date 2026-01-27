@@ -8,7 +8,7 @@ import { formatStat, formatStorageStat } from '../../lib/formatStats'
 import { useChartFilters } from '../../lib/cards'
 
 export function StorageOverview() {
-  const { clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { pvcs, isLoading: pvcsLoading, isRefreshing: pvcsRefreshing, refetch: refetchPVCs } = usePVCs()
 
   const isRefreshing = clustersRefreshing || pvcsRefreshing

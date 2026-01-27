@@ -91,7 +91,7 @@ const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
 }
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
-  const { clusters, isRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
 

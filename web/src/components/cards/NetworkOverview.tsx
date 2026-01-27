@@ -8,7 +8,7 @@ import { RefreshButton } from '../ui/RefreshIndicator'
 import { useChartFilters } from '../../lib/cards'
 
 export function NetworkOverview() {
-  const { clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, refetch: refetchServices } = useCachedServices()
 
   const isRefreshing = clustersRefreshing || servicesRefreshing

@@ -309,7 +309,7 @@ function QuotaModal({
 }
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
-  const { clusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')

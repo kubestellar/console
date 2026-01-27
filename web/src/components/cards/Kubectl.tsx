@@ -22,7 +22,7 @@ interface YAMLManifest {
 
 export function Kubectl() {
   const { execute } = useKubectl()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const [selectedContext, setSelectedContext] = useState<string>('')
   const [command, setCommand] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')

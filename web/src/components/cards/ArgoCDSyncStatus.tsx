@@ -20,7 +20,7 @@ function getMockSyncStatusData(clusterCount: number) {
 }
 
 export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
-  const { clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Local cluster filter
