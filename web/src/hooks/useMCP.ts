@@ -7,6 +7,9 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
 const REFRESH_INTERVAL_MS = 120000
 
+// Health check interval for cluster status updates (30 seconds)
+const HEALTH_CHECK_INTERVAL_MS = 30000
+
 // Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)
 const MIN_REFRESH_INDICATOR_MS = 500
 
@@ -1716,6 +1719,22 @@ export function useClusters() {
       if (!sharedWebSocket.connecting && !sharedWebSocket.ws) {
         connectSharedWebSocket()
       }
+    }
+  }, [])
+
+  // Periodic health check polling for cluster status updates
+  useEffect(() => {
+    // Set up interval for health checks every 30 seconds
+    const healthCheckInterval = setInterval(() => {
+      // Only poll if we have clusters and not in demo mode
+      if (clusterCache.clusters.length > 0 && !getDemoMode()) {
+        // Perform health checks for all clusters without showing refresh indicator
+        checkHealthProgressively(clusterCache.clusters)
+      }
+    }, HEALTH_CHECK_INTERVAL_MS)
+
+    return () => {
+      clearInterval(healthCheckInterval)
     }
   }, [])
 
