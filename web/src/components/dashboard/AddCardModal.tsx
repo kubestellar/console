@@ -87,6 +87,7 @@ const CARD_CATALOG = {
     { type: 'klaude_issues', title: 'Klaude Issues', description: 'AI-powered issue detection and repair', visualization: 'status' },
     { type: 'klaude_kubeconfig_audit', title: 'Klaude Kubeconfig Audit', description: 'Audit kubeconfig for stale contexts', visualization: 'status' },
     { type: 'klaude_health_check', title: 'Klaude Health Check', description: 'Comprehensive AI health analysis', visualization: 'gauge' },
+    { type: 'klaude_offline_detection', title: 'Offline Detection', description: 'Detect offline nodes and unavailable GPUs', visualization: 'status' },
   ],
   'Alerting': [
     { type: 'active_alerts', title: 'Active Alerts', description: 'Firing alerts with severity and quick actions', visualization: 'status' },

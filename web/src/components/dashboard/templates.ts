@@ -270,8 +270,9 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     category: 'klaude',
     cards: [
       { card_type: 'klaude_issues', title: 'Klaude Issues', position: { w: 4, h: 3 } },
-      { card_type: 'klaude_kubeconfig_audit', title: 'Klaude Kubeconfig Audit', position: { w: 4, h: 3 } },
-      { card_type: 'klaude_health_check', title: 'Klaude Health Check', position: { w: 4, h: 3 } },
+      { card_type: 'klaude_kubeconfig_audit', title: 'Kubeconfig Audit', position: { w: 4, h: 3 } },
+      { card_type: 'klaude_health_check', title: 'Health Check', position: { w: 4, h: 3 } },
+      { card_type: 'klaude_offline_detection', title: 'Offline Detection', position: { w: 4, h: 3 } },
       { card_type: 'pod_issues', position: { w: 6, h: 2 } },
       { card_type: 'deployment_issues', position: { w: 6, h: 2 } },
     ],
