@@ -62,7 +62,8 @@ jobs:
 
           echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
 
-          if [ "$RELEASE_TYPE" = "nightly" ] || [ "$RELEASE_TYPE" = "weekly" ]; then
+          # Only nightly builds are pre-releases; weekly builds are stable releases
+          if [ "$RELEASE_TYPE" = "nightly" ]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
@@ -96,8 +97,8 @@ jobs:
           FORCE_AGENT="${{ github.event.inputs.force_agent_release }}"
           RELEASE_TYPE="${{ steps.type.outputs.release_type }}"
 
-          # For stable releases (patch/minor/major), always include agent
-          if [ "$RELEASE_TYPE" != "nightly" ] && [ "$RELEASE_TYPE" != "weekly" ]; then
+          # For stable releases (weekly/patch/minor/major), always include agent
+          if [ "$RELEASE_TYPE" != "nightly" ]; then
             echo "Stable release - including agent"
             echo "agent_changed=true" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
