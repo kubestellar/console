@@ -1,56 +1,66 @@
 {
-  "version": "1.0",
   "workflow": {
-    "description": "Task coordination for Claude Code instances",
-    "steps": [
-      "1. Read tasks.json and find an unclaimed 'pending' task",
-      "2. Set status to 'in_progress', add your instance ID as 'owner', set 'lockedAt' timestamp",
-      "3. Complete the work described in the task",
-      "4. Set status to 'completed', set 'completedAt' timestamp",
-      "5. Create a new test task for the completed item (see testTaskTemplate)"
-    ],
-    "testTaskTemplate": {
-      "description": "After completing a task, create a test task using Chrome DevTools MCP",
-      "tools": [
-        "mcp__chrome-devtools__navigate_page - Load the relevant page",
-        "mcp__chrome-devtools__take_snapshot - Verify UI elements exist",
-        "mcp__chrome-devtools__list_console_messages - Check for errors/warnings",
-        "mcp__chrome-devtools__click / fill - Interact with UI elements",
-        "mcp__chrome-devtools__take_screenshot - Capture visual state",
-        "mcp__chrome-devtools__list_network_requests - Verify API calls"
+    "description": "Instructions for Claude instances working on tasks",
+    "commit_and_merge": {
+      "steps": [
+        "1. Create a feature branch from main",
+        "2. Commit changes with DCO sign-off (-s flag)",
+        "3. Push branch and create PR with gh pr create",
+        "4. Monitor GitHub Actions: wait for build, lint, and preview checks to pass",
+        "5. Ignore playwright tests (they may fail in CI)",
+        "6. Once build/lint/preview pass, merge with gh pr merge --admin --squash",
+        "7. Update task status to completed in tasks.json"
       ],
-      "namingConvention": "test-{original-task-id}"
+      "required_checks": ["build", "lint", "preview"],
+      "optional_checks": ["playwright"]
     }
   },
   "tasks": [
     {
-      "id": "example-1",
-      "subject": "Example: Add login button to header",
-      "description": "Add a login button to the main header component that redirects to /login",
-      "status": "pending",
-      "owner": null,
-      "lockedAt": null,
-      "completedAt": null,
-      "testTaskId": null
+      "id": "gpu-offline-detection",
+      "subject": "Add AI mission to detect when nodes or GPUs go offline",
+      "description": "Create an AI mission that monitors and detects when Kubernetes nodes go offline or GPUs become unavailable on nodes. This should alert or take action when nodes become unavailable or when GPUs stop reporting (like the nvidia driver pods failing). Could integrate with the existing cluster health monitoring or be a standalone mission that checks node status and nvidia.com/gpu resource availability.",
+      "status": "completed",
+      "priority": "high",
+      "created": "2025-01-27",
+      "completed": "2026-01-27",
+      "tags": ["ai-mission", "monitoring", "gpu", "nodes"]
     },
     {
-      "id": "test-example-1",
-      "subject": "Test: Login button in header",
-      "description": "Verify login button works using Chrome DevTools MCP",
+      "id": "resource-usage-similar",
+      "subject": "Why is resource usage card similar across clusters?",
+      "description": "Investigate why the resource usage card shows similar values across different clusters. This could be a bug with data fetching, caching, or the card displaying the same data source for all clusters instead of cluster-specific metrics.",
       "status": "pending",
-      "owner": null,
-      "lockedAt": null,
-      "completedAt": null,
-      "parentTaskId": "example-1",
-      "testSteps": [
-        "Navigate to homepage with mcp__chrome-devtools__navigate_page",
-        "Take snapshot and verify login button exists with uid",
-        "Check console for errors with mcp__chrome-devtools__list_console_messages",
-        "Click login button with mcp__chrome-devtools__click",
-        "Verify navigation to /login page",
-        "Take screenshot of result"
-      ],
-      "testResults": null
+      "priority": "medium",
+      "created": "2025-01-27",
+      "tags": ["bug", "investigation", "resource-usage", "clusters"]
+    },
+    {
+      "id": "resource-capacity-zero",
+      "subject": "Resource capacity showing 0 for cpu and mem",
+      "description": "Resource capacity card is showing 0 for CPU and memory values. Investigate why capacity metrics are not being fetched or displayed correctly.",
+      "status": "pending",
+      "priority": "high",
+      "created": "2025-01-27",
+      "tags": ["bug", "resource-capacity", "cpu", "memory"]
+    },
+    {
+      "id": "opa-policies-empty",
+      "subject": "OPA policies empty",
+      "description": "OPA policies card or section is showing empty. Investigate why OPA/Gatekeeper policies are not being fetched or displayed.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2025-01-27",
+      "tags": ["bug", "opa", "gatekeeper", "policies"]
+    },
+    {
+      "id": "github-issues-workflow",
+      "subject": "Convert issue and feature request workflow to GitHub",
+      "description": "Convert the current issue and feature request workflow to use GitHub Issues instead of the custom implementation. This will integrate better with the GitHub ecosystem and provide standard issue tracking.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2025-01-27",
+      "tags": ["feature", "github", "issues", "workflow"]
     }
   ]
 }

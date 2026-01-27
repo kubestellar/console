@@ -61,7 +61,7 @@ import { ArgoCDHealth } from './ArgoCDHealth'
 // User management card
 import { UserManagement } from './UserManagement'
 // Klaude AI mission cards
-import { KlaudeIssuesCard, KlaudeKubeconfigAuditCard, KlaudeHealthCheckCard } from './KlaudeMissions'
+import { KlaudeIssuesCard, KlaudeKubeconfigAuditCard, KlaudeHealthCheckCard, KlaudeOfflineDetectionCard } from './KlaudeMissions'
 // Alerting cards
 import { ActiveAlerts } from './ActiveAlerts'
 import { AlertRulesCard } from './AlertRules'
@@ -224,6 +224,7 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   klaude_issues: KlaudeIssuesCard,
   klaude_kubeconfig_audit: KlaudeKubeconfigAuditCard,
   klaude_health_check: KlaudeHealthCheckCard,
+  klaude_offline_detection: KlaudeOfflineDetectionCard,
   // Alerting cards
   active_alerts: ActiveAlerts,
   alert_rules: AlertRulesCard,
@@ -478,6 +479,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   klaude_issues: 6,
   klaude_kubeconfig_audit: 6,
   klaude_health_check: 6,
+  klaude_offline_detection: 6,
   user_management: 6,
   // Weather card
   weather: 6,
