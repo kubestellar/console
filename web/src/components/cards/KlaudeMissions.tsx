@@ -713,7 +713,7 @@ export function KlaudeOfflineDetectionCard(_props: KlaudeMissionCardProps) {
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Get all nodes from direct API fetch
-  const [allNodes, setAllNodes] = useState<Array<{ name: string; cluster?: string; status: string; roles: string[] }>>([])
+  const [allNodes, setAllNodes] = useState<Array<{ name: string; cluster?: string; status: string; roles: string[]; unschedulable?: boolean }>>([])
   const [nodesLoading, setNodesLoading] = useState(true)
 
   // Fetch nodes on mount and when clusters change
@@ -769,9 +769,11 @@ export function KlaudeOfflineDetectionCard(_props: KlaudeMissionCardProps) {
     return result
   }, [allNodes, selectedClusters, isAllClustersSelected, customFilter])
 
-  // Detect offline/unhealthy nodes
+  // Detect any node that is not fully Ready (NotReady, Unknown, SchedulingDisabled, Cordoned, etc.)
   const offlineNodes = useMemo(() => {
-    return nodes.filter(n => n.status !== 'Ready')
+    return nodes.filter(n =>
+      n.status !== 'Ready' || n.unschedulable === true
+    )
   }, [nodes])
 
   // Detect GPU issues from GPU nodes data
