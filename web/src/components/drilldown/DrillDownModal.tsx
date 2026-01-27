@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
+import { useClusterFilter } from '../../hooks/useClusterFilter'
 import { ClusterDrillDown } from './views/ClusterDrillDown'
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
 import { DeploymentDrillDown } from './views/DeploymentDrillDown'
@@ -81,6 +82,15 @@ const getViewIcon = (type: string) => {
 
 export function DrillDownModal() {
   const { state, pop, goTo, close } = useDrillDown()
+  const { selectedClusters } = useClusterFilter()
+
+  // Close modal when cluster filter changes to prevent showing stale data
+  useEffect(() => {
+    if (state.isOpen) {
+      close()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClusters])
 
   // Disable body scroll when modal is open
   useEffect(() => {
