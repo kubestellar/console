@@ -43,17 +43,14 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     refetchSummary()
     refetchUsers()
   }
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
   const { serviceAccounts: allServiceAccounts, isLoading: sasLoading } = useK8sServiceAccounts(selectedCluster)
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
 
-  // Filter clusters by global filter
+  // Filter clusters by global filter (already deduplicated from hook)
   const clusters = useMemo(() => {
-    let result = allClusters
-    if (!isAllClustersSelected) {
-      result = result.filter(c => selectedClusters.includes(c.name))
-    }
-    return result
+    if (isAllClustersSelected) return allClusters
+    return allClusters.filter(c => selectedClusters.includes(c.name))
   }, [allClusters, selectedClusters, isAllClustersSelected])
 
   // Filter users by global customFilter and local search
@@ -265,7 +262,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
             users={users}
             isLoading={usersLoading}
             isAdmin={isAdmin}
-            currentUserId={currentUser?.id}
+            currentUserGithubId={currentUser?.github_id}
             expandedUser={expandedUser}
             setExpandedUser={setExpandedUser}
             onRoleChange={handleRoleChange}
@@ -299,7 +296,7 @@ interface ConsoleUsersTabProps {
   users: ConsoleUser[]
   isLoading: boolean
   isAdmin: boolean
-  currentUserId?: string
+  currentUserGithubId?: string
   expandedUser: string | null
   setExpandedUser: (id: string | null) => void
   onRoleChange: (userId: string, role: UserRole) => void
@@ -311,7 +308,7 @@ function ConsoleUsersTab({
   users,
   isLoading,
   isAdmin,
-  currentUserId,
+  currentUserGithubId,
   expandedUser,
   setExpandedUser,
   onRoleChange,
@@ -335,96 +332,117 @@ function ConsoleUsersTab({
     )
   }
 
+  // Sort users: current user first, then others
+  const sortedUsers = [...users].sort((a, b) => {
+    if (a.github_id === currentUserGithubId) return -1
+    if (b.github_id === currentUserGithubId) return 1
+    return 0
+  })
+
   return (
     <div className="space-y-2">
-      {users.map((user) => (
-        <div
-          key={user.id}
-          className="p-3 rounded-lg bg-secondary/30 border border-border/50"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {user.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.github_login}
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <span className="text-sm font-medium text-purple-400">
-                    {user.github_login[0].toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-medium text-foreground">{user.github_login}</p>
-                {user.email && (
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                )}
-              </div>
-            </div>
+      {sortedUsers.map((user) => {
+        const isCurrentUser = user.github_id === currentUserGithubId
+        // Non-admins see other users blurred
+        const isBlurred = !isAdmin && !isCurrentUser
 
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'px-2 py-0.5 rounded-full text-xs font-medium border',
-                  getRoleBadgeClass(user.role)
+        return (
+          <div
+            key={user.id}
+            className={cn(
+              'p-3 rounded-lg bg-secondary/30 border border-border/50',
+              isCurrentUser && 'ring-1 ring-purple-500/50'
+            )}
+          >
+            <div className={cn(
+              'flex items-center justify-between',
+              isBlurred && 'blur-sm select-none pointer-events-none'
+            )}>
+              <div className="flex items-center gap-3">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={isBlurred ? '' : user.github_login}
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <span className="text-sm font-medium text-purple-400">
+                      {user.github_login[0].toUpperCase()}
+                    </span>
+                  </div>
                 )}
-              >
-                {user.role}
-              </span>
-
-              {isAdmin && user.id !== currentUserId && (
-                <button
-                  onClick={() =>
-                    setExpandedUser(expandedUser === user.id ? null : user.id)
-                  }
-                  className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-                >
-                  {expandedUser === user.id ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {isCurrentUser ? `${user.github_login} (you)` : user.github_login}
+                  </p>
+                  {user.email && (
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
                   )}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Expanded actions */}
-          {isAdmin && expandedUser === user.id && user.id !== currentUserId && (
-            <div className="mt-3 pt-3 border-t border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  {(['admin', 'editor', 'viewer'] as UserRole[]).map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => onRoleChange(user.id, role)}
-                      className={cn(
-                        'px-2 py-1 rounded text-xs font-medium transition-colors',
-                        user.role === role
-                          ? 'bg-purple-500 text-foreground'
-                          : 'bg-secondary hover:bg-secondary/80 text-muted-foreground'
-                      )}
-                    >
-                      {role}
-                    </button>
-                  ))}
                 </div>
+              </div>
 
-                <button
-                  onClick={() => onDeleteUser(user.id)}
-                  className="p-1.5 rounded text-red-400 hover:bg-red-500/10"
-                  title="Delete user"
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded-full text-xs font-medium border',
+                    getRoleBadgeClass(user.role)
+                  )}
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  {user.role}
+                </span>
+
+                {isAdmin && !isCurrentUser && (
+                  <button
+                    onClick={() =>
+                      setExpandedUser(expandedUser === user.id ? null : user.id)
+                    }
+                    className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+                  >
+                    {expandedUser === user.id ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Expanded actions */}
+            {isAdmin && expandedUser === user.id && !isCurrentUser && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2">
+                    {(['admin', 'editor', 'viewer'] as UserRole[]).map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => onRoleChange(user.id, role)}
+                        className={cn(
+                          'px-2 py-1 rounded text-xs font-medium transition-colors',
+                          user.role === role
+                            ? 'bg-purple-500 text-foreground'
+                            : 'bg-secondary hover:bg-secondary/80 text-muted-foreground'
+                        )}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => onDeleteUser(user.id)}
+                    className="p-1.5 rounded text-red-400 hover:bg-red-500/10"
+                    title="Delete user"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -26,7 +26,7 @@ func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandl
 	return &RBACHandler{store: s, k8sClient: k8sClient}
 }
 
-// ListConsoleUsers returns all console users (admin sees all, others see only themselves)
+// ListConsoleUsers returns all console users (frontend handles visibility/blurring)
 func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 	// Check if current user is authenticated
 	userID := middleware.GetUserID(c)
@@ -35,17 +35,11 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
 
-	// Admins can see all users
-	if currentUser.Role == "admin" {
-		users, err := h.store.ListUsers()
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to list users")
-		}
-		return c.JSON(users)
+	users, err := h.store.ListUsers()
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list users")
 	}
-
-	// Non-admins only see themselves
-	return c.JSON([]models.User{*currentUser})
+	return c.JSON(users)
 }
 
 // UpdateUserRole updates a user's role (admin only)

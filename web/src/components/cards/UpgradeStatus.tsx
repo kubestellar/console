@@ -152,7 +152,7 @@ function getStatusIcon(status: string) {
 }
 
 export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
-  const { clusters: allClusters, isLoading: isLoadingHook, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: isLoadingHook, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()

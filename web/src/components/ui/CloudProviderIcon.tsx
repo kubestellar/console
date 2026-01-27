@@ -177,23 +177,16 @@ const RancherIcon: React.FC<{ size: number; className?: string }> = ({ size, cla
   </svg>
 )
 
-// Kind icon - ship in bottle (Kubernetes IN Docker)
+// Kind icon - official logo (ship in bottle)
 const KindIcon: React.FC<{ size: number; className?: string }> = ({ size, className }) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} className={className}>
-    {/* Bottle outline */}
-    <path d="M8 4h8v2h-1v1c2 1 4 3 4 6v6c0 1-1 2-2 2H7c-1 0-2-1-2-2v-6c0-3 2-5 4-6V6H8V4z" fill="#2496ED" />
-    {/* Bottle glass effect */}
-    <path d="M9 5h6v1h-1v2c1.5.8 3 2.5 3 5v5c0 .5-.5 1-1 1H8c-.5 0-1-.5-1-1v-5c0-2.5 1.5-4.2 3-5V6H9V5z" fill="#4DB8FF" fillOpacity="0.3" />
-    {/* Ship hull */}
-    <path d="M7 15l2-2h6l2 2c0 1-2 2-5 2s-5-1-5-2z" fill="white" />
-    {/* Ship mast */}
-    <line x1="12" y1="10" x2="12" y2="15" stroke="white" strokeWidth="1" />
-    {/* Ship sail */}
-    <path d="M12 10l-3 4h3z" fill="white" fillOpacity="0.9" />
-    <path d="M12 10l2.5 3.5H12z" fill="white" fillOpacity="0.7" />
-    {/* Wave lines */}
-    <path d="M7 16.5c1 .5 2.5.5 3.5 0s2.5-.5 3.5 0 2 .5 3 0" stroke="#2496ED" strokeWidth="0.5" fill="none" />
-  </svg>
+  <img
+    src="/kind-logo.png"
+    alt="Kind"
+    width={size}
+    height={size}
+    className={className}
+    style={{ objectFit: 'contain' }}
+  />
 )
 
 // Minikube icon - hexagon with container and helm wheel

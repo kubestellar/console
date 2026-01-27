@@ -79,7 +79,7 @@ function getClusterStateFromInfo(cluster: ClusterInfo): ClusterState {
 
 export function ClusterHealth() {
   const {
-    clusters: rawClusters,
+    deduplicatedClusters: rawClusters,
     isLoading: isLoadingHook,
     isRefreshing,
     error,
