@@ -352,7 +352,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": allNodes, "source": "agent"})
 }
 
-// handleNodesHTTP returns nodes for a cluster
+// handleNodesHTTP returns nodes for a cluster or all clusters
 func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
@@ -373,21 +373,48 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cluster := r.URL.Query().Get("cluster")
-	if cluster == "" {
-		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": "cluster parameter required"})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
-	nodes, err := s.k8sClient.GetNodes(ctx, cluster)
-	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
-		return
+	var allNodes []k8s.NodeInfo
+
+	if cluster != "" {
+		// Query specific cluster
+		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			return
+		}
+		allNodes = nodes
+	} else {
+		// Query all clusters
+		clusters, err := s.k8sClient.ListClusters(ctx)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"nodes": []interface{}{}, "error": err.Error()})
+			return
+		}
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+
+		for _, cl := range clusters {
+			wg.Add(1)
+			go func(clusterName string) {
+				defer wg.Done()
+				clusterCtx, clusterCancel := context.WithTimeout(ctx, 15*time.Second)
+				defer clusterCancel()
+				nodes, err := s.k8sClient.GetNodes(clusterCtx, clusterName)
+				if err == nil && len(nodes) > 0 {
+					mu.Lock()
+					allNodes = append(allNodes, nodes...)
+					mu.Unlock()
+				}
+			}(cl.Name)
+		}
+		wg.Wait()
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": nodes, "source": "agent"})
+	json.NewEncoder(w).Encode(map[string]interface{}{"nodes": allNodes, "source": "agent"})
 }
 
 // handlePodsHTTP returns pods for a cluster/namespace
