@@ -1711,7 +1711,8 @@ export function useClusters() {
           // Only poll if we have clusters and not in demo mode
           if (clusterCache.clusters.length > 0 && !getDemoMode()) {
             // Perform health checks for all clusters without showing refresh indicator
-            checkHealthProgressively(clusterCache.clusters)
+            // Fire-and-forget - intentionally not awaiting the async function
+            void checkHealthProgressively(clusterCache.clusters)
           }
         }, HEALTH_CHECK_INTERVAL_MS)
       }
