@@ -64,20 +64,18 @@ export function useDemoMode() {
   const toggleDemoMode = useCallback(() => {
     globalDemoMode = !globalDemoMode
     localStorage.setItem(DEMO_MODE_KEY, String(globalDemoMode))
-    // Clear GPU cache when turning off demo mode to prevent stale demo data
-    if (!globalDemoMode) {
-      localStorage.removeItem(GPU_CACHE_KEY)
-    }
+    // NOTE: We no longer clear GPU cache here - the fetch logic handles
+    // transitioning from demo to real data, and clearing here causes
+    // loss of GPU data if the subsequent fetch fails.
     notifyListeners()
   }, [])
 
   const setDemoMode = useCallback((value: boolean) => {
     globalDemoMode = value
     localStorage.setItem(DEMO_MODE_KEY, String(value))
-    // Clear GPU cache when turning off demo mode to prevent stale demo data
-    if (!value) {
-      localStorage.removeItem(GPU_CACHE_KEY)
-    }
+    // NOTE: We no longer clear GPU cache here - the fetch logic handles
+    // transitioning from demo to real data, and clearing here causes
+    // loss of GPU data if the subsequent fetch fails.
     notifyListeners()
   }, [])
 

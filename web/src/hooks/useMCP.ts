@@ -3428,12 +3428,9 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
   }
   gpuFetchInProgress = true
 
-  // Clear localStorage cache when fetching real data to prevent stale demo data
-  try {
-    localStorage.removeItem(GPU_CACHE_KEY)
-  } catch {
-    // Ignore storage errors
-  }
+  // NOTE: We no longer clear localStorage cache before fetch.
+  // This prevents losing GPU data if the fetch fails.
+  // The cache is only updated when we successfully get new data.
 
   // Show loading only if no cached data, otherwise show refreshing
   if (gpuNodeCache.nodes.length === 0) {
@@ -3526,6 +3523,7 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
   } catch (err) {
     console.log('[GPU] Fetch error:', err)
     const newFailures = gpuNodeCache.consecutiveFailures + 1
+
     // On error, preserve existing cached data
     // Only use demo data if demo mode is explicitly enabled
     if (gpuNodeCache.nodes.length === 0 && getDemoMode()) {
@@ -3540,14 +3538,49 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
       })
     } else {
       console.log('[GPU] Preserving cache on error (or no demo data fallback)')
-      // Preserve existing cache on error, or just clear loading state if no cache
-      updateGPUNodeCache({
-        isLoading: false,
-        isRefreshing: false,
-        error: gpuNodeCache.nodes.length === 0 ? 'Failed to fetch GPU nodes' : 'Failed to refresh GPU nodes',
-        consecutiveFailures: newFailures,
-        lastRefresh: new Date(),
-      })
+
+      // Try to restore from localStorage if memory cache is empty
+      if (gpuNodeCache.nodes.length === 0) {
+        const storedCache = loadGPUCacheFromStorage()
+        if (storedCache.nodes.length > 0) {
+          console.log('[GPU] Restored', storedCache.nodes.length, 'nodes from localStorage')
+          updateGPUNodeCache({
+            ...storedCache,
+            error: 'Using cached data - fetch failed',
+            consecutiveFailures: newFailures,
+            lastRefresh: new Date(),
+          })
+        } else {
+          // No cache to restore, update state with error
+          updateGPUNodeCache({
+            isLoading: false,
+            isRefreshing: false,
+            error: 'Failed to fetch GPU nodes',
+            consecutiveFailures: newFailures,
+            lastRefresh: new Date(),
+          })
+        }
+      } else {
+        // Preserve existing memory cache on error
+        updateGPUNodeCache({
+          isLoading: false,
+          isRefreshing: false,
+          error: 'Failed to refresh GPU nodes',
+          consecutiveFailures: newFailures,
+          lastRefresh: new Date(),
+        })
+      }
+
+      // Retry logic: schedule a retry if we haven't exceeded max retries
+      const MAX_RETRIES = 2
+      const RETRY_DELAYS = [2000, 5000] // 2s, then 5s
+      if (newFailures <= MAX_RETRIES && !getDemoMode()) {
+        const delay = RETRY_DELAYS[newFailures - 1] || 5000
+        console.log(`[GPU] Scheduling retry ${newFailures}/${MAX_RETRIES} in ${delay}ms`)
+        setTimeout(() => {
+          fetchGPUNodes(cluster, `retry-${newFailures}`)
+        }, delay)
+      }
     }
   } finally {
     gpuFetchInProgress = false
