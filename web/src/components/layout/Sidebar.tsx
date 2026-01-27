@@ -8,13 +8,15 @@ import { SidebarCustomizer } from './SidebarCustomizer'
 import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useClusters } from '../../hooks/useMCP'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
+import { RefreshSpinner } from '../ui/RefreshIndicator'
+import { Skeleton } from '../ui/Skeleton'
 import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 
 export function Sidebar() {
   const { config, toggleCollapsed, reorderItems } = useSidebarConfig()
-  const { deduplicatedClusters } = useClusters()
+  const { deduplicatedClusters, isLoading, isRefreshing } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
   const navigate = useNavigate()
@@ -246,41 +248,58 @@ export function Sidebar() {
         {/* Cluster status summary */}
         {config.showClusterStatus && !config.collapsed && (
           <div className="mt-6 p-4 rounded-lg bg-secondary/30">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-              Cluster Status
-            </h4>
-            <div className="space-y-2">
-              <button
-                onClick={() => handleClusterStatusClick('healthy')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                  Healthy
-                </span>
-                <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
-              </button>
-              <button
-                onClick={() => handleClusterStatusClick('unhealthy')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                  Unhealthy
-                </span>
-                <span className="text-sm font-medium text-orange-400">{unhealthyClusters}</span>
-              </button>
-              <button
-                onClick={() => handleClusterStatusClick('unreachable')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <WifiOff className="w-3.5 h-3.5 text-yellow-400" />
-                  Offline
-                </span>
-                <span className="text-sm font-medium text-yellow-400">{unreachableClusters}</span>
-              </button>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Cluster Status
+              </h4>
+              <RefreshSpinner isRefreshing={isRefreshing} size="sm" />
             </div>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between px-1 py-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Skeleton variant="circular" width={14} height={14} />
+                      <Skeleton variant="text" width={60} height={14} />
+                    </div>
+                    <Skeleton variant="text" width={20} height={14} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  onClick={() => handleClusterStatusClick('healthy')}
+                  className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-sm text-foreground">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                    Healthy
+                  </span>
+                  <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
+                </button>
+                <button
+                  onClick={() => handleClusterStatusClick('unhealthy')}
+                  className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-sm text-foreground">
+                    <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                    Unhealthy
+                  </span>
+                  <span className="text-sm font-medium text-orange-400">{unhealthyClusters}</span>
+                </button>
+                <button
+                  onClick={() => handleClusterStatusClick('unreachable')}
+                  className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-sm text-foreground">
+                    <WifiOff className="w-3.5 h-3.5 text-yellow-400" />
+                    Offline
+                  </span>
+                  <span className="text-sm font-medium text-yellow-400">{unreachableClusters}</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
