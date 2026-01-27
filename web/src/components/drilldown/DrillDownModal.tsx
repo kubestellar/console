@@ -89,8 +89,7 @@ export function DrillDownModal() {
     if (state.isOpen) {
       close()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClusters])
+  }, [selectedClusters, state.isOpen, close])
 
   // Disable body scroll when modal is open
   useEffect(() => {
