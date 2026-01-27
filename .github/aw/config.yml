@@ -1,0 +1,112 @@
+# GitHub Agentic Workflows Configuration
+# See: https://github.com/githubnext/gh-aw
+
+# AI Provider Configuration
+provider: copilot
+
+# Future: Add Claude as fallback provider
+# providers:
+#   primary: copilot
+#   fallback: claude
+# claude:
+#   model: claude-sonnet-4-20250514
+#   api-key-secret: ANTHROPIC_API_KEY
+
+# Permissions required by the workflows
+permissions:
+  contents: write    # Create branches, commit code
+  issues: write      # Manage issue labels and comments
+  pull-requests: write  # Create and manage PRs
+  statuses: write    # Set commit statuses (for DCO override)
+  checks: read       # Read check run results
+
+# Safety constraints for AI outputs
+safe-outputs:
+  # PRs created by AI will have this prefix
+  title-prefix: "[Copilot]"
+  # Labels automatically added to AI-generated content
+  labels:
+    - ai-generated
+  # Prevent AI from making changes to these paths
+  protected-paths:
+    - ".github/workflows/*.yml"  # Don't modify existing workflows
+    - "*.md"  # Don't modify documentation without approval
+    - "package-lock.json"  # Let npm handle this
+    - "go.sum"  # Let go mod handle this
+
+# Retry configuration
+retry:
+  max-attempts: 3
+  backoff: exponential
+  initial-delay: 30s
+  max-delay: 5m
+
+# Issue lifecycle management
+issues:
+  # Labels that indicate AI processing states
+  processing-labels:
+    - ai-fix-requested
+    - ai-processing
+    - ai-awaiting-fix
+    - ai-pr-draft
+    - ai-pr-ready
+    - ai-processing-complete
+    - ai-needs-human
+  # Labels that should trigger AI workflows
+  trigger-labels:
+    - ai-fix-requested
+  # Labels that indicate human approval
+  approval-labels:
+    - triage/accepted
+
+# PR lifecycle management
+pull-requests:
+  # Bot usernames that are considered AI agents
+  bot-users:
+    - Copilot
+    - copilot-swe-agent
+    - dependabot[bot]
+  # Labels to clean up on PR ready
+  cleanup-labels:
+    - do-not-merge/work-in-progress
+    - dco-signoff: no
+  # DCO override is automatic for bots
+  auto-override-dco: true
+
+# Preview deployment configuration
+preview:
+  # URL pattern for Netlify previews
+  url-pattern: "https://deploy-preview-{pr_number}.console-deploy-preview.kubestellar.io"
+  # Wait time for preview to be ready
+  max-wait-time: 2m
+  # Check interval
+  check-interval: 10s
+
+# Stuck detection thresholds
+stuck-detection:
+  # How long before an issue in ai-processing is considered stuck
+  processing-timeout: 2h
+  # How long before a PR awaiting fix is considered stuck
+  awaiting-fix-timeout: 4h
+  # How long before a draft PR with no activity is considered stuck
+  pr-inactivity-timeout: 1h
+  # How long before unaddressed review feedback is considered stuck
+  review-feedback-timeout: 2h
+  # Schedule for stuck detection runs
+  schedule: "*/30 * * * *"
+
+# Notification settings
+notifications:
+  # Who to notify when escalating
+  escalation-team: "@kubestellar/maintainers"
+  # Mention in escalation comments
+  mention-on-escalate: true
+
+# Environment-specific settings
+environments:
+  production:
+    # More conservative settings for production
+    retry:
+      max-attempts: 5
+    stuck-detection:
+      processing-timeout: 3h
