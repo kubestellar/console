@@ -3,6 +3,7 @@ import { Login } from './components/auth/Login'
 import { AuthCallback } from './components/auth/AuthCallback'
 import { Onboarding } from './components/onboarding/Onboarding'
 import { Dashboard } from './components/dashboard/Dashboard'
+import { CustomDashboard } from './components/dashboard/CustomDashboard'
 import { Settings } from './components/settings/Settings'
 import { Clusters } from './components/clusters/Clusters'
 import { Events } from './components/events/Events'
@@ -120,6 +121,18 @@ function App() {
               <OnboardedRoute>
                 <Layout>
                   <Dashboard />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/custom-dashboard/:id"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <CustomDashboard />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>

@@ -1,0 +1,544 @@
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { GripVertical, RefreshCw, Hourglass, Trash2 } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { api } from '../../lib/api'
+import { useDashboards, Dashboard } from '../../hooks/useDashboards'
+import { useClusters } from '../../hooks/useMCP'
+import { useToast } from '../ui/Toast'
+import { CardWrapper } from '../cards/CardWrapper'
+import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { AddCardModal } from './AddCardModal'
+import { ConfigureCardModal } from './ConfigureCardModal'
+import { CardRecommendations } from './CardRecommendations'
+import { TemplatesModal } from './TemplatesModal'
+import { FloatingDashboardActions } from './FloatingDashboardActions'
+import { DashboardTemplate } from './templates'
+import { formatCardTitle } from '../../lib/formatCardTitle'
+
+interface Card {
+  id: string
+  card_type: string
+  config: Record<string, unknown>
+  position: { x: number; y: number; w: number; h: number }
+  title?: string
+}
+
+// Sortable card component
+interface SortableCardProps {
+  card: Card
+  onConfigure: () => void
+  onRemove: () => void
+  onWidthChange: (newWidth: number) => void
+  isDragging?: boolean
+}
+
+function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging }: SortableCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    gridColumn: `span ${card.position?.w || 4}`,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const CardComponent = CARD_COMPONENTS[card.card_type]
+
+  if (!CardComponent) {
+    return (
+      <div ref={setNodeRef} style={style} className="relative">
+        <CardWrapper
+          cardId={card.id}
+          cardType={card.card_type}
+          title={formatCardTitle(card.card_type)}
+          onConfigure={onConfigure}
+          onRemove={onRemove}
+          onWidthChange={onWidthChange}
+          cardWidth={card.position?.w || 4}
+        >
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Unknown card type: {card.card_type}
+          </div>
+        </CardWrapper>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded cursor-grab active:cursor-grabbing opacity-0 hover:opacity-100 transition-opacity bg-secondary/80"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <CardWrapper
+        cardId={card.id}
+        cardType={card.card_type}
+        title={card.title || formatCardTitle(card.card_type)}
+        onConfigure={onConfigure}
+        onRemove={onRemove}
+        onWidthChange={onWidthChange}
+        cardWidth={card.position?.w || 4}
+      >
+        <CardComponent config={card.config} />
+      </CardWrapper>
+    </div>
+  )
+}
+
+// Drag preview card
+function DragPreviewCard({ card }: { card: Card }) {
+  const CardComponent = CARD_COMPONENTS[card.card_type]
+
+  return (
+    <div
+      className="rounded-lg border border-purple-500 bg-card shadow-lg"
+      style={{ width: `${(card.position?.w || 4) * 80}px`, height: '200px' }}
+    >
+      <CardWrapper
+        cardId={card.id}
+        cardType={card.card_type}
+        title={card.title || formatCardTitle(card.card_type)}
+        cardWidth={card.position?.w || 4}
+      >
+        {CardComponent ? <CardComponent config={card.config} /> : null}
+      </CardWrapper>
+    </div>
+  )
+}
+
+export function CustomDashboard() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { showToast } = useToast()
+  const { getDashboardWithCards, deleteDashboard } = useDashboards()
+  const { clusters } = useClusters()
+
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [cards, setCards] = useState<Card[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
+  // Modal states
+  const [isAddCardOpen, setIsAddCardOpen] = useState(false)
+  const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
+
+  // Drag state
+  const [activeId, setActiveId] = useState<string | null>(null)
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  // Storage key for this dashboard's cards
+  const storageKey = `kubestellar-custom-dashboard-${id}-cards`
+
+  // Load dashboard
+  const loadDashboard = useCallback(async (isRefresh = false) => {
+    if (!id) return
+
+    if (isRefresh) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
+
+    try {
+      // First try to load from localStorage for instant display
+      if (!isRefresh) {
+        const stored = localStorage.getItem(storageKey)
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setCards(parsed)
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+
+      // Then fetch from API
+      const data = await getDashboardWithCards(id)
+      if (data) {
+        setDashboard(data)
+        if (data.cards && data.cards.length > 0) {
+          const loadedCards = data.cards.map(c => ({
+            ...c,
+            position: c.position || { x: 0, y: 0, w: 4, h: 2 }
+          }))
+          setCards(loadedCards)
+          localStorage.setItem(storageKey, JSON.stringify(loadedCards))
+        }
+      }
+      setLastUpdated(new Date())
+    } catch (error) {
+      console.error('Failed to load dashboard:', error)
+      if (!isRefresh) {
+        showToast('Failed to load dashboard', 'error')
+      }
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [id, getDashboardWithCards, showToast, storageKey])
+
+  // Initial load
+  useEffect(() => {
+    loadDashboard()
+  }, [loadDashboard])
+
+  // Auto-refresh
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(() => loadDashboard(true), 30000)
+    return () => clearInterval(interval)
+  }, [autoRefresh, loadDashboard])
+
+  // Persist cards to localStorage when they change
+  useEffect(() => {
+    if (cards.length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify(cards))
+    }
+  }, [cards, storageKey])
+
+  // Card operations
+  const handleAddCards = useCallback(async (newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
+    const cardsToAdd = newCards.map((c, index) => ({
+      id: `card-${Date.now()}-${index}`,
+      card_type: c.type,
+      title: c.title,
+      config: c.config,
+      position: { x: 0, y: 0, w: 4, h: 2 }
+    }))
+
+    // Add to local state
+    setCards(prev => [...prev, ...cardsToAdd])
+
+    // Persist to backend
+    if (id) {
+      for (const card of cardsToAdd) {
+        try {
+          await api.post(`/api/dashboards/${id}/cards`, card)
+        } catch (error) {
+          console.error('Failed to persist card:', error)
+        }
+      }
+    }
+
+    setIsAddCardOpen(false)
+    showToast(`Added ${newCards.length} card${newCards.length > 1 ? 's' : ''}`, 'success')
+  }, [id, showToast])
+
+  const handleRemoveCard = useCallback(async (cardId: string) => {
+    setCards(prev => prev.filter(c => c.id !== cardId))
+
+    if (id) {
+      try {
+        await api.delete(`/api/dashboards/${id}/cards/${cardId}`)
+      } catch (error) {
+        console.error('Failed to delete card:', error)
+      }
+    }
+  }, [id])
+
+  const handleConfigureCard = useCallback((card: Card) => {
+    setSelectedCard(card)
+    setIsConfigureCardOpen(true)
+  }, [])
+
+  const handleCardConfigured = useCallback(async (cardId: string, config: Record<string, unknown>) => {
+    setCards(prev => prev.map(c =>
+      c.id === cardId ? { ...c, config } : c
+    ))
+    setIsConfigureCardOpen(false)
+    setSelectedCard(null)
+  }, [])
+
+  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
+    setCards(prev => prev.map(c =>
+      c.id === cardId ? { ...c, position: { ...c.position, w: newWidth } } : c
+    ))
+  }, [])
+
+  const handleApplyTemplate = useCallback(async (template: DashboardTemplate) => {
+    const templateCards = template.cards.map((tc, index) => ({
+      id: `template-${Date.now()}-${index}`,
+      card_type: tc.card_type,
+      title: tc.title,
+      config: tc.config || {},
+      position: { x: 0, y: 0, w: tc.position.w, h: tc.position.h }
+    }))
+
+    setCards(templateCards)
+    setIsTemplatesOpen(false)
+
+    // Persist to backend
+    if (id) {
+      for (const card of templateCards) {
+        try {
+          await api.post(`/api/dashboards/${id}/cards`, card)
+        } catch (error) {
+          console.error('Failed to persist template card:', error)
+        }
+      }
+    }
+
+    showToast(`Applied template "${template.name}" with ${templateCards.length} cards`, 'success')
+  }, [id, showToast])
+
+  const handleAddRecommendedCard = useCallback((cardType: string, config?: Record<string, unknown>) => {
+    handleAddCards([{ type: cardType, title: formatCardTitle(cardType), config: config || {} }])
+  }, [handleAddCards])
+
+  const handleReset = useCallback(() => {
+    setCards([])
+    localStorage.removeItem(storageKey)
+    showToast('Dashboard reset to empty', 'info')
+  }, [storageKey, showToast])
+
+  const handleDeleteDashboard = useCallback(async () => {
+    if (!id || !dashboard) return
+
+    if (!confirm(`Are you sure you want to delete "${dashboard.name}"? This cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await deleteDashboard(id)
+      localStorage.removeItem(storageKey)
+      showToast(`Deleted "${dashboard.name}"`, 'success')
+      navigate('/')
+    } catch (error) {
+      console.error('Failed to delete dashboard:', error)
+      showToast('Failed to delete dashboard', 'error')
+    }
+  }, [id, dashboard, deleteDashboard, storageKey, showToast, navigate])
+
+  // Drag handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }, [])
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveId(null)
+
+    if (over && active.id !== over.id) {
+      setCards(prev => {
+        const oldIndex = prev.findIndex(c => c.id === active.id)
+        const newIndex = prev.findIndex(c => c.id === over.id)
+        return arrayMove(prev, oldIndex, newIndex)
+      })
+    }
+  }, [])
+
+  // Current card types for recommendations
+  const currentCardTypes = useMemo(() => cards.map(c => c.card_type), [cards])
+
+  // Loading skeleton
+  if (isLoading && cards.length === 0) {
+    return (
+      <div className="pt-16">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-64 bg-secondary/50 rounded" />
+          <div className="h-4 w-96 bg-secondary/30 rounded" />
+          <div className="grid grid-cols-12 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="col-span-4 h-48 bg-secondary/30 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="pt-16">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {dashboard?.name || 'Custom Dashboard'}
+          </h1>
+          <p className="text-muted-foreground">
+            {cards.length === 0
+              ? 'Add cards to start monitoring your clusters'
+              : `${cards.length} card${cards.length !== 1 ? 's' : ''}`
+            }
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* Delete dashboard button */}
+          <button
+            onClick={handleDeleteDashboard}
+            className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+            title="Delete dashboard"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          {/* Refresh controls */}
+          <div className="flex items-center gap-3">
+            {isRefreshing && (
+              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse">
+                <Hourglass className="w-3 h-3" />
+                <span>Updating</span>
+              </span>
+            )}
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-border bg-secondary w-3.5 h-3.5"
+              />
+              Auto
+            </label>
+            <button
+              onClick={() => loadDashboard(true)}
+              disabled={isRefreshing}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* AI Recommendations - always shown to help users add relevant cards */}
+      <CardRecommendations
+        currentCardTypes={currentCardTypes}
+        onAddCard={handleAddRecommendedCard}
+      />
+
+      {/* Empty state */}
+      {cards.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-medium text-foreground mb-2">No cards yet</h2>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            This dashboard is empty. Add cards to start monitoring your {clusters.length > 0 ? `${clusters.length} clusters` : 'Kubernetes clusters'}.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsAddCardOpen(true)}
+              className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+            >
+              Add Cards
+            </button>
+            <button
+              onClick={() => setIsTemplatesOpen(true)}
+              className="px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+            >
+              Start with Template
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Card grid with drag and drop */
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+              {cards.map((card) => (
+                <SortableCard
+                  key={card.id}
+                  card={card}
+                  onConfigure={() => handleConfigureCard(card)}
+                  onRemove={() => handleRemoveCard(card.id)}
+                  onWidthChange={(w) => handleWidthChange(card.id, w)}
+                  isDragging={activeId === card.id}
+                />
+              ))}
+            </div>
+          </SortableContext>
+
+          <DragOverlay>
+            {activeId ? (
+              <div className="opacity-80 rotate-3 scale-105">
+                <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Floating action buttons */}
+      <FloatingDashboardActions
+        onAddCard={() => setIsAddCardOpen(true)}
+        onOpenTemplates={() => setIsTemplatesOpen(true)}
+        onResetToDefaults={handleReset}
+        isCustomized={cards.length > 0}
+      />
+
+      {/* Add Card Modal */}
+      <AddCardModal
+        isOpen={isAddCardOpen}
+        onClose={() => setIsAddCardOpen(false)}
+        onAddCards={handleAddCards}
+        existingCardTypes={currentCardTypes}
+      />
+
+      {/* Configure Card Modal */}
+      <ConfigureCardModal
+        isOpen={isConfigureCardOpen}
+        card={selectedCard}
+        onClose={() => {
+          setIsConfigureCardOpen(false)
+          setSelectedCard(null)
+        }}
+        onSave={handleCardConfigured}
+      />
+
+      {/* Templates Modal */}
+      <TemplatesModal
+        isOpen={isTemplatesOpen}
+        onClose={() => setIsTemplatesOpen(false)}
+        onApplyTemplate={handleApplyTemplate}
+      />
+    </div>
+  )
+}

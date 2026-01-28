@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Square,
   Search,
+  FolderPlus,
 } from 'lucide-react'
 import {
   DndContext,
@@ -33,7 +34,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
-import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES } from '../dashboard/templates'
+import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
+import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
 import * as Icons from 'lucide-react'
@@ -211,9 +213,10 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     }
   }
 
-  const { getAllDashboardsWithCards } = useDashboards()
+  const { getAllDashboardsWithCards, createDashboard, dashboards } = useDashboards()
 
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isCreateDashboardOpen, setIsCreateDashboardOpen] = useState(false)
   const [generationResult, setGenerationResult] = useState<string | null>(null)
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -308,6 +311,32 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
     setIsGenerating(false)
   }
 
+  // Handle creating a new custom dashboard
+  const handleCreateDashboard = async (name: string, template?: DashboardTemplate) => {
+    try {
+      const newDashboard = await createDashboard(name)
+      if (newDashboard) {
+        // If a template was selected, apply template cards
+        if (template) {
+          // Template cards will be added when user navigates to the dashboard
+          // For now, just create the empty dashboard
+        }
+
+        // Add the new dashboard to sidebar
+        addItem({
+          name: name,
+          icon: 'LayoutDashboard',
+          href: `/custom-dashboard/${newDashboard.id}`,
+          type: 'link',
+        }, 'primary')
+
+        setIsCreateDashboardOpen(false)
+      }
+    } catch (error) {
+      console.error('Failed to create dashboard:', error)
+    }
+  }
+
   const renderIcon = (iconName: string, className?: string) => {
     const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[iconName]
     return IconComponent ? <IconComponent className={className} /> : null
@@ -335,6 +364,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   )
 
   return (
+    <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
         title="Customize Sidebar"
@@ -346,13 +376,20 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
 
       <BaseModal.Content className="max-h-[60vh]">
           {/* Quick Actions */}
-          <div className="flex gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-6">
             <button
               onClick={() => setShowAddForm(!showAddForm)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
             >
               <Plus className="w-4 h-4" />
               Add Item
+            </button>
+            <button
+              onClick={() => setIsCreateDashboardOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"
+            >
+              <FolderPlus className="w-4 h-4" />
+              New Dashboard
             </button>
             <button
               onClick={resetToDefault}
@@ -791,5 +828,14 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
         )}
       </BaseModal.Footer>
     </BaseModal>
+
+    {/* Create Dashboard Modal */}
+    <CreateDashboardModal
+      isOpen={isCreateDashboardOpen}
+      onClose={() => setIsCreateDashboardOpen(false)}
+      onCreate={handleCreateDashboard}
+      existingNames={dashboards.map(d => d.name)}
+    />
+    </>
   )
 }
