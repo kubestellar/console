@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -137,6 +138,7 @@ export function Cost() {
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -327,7 +329,7 @@ export function Cost() {
   }, [reachableClusters, gpuByCluster, providerOverrides])
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const drillToCostType = (type: string) => {
       drillToCost('all', { costType: type, totalMonthly: costStats.totalMonthly })
     }
@@ -349,6 +351,11 @@ export function Cost() {
         return { value: 0 }
     }
   }, [costStats, drillToCost])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

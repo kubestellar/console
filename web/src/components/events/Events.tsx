@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useEvents, useWarningEvents } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DonutChart } from '../charts/PieChart'
 import { BarChart } from '../charts/BarChart'
@@ -205,6 +206,7 @@ export function Events() {
     customFilter: globalCustomFilter,
   } = useGlobalFilters()
   const { drillToEvents: _drillToEvents, drillToAllEvents } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Get events - fetch all, filter client-side with global filter
   const { events: allEvents, isLoading: loadingAll, isRefreshing: refreshingAll, lastUpdated: allUpdated, refetch: refetchAll } = useEvents(undefined)
@@ -529,7 +531,7 @@ export function Events() {
     : stats
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total':
         return { value: formatStat(displayStats.total), sublabel: 'events', onClick: () => drillToAllEvents(), isClickable: displayStats.total > 0 }
@@ -545,6 +547,11 @@ export function Events() {
         return { value: '-', sublabel: '' }
     }
   }, [displayStats, drillToAllEvents])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Group events by time
   const groupedEvents = useMemo(() => {

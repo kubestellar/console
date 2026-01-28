@@ -13,6 +13,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useAlerts, useAlertRules } from '../../hooks/useAlerts'
 import { useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
@@ -101,6 +102,7 @@ export function Alerts() {
   const { rules } = useAlertRules()
   const { isRefreshing, refetch } = useClusters()
   const { drillToAlert } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Local state for last updated time
   const [lastUpdated, setLastUpdated] = useState<Date | undefined>(undefined)
@@ -180,7 +182,7 @@ export function Alerts() {
   const enabledRulesCount = rules.filter(r => r.enabled).length
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const disabledRulesCount = rules.filter(r => !r.enabled).length
     const drillToFiringAlert = () => {
       drillToAlert('all', undefined, 'Active Alerts', { status: 'firing', count: stats.firing })
@@ -204,6 +206,11 @@ export function Alerts() {
         return { value: 0 }
     }
   }, [stats, enabledRulesCount, rules, drillToAlert])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
 
   return (

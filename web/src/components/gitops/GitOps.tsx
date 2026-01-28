@@ -14,6 +14,7 @@ import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../ho
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2, GripVertical, Hourglass } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
 import { api } from '../../lib/api'
@@ -218,6 +219,7 @@ export function GitOps() {
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToHelm: _drillToHelm, drillToOperator: _drillToOperator, drillToAllHelm, drillToAllOperators } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { showToast } = useToast()
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -489,7 +491,7 @@ export function GitOps() {
   }
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total':
         return { value: stats.total, sublabel: 'apps configured', onClick: () => drillToAllHelm(), isClickable: stats.total > 0 }
@@ -511,6 +513,11 @@ export function GitOps() {
         return { value: 0 }
     }
   }, [stats, helmCount, operatorSubs, drillToAllHelm, drillToAllOperators])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

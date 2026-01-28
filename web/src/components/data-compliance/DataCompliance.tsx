@@ -14,6 +14,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -159,6 +160,7 @@ export function DataCompliance() {
   const location = useLocation()
   const { isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
   useGlobalFilters() // Keep hook for potential future use
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const {
     cards,
@@ -234,7 +236,7 @@ export function DataCompliance() {
   const posture = DEMO_POSTURE
 
   // Stats value getter - returns fixed demo data with isDemo flag
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       // Encryption
       case 'encryption_score':
@@ -280,6 +282,11 @@ export function DataCompliance() {
         return { value: '-' }
     }
   }, [posture])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   const configureCardData = configuringCard ? {
     id: configuringCard.id,

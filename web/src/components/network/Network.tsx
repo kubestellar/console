@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useServices } from '../../hooks/useMCP'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
@@ -134,6 +135,7 @@ export function Network() {
     isAllClustersSelected,
   } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -228,7 +230,7 @@ export function Network() {
   const clusterIPServices = filteredServices.filter(s => s.type === 'ClusterIP').length
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const drillToFirstService = () => {
       if (filteredServices.length > 0 && filteredServices[0]) {
         drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
@@ -264,6 +266,11 @@ export function Network() {
         return { value: '-', sublabel: '' }
     }
   }, [filteredServices, loadBalancers, nodePortServices, clusterIPServices, drillToService])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

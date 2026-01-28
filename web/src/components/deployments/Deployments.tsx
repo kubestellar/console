@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useDeployments, useDeploymentIssues, usePodIssues, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
@@ -127,6 +128,7 @@ export function Deployments() {
   const { issues: podIssues } = usePodIssues()
   const { clusters: _clusters } = useClusters()
   const { drillToDeployment: _drillToDeployment, drillToPod: _drillToPod, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -237,7 +239,7 @@ export function Deployments() {
   const issueCount = currentTotalDeployments > 0 ? currentIssueCount : cachedStats.current.issues
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'namespaces':
         return { value: totalDeployments, sublabel: 'total deployments', onClick: () => drillToAllDeployments(), isClickable: totalDeployments > 0 }
@@ -257,6 +259,11 @@ export function Deployments() {
         return { value: 0 }
     }
   }, [totalDeployments, healthyDeployments, issueCount, podIssues, drillToAllDeployments, drillToAllPods])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -166,6 +167,7 @@ export function Compliance() {
   const location = useLocation()
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
   const { drillToPolicy: _drillToPolicy, drillToAllSecurity } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -250,7 +252,7 @@ export function Compliance() {
   const posture = getCompliancePosture(reachableClusters.length || 1)
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       // Overall compliance
       case 'score':
@@ -296,6 +298,11 @@ export function Compliance() {
         return { value: '-' }
     }
   }, [posture, reachableClusters, drillToAllSecurity])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

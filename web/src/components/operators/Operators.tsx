@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useOperatorSubscriptions, useOperators } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
@@ -126,6 +127,7 @@ export function Operators() {
   const { subscriptions: operatorSubs, refetch: refetchSubs } = useOperatorSubscriptions()
   const { operators: allOperators, refetch: refetchOps } = useOperators()
   const { drillToOperator: _drillToOperator, drillToAllOperators, drillToAllClusters } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -270,7 +272,7 @@ export function Operators() {
   const failingOperators = filteredOperatorsAPI.filter(op => op.status === 'Failed').length
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'operators':
         return { value: totalOperators, sublabel: 'total operators', onClick: () => drillToAllOperators(), isClickable: totalOperators > 0 }
@@ -292,6 +294,11 @@ export function Operators() {
         return { value: 0 }
     }
   }, [totalOperators, installedOperators, installingOperators, upgradesAvailable, failingOperators, reachableClusters.length, filteredSubscriptions, drillToAllOperators, drillToAllClusters])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

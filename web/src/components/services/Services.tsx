@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useServices } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
@@ -125,6 +126,7 @@ export function Services() {
   const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const { services } = useServices()
   const { drillToService: _drillToService, drillToAllServices, drillToAllClusters } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -221,7 +223,7 @@ export function Services() {
   const clusterIPServices = filteredServices.filter(s => s.type === 'ClusterIP').length
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
@@ -243,6 +245,11 @@ export function Services() {
         return { value: 0 }
     }
   }, [reachableClusters.length, totalServices, loadBalancers, nodePortServices, clusterIPServices, drillToAllServices, drillToAllClusters])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {

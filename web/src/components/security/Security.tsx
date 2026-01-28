@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { DonutChart } from '../charts/PieChart'
 import { ProgressBar } from '../charts/ProgressBar'
@@ -275,6 +276,7 @@ export function Security() {
     filterBySeverity,
     customFilter,
   } = useGlobalFilters()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
@@ -552,7 +554,7 @@ export function Security() {
   } : null
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const hasDataToShow = stats.total > 0
     switch (blockId) {
       case 'issues':
@@ -573,6 +575,11 @@ export function Security() {
         return { value: 0 }
     }
   }, [stats, setActiveTab, setSeverityFilter])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   return (
     <div className="pt-16">

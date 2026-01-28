@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { BaseModal } from '../../lib/modals'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -234,6 +235,7 @@ export function Storage() {
   } = useGlobalFilters()
   const { pvcs } = usePVCs()
   const { drillToPVC, drillToResources } = useDrillDownActions()
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -399,7 +401,7 @@ export function Storage() {
   }
 
   // Stats value getter for the configurable StatsOverview component
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'ephemeral':
         return {
@@ -437,6 +439,11 @@ export function Storage() {
         return { value: '-', sublabel: '' }
     }
   }, [stats, hasDataToShow, formatStorage, formatStatValue, drillToResources, setPVCModalFilter, setShowPVCModal])
+
+  const getStatValue = useCallback(
+    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
+    [getDashboardStatValue, getUniversalStatValue]
+  )
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
