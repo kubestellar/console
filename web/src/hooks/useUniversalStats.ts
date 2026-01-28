@@ -85,7 +85,6 @@ export function useUniversalStats() {
   // ─── PVC-derived values ───
   const allPVCs = pvcs || []
   const boundPVCs = allPVCs.filter(p => p.status === 'Bound').length
-  const pendingPVCs = allPVCs.filter(p => p.status === 'Pending').length
   const storageClassCount = useMemo(
     () => new Set(allPVCs.map(p => p.storageClass).filter(Boolean)).size,
     [allPVCs]
@@ -401,7 +400,7 @@ export function useUniversalStats() {
     podIssuesList, pendingPods, highRestartPods,
     allDeployments, allDeploymentIssues,
     // Storage
-    allPVCs, boundPVCs, pendingPVCs, storageClassCount,
+    allPVCs, boundPVCs, storageClassCount,
     // Network
     allServices, lbCount, npCount, cipCount,
     // Events
