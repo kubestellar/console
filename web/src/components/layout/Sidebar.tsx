@@ -11,6 +11,8 @@ import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
+import { Tooltip } from '../ui/Tooltip'
+import type { ClusterInfo } from '../../hooks/useMCP'
 
 export function Sidebar() {
   const { config, toggleCollapsed, reorderItems } = useSidebarConfig()
@@ -30,6 +32,49 @@ export function Sidebar() {
   const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
   const unhealthyClusters = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false).length
   const unreachableClusters = deduplicatedClusters.filter((c) => c.reachable === false).length
+
+  // Group clusters by status for tooltips
+  const healthyClustersList = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false)
+  const unhealthyClustersList = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false)
+  const unreachableClustersList = deduplicatedClusters.filter((c) => c.reachable === false)
+
+  // Format tooltip content for cluster status
+  const formatClusterTooltip = (clusters: ClusterInfo[], statusType: 'healthy' | 'unhealthy' | 'unreachable') => {
+    if (clusters.length === 0) {
+      return <div className="text-muted-foreground">No {statusType} clusters</div>
+    }
+
+    const statusLabel = statusType === 'healthy' ? 'Healthy' : statusType === 'unhealthy' ? 'Unhealthy' : 'Unreachable'
+    
+    return (
+      <div className="space-y-2 min-w-[220px] max-w-[280px]">
+        <div className="font-semibold text-foreground border-b border-border/50 pb-1 mb-2">
+          {statusLabel} Clusters ({clusters.length})
+        </div>
+        {clusters.slice(0, 5).map((cluster, idx) => (
+          <div key={idx} className="text-xs space-y-0.5">
+            <div className="font-medium text-foreground">{cluster.name}</div>
+            <div className="text-muted-foreground space-y-0.5">
+              {cluster.nodeCount !== undefined && (
+                <div>Nodes: {cluster.nodeCount}</div>
+              )}
+              {cluster.lastSeen && (
+                <div>Last seen: {new Date(cluster.lastSeen).toLocaleString()}</div>
+              )}
+              {!cluster.lastSeen && statusType !== 'healthy' && (
+                <div>Status: {statusType === 'unhealthy' ? 'Degraded' : 'Offline'}</div>
+              )}
+            </div>
+          </div>
+        ))}
+        {clusters.length > 5 && (
+          <div className="text-muted-foreground text-xs pt-1 border-t border-border/50">
+            +{clusters.length - 5} more clusters
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // Handle Add Card click - work with current dashboard
   const handleAddCardClick = () => {
@@ -250,36 +295,42 @@ export function Sidebar() {
               Cluster Status
             </h4>
             <div className="space-y-2">
-              <button
-                onClick={() => handleClusterStatusClick('healthy')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                  Healthy
-                </span>
-                <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
-              </button>
-              <button
-                onClick={() => handleClusterStatusClick('unhealthy')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                  Unhealthy
-                </span>
-                <span className="text-sm font-medium text-orange-400">{unhealthyClusters}</span>
-              </button>
-              <button
-                onClick={() => handleClusterStatusClick('unreachable')}
-                className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
-              >
-                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                  <WifiOff className="w-3.5 h-3.5 text-yellow-400" />
-                  Offline
-                </span>
-                <span className="text-sm font-medium text-yellow-400">{unreachableClusters}</span>
-              </button>
+              <Tooltip content={formatClusterTooltip(healthyClustersList, 'healthy')}>
+                <button
+                  onClick={() => handleClusterStatusClick('healthy')}
+                  className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-sm text-foreground">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                    Healthy
+                  </span>
+                  <span className="text-sm font-medium text-green-400">{healthyClusters}</span>
+                </button>
+              </Tooltip>
+              <Tooltip content={formatClusterTooltip(unhealthyClustersList, 'unhealthy')}>
+                <button
+                  onClick={() => handleClusterStatusClick('unhealthy')}
+                  className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-sm text-foreground">
+                    <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                    Unhealthy
+                  </span>
+                  <span className="text-sm font-medium text-orange-400">{unhealthyClusters}</span>
+                </button>
+              </Tooltip>
+              <Tooltip content={formatClusterTooltip(unreachableClustersList, 'unreachable')}>
+                <button
+                  onClick={() => handleClusterStatusClick('unreachable')}
+                  className="w-full flex items-center justify-between hover:bg-secondary/50 rounded px-1 py-0.5 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 text-sm text-foreground">
+                    <WifiOff className="w-3.5 h-3.5 text-yellow-400" />
+                    Offline
+                  </span>
+                  <span className="text-sm font-medium text-yellow-400">{unreachableClusters}</span>
+                </button>
+              </Tooltip>
             </div>
           </div>
         )}
