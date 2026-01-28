@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect } from 'react'
+import { ReactNode, useState, useRef, useEffect, useId } from 'react'
 import { cn } from '../../lib/cn'
 
 interface TooltipProps {
@@ -14,6 +14,7 @@ export function Tooltip({ content, children, className, delayMs = 300 }: Tooltip
   const timeoutRef = useRef<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const tooltipId = useId()
 
   const handleMouseEnter = () => {
     timeoutRef.current = window.setTimeout(() => {
@@ -65,12 +66,15 @@ export function Tooltip({ content, children, className, delayMs = 300 }: Tooltip
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="inline-block"
+        aria-describedby={isVisible ? tooltipId : undefined}
       >
         {children}
       </div>
       {isVisible && position && (
         <div
+          id={tooltipId}
           ref={tooltipRef}
+          role="tooltip"
           className={cn(
             'fixed z-50 rounded-lg border border-border bg-secondary/95 backdrop-blur-sm px-3 py-2 text-sm shadow-lg',
             'animate-in fade-in-0 zoom-in-95 duration-200',

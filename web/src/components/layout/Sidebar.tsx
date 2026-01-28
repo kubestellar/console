@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import * as Icons from 'lucide-react'
 import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical } from 'lucide-react'
@@ -28,31 +28,36 @@ export function Sidebar() {
   const [dragSection, setDragSection] = useState<'primary' | 'secondary' | null>(null)
   const dragCounter = useRef(0)
 
-  // Cluster status counts (using deduplicated clusters to avoid double-counting same server with different contexts)
-  const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
-  const unhealthyClusters = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false).length
-  const unreachableClusters = deduplicatedClusters.filter((c) => c.reachable === false).length
-
-  // Group clusters by status for tooltips
+  // Group clusters by status for tooltips (using deduplicated clusters to avoid double-counting same server with different contexts)
   const healthyClustersList = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false)
   const unhealthyClustersList = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false)
   const unreachableClustersList = deduplicatedClusters.filter((c) => c.reachable === false)
 
+  // Cluster status counts
+  const healthyClusters = healthyClustersList.length
+  const unhealthyClusters = unhealthyClustersList.length
+  const unreachableClusters = unreachableClustersList.length
+
   // Format tooltip content for cluster status
-  const formatClusterTooltip = (clusters: ClusterInfo[], statusType: 'healthy' | 'unhealthy' | 'unreachable') => {
+  const formatClusterTooltip = useCallback((clusters: ClusterInfo[], statusType: 'healthy' | 'unhealthy' | 'unreachable') => {
     if (clusters.length === 0) {
       return <div className="text-muted-foreground">No {statusType} clusters</div>
     }
 
-    const statusLabel = statusType === 'healthy' ? 'Healthy' : statusType === 'unhealthy' ? 'Unhealthy' : 'Unreachable'
+    const statusLabels = {
+      healthy: 'Healthy',
+      unhealthy: 'Unhealthy',
+      unreachable: 'Unreachable'
+    }
+    const statusLabel = statusLabels[statusType]
     
     return (
       <div className="space-y-2 min-w-[220px] max-w-[280px]">
         <div className="font-semibold text-foreground border-b border-border/50 pb-1 mb-2">
           {statusLabel} Clusters ({clusters.length})
         </div>
-        {clusters.slice(0, 5).map((cluster, idx) => (
-          <div key={idx} className="text-xs space-y-0.5">
+        {clusters.slice(0, 5).map((cluster) => (
+          <div key={cluster.name} className="text-xs space-y-0.5">
             <div className="font-medium text-foreground">{cluster.name}</div>
             <div className="text-muted-foreground space-y-0.5">
               {cluster.nodeCount !== undefined && (
@@ -74,7 +79,7 @@ export function Sidebar() {
         )}
       </div>
     )
-  }
+  }, [])
 
   // Handle Add Card click - work with current dashboard
   const handleAddCardClick = () => {
