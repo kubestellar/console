@@ -174,8 +174,7 @@ test.describe('Resolution Memory System', () => {
     const toggleButton = page.locator('[data-tour="ai-missions"]')
 
     // Should be visible (either the floating button or in the sidebar)
-    const isVisible = await toggleButton.first().isVisible().catch(() => false)
-    expect(isVisible || true).toBeTruthy()
+    await expect(toggleButton.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('mission sidebar opens when clicking toggle', async ({ page }) => {
@@ -183,16 +182,12 @@ test.describe('Resolution Memory System', () => {
 
     // Find and click the AI Missions button
     const toggleButton = page.locator('[data-tour="ai-missions"]').first()
-    const isVisible = await toggleButton.isVisible().catch(() => false)
+    await expect(toggleButton).toBeVisible({ timeout: 10000 })
+    await toggleButton.click()
 
-    if (isVisible) {
-      await toggleButton.click()
-
-      // Sidebar should open - look for the header text
-      const sidebarHeader = page.locator('text=AI Missions')
-      const headerVisible = await sidebarHeader.first().isVisible().catch(() => false)
-      expect(headerVisible || true).toBeTruthy()
-    }
+    // Sidebar should open - look for the header text
+    const sidebarHeader = page.locator('text=AI Missions')
+    await expect(sidebarHeader.first()).toBeVisible({ timeout: 5000 })
   })
 
   test('fullscreen mode expands the mission sidebar', async ({ page }) => {
@@ -221,23 +216,20 @@ test.describe('Resolution Memory System', () => {
 
     // Open the sidebar
     const toggleButton = page.locator('[data-tour="ai-missions"]').first()
-    const toggleVisible = await toggleButton.isVisible().catch(() => false)
+    await expect(toggleButton).toBeVisible({ timeout: 10000 })
+    await toggleButton.click()
 
-    if (toggleVisible) {
-      await toggleButton.click()
+    // Look for fullscreen button
+    const fullscreenButton = page.locator('button[title="Full screen"], button[title="Expand to full screen"]').first()
+    if (await fullscreenButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await fullscreenButton.click()
 
-      // Look for fullscreen button
-      const fullscreenButton = page.locator('button[title="Full screen"], button[title="Expand to full screen"]').first()
-      if (await fullscreenButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await fullscreenButton.click()
-
-        // In fullscreen, the sidebar should take more space
-        const sidebar = page.locator('[data-tour="ai-missions"]').first()
-        const box = await sidebar.boundingBox()
-        if (box) {
-          // Fullscreen should be wider than default 520px
-          expect(box.width > 500 || true).toBeTruthy()
-        }
+      // In fullscreen, the sidebar should take more space
+      const sidebar = page.locator('[data-tour="ai-missions"]').first()
+      const box = await sidebar.boundingBox()
+      if (box) {
+        // Fullscreen should be wider than default 520px
+        expect(box.width).toBeGreaterThan(500)
       }
     }
   })
