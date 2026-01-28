@@ -185,6 +185,7 @@ export function Dashboard() {
     return stored !== null ? stored === 'true' : true // default to true
   })
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isInitialMountRef = useRef(true)
 
   // Persist auto-refresh setting
   useEffect(() => {
@@ -322,6 +323,17 @@ export function Dashboard() {
       loadDashboard(false)
     }
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refetch cluster data when navigating back to the dashboard
+  // This ensures dashboard cards show up-to-date cluster counts after changes in other views
+  useEffect(() => {
+    // Skip initial mount to avoid double-fetching (useClusters already fetches on mount)
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [location.key, refetch])
 
   // Keep cache and localStorage in sync when cards are modified locally
   useEffect(() => {
