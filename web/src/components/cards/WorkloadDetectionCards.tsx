@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
   Cpu, Layers, AlertCircle, Play, Pause, RefreshCw, Filter, ChevronDown, Server,
-  Activity, Network, Box
+  Activity, Network, Box, Search
 } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { CardControls, SortDirection } from '../ui/CardControls'
@@ -58,10 +58,22 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [typeFilter, setTypeFilter] = useState<ProwJob['type'] | 'all'>('all')
   const [stateFilter, setStateFilter] = useState<ProwJob['state'] | 'all'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Filter and sort jobs
   const sortedJobs = useMemo(() => {
     let filtered = [...jobs]
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(j =>
+        j.name.toLowerCase().includes(q) ||
+        j.state.toLowerCase().includes(q) ||
+        j.type.toLowerCase().includes(q) ||
+        (j.pr && String(j.pr).includes(q))
+      )
+    }
 
     // Apply type filter
     if (typeFilter !== 'all') {
@@ -88,7 +100,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       }
       return sortDirection === 'asc' ? compare : -compare
     })
-  }, [jobs, sortBy, sortDirection, typeFilter, stateFilter])
+  }, [jobs, sortBy, sortDirection, typeFilter, stateFilter, searchQuery])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
   const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(sortedJobs, effectivePerPage)
@@ -188,6 +200,18 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Search input */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search jobs..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Jobs list */}
@@ -316,11 +340,25 @@ interface ProwHistoryProps {
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
   const { jobs, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Filter to only completed jobs for history view
   const completedJobs = useMemo(() => {
-    return jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted')
-  }, [jobs])
+    let filtered = jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted')
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(j =>
+        j.name.toLowerCase().includes(q) ||
+        j.state.toLowerCase().includes(q) ||
+        j.type.toLowerCase().includes(q) ||
+        j.duration.toLowerCase().includes(q)
+      )
+    }
+
+    return filtered
+  }, [jobs, searchQuery])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
   const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(completedJobs, effectivePerPage)
@@ -338,7 +376,10 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Controls */}
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+          {completedJobs.length} revisions
+        </span>
         <div className="flex items-center gap-2">
           <CardControls
             limit={limit}
@@ -353,6 +394,18 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
             size="sm"
           />
         </div>
+      </div>
+
+      {/* Search input */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search history..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Timeline */}
@@ -460,6 +513,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
   })
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const [showComponentFilter, setShowComponentFilter] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const clusterFilterRef = useRef<HTMLDivElement>(null)
   const componentFilterRef = useRef<HTMLDivElement>(null)
 
@@ -493,6 +547,20 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
   const filteredServers = useMemo(() => {
     let result = localClusterFilter.length === 0 ? servers : servers.filter(s => localClusterFilter.includes(s.cluster))
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        s.namespace.toLowerCase().includes(q) ||
+        s.cluster.toLowerCase().includes(q) ||
+        s.status.toLowerCase().includes(q) ||
+        s.componentType.toLowerCase().includes(q) ||
+        s.type.toLowerCase().includes(q) ||
+        (s.model && s.model.toLowerCase().includes(q))
+      )
+    }
 
     // Apply component filter
     if (componentFilter !== 'all') {
@@ -529,7 +597,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     })
 
     return result
-  }, [servers, localClusterFilter, componentFilter, sortBy, sortDirection])
+  }, [servers, localClusterFilter, searchQuery, componentFilter, sortBy, sortDirection])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
   const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(filteredServers, effectivePerPage)
@@ -688,6 +756,18 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
           />
           <RefreshButton isRefreshing={isRefreshing} isFailed={isFailed} consecutiveFailures={consecutiveFailures} lastRefresh={lastRefresh} onRefresh={refetch} size="sm" />
         </div>
+      </div>
+
+      {/* Search input */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search servers..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Integration notice */}
@@ -954,6 +1034,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
     } catch { return [] }
   })
   const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -982,9 +1063,21 @@ export function MLJobs({ config: _config }: MLJobsProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected])
 
   const filteredJobs = useMemo(() => {
-    if (localClusterFilter.length === 0) return jobs
-    return jobs.filter(j => localClusterFilter.includes(j.cluster))
-  }, [jobs, localClusterFilter])
+    let result = localClusterFilter.length === 0 ? jobs : jobs.filter(j => localClusterFilter.includes(j.cluster))
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(j =>
+        j.name.toLowerCase().includes(q) ||
+        j.framework.toLowerCase().includes(q) ||
+        j.status.toLowerCase().includes(q) ||
+        j.cluster.toLowerCase().includes(q)
+      )
+    }
+
+    return result
+  }, [jobs, localClusterFilter, searchQuery])
 
   const effectivePerPage = limit === 'unlimited' ? 100 : limit
   const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(filteredJobs, effectivePerPage)
@@ -1059,6 +1152,18 @@ export function MLJobs({ config: _config }: MLJobsProps) {
           <CardControls limit={limit} onLimitChange={setLimit} />
           <RefreshButton isRefreshing={isRefreshing} isFailed={isFailed} consecutiveFailures={consecutiveFailures} lastRefresh={lastRefresh} onRefresh={refetch} size="sm" />
         </div>
+      </div>
+
+      {/* Search input */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search jobs..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Integration notice */}

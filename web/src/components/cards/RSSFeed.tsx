@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Rss, RefreshCw, ExternalLink, Settings, X, Plus,
-  Clock, ArrowUp, ChevronDown, Star, Filter, Pencil
+  Clock, ArrowUp, ChevronDown, Star, Filter, Pencil, Search
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Pagination, usePagination } from '../ui/Pagination'
@@ -979,8 +979,8 @@ export function RSSFeed({ config }: RSSFeedProps) {
 
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden relative">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+      {/* Row 1: Header */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           {/* Feed Selector */}
           <div className="relative">
@@ -1035,40 +1035,22 @@ export function RSSFeed({ config }: RSSFeedProps) {
               </div>
             )}
           </div>
+
+          {/* Count badge */}
+          <span className="text-sm font-medium text-muted-foreground">
+            {filteredAndSortedItems.length} items
+          </span>
         </div>
 
-        <div className="flex items-center gap-1">
-          {lastRefresh && (
-            <span className="text-[10px] text-muted-foreground">
-              {formatTimeAgo(lastRefresh)}
-            </span>
-          )}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => fetchFeed(true)}
             disabled={isRefreshing}
             className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title="Refresh"
+            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh)})` : 'Refresh'}
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
-          {/* Search toggle */}
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..."
-              className="w-24 focus:w-32 px-2 py-1 text-xs bg-secondary/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={cn(
@@ -1084,7 +1066,21 @@ export function RSSFeed({ config }: RSSFeedProps) {
         </div>
       </div>
 
-      {/* Feed Pills - Quick Navigation */}
+      {/* Row 2: Search */}
+      <div className="flex flex-col gap-2 mb-2 flex-shrink-0">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Feed Pills - Quick Navigation */}
       {feeds.length > 1 && (
         <div className="flex items-center gap-1 mb-2 overflow-x-auto scrollbar-thin flex-shrink-0 h-6">
           {feeds.map((feed, idx) => (
