@@ -637,15 +637,17 @@ function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): Cluster
   for (const cluster of clusters) {
     if (!cluster.server) continue
     const existing = serverMetrics.get(cluster.server)
-    // Prefer cluster with both capacity AND request data
+    // Prefer cluster with: nodeCount > 0, then capacity, then request data
+    const clusterHasNodes = cluster.nodeCount && cluster.nodeCount > 0
     const clusterHasCapacity = !!cluster.cpuCores
     const clusterHasRequests = !!cluster.cpuRequestsCores
+    const existingHasNodes = existing?.nodeCount && existing.nodeCount > 0
     const existingHasCapacity = !!existing?.cpuCores
     const existingHasRequests = !!existing?.cpuRequestsCores
 
-    // Score: 2 points for capacity, 1 point for requests
-    const clusterScore = (clusterHasCapacity ? 2 : 0) + (clusterHasRequests ? 1 : 0)
-    const existingScore = (existingHasCapacity ? 2 : 0) + (existingHasRequests ? 1 : 0)
+    // Score: 4 points for nodes, 2 points for capacity, 1 point for requests
+    const clusterScore = (clusterHasNodes ? 4 : 0) + (clusterHasCapacity ? 2 : 0) + (clusterHasRequests ? 1 : 0)
+    const existingScore = (existingHasNodes ? 4 : 0) + (existingHasCapacity ? 2 : 0) + (existingHasRequests ? 1 : 0)
 
     if (!existing || clusterScore > existingScore) {
       serverMetrics.set(cluster.server, cluster)
@@ -659,24 +661,39 @@ function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): Cluster
     const source = serverMetrics.get(cluster.server)
     if (!source) return cluster
 
-    // Check if we need to copy anything
+    // Check if we need to copy anything - include nodeCount, podCount, and capacity/requests
+    const needsNodes = (!cluster.nodeCount || cluster.nodeCount === 0) && source.nodeCount && source.nodeCount > 0
+    const needsPods = (!cluster.podCount || cluster.podCount === 0) && source.podCount && source.podCount > 0
     const needsCapacity = !cluster.cpuCores && source.cpuCores
     const needsRequests = !cluster.cpuRequestsCores && source.cpuRequestsCores
 
-    if (!needsCapacity && !needsRequests) return cluster
+    if (!needsNodes && !needsPods && !needsCapacity && !needsRequests) return cluster
 
-    // Copy metrics from the source cluster (both capacity and request metrics)
+    // Copy all health metrics from the source cluster (node/pod counts, capacity, requests)
     return {
       ...cluster,
+      // Node and pod counts - critical for dashboard display
+      nodeCount: needsNodes ? source.nodeCount : cluster.nodeCount,
+      podCount: needsPods ? source.podCount : cluster.podCount,
+      // Also copy healthy and reachable flags when we copy node data
+      healthy: needsNodes ? source.healthy : cluster.healthy,
+      reachable: needsNodes ? source.reachable : cluster.reachable,
+      // CPU metrics
       cpuCores: cluster.cpuCores ?? source.cpuCores,
       cpuRequestsMillicores: cluster.cpuRequestsMillicores ?? source.cpuRequestsMillicores,
       cpuRequestsCores: cluster.cpuRequestsCores ?? source.cpuRequestsCores,
+      cpuUsageCores: cluster.cpuUsageCores ?? source.cpuUsageCores,
+      // Memory metrics
       memoryBytes: cluster.memoryBytes ?? source.memoryBytes,
       memoryGB: cluster.memoryGB ?? source.memoryGB,
       memoryRequestsBytes: cluster.memoryRequestsBytes ?? source.memoryRequestsBytes,
       memoryRequestsGB: cluster.memoryRequestsGB ?? source.memoryRequestsGB,
+      memoryUsageGB: cluster.memoryUsageGB ?? source.memoryUsageGB,
+      // Storage metrics
       storageBytes: cluster.storageBytes ?? source.storageBytes,
       storageGB: cluster.storageGB ?? source.storageGB,
+      // Availability flags
+      metricsAvailable: cluster.metricsAvailable ?? source.metricsAvailable,
     }
   })
 }
@@ -856,7 +873,8 @@ function updateSingleClusterInCache(clusterName: string, updates: Partial<Cluste
 
   // Share metrics between clusters pointing to the same server
   // This ensures aliases (like "prow") get metrics from their full-context counterparts
-  if (updates.cpuCores || updates.memoryGB || updates.storageGB || updates.cpuRequestsCores || updates.memoryRequestsGB) {
+  // Include nodeCount and podCount to ensure all health data is shared
+  if (updates.nodeCount || updates.podCount || updates.cpuCores || updates.memoryGB || updates.storageGB || updates.cpuRequestsCores || updates.memoryRequestsGB) {
     updatedClusters = shareMetricsBetweenSameServerClusters(updatedClusters)
   }
 
@@ -1109,27 +1127,30 @@ function clearClusterFailure(clusterName: string): void {
   clusterHealthFailureStart.delete(clusterName)
 }
 
-// Fetch health for a single cluster - uses WebSocket kubectl proxy when agent available
+// Fetch health for a single cluster - uses HTTP endpoint like GPU nodes
 async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: string): Promise<ClusterHealth | null> {
-  // Try local agent's WebSocket kubectl proxy first (if available)
-  // This bypasses the backend failure counter since WebSocket is independent
+  // Try local agent's HTTP endpoint first (same pattern as GPU nodes)
+  // This is more reliable than WebSocket for simple data fetching
   if (!isAgentUnavailable()) {
     try {
-      // Use kubectlProxy to get health via kubectl commands over WebSocket
-      // Use the kubectl context (full path) if provided, otherwise fall back to name
-      // Add overall timeout to prevent hanging (8 seconds max)
-      const healthPromise = kubectlProxy.getClusterHealth(kubectlContext || clusterName)
-      const timeoutPromise = new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), 8000)
-      )
-      const health = await Promise.race([healthPromise, timeoutPromise])
-      if (health) {
+      const context = kubectlContext || clusterName
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+      const response = await fetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' },
+      })
+      clearTimeout(timeoutId)
+
+      if (response.ok) {
+        const health = await response.json()
         reportAgentDataSuccess()
-        // Return health data even if cluster is unreachable (has errorMessage)
+        console.log(`[HealthCheck] HTTP success for ${clusterName}: nodeCount=${health.nodeCount}, podCount=${health.podCount}, cpuCores=${health.cpuCores}`)
         return health
       }
-    } catch {
-      // Agent WebSocket failed, will try backend below
+    } catch (err) {
+      console.log(`[HealthCheck] HTTP failed for ${clusterName}:`, err)
+      // Agent HTTP failed, will try backend below
     }
   }
 

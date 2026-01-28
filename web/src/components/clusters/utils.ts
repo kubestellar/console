@@ -1,13 +1,15 @@
 import { ClusterInfo } from '../../hooks/useMCP'
 
 // Helper to determine if cluster is unreachable vs just unhealthy
-// A reachable cluster always has at least 1 node - 0 nodes means we couldn't connect
+// IMPORTANT: Only mark as unreachable with CORROBORATED evidence
+// The useMCP hook only sets reachable=false after 5 minutes of consecutive failures
+// This prevents fluctuation from transient network issues or slow health checks
 export const isClusterUnreachable = (c: ClusterInfo): boolean => {
+  // Only trust reachable=false - this is set after 5+ minutes of failures
+  // Do NOT use nodeCount === 0 alone as it can be transient
   if (c.reachable === false) return true
-  if (c.errorType && ['timeout', 'network', 'certificate'].includes(c.errorType)) return true
-  // nodeCount === 0 means unreachable (health check completed but no nodes)
-  // nodeCount === undefined means still checking - treat as loading, not unreachable
-  if (c.nodeCount === 0) return true
+  // Error type is only set after confirmed failures, so trust it
+  if (c.errorType && ['timeout', 'network', 'certificate', 'auth'].includes(c.errorType)) return true
   return false
 }
 

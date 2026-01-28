@@ -6,10 +6,9 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { getClusterState, ClusterState } from '../ui/ClusterStatusBadge'
-import { classifyError } from '../../lib/errorClassifier'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
+import { isClusterUnreachable } from '../clusters/utils'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -63,31 +62,6 @@ const SORT_OPTIONS = [
   { value: 'pods' as const, label: 'Pods' },
 ]
 
-// Helper to get cluster state from ClusterInfo
-function getClusterStateFromInfo(cluster: ClusterInfo): ClusterState {
-  // If cluster has error info (from health check)
-  if (cluster.errorType || cluster.errorMessage) {
-    const classified = cluster.errorType
-      ? { type: cluster.errorType }
-      : classifyError(cluster.errorMessage || '')
-    return getClusterState(false, false, cluster.nodeCount, undefined, classified.type)
-  }
-
-  // Check reachability:
-  // - reachable === false: explicitly unreachable
-  // - nodeCount === 0: health check completed but no nodes (unreachable)
-  // - nodeCount === undefined: still checking
-  const isUnreachable = cluster.reachable === false || cluster.nodeCount === 0
-  const isReachable = !isUnreachable
-
-  // A cluster is healthy if we can connect and it has nodes
-  // The detailed healthy flag (50% nodes ready) can be inconsistent during refresh cycles
-  // For the status dot, we use: hasNodes = healthy
-  const hasNodes = cluster.nodeCount !== undefined && cluster.nodeCount > 0
-  const isHealthy = isReachable && hasNodes
-
-  return getClusterState(isHealthy, isReachable, cluster.nodeCount, cluster.nodeCount)
-}
 
 export function ClusterHealth() {
   const {
@@ -168,37 +142,34 @@ export function ClusterHealth() {
     ? rawClusters
     : rawClusters.filter(c => selectedClusters.includes(c.name))
 
-  // Helper to determine if cluster is unreachable vs unhealthy
-  // A reachable cluster always has at least 1 node - 0 nodes means we couldn't connect
-  const isUnreachable = (c: ClusterInfo) => {
-    if (c.reachable === false) return true
-    if (c.errorType && ['timeout', 'network', 'certificate'].includes(c.errorType)) return true
-    // nodeCount === 0 means unreachable (health check completed but no nodes)
-    // nodeCount === undefined means still checking - treat as loading, not unreachable
-    if (c.nodeCount === 0) return true
-    return false
+  // Use shared utilities for consistent status determination across all cards
+  // Match EXACTLY the logic from Clusters.tsx to ensure stats are in sync
+
+  // Helper: A cluster is healthy if it has nodes OR if healthy flag is explicitly true
+  // This is the EXACT same logic as Clusters.tsx line 1716
+  const isHealthy = (c: ClusterInfo) => (c.nodeCount && c.nodeCount > 0) || c.healthy === true
+
+  // Helper to check if cluster is in initial loading state (no data yet)
+  // Only show loading spinners when we truly have NO information about the cluster
+  const isInitialLoading = (c: ClusterInfo) => {
+    // If unreachable, not loading - show offline state
+    if (isClusterUnreachable(c)) return false
+    // If we have node data, not loading
+    if (c.nodeCount !== undefined && c.nodeCount > 0) return false
+    // If healthy flag is set (from kubeconfig or previous health check), not loading
+    // The healthy flag is our best indicator until nodeCount is populated
+    if (c.healthy === true) return false
+    // Only show loading if we have no information at all
+    return c.nodeCount === undefined && c.healthy === undefined
   }
 
-  // Helper to determine if cluster health is still loading
-  const isClusterLoading = (c: ClusterInfo) => {
-    return c.nodeCount === undefined && c.reachable === undefined
-  }
-
-  // Helper to determine if cluster is healthy
-  // A cluster is healthy if it's reachable and has nodes OR healthy flag is true
-  const isClusterHealthy = (c: ClusterInfo) => {
-    // If explicitly marked unreachable, it's not healthy
-    if (c.reachable === false) return false
-    // If has nodes and is reachable, it's healthy
-    if (c.nodeCount && c.nodeCount > 0) return true
-    // Otherwise check the healthy flag
-    return c.healthy === true
-  }
-
-  // Stats: exclude loading clusters from unhealthy/unreachable counts
-  const healthyClusters = filteredForStats.filter((c) => !isClusterLoading(c) && isClusterHealthy(c)).length
-  const unreachableClusters = filteredForStats.filter((c) => !isClusterLoading(c) && !isClusterHealthy(c) && isUnreachable(c)).length
-  const unhealthyClusters = filteredForStats.filter((c) => !isClusterLoading(c) && !isClusterHealthy(c) && !isUnreachable(c)).length
+  // Stats: EXACT same logic as Clusters.tsx lines 1714-1720
+  // Unreachable = reachable explicitly false or connection errors or no nodes
+  const unreachableClusters = filteredForStats.filter(c => isClusterUnreachable(c)).length
+  // Healthy = not unreachable and (has nodes OR healthy flag)
+  const healthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && isHealthy(c)).length
+  // Unhealthy = not unreachable and not healthy
+  const unhealthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && !isHealthy(c)).length
   const totalNodes = filteredForStats.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const totalCPUs = filteredForStats.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
   const totalPods = filteredForStats.reduce((sum, c) => sum + (c.podCount || 0), 0)
@@ -301,9 +272,11 @@ export function ClusterHealth() {
       {/* Cluster list */}
       <div className="flex-1 space-y-2 overflow-y-auto">
         {clusters.map((cluster, idx) => {
-          const clusterState = getClusterStateFromInfo(cluster)
-          const clusterUnreachable = isUnreachable(cluster)
-          const clusterLoading = isClusterLoading(cluster)
+          const clusterUnreachable = isClusterUnreachable(cluster)
+          const clusterHealthy = !clusterUnreachable && isHealthy(cluster)
+          // Only show loading spinner for initial load (no cached data)
+          // During refresh with cached data, show the cached data
+          const clusterLoading = isInitialLoading(cluster)
           // Use detected distribution from health check, or detect from name/server/namespaces
           const provider = cluster.distribution as CloudProvider ||
             detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
@@ -330,7 +303,7 @@ export function ClusterHealth() {
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
                 ) : clusterUnreachable ? (
                   <WifiOff className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-                ) : clusterState === 'healthy' ? (
+                ) : clusterHealthy ? (
                   <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
                 ) : (
                   <AlertTriangle className="w-3.5 h-3.5 text-orange-400 shrink-0" />
