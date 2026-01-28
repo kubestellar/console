@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Plus, Loader2, LayoutGrid, Search } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 
@@ -753,6 +753,15 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const [selectedBrowseCards, setSelectedBrowseCards] = useState<Set<string>>(new Set())
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(Object.keys(CARD_CATALOG)))
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'browse') {
+      // Delay slightly to ensure modal is rendered
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen, activeTab])
 
   const handleGenerate = async () => {
     if (!query.trim()) return
@@ -888,6 +897,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
+                      ref={searchInputRef}
                       type="text"
                       value={browseSearch}
                       onChange={(e) => setBrowseSearch(e.target.value)}
