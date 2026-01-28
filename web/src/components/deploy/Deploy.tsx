@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitBranch, RefreshCw } from 'lucide-react'
+import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitBranch, RefreshCw, Hourglass } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -21,6 +21,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useDeployments } from '../../hooks/useMCP'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -135,8 +136,9 @@ function DeployDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Deploy() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
+  const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch } = useDeployments()
 
-  // Use the shared dashboard hook for cards, DnD, modals
+  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
     cards,
     setCards,
@@ -157,10 +159,16 @@ export function Deploy() {
     setShowCards,
     expandCards,
     dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    autoRefresh,
+    setAutoRefresh,
   } = useDashboard({
     storageKey: DEPLOY_CARDS_KEY,
     defaultCards: DEFAULT_DEPLOY_CARDS,
+    onRefresh: refetch,
   })
+
+  const isRefreshing = deploymentsRefreshing
+  const isFetching = deploymentsLoading || isRefreshing
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -174,6 +182,10 @@ export function Deploy() {
   useEffect(() => {
     // Could add analytics or other effects here
   }, [location.key])
+
+  const handleRefresh = useCallback(() => {
+    refetch()
+  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -231,6 +243,32 @@ export function Deploy() {
               </h1>
               <p className="text-muted-foreground">Monitor deployments, GitOps, and Helm releases across clusters</p>
             </div>
+            {isRefreshing && (
+              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
+                <Hourglass className="w-3 h-3" />
+                <span>Updating</span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <label htmlFor="deploy-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
+              <input
+                type="checkbox"
+                id="deploy-auto-refresh"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-border w-3.5 h-3.5"
+              />
+              Auto
+            </label>
+            <button
+              onClick={handleRefresh}
+              disabled={isFetching}
+              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         </div>
       </div>
