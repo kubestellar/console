@@ -1,6 +1,7 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Database, RefreshCw, Hourglass, GripVertical, FlaskConical } from 'lucide-react'
+import { Database, GripVertical, FlaskConical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -13,6 +14,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -159,6 +161,8 @@ const DEMO_POSTURE = {
 export function DataCompliance() {
   const location = useLocation()
   const { isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isFetching = isLoading || isRefreshing || showIndicator
   useGlobalFilters() // Keep hook for potential future use
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -192,10 +196,6 @@ export function DataCompliance() {
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -298,49 +298,17 @@ export function DataCompliance() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Database className="w-6 h-6 text-blue-400" />
-                Data Compliance
-                <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                  <FlaskConical className="w-3 h-3" />
-                  Demo
-                </span>
-              </h1>
-              <p className="text-muted-foreground">GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="data-compliance-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="data-compliance-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title={<>Data Compliance <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"><FlaskConical className="w-3 h-3" />Demo</span></>}
+        subtitle="GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance"
+        icon={<Database className="w-6 h-6 text-blue-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="data-compliance-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Stats Overview */}
       <StatsOverview

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap, Plus, LayoutGrid, ChevronDown, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap, Plus, LayoutGrid, ChevronDown, GripVertical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -31,6 +32,7 @@ import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 const EVENTS_CARDS_KEY = 'kubestellar-events-cards'
 
@@ -212,6 +214,12 @@ export function Events() {
   const { events: allEvents, isLoading: loadingAll, isRefreshing: refreshingAll, lastUpdated: allUpdated, refetch: refetchAll } = useEvents(undefined)
   const { events: warningEvents, isLoading: loadingWarnings, isRefreshing: refreshingWarnings, lastUpdated: warningsUpdated, refetch: refetchWarnings } = useWarningEvents(undefined)
 
+  const combinedRefetch = useCallback(() => {
+    refetchAll()
+    refetchWarnings()
+  }, [refetchAll, refetchWarnings])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(combinedRefetch)
+
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [selectedReason, setSelectedReason] = useState<string>('')
   const [filter, setFilter] = useState<EventFilter>('all')
@@ -220,7 +228,7 @@ export function Events() {
 
   const isLoading = filter === 'warning' ? loadingWarnings : loadingAll
   const isRefreshing = filter === 'warning' ? refreshingWarnings : refreshingAll
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   const lastUpdated = filter === 'warning' ? warningsUpdated : allUpdated
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -265,14 +273,6 @@ export function Events() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams, setShowAddCard])
-
-  const handleRefresh = useCallback(() => {
-    if (filter === 'warning') {
-      refetchWarnings()
-    } else {
-      refetchAll()
-    }
-  }, [filter, refetchAll, refetchWarnings])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -601,45 +601,17 @@ export function Events() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Activity className="w-6 h-6 text-purple-400" />
-                Events
-              </h1>
-              <p className="text-muted-foreground">Cluster events and activity across your infrastructure</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="events-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="events-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Events"
+        subtitle="Cluster events and activity across your infrastructure"
+        icon={<Activity className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="events-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Stats Overview - configurable */}
       <StatsOverview

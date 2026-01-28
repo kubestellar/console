@@ -17,9 +17,11 @@ import {
   WifiOff
 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { BaseModal } from '../../lib/modals'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import { api } from '../../lib/api'
 
 type GroupByMode = 'cluster' | 'type'
@@ -202,6 +204,10 @@ export function NamespaceManager() {
     setLastUpdated(new Date())
   }, [allClusterNames, allNamespaces.length])
 
+  const handleRefreshNamespaces = useCallback(() => fetchNamespaces(true), [fetchNamespaces])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
+  const isFetching = loading || showIndicator
+
   const fetchAccess = useCallback(async (namespace: NamespaceDetails) => {
     setAccessLoading(true)
     try {
@@ -325,37 +331,14 @@ export function NamespaceManager() {
   return (
     <div className="h-full flex flex-col p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Folder className="w-6 h-6 text-blue-400" />
-            Namespace Manager
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Create namespaces and manage access across clusters
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {loading && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Hourglass className="w-3 h-3 animate-pulse" />
-              updating...
-            </span>
-          )}
-          {lastUpdated && !loading && (
-            <span className="text-xs text-muted-foreground">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-          <button
-            onClick={() => fetchNamespaces(true)}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-white transition-colors disabled:opacity-50"
-            title="Refresh namespace data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+      <DashboardHeader
+        title="Namespace Manager"
+        subtitle="Create namespaces and manage access across clusters"
+        icon={<Folder className="w-6 h-6 text-blue-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        lastUpdated={lastUpdated}
+        rightExtra={
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
@@ -363,8 +346,8 @@ export function NamespaceManager() {
             <Plus className="w-4 h-4" />
             Create Namespace
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Error display */}
       {error && (

@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight, Plus, LayoutGrid, ChevronDown, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight, Plus, LayoutGrid, ChevronDown, GripVertical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import {
   DndContext,
   closestCenter,
@@ -294,6 +296,9 @@ export function Security() {
     setLastUpdated(new Date())
   }, [])
 
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isFetching = isRefreshing || showIndicator
+
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
     cards,
@@ -584,45 +589,17 @@ export function Security() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Shield className="w-6 h-6 text-purple-400" />
-                Security
-              </h1>
-              <p className="text-muted-foreground">RBAC, compliance, and security policies across your clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="security-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="security-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Security"
+        subtitle="RBAC, compliance, and security policies across your clusters"
+        icon={<Shield className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="security-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Configurable Stats Overview */}
       <StatsOverview

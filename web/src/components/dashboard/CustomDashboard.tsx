@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { GripVertical, RefreshCw, Hourglass, Trash2, AlertTriangle } from 'lucide-react'
+import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -39,6 +39,8 @@ import { BaseModal } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 
 interface Card {
   id: string
@@ -255,6 +257,10 @@ export function CustomDashboard() {
     }
   }, [id, getDashboardWithCards, showToast, storageKey])
 
+  const handleRefreshDashboard = useCallback(() => loadDashboard(true), [loadDashboard])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshDashboard, id)
+  const isFetching = isLoading || isRefreshing || showIndicator
+
   // Initial load
   useEffect(() => {
     loadDashboard()
@@ -431,20 +437,18 @@ export function CustomDashboard() {
   return (
     <div className="pt-16">
       {/* Header - name from sidebar item takes priority for consistency */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {sidebarItem?.name || dashboard?.name || 'Custom Dashboard'}
-          </h1>
-          <p className="text-muted-foreground">
-            {sidebarItem?.description || (cards.length === 0
-              ? 'Add cards to start monitoring your clusters'
-              : `${cards.length} card${cards.length !== 1 ? 's' : ''}`
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Delete dashboard button */}
+      <DashboardHeader
+        title={sidebarItem?.name || dashboard?.name || 'Custom Dashboard'}
+        subtitle={sidebarItem?.description || (cards.length === 0
+          ? 'Add cards to start monitoring your clusters'
+          : `${cards.length} card${cards.length !== 1 ? 's' : ''}`
+        )}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        lastUpdated={lastUpdated}
+        rightExtra={
           <button
             onClick={() => setIsDeleteConfirmOpen(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
@@ -452,39 +456,8 @@ export function CustomDashboard() {
           >
             <Trash2 className="w-4 h-4" />
           </button>
-          {/* Refresh controls */}
-          <div className="flex items-center gap-3">
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-            <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border bg-secondary w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={() => loadDashboard(true)}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* Stats Overview */}
       <StatsOverview

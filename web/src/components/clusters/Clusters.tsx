@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Pencil, X, Check, Loader2, Hourglass, WifiOff, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, ChevronDown, HardDrive, Network, FolderOpen, Plus, Trash2, Box, Layers, Server, List, GitBranch, Eye, Terminal, FileText, Info, Activity, Briefcase, Lock, Settings, LayoutGrid, Wrench, RefreshCw, GripVertical } from 'lucide-react'
+import { Pencil, X, Check, Loader2, WifiOff, ChevronRight, CheckCircle, AlertTriangle, AlertCircle, ChevronDown, HardDrive, Network, FolderOpen, Plus, Trash2, Box, Layers, Server, List, GitBranch, Eye, Terminal, FileText, Info, Activity, Briefcase, Lock, Settings, LayoutGrid, Wrench, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -32,6 +32,8 @@ import {
 import { isClusterUnreachable } from './utils'
 import { formatK8sMemory } from '../../lib/formatters'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
@@ -1451,6 +1453,8 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 
 export function Clusters() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isFetching = isLoading || isRefreshing || showIndicator
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
   const { isConnected } = useLocalAgent()
@@ -1782,45 +1786,16 @@ export function Clusters() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Server className="w-6 h-6 text-purple-400" />
-                Clusters
-              </h1>
-              <p className="text-muted-foreground">Manage your Kubernetes clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="clusters-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="clusters-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={() => refetch()}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Clusters"
+        subtitle="Manage your Kubernetes clusters"
+        icon={<Server className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="clusters-auto-refresh"
+      />
 
       {/* Stats Overview - collapsible */}
       <div className="mb-6">

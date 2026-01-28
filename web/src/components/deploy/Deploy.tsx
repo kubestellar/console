@@ -1,6 +1,7 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitBranch, RefreshCw, Hourglass } from 'lucide-react'
+import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitBranch, RefreshCw } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -22,6 +23,7 @@ import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useDeployments } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -137,6 +139,7 @@ export function Deploy() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch } = useDeployments()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -168,7 +171,7 @@ export function Deploy() {
   })
 
   const isRefreshing = deploymentsRefreshing
-  const isFetching = deploymentsLoading || isRefreshing
+  const isFetching = deploymentsLoading || isRefreshing || showIndicator
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -182,10 +185,6 @@ export function Deploy() {
   useEffect(() => {
     // Could add analytics or other effects here
   }, [location.key])
-
-  const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -233,45 +232,16 @@ export function Deploy() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Rocket className="w-6 h-6 text-blue-400" />
-                KubeStellar Deploy
-              </h1>
-              <p className="text-muted-foreground">Monitor deployments, GitOps, and Helm releases across clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="deploy-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="deploy-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="KubeStellar Deploy"
+        subtitle="Monitor deployments, GitOps, and Helm releases across clusters"
+        icon={<Rocket className="w-6 h-6 text-blue-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="deploy-auto-refresh"
+      />
 
       {/* Deploy Stats Banner */}
       <div className="mb-6 glass rounded-lg p-4 border border-blue-500/20 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-green-500/10">

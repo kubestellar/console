@@ -1,6 +1,7 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Globe, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Globe, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -26,6 +27,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
@@ -125,6 +127,7 @@ function NetworkDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Network() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch } = useServices()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -163,7 +166,7 @@ export function Network() {
   })
 
   // Show loading spinner when fetching (initial or refresh)
-  const isFetching = servicesLoading || servicesRefreshing
+  const isFetching = servicesLoading || servicesRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = services.length === 0 && servicesLoading
 
@@ -174,10 +177,6 @@ export function Network() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams, setShowAddCard])
-
-  const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -278,45 +277,17 @@ export function Network() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Globe className="w-6 h-6 text-purple-400" />
-                Network
-              </h1>
-              <p className="text-muted-foreground">Monitor network resources across clusters</p>
-            </div>
-            {servicesRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="network-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="network-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Network"
+        subtitle="Monitor network resources across clusters"
+        icon={<Globe className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="network-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Stats Overview - configurable */}
       <StatsOverview

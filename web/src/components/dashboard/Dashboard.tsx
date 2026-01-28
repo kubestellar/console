@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { GripVertical, AlertTriangle, X, RefreshCw, Hourglass } from 'lucide-react'
+import { GripVertical, AlertTriangle, X } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -42,6 +42,8 @@ import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { DashboardTemplate } from './templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 
@@ -134,6 +136,8 @@ export function Dashboard() {
   // Cluster data for refresh functionality and stats - most cards depend on this
   // Use deduplicated clusters to avoid double-counting same server with different contexts
   const { deduplicatedClusters: clusters, isRefreshing, lastUpdated, refetch, isLoading: isClustersLoading } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isFetching = isClustersLoading || isRefreshing || showIndicator
   const { drillToCluster: _drillToCluster, drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
 
   // Reset hook for dashboard
@@ -713,50 +717,16 @@ export function Dashboard() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Multi-cluster overview and resource monitoring
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Refresh controls */}
-          <div className="flex items-center gap-3">
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-            <label htmlFor="dashboard-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="dashboard-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border bg-secondary w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={() => refetch()}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh all data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-      </div>
+      <DashboardHeader
+        title="Dashboard"
+        subtitle="Multi-cluster overview and resource monitoring"
+        isFetching={isFetching}
+        onRefresh={() => triggerRefresh()}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="dashboard-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Configurable Stats Overview */}
       <StatsOverview

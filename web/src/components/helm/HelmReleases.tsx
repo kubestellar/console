@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Ship, RefreshCw, Hourglass, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
+import { Ship, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -26,6 +26,8 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 
 const HELM_CARDS_KEY = 'kubestellar-helm-cards'
 
@@ -124,6 +126,8 @@ function HelmDragPreviewCard({ card }: { card: DashboardCard }) {
 export function HelmReleases() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isFetching = isLoading || isRefreshing || showIndicator
   const { drillToHelm: _drillToHelm, drillToAllHelm, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -164,10 +168,6 @@ export function HelmReleases() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams, setShowAddCard])
-
-  const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -238,45 +238,16 @@ export function HelmReleases() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Ship className="w-6 h-6 text-purple-400" />
-                Helm Releases
-              </h1>
-              <p className="text-muted-foreground">Monitor Helm chart releases and versions</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="helm-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="helm-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Helm Releases"
+        subtitle="Monitor Helm chart releases and versions"
+        icon={<Ship className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="helm-auto-refresh"
+      />
 
       {/* Stats Overview */}
       <StatsOverview

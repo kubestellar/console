@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Rocket, RefreshCw, Hourglass, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
+import { Rocket, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -13,6 +13,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDeployments, useDeploymentIssues, usePodIssues, useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -176,6 +178,9 @@ export function Deployments() {
     refetchIssues()
   }, [refetch, refetchIssues])
 
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isFetching = isLoading || isRefreshing || showIndicator
+
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
     expandCards()
@@ -276,45 +281,16 @@ export function Deployments() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Rocket className="w-6 h-6 text-purple-400" />
-                Deployments
-              </h1>
-              <p className="text-muted-foreground">Monitor deployment health and rollout status</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="deployments-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="deployments-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Deployments"
+        subtitle="Monitor deployment health and rollout status"
+        icon={<Rocket className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="deployments-auto-refresh"
+      />
 
       {/* Stats Overview */}
       <StatsOverview

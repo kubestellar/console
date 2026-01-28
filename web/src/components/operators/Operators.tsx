@@ -1,6 +1,7 @@
 import { useEffect, useCallback, memo, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Cog, RefreshCw, Hourglass, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
+import { Cog, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -13,6 +14,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useOperatorSubscriptions, useOperators } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -177,6 +179,9 @@ export function Operators() {
     refetchOps()
   }, [refetch, refetchSubs, refetchOps])
 
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isFetching = isLoading || isRefreshing || showIndicator
+
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
     expandCards()
@@ -311,45 +316,17 @@ export function Operators() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Cog className="w-6 h-6 text-purple-400" />
-                Operators
-              </h1>
-              <p className="text-muted-foreground">Monitor OLM operators, subscriptions, and CRDs</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="operators-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="operators-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Operators"
+        subtitle="Monitor OLM operators, subscriptions, and CRDs"
+        icon={<Cog className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="operators-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Stats Overview */}
       <StatsOverview

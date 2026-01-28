@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { HardDrive, Database, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, ExternalLink, GripVertical } from 'lucide-react'
+import { HardDrive, Database, Plus, LayoutGrid, ChevronDown, ChevronRight, ExternalLink, GripVertical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -28,6 +29,7 @@ import { DashboardTemplate } from '../dashboard/templates'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 // PVC List Modal
 interface PVCListModalProps {
@@ -229,6 +231,7 @@ export function Storage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -271,7 +274,7 @@ export function Storage() {
   const [pvcModalFilter, setPVCModalFilter] = useState<'Bound' | 'Pending' | 'all'>('all')
 
   // Combined loading/refreshing states (useClusters has shared cache so data persists)
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = clusters.length === 0 && isLoading
 
@@ -287,10 +290,6 @@ export function Storage() {
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     // Custom handling for storage cards with special widths
@@ -456,45 +455,17 @@ export function Storage() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <HardDrive className="w-6 h-6 text-purple-400" />
-                Storage
-              </h1>
-              <p className="text-muted-foreground">Monitor storage resources across clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="storage-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="storage-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Storage"
+        subtitle="Monitor storage resources across clusters"
+        icon={<HardDrive className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="storage-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Stats Overview - configurable */}
       <StatsOverview

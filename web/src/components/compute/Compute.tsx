@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef, memo, useState } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
-import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical, GitCompare, CheckSquare, Square } from 'lucide-react'
+import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitCompare, CheckSquare, Square } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
   closestCenter,
@@ -26,6 +27,7 @@ import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
@@ -127,6 +129,7 @@ export function Compute() {
   const location = useLocation()
   const navigate = useNavigate()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { nodes: gpuNodes } = useGPUNodes()
   const {
     selectedClusters: globalSelectedClusters,
@@ -169,7 +172,7 @@ export function Compute() {
   })
 
   // Combined loading/refreshing states (useClusters has shared cache so data persists)
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = clusters.length === 0 && isLoading
 
@@ -185,10 +188,6 @@ export function Compute() {
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -358,45 +357,17 @@ export function Compute() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Cpu className="w-6 h-6 text-purple-400" />
-                Compute
-              </h1>
-              <p className="text-muted-foreground">Monitor compute resources across clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="compute-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="compute-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Compute"
+        subtitle="Monitor compute resources across clusters"
+        icon={<Cpu className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="compute-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Stats Overview - configurable */}
       <StatsOverview

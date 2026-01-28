@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useMemo, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Box, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Box, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -29,6 +29,8 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 
 const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 
@@ -130,6 +132,8 @@ export function Pods() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const handleRefreshAll = useCallback(() => { refetchPodIssues(); refetchClusters() }, [refetchPodIssues, refetchClusters])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshAll)
   const { drillToPod, drillToAllPods, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -168,7 +172,7 @@ export function Pods() {
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   const showSkeletons = podIssues.length === 0 && isLoading
 
   // Handle addCard URL param
@@ -178,11 +182,6 @@ export function Pods() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams, setShowAddCard])
-
-  const handleRefresh = useCallback(() => {
-    refetchPodIssues()
-    refetchClusters()
-  }, [refetchPodIssues, refetchClusters])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -303,45 +302,16 @@ export function Pods() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Box className="w-6 h-6 text-purple-400" />
-                Pods
-              </h1>
-              <p className="text-muted-foreground">Monitor pod health and issues across clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="pods-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="pods-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Pods"
+        subtitle="Monitor pod health and issues across clusters"
+        icon={<Box className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="pods-auto-refresh"
+      />
 
       {/* Stats Overview */}
       <StatsOverview

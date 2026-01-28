@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useMemo, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Layers, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { Layers, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -29,6 +29,8 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { DashboardHeader } from '../shared/DashboardHeader'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -142,6 +144,14 @@ export function Workloads() {
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
   const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+
+  const combinedRefetch = useCallback(() => {
+    refetchPodIssues()
+    refetchDeploymentIssues()
+    refetchDeployments()
+    refetchClusters()
+  }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(combinedRefetch)
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -182,7 +192,7 @@ export function Workloads() {
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = (allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading
 
@@ -193,13 +203,6 @@ export function Workloads() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams, setShowAddCard])
-
-  const handleRefresh = useCallback(() => {
-    refetchPodIssues()
-    refetchDeploymentIssues()
-    refetchDeployments()
-    refetchClusters()
-  }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -397,45 +400,16 @@ export function Workloads() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Layers className="w-6 h-6 text-purple-400" />
-                Workloads
-              </h1>
-              <p className="text-muted-foreground">View and manage deployed applications across clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="workloads-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="workloads-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="Workloads"
+        subtitle="View and manage deployed applications across clusters"
+        icon={<Layers className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={() => triggerRefresh()}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="workloads-auto-refresh"
+      />
 
       {/* Stats Overview - configurable */}
       <StatsOverview

@@ -11,11 +11,13 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { RefreshCw, GitBranch, FolderGit, Box, Loader2, GripVertical, Hourglass } from 'lucide-react'
+import { RefreshCw, GitBranch, FolderGit, Box, Loader2, GripVertical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
 import { SyncDialog } from './SyncDialog'
 import { api } from '../../lib/api'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -305,6 +307,9 @@ export function GitOps() {
     setLastUpdated(new Date())
   }, [refetch])
 
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isFetching = isRefreshing || showIndicator
+
   // Detect drift for all apps on mount
   useEffect(() => {
     async function detectAllDrift() {
@@ -530,45 +535,17 @@ export function GitOps() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <GitBranch className="w-6 h-6 text-purple-400" />
-                GitOps
-              </h1>
-              <p className="text-muted-foreground">GitOps drift detection and sync status</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <label htmlFor="gitops-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="gitops-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DashboardHeader
+        title="GitOps"
+        subtitle="GitOps drift detection and sync status"
+        icon={<GitBranch className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="gitops-auto-refresh"
+        lastUpdated={lastUpdated}
+      />
 
       {/* Configurable Stats Overview */}
       <StatsOverview

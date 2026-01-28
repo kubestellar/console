@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Bell, RefreshCw, GripVertical, Hourglass } from 'lucide-react'
+import { Bell, GripVertical } from 'lucide-react'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import {
   DndContext,
   closestCenter,
@@ -179,6 +181,9 @@ export function Alerts() {
     evaluateConditions()
   }, [refetch, evaluateConditions])
 
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isFetching = isRefreshing || showIndicator
+
   const enabledRulesCount = rules.filter(r => r.enabled).length
 
   // Stats value getter for the configurable StatsOverview component
@@ -216,56 +221,29 @@ export function Alerts() {
   return (
     <div className="pt-16">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Bell className="w-6 h-6 text-purple-400" />
-                Alerts
-              </h1>
-              <p className="text-muted-foreground">Monitor alerts and rules across clusters</p>
-            </div>
-            {isRefreshing && (
-              <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-                <Hourglass className="w-3 h-3" />
-                <span>Updating</span>
+      <DashboardHeader
+        title="Alerts"
+        subtitle="Monitor alerts and rules across clusters"
+        icon={<Bell className="w-6 h-6 text-purple-400" />}
+        isFetching={isFetching}
+        onRefresh={triggerRefresh}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="alerts-auto-refresh"
+        lastUpdated={lastUpdated}
+        afterTitle={
+          <div className="flex items-center gap-2 ml-4">
+            {stats.firing > 0 && (
+              <span className="px-2 py-1 text-sm font-medium rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+                {stats.firing} active
               </span>
             )}
-            <div className="flex items-center gap-2 ml-4">
-              {stats.firing > 0 && (
-                <span className="px-2 py-1 text-sm font-medium rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-                  {stats.firing} active
-                </span>
-              )}
-              <span className="px-2 py-1 text-sm rounded bg-secondary text-muted-foreground">
-                {enabledRulesCount} rules enabled
-              </span>
-            </div>
+            <span className="px-2 py-1 text-sm rounded bg-secondary text-muted-foreground">
+              {enabledRulesCount} rules enabled
+            </span>
           </div>
-
-          <div className="flex items-center gap-3">
-            <label htmlFor="alerts-auto-refresh" className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground" title="Auto-refresh every 30s">
-              <input
-                type="checkbox"
-                id="alerts-auto-refresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded border-border w-3.5 h-3.5"
-              />
-              Auto
-            </label>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Configurable Stats Overview */}
       <StatsOverview
