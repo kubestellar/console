@@ -28,6 +28,8 @@ test.describe('Tour/Onboarding', () => {
     await page.goto('/login')
     await page.evaluate(() => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
     })
   })
 

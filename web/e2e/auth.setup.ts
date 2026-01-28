@@ -38,6 +38,7 @@ setup('authenticate', async ({ page }) => {
   // Set token in localStorage (simulates authenticated state)
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
   })
 
   // Navigate to dashboard - should not redirect to login now

@@ -28,6 +28,8 @@ async function setupAuthAndNavigate(page: Page, aiMode: 'low' | 'medium' | 'high
   await page.goto('/login')
   await page.evaluate((mode) => {
     localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-ai-mode', mode)
   }, aiMode)
 
@@ -82,6 +84,8 @@ test.describe('AI Card Recommendations', () => {
       await page.goto('/login')
       await page.evaluate(() => {
         localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-ai-mode', 'high')
       })
 
@@ -137,6 +141,8 @@ test.describe('AI Card Recommendations', () => {
       await page.goto('/login')
       await page.evaluate(() => {
         localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-ai-mode', 'high')
       })
 
@@ -279,6 +285,8 @@ test.describe('AI Card Recommendations', () => {
       await page.goto('/login')
       await page.evaluate(() => {
         localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-ai-mode', 'high')
       })
 
@@ -336,6 +344,8 @@ test.describe('AI Card Recommendations', () => {
       await page.goto('/login')
       await page.evaluate(() => {
         localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-ai-mode', 'high')
       })
 
@@ -403,6 +413,8 @@ test.describe('AI Card Recommendations', () => {
       await page.goto('/login')
       await page.evaluate(() => {
         localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-ai-mode', 'high')
       })
 

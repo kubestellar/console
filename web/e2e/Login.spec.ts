@@ -66,9 +66,10 @@ test.describe('Login Page', () => {
 
     await page.goto('/login')
 
-    // Simulate authenticated state by setting localStorage token
+    // Simulate authenticated state by setting localStorage token and onboarded flag
     await page.evaluate(() => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('demo-user-onboarded', 'true')
     })
 
     // Navigate to home - should redirect to dashboard since authenticated
