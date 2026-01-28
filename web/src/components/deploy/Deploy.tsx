@@ -22,6 +22,7 @@ import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useDeployments } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -137,6 +138,7 @@ export function Deploy() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch } = useDeployments()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -168,7 +170,7 @@ export function Deploy() {
   })
 
   const isRefreshing = deploymentsRefreshing
-  const isFetching = deploymentsLoading || isRefreshing
+  const isFetching = deploymentsLoading || isRefreshing || showIndicator
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -184,8 +186,8 @@ export function Deploy() {
   }, [location.key])
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -243,7 +245,7 @@ export function Deploy() {
               </h1>
               <p className="text-muted-foreground">Monitor deployments, GitOps, and Helm releases across clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>

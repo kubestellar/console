@@ -12,6 +12,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useAlerts, useAlertRules } from '../../hooks/useAlerts'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -101,6 +102,7 @@ export function Alerts() {
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
   const { isRefreshing, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { drillToAlert } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -175,9 +177,9 @@ export function Alerts() {
   }, [setCards, expandCards, setShowTemplates])
 
   const handleRefresh = useCallback(() => {
-    refetch()
+    triggerRefresh()
     evaluateConditions()
-  }, [refetch, evaluateConditions])
+  }, [triggerRefresh, evaluateConditions])
 
   const enabledRulesCount = rules.filter(r => r.enabled).length
 
@@ -226,7 +228,7 @@ export function Alerts() {
               </h1>
               <p className="text-muted-foreground">Monitor alerts and rules across clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -257,11 +259,11 @@ export function Alerts() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

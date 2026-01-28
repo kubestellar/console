@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -166,6 +167,7 @@ function getCompliancePosture(clusterCount: number) {
 export function Compliance() {
   const location = useLocation()
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { drillToPolicy: _drillToPolicy, drillToAllSecurity } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -204,8 +206,8 @@ export function Compliance() {
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -325,7 +327,7 @@ export function Compliance() {
               </h1>
               <p className="text-muted-foreground">Security scanning, vulnerability assessment, and policy enforcement</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -345,11 +347,11 @@ export function Compliance() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

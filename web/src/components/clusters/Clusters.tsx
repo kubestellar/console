@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNVIDIAOperators, useNamespaceStats, useNodes, usePods, useDeployments, useServices, useJobs, useHPAs, useConfigMaps, useSecrets, usePodLogs, ClusterInfo, refreshSingleCluster } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
@@ -1451,6 +1452,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 
 export function Clusters() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
   const { isConnected } = useLocalAgent()
@@ -1792,7 +1794,7 @@ export function Clusters() {
               </h1>
               <p className="text-muted-foreground">Manage your Kubernetes clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -1811,12 +1813,12 @@ export function Clusters() {
               Auto
             </label>
             <button
-              onClick={() => refetch()}
-              disabled={isRefreshing}
+              onClick={() => triggerRefresh()}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

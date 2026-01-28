@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -216,6 +217,7 @@ function getTimeAgo(timestamp: string | undefined): string {
 
 export function GitOps() {
   const { clusters, isRefreshing, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToHelm: _drillToHelm, drillToOperator: _drillToOperator, drillToAllHelm, drillToAllOperators } = useDrillDownActions()
@@ -301,9 +303,9 @@ export function GitOps() {
   }, [])
 
   const handleRefresh = useCallback(() => {
-    refetch()
+    triggerRefresh()
     setLastUpdated(new Date())
-  }, [refetch])
+  }, [triggerRefresh])
 
   // Detect drift for all apps on mount
   useEffect(() => {
@@ -540,7 +542,7 @@ export function GitOps() {
               </h1>
               <p className="text-muted-foreground">GitOps drift detection and sync status</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -560,11 +562,11 @@ export function GitOps() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

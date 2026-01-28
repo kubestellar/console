@@ -39,6 +39,7 @@ import { BaseModal } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 
 interface Card {
   id: string
@@ -255,6 +256,10 @@ export function CustomDashboard() {
     }
   }, [id, getDashboardWithCards, showToast, storageKey])
 
+  // Wrap refresh for guaranteed indicator display
+  const handleRefreshDashboard = useCallback(() => loadDashboard(true), [loadDashboard])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshDashboard)
+
   // Initial load
   useEffect(() => {
     loadDashboard()
@@ -454,7 +459,7 @@ export function CustomDashboard() {
           </button>
           {/* Refresh controls */}
           <div className="flex items-center gap-3">
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -470,12 +475,12 @@ export function CustomDashboard() {
               Auto
             </label>
             <button
-              onClick={() => loadDashboard(true)}
-              disabled={isRefreshing}
+              onClick={() => triggerRefresh()}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
           {lastUpdated && (

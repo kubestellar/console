@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useOperatorSubscriptions, useOperators } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -126,6 +127,11 @@ export function Operators() {
   const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const { subscriptions: operatorSubs, refetch: refetchSubs } = useOperatorSubscriptions()
   const { operators: allOperators, refetch: refetchOps } = useOperators()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(useCallback(() => {
+    refetch()
+    refetchSubs()
+    refetchOps()
+  }, [refetch, refetchSubs, refetchOps]))
   const { drillToOperator: _drillToOperator, drillToAllOperators, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, filterByStatus, customFilter } = useGlobalFilters()
@@ -172,10 +178,8 @@ export function Operators() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetch()
-    refetchSubs()
-    refetchOps()
-  }, [refetch, refetchSubs, refetchOps])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -321,7 +325,7 @@ export function Operators() {
               </h1>
               <p className="text-muted-foreground">Monitor OLM operators, subscriptions, and CRDs</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -341,11 +345,11 @@ export function Operators() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

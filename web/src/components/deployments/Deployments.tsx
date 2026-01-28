@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDeployments, useDeploymentIssues, usePodIssues, useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -127,6 +128,10 @@ export function Deployments() {
   const { issues: deploymentIssues, refetch: refetchIssues } = useDeploymentIssues()
   const { issues: podIssues } = usePodIssues()
   const { clusters: _clusters } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(useCallback(() => {
+    refetch()
+    refetchIssues()
+  }, [refetch, refetchIssues]))
   const { drillToDeployment: _drillToDeployment, drillToPod: _drillToPod, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -172,9 +177,8 @@ export function Deployments() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetch()
-    refetchIssues()
-  }, [refetch, refetchIssues])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -286,7 +290,7 @@ export function Deployments() {
               </h1>
               <p className="text-muted-foreground">Monitor deployment health and rollout status</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -306,11 +310,11 @@ export function Deployments() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

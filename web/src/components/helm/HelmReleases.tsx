@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -124,6 +125,7 @@ function HelmDragPreviewCard({ card }: { card: DashboardCard }) {
 export function HelmReleases() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { drillToHelm: _drillToHelm, drillToAllHelm, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -166,8 +168,8 @@ export function HelmReleases() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -248,7 +250,7 @@ export function HelmReleases() {
               </h1>
               <p className="text-muted-foreground">Monitor Helm chart releases and versions</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -268,11 +270,11 @@ export function HelmReleases() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

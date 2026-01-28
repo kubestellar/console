@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters, useServices } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -124,6 +125,7 @@ function ServicesDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Services() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const { services } = useServices()
   const { drillToService: _drillToService, drillToAllServices, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -167,8 +169,8 @@ export function Services() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -272,7 +274,7 @@ export function Services() {
               </h1>
               <p className="text-muted-foreground">Monitor Kubernetes services and network connectivity</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -292,11 +294,11 @@ export function Services() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

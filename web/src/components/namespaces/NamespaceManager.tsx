@@ -17,6 +17,7 @@ import {
   WifiOff
 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { BaseModal } from '../../lib/modals'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -202,6 +203,10 @@ export function NamespaceManager() {
     setLastUpdated(new Date())
   }, [allClusterNames, allNamespaces.length])
 
+  // Wrap refresh for guaranteed indicator display
+  const handleForceRefresh = useCallback(() => fetchNamespaces(true), [fetchNamespaces])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(handleForceRefresh)
+
   const fetchAccess = useCallback(async (namespace: NamespaceDetails) => {
     setAccessLoading(true)
     try {
@@ -336,24 +341,24 @@ export function NamespaceManager() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {loading && (
+          {(loading || showIndicator) && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Hourglass className="w-3 h-3 animate-pulse" />
               updating...
             </span>
           )}
-          {lastUpdated && !loading && (
+          {lastUpdated && !loading && !showIndicator && (
             <span className="text-xs text-muted-foreground">
               Updated {lastUpdated.toLocaleTimeString()}
             </span>
           )}
           <button
-            onClick={() => fetchNamespaces(true)}
-            disabled={loading}
+            onClick={() => triggerRefresh()}
+            disabled={loading || showIndicator}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary text-muted-foreground hover:text-white transition-colors disabled:opacity-50"
             title="Refresh namespace data"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading || showIndicator ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <button

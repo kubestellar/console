@@ -16,6 +16,7 @@ import { useEvents, useWarningEvents } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DonutChart } from '../charts/PieChart'
 import { BarChart } from '../charts/BarChart'
@@ -218,9 +219,17 @@ export function Events() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
 
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(useCallback(() => {
+    if (filter === 'warning') {
+      refetchWarnings()
+    } else {
+      refetchAll()
+    }
+  }, [filter, refetchAll, refetchWarnings]))
+
   const isLoading = filter === 'warning' ? loadingWarnings : loadingAll
   const isRefreshing = filter === 'warning' ? refreshingWarnings : refreshingAll
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   const lastUpdated = filter === 'warning' ? warningsUpdated : allUpdated
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -267,12 +276,8 @@ export function Events() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    if (filter === 'warning') {
-      refetchWarnings()
-    } else {
-      refetchAll()
-    }
-  }, [filter, refetchAll, refetchWarnings])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -611,7 +616,7 @@ export function Events() {
               </h1>
               <p className="text-muted-foreground">Cluster events and activity across your infrastructure</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>

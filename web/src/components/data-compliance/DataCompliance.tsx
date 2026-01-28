@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
@@ -159,6 +160,7 @@ const DEMO_POSTURE = {
 export function DataCompliance() {
   const location = useLocation()
   const { isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   useGlobalFilters() // Keep hook for potential future use
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -194,8 +196,8 @@ export function DataCompliance() {
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -312,7 +314,7 @@ export function DataCompliance() {
               </h1>
               <p className="text-muted-foreground">GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -332,11 +334,11 @@ export function DataCompliance() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { usePodIssues, useClusters } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -165,10 +166,17 @@ export function Pods() {
     },
   })
 
+  // Wrap the combined refetch for guaranteed indicator display
+  const refetchAll = useCallback(() => {
+    refetchPodIssues()
+    refetchClusters()
+  }, [refetchPodIssues, refetchClusters])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetchAll)
+
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   const showSkeletons = podIssues.length === 0 && isLoading
 
   // Handle addCard URL param
@@ -180,9 +188,8 @@ export function Pods() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetchPodIssues()
-    refetchClusters()
-  }, [refetchPodIssues, refetchClusters])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -313,7 +320,7 @@ export function Pods() {
               </h1>
               <p className="text-muted-foreground">Monitor pod health and issues across clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>

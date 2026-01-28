@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -179,10 +180,19 @@ export function Workloads() {
     },
   })
 
+  // Wrap the combined refetch for guaranteed indicator display
+  const refetchAll = useCallback(() => {
+    refetchPodIssues()
+    refetchDeploymentIssues()
+    refetchDeployments()
+    refetchClusters()
+  }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetchAll)
+
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = (allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading
 
@@ -195,11 +205,8 @@ export function Workloads() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetchPodIssues()
-    refetchDeploymentIssues()
-    refetchDeployments()
-    refetchClusters()
-  }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -407,7 +414,7 @@ export function Workloads() {
               </h1>
               <p className="text-muted-foreground">View and manage deployed applications across clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>

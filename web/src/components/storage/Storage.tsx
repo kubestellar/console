@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { BaseModal } from '../../lib/modals'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
@@ -229,6 +230,7 @@ export function Storage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -271,7 +273,7 @@ export function Storage() {
   const [pvcModalFilter, setPVCModalFilter] = useState<'Bound' | 'Pending' | 'all'>('all')
 
   // Combined loading/refreshing states (useClusters has shared cache so data persists)
-  const isFetching = isLoading || isRefreshing
+  const isFetching = isLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = clusters.length === 0 && isLoading
 
@@ -289,8 +291,8 @@ export function Storage() {
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     // Custom handling for storage cards with special widths
@@ -466,7 +468,7 @@ export function Storage() {
               </h1>
               <p className="text-muted-foreground">Monitor storage resources across clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>

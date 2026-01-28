@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { DonutChart } from '../charts/PieChart'
@@ -285,7 +286,7 @@ export function Security() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Refresh function for security data
-  const handleRefresh = useCallback(async () => {
+  const refetch = useCallback(async () => {
     setIsRefreshing(true)
     // In a real implementation, this would refetch security data
     // For now, just simulate a refresh
@@ -293,6 +294,12 @@ export function Security() {
     setIsRefreshing(false)
     setLastUpdated(new Date())
   }, [])
+
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+
+  const handleRefresh = useCallback(() => {
+    triggerRefresh()
+  }, [triggerRefresh])
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -594,7 +601,7 @@ export function Security() {
               </h1>
               <p className="text-muted-foreground">RBAC, compliance, and security policies across your clusters</p>
             </div>
-            {isRefreshing && (
+            {(isRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
@@ -614,11 +621,11 @@ export function Security() {
             </label>
             <button
               onClick={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || showIndicator}
               className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
               title="Refresh data"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing || showIndicator ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useServices } from '../../hooks/useMCP'
+import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -125,6 +126,7 @@ function NetworkDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Network() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch } = useServices()
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -163,7 +165,7 @@ export function Network() {
   })
 
   // Show loading spinner when fetching (initial or refresh)
-  const isFetching = servicesLoading || servicesRefreshing
+  const isFetching = servicesLoading || servicesRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = services.length === 0 && servicesLoading
 
@@ -176,8 +178,8 @@ export function Network() {
   }, [searchParams, setSearchParams, setShowAddCard])
 
   const handleRefresh = useCallback(() => {
-    refetch()
-  }, [refetch])
+    triggerRefresh()
+  }, [triggerRefresh])
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
     addCards(newCards)
@@ -288,7 +290,7 @@ export function Network() {
               </h1>
               <p className="text-muted-foreground">Monitor network resources across clusters</p>
             </div>
-            {servicesRefreshing && (
+            {(servicesRefreshing || showIndicator) && (
               <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
                 <Hourglass className="w-3 h-3" />
                 <span>Updating</span>
