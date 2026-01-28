@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, ChevronDown, Plus, Trash2, Search } from 'lucide-react'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -410,6 +410,7 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
   const [repoInput, setRepoInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoDropdown, setShowRepoDropdown] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Use current repo for data fetching
   const effectiveConfig = useMemo(() => {
@@ -549,8 +550,23 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       })
     }
 
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      data = data.filter((item: any) => {
+        return (
+          item.title?.toLowerCase().includes(query) ||
+          item.name?.toLowerCase().includes(query) ||
+          item.tag_name?.toLowerCase().includes(query) ||
+          item.login?.toLowerCase().includes(query) ||
+          item.user?.login?.toLowerCase().includes(query) ||
+          item.author?.login?.toLowerCase().includes(query)
+        )
+      })
+    }
+
     return data
-  }, [viewMode, prs, issues, releases, contributors, sortBy, sortDirection, timeRange])
+  }, [viewMode, prs, issues, releases, contributors, sortBy, sortDirection, timeRange, searchQuery])
 
   const effectivePerPage = itemsPerPage === 'unlimited' ? 1000 : itemsPerPage
   const {
@@ -770,26 +786,19 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      {/* Header with Repo Picker */}
-      <div className="flex items-center justify-between mb-3">
+      {/* Row 1: Header with count badge, repo picker, and controls */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2 relative">
+          <span className="text-sm font-medium text-muted-foreground">
+            {filteredAndSorted.length} items
+          </span>
           <button
             onClick={() => setShowRepoDropdown(!showRepoDropdown)}
-            className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             {repoInfo?.full_name || currentRepo || 'Select Repo'}
-            <ChevronDown className={cn('w-4 h-4 transition-transform', showRepoDropdown && 'rotate-180')} />
+            <ChevronDown className={cn('w-3 h-3 transition-transform', showRepoDropdown && 'rotate-180')} />
           </button>
-          {repoInfo && (
-            <a
-              href={repoInfo.html_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline"
-            >
-              View on GitHub
-            </a>
-          )}
           {/* Repo Dropdown */}
           {showRepoDropdown && (
             <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
@@ -833,24 +842,100 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-            title="Configure repositories"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+          <CardControls
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
           <RefreshButton
             isRefreshing={isRefreshing}
             lastRefresh={lastRefresh}
             onRefresh={refetch}
           />
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={cn(
+              'p-1.5 rounded transition-colors',
+              showSettings ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
+            )}
+            title="Configure repositories"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
         </div>
+      </div>
+
+      {/* Row 2: Search input */}
+      <div className="relative mb-2 flex-shrink-0">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={`Search ${viewMode}...`}
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
+      </div>
+
+      {/* Row 3: View Mode Tabs (act as filter pills) */}
+      <div className="flex items-center gap-1 mb-3 overflow-x-auto flex-shrink-0">
+        <button
+          onClick={() => setViewMode('prs')}
+          className={cn(
+            'px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
+            viewMode === 'prs'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <GitPullRequest className="w-3 h-3 inline mr-1" />
+          Pull Requests
+        </button>
+        <button
+          onClick={() => setViewMode('issues')}
+          className={cn(
+            'px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
+            viewMode === 'issues'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <AlertCircle className="w-3 h-3 inline mr-1" />
+          Issues
+        </button>
+        <button
+          onClick={() => setViewMode('releases')}
+          className={cn(
+            'px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
+            viewMode === 'releases'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <Package className="w-3 h-3 inline mr-1" />
+          Releases
+        </button>
+        <button
+          onClick={() => setViewMode('contributors')}
+          className={cn(
+            'px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
+            viewMode === 'contributors'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+          )}
+        >
+          <Users className="w-3 h-3 inline mr-1" />
+          Contributors
+        </button>
       </div>
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="mb-4 p-3 rounded-lg bg-secondary/30 border border-border/50">
+        <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium">Manage Repositories</span>
             <button
@@ -936,7 +1021,7 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-3 flex-shrink-0">
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitPullRequest className="w-4 h-4 text-blue-400" />
@@ -973,93 +1058,30 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
         </div>
       </div>
 
-      {/* View Mode Tabs */}
-      <div className="flex items-center gap-2 mb-3 overflow-x-auto">
-        <button
-          onClick={() => setViewMode('prs')}
-          className={cn(
-            'px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap',
-            viewMode === 'prs'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-          )}
-        >
-          <GitPullRequest className="w-3 h-3 inline mr-1" />
-          Pull Requests
-        </button>
-        <button
-          onClick={() => setViewMode('issues')}
-          className={cn(
-            'px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap',
-            viewMode === 'issues'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-          )}
-        >
-          <AlertCircle className="w-3 h-3 inline mr-1" />
-          Issues
-        </button>
-        <button
-          onClick={() => setViewMode('releases')}
-          className={cn(
-            'px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap',
-            viewMode === 'releases'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-          )}
-        >
-          <Package className="w-3 h-3 inline mr-1" />
-          Releases
-        </button>
-        <button
-          onClick={() => setViewMode('contributors')}
-          className={cn(
-            'px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap',
-            viewMode === 'contributors'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
-          )}
-        >
-          <Users className="w-3 h-3 inline mr-1" />
-          Contributors
-        </button>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Time Range:</span>
-          {TIME_RANGES.map(range => (
-            <button
-              key={range.value}
-              onClick={() => setTimeRange(range.value)}
-              className={cn(
-                'px-2 py-1 text-xs rounded transition-colors',
-                timeRange === range.value
-                  ? 'bg-primary/20 text-primary'
-                  : 'text-muted-foreground hover:bg-secondary/50'
-              )}
-            >
-              {range.label}
-            </button>
-          ))}
-        </div>
-        <CardControls
-          limit={itemsPerPage}
-          onLimitChange={setItemsPerPage}
-          sortBy={sortBy}
-          sortOptions={SORT_OPTIONS}
-          onSortChange={setSortBy}
-          sortDirection={sortDirection}
-          onSortDirectionChange={setSortDirection}
-        />
+      {/* Time Range Controls */}
+      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+        <span className="text-xs text-muted-foreground">Time Range:</span>
+        {TIME_RANGES.map(range => (
+          <button
+            key={range.value}
+            onClick={() => setTimeRange(range.value)}
+            className={cn(
+              'px-2 py-1 text-xs rounded transition-colors',
+              timeRange === range.value
+                ? 'bg-primary/20 text-primary'
+                : 'text-muted-foreground hover:bg-secondary/50'
+            )}
+          >
+            {range.label}
+          </button>
+        ))}
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin min-h-0">
         {paginatedItems.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-            No {viewMode} found for this time range
+            No {viewMode} found{searchQuery ? ' matching search' : ' for this time range'}
           </div>
         ) : (
           paginatedItems.map((item: any) => {

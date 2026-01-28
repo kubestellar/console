@@ -7,6 +7,8 @@ import {
   ChevronUp,
   Search,
   ChevronRight,
+  Filter,
+  Server,
 } from 'lucide-react'
 import { useConsoleUsers, useAllK8sServiceAccounts, useAllOpenShiftUsers } from '../../hooks/useUsers'
 import { useClusters } from '../../hooks/useMCP'
@@ -14,6 +16,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useAuth } from '../../lib/auth'
 import { cn } from '../../lib/cn'
+import { useChartFilters } from '../../lib/cards'
 import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
@@ -87,6 +90,17 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     refetchOpenShiftUsers()
   }
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
+
+  // Local cluster filter (gold standard pattern)
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({ storageKey: 'user-management' })
 
   // Filter clusters by global filter (already deduplicated from hook)
   const clusters = useMemo(() => {
@@ -305,6 +319,19 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const saPerPage = saLimit === 'unlimited' ? 1000 : saLimit
   const saPagination = usePagination(sortedServiceAccounts, saPerPage)
 
+  // Count for current tab (shown in Row 1 LEFT)
+  const currentTabCount = useMemo(() => {
+    if (activeTab === 'clusterUsers') return filteredOpenShiftUsers.length
+    if (activeTab === 'serviceAccounts') return serviceAccounts.length
+    return users.length
+  }, [activeTab, filteredOpenShiftUsers.length, serviceAccounts.length, users.length])
+
+  const currentTabLabel = useMemo(() => {
+    if (activeTab === 'clusterUsers') return 'cluster users'
+    if (activeTab === 'serviceAccounts') return 'service accounts'
+    return 'console users'
+  }, [activeTab])
+
   // Only show skeleton during initial loading
   const hasData = allUsers.length > 0 || currentUser !== null
   const hasError = Boolean(usersError)
@@ -335,44 +362,66 @@ export function UserManagement({ config: _config }: UserManagementProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header with tabs and controls */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setActiveTab('clusterUsers')}
-            className={cn(
-              'px-2 py-1 rounded text-xs font-medium transition-colors',
-              activeTab === 'clusterUsers'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Cluster Users
-          </button>
-          <button
-            onClick={() => setActiveTab('serviceAccounts')}
-            className={cn(
-              'px-2 py-1 rounded text-xs font-medium transition-colors',
-              activeTab === 'serviceAccounts'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Service Accounts
-          </button>
-          <button
-            onClick={() => setActiveTab('console')}
-            className={cn(
-              'px-2 py-1 rounded text-xs font-medium transition-colors',
-              activeTab === 'console'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Console Users
-          </button>
+      {/* Row 1: Header with count badge and controls */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            {currentTabCount} {currentTabLabel}
+          </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'clusterUsers' && (
             <CardControls
               limit={openshiftUserLimit}
@@ -414,8 +463,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
         </div>
       </div>
 
-      {/* Local Search */}
-      <div className="relative mb-3">
+      {/* Row 2: Search input */}
+      <div className="relative mb-2 flex-shrink-0">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
@@ -428,6 +477,43 @@ export function UserManagement({ config: _config }: UserManagementProps) {
           }
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
+      </div>
+
+      {/* Row 3: Tab filter pills */}
+      <div className="flex items-center gap-1 mb-3 flex-shrink-0">
+        <button
+          onClick={() => setActiveTab('clusterUsers')}
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium transition-colors',
+            activeTab === 'clusterUsers'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Cluster Users
+        </button>
+        <button
+          onClick={() => setActiveTab('serviceAccounts')}
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium transition-colors',
+            activeTab === 'serviceAccounts'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Service Accounts
+        </button>
+        <button
+          onClick={() => setActiveTab('console')}
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium transition-colors',
+            activeTab === 'console'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Console Users
+        </button>
       </div>
 
       {/* Content - fixed height to prevent jumping, p-px prevents border clipping */}
