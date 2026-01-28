@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test'
 
 // Use dedicated test server on port 5180 (backend in demo mode on 8082)
+// This test requires a specific backend setup not available in CI
 const TEST_URL = 'http://localhost:5180'
 
 test.describe('Custom Dashboard Creation', () => {
+  // Skip in CI - requires dedicated backend on port 5180
+  test.skip(!!process.env.CI, 'Requires dedicated backend on port 5180')
+
   test.beforeEach(async ({ page }) => {
     // Mock auth API to return authenticated user
     await page.route('**/api/auth/me', (route) =>
