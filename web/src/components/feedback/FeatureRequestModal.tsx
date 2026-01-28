@@ -883,7 +883,12 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
       </div>
 
       {/* Footer - always visible */}
-      <div className="p-4 border-t border-border flex justify-end gap-2 flex-shrink-0">
+      <div className="p-4 border-t border-border flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/50">
+          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
+        </div>
+        <div className="flex items-center gap-2">
         {activeTab === 'submit' && !success ? (
           <>
             <button
@@ -930,6 +935,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
             Close
           </button>
         )}
+        </div>
       </div>
     </BaseModal>
   )

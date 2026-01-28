@@ -239,6 +239,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
             </>
           )}
         </div>
+        {/* Keyboard hints */}
+        <div className="flex items-center justify-end gap-3 px-4 py-2 border-t border-border/50 text-[10px] text-muted-foreground/50">
+          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
+          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
+        </div>
       </div>
     </div>,
     document.body
