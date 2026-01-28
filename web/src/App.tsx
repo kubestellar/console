@@ -10,6 +10,7 @@ import { Events } from './components/events/Events'
 import { Workloads } from './components/workloads/Workloads'
 import { Storage } from './components/storage/Storage'
 import { Compute } from './components/compute/Compute'
+import { ClusterComparisonPage } from './components/compute/ClusterComparisonPage'
 import { Network } from './components/network/Network'
 import { Security } from './components/security/Security'
 import { GitOps } from './components/gitops/GitOps'
@@ -253,6 +254,18 @@ function App() {
               <OnboardedRoute>
                 <Layout>
                   <Compute />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/compute/compare"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <ClusterComparisonPage />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>

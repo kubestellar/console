@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useRef, memo } from 'react'
-import { useSearchParams, useLocation } from 'react-router-dom'
-import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical } from 'lucide-react'
+import { useEffect, useCallback, useRef, memo, useState } from 'react'
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
+import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, GripVertical, GitCompare, CheckSquare, Square } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -125,6 +125,7 @@ function ComputeDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Compute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const {
@@ -133,6 +134,10 @@ export function Compute() {
   } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
+  
+  // State for cluster comparison selection
+  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([])
+  const [showClusterList, setShowClusterList] = useState(false)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -320,6 +325,28 @@ export function Compute() {
     [getDashboardStatValue, getUniversalStatValue]
   )
 
+  // Cluster comparison handlers
+  const toggleClusterSelection = useCallback((clusterName: string) => {
+    setSelectedForComparison(prev => {
+      if (prev.includes(clusterName)) {
+        return prev.filter(name => name !== clusterName)
+      }
+      // Max 4 clusters
+      if (prev.length >= 4) return prev
+      return [...prev, clusterName]
+    })
+  }, [])
+
+  const handleCompare = useCallback(() => {
+    if (selectedForComparison.length >= 2) {
+      navigate(`/compute/compare?clusters=${selectedForComparison.join(',')}`)
+    }
+  }, [selectedForComparison, navigate])
+
+  const clearSelection = useCallback(() => {
+    setSelectedForComparison([])
+  }, [])
+
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
     id: configuringCard.id,
@@ -380,6 +407,104 @@ export function Compute() {
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-compute-stats-collapsed"
       />
+
+      {/* Cluster Selection for Comparison */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={() => setShowClusterList(!showClusterList)}
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <GitCompare className="w-4 h-4" />
+            <span>Cluster Comparison</span>
+            {showClusterList ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          {selectedForComparison.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {selectedForComparison.length} selected
+              </span>
+              <button
+                onClick={clearSelection}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </button>
+              {selectedForComparison.length >= 2 && (
+                <button
+                  onClick={handleCompare}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors text-sm font-medium"
+                >
+                  <GitCompare className="w-4 h-4" />
+                  Compare ({selectedForComparison.length})
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {showClusterList && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filteredClusters.map((cluster) => {
+              const isSelected = selectedForComparison.includes(cluster.name)
+              const isDisabled = !isSelected && selectedForComparison.length >= 4
+              
+              return (
+                <button
+                  key={cluster.name}
+                  onClick={() => !isDisabled && toggleClusterSelection(cluster.name)}
+                  disabled={isDisabled}
+                  className={`glass p-4 rounded-lg text-left transition-all ${
+                    isSelected 
+                      ? 'ring-2 ring-purple-500 bg-purple-500/10' 
+                      : isDisabled 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'hover:bg-secondary/50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {isSelected ? (
+                        <CheckSquare className="w-5 h-5 text-purple-400" />
+                      ) : (
+                        <Square className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                        <h4 className="font-medium text-foreground truncate" title={cluster.name}>
+                          {cluster.context || cluster.name}
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div className="text-muted-foreground">Nodes</div>
+                          <div className="text-foreground font-medium">{cluster.nodeCount || 0}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">CPUs</div>
+                          <div className="text-foreground font-medium">{cluster.cpuCores || 0}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Pods</div>
+                          <div className="text-foreground font-medium">{cluster.podCount || 0}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {showClusterList && filteredClusters.length === 0 && (
+          <div className="glass p-8 rounded-lg text-center">
+            <p className="text-muted-foreground">No clusters available</p>
+          </div>
+        )}
+      </div>
 
       {/* Dashboard Cards Section */}
       <div className="mb-6">
