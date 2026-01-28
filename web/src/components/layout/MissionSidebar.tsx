@@ -269,10 +269,11 @@ const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent, isFul
   }), [fontSize])
 
   const proseClasses = cn(
-    "prose prose-invert max-w-none",
-    "prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0",
-    "prose-code:text-purple-300 prose-code:bg-black/20 prose-code:px-1 prose-code:rounded",
+    "prose prose-invert max-w-none overflow-hidden",
+    "prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-pre:overflow-x-auto",
+    "prose-code:text-purple-300 prose-code:bg-black/20 prose-code:px-1 prose-code:rounded prose-code:break-all",
     "prose-hr:my-6",
+    "break-words [word-break:break-word]",
     FONT_SIZE_CLASSES[fontSize],
     msg.role === 'system' ? 'text-yellow-200' : 'text-foreground'
   )
@@ -304,7 +305,7 @@ const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent, isFul
         )}
       </div>
       <div className={cn(
-        'flex-1 rounded-lg p-3',
+        'flex-1 rounded-lg p-3 overflow-hidden min-w-0',
         isFullScreen ? 'max-w-[98%]' : 'max-w-[85%]',
         msg.role === 'user' ? 'bg-primary/10 ml-auto' : msg.role === 'assistant' ? 'bg-secondary/50' : 'bg-yellow-500/10'
       )}>
@@ -954,7 +955,7 @@ export function MissionSidebar() {
   // Minimized sidebar view (thin strip)
   if (isSidebarMinimized) {
     return (
-      <div className="fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border z-40 flex flex-col items-center py-4">
+      <div className="fixed top-20 right-4 bottom-4 w-12 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-xl z-40 flex flex-col items-center py-4">
         <button
           onClick={expandSidebar}
           className="p-2 hover:bg-secondary rounded transition-colors mb-4"
@@ -985,12 +986,12 @@ export function MissionSidebar() {
     <div
       data-tour="ai-missions"
       className={cn(
-        "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col",
+        "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col overflow-hidden rounded-lg",
         // Use separate transitions for smoother animation
         "transition-[width,top,border] duration-300",
         isFullScreen
-          ? "inset-0 top-16 border-l-0"
-          : "top-16 right-0 bottom-0 w-96 border-l"
+          ? "inset-0 top-16 border-l-0 rounded-none"
+          : "top-20 right-4 bottom-4 w-[520px] border shadow-xl"
       )}
     >
       {/* Header */}

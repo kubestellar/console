@@ -28,6 +28,7 @@
     "@headlessui/react": "^2.2.9",
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.10",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "clsx": "^2.1.1",
     "i18next": "^25.7.4",
     "i18next-browser-languagedetector": "^8.2.0",
@@ -38,6 +39,7 @@
     "react-is": "^19.2.3",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.1.1",
+    "react-syntax-highlighter": "^16.1.0",
     "recharts": "^3.6.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
@@ -66,7 +68,8 @@
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.5",
     "vite-plugin-istanbul": "^7.2.1",
-    "wait-on": "^9.0.3"
+    "wait-on": "^9.0.3",
+    "ws": "^8.19.0"
   },
   "msw": {
     "workerDirectory": [

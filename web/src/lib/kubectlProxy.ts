@@ -141,11 +141,17 @@ class KubectlProxy {
 
   /**
    * Execute a kubectl command (queued to prevent overwhelming the agent)
+   * Use priority: true for interactive requests that should bypass the queue
    */
   async exec(
     args: string[],
-    options: { context?: string; namespace?: string; timeout?: number } = {}
+    options: { context?: string; namespace?: string; timeout?: number; priority?: boolean } = {}
   ): Promise<KubectlResponse> {
+    // Priority requests bypass the queue for immediate execution (interactive user actions)
+    if (options.priority) {
+      return this.execImmediate(args, options)
+    }
+
     // Queue the request and process it when a slot is available
     return new Promise((resolve, reject) => {
       this.requestQueue.push({ args, options, resolve, reject })
@@ -273,6 +279,7 @@ class KubectlProxy {
     // Sum resource requests from all containers in all pods
     let cpuRequestsMillicores = 0
     let memoryRequestsBytes = 0
+    let podsWithRequests = 0
 
     for (const pod of pods) {
       const containers = pod.spec?.containers || []
@@ -280,7 +287,9 @@ class KubectlProxy {
         const requests = container.resources?.requests || {}
         // Parse CPU requests (can be "100m", "0.1", "1", etc.)
         if (requests.cpu) {
-          cpuRequestsMillicores += parseResourceQuantityMillicores(requests.cpu)
+          const parsed = parseResourceQuantityMillicores(requests.cpu)
+          cpuRequestsMillicores += parsed
+          if (parsed > 0) podsWithRequests++
         }
         // Parse memory requests (can be "128Mi", "1Gi", etc.)
         if (requests.memory) {
@@ -288,6 +297,9 @@ class KubectlProxy {
         }
       }
     }
+
+    // Debug log
+    console.log(`[PodMetrics] ${context}: ${pods.length} pods, ${podsWithRequests} with CPU requests, cpuMillicores=${cpuRequestsMillicores}, memBytes=${memoryRequestsBytes}`)
 
     return { count: pods.length, cpuRequestsMillicores, memoryRequestsBytes }
   }
@@ -301,14 +313,125 @@ class KubectlProxy {
   }
 
   /**
+   * Get all namespaces in a cluster
+   */
+  async getNamespaces(context: string): Promise<string[]> {
+    const response = await this.exec(
+      ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
+      { context, timeout: 10000 }
+    )
+    if (response.exitCode !== 0) {
+      throw new Error(response.error || 'Failed to get namespaces')
+    }
+    return response.output.split(/\s+/).filter(Boolean).sort()
+  }
+
+  /**
+   * Get services from a cluster
+   */
+  async getServices(context: string, namespace?: string): Promise<{ name: string; namespace: string; type: string; clusterIP: string; ports: string }[]> {
+    const nsArg = namespace ? ['-n', namespace] : ['-A']
+    const response = await this.exec(['get', 'services', ...nsArg, '-o', 'json'], { context, timeout: 15000 })
+    if (response.exitCode !== 0) {
+      throw new Error(response.error || 'Failed to get services')
+    }
+    const data = JSON.parse(response.output)
+    return (data.items || []).map((svc: { metadata: { name: string; namespace: string }; spec: { type: string; clusterIP: string; ports?: { port: number; protocol: string }[] } }) => ({
+      name: svc.metadata.name,
+      namespace: svc.metadata.namespace,
+      type: svc.spec.type,
+      clusterIP: svc.spec.clusterIP || '',
+      ports: (svc.spec.ports || []).map(p => `${p.port}/${p.protocol}`).join(', '),
+    }))
+  }
+
+  /**
+   * Get PVCs from a cluster
+   */
+  async getPVCs(context: string, namespace?: string): Promise<{ name: string; namespace: string; status: string; capacity: string; storageClass: string }[]> {
+    const nsArg = namespace ? ['-n', namespace] : ['-A']
+    const response = await this.exec(['get', 'pvc', ...nsArg, '-o', 'json'], { context, timeout: 15000 })
+    if (response.exitCode !== 0) {
+      throw new Error(response.error || 'Failed to get PVCs')
+    }
+    const data = JSON.parse(response.output)
+    return (data.items || []).map((pvc: { metadata: { name: string; namespace: string }; status: { phase: string; capacity?: { storage: string } }; spec: { storageClassName?: string } }) => ({
+      name: pvc.metadata.name,
+      namespace: pvc.metadata.namespace,
+      status: pvc.status.phase,
+      capacity: pvc.status.capacity?.storage || '',
+      storageClass: pvc.spec.storageClassName || '',
+    }))
+  }
+
+  /**
+   * Get actual resource usage from metrics-server via kubectl top nodes
+   * Returns actual CPU and memory consumption (not requests/allocations)
+   */
+  async getClusterUsage(context: string): Promise<{ cpuUsageMillicores: number; memoryUsageBytes: number; metricsAvailable: boolean }> {
+    try {
+      const response = await this.exec(['top', 'nodes', '--no-headers'], { context, timeout: 5000 })
+      if (response.exitCode !== 0) {
+        // Metrics server not available
+        console.log(`[ClusterUsage] ${context}: metrics-server not available`)
+        return { cpuUsageMillicores: 0, memoryUsageBytes: 0, metricsAvailable: false }
+      }
+
+      // Parse kubectl top nodes output
+      // Format: NAME   CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
+      const lines = response.output.trim().split('\n').filter(l => l.trim())
+      let totalCpuMillicores = 0
+      let totalMemoryBytes = 0
+
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/)
+        if (parts.length >= 4) {
+          // Parse CPU (e.g., "2500m" or "2")
+          const cpuStr = parts[1]
+          if (cpuStr.endsWith('m')) {
+            totalCpuMillicores += parseInt(cpuStr.slice(0, -1), 10)
+          } else {
+            totalCpuMillicores += parseFloat(cpuStr) * 1000
+          }
+
+          // Parse Memory (e.g., "4096Mi", "4Gi")
+          const memStr = parts[3]
+          totalMemoryBytes += parseResourceQuantity(memStr)
+        }
+      }
+
+      console.log(`[ClusterUsage] ${context}: cpuMillicores=${totalCpuMillicores}, memBytes=${totalMemoryBytes}`)
+      return { cpuUsageMillicores: totalCpuMillicores, memoryUsageBytes: totalMemoryBytes, metricsAvailable: true }
+    } catch (err) {
+      console.log(`[ClusterUsage] ${context}: error getting usage -`, err)
+      return { cpuUsageMillicores: 0, memoryUsageBytes: 0, metricsAvailable: false }
+    }
+  }
+
+  /**
    * Get cluster health summary
    */
   async getClusterHealth(context: string): Promise<ClusterHealth> {
     try {
+      // Get nodes and pod metrics first (required)
+      // Usage metrics are optional - don't block if metrics-server is slow/unavailable
       const [nodes, podMetrics] = await Promise.all([
         this.getNodes(context),
         this.getPodMetrics(context),
       ])
+
+      // Try to get usage metrics with a short timeout, but don't block health check
+      let usageMetrics = { cpuUsageMillicores: 0, memoryUsageBytes: 0, metricsAvailable: false }
+      try {
+        const usagePromise = this.getClusterUsage(context)
+        const timeoutPromise = new Promise<typeof usageMetrics>((_, reject) =>
+          setTimeout(() => reject(new Error('Usage metrics timeout')), 5000)
+        )
+        usageMetrics = await Promise.race([usagePromise, timeoutPromise])
+      } catch (err) {
+        // Usage metrics failed or timed out - continue without them
+        console.log(`[ClusterHealth] ${context}: Usage metrics unavailable, using requests only`)
+      }
 
       const readyNodes = nodes.filter(n => n.ready).length
 
@@ -317,15 +440,15 @@ class KubectlProxy {
       const totalMemoryBytes = nodes.reduce((sum, n) => sum + (n.memoryBytes || 0), 0)
       const totalStorageBytes = nodes.reduce((sum, n) => sum + (n.storageBytes || 0), 0)
 
-      // Consider healthy if at least 80% of nodes are ready (or all nodes if < 5 nodes)
-      // This allows for some nodes being in maintenance/update without marking cluster unhealthy
-      const healthyThreshold = nodes.length < 5 ? nodes.length : Math.ceil(nodes.length * 0.8)
+      // Consider healthy if at least 50% of nodes are ready (lenient threshold)
+      // A cluster with working nodes should show as healthy, not warning
+      const healthyThreshold = Math.max(1, Math.ceil(nodes.length * 0.5))
       const isHealthy = readyNodes >= healthyThreshold && nodes.length > 0
 
       // Debug log to understand health status
       console.log(`[ClusterHealth] ${context}: ${readyNodes}/${nodes.length} ready, threshold=${healthyThreshold}, healthy=${isHealthy}`)
 
-      return {
+      const result = {
         cluster: context,
         healthy: isHealthy,
         reachable: true,
@@ -335,14 +458,26 @@ class KubectlProxy {
         cpuCores: Math.round(totalCpuCores),
         cpuRequestsMillicores: podMetrics.cpuRequestsMillicores,
         cpuRequestsCores: podMetrics.cpuRequestsMillicores / 1000,
+        // Actual usage from metrics-server
+        cpuUsageMillicores: usageMetrics.cpuUsageMillicores,
+        cpuUsageCores: usageMetrics.cpuUsageMillicores / 1000,
         memoryBytes: totalMemoryBytes,
         memoryGB: Math.round(totalMemoryBytes / (1024 * 1024 * 1024)),
         memoryRequestsBytes: podMetrics.memoryRequestsBytes,
         memoryRequestsGB: podMetrics.memoryRequestsBytes / (1024 * 1024 * 1024),
+        // Actual usage from metrics-server
+        memoryUsageBytes: usageMetrics.memoryUsageBytes,
+        memoryUsageGB: usageMetrics.memoryUsageBytes / (1024 * 1024 * 1024),
+        metricsAvailable: usageMetrics.metricsAvailable,
         storageBytes: totalStorageBytes,
         storageGB: Math.round(totalStorageBytes / (1024 * 1024 * 1024)),
         lastSeen: new Date().toISOString(),
       }
+
+      // Debug log
+      console.log(`[ClusterHealth] ${context}: cpuCores=${result.cpuCores}, cpuUsage=${result.cpuUsageCores?.toFixed(1)}, cpuRequests=${result.cpuRequestsCores?.toFixed(1)}, memGB=${result.memoryGB}, memUsage=${result.memoryUsageGB?.toFixed(1)}, memRequests=${result.memoryRequestsGB?.toFixed(1)}, metricsAvailable=${result.metricsAvailable}`)
+
+      return result
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error'
       console.error(`[ClusterHealth] ERROR for ${context}: ${errorMsg}`)

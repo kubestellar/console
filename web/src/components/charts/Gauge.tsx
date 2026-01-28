@@ -3,7 +3,7 @@ interface GaugeProps {
   max?: number
   label?: string
   unit?: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
   thresholds?: {
     warning: number
     critical: number
@@ -41,6 +41,7 @@ export function Gauge({
   const color = getColor()
 
   const sizes = {
+    xs: { width: 48, strokeWidth: 4, fontSize: 'text-sm' },
     sm: { width: 80, strokeWidth: 6, fontSize: 'text-lg' },
     md: { width: 120, strokeWidth: 8, fontSize: 'text-2xl' },
     lg: { width: 160, strokeWidth: 10, fontSize: 'text-3xl' },
