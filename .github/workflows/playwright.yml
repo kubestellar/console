@@ -134,7 +134,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge reports
-        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+        run: npx playwright merge-reports --reporter=html,json ./all-blob-reports
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
@@ -148,10 +148,10 @@ jobs:
         run: |
           echo "## Playwright Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f "test-results/results.json" ]; then
-            total=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' test-results/results.json 2>/dev/null || echo "N/A")
-            passed=$(jq '.stats.expected' test-results/results.json 2>/dev/null || echo "N/A")
-            failed=$(jq '.stats.unexpected' test-results/results.json 2>/dev/null || echo "N/A")
+          if [ -f "test-results.json" ]; then
+            total=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' test-results.json 2>/dev/null || echo "N/A")
+            passed=$(jq '.stats.expected' test-results.json 2>/dev/null || echo "N/A")
+            failed=$(jq '.stats.unexpected' test-results.json 2>/dev/null || echo "N/A")
             echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
             echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
             echo "| Total | $total |" >> $GITHUB_STEP_SUMMARY
@@ -160,6 +160,62 @@ jobs:
           else
             echo "Test results summary not available" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Comment on PR with test failures
+        if: github.event_name == 'pull_request' && needs.test.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let comment = '## ❌ Playwright Tests Failed\n\n';
+
+            // Try to parse test results
+            try {
+              const resultsPath = 'web/test-results.json';
+              if (fs.existsSync(resultsPath)) {
+                const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                const failed = results.suites?.flatMap(s =>
+                  s.specs?.filter(spec => spec.ok === false) || []
+                ) || [];
+
+                if (failed.length > 0) {
+                  comment += '### Failed Tests\n\n';
+                  comment += '| Test | File | Error |\n';
+                  comment += '|------|------|-------|\n';
+
+                  for (const spec of failed.slice(0, 10)) {
+                    const name = spec.title || 'Unknown';
+                    const file = spec.file || 'Unknown';
+                    const error = spec.tests?.[0]?.results?.[0]?.error?.message?.slice(0, 100) || 'See report';
+                    comment += `| ${name} | ${file} | ${error} |\n`;
+                  }
+
+                  if (failed.length > 10) {
+                    comment += `\n_...and ${failed.length - 10} more failures_\n`;
+                  }
+                }
+              }
+            } catch (e) {
+              comment += `_Could not parse test results: ${e.message}_\n`;
+            }
+
+            comment += '\n### 📊 View Full Report\n\n';
+            comment += `Download the \`playwright-report\` artifact from the [workflow run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for screenshots and detailed traces.\n\n`;
+            comment += '**To view the report locally:**\n';
+            comment += '```bash\n';
+            comment += '# Download and extract playwright-report.zip\n';
+            comment += 'npx playwright show-report path/to/playwright-report\n';
+            comment += '```\n';
+
+            // Post comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
 
   # Mobile tests - separate job
   mobile-tests:

@@ -24,6 +24,7 @@ export const test = base.extend<{
     mockPodIssues: (issues: unknown[]) => Promise<void>
     mockEvents: (events: unknown[]) => Promise<void>
     mockGPUNodes: (nodes: unknown[]) => Promise<void>
+    mockLocalAgent: () => Promise<void>
   }
 }>({
   // AI mode fixture
@@ -79,6 +80,15 @@ export const test = base.extend<{
           route.fulfill({
             status: 200,
             json: { nodes },
+          })
+        )
+      },
+      mockLocalAgent: async () => {
+        // Mock local agent endpoints (used by drilldown components)
+        await page.route('**/127.0.0.1:8585/**', (route) =>
+          route.fulfill({
+            status: 200,
+            json: { events: [], clusters: [], health: { hasClaude: false, hasBob: false } },
           })
         )
       },
