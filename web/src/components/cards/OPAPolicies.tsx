@@ -1389,6 +1389,11 @@ Let's start by discussing what kind of policy I need.`,
             sortDirection={sortDirection}
             onSortDirectionChange={setSortDirection}
           />
+          <RefreshButton
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            size="sm"
+          />
           <a
             href="https://open-policy-agent.github.io/gatekeeper/website/docs/"
             target="_blank"
@@ -1398,11 +1403,6 @@ Let's start by discussing what kind of policy I need.`,
           >
             <ExternalLink className="w-4 h-4" />
           </a>
-          <RefreshButton
-            isRefreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            size="sm"
-          />
         </div>
       </div>
 

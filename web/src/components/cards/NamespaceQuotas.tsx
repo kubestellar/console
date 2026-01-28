@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, Zap, Search } from 'lucide-react'
+import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, Zap, Search, Server, Filter, ChevronDown } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import {
@@ -19,6 +19,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
+import { useChartFilters } from '../../lib/cards'
 
 interface NamespaceQuotasProps {
   config?: {
@@ -319,6 +320,12 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [localSearch, setLocalSearch] = useState('')
 
+  // Local cluster filter
+  const {
+    localClusterFilter, toggleClusterFilter, clearClusterFilter,
+    availableClusters, showClusterFilter, setShowClusterFilter, clusterFilterRef,
+  } = useChartFilters({ storageKey: 'namespace-quotas' })
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingQuota, setEditingQuota] = useState<ResourceQuota | null>(null)
@@ -551,21 +558,63 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          {isFetchingData && (
-            <Loader2 className="w-3 h-3 text-yellow-400 animate-spin" />
-          )}
+          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+            {activeTab === 'quotas' ? `${quotaUsages.length} quotas` : `${limitRangeItems.length} limits`}
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setEditingQuota(null)
-              setIsModalOpen(true)
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-          >
-            <Plus className="w-3 h-3" />
-            Add Quota
-          </button>
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(c => (
+                      <button
+                        key={c.name}
+                        onClick={() => toggleClusterFilter(c.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -580,6 +629,16 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
             onRefresh={refetch}
             size="sm"
           />
+          <button
+            onClick={() => {
+              setEditingQuota(null)
+              setIsModalOpen(true)
+            }}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+          >
+            <Plus className="w-3 h-3" />
+            Add Quota
+          </button>
         </div>
       </div>
 

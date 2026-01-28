@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { AlertTriangle, Info, AlertCircle, Clock, Search, ChevronRight } from 'lucide-react'
+import { AlertTriangle, Info, AlertCircle, Clock, Search, ChevronRight, Server, Filter, ChevronDown } from 'lucide-react'
 import { useClusters, useWarningEvents, useNamespaces } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -7,7 +7,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
-import { useCascadingSelection } from '../../lib/cards'
+import { useCascadingSelection, useChartFilters } from '../../lib/cards'
 
 interface NamespaceEventsProps {
   config?: {
@@ -41,6 +41,12 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   } = useCascadingSelection({
     storageKey: 'namespace-events',
   })
+
+  // Local cluster filter
+  const {
+    localClusterFilter, toggleClusterFilter, clearClusterFilter,
+    availableClusters, showClusterFilter, setShowClusterFilter, clusterFilterRef,
+  } = useChartFilters({ storageKey: 'namespace-events' })
 
   // Apply config overrides (e.g., from drill-down navigation)
   useEffect(() => {
@@ -175,6 +181,58 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(c => (
+                      <button
+                        key={c.name}
+                        onClick={() => toggleClusterFilter(c.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}

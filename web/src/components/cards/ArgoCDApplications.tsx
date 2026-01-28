@@ -310,15 +310,6 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
             </div>
           )}
 
-          <a
-            href="https://argo-cd.readthedocs.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="ArgoCD Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -336,6 +327,15 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
             onRefresh={refetch}
             size="sm"
           />
+          <a
+            href="https://argo-cd.readthedocs.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+            title="ArgoCD Documentation"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
         </div>
       </div>
 

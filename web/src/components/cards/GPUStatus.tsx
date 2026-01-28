@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Activity, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
+import { Activity, ChevronRight, Filter, ChevronDown, Server, Search } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -56,6 +56,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [selectedGpuType, setSelectedGpuType] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Get all unique GPU types for filter dropdown
   const gpuTypes = useMemo(() => {
@@ -76,8 +77,16 @@ export function GPUStatus({ config }: GPUStatusProps) {
     if (selectedGpuType !== 'all') {
       result = result.filter(n => n.gpuType.toLowerCase().includes(selectedGpuType.toLowerCase()))
     }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(n =>
+        n.cluster.toLowerCase().includes(query) ||
+        n.gpuType.toLowerCase().includes(query) ||
+        n.name.toLowerCase().includes(query)
+      )
+    }
     return result
-  }, [rawNodes, selectedClusters, isAllClustersSelected, selectedGpuType, localClusterFilter])
+  }, [rawNodes, selectedClusters, isAllClustersSelected, selectedGpuType, localClusterFilter, searchQuery])
 
   // Calculate cluster-level stats from filtered nodes
   const clusterStatsList = useMemo(() => {
@@ -249,6 +258,18 @@ export function GPUStatus({ config }: GPUStatusProps) {
             onRefresh={() => refetch()}
           />
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-2">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); goToPage(1) }}
+          placeholder="Search GPU clusters..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* GPU Type Filter */}
