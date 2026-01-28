@@ -14,10 +14,14 @@ import {
   Gauge,
   Plus,
   ArrowUpRight,
-  GripVertical
+  GripVertical,
+  Filter,
+  ChevronDown
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { CardControls, SortDirection } from '../ui/CardControls'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useChartFilters } from '../../lib/cards'
 import { cn } from '../../lib/cn'
 import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
 
@@ -338,6 +342,16 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
   )
 }
 
+type SortByOption = 'name' | 'status' | 'type'
+
+const SORT_OPTIONS = [
+  { value: 'name' as const, label: 'Name' },
+  { value: 'status' as const, label: 'Status' },
+  { value: 'type' as const, label: 'Type' },
+]
+
+const workloadStatusOrder: Record<string, number> = { Failed: 0, Degraded: 1, Pending: 2, Running: 3, Unknown: 4 }
+
 interface WorkloadDeploymentProps {
   config?: Record<string, unknown>
   onRefresh?: () => void
@@ -349,6 +363,22 @@ export function WorkloadDeployment({ onRefresh, isRefreshing = false }: Workload
   const [typeFilter, setTypeFilter] = useState<WorkloadType | 'All'>('All')
   const [statusFilter, setStatusFilter] = useState<WorkloadStatus | 'All'>('All')
   const [selectedWorkload, setSelectedWorkload] = useState<Workload | null>(null)
+  const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [sortBy, setSortBy] = useState<SortByOption>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'workload-deployment',
+  })
 
   // Fetch real workloads from API
   const { data: realWorkloads, isLoading, refetch } = useWorkloads()
@@ -399,7 +429,7 @@ export function WorkloadDeployment({ onRefresh, isRefreshing = false }: Workload
   }
 
   const filteredWorkloads = useMemo(() => {
-    return workloads.filter((w) => {
+    let result = workloads.filter((w) => {
       const matchesSearch =
         search === '' ||
         w.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -407,22 +437,120 @@ export function WorkloadDeployment({ onRefresh, isRefreshing = false }: Workload
         w.image.toLowerCase().includes(search.toLowerCase())
       const matchesType = typeFilter === 'All' || w.type === typeFilter
       const matchesStatus = statusFilter === 'All' || w.status === statusFilter
-      return matchesSearch && matchesType && matchesStatus
+      // Apply local cluster filter
+      const matchesCluster = localClusterFilter.length === 0 ||
+        w.targetClusters.some(c => localClusterFilter.includes(c))
+      return matchesSearch && matchesType && matchesStatus && matchesCluster
     })
-  }, [workloads, search, typeFilter, statusFilter])
+
+    // Sort
+    const sorted = [...result].sort((a, b) => {
+      let cmp = 0
+      if (sortBy === 'status') cmp = (workloadStatusOrder[a.status] || 4) - (workloadStatusOrder[b.status] || 4)
+      else if (sortBy === 'name') cmp = a.name.localeCompare(b.name)
+      else if (sortBy === 'type') cmp = a.type.localeCompare(b.type)
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+
+    // Apply limit
+    if (limit !== 'unlimited') {
+      return sorted.slice(0, limit)
+    }
+    return sorted
+  }, [workloads, search, typeFilter, statusFilter, localClusterFilter, sortBy, sortDirection, limit])
 
   const workloadTypes: (WorkloadType | 'All')[] = ['All', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob']
   const workloadStatuses: (WorkloadStatus | 'All')[] = ['All', 'Running', 'Degraded', 'Pending', 'Failed']
 
   return (
     <div className="h-full flex flex-col">
-      {/* Controls */}
-      <div className="flex items-center justify-end p-3 border-b border-gray-200 dark:border-gray-700">
-        <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshing || isLoading} />
+      {/* Header with controls */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0 px-3 pt-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            {stats.totalWorkloads} workloads
+          </span>
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
+          <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshing || isLoading} />
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 mb-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search workloads..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+          />
+        </div>
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-5 gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+      <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
         <div className="text-center">
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.totalWorkloads}</div>
           <div className="text-xs text-gray-500">Total</div>
@@ -445,18 +573,8 @@ export function WorkloadDeployment({ onRefresh, isRefreshing = false }: Workload
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700 space-y-2">
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search workloads..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
+      {/* Type/Status Filters */}
+      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex gap-2 flex-wrap">
           <select
             value={typeFilter}

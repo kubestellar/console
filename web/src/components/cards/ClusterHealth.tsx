@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, Search, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, Search, AlertTriangle, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useChartFilters } from '../../lib/cards'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable } from '../clusters/utils'
@@ -82,6 +83,19 @@ export function ClusterHealth() {
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const [localSearch, setLocalSearch] = useState('')
 
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'cluster-health',
+  })
+
   // Only show skeleton when no cached data exists - prevents flickering on refresh
   const isLoading = isLoadingHook && rawClusters.length === 0
 
@@ -101,6 +115,11 @@ export function ClusterHealth() {
     let filtered = isAllClustersSelected
       ? rawClusters
       : rawClusters.filter(c => selectedClusters.includes(c.name))
+
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      filtered = filtered.filter(c => localClusterFilter.includes(c.name))
+    }
 
     // Apply local search filter
     if (localSearch.trim()) {
@@ -123,7 +142,7 @@ export function ClusterHealth() {
       return sortDirection === 'asc' ? result : -result
     })
     return sorted
-  }, [rawClusters, sortBy, sortDirection, selectedClusters, isAllClustersSelected, localSearch])
+  }, [rawClusters, sortBy, sortDirection, selectedClusters, isAllClustersSelected, localSearch, localClusterFilter])
 
   // Use pagination hook
   const effectivePerPage = limit === 'unlimited' ? 1000 : limit
@@ -213,6 +232,58 @@ export function ClusterHealth() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Cluster count indicator */}
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
+
+          {/* Cluster filter dropdown */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <CardControls
             limit={limit}
             onLimitChange={setLimit}

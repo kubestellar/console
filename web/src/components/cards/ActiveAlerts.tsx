@@ -20,6 +20,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { Pagination } from '../ui/Pagination'
 import { useCardData } from '../../lib/cards'
 
@@ -194,8 +195,8 @@ export function ActiveAlerts() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      {/* Header with controls */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           {stats.firing > 0 && (
             <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
@@ -211,7 +212,7 @@ export function ActiveAlerts() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Toggle acknowledged alerts */}
+          {/* 1. Ack'd toggle */}
           <button
             onClick={() => setShowAcknowledged(!showAcknowledged)}
             className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
@@ -229,6 +230,53 @@ export function ActiveAlerts() {
               </span>
             )}
           </button>
+          {/* 2. Cluster Filter */}
+          {availableClustersForFilter.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0
+                          ? 'bg-purple-500/20 text-purple-400'
+                          : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClustersForFilter.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name)
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {/* 3. CardControls */}
           <CardControls
             limit={itemsPerPage}
             onLimitChange={setItemsPerPage}
@@ -239,63 +287,13 @@ export function ActiveAlerts() {
               { value: 'time', label: 'Time' },
             ]}
           />
+          {/* 4. RefreshButton */}
+          <RefreshButton
+            isRefreshing={false}
+            onRefresh={() => window.location.reload()}
+          />
         </div>
       </div>
-
-      {/* Cluster Filter */}
-      {availableClustersForFilter.length >= 1 && (
-        <div className="flex items-center gap-2 mb-3">
-          <div ref={clusterFilterRef} className="relative">
-            <button
-              onClick={() => setShowClusterFilter(!showClusterFilter)}
-              className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                localClusterFilter.length > 0
-                  ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-              }`}
-              title="Filter by cluster"
-            >
-              <Filter className="w-3 h-3" />
-              <span>
-                {localClusterFilter.length > 0
-                  ? `${localClusterFilter.length} clusters`
-                  : 'All clusters'}
-              </span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
-
-            {showClusterFilter && (
-              <div className="absolute top-full left-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                <div className="p-1">
-                  <button
-                    onClick={clearClusterFilter}
-                    className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                      localClusterFilter.length === 0
-                        ? 'bg-purple-500/20 text-purple-400'
-                        : 'hover:bg-secondary text-foreground'
-                    }`}
-                  >
-                    All clusters
-                  </button>
-                  {availableClustersForFilter.map(cluster => (
-                    <button
-                      key={cluster.name}
-                      onClick={() => toggleClusterFilter(cluster.name)}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.includes(cluster.name)
-                          ? 'bg-purple-500/20 text-purple-400'
-                          : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      {cluster.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Local Search */}
       <div className="relative mb-3">

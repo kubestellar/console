@@ -6,14 +6,19 @@ import {
   Trash2,
   Pencil,
   Search,
+  Filter,
+  ChevronDown,
+  Server,
 } from 'lucide-react'
 import { useAlertRules } from '../../hooks/useAlerts'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { formatCondition } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
 import { CardControls, SortDirection } from '../ui/CardControls'
+import { RefreshButton } from '../ui/RefreshIndicator'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
+import { useChartFilters } from '../../lib/cards'
 
 type SortField = 'name' | 'severity' | 'enabled'
 
@@ -26,6 +31,19 @@ export function AlertRulesCard() {
   const [sortBy, setSortBy] = useState<SortField>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [localSearch, setLocalSearch] = useState('')
+
+  // Local cluster filter
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'alert-rules',
+  })
 
   // Filter and sort rules
   const sortedRules = useMemo(() => {
@@ -137,15 +155,22 @@ export function AlertRulesCard() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      {/* Header with controls */}
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {enabledCount} active
           </span>
+          {localClusterFilter.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+              <Server className="w-3 h-3" />
+              {localClusterFilter.length}/{availableClusters.length}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 1. Plus button */}
           <button
             onClick={handleCreateNew}
             className="p-1 rounded hover:bg-secondary/50 text-purple-400 transition-colors"
@@ -153,6 +178,53 @@ export function AlertRulesCard() {
           >
             <Plus className="w-4 h-4" />
           </button>
+          {/* 2. Cluster Filter */}
+          {availableClusters.length >= 1 && (
+            <div ref={clusterFilterRef} className="relative">
+              <button
+                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  localClusterFilter.length > 0
+                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+                }`}
+                title="Filter by cluster"
+              >
+                <Filter className="w-3 h-3" />
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showClusterFilter && (
+                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                  <div className="p-1">
+                    <button
+                      onClick={clearClusterFilter}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.length === 0
+                          ? 'bg-purple-500/20 text-purple-400'
+                          : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      All clusters
+                    </button>
+                    {availableClusters.map(cluster => (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                          localClusterFilter.includes(cluster.name)
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : 'hover:bg-secondary text-foreground'
+                        }`}
+                      >
+                        {cluster.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {/* 3. CardControls */}
           <CardControls
             limit={limit}
             onLimitChange={setLimit}
@@ -165,6 +237,11 @@ export function AlertRulesCard() {
               { value: 'severity', label: 'Severity' },
               { value: 'enabled', label: 'Status' },
             ]}
+          />
+          {/* 4. RefreshButton */}
+          <RefreshButton
+            isRefreshing={false}
+            onRefresh={() => window.location.reload()}
           />
         </div>
       </div>

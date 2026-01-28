@@ -1,10 +1,12 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, Search, ChevronRight, Filter } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { CardControls, SortDirection } from '../ui/CardControls'
 import { RefreshButton } from '../ui/RefreshIndicator'
+import { useChartFilters } from '../../lib/cards'
 import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
@@ -39,6 +41,13 @@ const loadPersistedOverrides = (configOverrides?: Record<string, CloudProvider>)
   return configOverrides || {}
 }
 type PricingMode = 'uniform' | 'per-cluster'
+type SortByOption = 'cost' | 'name' | 'cpus'
+
+const SORT_OPTIONS = [
+  { value: 'cost' as const, label: 'Cost' },
+  { value: 'name' as const, label: 'Name' },
+  { value: 'cpus' as const, label: 'CPUs' },
+]
 
 // Cloud provider icons (simple text badges for now, could be SVG logos)
 const PROVIDER_ICONS: Record<CloudProvider, { color: string; bg: string; short: string }> = {
@@ -172,14 +181,22 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     () => loadPersistedOverrides(config?.clusterProviders)
   )
   const [localSearch, setLocalSearch] = useState('')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('kubestellar-card-filter:cluster-costs')
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
+  const [limit, setLimit] = useState<number | 'unlimited'>(5)
+  const [sortBy, setSortBy] = useState<SortByOption>('cost')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+
+  // Local cluster filter via shared hook
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    availableClusters: availableClustersForFilter,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  } = useChartFilters({
+    storageKey: 'cluster-costs',
   })
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
 
   // Persist provider overrides to localStorage
   useEffect(() => {
@@ -189,35 +206,6 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       localStorage.removeItem(PROVIDER_OVERRIDES_KEY)
     }
   }, [clusterProviderOverrides])
-
-  // Close cluster filter dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Save cluster filter to localStorage
-  useEffect(() => {
-    localStorage.setItem('kubestellar-card-filter:cluster-costs', JSON.stringify(localClusterFilter))
-  }, [localClusterFilter])
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
-
-  const clearClusterFilter = () => {
-    setLocalClusterFilter([])
-  }
 
   // Auto-detect cloud provider from cluster names
   const detectedProvider = useMemo((): CloudProvider | null => {
@@ -249,15 +237,6 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       setIsAutoDetected(true)
     }
   }, [detectedProvider, config?.provider])
-
-  // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
-    let result = allClusters.filter(c => c.reachable !== false)
-    if (!isAllClustersSelected) {
-      result = result.filter(c => globalSelectedClusters.includes(c.name))
-    }
-    return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected])
 
   // Apply global filters, local cluster filter, and local search
   const clusters = useMemo(() => {
@@ -358,8 +337,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         monthly,
         provider,
       }
-    }).sort((a, b) => b.monthly - a.monthly)
-  }, [clusters, gpuByCluster, clusterProviders, config])
+    }).sort((a, b) => {
+      let cmp = 0
+      if (sortBy === 'cost') cmp = a.monthly - b.monthly
+      else if (sortBy === 'name') cmp = a.name.localeCompare(b.name)
+      else if (sortBy === 'cpus') cmp = a.cpus - b.cpus
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+  }, [clusters, gpuByCluster, clusterProviders, config, sortBy, sortDirection])
 
   const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
   const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
@@ -386,6 +371,9 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            {clusters.length} clusters
+          </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
@@ -393,7 +381,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {/* Cluster Filter */}
           {availableClustersForFilter.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
@@ -437,6 +425,15 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               )}
             </div>
           )}
+          <CardControls
+            limit={limit}
+            onLimitChange={setLimit}
+            sortBy={sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionChange={setSortDirection}
+          />
           {/* Info button */}
           <button
             onClick={() => setShowRatesInfo(!showRatesInfo)}
