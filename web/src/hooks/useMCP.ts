@@ -1149,6 +1149,7 @@ async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: st
       if (response.ok) {
         const health = await response.json()
         reportAgentDataSuccess()
+        healthCheckFailures = 0 // Reset on success to allow backend fallback if agent later fails
         console.log(`[HealthCheck] HTTP success for ${clusterName}: nodeCount=${health.nodeCount}, podCount=${health.podCount}, cpuCores=${health.cpuCores}`)
         return health
       }
