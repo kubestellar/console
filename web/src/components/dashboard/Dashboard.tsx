@@ -331,7 +331,7 @@ export function Dashboard() {
     } else {
       isInitialMountRef.current = false
     }
-  }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.key, refetch]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep cache and localStorage in sync when cards are modified locally
   useEffect(() => {
