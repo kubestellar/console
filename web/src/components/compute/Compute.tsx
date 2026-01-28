@@ -414,6 +414,8 @@ export function Compute() {
           <button
             onClick={() => setShowClusterList(!showClusterList)}
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            aria-expanded={showClusterList}
+            aria-controls="cluster-comparison-list"
           >
             <GitCompare className="w-4 h-4" />
             <span>Cluster Comparison</span>
@@ -444,7 +446,7 @@ export function Compute() {
         </div>
 
         {showClusterList && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div id="cluster-comparison-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filteredClusters.map((cluster) => {
               const isSelected = selectedForComparison.includes(cluster.name)
               const isDisabled = !isSelected && selectedForComparison.length >= 4
@@ -461,6 +463,8 @@ export function Compute() {
                         ? 'opacity-50 cursor-not-allowed' 
                         : 'hover:bg-secondary/50'
                   }`}
+                  aria-label={`${isSelected ? 'Deselect' : 'Select'} ${cluster.context || cluster.name} for comparison`}
+                  aria-pressed={isSelected}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-1">
