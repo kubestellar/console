@@ -55,6 +55,7 @@ const LARGE_EXPANDED_CARDS = new Set([
 const FULLSCREEN_EXPANDED_CARDS = new Set([
   'cluster_locations',
   'sudoku_game', // Games need fullscreen for the grid to fill properly
+  'mobile_browser', // Shows iPad view when expanded
 ])
 
 // Context to expose card expanded state to children
@@ -185,7 +186,7 @@ const CARD_TITLES: Record<string, string> = {
   pod_issues: 'Pod Issues',
   top_pods: 'Top Pods',
   resource_capacity: 'Resource Capacity',
-  resource_usage: 'Resource Usage',
+  resource_usage: 'Resource Allocation',
 
   // Events
   event_stream: 'Event Stream',

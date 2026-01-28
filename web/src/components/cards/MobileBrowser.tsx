@@ -4,6 +4,7 @@ import {
   Plus, X, Lock, Bookmark, Star,
   Wifi, Battery, Signal
 } from 'lucide-react'
+import { useCardExpanded } from './CardWrapper'
 
 interface Tab {
   id: string
@@ -21,9 +22,11 @@ interface SavedBookmark {
 const STORAGE_KEY = 'mobile_browser_state'
 const BOOKMARKS_KEY = 'mobile_browser_bookmarks'
 
-// Device dimensions (iPhone-like mobile view)
-const MOBILE_WIDTH = 375
-const MOBILE_HEIGHT = 667
+// Device dimensions - iPhone for normal view, iPad horizontal for expanded/fullscreen
+const IPHONE_WIDTH = 375
+const IPHONE_HEIGHT = 667
+const IPAD_WIDTH = 1024
+const IPAD_HEIGHT = 768
 
 // Popular mobile-friendly sites
 const QUICK_LINKS = [
@@ -37,7 +40,37 @@ const QUICK_LINKS = [
 ]
 
 export function MobileBrowser() {
+  const { isExpanded } = useCardExpanded()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+
+  // Detect container size to determine if iPad view should be used
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateWidth = () => {
+      setContainerWidth(container.clientWidth)
+    }
+
+    // Initial measurement
+    updateWidth()
+
+    // Observe resize
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [])
+
+  // Use iPad dimensions when expanded OR when container is large enough (> 1100px)
+  // This handles both fullscreen modal and full-width card resize
+  const shouldUseIPad = isExpanded || containerWidth > 1100
+  const DEVICE_WIDTH = shouldUseIPad ? IPAD_WIDTH : IPHONE_WIDTH
+  const DEVICE_HEIGHT = shouldUseIPad ? IPAD_HEIGHT : IPHONE_HEIGHT
+  const isIPad = shouldUseIPad
+
   const [tabs, setTabs] = useState<Tab[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -196,29 +229,31 @@ export function MobileBrowser() {
   const formattedTime = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={containerRef} className="flex flex-col h-full">
       <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-        {/* iPhone Frame */}
+        {/* Device Frame - iPhone or iPad based on expanded state */}
         <div
-          className="relative bg-black rounded-[40px] p-2 shadow-2xl"
-          style={{ width: MOBILE_WIDTH + 16, height: MOBILE_HEIGHT + 16 }}
+          className={`relative bg-black shadow-2xl ${isIPad ? 'rounded-[24px] p-3' : 'rounded-[40px] p-2'}`}
+          style={{ width: DEVICE_WIDTH + (isIPad ? 24 : 16), height: DEVICE_HEIGHT + (isIPad ? 24 : 16) }}
         >
           {/* Screen */}
           <div
-            className="relative bg-white dark:bg-zinc-900 rounded-[32px] overflow-hidden"
-            style={{ width: MOBILE_WIDTH, height: MOBILE_HEIGHT }}
+            className={`relative bg-white dark:bg-zinc-900 overflow-hidden ${isIPad ? 'rounded-[16px]' : 'rounded-[32px]'}`}
+            style={{ width: DEVICE_WIDTH, height: DEVICE_HEIGHT }}
           >
-            {/* Dynamic Island / Notch */}
-            <div className="absolute top-0 left-0 right-0 z-20">
-              <div className="flex justify-center pt-2">
-                <div className="bg-black rounded-full px-6 py-1 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-zinc-700" /> {/* Camera */}
+            {/* Dynamic Island / Notch - only for iPhone */}
+            {!isIPad && (
+              <div className="absolute top-0 left-0 right-0 z-20">
+                <div className="flex justify-center pt-2">
+                  <div className="bg-black rounded-full px-6 py-1 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-zinc-700" /> {/* Camera */}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Status Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 px-6 pt-2 flex justify-between items-center text-xs">
+            <div className={`absolute top-0 left-0 right-0 z-10 flex justify-between items-center text-xs ${isIPad ? 'px-8 pt-3' : 'px-6 pt-2'}`}>
               <span className="font-semibold text-black dark:text-white">{formattedTime}</span>
               <div className="flex items-center gap-1 text-black dark:text-white">
                 <Signal className="w-3 h-3" />
@@ -228,7 +263,7 @@ export function MobileBrowser() {
             </div>
 
             {/* Safari-style Address Bar */}
-            <div className="absolute top-8 left-0 right-0 z-10 px-2 pt-2">
+            <div className={`absolute left-0 right-0 z-10 px-2 pt-2 ${isIPad ? 'top-6' : 'top-8'}`}>
               <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-2">
                 {activeTab.url && (
                   <Lock className="w-3 h-3 text-green-500 flex-shrink-0" />
@@ -253,7 +288,7 @@ export function MobileBrowser() {
             </div>
 
             {/* Content Area */}
-            <div className="absolute top-[72px] left-0 right-0 bottom-12 overflow-hidden bg-white dark:bg-zinc-900">
+            <div className={`absolute left-0 right-0 bottom-12 overflow-hidden bg-white dark:bg-zinc-900 ${isIPad ? 'top-[56px]' : 'top-[72px]'}`}>
               {activeTab.url ? (
                 <>
                   {isLoading && (
@@ -484,7 +519,7 @@ export function MobileBrowser() {
             </div>
 
             {/* Home Indicator */}
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-24 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+            <div className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full ${isIPad ? 'w-32' : 'w-24'}`} />
           </div>
         </div>
 
