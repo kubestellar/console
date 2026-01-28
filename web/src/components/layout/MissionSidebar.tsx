@@ -30,6 +30,8 @@ import {
   Plus,
   Type,
   Download,
+  BookOpen,
+  Save,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -37,9 +39,12 @@ import remarkBreaks from 'remark-breaks'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useMissions, Mission, MissionStatus, MissionMessage } from '../../hooks/useMissions'
+import { useResolutions, detectIssueSignature, type Resolution } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
 import { AgentSelector } from '../agent/AgentSelector'
 import { AgentBadge, AgentIcon } from '../agent/AgentIcon'
+import { ResolutionKnowledgePanel } from '../missions/ResolutionKnowledgePanel'
+import { SaveResolutionDialog } from '../missions/SaveResolutionDialog'
 
 // Rotating status messages for agent thinking
 const THINKING_MESSAGES = [
@@ -372,6 +377,7 @@ function extractInputRequestParagraph(content: string): { before: string; reques
 
 function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, selectedAgent } = useMissions()
+  const { findSimilarResolutions, recordUsage } = useResolutions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -382,6 +388,33 @@ function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontS
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const savedInputRef = useRef('')
+  // Resolution memory state
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [appliedResolutionId, setAppliedResolutionId] = useState<string | null>(null)
+
+  // Find related resolutions based on mission content
+  const relatedResolutions = useMemo(() => {
+    const content = [
+      mission.title,
+      mission.description,
+      ...mission.messages.slice(0, 3).map(m => m.content), // First few messages
+    ].join('\n')
+
+    const signature = detectIssueSignature(content)
+    if (!signature.type || signature.type === 'Unknown') {
+      return []
+    }
+
+    return findSimilarResolutions(signature as { type: string }, { minSimilarity: 0.4, limit: 5 })
+  }, [mission.title, mission.description, mission.messages, findSimilarResolutions])
+
+  // Handle applying a resolution
+  const handleApplyResolution = useCallback((resolution: Resolution) => {
+    setAppliedResolutionId(resolution.id)
+    // Inject the resolution into the chat as a user message
+    const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}\n\nSteps:\n${resolution.resolution.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
+    sendMessage(mission.id, applyMessage)
+  }, [mission.id, sendMessage])
 
   // Save transcript as markdown file
   const saveTranscript = useCallback(() => {
@@ -554,7 +587,17 @@ function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontS
   const TypeIcon = TYPE_ICONS[mission.type]
 
   return (
+    <>
     <div className={cn("flex flex-1 min-h-0", isFullScreen && "gap-4")}>
+      {/* Left panel for related resolutions (fullscreen only) */}
+      {isFullScreen && (
+        <ResolutionKnowledgePanel
+          relatedResolutions={relatedResolutions}
+          onApplyResolution={handleApplyResolution}
+          onSaveNewResolution={() => setShowSaveDialog(true)}
+        />
+      )}
+
       {/* Main chat area */}
       <div className={cn("flex flex-col flex-1 min-h-0", isFullScreen && "max-w-4xl")}>
       {/* Header */}
@@ -613,6 +656,29 @@ function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontS
           <span className="text-xs text-purple-400 mt-1 inline-block">Cluster: {mission.cluster}</span>
         )}
       </div>
+
+      {/* Related Knowledge Banner (non-fullscreen only) */}
+      {!isFullScreen && relatedResolutions.length > 0 && (
+        <div className="px-4 py-2 bg-purple-500/10 border-b border-purple-500/20 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs">
+              <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-purple-300">
+                {relatedResolutions.length} similar resolution{relatedResolutions.length !== 1 ? 's' : ''} found
+              </span>
+            </div>
+            {onToggleFullScreen && (
+              <button
+                onClick={onToggleFullScreen}
+                className="text-[10px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+              >
+                View in fullscreen
+                <Maximize2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Messages - using memoized component for better scroll performance */}
       <div
@@ -707,46 +773,86 @@ function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontS
           </div>
         ) : mission.status === 'completed' ? (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className={cn('text-sm', config.color)}>{config.label}</span>
-              <button
-                onClick={() => setActiveMission(null)}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <ChevronLeft className="w-3 h-3" />
-                Minimize
-              </button>
-            </div>
-            {/* Feedback buttons */}
-            <div className="flex items-center justify-center gap-4 pt-2 border-t border-border/50">
-              <span className="text-xs text-muted-foreground">Was this helpful?</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => rateMission(mission.id, 'positive')}
-                  className={cn(
-                    'p-1.5 rounded-lg transition-colors',
-                    mission.feedback === 'positive'
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'hover:bg-secondary text-muted-foreground hover:text-green-400'
+            {/* Conversational completion message */}
+            <div className="bg-secondary/30 border border-border rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground mb-2">
+                    {mission.type === 'troubleshoot'
+                      ? "I've completed my diagnosis. Did this help resolve your issue?"
+                      : mission.type === 'deploy' || mission.type === 'repair'
+                      ? "The operation is complete. Did everything work as expected?"
+                      : "Mission complete! Was this information helpful?"}
+                  </p>
+
+                  {/* Feedback buttons - only show if no feedback yet */}
+                  {!mission.feedback && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          rateMission(mission.id, 'positive')
+                          if (appliedResolutionId) {
+                            recordUsage(appliedResolutionId, true)
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors"
+                      >
+                        <ThumbsUp className="w-3.5 h-3.5" />
+                        Yes, helpful
+                      </button>
+                      <button
+                        onClick={() => {
+                          rateMission(mission.id, 'negative')
+                          if (appliedResolutionId) {
+                            recordUsage(appliedResolutionId, false)
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-muted-foreground border border-border rounded-lg transition-colors"
+                      >
+                        <ThumbsDown className="w-3.5 h-3.5" />
+                        Not really
+                      </button>
+                    </div>
                   )}
-                  title="Helpful"
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => rateMission(mission.id, 'negative')}
-                  className={cn(
-                    'p-1.5 rounded-lg transition-colors',
-                    mission.feedback === 'negative'
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'hover:bg-secondary text-muted-foreground hover:text-red-400'
+
+                  {/* Save prompt after positive feedback */}
+                  {mission.feedback === 'positive' && (
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <p className="text-sm text-foreground mb-2">
+                        Great! Would you like to save this resolution? It'll help you (and your team) solve similar issues faster next time.
+                      </p>
+                      <button
+                        onClick={() => setShowSaveDialog(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg transition-colors"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        Save Resolution
+                      </button>
+                    </div>
                   )}
-                  title="Not helpful"
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                </button>
+
+                  {/* Thank you after negative feedback */}
+                  {mission.feedback === 'negative' && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground">
+                        Thanks for the feedback. Try a different approach or switch to another agent above.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+
+            <button
+              onClick={() => setActiveMission(null)}
+              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="w-3 h-3" />
+              Back to missions
+            </button>
           </div>
         ) : mission.status === 'failed' ? (
           <div className="flex flex-col gap-2">
@@ -896,6 +1002,18 @@ function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontS
         </div>
       )}
     </div>
+
+    {/* Save Resolution Dialog */}
+    <SaveResolutionDialog
+      mission={mission}
+      isOpen={showSaveDialog}
+      onClose={() => setShowSaveDialog(false)}
+      onSaved={() => {
+        // Could show a toast notification here
+        console.log('[Missions] Resolution saved successfully')
+      }}
+    />
+    </>
   )
 }
 
