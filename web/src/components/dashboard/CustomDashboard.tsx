@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { GripVertical, RefreshCw, Hourglass, Trash2 } from 'lucide-react'
+import { GripVertical, RefreshCw, Hourglass, Trash2, AlertTriangle } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -23,16 +23,22 @@ import { CSS } from '@dnd-kit/utilities'
 import { api } from '../../lib/api'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS } from '../cards/cardRegistry'
 import { AddCardModal } from './AddCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
+import { MissionSuggestions } from './MissionSuggestions'
 import { TemplatesModal } from './TemplatesModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { DashboardTemplate } from './templates'
+import { BaseModal } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 
 interface Card {
   id: string
@@ -134,7 +140,43 @@ export function CustomDashboard() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const { getDashboardWithCards, deleteDashboard } = useDashboards()
-  const { clusters } = useClusters()
+  const { clusters, deduplicatedClusters, isLoading: isClustersLoading } = useClusters()
+  const { config, removeItem } = useSidebarConfig()
+  const { drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
+
+  // Find the sidebar item matching this dashboard to get name/description
+  const sidebarItem = useMemo(() => {
+    return [...config.primaryNav, ...config.secondaryNav]
+      .find(item => item.href === `/custom-dashboard/${id}`)
+  }, [config.primaryNav, config.secondaryNav, id])
+
+  // Stats data from clusters
+  const healthyClusters = deduplicatedClusters.filter((c) => c.healthy === true && c.reachable !== false).length
+  const unhealthyClusters = deduplicatedClusters.filter((c) => c.healthy === false && c.reachable !== false).length
+  const totalNodes = deduplicatedClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const totalPods = deduplicatedClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
+    switch (blockId) {
+      case 'clusters':
+        return { value: deduplicatedClusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: deduplicatedClusters.length > 0 }
+      case 'healthy':
+        return { value: healthyClusters, sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
+      case 'warnings':
+        return { value: 0, sublabel: 'warnings', isClickable: false }
+      case 'errors':
+        return { value: unhealthyClusters, sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
+      case 'namespaces':
+        return { value: totalNodes, sublabel: 'nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+      case 'pods':
+        return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
+      default:
+        return { value: '-' }
+    }
+  }, [deduplicatedClusters, healthyClusters, unhealthyClusters, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods])
+
+  const { getStatValue: getUniversalStatValue } = useUniversalStats()
+  const getStatValue = useMemo(() => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue), [getDashboardStatValue, getUniversalStatValue])
 
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [cards, setCards] = useState<Card[]>([])
@@ -147,6 +189,7 @@ export function CustomDashboard() {
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
 
   // Drag state
@@ -326,23 +369,26 @@ export function CustomDashboard() {
     showToast('Dashboard reset to empty', 'info')
   }, [storageKey, showToast])
 
-  const handleDeleteDashboard = useCallback(async () => {
-    if (!id || !dashboard) return
+  const handleDeleteDashboard = useCallback(() => {
+    if (!id) return
 
-    if (!confirm(`Are you sure you want to delete "${dashboard.name}"? This cannot be undone.`)) {
-      return
+    // Remove sidebar item
+    if (sidebarItem) {
+      removeItem(sidebarItem.id)
     }
 
-    try {
-      await deleteDashboard(id)
-      localStorage.removeItem(storageKey)
-      showToast(`Deleted "${dashboard.name}"`, 'success')
-      navigate('/')
-    } catch (error) {
-      console.error('Failed to delete dashboard:', error)
-      showToast('Failed to delete dashboard', 'error')
-    }
-  }, [id, dashboard, deleteDashboard, storageKey, showToast, navigate])
+    // Remove local card storage
+    localStorage.removeItem(storageKey)
+
+    const displayName = sidebarItem?.name || dashboard?.name || 'this dashboard'
+    showToast(`Deleted "${displayName}"`, 'success')
+    navigate('/')
+
+    // Try to delete from backend in the background (may fail offline)
+    deleteDashboard(id).catch(() => {
+      // Backend deletion is optional — sidebar + localStorage are the source of truth
+    })
+  }, [id, sidebarItem, dashboard, deleteDashboard, removeItem, storageKey, showToast, navigate])
 
   // Drag handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -384,23 +430,23 @@ export function CustomDashboard() {
 
   return (
     <div className="pt-16">
-      {/* Header */}
+      {/* Header - name from sidebar item takes priority for consistency */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {dashboard?.name || 'Custom Dashboard'}
+            {sidebarItem?.name || dashboard?.name || 'Custom Dashboard'}
           </h1>
           <p className="text-muted-foreground">
-            {cards.length === 0
+            {sidebarItem?.description || (cards.length === 0
               ? 'Add cards to start monitoring your clusters'
               : `${cards.length} card${cards.length !== 1 ? 's' : ''}`
-            }
+            )}
           </p>
         </div>
         <div className="flex items-center gap-4">
           {/* Delete dashboard button */}
           <button
-            onClick={handleDeleteDashboard}
+            onClick={() => setIsDeleteConfirmOpen(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
             title="Delete dashboard"
           >
@@ -440,11 +486,24 @@ export function CustomDashboard() {
         </div>
       </div>
 
+      {/* Stats Overview */}
+      <StatsOverview
+        dashboardType="dashboard"
+        getStatValue={getStatValue}
+        hasData={deduplicatedClusters.length > 0}
+        isLoading={isClustersLoading}
+        lastUpdated={lastUpdated}
+        collapsedStorageKey={`kubestellar-custom-${id}-stats-collapsed`}
+      />
+
       {/* AI Recommendations - always shown to help users add relevant cards */}
       <CardRecommendations
         currentCardTypes={currentCardTypes}
         onAddCard={handleAddRecommendedCard}
       />
+
+      {/* Mission Suggestions */}
+      <MissionSuggestions />
 
       {/* Empty state */}
       {cards.length === 0 ? (
@@ -539,6 +598,46 @@ export function CustomDashboard() {
         onClose={() => setIsTemplatesOpen(false)}
         onApplyTemplate={handleApplyTemplate}
       />
+
+      {/* Delete Confirmation Modal */}
+      <BaseModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} size="md">
+        <BaseModal.Header
+          title="Delete Dashboard"
+          description={`Are you sure you want to delete "${sidebarItem?.name || dashboard?.name || 'this dashboard'}"?`}
+          icon={Trash2}
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          showBack={false}
+        />
+        <BaseModal.Content>
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-foreground font-medium">This action cannot be undone</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                The dashboard and all its cards will be permanently removed from the sidebar.
+              </p>
+            </div>
+          </div>
+        </BaseModal.Content>
+        <BaseModal.Footer>
+          <button
+            onClick={() => setIsDeleteConfirmOpen(false)}
+            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              setIsDeleteConfirmOpen(false)
+              handleDeleteDashboard()
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Dashboard
+          </button>
+        </BaseModal.Footer>
+      </BaseModal>
     </div>
   )
 }

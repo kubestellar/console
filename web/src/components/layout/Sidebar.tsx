@@ -13,12 +13,16 @@ import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendation
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 
 export function Sidebar() {
-  const { config, toggleCollapsed, reorderItems } = useSidebarConfig()
+  const { config, toggleCollapsed, reorderItems, updateItem } = useSidebarConfig()
   const { deduplicatedClusters } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Inline rename state for custom sidebar items
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
@@ -36,8 +40,9 @@ export function Sidebar() {
     // List of dashboards that have card systems
     const cardDashboards = ['/', '/workloads', '/security', '/gitops', '/storage', '/compute', '/network', '/events', '/clusters']
     const currentPath = location.pathname
+    const isCustomDashboard = currentPath.startsWith('/custom-dashboard/')
 
-    if (cardDashboards.includes(currentPath)) {
+    if (cardDashboards.includes(currentPath) || isCustomDashboard) {
       // Current page has cards - use query param to trigger modal
       if (currentPath === '/') {
         dashboardContext?.openAddCardModal()
@@ -50,6 +55,24 @@ export function Sidebar() {
       dashboardContext?.setPendingOpenAddCardModal(true)
       navigate('/')
     }
+  }
+
+  // Inline rename handlers - only for user-created custom dashboards (not built-in or template items)
+  const handleDoubleClick = (item: SidebarItem, e: React.MouseEvent) => {
+    if (!item.isCustom || !item.href.startsWith('/custom-dashboard/')) return
+    e.preventDefault()
+    e.stopPropagation()
+    setEditingItemId(item.id)
+    setEditingName(item.name)
+  }
+
+  const handleSaveRename = (itemId: string) => {
+    const trimmed = editingName.trim()
+    if (trimmed) {
+      updateItem(itemId, { name: trimmed })
+    }
+    setEditingItemId(null)
+    setEditingName('')
   }
 
   // Navigate to clusters page with status filter
@@ -152,45 +175,77 @@ export function Sidebar() {
     return IconComponent ? <IconComponent className={className} /> : null
   }
 
-  const renderNavItem = (item: SidebarItem, section: 'primary' | 'secondary') => (
-    <div
-      key={item.id}
-      draggable={!config.collapsed}
-      onDragStart={(e) => handleDragStart(e, item.id, section)}
-      onDragEnd={handleDragEnd}
-      onDragEnter={(e) => handleDragEnter(e, item.id)}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={(e) => handleDrop(e, item.id, section)}
-      className={cn(
-        'group relative transition-all duration-150',
-        dragOverItem === item.id && dragSection === section && 'before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:bg-purple-500 before:rounded-full',
-        draggedItem === item.id && 'opacity-50'
-      )}
-    >
-      <NavLink
-        to={item.href}
-        className={({ isActive }) => cn(
-          'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
-          isActive
-            ? 'bg-purple-500/20 text-purple-400'
-            : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
-          config.collapsed ? 'justify-center p-3' : 'px-3 py-2',
-          !config.collapsed && 'pl-2'
+  const renderNavItem = (item: SidebarItem, section: 'primary' | 'secondary') => {
+    const isEditing = editingItemId === item.id
+
+    return (
+      <div
+        key={item.id}
+        draggable={!config.collapsed && !isEditing}
+        onDragStart={(e) => handleDragStart(e, item.id, section)}
+        onDragEnd={handleDragEnd}
+        onDragEnter={(e) => handleDragEnter(e, item.id)}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={(e) => handleDrop(e, item.id, section)}
+        className={cn(
+          'group relative transition-all duration-150',
+          dragOverItem === item.id && dragSection === section && 'before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:bg-purple-500 before:rounded-full',
+          draggedItem === item.id && 'opacity-50'
         )}
-        title={config.collapsed ? item.name : undefined}
       >
-        {!config.collapsed && (
-          <GripVertical
-            className="w-3.5 h-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
-            onMouseDown={(e) => e.stopPropagation()}
-          />
+        {isEditing ? (
+          // Inline editing mode
+          <div className={cn(
+            'flex items-center gap-3 rounded-lg text-sm font-medium',
+            'bg-purple-500/20 text-purple-400',
+            config.collapsed ? 'justify-center p-3' : 'px-3 py-2 pl-2'
+          )}>
+            {!config.collapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+            {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
+            {!config.collapsed && (
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={() => handleSaveRename(item.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveRename(item.id)
+                  if (e.key === 'Escape') { setEditingItemId(null); setEditingName('') }
+                }}
+                autoFocus
+                className="flex-1 bg-transparent border-b border-purple-500 outline-none text-foreground text-sm min-w-0"
+              />
+            )}
+          </div>
+        ) : (
+          // Normal navigation mode
+          <NavLink
+            to={item.href}
+            onDoubleClick={(e) => handleDoubleClick(item, e)}
+            className={({ isActive }) => cn(
+              'flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-200',
+              isActive
+                ? 'bg-purple-500/20 text-purple-400'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
+              config.collapsed ? 'justify-center p-3' : 'px-3 py-2',
+              !config.collapsed && 'pl-2'
+            )}
+            title={config.collapsed ? item.name : (item.isCustom && item.href.startsWith('/custom-dashboard/') ? 'Double-click to rename' : undefined)}
+          >
+            {!config.collapsed && (
+              <GripVertical
+                className="w-3.5 h-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+            )}
+            {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
+            {!config.collapsed && item.name}
+          </NavLink>
         )}
-        {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
-        {!config.collapsed && item.name}
-      </NavLink>
-    </div>
-  )
+      </div>
+    )
+  }
 
   return (
     <>

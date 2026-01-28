@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Plus,
   Trash2,
@@ -37,6 +38,7 @@ import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 import { cn } from '../../lib/cn'
+import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal } from '../../lib/modals'
 import * as Icons from 'lucide-react'
 
@@ -173,11 +175,13 @@ interface SidebarCustomizerProps {
 }
 
 export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
+  const navigate = useNavigate()
   const {
     config,
     addItem,
     addItems,
     removeItem,
+    updateItem,
     reorderItems,
     toggleClusterStatus,
     resetToDefault,
@@ -312,29 +316,42 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   }
 
   // Handle creating a new custom dashboard
-  const handleCreateDashboard = async (name: string, template?: DashboardTemplate) => {
-    try {
-      const newDashboard = await createDashboard(name)
-      if (newDashboard) {
-        // If a template was selected, apply template cards
-        if (template) {
-          // Template cards will be added when user navigates to the dashboard
-          // For now, just create the empty dashboard
+  const handleCreateDashboard = (name: string, _template?: DashboardTemplate, description?: string) => {
+    // Generate a local ID so we don't depend on the backend API
+    const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const href = `/custom-dashboard/${localId}`
+
+    // Use keyword-based icon immediately, then upgrade via AI
+    const quickIcon = suggestIconSync(name)
+
+    // Add sidebar item, close modals, and navigate — all synchronous
+    addItem({
+      name: name,
+      icon: quickIcon,
+      href,
+      type: 'link',
+      description,
+    }, 'primary')
+
+    setIsCreateDashboardOpen(false)
+    onClose()
+    navigate(href)
+
+    // Try to persist to backend in the background (optional, may fail offline)
+    createDashboard(name).catch(() => {
+      // Dashboard works purely from localStorage — backend persistence is optional
+    })
+
+    // Ask AI agent for a better icon in the background
+    suggestDashboardIcon(name).then((aiIcon) => {
+      if (aiIcon && aiIcon !== quickIcon) {
+        const items = [...config.primaryNav, ...config.secondaryNav]
+        const item = items.find(i => i.href === href && i.isCustom)
+        if (item) {
+          updateItem(item.id, { icon: aiIcon })
         }
-
-        // Add the new dashboard to sidebar
-        addItem({
-          name: name,
-          icon: 'LayoutDashboard',
-          href: `/custom-dashboard/${newDashboard.id}`,
-          type: 'link',
-        }, 'primary')
-
-        setIsCreateDashboardOpen(false)
       }
-    } catch (error) {
-      console.error('Failed to create dashboard:', error)
-    }
+    })
   }
 
   const renderIcon = (iconName: string, className?: string) => {

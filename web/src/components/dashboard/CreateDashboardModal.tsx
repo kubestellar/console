@@ -6,7 +6,7 @@ import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './t
 interface CreateDashboardModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreate: (name: string, template?: DashboardTemplate) => void
+  onCreate: (name: string, template?: DashboardTemplate, description?: string) => void
   existingNames?: string[]
 }
 
@@ -17,6 +17,7 @@ export function CreateDashboardModal({
   existingNames = [],
 }: CreateDashboardModalProps) {
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
@@ -26,6 +27,7 @@ export function CreateDashboardModal({
   useEffect(() => {
     if (isOpen) {
       setName('')
+      setDescription('')
       setSelectedTemplate(null)
       setShowTemplates(false)
       setExpandedCategory(null)
@@ -47,7 +49,7 @@ export function CreateDashboardModal({
 
   const handleCreate = () => {
     const dashboardName = name.trim() || generateDefaultName()
-    onCreate(dashboardName, selectedTemplate || undefined)
+    onCreate(dashboardName, selectedTemplate || undefined, description.trim() || undefined)
     onClose()
   }
 
@@ -70,7 +72,7 @@ export function CreateDashboardModal({
 
       <BaseModal.Content>
         {/* Dashboard name input */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block text-sm font-medium text-foreground mb-2">
             Dashboard Name
           </label>
@@ -82,6 +84,20 @@ export function CreateDashboardModal({
             onKeyDown={handleKeyDown}
             placeholder={generateDefaultName()}
             className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+          />
+        </div>
+
+        {/* Description input (optional) */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Description <span className="text-muted-foreground font-normal">(optional)</span>
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this dashboard for?"
+            rows={2}
+            className="w-full px-4 py-3 bg-secondary/30 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent resize-none"
           />
         </div>
 

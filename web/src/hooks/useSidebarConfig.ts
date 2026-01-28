@@ -9,6 +9,7 @@ export interface SidebarItem {
   children?: SidebarItem[]
   cardType?: string // For mini cards
   isCustom?: boolean
+  description?: string
   order: number
 }
 
