@@ -599,7 +599,7 @@ function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontS
       )}
 
       {/* Main chat area */}
-      <div className={cn("flex flex-col flex-1 min-h-0", isFullScreen && "max-w-4xl")}>
+      <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header */}
       <div className="p-4 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-2 mb-2">
@@ -1193,7 +1193,7 @@ export function MissionSidebar() {
       ) : activeMission ? (
         <div className={cn(
           "flex-1 flex flex-col min-h-0",
-          isFullScreen && "max-w-6xl mx-auto w-full"
+          isFullScreen && "w-full"
         )}>
           {/* Back to list if multiple missions */}
           {missions.length > 1 && (
