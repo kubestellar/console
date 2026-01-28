@@ -458,6 +458,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'kube_kong', title: 'Kube Kong', position: { w: 4, h: 4 } },
       { card_type: 'pod_pitfall', title: 'Pod Pitfall', position: { w: 6, h: 4 } },
       { card_type: 'kube_man', title: 'Kube Man', position: { w: 6, h: 4 } },
+      { card_type: 'kube_doom', title: 'Kube Doom', position: { w: 6, h: 4 } },
     ],
   },
   {
@@ -500,6 +501,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'kube_craft', title: 'KubeCraft', position: { w: 4, h: 4 } },
       { card_type: 'kube_chess', title: 'Kube Chess', position: { w: 4, h: 4 } },
       { card_type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 4, h: 4 } },
+      { card_type: 'kube_doom', title: 'Kube Doom', position: { w: 6, h: 4 } },
     ],
   },
 

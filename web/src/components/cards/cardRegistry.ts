@@ -125,6 +125,8 @@ import { KubePong } from './KubePong'
 import { KubeSnake } from './KubeSnake'
 // Kube Galaga card
 import { KubeGalaga } from './KubeGalaga'
+// Kube Doom card
+import { KubeDoom } from './KubeDoom'
 // KubeCraft (Minecraft) card
 import { KubeCraft } from './KubeCraft'
 // Generic Iframe Embed card
@@ -293,6 +295,7 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   kube_pong: KubePong,
   kube_snake: KubeSnake,
   kube_galaga: KubeGalaga,
+  kube_doom: KubeDoom,
   kube_craft: KubeCraft,
   // Generic Iframe Embed card
   iframe_embed: IframeEmbed,
@@ -515,6 +518,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   kube_pong: 5,
   kube_snake: 5,
   kube_galaga: 5,
+  kube_doom: 6,
   kube_craft: 5,
   iframe_embed: 6,
   network_utils: 5,

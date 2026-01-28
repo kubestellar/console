@@ -7,7 +7,7 @@ Last Updated: 2026-01-23
 | Category | Count |
 |----------|-------|
 | Dashboard Pages | 20 (1 main + 19 dedicated) |
-| Card Types | 109 |
+| Card Types | 110 |
 | Cards with Drill-Down | 40 |
 | Drill-Down Views | 22 |
 | Modal Dialogs | 19 |
@@ -55,7 +55,7 @@ Last Updated: 2026-01-23
 
 ---
 
-## 2. Card Types (109 Total)
+## 2. Card Types (110 Total)
 
 ### Category: Cluster Health (8 cards)
 | # | Type | Title | Visualization |
@@ -225,7 +225,7 @@ Last Updated: 2026-01-23
 | 87 | `mobile_browser` | Mobile Browser | interactive |
 | 88 | `stock_market_ticker` | Stock Market Ticker | status |
 
-### Category: Games (21 cards)
+### Category: Games (22 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
 | 89 | `sudoku_game` | Sudoku Game | interactive |
@@ -249,6 +249,7 @@ Last Updated: 2026-01-23
 | 107 | `kube_craft` | KubeCraft | interactive |
 | 108 | `kube_chess` | Kube Chess | interactive |
 | 109 | `kube_craft_3d` | KubeCraft 3D | interactive |
+| 110 | `kube_doom` | Kube Doom | interactive |
 
 ---
 
