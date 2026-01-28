@@ -322,18 +322,16 @@ export function Dashboard() {
     } else {
       loadDashboard(false)
     }
-  }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Refetch cluster data when navigating back to the dashboard
-  // This ensures dashboard cards show up-to-date cluster counts after changes in other views
-  useEffect(() => {
+    
+    // Refetch cluster data when navigating back to the dashboard
+    // This ensures dashboard cards show up-to-date cluster counts after changes in other views
     // Skip initial mount to avoid double-fetching (useClusters already fetches on mount)
-    if (isInitialMountRef.current) {
+    if (!isInitialMountRef.current) {
+      refetch()
+    } else {
       isInitialMountRef.current = false
-      return
     }
-    refetch()
-  }, [location.key, refetch])
+  }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep cache and localStorage in sync when cards are modified locally
   useEffect(() => {
