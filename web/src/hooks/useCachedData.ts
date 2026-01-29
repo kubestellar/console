@@ -359,7 +359,12 @@ export function useCachedDeployments(
     enabled: !isDemoMode(),
     fetcher: async () => {
       const data = await fetchAPI<{ deployments: Deployment[] }>('deployments', { cluster, namespace })
-      return data.deployments || []
+      const deployments = data.deployments || []
+      // Ensure each deployment has cluster set when fetching for a specific cluster
+      if (cluster) {
+        return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
+      }
+      return deployments
     },
   })
 

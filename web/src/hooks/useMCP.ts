@@ -2680,7 +2680,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
 
         if (response.ok) {
           const data = await response.json()
-          const deployData = data.deployments || []
+          const deployData = (data.deployments || []).map((d: Deployment) => ({ ...d, cluster: d.cluster || cluster }))
           console.log(`[useDeployments] Got ${deployData.length} deployments for ${cluster} from local agent`)
           const now = new Date()
           // Update cache
@@ -2720,11 +2720,12 @@ export function useDeployments(cluster?: string, namespace?: string) {
         const deployData = await Promise.race([deployPromise, timeoutPromise])
 
         if (deployData && deployData.length >= 0) {
-          console.log(`[useDeployments] Got ${deployData.length} deployments for ${cluster} from kubectl proxy`)
+          const enriched = deployData.map((d: Deployment) => ({ ...d, cluster: d.cluster || cluster }))
+          console.log(`[useDeployments] Got ${enriched.length} deployments for ${cluster} from kubectl proxy`)
           const now = new Date()
           // Update cache
-          deploymentsCache = { data: deployData, timestamp: now, key: cacheKey }
-          setDeployments(deployData)
+          deploymentsCache = { data: enriched, timestamp: now, key: cacheKey }
+          setDeployments(enriched)
           setError(null)
           setLastUpdated(now)
           setConsecutiveFailures(0)
@@ -2765,7 +2766,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
         throw new Error(`API error: ${response.status}`)
       }
       const data = await response.json() as { deployments: Deployment[] }
-      const newDeployments = data.deployments || []
+      const newDeployments = (data.deployments || []).map(d => ({ ...d, cluster: d.cluster || cluster || 'unknown' }))
       setDeployments(newDeployments)
       setError(null)
       const now = new Date()

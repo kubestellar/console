@@ -47,7 +47,7 @@ interface NamespaceAccessEntry {
 const namespaceCache = new Map<string, NamespaceDetails[]>()
 
 export function NamespaceManager() {
-  const { clusters, isLoading: clustersLoading } = useClusters()
+  const { clusters, deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   // Note: We don't check permissions upfront - the API will return auth errors for inaccessible clusters
   const [allNamespaces, setAllNamespaces] = useState<NamespaceDetails[]>([])
@@ -72,15 +72,15 @@ export function NamespaceManager() {
   const lastFetchKeyRef = useRef<string>('')
 
   // Get all available clusters
-  const allClusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
+  const allClusterNames = useMemo(() => deduplicatedClusters.map(c => c.name), [deduplicatedClusters])
 
   // Get target clusters based on global filter selection
   // We don't check permissions upfront - let the API handle auth errors per-cluster
   const targetClusters = useMemo(() => {
     return isAllClustersSelected
-      ? clusters.map(c => c.name)
+      ? deduplicatedClusters.map(c => c.name)
       : selectedClusters
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
 
   // Filter namespaces from cache based on selected clusters (no refetch needed)

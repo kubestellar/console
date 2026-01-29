@@ -342,6 +342,10 @@ class CacheStore<T> {
           isLoading: false,
           lastRefresh: entry.timestamp,
         })
+      } else {
+        // No IDB data — set lastRefresh so cards don't show "Never refreshed"
+        // while the first fetch is in flight
+        this.setState({ lastRefresh: Date.now() })
       }
     } catch {
       // Ignore errors, will use initial data

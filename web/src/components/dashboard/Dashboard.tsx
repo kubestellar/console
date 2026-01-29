@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { GripVertical, AlertTriangle, X } from 'lucide-react'
 import {
   DndContext,
@@ -91,6 +91,7 @@ export function Dashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(() => dashboardCache?.dashboard || null)
   const [isLoading, setIsLoading] = useState(() => !dashboardCache) // Only show loading if no cache
   const location = useLocation()
+  const navigate = useNavigate()
   const [isReplaceCardOpen, setIsReplaceCardOpen] = useState(false)
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
@@ -156,6 +157,7 @@ export function Dashboard() {
   const unhealthyClusters = clusters.filter(c => !c.healthy).length
   const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
   const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const totalNamespaces = clusters.reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
@@ -169,13 +171,13 @@ export function Dashboard() {
       case 'errors':
         return { value: unhealthyClusters, sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
       case 'namespaces':
-        return { value: totalNodes, sublabel: 'nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return { value: totalNamespaces, sublabel: 'namespaces', onClick: () => navigate('/namespaces'), isClickable: totalNamespaces > 0 }
       case 'pods':
         return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       default:
         return { value: '-' }
     }
-  }, [clusters, healthyClusters, unhealthyClusters, totalNodes, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods])
+  }, [clusters, healthyClusters, unhealthyClusters, totalNodes, totalNamespaces, totalPods, drillToAllClusters, drillToAllNodes, drillToAllPods, navigate])
 
   // Merged getter: dashboard-specific values first, then universal fallback
   const getStatValue = useCallback(
