@@ -12,17 +12,32 @@ import {
   ChevronRight,
   Loader2,
   Rocket,
+  RefreshCw,
+  Zap,
+  Sparkles,
+  Search,
+  Tag,
+  Filter,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { useClusterGroups, ClusterGroup } from '../../hooks/useClusterGroups'
+import {
+  useClusterGroups,
+  type ClusterGroup,
+  type ClusterGroupKind,
+  type ClusterFilter,
+  type ClusterGroupQuery,
+} from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
 }
 
-// Group color options
+// ============================================================================
+// Constants
+// ============================================================================
+
 const GROUP_COLORS = [
   { name: 'blue', bg: 'bg-blue-500/20', border: 'border-blue-500/40', text: 'text-blue-400', dot: 'bg-blue-500' },
   { name: 'green', bg: 'bg-green-500/20', border: 'border-green-500/40', text: 'text-green-400', dot: 'bg-green-500' },
@@ -32,16 +47,53 @@ const GROUP_COLORS = [
   { name: 'rose', bg: 'bg-rose-500/20', border: 'border-rose-500/40', text: 'text-rose-400', dot: 'bg-rose-500' },
 ]
 
+const FILTER_FIELDS = [
+  { field: 'healthy', label: 'Healthy', type: 'bool' as const },
+  { field: 'reachable', label: 'Reachable', type: 'bool' as const },
+  { field: 'cpuCores', label: 'CPU Cores', type: 'number' as const },
+  { field: 'memoryGB', label: 'Memory (GB)', type: 'number' as const },
+  { field: 'nodeCount', label: 'Nodes', type: 'number' as const },
+  { field: 'podCount', label: 'Pods', type: 'number' as const },
+]
+
+const NUM_OPERATORS = [
+  { value: 'gt', label: '>' },
+  { value: 'gte', label: '>=' },
+  { value: 'lt', label: '<' },
+  { value: 'lte', label: '<=' },
+  { value: 'eq', label: '=' },
+]
+
 function getGroupColor(colorName?: string) {
   return GROUP_COLORS.find(c => c.name === colorName) || GROUP_COLORS[0]
 }
 
+function formatFilter(f: ClusterFilter): string {
+  const field = FILTER_FIELDS.find(ff => ff.field === f.field)?.label ?? f.field
+  const op = NUM_OPERATORS.find(o => o.value === f.operator)?.label ?? f.operator
+  return `${field} ${op} ${f.value}`
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const secs = Math.floor(diff / 1000)
+  if (secs < 60) return `${secs}s ago`
+  const mins = Math.floor(secs / 60)
+  if (mins < 60) return `${mins}m ago`
+  return `${Math.floor(mins / 60)}h ago`
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export function ClusterGroups(_props: ClusterGroupsProps) {
-  const { groups, createGroup, updateGroup, deleteGroup } = useClusterGroups()
+  const { groups, createGroup, updateGroup, deleteGroup, evaluateGroup } = useClusterGroups()
   const { deduplicatedClusters: clusters } = useClusters()
   const [isCreating, setIsCreating] = useState(false)
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [refreshing, setRefreshing] = useState<Set<string>>(new Set())
 
   const toggleExpanded = useCallback((name: string) => {
     setExpandedGroups(prev => {
@@ -51,6 +103,16 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
       return next
     })
   }, [])
+
+  const handleRefreshGroup = useCallback(async (name: string) => {
+    setRefreshing(prev => new Set(prev).add(name))
+    await evaluateGroup(name)
+    setRefreshing(prev => {
+      const next = new Set(prev)
+      next.delete(name)
+      return next
+    })
+  }, [evaluateGroup])
 
   const availableClusterNames = clusters.map(c => c.name)
 
@@ -115,10 +177,12 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
                 key={group.name}
                 group={group}
                 isExpanded={expandedGroups.has(group.name)}
+                isRefreshing={refreshing.has(group.name)}
                 clusterHealthMap={new Map(clusters.map(c => [c.name, c.healthy]))}
                 onToggle={() => toggleExpanded(group.name)}
                 onEdit={() => setEditingGroup(group.name)}
                 onDelete={() => deleteGroup(group.name)}
+                onRefresh={() => handleRefreshGroup(group.name)}
               />
             )
           ))}
@@ -142,13 +206,15 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
 interface DroppableGroupProps {
   group: ClusterGroup
   isExpanded: boolean
+  isRefreshing: boolean
   clusterHealthMap: Map<string, boolean>
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
+  onRefresh: () => void
 }
 
-function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit, onDelete }: DroppableGroupProps) {
+function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onToggle, onEdit, onDelete, onRefresh }: DroppableGroupProps) {
   const { isOver, setNodeRef } = useDroppable({
     id: `cluster-group-${group.name}`,
     data: {
@@ -160,6 +226,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
 
   const color = getGroupColor(group.color)
   const healthyCount = group.clusters.filter(c => clusterHealthMap.get(c) !== false).length
+  const isDynamic = group.kind === 'dynamic'
 
   return (
     <div
@@ -186,15 +253,33 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
         {/* Color dot */}
         <div className={cn('w-2 h-2 rounded-full', color.dot)} />
 
-        {/* Group name */}
-        <span className={cn('text-sm font-medium flex-1', color.text)}>
+        {/* Group name + dynamic badge */}
+        <span className={cn('text-sm font-medium flex-1 flex items-center gap-1.5', color.text)}>
           {group.name}
+          {isDynamic && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
+              <Zap className="w-2.5 h-2.5" />
+              dynamic
+            </span>
+          )}
         </span>
 
         {/* Cluster count + health */}
         <span className="text-[10px] text-gray-500">
           {healthyCount}/{group.clusters.length} healthy
         </span>
+
+        {/* Dynamic: refresh button */}
+        {isDynamic && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRefresh() }}
+            disabled={isRefreshing}
+            className="p-1 rounded hover:bg-white/10 text-purple-400 hover:text-purple-300 transition-colors"
+            title={group.lastEvaluated ? `Last evaluated: ${relativeTime(group.lastEvaluated)}` : 'Evaluate query'}
+          >
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
+          </button>
+        )}
 
         {/* Drop indicator */}
         {isOver && (
@@ -220,9 +305,31 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
         </div>
       </div>
 
-      {/* Expanded cluster list */}
+      {/* Expanded: cluster list + query info for dynamic groups */}
       {isExpanded && (
-        <div className="px-3 pb-2 pt-1 border-t border-gray-800/50">
+        <div className="px-3 pb-2 pt-1 border-t border-gray-800/50 space-y-2">
+          {/* Dynamic: show query summary */}
+          {isDynamic && group.query && (
+            <div className="text-[10px] text-gray-500 space-y-0.5">
+              {group.query.labelSelector && (
+                <div className="flex items-center gap-1">
+                  <Tag className="w-2.5 h-2.5" />
+                  <span className="font-mono">{group.query.labelSelector}</span>
+                </div>
+              )}
+              {group.query.filters?.map((f, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <Filter className="w-2.5 h-2.5" />
+                  <span>{formatFilter(f)}</span>
+                </div>
+              ))}
+              {group.lastEvaluated && (
+                <div className="text-gray-600">Evaluated {relativeTime(group.lastEvaluated)}</div>
+              )}
+            </div>
+          )}
+
+          {/* Cluster badges */}
           <div className="flex flex-wrap gap-1.5">
             {group.clusters.map(cluster => {
               const healthy = clusterHealthMap.get(cluster)
@@ -236,6 +343,9 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
                 </div>
               )
             })}
+            {group.clusters.length === 0 && (
+              <span className="text-xs text-gray-600 italic">No clusters match</span>
+            )}
           </div>
         </div>
       )}
@@ -255,9 +365,25 @@ interface CreateGroupFormProps {
 }
 
 function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel }: CreateGroupFormProps) {
+  const { previewQuery, generateAIQuery } = useClusterGroups()
   const [name, setName] = useState('')
-  const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set())
   const [selectedColor, setSelectedColor] = useState('blue')
+  const [kind, setKind] = useState<ClusterGroupKind>('static')
+
+  // Static mode state
+  const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set())
+
+  // Dynamic mode state
+  const [dynamicTab, setDynamicTab] = useState<'builder' | 'ai'>('builder')
+  const [labelSelector, setLabelSelector] = useState('')
+  const [filters, setFilters] = useState<ClusterFilter[]>([])
+  const [previewClusters, setPreviewClusters] = useState<string[] | null>(null)
+  const [isPreviewing, setIsPreviewing] = useState(false)
+
+  // AI state
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   const toggleCluster = (cluster: string) => {
     setSelectedClusters(prev => {
@@ -268,13 +394,78 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
     })
   }
 
+  const buildQuery = (): ClusterGroupQuery => ({
+    labelSelector: labelSelector.trim() || undefined,
+    filters: filters.length > 0 ? filters : undefined,
+  })
+
+  const handlePreview = async () => {
+    setIsPreviewing(true)
+    const result = await previewQuery(buildQuery())
+    setPreviewClusters(result.clusters)
+    setIsPreviewing(false)
+  }
+
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) return
+    setAiLoading(true)
+    setAiError(null)
+    const result = await generateAIQuery(aiPrompt.trim())
+    if (result.error) {
+      setAiError(result.error)
+    } else if (result.query) {
+      setLabelSelector(result.query.labelSelector ?? '')
+      setFilters(result.query.filters ?? [])
+      if (result.suggestedName && !name) {
+        setName(result.suggestedName)
+      }
+      setDynamicTab('builder')
+      // Auto-preview
+      setIsPreviewing(true)
+      const preview = await previewQuery(result.query)
+      setPreviewClusters(preview.clusters)
+      setIsPreviewing(false)
+    }
+    setAiLoading(false)
+  }
+
+  const addFilter = () => {
+    setFilters(prev => [...prev, { field: 'healthy', operator: 'eq', value: 'true' }])
+  }
+
+  const removeFilter = (index: number) => {
+    setFilters(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateFilter = (index: number, updates: Partial<ClusterFilter>) => {
+    setFilters(prev => prev.map((f, i) => i === index ? { ...f, ...updates } : f))
+  }
+
+  const canSave = name.trim() && (
+    kind === 'static'
+      ? selectedClusters.size > 0
+      : (labelSelector.trim() || filters.length > 0)
+  )
+
   const handleSave = () => {
-    if (!name.trim() || selectedClusters.size === 0) return
-    onSave({
-      name: name.trim(),
-      clusters: Array.from(selectedClusters),
-      color: selectedColor,
-    })
+    if (!canSave) return
+    if (kind === 'static') {
+      onSave({
+        name: name.trim(),
+        kind: 'static',
+        clusters: Array.from(selectedClusters),
+        color: selectedColor,
+      })
+    } else {
+      onSave({
+        name: name.trim(),
+        kind: 'dynamic',
+        clusters: previewClusters ?? [],
+        color: selectedColor,
+        query: buildQuery(),
+        lastEvaluated: previewClusters ? new Date().toISOString() : undefined,
+      })
+    }
   }
 
   return (
@@ -312,64 +503,379 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
         ))}
       </div>
 
-      {/* Cluster selection */}
-      <div>
-        <span className="text-[10px] text-gray-500 block mb-1.5">
-          Select clusters ({selectedClusters.size} selected)
-        </span>
-        <div className="max-h-32 overflow-y-auto space-y-1">
-          {availableClusters.length === 0 ? (
-            <div className="flex items-center gap-2 py-2 text-xs text-gray-500">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading clusters...
-            </div>
-          ) : (
-            availableClusters.map(cluster => {
-              const healthy = clusterHealthMap.get(cluster)
-              const isSelected = selectedClusters.has(cluster)
-              return (
-                <button
-                  key={cluster}
-                  onClick={() => toggleCluster(cluster)}
-                  className={cn(
-                    'flex items-center gap-2 w-full px-2 py-1 rounded text-left text-xs transition-colors',
-                    isSelected
-                      ? 'bg-blue-500/20 text-blue-300'
-                      : 'hover:bg-gray-800/50 text-gray-400'
-                  )}
-                >
-                  <div className={cn(
-                    'w-3.5 h-3.5 rounded border flex items-center justify-center',
-                    isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-600'
-                  )}>
-                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                  </div>
-                  <div className={cn(
-                    'w-1.5 h-1.5 rounded-full',
-                    healthy === false ? 'bg-red-500' : 'bg-green-500'
-                  )} />
-                  <Server className="w-3 h-3" />
-                  <span className="truncate">{cluster}</span>
-                </button>
-              )
-            })
+      {/* Static / Dynamic toggle */}
+      <div className="flex rounded-md overflow-hidden border border-gray-700">
+        <button
+          onClick={() => setKind('static')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            kind === 'static'
+              ? 'bg-blue-500/20 text-blue-400'
+              : 'bg-gray-900/30 text-gray-500 hover:text-gray-400'
           )}
-        </div>
+        >
+          <Server className="w-3 h-3" />
+          Static
+        </button>
+        <button
+          onClick={() => setKind('dynamic')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            kind === 'dynamic'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'bg-gray-900/30 text-gray-500 hover:text-gray-400'
+          )}
+        >
+          <Zap className="w-3 h-3" />
+          Dynamic
+        </button>
       </div>
+
+      {/* Static mode: cluster picker */}
+      {kind === 'static' && (
+        <StaticClusterPicker
+          availableClusters={availableClusters}
+          clusterHealthMap={clusterHealthMap}
+          selectedClusters={selectedClusters}
+          onToggle={toggleCluster}
+          accentColor="blue"
+        />
+      )}
+
+      {/* Dynamic mode: query builder or AI */}
+      {kind === 'dynamic' && (
+        <div className="space-y-2">
+          {/* Builder / AI tabs */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => setDynamicTab('builder')}
+              className={cn(
+                'flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded transition-colors',
+                dynamicTab === 'builder'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'text-gray-500 hover:text-gray-400'
+              )}
+            >
+              <Search className="w-2.5 h-2.5" />
+              Query Builder
+            </button>
+            <button
+              onClick={() => setDynamicTab('ai')}
+              className={cn(
+                'flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded transition-colors',
+                dynamicTab === 'ai'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'text-gray-500 hover:text-gray-400'
+              )}
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              AI Assistant
+            </button>
+          </div>
+
+          {dynamicTab === 'builder' ? (
+            <QueryBuilder
+              labelSelector={labelSelector}
+              onLabelSelectorChange={setLabelSelector}
+              filters={filters}
+              onAddFilter={addFilter}
+              onRemoveFilter={removeFilter}
+              onUpdateFilter={updateFilter}
+            />
+          ) : (
+            <AIAssistant
+              prompt={aiPrompt}
+              onPromptChange={setAiPrompt}
+              onGenerate={handleAIGenerate}
+              loading={aiLoading}
+              error={aiError}
+            />
+          )}
+
+          {/* Preview button + results */}
+          <div className="space-y-1.5">
+            <button
+              onClick={handlePreview}
+              disabled={isPreviewing || (!labelSelector.trim() && filters.length === 0)}
+              className={cn(
+                'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
+                (!labelSelector.trim() && filters.length === 0)
+                  ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                  : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+              )}
+            >
+              {isPreviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+              Preview Matches
+            </button>
+            {previewClusters !== null && (
+              <div className="text-[10px] text-gray-400">
+                {previewClusters.length} cluster{previewClusters.length !== 1 ? 's' : ''} match:
+                <span className="ml-1 text-purple-400">
+                  {previewClusters.length > 0 ? previewClusters.join(', ') : 'none'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Save button */}
       <button
         onClick={handleSave}
-        disabled={!name.trim() || selectedClusters.size === 0}
+        disabled={!canSave}
         className={cn(
           'w-full py-1.5 text-xs font-medium rounded-md transition-colors',
-          name.trim() && selectedClusters.size > 0
-            ? 'bg-blue-500 text-white hover:bg-blue-600'
+          canSave
+            ? kind === 'dynamic'
+              ? 'bg-purple-500 text-white hover:bg-purple-600'
+              : 'bg-blue-500 text-white hover:bg-blue-600'
             : 'bg-gray-800 text-gray-600 cursor-not-allowed'
         )}
       >
-        Create Group
+        Create {kind === 'dynamic' ? 'Dynamic' : ''} Group
       </button>
+    </div>
+  )
+}
+
+// ============================================================================
+// Shared: Static Cluster Picker
+// ============================================================================
+
+function StaticClusterPicker({
+  availableClusters,
+  clusterHealthMap,
+  selectedClusters,
+  onToggle,
+  accentColor,
+}: {
+  availableClusters: string[]
+  clusterHealthMap: Map<string, boolean>
+  selectedClusters: Set<string>
+  onToggle: (cluster: string) => void
+  accentColor: 'blue' | 'yellow'
+}) {
+  const accent = accentColor === 'blue'
+    ? { selected: 'bg-blue-500/20 text-blue-300', check: 'border-blue-500 bg-blue-500' }
+    : { selected: 'bg-yellow-500/20 text-yellow-300', check: 'border-yellow-500 bg-yellow-500' }
+
+  return (
+    <div>
+      <span className="text-[10px] text-gray-500 block mb-1.5">
+        Select clusters ({selectedClusters.size} selected)
+      </span>
+      <div className="max-h-32 overflow-y-auto space-y-1">
+        {availableClusters.length === 0 ? (
+          <div className="flex items-center gap-2 py-2 text-xs text-gray-500">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Loading clusters...
+          </div>
+        ) : (
+          availableClusters.map(cluster => {
+            const healthy = clusterHealthMap.get(cluster)
+            const isSelected = selectedClusters.has(cluster)
+            return (
+              <button
+                key={cluster}
+                onClick={() => onToggle(cluster)}
+                className={cn(
+                  'flex items-center gap-2 w-full px-2 py-1 rounded text-left text-xs transition-colors',
+                  isSelected ? accent.selected : 'hover:bg-gray-800/50 text-gray-400'
+                )}
+              >
+                <div className={cn(
+                  'w-3.5 h-3.5 rounded border flex items-center justify-center',
+                  isSelected ? accent.check : 'border-gray-600'
+                )}>
+                  {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                </div>
+                <div className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  healthy === false ? 'bg-red-500' : 'bg-green-500'
+                )} />
+                <Server className="w-3 h-3" />
+                <span className="truncate">{cluster}</span>
+              </button>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// Query Builder
+// ============================================================================
+
+function QueryBuilder({
+  labelSelector,
+  onLabelSelectorChange,
+  filters,
+  onAddFilter,
+  onRemoveFilter,
+  onUpdateFilter,
+}: {
+  labelSelector: string
+  onLabelSelectorChange: (v: string) => void
+  filters: ClusterFilter[]
+  onAddFilter: () => void
+  onRemoveFilter: (i: number) => void
+  onUpdateFilter: (i: number, updates: Partial<ClusterFilter>) => void
+}) {
+  return (
+    <div className="space-y-2">
+      {/* Label selector */}
+      <div>
+        <label className="flex items-center gap-1 text-[10px] text-gray-500 mb-1">
+          <Tag className="w-2.5 h-2.5" />
+          Label Selector
+        </label>
+        <input
+          type="text"
+          value={labelSelector}
+          onChange={(e) => onLabelSelectorChange(e.target.value)}
+          placeholder="e.g. topology.kubernetes.io/zone in (us-east-1a)"
+          className="w-full px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 border border-gray-700 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
+        />
+      </div>
+
+      {/* Resource filters */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="flex items-center gap-1 text-[10px] text-gray-500">
+            <Filter className="w-2.5 h-2.5" />
+            Resource Filters
+          </label>
+          <button
+            onClick={onAddFilter}
+            className="flex items-center gap-0.5 text-[10px] text-purple-400 hover:text-purple-300"
+          >
+            <Plus className="w-2.5 h-2.5" />
+            Add
+          </button>
+        </div>
+        <div className="space-y-1.5">
+          {filters.map((f, i) => {
+            const fieldDef = FILTER_FIELDS.find(ff => ff.field === f.field)
+            const isBool = fieldDef?.type === 'bool'
+            return (
+              <div key={i} className="flex items-center gap-1.5">
+                {/* Field */}
+                <select
+                  value={f.field}
+                  onChange={(e) => {
+                    const newField = FILTER_FIELDS.find(ff => ff.field === e.target.value)
+                    if (newField?.type === 'bool') {
+                      onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: 'true' })
+                    } else {
+                      onUpdateFilter(i, { field: e.target.value, operator: 'gte', value: '1' })
+                    }
+                  }}
+                  className="flex-1 px-1.5 py-1 text-[10px] rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                >
+                  {FILTER_FIELDS.map(ff => (
+                    <option key={ff.field} value={ff.field}>{ff.label}</option>
+                  ))}
+                </select>
+
+                {isBool ? (
+                  // Bool: just a toggle
+                  <select
+                    value={f.value}
+                    onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
+                    className="w-16 px-1.5 py-1 text-[10px] rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                  </select>
+                ) : (
+                  <>
+                    {/* Operator */}
+                    <select
+                      value={f.operator}
+                      onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
+                      className="w-12 px-1 py-1 text-[10px] rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                    >
+                      {NUM_OPERATORS.map(op => (
+                        <option key={op.value} value={op.value}>{op.label}</option>
+                      ))}
+                    </select>
+                    {/* Value */}
+                    <input
+                      type="number"
+                      value={f.value}
+                      onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
+                      className="w-14 px-1.5 py-1 text-[10px] rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                    />
+                  </>
+                )}
+
+                {/* Remove */}
+                <button
+                  onClick={() => onRemoveFilter(i)}
+                  className="p-0.5 rounded hover:bg-red-500/20 text-gray-500 hover:text-red-400"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )
+          })}
+          {filters.length === 0 && (
+            <p className="text-[10px] text-gray-600 italic">No filters — add one above</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// AI Assistant
+// ============================================================================
+
+function AIAssistant({
+  prompt,
+  onPromptChange,
+  onGenerate,
+  loading,
+  error,
+}: {
+  prompt: string
+  onPromptChange: (v: string) => void
+  onGenerate: () => void
+  loading: boolean
+  error: string | null
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-1 text-[10px] text-gray-500">
+        <Sparkles className="w-2.5 h-2.5" />
+        Describe the clusters you want
+      </label>
+      <textarea
+        value={prompt}
+        onChange={(e) => onPromptChange(e.target.value)}
+        placeholder='e.g. "Healthy clusters with at least 4 CPU cores"'
+        rows={2}
+        className="w-full px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 border border-gray-700 text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-purple-500 resize-none"
+      />
+      <button
+        onClick={onGenerate}
+        disabled={loading || !prompt.trim()}
+        className={cn(
+          'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
+          loading || !prompt.trim()
+            ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+            : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+        )}
+      >
+        {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+        {loading ? 'Generating...' : 'Generate Query'}
+      </button>
+      {error && (
+        <p className="text-[10px] text-red-400">{error}</p>
+      )}
     </div>
   )
 }
@@ -387,8 +893,14 @@ interface EditGroupFormProps {
 }
 
 function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onCancel }: EditGroupFormProps) {
+  const { previewQuery } = useClusterGroups()
   const [selectedClusters, setSelectedClusters] = useState<Set<string>>(new Set(group.clusters))
   const [selectedColor, setSelectedColor] = useState(group.color || 'blue')
+  const [kind, setKind] = useState<ClusterGroupKind>(group.kind || 'static')
+  const [labelSelector, setLabelSelector] = useState(group.query?.labelSelector ?? '')
+  const [filters, setFilters] = useState<ClusterFilter[]>(group.query?.filters ?? [])
+  const [previewClusters, setPreviewClusters] = useState<string[] | null>(null)
+  const [isPreviewing, setIsPreviewing] = useState(false)
 
   const toggleCluster = (cluster: string) => {
     setSelectedClusters(prev => {
@@ -399,12 +911,42 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
     })
   }
 
+  const buildQuery = (): ClusterGroupQuery => ({
+    labelSelector: labelSelector.trim() || undefined,
+    filters: filters.length > 0 ? filters : undefined,
+  })
+
+  const handlePreview = async () => {
+    setIsPreviewing(true)
+    const result = await previewQuery(buildQuery())
+    setPreviewClusters(result.clusters)
+    setIsPreviewing(false)
+  }
+
+  const addFilter = () => setFilters(prev => [...prev, { field: 'healthy', operator: 'eq', value: 'true' }])
+  const removeFilter = (i: number) => setFilters(prev => prev.filter((_, idx) => idx !== i))
+  const updateFilter = (i: number, updates: Partial<ClusterFilter>) => {
+    setFilters(prev => prev.map((f, idx) => idx === i ? { ...f, ...updates } : f))
+  }
+
   const handleSave = () => {
-    if (selectedClusters.size === 0) return
-    onSave({
-      clusters: Array.from(selectedClusters),
-      color: selectedColor,
-    })
+    if (kind === 'static') {
+      if (selectedClusters.size === 0) return
+      onSave({
+        kind: 'static',
+        clusters: Array.from(selectedClusters),
+        color: selectedColor,
+        query: undefined,
+      })
+    } else {
+      onSave({
+        kind: 'dynamic',
+        clusters: previewClusters ?? group.clusters,
+        color: selectedColor,
+        query: buildQuery(),
+        lastEvaluated: previewClusters ? new Date().toISOString() : group.lastEvaluated,
+      })
+    }
   }
 
   return (
@@ -432,45 +974,81 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
         ))}
       </div>
 
-      {/* Cluster selection */}
-      <div>
-        <span className="text-[10px] text-gray-500 block mb-1.5">
-          Clusters ({selectedClusters.size} selected)
-        </span>
-        <div className="max-h-32 overflow-y-auto space-y-1">
-          {availableClusters.map(cluster => {
-            const healthy = clusterHealthMap.get(cluster)
-            const isSelected = selectedClusters.has(cluster)
-            return (
-              <button
-                key={cluster}
-                onClick={() => toggleCluster(cluster)}
-                className={cn(
-                  'flex items-center gap-2 w-full px-2 py-1 rounded text-left text-xs transition-colors',
-                  isSelected
-                    ? 'bg-yellow-500/20 text-yellow-300'
-                    : 'hover:bg-gray-800/50 text-gray-400'
-                )}
-              >
-                <div className={cn(
-                  'w-3.5 h-3.5 rounded border flex items-center justify-center',
-                  isSelected ? 'border-yellow-500 bg-yellow-500' : 'border-gray-600'
-                )}>
-                  {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                </div>
-                <div className={cn(
-                  'w-1.5 h-1.5 rounded-full',
-                  healthy === false ? 'bg-red-500' : 'bg-green-500'
-                )} />
-                <Server className="w-3 h-3" />
-                <span className="truncate">{cluster}</span>
-              </button>
-            )
-          })}
-        </div>
+      {/* Static / Dynamic toggle */}
+      <div className="flex rounded-md overflow-hidden border border-gray-700">
+        <button
+          onClick={() => setKind('static')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            kind === 'static'
+              ? 'bg-yellow-500/20 text-yellow-400'
+              : 'bg-gray-900/30 text-gray-500 hover:text-gray-400'
+          )}
+        >
+          <Server className="w-3 h-3" />
+          Static
+        </button>
+        <button
+          onClick={() => setKind('dynamic')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            kind === 'dynamic'
+              ? 'bg-purple-500/20 text-purple-400'
+              : 'bg-gray-900/30 text-gray-500 hover:text-gray-400'
+          )}
+        >
+          <Zap className="w-3 h-3" />
+          Dynamic
+        </button>
       </div>
 
-      {/* Save button */}
+      {/* Static: cluster picker */}
+      {kind === 'static' && (
+        <StaticClusterPicker
+          availableClusters={availableClusters}
+          clusterHealthMap={clusterHealthMap}
+          selectedClusters={selectedClusters}
+          onToggle={toggleCluster}
+          accentColor="yellow"
+        />
+      )}
+
+      {/* Dynamic: query builder */}
+      {kind === 'dynamic' && (
+        <div className="space-y-2">
+          <QueryBuilder
+            labelSelector={labelSelector}
+            onLabelSelectorChange={setLabelSelector}
+            filters={filters}
+            onAddFilter={addFilter}
+            onRemoveFilter={removeFilter}
+            onUpdateFilter={updateFilter}
+          />
+          <button
+            onClick={handlePreview}
+            disabled={isPreviewing || (!labelSelector.trim() && filters.length === 0)}
+            className={cn(
+              'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
+              (!labelSelector.trim() && filters.length === 0)
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+            )}
+          >
+            {isPreviewing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+            Preview Matches
+          </button>
+          {previewClusters !== null && (
+            <div className="text-[10px] text-gray-400">
+              {previewClusters.length} cluster{previewClusters.length !== 1 ? 's' : ''} match:
+              <span className="ml-1 text-purple-400">
+                {previewClusters.length > 0 ? previewClusters.join(', ') : 'none'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Save / Cancel */}
       <div className="flex gap-2">
         <button
           onClick={onCancel}
@@ -480,13 +1058,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
         </button>
         <button
           onClick={handleSave}
-          disabled={selectedClusters.size === 0}
-          className={cn(
-            'flex-1 py-1.5 text-xs font-medium rounded-md transition-colors',
-            selectedClusters.size > 0
-              ? 'bg-yellow-500 text-black hover:bg-yellow-400'
-              : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-          )}
+          className="flex-1 py-1.5 text-xs font-medium rounded-md bg-yellow-500 text-black hover:bg-yellow-400 transition-colors"
         >
           Save
         </button>
