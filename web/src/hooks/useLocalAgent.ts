@@ -336,15 +336,15 @@ export function useLocalAgent() {
   const installInstructions = {
     title: 'Install Local Agent',
     description:
-      'To connect to your local kubeconfig and Claude Code, install the kkc-agent on your machine.',
+      'To connect to your local kubeconfig and Claude Code, install the ksc-agent on your machine.',
     steps: [
       {
         title: 'Install via Homebrew (macOS)',
-        command: 'brew install kubestellar/tap/kkc-agent && kkc-agent',
+        command: 'brew install kubestellar/tap/ksc-agent && ksc-agent',
       },
       {
         title: 'Or build from source',
-        command: 'go install github.com/kubestellar/console/cmd/kkc-agent@latest && kkc-agent',
+        command: 'go install github.com/kubestellar/console/cmd/ksc-agent@latest && ksc-agent',
       },
     ],
     benefits: [

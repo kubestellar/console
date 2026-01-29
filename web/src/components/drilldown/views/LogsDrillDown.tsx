@@ -23,7 +23,7 @@ Tail lines: ${tailLines}
 [2024-01-16 10:00:05] Ready to accept connections
 
 Note: Live log streaming coming soon.
-Connect to klaude-ops MCP server to fetch real logs.`
+Connect to kubestellar-ops MCP server to fetch real logs.`
 
   return (
     <div className="space-y-4">

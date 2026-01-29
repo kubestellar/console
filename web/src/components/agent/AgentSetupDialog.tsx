@@ -5,8 +5,8 @@ import { Download } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { BaseModal } from '../../lib/modals'
 
-const DISMISSED_KEY = 'kkc-agent-setup-dismissed'
-const SNOOZED_KEY = 'kkc-agent-setup-snoozed'
+const DISMISSED_KEY = 'ksc-agent-setup-dismissed'
+const SNOOZED_KEY = 'ksc-agent-setup-snoozed'
 const SNOOZE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
 export function AgentSetupDialog() {
@@ -14,7 +14,7 @@ export function AgentSetupDialog() {
   const [show, setShow] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const installCommand = 'brew install kubestellar/tap/kkc-agent && kkc-agent'
+  const installCommand = 'brew install kubestellar/tap/ksc-agent && ksc-agent'
 
   useEffect(() => {
     // Only show after initial connection check completes

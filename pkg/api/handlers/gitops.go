@@ -470,7 +470,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "repoUrl is required"})
 	}
 
-	// Try MCP bridge first (detect_drift tool from klaude-ops)
+	// Try MCP bridge first (detect_drift tool from kubestellar-ops)
 	if h.bridge != nil {
 		result, err := h.detectDriftViaMCP(c.Context(), req)
 		if err == nil {
@@ -488,7 +488,7 @@ func (h *GitOpsHandlers) DetectDrift(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-// detectDriftViaMCP uses the klaude-ops detect_drift tool
+// detectDriftViaMCP uses the kubestellar-ops detect_drift tool
 func (h *GitOpsHandlers) detectDriftViaMCP(ctx context.Context, req DetectDriftRequest) (*DetectDriftResponse, error) {
 	args := map[string]interface{}{
 		"repo_url": req.RepoURL,
@@ -649,7 +649,7 @@ func (h *GitOpsHandlers) Sync(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-// syncViaMCP uses klaude-deploy for sync
+// syncViaMCP uses kubestellar-deploy for sync
 func (h *GitOpsHandlers) syncViaMCP(ctx context.Context, req SyncRequest) (*SyncResponse, error) {
 	args := map[string]interface{}{
 		"repo_url": req.RepoURL,

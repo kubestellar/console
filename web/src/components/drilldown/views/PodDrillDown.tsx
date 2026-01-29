@@ -6,7 +6,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Box, Layers, Server, AlertTriangle, Pencil, Trash2, Plus, Save, X, RefreshCw, Stethoscope, Wrench, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { KlaudeIcon } from '../../ui/KlaudeIcon'
+import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 
 // Helper to determine issue severity for styling
 const getIssueSeverity = (issue: string): 'critical' | 'warning' | 'info' => {
@@ -250,7 +250,7 @@ export function PodDrillDown({ data }: Props) {
     if (passedAnnotations) setAnnotations(passedAnnotations)
   }, [passedLabels, passedAnnotations])
 
-  // Fetch pod describe output via KKC agent
+  // Fetch pod describe output via local agent
   const fetchDescribe = async (force = false) => {
     if (!agentConnected || (!force && describeOutput)) return
     setDescribeLoading(true)
@@ -313,7 +313,7 @@ export function PodDrillDown({ data }: Props) {
     }
   }
 
-  // Fetch pod logs via KKC agent
+  // Fetch pod logs via local agent
   const fetchLogs = async (force = false) => {
     if (!agentConnected || (!force && logsOutput)) return
     setLogsLoading(true)
@@ -348,7 +348,7 @@ export function PodDrillDown({ data }: Props) {
     }
   }
 
-  // Fetch pod events via KKC agent
+  // Fetch pod events via local agent
   const fetchEvents = async (force = false) => {
     if (!agentConnected || (!force && eventsOutput)) return
     setEventsLoading(true)
@@ -604,7 +604,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     }
   }
 
-  // Fetch pod YAML via KKC agent
+  // Fetch pod YAML via local agent
   const fetchYaml = async (force = false) => {
     if (!agentConnected || (!force && yamlOutput)) return
     setYamlLoading(true)
@@ -2025,7 +2025,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
               {/* Agent not connected warning */}
               {!agentConnected && ownerChain.length === 0 && configMaps.length === 0 && secrets.length === 0 && !serviceAccount && (
                 <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                  <p className="text-yellow-400">KKC Agent not connected</p>
+                  <p className="text-yellow-400">Local Agent not connected</p>
                   <p className="text-sm text-muted-foreground mt-1">Connect the local agent to discover related resources</p>
                 </div>
               )}
@@ -2063,7 +2063,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">KKC Agent not connected</p>
+              <p className="text-yellow-400">Local Agent not connected</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view kubectl describe output</p>
             </div>
           ) : (
@@ -2116,7 +2116,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">KKC Agent not connected</p>
+              <p className="text-yellow-400">Local Agent not connected</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view pod logs</p>
             </div>
           ) : (
@@ -2169,7 +2169,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">KKC Agent not connected</p>
+              <p className="text-yellow-400">Local Agent not connected</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view events</p>
             </div>
           ) : (
@@ -2222,7 +2222,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
             </div>
           ) : !agentConnected ? (
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-              <p className="text-yellow-400">KKC Agent not connected</p>
+              <p className="text-yellow-400">Local Agent not connected</p>
               <p className="text-sm text-muted-foreground mt-1">Connect the local agent to view YAML</p>
             </div>
           ) : (
@@ -2261,8 +2261,8 @@ Please proceed step by step and ask for confirmation before making any changes.`
                 ) : (
                   <div className="p-4 max-h-48 overflow-y-auto">
                     <div className="flex items-center gap-2 text-xs text-purple-400 mb-2">
-                      <KlaudeIcon size="sm" />
-                      <span className="font-semibold tracking-wide">KLAUDE DIAGNOSIS</span>
+                      <ConsoleAIIcon size="sm" />
+                      <span className="font-semibold tracking-wide">AI DIAGNOSIS</span>
                       <span className="text-purple-400/50 font-mono">// powered by KubeStellar</span>
                     </div>
                     <div className="font-mono text-sm text-foreground leading-relaxed whitespace-pre-wrap">

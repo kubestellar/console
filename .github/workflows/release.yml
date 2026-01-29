@@ -123,7 +123,7 @@ jobs:
           fi
 
           # Check for changes in agent-related paths
-          AGENT_PATHS="pkg/agent cmd/kkc-agent go.mod go.sum"
+          AGENT_PATHS="pkg/agent cmd/ksc-agent go.mod go.sum"
           AGENT_CHANGED="false"
 
           for path in $AGENT_PATHS; do
@@ -295,7 +295,7 @@ jobs:
           body: |
             ## Changes
 
-            This release contains web/console updates only. No changes to kkc-agent binary.
+            This release contains web/console updates only. No changes to ksc-agent binary.
 
             The Homebrew formula was not updated as there are no agent changes.
 
@@ -336,7 +336,7 @@ jobs:
             echo "- GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
             echo "- Docker Image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
             if [ "${{ needs.determine-version.outputs.agent_changed }}" = "true" ]; then
-              echo "- Homebrew: \`brew upgrade kkc-agent\` (formula updated)" >> $GITHUB_STEP_SUMMARY
+              echo "- Homebrew: \`brew upgrade ksc-agent\` (formula updated)" >> $GITHUB_STEP_SUMMARY
             else
               echo "- Homebrew: No update (no agent changes)" >> $GITHUB_STEP_SUMMARY
             fi

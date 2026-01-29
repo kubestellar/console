@@ -34,8 +34,8 @@ var defaultAllowedOrigins = []string{
 	"http://127.0.0.1",
 	"https://127.0.0.1",
 	// Known deployment URLs
-	"https://kubestellarklaudeconsole.netlify.app",
-	"https://kkc.apps.fmaas-vllm-d.fmaas.res.ibm.com",
+	"https://kubestellarconsole.netlify.app",
+	"https://ksc.apps.fmaas-vllm-d.fmaas.res.ibm.com",
 }
 
 // Server is the local agent WebSocket server
@@ -84,7 +84,7 @@ func NewServer(cfg Config) (*Server, error) {
 	allowedOrigins := append([]string{}, defaultAllowedOrigins...)
 
 	// Add custom origins from environment variable (comma-separated)
-	if extraOrigins := os.Getenv("KKC_ALLOWED_ORIGINS"); extraOrigins != "" {
+	if extraOrigins := os.Getenv("KSC_ALLOWED_ORIGINS"); extraOrigins != "" {
 		for _, origin := range strings.Split(extraOrigins, ",") {
 			origin = strings.TrimSpace(origin)
 			if origin != "" {
@@ -94,7 +94,7 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	// Optional shared secret for authentication
-	agentToken := os.Getenv("KKC_AGENT_TOKEN")
+	agentToken := os.Getenv("KSC_AGENT_TOKEN")
 	if agentToken != "" {
 		log.Println("Agent token authentication enabled")
 	}
@@ -208,7 +208,7 @@ func (s *Server) Start() error {
 	})
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
-	log.Printf("KKC Agent v%s starting on %s", Version, addr)
+	log.Printf("KSC Agent v%s starting on %s", Version, addr)
 	log.Printf("Health: http://%s/health", addr)
 	log.Printf("WebSocket: ws://%s/ws", addr)
 

@@ -13,7 +13,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
     target: '[data-tour="navbar"]',
-    title: 'Welcome to KubeStellar Klaude Console',
+    title: 'Welcome to KubeStellar Console',
     content: 'This is your AI-powered multi-cluster Kubernetes dashboard. Claude AI helps you monitor, troubleshoot, and manage your clusters. Let me show you around!',
     placement: 'bottom',
     highlight: true,

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Klaude Missions', () => {
+test.describe('AI Missions', () => {
   test.beforeEach(async ({ page }) => {
     // Mock authentication
     await page.route('**/api/me', (route) =>

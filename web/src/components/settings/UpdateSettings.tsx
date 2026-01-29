@@ -67,10 +67,10 @@ export function UpdateSettings() {
   }
 
   const helmCommand = latestRelease
-    ? `helm upgrade kkc kubestellar-console/kubestellar-console --version ${latestRelease.tag.replace(/^v/, '')} -n kkc`
-    : 'helm upgrade kkc kubestellar-console/kubestellar-console -n kkc'
+    ? `helm upgrade ksc kubestellar-console/kubestellar-console --version ${latestRelease.tag.replace(/^v/, '')} -n ksc`
+    : 'helm upgrade ksc kubestellar-console/kubestellar-console -n ksc'
 
-  const brewCommand = 'brew upgrade kubestellar/tap/kkc-agent'
+  const brewCommand = 'brew upgrade kubestellar/tap/ksc-agent'
 
   return (
     <div className="glass rounded-xl p-6">

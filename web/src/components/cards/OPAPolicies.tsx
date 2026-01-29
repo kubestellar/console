@@ -529,8 +529,8 @@ function ClusterOPAModal({
     }
   }
 
-  // Create policy with Klaude (AI-assisted)
-  const handleCreateWithKlaude = () => {
+  // Create policy with AI
+  const handleCreateWithAI = () => {
     setShowCreateMenu(false)
     onClose()
     startMission({
@@ -559,8 +559,8 @@ Let's start by discussing what kind of policy I need.`,
     setShowYamlEditor(true)
   }
 
-  // Edit policy with Klaude
-  const handleEditWithKlaude = (policy: Policy) => {
+  // Edit policy with AI
+  const handleEditWithAI = (policy: Policy) => {
     onClose()
     startMission({
       title: `Edit Policy: ${policy.name}`,
@@ -611,7 +611,7 @@ What would you like to modify about this policy?`,
     }
   }
 
-  // Apply YAML changes via Klaude (validates and applies safely)
+  // Apply YAML changes via AI (validates and applies safely)
   const handleApplyYaml = () => {
     const action = editingPolicy ? 'update' : 'create'
     setShowYamlEditor(false)
@@ -720,12 +720,12 @@ Please proceed with applying this policy.`,
               {showCreateMenu && (
                 <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
                   <button
-                    onClick={handleCreateWithKlaude}
+                    onClick={handleCreateWithAI}
                     className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2"
                   >
                     <Sparkles className="w-4 h-4 text-purple-400" />
                     <div>
-                      <div className="font-medium">Create with Klaude</div>
+                      <div className="font-medium">Create with AI</div>
                       <div className="text-xs text-muted-foreground">AI-assisted policy creation</div>
                     </div>
                   </button>
@@ -801,9 +801,9 @@ Please proceed with applying this policy.`,
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleEditWithKlaude(policy) }}
+                          onClick={(e) => { e.stopPropagation(); handleEditWithAI(policy) }}
                           className="p-1.5 rounded hover:bg-secondary text-purple-400 transition-colors"
-                          title="Edit with Klaude"
+                          title="Edit with AI"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
                         </button>
@@ -1511,7 +1511,7 @@ Let's start by discussing what kind of policy I need.`,
                       }}
                       className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer"
                     >
-                      Install with Klaude →
+                      Install with AI →
                     </span>
                   </div>
                 )}

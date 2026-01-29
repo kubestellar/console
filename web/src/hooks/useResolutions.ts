@@ -60,8 +60,8 @@ export interface Resolution {
   updatedAt: string // ISO date string
 }
 
-const RESOLUTIONS_STORAGE_KEY = 'klaude_resolutions'
-const SHARED_RESOLUTIONS_KEY = 'klaude_shared_resolutions'
+const RESOLUTIONS_STORAGE_KEY = 'ksc_resolutions'
+const SHARED_RESOLUTIONS_KEY = 'ksc_shared_resolutions'
 
 // Common Kubernetes issue patterns for auto-detection
 const ISSUE_PATTERNS: { pattern: RegExp; type: string; resourceKind?: string }[] = [

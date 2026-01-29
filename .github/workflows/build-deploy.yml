@@ -1,4 +1,4 @@
-name: Build and Deploy KKC
+name: Build and Deploy KSC
 
 on:
   push:
@@ -90,7 +90,7 @@ jobs:
   deploy-vllm-d:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: [self-hosted, kkc]
+    runs-on: [self-hosted, ksc]
     environment: vllm-d
 
     steps:
@@ -107,33 +107,33 @@ jobs:
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace kkc --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace ksc --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create or update secrets
         run: |
-          kubectl create secret generic kkc-secrets \
-            --namespace kkc \
-            --from-literal=github-client-id=${{ secrets.KKC_OAUTH_CLIENT_ID }} \
-            --from-literal=github-client-secret=${{ secrets.KKC_OAUTH_CLIENT_SECRET }} \
-            --from-literal=jwt-secret=${{ secrets.KKC_JWT_SECRET }} \
+          kubectl create secret generic ksc-secrets \
+            --namespace ksc \
+            --from-literal=github-client-id=${{ secrets.KSC_OAUTH_CLIENT_ID }} \
+            --from-literal=github-client-secret=${{ secrets.KSC_OAUTH_CLIENT_SECRET }} \
+            --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy with Helm
         run: |
-          helm upgrade --install kkc ./deploy/helm/kubestellar-console \
-            --namespace kkc \
+          helm upgrade --install ksc ./deploy/helm/kubestellar-console \
+            --namespace ksc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
-            --set github.existingSecret=kkc-secrets \
-            --set claude.existingSecret=kkc-secrets \
-            --set jwt.existingSecret=kkc-secrets \
+            --set github.existingSecret=ksc-secrets \
+            --set claude.existingSecret=ksc-secrets \
+            --set jwt.existingSecret=ksc-secrets \
             --set route.enabled=true \
-            --set route.host=kkc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
+            --set route.host=ksc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --wait \
             --timeout 5m
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/kkc-kubestellar-klaude-console -n kkc --timeout=3m
+          kubectl rollout status deployment/ksc-kubestellar-console -n ksc --timeout=3m
           echo "Deployment successful!"
-          echo "Access KKC at: https://kkc.apps.fmaas-vllm-d.fmaas.res.ibm.com"
+          echo "Access KSC at: https://ksc.apps.fmaas-vllm-d.fmaas.res.ibm.com"

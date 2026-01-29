@@ -1,6 +1,6 @@
 apiVersion: v2
-name: kubestellar-klaude-console
-description: KubeStellar Klaude Console (kkc) - AI-powered multi-cluster Kubernetes dashboard
+name: kubestellar-console
+description: KubeStellar Console - AI-powered multi-cluster Kubernetes dashboard
 type: application
 version: 0.1.0
 appVersion: "0.1.0"

@@ -32,12 +32,12 @@ import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 const CACHE_VERSION = 3
 
 /** IndexedDB configuration */
-const DB_NAME = 'klaude_cache'
+const DB_NAME = 'ksc_cache'
 const DB_VERSION = 1
 const STORE_NAME = 'cache'
 
 /** Storage key prefixes (for localStorage metadata only) */
-const META_PREFIX = 'klaude_meta:'
+const META_PREFIX = 'ksc_meta:'
 
 /** Maximum consecutive failures before marking as failed */
 const MAX_FAILURES = 3
@@ -697,7 +697,7 @@ export async function prefetchCache<T>(
 
 /** Migrate old localStorage cache to IndexedDB (run once on app startup) */
 export async function migrateFromLocalStorage(): Promise<void> {
-  const OLD_PREFIX = 'klaude_cache:'
+  const OLD_PREFIX = 'ksc_cache:'
   const keysToMigrate: string[] = []
 
   for (let i = 0; i < localStorage.length; i++) {

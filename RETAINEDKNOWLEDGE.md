@@ -67,7 +67,7 @@ interface Resolution {
 - `saveResolution(mission, issueSignature, resolution)` - Save from completed mission
 - `findSimilarResolutions(issueSignature)` - Search by issue type/pattern
 - `recordUsage(resolutionId, success: boolean)` - Track effectiveness
-- localStorage persistence with key `klaude_resolutions`
+- localStorage persistence with key `ksc_resolutions`
 
 **Modify: `web/src/hooks/useMissions.tsx`**
 - On `startMission()`: Call `findSimilarResolutions()` and inject into context

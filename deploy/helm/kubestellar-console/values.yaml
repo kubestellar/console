@@ -103,10 +103,10 @@ persistence:
   accessModes:
     - ReadWriteOnce
 
-# klaude binaries configuration
-klaude:
-  opsPath: /usr/local/bin/klaude-ops
-  deployPath: /usr/local/bin/klaude-deploy
+# kubestellar binaries configuration
+kubestellar:
+  opsPath: /usr/local/bin/kubestellar-ops
+  deployPath: /usr/local/bin/kubestellar-deploy
 
 nodeSelector: {}
 

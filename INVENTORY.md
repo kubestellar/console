@@ -158,12 +158,12 @@ Last Updated: 2026-01-23
 | 56 | `resource_trend` | Resource Trend | timeseries |
 | 57 | `gpu_utilization` | GPU Utilization | timeseries |
 
-### Category: Klaude AI (3 cards)
+### Category: AI (3 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 58 | `klaude_issues` | Klaude Issues | status |
-| 59 | `klaude_kubeconfig_audit` | Klaude Kubeconfig Audit | status |
-| 60 | `klaude_health_check` | Klaude Health Check | gauge |
+| 58 | `ai_issues` | AI Issues | status |
+| 59 | `ai_kubeconfig_audit` | AI Kubeconfig Audit | status |
+| 60 | `ai_health_check` | AI Health Check | gauge |
 
 ### Category: Alerting (2 cards)
 | # | Type | Title | Visualization |
@@ -514,7 +514,7 @@ Based on feature requests:
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 17 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit ResourceQuota with CPU/memory/storage limits |
-| 18 | ApiKeyPromptModal | `cards/KlaudeMissions.tsx` | AI feature without API key | Prompts user to configure Anthropic API key for AI features |
+| 18 | ApiKeyPromptModal | `cards/AIMissions.tsx` | AI feature without API key | Prompts user to configure Anthropic API key for AI features |
 | 19 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Form for creating/editing Prometheus-style alert rules |
 
 ### Modal Features
@@ -581,7 +581,7 @@ Cards that have `useDrillDownActions` hook for clickable items:
 | 17 | HelmHistory | drillToHelm | HelmReleaseDrillDown |
 | 18 | HelmReleaseStatus | drillToHelm | HelmReleaseDrillDown |
 | 19 | HelmValuesDiff | drillToHelm | HelmReleaseDrillDown |
-| 20 | KlaudeMissions | drillToMission | MissionDrillDown |
+| 20 | AIMissions | drillToMission | MissionDrillDown |
 | 21 | KubecostOverview | drillToCost | CostDrillDown |
 | 22 | KustomizationStatus | drillToKustomization | KustomizationDrillDown |
 | 23 | NamespaceEvents | drillToEvents | EventsDrillDown |
@@ -633,7 +633,7 @@ Located in `src/components/modals/hooks/`:
 | Hook | Description |
 |------|-------------|
 | useModalNavigation | ESC to close, Backspace to go back |
-| useModalAI | Klaude AI integration for modals |
+| useModalAI | AI Assistant integration for modals |
 
 ---
 

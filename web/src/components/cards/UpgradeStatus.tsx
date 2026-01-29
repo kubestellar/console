@@ -132,7 +132,7 @@ function ensureVersionWs(): Promise<WebSocket> {
   })
 }
 
-// Fetch version from KKC agent for a cluster (with caching)
+// Fetch version from local agent for a cluster (with caching)
 async function fetchClusterVersion(clusterName: string, forceRefresh = false): Promise<string | null> {
   // Check cache first (unless forcing refresh)
   if (!forceRefresh) {
@@ -276,7 +276,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     prevAgentConnectedRef.current = agentConnected
   }, [agentConnected])
 
-  // Fetch real versions from clusters via KKC agent
+  // Fetch real versions from clusters via local agent
   useEffect(() => {
     if (!agentConnected || allClusters.length === 0) {
       // If not connected, mark fetch as completed so we show '-' instead of 'loading...'

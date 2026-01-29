@@ -46,7 +46,7 @@ const ACTION_STYLES = {
 /**
  * AI Action Bar component for modals
  *
- * Displays Diagnose, Repair, and Ask buttons that integrate with Klaude AI.
+ * Displays Diagnose, Repair, and Ask buttons that integrate with AI.
  * Shows connection status and provides quick access to AI-powered diagnostics.
  *
  * @example
@@ -101,7 +101,7 @@ export function AIActionBar({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-purple-400" />
-          <span className="text-sm font-medium text-foreground">Klaude AI Assistant</span>
+          <span className="text-sm font-medium text-foreground">AI Assistant</span>
         </div>
 
         {!isAgentConnected && (
@@ -147,7 +147,7 @@ export function AIActionBar({
       {/* Agent status message */}
       {!isAgentConnected && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Connect the local KKC agent to enable AI features.{' '}
+          Connect the local agent to enable AI features.{' '}
           <Link to="/settings" className="text-purple-400 hover:text-purple-300">
             Configure →
           </Link>

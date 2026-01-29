@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const DEMO_MODE_KEY = 'kkc-demo-mode'
+const DEMO_MODE_KEY = 'ksc-demo-mode'
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
 
 // Global state for demo mode to ensure consistency across components

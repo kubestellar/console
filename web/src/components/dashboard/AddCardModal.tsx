@@ -83,11 +83,11 @@ const CARD_CATALOG = {
     { type: 'resource_trend', title: 'Resource Trend', description: 'CPU, memory, pods, nodes over time', visualization: 'timeseries' },
     { type: 'gpu_utilization', title: 'GPU Utilization', description: 'GPU allocation trend with donut chart', visualization: 'timeseries' },
   ],
-  'Klaude AI': [
-    { type: 'klaude_issues', title: 'Klaude Issues', description: 'AI-powered issue detection and repair', visualization: 'status' },
-    { type: 'klaude_kubeconfig_audit', title: 'Klaude Kubeconfig Audit', description: 'Audit kubeconfig for stale contexts', visualization: 'status' },
-    { type: 'klaude_health_check', title: 'Klaude Health Check', description: 'Comprehensive AI health analysis', visualization: 'gauge' },
-    { type: 'klaude_offline_detection', title: 'Offline Detection', description: 'Detect offline nodes and unavailable GPUs', visualization: 'status' },
+  'AI Assistant': [
+    { type: 'console_ai_issues', title: 'AI Issues', description: 'AI-powered issue detection and repair', visualization: 'status' },
+    { type: 'console_ai_kubeconfig_audit', title: 'AI Kubeconfig Audit', description: 'Audit kubeconfig for stale contexts', visualization: 'status' },
+    { type: 'console_ai_health_check', title: 'AI Health Check', description: 'Comprehensive AI health analysis', visualization: 'gauge' },
+    { type: 'console_ai_offline_detection', title: 'Offline Detection', description: 'Detect offline nodes and unavailable GPUs', visualization: 'status' },
   ],
   'Alerting': [
     { type: 'active_alerts', title: 'Active Alerts', description: 'Firing alerts with severity and quick actions', visualization: 'status' },

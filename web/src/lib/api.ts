@@ -19,7 +19,7 @@ export class BackendUnavailableError extends Error {
 }
 
 // Backend availability tracking with localStorage persistence
-const BACKEND_STATUS_KEY = 'kkc-backend-status'
+const BACKEND_STATUS_KEY = 'ksc-backend-status'
 let backendLastCheckTime = 0
 let backendAvailable: boolean | null = null // null = unknown, true = available, false = unavailable
 let backendCheckPromise: Promise<boolean> | null = null

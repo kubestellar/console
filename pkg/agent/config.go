@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	configDirName  = ".kkc"
+	configDirName  = ".ksc"
 	configFileName = "config.yaml"
 	configFileMode = 0600 // Owner read/write only
 	configDirMode  = 0700 // Owner read/write/execute only

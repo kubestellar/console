@@ -51,7 +51,7 @@ Fix filtering, data handling, and consistency issues across the console applicat
 | HelmHistory | Yes | No | Yes |
 | HelmReleaseStatus | Yes | No | Yes |
 | HelmValuesDiff | Yes | No | Yes |
-| KlaudeMissions | No | No | Yes |
+| ConsoleMissions | No | No | Yes |
 | KubecostOverview | No | No | Yes |
 | KustomizationStatus | Yes | No | Yes |
 | KyvernoPolicies | No | No | Yes |
@@ -82,7 +82,7 @@ Fix filtering, data handling, and consistency issues across the console applicat
 Clusters, Healthy, Unhealthy, Offline, Nodes, CPUs, Memory, Storage, GPUs, Pods
 
 ### Dashboards (19 templates)
-cluster-overview, cluster-resource-tree, cluster-comparison, single-cluster-focus, namespace-dashboard, gitops-overview, helm-management, flux-dashboard, argocd-dashboard, security-overview, operator-management, gpu-dashboard, app-monitoring, troubleshooting, storage-overview, compute-overview, network-overview, klaude-dashboard, cost-management
+cluster-overview, cluster-resource-tree, cluster-comparison, single-cluster-focus, namespace-dashboard, gitops-overview, helm-management, flux-dashboard, argocd-dashboard, security-overview, operator-management, gpu-dashboard, app-monitoring, troubleshooting, storage-overview, compute-overview, network-overview, ai-dashboard, cost-management
 
 ---
 
@@ -117,7 +117,7 @@ return effectiveSelectedStatuses.includes(status as StatusLevel)
 **Priority cards:**
 - `AlertRules.tsx` - add cluster + customFilter
 - `GitOpsDrift.tsx` - add cluster filter
-- `KlaudeMissions.tsx` - add cluster filter
+- `ConsoleMissions.tsx` - add cluster filter
 
 ---
 
@@ -274,7 +274,7 @@ Add `resetDependencies` parameter to auto-reset page on filter changes.
 - `GitOpsDrift.tsx` - global filters
 - `GPUUtilization.tsx` - local cluster filter hook
 - `HelmReleaseStatus.tsx` - search
-- `KlaudeMissions.tsx` - global filters
+- `ConsoleMissions.tsx` - global filters
 - `NamespaceRBAC.tsx` - search
 - `OperatorStatus.tsx` - search
 - `PodHealthTrend.tsx` - local cluster filter hook, remove synthetic data

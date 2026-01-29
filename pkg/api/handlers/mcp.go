@@ -41,7 +41,7 @@ func (h *MCPHandlers) GetStatus(c *fiber.Ctx) error {
 	return c.JSON(status)
 }
 
-// GetOpsTools returns available klaude-ops tools
+// GetOpsTools returns available kubestellar-ops tools
 func (h *MCPHandlers) GetOpsTools(c *fiber.Ctx) error {
 	if h.bridge == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "MCP bridge not available"})
@@ -51,7 +51,7 @@ func (h *MCPHandlers) GetOpsTools(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"tools": tools})
 }
 
-// GetDeployTools returns available klaude-deploy tools
+// GetDeployTools returns available kubestellar-deploy tools
 func (h *MCPHandlers) GetDeployTools(c *fiber.Ctx) error {
 	if h.bridge == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "MCP bridge not available"})
@@ -1244,7 +1244,7 @@ type CallToolRequest struct {
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
-// AllowedOpsTools is the whitelist of klaude-ops tools that can be called via API
+// AllowedOpsTools is the whitelist of kubestellar-ops tools that can be called via API
 // SECURITY: Only read-only tools are allowed by default to prevent unauthorized modifications
 var AllowedOpsTools = map[string]bool{
 	// Cluster discovery and health
@@ -1292,7 +1292,7 @@ var AllowedOpsTools = map[string]bool{
 	"list_ownership_violations":    true,
 }
 
-// AllowedDeployTools is the whitelist of klaude-deploy tools that can be called via API
+// AllowedDeployTools is the whitelist of kubestellar-deploy tools that can be called via API
 // SECURITY: Write operations require explicit allowlisting
 var AllowedDeployTools = map[string]bool{
 	// Read-only operations
@@ -1329,7 +1329,7 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 	return nil
 }
 
-// CallOpsTool calls a klaude-ops tool
+// CallOpsTool calls a kubestellar-ops tool
 func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	if h.bridge == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "MCP bridge not available"})
@@ -1353,7 +1353,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-// CallDeployTool calls a klaude-deploy tool
+// CallDeployTool calls a kubestellar-deploy tool
 func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 	if h.bridge == nil {
 		return c.Status(503).JSON(fiber.Map{"error": "MCP bridge not available"})

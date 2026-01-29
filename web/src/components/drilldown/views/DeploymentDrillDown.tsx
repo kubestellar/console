@@ -532,7 +532,7 @@ export function DeploymentDrillDown({ data }: Props) {
               </pre>
             ) : (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">KKC Agent not connected</p>
+                <p className="text-yellow-400">Local Agent not connected</p>
               </div>
             )}
           </div>
@@ -559,7 +559,7 @@ export function DeploymentDrillDown({ data }: Props) {
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">KKC Agent not connected</p>
+                <p className="text-yellow-400">Local Agent not connected</p>
               </div>
             )}
           </div>
@@ -586,7 +586,7 @@ export function DeploymentDrillDown({ data }: Props) {
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                <p className="text-yellow-400">KKC Agent not connected</p>
+                <p className="text-yellow-400">Local Agent not connected</p>
               </div>
             )}
           </div>

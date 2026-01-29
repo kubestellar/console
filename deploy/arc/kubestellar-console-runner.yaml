@@ -31,7 +31,7 @@ spec:
         - self-hosted
         - linux
         - openshift
-        - kkc
+        - ksc
       resources:
         limits:
           cpu: "2"

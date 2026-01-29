@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run KubeStellar Klaude Console in dev mode with OAuth
+# Run KubeStellar Console in dev mode with OAuth
 
 # Load OAuth credentials
 source ~/.config/kubestellar-console/env
@@ -13,7 +13,7 @@ export GOWORK=off
 cd "$(dirname "$0")"
 
 # Run
-echo "Starting KubeStellar Klaude Console..."
+echo "Starting KubeStellar Console..."
 echo "  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:0:8}..."
 echo "  Frontend: $FRONTEND_URL"
 echo "  Backend: http://localhost:8080"

@@ -38,8 +38,8 @@ test.describe('Resolution Memory System', () => {
         updatedAt: new Date().toISOString(),
       }
 
-      localStorage.setItem('klaude_resolutions', JSON.stringify([testResolution]))
-      const stored = localStorage.getItem('klaude_resolutions')
+      localStorage.setItem('ksc_resolutions', JSON.stringify([testResolution]))
+      const stored = localStorage.getItem('ksc_resolutions')
       return stored ? JSON.parse(stored) : null
     })
 
@@ -110,14 +110,14 @@ test.describe('Resolution Memory System', () => {
         updatedAt: new Date().toISOString(),
       }
 
-      localStorage.setItem('klaude_resolutions', JSON.stringify([privateRes]))
-      localStorage.setItem('klaude_shared_resolutions', JSON.stringify([sharedRes]))
+      localStorage.setItem('ksc_resolutions', JSON.stringify([privateRes]))
+      localStorage.setItem('ksc_shared_resolutions', JSON.stringify([sharedRes]))
     })
 
     const results = await page.evaluate(() => {
       return {
-        personal: JSON.parse(localStorage.getItem('klaude_resolutions') || '[]'),
-        shared: JSON.parse(localStorage.getItem('klaude_shared_resolutions') || '[]'),
+        personal: JSON.parse(localStorage.getItem('ksc_resolutions') || '[]'),
+        shared: JSON.parse(localStorage.getItem('ksc_shared_resolutions') || '[]'),
       }
     })
 
@@ -143,12 +143,12 @@ test.describe('Resolution Memory System', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      localStorage.setItem('klaude_resolutions', JSON.stringify([resolution]))
+      localStorage.setItem('ksc_resolutions', JSON.stringify([resolution]))
     })
 
     // Simulate recording usage
     const updated = await page.evaluate(() => {
-      const resolutions = JSON.parse(localStorage.getItem('klaude_resolutions') || '[]')
+      const resolutions = JSON.parse(localStorage.getItem('ksc_resolutions') || '[]')
       const resolution = resolutions[0]
 
       // Record a successful usage
@@ -157,8 +157,8 @@ test.describe('Resolution Memory System', () => {
       resolution.effectiveness.lastUsed = new Date().toISOString()
       resolution.updatedAt = new Date().toISOString()
 
-      localStorage.setItem('klaude_resolutions', JSON.stringify([resolution]))
-      return JSON.parse(localStorage.getItem('klaude_resolutions') || '[]')[0]
+      localStorage.setItem('ksc_resolutions', JSON.stringify([resolution]))
+      return JSON.parse(localStorage.getItem('ksc_resolutions') || '[]')[0]
     })
 
     expect(updated.effectiveness.timesUsed).toBe(6)
@@ -207,7 +207,7 @@ test.describe('Resolution Memory System', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      localStorage.setItem('klaude_missions', JSON.stringify([mission]))
+      localStorage.setItem('ksc_missions', JSON.stringify([mission]))
     })
 
     // Reload to pick up the seeded mission
@@ -250,7 +250,7 @@ test.describe('Resolution Memory System', () => {
           updatedAt: new Date().toISOString(),
         }
       ]
-      localStorage.setItem('klaude_resolutions', JSON.stringify(resolutions))
+      localStorage.setItem('ksc_resolutions', JSON.stringify(resolutions))
 
       // Seed a mission that should match
       const mission = {
@@ -265,7 +265,7 @@ test.describe('Resolution Memory System', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      localStorage.setItem('klaude_missions', JSON.stringify([mission]))
+      localStorage.setItem('ksc_missions', JSON.stringify([mission]))
     })
 
     // Reload

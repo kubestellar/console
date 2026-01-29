@@ -231,7 +231,7 @@ export function Navbar() {
           alt="KubeStellar"
           className="w-9 h-9"
         />
-        <span className="text-lg font-semibold text-foreground">KubeStellar Klaude Console</span>
+        <span className="text-lg font-semibold text-foreground">KubeStellar Console</span>
       </div>
 
       {/* Search */}
@@ -711,7 +711,7 @@ export function Navbar() {
                 ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
                 : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
             )}
-            title={isDemoMode ? 'Demo Mode - showing sample data' : isDegraded ? `KKC Agent degraded (${dataErrorCount} errors)` : isConnected ? 'KKC Agent connected' : agentStatus === 'connecting' ? 'Connecting to agent...' : 'KKC Agent disconnected'}
+            title={isDemoMode ? 'Demo Mode - showing sample data' : isDegraded ? `Local Agent degraded (${dataErrorCount} errors)` : isConnected ? 'Local Agent connected' : agentStatus === 'connecting' ? 'Connecting to agent...' : 'Local Agent disconnected'}
           >
             {isDemoMode ? (
               <Box className="w-4 h-4" />
@@ -770,7 +770,7 @@ export function Navbar() {
                     isDemoMode ? 'bg-gray-400' : isDegraded ? 'bg-yellow-400' : isConnected ? 'bg-green-400' : agentStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
                   )} />
                   <span className={cn('text-sm font-medium', isDemoMode ? 'text-muted-foreground' : 'text-foreground')}>
-                    KKC Agent: {isDemoMode ? 'Bypassed' : isDegraded ? 'Degraded' : isConnected ? 'Connected' : agentStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                    Local Agent: {isDemoMode ? 'Bypassed' : isDegraded ? 'Degraded' : isConnected ? 'Connected' : agentStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
                   </span>
                   {!isDemoMode && isConnected && agentHealth?.version && agentHealth.version !== 'demo' && (
                     <span className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -829,15 +829,15 @@ export function Navbar() {
               <div className="p-3 border-t border-border bg-secondary/20">
                 <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-2">
                   <Server className="w-3 h-3 text-purple-400" />
-                  Install KKC Agent
+                  Install Local Agent
                 </h4>
                 <p className="text-xs text-muted-foreground mb-2">
-                  The KKC Agent enables real-time cluster data and kubectl operations.
+                  The Local Agent enables real-time cluster data and kubectl operations.
                 </p>
                 <div className="bg-black/50 rounded p-2 font-mono text-[11px] text-green-400 mb-2 space-y-1">
                   <div className="text-muted-foreground"># Install via Homebrew</div>
                   <code className="block">brew tap kubestellar/tap</code>
-                  <code className="block">brew install kkc-agent</code>
+                  <code className="block">brew install ksc-agent</code>
                 </div>
                 <p className="text-[10px] text-muted-foreground">
                   Visit{' '}

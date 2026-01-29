@@ -1,5 +1,5 @@
 #!/bin/bash
-# KubeStellar Klaude Console (kkc) Development Script
+# KubeStellar Console Development Script
 #
 # Before running, set your GitHub OAuth credentials:
 #   export GITHUB_CLIENT_ID="your-client-id"
@@ -9,7 +9,7 @@
 # 1. Go to https://github.com/settings/developers
 # 2. Click "New OAuth App"
 # 3. Set:
-#    - Application name: KubeStellar Klaude Console (Dev)
+#    - Application name: KubeStellar Console (Dev)
 #    - Homepage URL: http://localhost:5174
 #    - Authorization callback URL: http://localhost:5174/auth/github/callback
 # 4. Copy the Client ID and generate a Client Secret
@@ -30,7 +30,7 @@ if [ -z "$GITHUB_CLIENT_SECRET" ]; then
 fi
 
 # Start backend and frontend
-echo "Starting KubeStellar Klaude Console (kkc)..."
+echo "Starting KubeStellar Console..."
 echo "  Frontend: http://localhost:5174"
 echo "  Backend:  http://localhost:8080"
 echo ""

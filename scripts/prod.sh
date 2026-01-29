@@ -1,5 +1,5 @@
 #!/bin/bash
-# Production mode startup script for KubeStellar Klaude Console (kkc)
+# Production mode startup script for KubeStellar Console
 # Uses real GitHub OAuth instead of dev-user
 
 set -e
@@ -13,7 +13,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}=== KubeStellar Klaude Console (kkc) - Production Mode ===${NC}"
+echo -e "${GREEN}=== KubeStellar Console - Production Mode ===${NC}"
 
 # Load .env file manually (more reliable than source)
 if [ -f "$PROJECT_DIR/.env" ]; then

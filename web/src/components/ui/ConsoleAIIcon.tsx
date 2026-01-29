@@ -1,16 +1,16 @@
 import { Sparkles } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
-interface KlaudeIconProps {
+interface ConsoleAIIconProps {
   className?: string
   size?: 'sm' | 'md' | 'lg'
 }
 
 /**
- * KubeStellar Klaude AI icon - KubeStellar logo with AI sparkle effect.
+ * KubeStellar Console AI icon - KubeStellar logo with AI sparkle effect.
  * Uses the same pattern as the Tour component for consistency.
  */
-export function KlaudeIcon({ className, size = 'md' }: KlaudeIconProps) {
+export function ConsoleAIIcon({ className, size = 'md' }: ConsoleAIIconProps) {
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-5 h-5',

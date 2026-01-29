@@ -132,7 +132,7 @@ function SecurityDragPreviewCard({ card }: { card: DashboardCard }) {
 
 type ViewTab = 'overview' | 'issues' | 'rbac' | 'compliance'
 
-// Mock security data - in production would come from klaude-ops check_security_issues
+// Mock security data - in production would come from check_security_issues API
 interface SecurityIssue {
   type: 'privileged' | 'root' | 'hostNetwork' | 'hostPID' | 'noSecurityContext'
   severity: 'high' | 'medium' | 'low'

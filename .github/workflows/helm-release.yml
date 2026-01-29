@@ -101,5 +101,5 @@ jobs:
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "helm repo add kubestellar-console https://kubestellar.github.io/console" >> $GITHUB_STEP_SUMMARY
           echo "helm repo update" >> $GITHUB_STEP_SUMMARY
-          echo "helm install kkc kubestellar-console/kubestellar-klaude-console" >> $GITHUB_STEP_SUMMARY
+          echo "helm install ksc kubestellar-console/kubestellar-console" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

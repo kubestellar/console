@@ -36,7 +36,7 @@ fi
 export DEV_MODE=${DEV_MODE:-true}
 export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 
-echo "Starting KubeStellar Klaude Console..."
+echo "Starting KubeStellar Console..."
 echo "  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:0:10}..."
 echo "  Frontend: $FRONTEND_URL"
 echo "  Backend: http://localhost:8080"

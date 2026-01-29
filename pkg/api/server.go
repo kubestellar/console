@@ -30,8 +30,8 @@ type Config struct {
 	JWTSecret        string
 	FrontendURL      string
 	ClaudeAPIKey     string
-	KlaudeOpsPath    string
-	KlaudeDeployPath string
+	KubestellarOpsPath    string
+	KubestellarDeployPath string
 	Kubeconfig       string
 	// Dev mode user settings (used when GitHub OAuth not configured)
 	DevUserLogin  string
@@ -129,10 +129,10 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Initialize MCP bridge (optional - starts in background)
 	var bridge *mcp.Bridge
-	if cfg.KlaudeOpsPath != "" || cfg.KlaudeDeployPath != "" {
+	if cfg.KubestellarOpsPath != "" || cfg.KubestellarDeployPath != "" {
 		bridge = mcp.NewBridge(mcp.BridgeConfig{
-			KlaudeOpsPath:    cfg.KlaudeOpsPath,
-			KlaudeDeployPath: cfg.KlaudeDeployPath,
+			KubestellarOpsPath:    cfg.KubestellarOpsPath,
+			KubestellarDeployPath: cfg.KubestellarDeployPath,
 			Kubeconfig:       cfg.Kubeconfig,
 		})
 		// Start bridge in background
@@ -290,7 +290,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/namespaces/:name/access", namespaces.GrantNamespaceAccess)
 	api.Delete("/namespaces/:name/access/:binding", namespaces.RevokeNamespaceAccess)
 
-	// MCP routes (cluster operations via klaude and direct k8s)
+	// MCP routes (cluster operations via kubestellar tools and direct k8s)
 	// SECURITY: All MCP routes require authentication in both dev and production modes
 	api.Get("/mcp/status", mcpHandlers.GetStatus)
 	api.Get("/mcp/tools/ops", mcpHandlers.GetOpsTools)
@@ -493,8 +493,8 @@ func LoadConfigFromEnv() Config {
 		JWTSecret:        jwtSecret,
 		FrontendURL:      frontendURL,
 		ClaudeAPIKey:     os.Getenv("CLAUDE_API_KEY"),
-		KlaudeOpsPath:    getEnvOrDefault("KLAUDE_OPS_PATH", "klaude-ops"),
-		KlaudeDeployPath: getEnvOrDefault("KLAUDE_DEPLOY_PATH", "klaude-deploy"),
+		KubestellarOpsPath:    getEnvOrDefault("KUBESTELLAR_OPS_PATH", "kubestellar-ops"),
+		KubestellarDeployPath: getEnvOrDefault("KUBESTELLAR_DEPLOY_PATH", "kubestellar-deploy"),
 		Kubeconfig:       os.Getenv("KUBECONFIG"),
 		// Dev mode user settings
 		DevUserLogin:  getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),

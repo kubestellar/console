@@ -108,7 +108,7 @@ type CardTypeInfo struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Icon        string   `json:"icon"`
-	KlaudeTool  string   `json:"klaude_tool"` // Which klaude tool powers this card
+	KubestellarTool  string   `json:"kubestellar_tool"` // Which kubestellar tool powers this card
 }
 
 // GetCardTypes returns information about all available card types

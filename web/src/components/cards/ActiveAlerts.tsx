@@ -373,7 +373,7 @@ export function ActiveAlerts() {
                     {getMissionForAlert(alert) && (
                       <span className="text-xs text-purple-400 flex items-center gap-1">
                         <Bot className="w-3 h-3" />
-                        Klaude
+                        AI
                       </span>
                     )}
                     {alert.acknowledgedAt && (
@@ -413,7 +413,7 @@ export function ActiveAlerts() {
                         className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
                       >
                         <Bot className="w-3 h-3" />
-                        Klaude Diagnose
+                        AI Diagnose
                       </button>
                     )
                   }

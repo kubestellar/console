@@ -87,9 +87,9 @@ interface StartMissionParams {
 
 const MissionContext = createContext<MissionContextValue | null>(null)
 
-const KKC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
-const MISSIONS_STORAGE_KEY = 'klaude_missions'
-const UNREAD_MISSIONS_KEY = 'klaude_unread_missions'
+const KSC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+const MISSIONS_STORAGE_KEY = 'ksc_missions'
+const UNREAD_MISSIONS_KEY = 'ksc_unread_missions'
 
 // Load missions from localStorage
 function loadMissions(): Mission[] {
@@ -194,7 +194,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Connect to KKC agent WebSocket
+  // Connect to local agent WebSocket
   const ensureConnection = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return Promise.resolve()
@@ -215,11 +215,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       }, 5000)
 
       try {
-        wsRef.current = new WebSocket(KKC_AGENT_WS_URL)
+        wsRef.current = new WebSocket(KSC_AGENT_WS_URL)
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
-          console.log('[Missions] Connected to KKC agent')
+          console.log('[Missions] Connected to local agent')
           // Fetch available agents on connect
           fetchAgents()
 
@@ -307,11 +307,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           if (pendingRequests.current.size > 0) {
             const errorContent = `**Local Agent Not Connected**
 
-The AI missions feature requires the local KKC agent to be running.
+The AI missions feature requires the local agent to be running.
 
 **To get started:**
-1. Install the agent: \`brew install kubestellar/tap/kkc-agent\`
-2. Start the agent: \`kkc-agent\`
+1. Install the agent: \`brew install kubestellar/tap/ksc-agent\`
+2. Start the agent: \`ksc-agent\`
 3. [Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
 
             const pendingMissionIds = new Set(pendingRequests.current.values())
@@ -582,11 +582,11 @@ The AI missions feature requires the local KKC agent to be running.
     }).catch(() => {
       const errorContent = `**Local Agent Not Connected**
 
-The AI missions feature requires the local KKC agent to be running.
+The AI missions feature requires the local agent to be running.
 
 **To get started:**
-1. Install the agent: \`brew install kubestellar/tap/kkc-agent\`
-2. Start the agent: \`kkc-agent\`
+1. Install the agent: \`brew install kubestellar/tap/ksc-agent\`
+2. Start the agent: \`ksc-agent\`
 3. [Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
 
       setMissions(prev => prev.map(m =>

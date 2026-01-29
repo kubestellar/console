@@ -182,7 +182,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-foreground">Klaude AI Diagnosis</span>
+              <span className="text-sm font-medium text-foreground">AI Diagnosis</span>
             </div>
             {!alert.aiDiagnosis?.missionId && (
               <button
@@ -241,13 +241,13 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
                   className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  View Klaude Mission
+                  View AI Mission
                 </button>
               )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No AI diagnosis yet. Click "Run Diagnosis" to analyze this alert with Klaude.
+              No AI diagnosis yet. Click "Run Diagnosis" to analyze this alert with AI.
             </p>
           )}
         </div>

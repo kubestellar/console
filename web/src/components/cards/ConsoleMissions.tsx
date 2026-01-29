@@ -81,14 +81,14 @@ function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
   )
 }
 
-// Klaude Mission Cards - Quick actions for AI-powered cluster management
+// Console AI Mission Cards - Quick actions for AI-powered cluster management
 
-interface KlaudeMissionCardProps {
+interface ConsoleMissionCardProps {
   config?: Record<string, unknown>
 }
 
-// Card 1: Klaude Issues Overview - Shows issues Klaude can help fix
-export function KlaudeIssuesCard(_props: KlaudeMissionCardProps) {
+// Card 1: AI Issues Overview - Shows issues AI can help fix
+export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { isRefreshing: clustersRefreshing, refetch: refetchClusters, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { issues: allPodIssues, isRefreshing: podRefreshing, refetch: refetchPods } = useCachedPodIssues()
@@ -292,7 +292,7 @@ Please:
         ) : (
           <>
             <Play className="w-4 h-4" />
-            Ask Klaude to Fix
+            Ask AI to Fix
           </>
         )}
       </button>
@@ -301,7 +301,7 @@ Please:
 }
 
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
-export function KlaudeKubeconfigAuditCard(_props: KlaudeMissionCardProps) {
+export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
@@ -464,7 +464,7 @@ Please:
 }
 
 // Card 3: Cluster Health Check - Overall health assessment
-export function KlaudeHealthCheckCard(_props: KlaudeMissionCardProps) {
+export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { issues: allPodIssues } = useCachedPodIssues()
@@ -704,7 +704,7 @@ Please provide:
 }
 
 // Card 4: Offline Detection - Detect offline nodes and unavailable GPUs
-export function KlaudeOfflineDetectionCard(_props: KlaudeMissionCardProps) {
+export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, lastRefresh } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
@@ -1006,10 +1006,10 @@ Please:
   )
 }
 
-// Export all Klaude cards
-export const KLAUDE_CARDS = {
-  klaude_issues: KlaudeIssuesCard,
-  klaude_kubeconfig_audit: KlaudeKubeconfigAuditCard,
-  klaude_health_check: KlaudeHealthCheckCard,
-  klaude_offline_detection: KlaudeOfflineDetectionCard,
+// Export all Console AI cards
+export const CONSOLE_AI_CARDS = {
+  console_ai_issues: ConsoleIssuesCard,
+  console_ai_kubeconfig_audit: ConsoleKubeconfigAuditCard,
+  console_ai_health_check: ConsoleHealthCheckCard,
+  console_ai_offline_detection: ConsoleOfflineDetectionCard,
 }

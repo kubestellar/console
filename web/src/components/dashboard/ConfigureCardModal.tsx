@@ -300,18 +300,18 @@ const CARD_BEHAVIORS: Record<string, Array<{ key: string; label: string; descrip
     { key: 'showResources', label: 'Show resources', description: 'Display resource usage per namespace', default: true },
     { key: 'alertOnQuota', label: 'Alert on quota', description: 'Notify when approaching quota limits', default: false },
   ],
-  // Klaude AI mission cards
-  klaude_issues: [
+  // AI mission cards
+  console_ai_issues: [
     { key: 'autoRefresh', label: 'Auto-refresh', description: 'Scan for issues periodically', default: true },
     { key: 'includeWarnings', label: 'Include warnings', description: 'Include warning-level issues', default: true },
     { key: 'alertOnCritical', label: 'Alert on critical', description: 'Notify on critical issues found', default: false },
   ],
-  klaude_kubeconfig_audit: [
+  console_ai_kubeconfig_audit: [
     { key: 'autoRefresh', label: 'Auto-refresh', description: 'Audit kubeconfig periodically', default: false },
     { key: 'showExpired', label: 'Show expired', description: 'Highlight expired contexts', default: true },
     { key: 'showUnused', label: 'Show unused', description: 'Display unused contexts', default: false },
   ],
-  klaude_health_check: [
+  console_ai_health_check: [
     { key: 'autoRefresh', label: 'Auto-refresh', description: 'Run health checks periodically', default: true },
     { key: 'deepScan', label: 'Deep scan', description: 'Perform comprehensive health analysis', default: false },
     { key: 'alertOnUnhealthy', label: 'Alert on unhealthy', description: 'Notify when clusters are unhealthy', default: false },

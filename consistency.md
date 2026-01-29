@@ -66,7 +66,7 @@ Row 3: [Search input]
 | Pod Issues | 5 | Status | YES | YES | YES | 151 issues, pagination |
 | Events Timeline | - | - | - | YES | YES | Time range SELECT (15m/1h/6h/24h) |
 | Cluster Locations | - | - | - | - | - | Map card |
-| Klaude Offline Detection | - | - | - | - | - | Stat card |
+| Offline Detection | - | - | - | - | - | Stat card |
 | Mobile Browser | - | - | - | - | - | Browser embed |
 
 ### Dashboard Page (/) - 13 cards

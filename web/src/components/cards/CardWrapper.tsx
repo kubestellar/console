@@ -235,10 +235,10 @@ const CARD_TITLES: Record<string, string> = {
   github_activity: 'GitHub Activity',
   kubectl: 'Kubectl Terminal',
 
-  // Klaude AI cards (consistent naming with Klaude prefix)
-  klaude_issues: 'Klaude Issues',
-  klaude_kubeconfig_audit: 'Klaude Kubeconfig Audit',
-  klaude_health_check: 'Klaude Health Check',
+  // AI cards
+  console_ai_issues: 'AI Issues',
+  console_ai_kubeconfig_audit: 'AI Kubeconfig Audit',
+  console_ai_health_check: 'AI Health Check',
   
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
@@ -367,10 +367,10 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   weather: { icon: Globe, color: 'text-blue-400' },
   stock_market_ticker: { icon: TrendingUp, color: 'text-green-400' },
 
-  // Klaude AI cards
-  klaude_issues: { icon: Wand2, color: 'text-purple-400' },
-  klaude_kubeconfig_audit: { icon: Wand2, color: 'text-purple-400' },
-  klaude_health_check: { icon: Wand2, color: 'text-purple-400' },
+  // AI cards
+  console_ai_issues: { icon: Wand2, color: 'text-purple-400' },
+  console_ai_kubeconfig_audit: { icon: Wand2, color: 'text-purple-400' },
+  console_ai_health_check: { icon: Wand2, color: 'text-purple-400' },
 
   // Cost cards
   opencost_overview: { icon: TrendingUp, color: 'text-emerald-400' },

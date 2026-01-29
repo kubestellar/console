@@ -24,10 +24,10 @@ interface UseModalAIReturn {
 }
 
 /**
- * Hook for integrating Klaude AI actions into modals
+ * Hook for integrating AI actions into modals
  *
  * Provides standard Diagnose, Repair, and Ask actions that integrate
- * with the Klaude AI mission system.
+ * with the AI mission system.
  *
  * @example
  * ```tsx

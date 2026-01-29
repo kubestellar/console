@@ -26,7 +26,7 @@ You are an AI QA engineer responsible for testing preview deployments of the Kub
 ## When to Run
 
 Only process check_run events where:
-- The check name contains `kubestellarklaudeconsole` (Netlify build)
+- The check name contains `kubestellarconsole` (Netlify build)
 - The conclusion is `success`
 - The PR is authored by Copilot or copilot-swe-agent
 

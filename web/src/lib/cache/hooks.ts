@@ -200,7 +200,7 @@ export function useIndexedData<T>({
 // IndexedDB Utilities
 // ============================================================================
 
-const DB_NAME = 'klaude_cache'
+const DB_NAME = 'ksc_cache'
 const DB_VERSION = 1
 const STORE_NAME = 'cache'
 
@@ -348,7 +348,7 @@ export async function clearAllStorage(): Promise<void> {
   const keysToRemove: string[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key?.startsWith('kubestellar-') || key?.startsWith('klaude_')) {
+    if (key?.startsWith('kubestellar-') || key?.startsWith('ksc_')) {
       keysToRemove.push(key)
     }
   }

@@ -154,7 +154,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   })
   const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
 
-  // Klaude diagnose/repair handlers
+  // AI diagnose/repair handlers
   const handleDiagnose = () => {
     const issuesSummary = [
       ...podIssues.map(p => `Pod ${p.name} in ${p.namespace}: ${p.status}`),
@@ -329,18 +329,18 @@ After I approve, help me execute the repairs step by step.`,
           </button>
         </div>
 
-        {/* Klaude AI Actions */}
+        {/* AI Actions */}
         <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
           <div className="flex items-center gap-2 mb-3">
             <Bot className="w-5 h-5 text-purple-400" />
-            <span className="text-sm font-medium text-foreground">Klaude AI Assistant</span>
+            <span className="text-sm font-medium text-foreground">AI Assistant</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleDiagnose}
               disabled={isUnreachable}
               className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Ask Klaude to analyze cluster health and identify issues"
+              title="Ask AI to analyze cluster health and identify issues"
             >
               <Stethoscope className="w-3.5 h-3.5" />
               Diagnose
@@ -349,7 +349,7 @@ After I approve, help me execute the repairs step by step.`,
               onClick={handleRepair}
               disabled={isUnreachable || (podIssues.length === 0 && clusterDeploymentIssues.length === 0)}
               className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={podIssues.length === 0 && clusterDeploymentIssues.length === 0 ? 'No issues to repair' : 'Ask Klaude to help fix cluster issues'}
+              title={podIssues.length === 0 && clusterDeploymentIssues.length === 0 ? 'No issues to repair' : 'Ask AI to help fix cluster issues'}
             >
               <Wrench className="w-3.5 h-3.5" />
               Repair
@@ -372,7 +372,7 @@ After I approve, help me execute the repairs step by step.`,
               }}
               disabled={isUnreachable}
               className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Ask Klaude any question about this cluster"
+              title="Ask AI any question about this cluster"
             >
               <Wand2 className="w-3.5 h-3.5" />
               Ask

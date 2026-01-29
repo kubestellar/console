@@ -5,7 +5,7 @@ export interface DashboardTemplate {
   name: string
   description: string
   icon: string
-  category: 'cluster' | 'namespace' | 'workloads' | 'gitops' | 'security' | 'gpu' | 'storage' | 'compute' | 'network' | 'klaude' | 'alerting' | 'cost' | 'compliance' | 'arcade' | 'deploy' | 'custom'
+  category: 'cluster' | 'namespace' | 'workloads' | 'gitops' | 'security' | 'gpu' | 'storage' | 'compute' | 'network' | 'ai' | 'alerting' | 'cost' | 'compliance' | 'arcade' | 'deploy' | 'custom'
   cards: Array<{
     card_type: string
     title?: string
@@ -268,18 +268,18 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     ],
   },
 
-  // Klaude AI templates
+  // AI templates
   {
-    id: 'klaude-dashboard',
-    name: 'Klaude AI Dashboard',
+    id: 'ai-dashboard',
+    name: 'AI Dashboard',
     description: 'AI-powered cluster analysis and troubleshooting',
     icon: '🤖',
-    category: 'klaude',
+    category: 'ai',
     cards: [
-      { card_type: 'klaude_issues', title: 'Klaude Issues', position: { w: 4, h: 3 } },
-      { card_type: 'klaude_kubeconfig_audit', title: 'Kubeconfig Audit', position: { w: 4, h: 3 } },
-      { card_type: 'klaude_health_check', title: 'Health Check', position: { w: 4, h: 3 } },
-      { card_type: 'klaude_offline_detection', title: 'Offline Detection', position: { w: 4, h: 3 } },
+      { card_type: 'console_ai_issues', title: 'AI Issues', position: { w: 4, h: 3 } },
+      { card_type: 'console_ai_kubeconfig_audit', title: 'Kubeconfig Audit', position: { w: 4, h: 3 } },
+      { card_type: 'console_ai_health_check', title: 'Health Check', position: { w: 4, h: 3 } },
+      { card_type: 'console_ai_offline_detection', title: 'Offline Detection', position: { w: 4, h: 3 } },
       { card_type: 'pod_issues', position: { w: 6, h: 2 } },
       { card_type: 'deployment_issues', position: { w: 6, h: 2 } },
     ],
@@ -623,7 +623,7 @@ export const TEMPLATE_CATEGORIES = [
   { id: 'gitops', name: 'GitOps', icon: '🔄' },
   { id: 'security', name: 'Security', icon: '🔒' },
   { id: 'gpu', name: 'GPU', icon: '🎮' },
-  { id: 'klaude', name: 'Klaude AI', icon: '🤖' },
+  { id: 'ai', name: 'AI Assistant', icon: '🤖' },
   { id: 'arcade', name: 'Arcade', icon: '🕹️' },
   { id: 'deploy', name: 'Deploy', icon: '🚀' },
   { id: 'custom', name: 'Other', icon: '📌' },

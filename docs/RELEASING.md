@@ -1,6 +1,6 @@
 # Release Process
 
-This document describes the automated release process for the Klaude Console project.
+This document describes the automated release process for the KubeStellar Console project.
 
 ## Release Types
 
@@ -74,10 +74,10 @@ Binaries are distributed as:
 Images are pushed to GitHub Container Registry (`ghcr.io`):
 
 ```
-ghcr.io/kubestellar/klaude-console:latest
-ghcr.io/kubestellar/klaude-console:v0.1.0
-ghcr.io/kubestellar/klaude-console:nightly
-ghcr.io/kubestellar/klaude-console:weekly
+ghcr.io/kubestellar/kubestellar-console:latest
+ghcr.io/kubestellar/kubestellar-console:v0.1.0
+ghcr.io/kubestellar/kubestellar-console:nightly
+ghcr.io/kubestellar/kubestellar-console:weekly
 ```
 
 ### Homebrew Tap
@@ -87,7 +87,7 @@ The Homebrew formula is automatically updated in the [kubestellar/homebrew-tap](
 Installation:
 ```bash
 brew tap kubestellar/tap
-brew install kkc-agent
+brew install ksc-agent
 ```
 
 ### Helm Charts
@@ -95,9 +95,9 @@ brew install kkc-agent
 Helm charts are published to GitHub Pages and can be added as a repository:
 
 ```bash
-helm repo add klaude https://kubestellar.github.io/console
+helm repo add kubestellar https://kubestellar.github.io/console
 helm repo update
-helm install klaude-console klaude/klaude-console
+helm install kubestellar-console kubestellar/kubestellar-console
 ```
 
 ## Workflow Configuration
@@ -173,4 +173,4 @@ ls dist/
 - `.github/workflows/release.yml` - Main release workflow
 - `.github/workflows/helm-release.yml` - Helm chart publishing
 - `.goreleaser.yaml` - GoReleaser configuration
-- `charts/klaude-console/` - Helm chart source
+- `charts/kubestellar-console/` - Helm chart source

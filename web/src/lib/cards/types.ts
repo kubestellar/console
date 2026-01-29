@@ -27,7 +27,7 @@ export type CardCategory =
   | 'namespaces'
   | 'security'
   | 'live-trends'
-  | 'klaude-ai'
+  | 'ai'
   | 'alerting'
   | 'cost'
   | 'policy'

@@ -19,8 +19,8 @@ type Bridge struct {
 
 // BridgeConfig holds configuration for the MCP bridge
 type BridgeConfig struct {
-	KlaudeOpsPath    string
-	KlaudeDeployPath string
+	KubestellarOpsPath    string
+	KubestellarDeployPath string
 	Kubeconfig       string
 }
 
@@ -107,8 +107,8 @@ func (b *Bridge) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 2)
 
-	// Start klaude-ops if path is configured
-	if b.config.KlaudeOpsPath != "" {
+	// Start kubestellar-ops if path is configured
+	if b.config.KubestellarOpsPath != "" {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -118,8 +118,8 @@ func (b *Bridge) Start(ctx context.Context) error {
 		}()
 	}
 
-	// Start klaude-deploy if path is configured
-	if b.config.KlaudeDeployPath != "" {
+	// Start kubestellar-deploy if path is configured
+	if b.config.KubestellarDeployPath != "" {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -177,7 +177,7 @@ func (b *Bridge) startOpsClient(ctx context.Context) error {
 		args = append(args, "--kubeconfig", b.config.Kubeconfig)
 	}
 
-	client, err := NewClient("klaude-ops", b.config.KlaudeOpsPath, args...)
+	client, err := NewClient("kubestellar-ops", b.config.KubestellarOpsPath, args...)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func (b *Bridge) startDeployClient(ctx context.Context) error {
 		args = append(args, "--kubeconfig", b.config.Kubeconfig)
 	}
 
-	client, err := NewClient("klaude-deploy", b.config.KlaudeDeployPath, args...)
+	client, err := NewClient("kubestellar-deploy", b.config.KubestellarDeployPath, args...)
 	if err != nil {
 		return err
 	}
@@ -532,8 +532,8 @@ func (b *Bridge) Status() map[string]interface{} {
 // DefaultBridgeConfig returns a default configuration from environment
 func DefaultBridgeConfig() BridgeConfig {
 	return BridgeConfig{
-		KlaudeOpsPath:    getEnvOrDefault("KLAUDE_OPS_PATH", "klaude-ops"),
-		KlaudeDeployPath: getEnvOrDefault("KLAUDE_DEPLOY_PATH", "klaude-deploy"),
+		KubestellarOpsPath:    getEnvOrDefault("KUBESTELLAR_OPS_PATH", "kubestellar-ops"),
+		KubestellarDeployPath: getEnvOrDefault("KUBESTELLAR_DEPLOY_PATH", "kubestellar-deploy"),
 		Kubeconfig:       os.Getenv("KUBECONFIG"),
 	}
 }

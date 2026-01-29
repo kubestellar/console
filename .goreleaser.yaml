@@ -1,19 +1,19 @@
-# GoReleaser config for kkc-agent
+# GoReleaser config for ksc-agent
 # Run: goreleaser release --clean
 # Test: goreleaser build --snapshot --clean
 
 version: 2
 
-project_name: kkc-agent
+project_name: ksc-agent
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: kkc-agent
-    main: ./cmd/kkc-agent
-    binary: kkc-agent
+  - id: ksc-agent
+    main: ./cmd/ksc-agent
+    binary: ksc-agent
     env:
       - CGO_ENABLED=0
     goos:
@@ -27,9 +27,9 @@ builds:
       - -X github.com/kubestellar/console/pkg/agent.Version={{.Version}}
 
 archives:
-  - id: kkc-agent
+  - id: ksc-agent
     builds:
-      - kkc-agent
+      - ksc-agent
     formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
@@ -47,7 +47,7 @@ changelog:
 
 # Homebrew tap - only runs if HOMEBREW_TAP_TOKEN is set
 brews:
-  - name: kkc-agent
+  - name: ksc-agent
     # Skip if token is not set
     skip_upload: '{{ if .Env.HOMEBREW_TAP_TOKEN }}false{{ else }}true{{ end }}'
     repository:
@@ -56,12 +56,12 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/kubestellar/console"
-    description: "Local agent for KubeStellar Klaude Console - bridges browser to kubeconfig and Claude Code"
+    description: "Local agent for KubeStellar Console - bridges browser to kubeconfig and Claude Code"
     license: "Apache-2.0"
     test: |
-      system "#{bin}/kkc-agent", "--version"
+      system "#{bin}/ksc-agent", "--version"
     install: |
-      bin.install "kkc-agent"
+      bin.install "ksc-agent"
 
 release:
   github:

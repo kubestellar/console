@@ -36,7 +36,7 @@
     {
       "id": "test-offline-detection",
       "subject": "Test offline detection mission card",
-      "description": "Verify the new KlaudeOfflineDetectionCard works correctly: 1) Card appears in dashboard, 2) Shows green 'All Healthy' when no issues, 3) Detects nodes with NotReady status, 4) Detects GPU nodes with 0 GPUs, 5) 'Analyze Issues' button starts AI mission correctly, 6) Drill-down links work.",
+      "description": "Verify the new OfflineDetectionCard works correctly: 1) Card appears in dashboard, 2) Shows green 'All Healthy' when no issues, 3) Detects nodes with NotReady status, 4) Detects GPU nodes with 0 GPUs, 5) 'Analyze Issues' button starts AI mission correctly, 6) Drill-down links work.",
       "status": "pending",
       "priority": "high",
       "created": "2026-01-27",
@@ -85,7 +85,7 @@
     {
       "id": "console-docs-weekly-release",
       "subject": "Create console docs for weekly release in kubestellar/docs",
-      "description": "Create comprehensive documentation for KubeStellar Klaude Console in kubestellar/docs repository for the weekly release. Features documented: Updates (nightly/weekly), LinkedIn sharing, KubeStellar rewards (coins), 100+ cards, stat blocks, dashboards. Created 5 doc files and captured 5 screenshots using demo mode.",
+      "description": "Create comprehensive documentation for KubeStellar Console in kubestellar/docs repository for the weekly release. Features documented: Updates (nightly/weekly), LinkedIn sharing, KubeStellar rewards (coins), 100+ cards, stat blocks, dashboards. Created 5 doc files and captured 5 screenshots using demo mode.",
       "status": "completed",
       "priority": "high",
       "created": "2026-01-27",

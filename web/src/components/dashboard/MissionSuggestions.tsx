@@ -97,7 +97,7 @@ export function MissionSuggestions() {
     setTimeout(() => {
       if (suggestion.action.type === 'navigate') {
         navigate(suggestion.action.target)
-      } else if (suggestion.action.type === 'klaude') {
+      } else if (suggestion.action.type === 'ai') {
         startMission({
           title: suggestion.title,
           description: suggestion.description,
@@ -228,7 +228,7 @@ export function MissionSuggestions() {
                         onClick={(e) => handleRepair(e, suggestion)}
                         disabled={isProcessing}
                         className="px-2 py-1.5 rounded text-xs font-medium bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors flex items-center gap-1"
-                        title="Klaude Repair - automatically fix this issue"
+                        title="AI Repair - automatically fix this issue"
                       >
                         <Wrench className="w-3 h-3" />
                         Repair

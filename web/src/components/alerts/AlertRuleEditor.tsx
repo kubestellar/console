@@ -551,7 +551,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 <Bot className={`w-5 h-5 ${aiDiagnose ? 'text-purple-400' : 'text-muted-foreground'}`} />
                 <div>
                   <span className="text-sm font-medium text-foreground">
-                    Klaude AI Diagnosis
+                    AI Diagnosis
                   </span>
                   <p className="text-xs text-muted-foreground">
                     Automatically analyze alerts and suggest remediation actions

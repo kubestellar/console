@@ -53,7 +53,7 @@ export interface AlertRule {
   condition: AlertCondition
   severity: AlertSeverity
   channels: AlertChannel[]
-  aiDiagnose: boolean // Enable Klaude AI analysis
+  aiDiagnose: boolean // Enable AI analysis
   createdAt: string
   updatedAt: string
 }

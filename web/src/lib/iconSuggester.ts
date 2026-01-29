@@ -1,11 +1,11 @@
 /**
  * AI-powered icon suggestion for custom dashboards.
- * Uses the KKC agent WebSocket to ask the AI for the best Lucide icon
+ * Uses the local agent WebSocket to ask the AI for the best Lucide icon
  * matching a dashboard name. Falls back to keyword matching if the agent
  * is unavailable, then to a random generic icon.
  */
 
-const KKC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+const KSC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
 
 // All Lucide icons available in the sidebar
 const ICON_POOL = [
@@ -80,7 +80,7 @@ const KEYWORD_MAP: Record<string, string> = {
 }
 
 /**
- * Ask the KKC agent AI for the best icon matching a dashboard name.
+ * Ask the local agent AI for the best icon matching a dashboard name.
  * Returns a Promise that resolves to a Lucide icon name.
  * Times out after 5 seconds.
  */
@@ -91,7 +91,7 @@ function askAgentForIcon(name: string): Promise<string | null> {
     }, 5000)
 
     try {
-      const ws = new WebSocket(KKC_AGENT_WS_URL)
+      const ws = new WebSocket(KSC_AGENT_WS_URL)
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 
@@ -221,7 +221,7 @@ function randomGenericIcon(name: string): string {
  * Suggest the best Lucide icon for a dashboard name.
  *
  * Strategy:
- * 1. Try AI agent (KKC WebSocket) for intelligent matching
+ * 1. Try AI agent (local agent WebSocket) for intelligent matching
  * 2. Fall back to keyword matching
  * 3. Fall back to deterministic random generic icon
  */

@@ -46,7 +46,7 @@ When starting the frontend dev server, always use:
 npm run dev -- --port 5174
 ```
 
-The backend (KKC API server) runs on port 8080. The KKC agent WebSocket runs on port 8585.
+The backend (KSC API server) runs on port 8080. The KSC agent WebSocket runs on port 8585.
 
 ## Shared Task Coordination
 

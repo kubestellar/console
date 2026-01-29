@@ -256,7 +256,7 @@ await migrateFromLocalStorage()
 ```
 
 This will:
-1. Find all `klaude_cache:*` keys in localStorage
+1. Find all `ksc_cache:*` keys in localStorage
 2. Move data to IndexedDB
 3. Remove old localStorage entries
 4. Clean up kubectl-history (major quota offender)

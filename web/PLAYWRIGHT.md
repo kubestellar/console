@@ -1,6 +1,6 @@
-# Playwright E2E Testing for KubeStellar Klaude Console
+# Playwright E2E Testing for KubeStellar Console
 
-This document describes the comprehensive Playwright testing suite for the KubeStellar Klaude Console (kkc).
+This document describes the comprehensive Playwright testing suite for the KubeStellar Console (ksc).
 
 ## Quick Start
 

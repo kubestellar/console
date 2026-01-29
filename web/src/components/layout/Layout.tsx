@@ -96,7 +96,7 @@ export function Layout({ children }: LayoutProps) {
               <WifiOff className="w-4 h-4 text-orange-400 shrink-0" />
               <span className="text-sm text-orange-400 font-medium shrink-0">Offline</span>
               <span className="text-xs text-orange-400/70 truncate">
-                — Install: <code className="bg-orange-500/20 px-1 rounded">brew install kubestellar/tap/kkc-agent</code> → run <code className="bg-orange-500/20 px-1 rounded">kkc-agent</code> → configure your AI agent API keys in Settings
+                — Install: <code className="bg-orange-500/20 px-1 rounded">brew install kubestellar/tap/ksc-agent</code> → run <code className="bg-orange-500/20 px-1 rounded">ksc-agent</code> → configure your AI agent API keys in Settings
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-2">

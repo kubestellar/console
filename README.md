@@ -1,4 +1,4 @@
-# KubeStellar Klaude Console (kkc)
+# KubeStellar Console (ksc)
 
 A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how you work.
 
@@ -6,7 +6,7 @@ A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how yo
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    KubeStellar Klaude Console (kkc)                          │
+│                      KubeStellar Console (ksc)                              │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
 │  │ Cluster     │ │ App Status  │ │ Event       │ │ Deployment  │  ← Cards  │
 │  │ Health      │ │ (3 clusters)│ │ Stream      │ │ Progress    │    auto-  │
@@ -15,15 +15,15 @@ A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how yo
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## What is KubeStellar Klaude Console?
+## What is KubeStellar Console?
 
-KubeStellar Klaude Console (kkc) is a web-based dashboard for managing multiple Kubernetes clusters. Unlike traditional dashboards that show static views, kkc uses AI to observe how you work and automatically restructures itself to surface the most relevant information.
+KubeStellar Console (ksc) is a web-based dashboard for managing multiple Kubernetes clusters. Unlike traditional dashboards that show static views, ksc uses AI to observe how you work and automatically restructures itself to surface the most relevant information.
 
 ### Key Features
 
 - **Multi-cluster Overview**: See all your clusters in one place - OpenShift, GKE, EKS, kind, or any Kubernetes distribution
 - **Personalized Dashboard**: Answer a few questions during onboarding, and Console creates a dashboard tailored to your role
-- **Proactive AI**: Claude AI analyzes your behavior patterns and suggests card swaps when your focus changes
+- **Proactive AI**: AI analyzes your behavior patterns and suggests card swaps when your focus changes
 - **Real-time Updates**: WebSocket-powered live event streaming from all clusters
 - **Card Swap Mechanism**: Dashboard cards auto-swap based on context, with snooze/expedite/cancel controls
 - **App-Centric View**: Focus on applications, not just resources - see app health across all clusters
@@ -63,7 +63,7 @@ When Claude detects a shift in your focus, it suggests swapping dashboard cards:
 
 ### 4. MCP Integration
 
-Console uses the `klaude-ops` and `klaude-deploy` MCP servers to fetch data from your clusters. This means it works with any clusters in your kubeconfig.
+Console uses the `kubestellar-ops` and `kubestellar-deploy` MCP servers to fetch data from your clusters. This means it works with any clusters in your kubeconfig.
 
 ## Architecture
 
@@ -75,7 +75,7 @@ Console uses the `klaude-ops` and `klaude-deploy` MCP servers to fetch data from
                               │ WebSocket + REST
                               ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    KubeStellar Klaude Console Backend                        │
+│                      KubeStellar Console Backend                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
 │  │   Auth       │  │   Dashboard  │  │   Claude     │  │   Events     │    │
 │  │   Service    │  │   Service    │  │   Service    │  │   Stream     │    │
@@ -85,7 +85,7 @@ Console uses the `klaude-ops` and `klaude-deploy` MCP servers to fetch data from
 │         ▼                  ▼                  ▼                  ▼          │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                         MCP Bridge Layer                             │   │
-│  │    Wraps klaude-ops and klaude-deploy MCP servers as HTTP/WS APIs   │   │
+│  │    Wraps kubestellar-ops and kubestellar-deploy MCP servers as HTTP/WS APIs   │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
                               │
@@ -96,25 +96,25 @@ Console uses the `klaude-ops` and `klaude-deploy` MCP servers to fetch data from
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## KKC Agent (Local Agent)
+## KSC Agent (Local Agent)
 
-The **kkc-agent** is a local agent that runs on your machine and bridges the browser-based console to your local kubeconfig and Claude Code CLI. This allows the hosted console to access your clusters without exposing your kubeconfig over the internet.
+The **ksc-agent** is a local agent that runs on your machine and bridges the browser-based console to your local kubeconfig and Claude Code CLI. This allows the hosted console to access your clusters without exposing your kubeconfig over the internet.
 
 ### Installation
 
 ```bash
 brew tap kubestellar/tap
-brew install --head kkc-agent
+brew install --head ksc-agent
 ```
 
 ### Running the Agent
 
 ```bash
 # Start the agent (runs on localhost:8585)
-kkc-agent
+ksc-agent
 
 # Or run as a background service
-brew services start kubestellar/tap/kkc-agent
+brew services start kubestellar/tap/ksc-agent
 ```
 
 ### Configuration
@@ -123,8 +123,8 @@ The agent supports the following environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `KKC_ALLOWED_ORIGINS` | Comma-separated list of allowed origins for CORS | localhost only |
-| `KKC_AGENT_TOKEN` | Optional shared secret for authentication | (none) |
+| `KSC_ALLOWED_ORIGINS` | Comma-separated list of allowed origins for CORS | localhost only |
+| `KSC_AGENT_TOKEN` | Optional shared secret for authentication | (none) |
 
 #### Adding Custom Origins
 
@@ -132,10 +132,10 @@ If you're running the console on a custom domain, add it to the allowed origins:
 
 ```bash
 # Single origin
-KKC_ALLOWED_ORIGINS="https://my-console.example.com" kkc-agent
+KSC_ALLOWED_ORIGINS="https://my-console.example.com" ksc-agent
 
 # Multiple origins
-KKC_ALLOWED_ORIGINS="https://console1.example.com,https://console2.example.com" kkc-agent
+KSC_ALLOWED_ORIGINS="https://console1.example.com,https://console2.example.com" ksc-agent
 ```
 
 #### Running as a Service with Custom Origins
@@ -143,13 +143,13 @@ KKC_ALLOWED_ORIGINS="https://console1.example.com,https://console2.example.com" 
 To persist the configuration when running as a brew service, add to your shell profile (`~/.zshrc` or `~/.bashrc`):
 
 ```bash
-export KKC_ALLOWED_ORIGINS="https://my-console.example.com"
+export KSC_ALLOWED_ORIGINS="https://my-console.example.com"
 ```
 
 Then restart the service:
 
 ```bash
-brew services restart kubestellar/tap/kkc-agent
+brew services restart kubestellar/tap/ksc-agent
 ```
 
 ### Security
@@ -158,7 +158,7 @@ The agent implements several security measures:
 
 - **Origin Validation**: Only allows connections from configured origins (localhost by default)
 - **Localhost Only**: Binds to `127.0.0.1` - not accessible from other machines
-- **Optional Token Auth**: Can require a shared secret via `KKC_AGENT_TOKEN`
+- **Optional Token Auth**: Can require a shared secret via `KSC_AGENT_TOKEN`
 - **Command Allowlist**: Only permits safe kubectl commands (get, describe, logs, etc.)
 
 ## Available Card Types
@@ -188,9 +188,9 @@ The agent implements several security measures:
 - Docker (for containerized deployment)
 - GitHub OAuth App (for authentication)
 - [Claude Code](https://claude.ai/claude-code) CLI installed
-- Klaude plugins from the [Claude Code Marketplace](https://marketplace.claude.ai) (source: [claude-plugins](https://github.com/kubestellar/claude-plugins)):
-  - `klaude-ops` - Kubernetes operations tools
-  - `klaude-deploy` - Multi-cluster deployment tools
+- KubeStellar plugins from the [Claude Code Marketplace](https://marketplace.claude.ai) (source: [claude-plugins](https://github.com/kubestellar/claude-plugins)):
+  - `kubestellar-ops` - Kubernetes operations tools
+  - `kubestellar-deploy` - Multi-cluster deployment tools
 
 ### Quick Start
 
@@ -198,12 +198,12 @@ The agent implements several security measures:
 
 Follow the installation instructions at [claude.ai/claude-code](https://claude.ai/claude-code)
 
-**2. Install Klaude Plugins from Marketplace**
+**2. Install KubeStellar Plugins from Marketplace**
 
 ```bash
 # Install from Claude Code Marketplace
-claude plugins install klaude-ops
-claude plugins install klaude-deploy
+claude plugins install kubestellar-ops
+claude plugins install kubestellar-deploy
 ```
 
 **3. Or Install via Homebrew** (alternative method, source: [homebrew-tap](https://github.com/kubestellar/homebrew-tap))
@@ -212,8 +212,8 @@ claude plugins install klaude-deploy
 # Add the KubeStellar tap
 brew tap kubestellar/tap
 
-# Install klaude tools
-brew install klaude-ops klaude-deploy
+# Install KubeStellar tools
+brew install kubestellar-ops kubestellar-deploy
 ```
 
 ### Local Development
@@ -225,18 +225,18 @@ git clone https://github.com/kubestellar/console.git
 cd console
 ```
 
-2. **Install klaude tools** (if not already installed via brew)
+2. **Install KubeStellar tools** (if not already installed via brew)
 
 ```bash
 brew tap kubestellar/tap
-brew install klaude-ops klaude-deploy
+brew install kubestellar-ops kubestellar-deploy
 ```
 
 3. **Create a GitHub OAuth App**
 
 Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
 
-- Application name: `KubeStellar Klaude Console (dev)`
+- Application name: `KubeStellar Console (dev)`
 - Homepage URL: `http://localhost:5174`
 - Authorization callback URL: `http://localhost:8080/auth/github/callback`
 
@@ -532,20 +532,20 @@ DEV_MODE=false GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy ./console
 
 **Symptom**: Log shows `MCP bridge failed to start: failed to start MCP clients`
 
-**Cause**: `klaude-ops` or `klaude-deploy` plugins are not installed.
+**Cause**: `kubestellar-ops` or `kubestellar-deploy` plugins are not installed.
 
 **Solution**:
 ```bash
 # Option 1: Install from Claude Code Marketplace (recommended)
-claude plugins install klaude-ops
-claude plugins install klaude-deploy
+claude plugins install kubestellar-ops
+claude plugins install kubestellar-deploy
 
 # Option 2: Install via Homebrew
 brew tap kubestellar/tap
-brew install klaude-ops klaude-deploy
+brew install kubestellar-ops kubestellar-deploy
 
 # Verify installation
-which klaude-ops klaude-deploy
+which kubestellar-ops kubestellar-deploy
 ```
 
 **Note**: The console will still function without MCP tools, but cluster data will not be available.
@@ -595,7 +595,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-- [klaude](https://github.com/kubestellar/klaude) - AI-powered kubectl plugins (MCP servers)
+- [console](https://github.com/kubestellar/console) - AI-powered kubectl plugins (MCP servers)
 - [claude-plugins](https://github.com/kubestellar/claude-plugins) - Claude Code marketplace plugins for Kubernetes
 - [homebrew-tap](https://github.com/kubestellar/homebrew-tap) - Homebrew formulae for KubeStellar tools
 - [KubeStellar](https://kubestellar.io) - Multi-cluster configuration management

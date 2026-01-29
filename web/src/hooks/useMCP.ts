@@ -1419,7 +1419,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
 }
 
 // Concurrency limit for health checks - rolling concurrency for 100+ clusters
-// Keep at 2 to avoid overwhelming the KKC agent WebSocket connection
+// Keep at 2 to avoid overwhelming the local agent WebSocket connection
 const HEALTH_CHECK_CONCURRENCY = 2
 
 // Progressive health check with rolling concurrency

@@ -18,18 +18,18 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("kkc-agent version %s\n", agent.Version)
+		fmt.Printf("ksc-agent version %s\n", agent.Version)
 		os.Exit(0)
 	}
 
 	fmt.Printf(`
- _    _                                    _
-| | _| | _____       __ _  __ _  ___ _ __ | |_
-| |/ / |/ / __|____ / _`+"`"+` |/ _`+"`"+` |/ _ \ '_ \| __|
-|   <|   < (__/___ | (_| | (_| |  __/ | | | |_
-|_|\_\_|\_|\___|     \__,_|\__, |\___|_| |_|\__|
+ _                                    _
+| | _____  ___      __ _  __ _  ___ _ __ | |_
+| |/ / __|/ __|____ / _`+"`"+` |/ _`+"`"+` |/ _ \ '_ \| __|
+|   <\__ \ (__/___ | (_| | (_| |  __/ | | | |_
+|_|\_\___/\___|     \__,_|\__, |\___|_| |_|\__|
                          |___/
-KubeStellar Klaude Console - Local Agent v%s
+KubeStellar Console - Local Agent v%s
 `, agent.Version)
 
 	server, err := agent.NewServer(agent.Config{Port: *port, Kubeconfig: *kubeconfig})

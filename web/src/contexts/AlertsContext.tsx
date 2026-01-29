@@ -15,8 +15,8 @@ function generateId(): string {
 }
 
 // Local storage keys
-const ALERT_RULES_KEY = 'klaude_alert_rules'
-const ALERTS_KEY = 'klaude_alerts'
+const ALERT_RULES_KEY = 'ksc_alert_rules'
+const ALERTS_KEY = 'ksc_alerts'
 
 // Load from localStorage
 function loadFromStorage<T>(key: string, defaultValue: T): T {
@@ -294,7 +294,7 @@ Please provide:
             ? {
                 ...a,
                 aiDiagnosis: {
-                  summary: 'Klaude is analyzing this alert...',
+                  summary: 'AI is analyzing this alert...',
                   rootCause: '',
                   suggestions: [],
                   missionId,

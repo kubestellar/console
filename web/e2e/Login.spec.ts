@@ -9,7 +9,7 @@ test.describe('Login Page', () => {
     await page.waitForTimeout(1000) // Give Firefox extra time to render
 
     // Check for main elements - flexible approach for different page structures
-    const heading = page.locator('h1, h2, [class*="title"], text=/kubestellar|klaude|console|sign in|login/i').first()
+    const heading = page.locator('h1, h2, [class*="title"], text=/kubestellar|console|sign in|login/i').first()
     const hasHeading = await heading.isVisible().catch(() => false)
 
     // Should have login options
@@ -31,7 +31,7 @@ test.describe('Login Page', () => {
     await page.waitForTimeout(1000) // Give Firefox extra time
 
     // Check for logo, title, or any branding text
-    const title = page.locator('text=/kubestellar|klaude|kkc|console/i, img[alt*="logo"], svg').first()
+    const title = page.locator('text=/kubestellar|console|ksc/i, img[alt*="logo"], svg').first()
     const hasTitle = await title.isVisible().catch(() => false)
 
     // Page should have some content (branding may vary)

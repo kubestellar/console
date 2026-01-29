@@ -1,5 +1,5 @@
 #!/bin/bash
-# Development startup script for KubeStellar Klaude Console (kkc)
+# Development startup script for KubeStellar Console
 
 set -e
 
@@ -9,7 +9,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}=== KubeStellar Klaude Console (kkc) Development Server ===${NC}"
+echo -e "${GREEN}=== KubeStellar Console Development Server ===${NC}"
 
 # Check required environment variables
 if [ -z "$GITHUB_CLIENT_ID" ]; then
@@ -19,7 +19,7 @@ if [ -z "$GITHUB_CLIENT_ID" ]; then
     echo "1. Go to https://github.com/settings/developers"
     echo "2. Click 'New OAuth App'"
     echo "3. Set the following:"
-    echo "   - Application name: KubeStellar Klaude Console (Dev)"
+    echo "   - Application name: KubeStellar Console (Dev)"
     echo "   - Homepage URL: http://localhost:5174"
     echo "   - Authorization callback URL: http://localhost:8080/auth/github/callback"
     echo "4. Copy the Client ID and generate a Client Secret"
@@ -47,8 +47,8 @@ echo -e "${GREEN}Configuration:${NC}"
 echo "  Backend Port: $PORT"
 echo "  Frontend URL: $FRONTEND_URL"
 echo "  Database: ./data/console.db"
-echo "  MCP Ops: ${KLAUDE_OPS_PATH:-klaude-ops}"
-echo "  MCP Deploy: ${KLAUDE_DEPLOY_PATH:-klaude-deploy}"
+echo "  MCP Ops: ${KUBESTELLAR_OPS_PATH:-kubestellar-ops}"
+echo "  MCP Deploy: ${KUBESTELLAR_DEPLOY_PATH:-kubestellar-deploy}"
 echo ""
 
 # Clear ports if in use (kill existing processes)

@@ -1,7 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 
 /**
- * MSW handlers for KubeStellar Klaude Console (kkc)
+ * MSW handlers for KubeStellar Console
  * Provides mock data for E2E testing without requiring backend
  */
 

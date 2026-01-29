@@ -16,7 +16,7 @@ function generateId(): string {
 }
 
 // Local storage key for webhooks (still managed separately)
-const SLACK_WEBHOOKS_KEY = 'klaude_slack_webhooks'
+const SLACK_WEBHOOKS_KEY = 'ksc_slack_webhooks'
 
 // Load from localStorage
 function loadFromStorage<T>(key: string, defaultValue: T): T {
@@ -169,7 +169,7 @@ export function useSlackNotification() {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Klaude AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${alert.aiDiagnosis.suggestions.map(s => `• ${s}`).join('\n')}`,
+            text: `*AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${alert.aiDiagnosis.suggestions.map(s => `• ${s}`).join('\n')}`,
           },
         })
       }

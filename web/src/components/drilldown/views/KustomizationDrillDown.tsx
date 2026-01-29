@@ -9,7 +9,7 @@ import {
   FileText, GitBranch, Clock, Package
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { KlaudeIcon } from '../../ui/KlaudeIcon'
+import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
   useModalAI,
@@ -524,7 +524,7 @@ Please:
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <KlaudeIcon className="w-5 h-5" />
+                <ConsoleAIIcon className="w-5 h-5" />
                 AI Analysis
               </h4>
               <button
@@ -539,9 +539,9 @@ Please:
 
             {!isAgentConnected ? (
               <div className="text-center py-12 text-muted-foreground">
-                <KlaudeIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <ConsoleAIIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>AI agent not connected</p>
-                <p className="text-xs mt-1">Configure the Klaude agent in Settings to enable AI analysis</p>
+                <p className="text-xs mt-1">Configure the local agent in Settings to enable AI analysis</p>
               </div>
             ) : aiAnalysisLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -555,7 +555,7 @@ Please:
               <div className="text-center py-12 text-muted-foreground">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>Click "Analyze Kustomization" to get AI-powered analysis</p>
-                <p className="text-xs mt-1">Klaude will analyze the kustomization and suggest improvements</p>
+                <p className="text-xs mt-1">AI will analyze the kustomization and suggest improvements</p>
               </div>
             )}
           </div>

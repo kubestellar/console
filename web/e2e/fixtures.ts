@@ -1,7 +1,7 @@
 import { test as base, expect } from '@playwright/test'
 
 /**
- * Custom fixtures for KubeStellar Klaude Console (kkc) E2E tests
+ * Custom fixtures for KubeStellar Console (ksc) E2E tests
  *
  * Provides common setup, utilities, and page objects for testing.
  */

@@ -1,11 +1,11 @@
 /**
- * Kubectl Proxy - Execute kubectl commands through the KKC agent's WebSocket
+ * Kubectl Proxy - Execute kubectl commands through the local agent's WebSocket
  *
- * This provides direct access to Kubernetes clusters via the local KKC agent,
+ * This provides direct access to Kubernetes clusters via the local agent,
  * which has access to the user's kubeconfig.
  */
 
-const KKC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+const KSC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
 
 type MessageType = 'kubectl' | 'health' | 'clusters' | 'result' | 'error'
 
@@ -51,7 +51,7 @@ class KubectlProxy {
   // Request queue to prevent overwhelming the WebSocket
   private requestQueue: QueuedRequest[] = []
   private activeRequests = 0
-  private readonly maxConcurrentRequests = 2 // Limit concurrent requests to KKC agent
+  private readonly maxConcurrentRequests = 2 // Limit concurrent requests to local agent
 
   /**
    * Ensure WebSocket is connected
@@ -74,10 +74,10 @@ class KubectlProxy {
     this.isConnecting = true
     this.connectPromise = new Promise((resolve, reject) => {
       try {
-        this.ws = new WebSocket(KKC_AGENT_WS_URL)
+        this.ws = new WebSocket(KSC_AGENT_WS_URL)
 
         this.ws.onopen = () => {
-          console.log('[KubectlProxy] Connected to KKC agent')
+          console.log('[KubectlProxy] Connected to local agent')
           this.isConnecting = false
           resolve()
         }
@@ -120,7 +120,7 @@ class KubectlProxy {
           console.error('[KubectlProxy] WebSocket error:', err)
           this.isConnecting = false
           this.connectPromise = null
-          reject(new Error('Failed to connect to KKC agent'))
+          reject(new Error('Failed to connect to local agent'))
         }
       } catch (err) {
         this.isConnecting = false
@@ -199,7 +199,7 @@ class KubectlProxy {
     await this.ensureConnected()
 
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('Not connected to KKC agent')
+      throw new Error('Not connected to local agent')
     }
 
     const id = this.generateId()
@@ -638,7 +638,7 @@ class KubectlProxy {
 
   /**
    * Get health for multiple clusters in parallel with progressive updates
-   * Uses a concurrency limit to avoid overwhelming the KKC agent
+   * Uses a concurrency limit to avoid overwhelming the local agent
    * @param contexts - Array of cluster contexts to check
    * @param onProgress - Callback called as each cluster's health is determined
    * @param concurrency - Max number of parallel health checks (default 5)

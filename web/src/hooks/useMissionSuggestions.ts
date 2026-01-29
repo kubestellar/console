@@ -18,8 +18,8 @@ export interface MissionSuggestion {
   description: string
   priority: 'critical' | 'high' | 'medium' | 'low'
   action: {
-    type: 'klaude' | 'navigate' | 'scale' | 'diagnose'
-    target: string   // Klaude command, route, or action identifier
+    type: 'ai' | 'navigate' | 'scale' | 'diagnose'
+    target: string   // AI command, route, or action identifier
     label: string    // Button label
   }
   context: {
@@ -74,7 +74,7 @@ export function useMissionSuggestions() {
         description: `${highRestartPods.length} pod${highRestartPods.length > 1 ? 's have' : ' has'} restarted ${THRESHOLDS.restartCount}+ times`,
         priority: highRestartPods.length > 5 ? 'high' : 'medium',
         action: {
-          type: 'klaude',
+          type: 'ai',
           target: `Diagnose why pods are restarting frequently: ${topPods.map(p => p.name).join(', ')}`,
           label: 'Diagnose',
         },
@@ -98,7 +98,7 @@ export function useMissionSuggestions() {
         description: `${unavailableDeployments.length} deployment${unavailableDeployments.length > 1 ? 's have' : ' has'} unavailable replicas`,
         priority: 'high',
         action: {
-          type: 'klaude',
+          type: 'ai',
           target: `Diagnose why deployments have unavailable replicas: ${unavailableDeployments.slice(0, 3).map(d => d.name).join(', ')}`,
           label: 'Diagnose',
         },
@@ -142,7 +142,7 @@ export function useMissionSuggestions() {
         description: `${unhealthyClusters.length} cluster${unhealthyClusters.length > 1 ? 's are' : ' is'} unhealthy or unreachable`,
         priority: 'critical',
         action: {
-          type: 'klaude',
+          type: 'ai',
           target: `Diagnose cluster health issues for: ${unhealthyClusters.map(c => c.name).join(', ')}`,
           label: 'Diagnose',
         },
@@ -168,9 +168,9 @@ export function useMissionSuggestions() {
         description: `${podsWithoutLimits.length} running pods may be missing resource limits`,
         priority: 'low',
         action: {
-          type: 'klaude',
+          type: 'ai',
           target: 'Find pods without resource limits and suggest appropriate values based on usage',
-          label: 'Analyze with Klaude',
+          label: 'Analyze with AI',
         },
         context: {
           count: podsWithoutLimits.length,
@@ -193,7 +193,7 @@ export function useMissionSuggestions() {
         description: `${pressuredNodes.length} node${pressuredNodes.length > 1 ? 's are' : ' is'} under resource pressure`,
         priority: 'high',
         action: {
-          type: 'klaude',
+          type: 'ai',
           target: `Diagnose resource pressure on nodes: ${pressuredNodes.map(n => n.name).join(', ')}`,
           label: 'Diagnose',
         },
@@ -217,9 +217,9 @@ export function useMissionSuggestions() {
         description: `${lowReplicaDeployments.length} deployments have only 1 replica (no HA)`,
         priority: 'low',
         action: {
-          type: 'klaude',
+          type: 'ai',
           target: 'Review deployments with single replicas and recommend scaling for high availability',
-          label: 'Review with Klaude',
+          label: 'Review with AI',
         },
         context: {
           count: lowReplicaDeployments.length,

@@ -121,7 +121,7 @@ export function Settings() {
   const [profileSaved, setProfileSaved] = useState(false)
   const [showAPIKeySettings, setShowAPIKeySettings] = useState(false)
 
-  const installCommand = 'brew install kubestellar/tap/kkc-agent && kkc-agent'
+  const installCommand = 'brew install kubestellar/tap/ksc-agent && ksc-agent'
 
   const copyInstallCommand = async () => {
     await navigator.clipboard.writeText(installCommand)
@@ -551,7 +551,7 @@ export function Settings() {
 
           <div className="p-4 rounded-lg bg-secondary/30 mb-4">
             <p className="text-sm text-muted-foreground">
-              API keys are stored securely on your local machine in <code className="px-1 py-0.5 rounded bg-secondary text-foreground">~/.kkc/config.yaml</code> and are never sent to our servers.
+              API keys are stored securely on your local machine in <code className="px-1 py-0.5 rounded bg-secondary text-foreground">~/.ksc/config.yaml</code> and are never sent to our servers.
             </p>
           </div>
 
