@@ -46,6 +46,9 @@ interface SortableDeploymentsCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableDeploymentsCard = memo(function SortableDeploymentsCard({
@@ -54,6 +57,9 @@ const SortableDeploymentsCard = memo(function SortableDeploymentsCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableDeploymentsCardProps) {
   const {
     attributes,
@@ -88,6 +94,9 @@ const SortableDeploymentsCard = memo(function SortableDeploymentsCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -125,7 +134,7 @@ function DeploymentsDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Deployments() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { deployments, isLoading, isRefreshing, lastUpdated, refetch } = useDeployments()
+  const { deployments, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useDeployments()
   const { issues: deploymentIssues, refetch: refetchIssues } = useDeploymentIssues()
   const { issues: podIssues } = usePodIssues()
   const { clusters: _clusters } = useClusters()
@@ -179,6 +188,7 @@ export function Deployments() {
   }, [refetch, refetchIssues])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
@@ -290,6 +300,7 @@ export function Deployments() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="deployments-auto-refresh"
+        lastUpdated={lastUpdated}
       />
 
       {/* Stats Overview */}
@@ -351,6 +362,9 @@ export function Deployments() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

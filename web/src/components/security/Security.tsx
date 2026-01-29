@@ -49,6 +49,9 @@ interface SortableSecurityCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableSecurityCard = memo(function SortableSecurityCard({
@@ -57,6 +60,9 @@ const SortableSecurityCard = memo(function SortableSecurityCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableSecurityCardProps) {
   const {
     attributes,
@@ -95,6 +101,9 @@ const SortableSecurityCard = memo(function SortableSecurityCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={isDemoData}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -283,7 +292,7 @@ export function Security() {
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
   const [selectedIssueType, setSelectedIssueType] = useState<string | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [dataRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Refresh function for security data
@@ -297,6 +306,7 @@ export function Security() {
   }, [])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isRefreshing || showIndicator
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -697,6 +707,9 @@ export function Security() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

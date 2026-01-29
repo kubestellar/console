@@ -57,9 +57,12 @@ interface SortableCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging?: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
-function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging }: SortableCardProps) {
+function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging, isRefreshing, onRefresh, lastUpdated }: SortableCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id })
 
   const style = {
@@ -82,6 +85,9 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging }
           onRemove={onRemove}
           onWidthChange={onWidthChange}
           cardWidth={card.position?.w || 4}
+          isRefreshing={isRefreshing}
+          onRefresh={onRefresh}
+          lastUpdated={lastUpdated}
         >
           <div className="flex items-center justify-center h-full text-muted-foreground">
             Unknown card type: {card.card_type}
@@ -109,6 +115,9 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, isDragging }
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         cardWidth={card.position?.w || 4}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
       >
         <CardComponent config={card.config} />
       </CardWrapper>
@@ -183,7 +192,7 @@ export function CustomDashboard() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [cards, setCards] = useState<Card[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [dataRefreshing, setIsRefreshing] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
@@ -259,6 +268,7 @@ export function CustomDashboard() {
 
   const handleRefreshDashboard = useCallback(() => loadDashboard(true), [loadDashboard])
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshDashboard, id)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
 
   // Initial load
@@ -523,6 +533,9 @@ export function CustomDashboard() {
                   onRemove={() => handleRemoveCard(card.id)}
                   onWidthChange={(w) => handleWidthChange(card.id, w)}
                   isDragging={activeId === card.id}
+                  isRefreshing={isRefreshing}
+                  onRefresh={triggerRefresh}
+                  lastUpdated={lastUpdated}
                 />
               ))}
             </div>

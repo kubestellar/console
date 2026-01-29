@@ -58,6 +58,9 @@ interface SortableDeployCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableDeployCard = memo(function SortableDeployCard({
@@ -66,6 +69,9 @@ const SortableDeployCard = memo(function SortableDeployCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableDeployCardProps) {
   const {
     attributes,
@@ -100,6 +106,9 @@ const SortableDeployCard = memo(function SortableDeployCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -138,7 +147,7 @@ function DeployDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Deploy() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
-  const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch } = useDeployments()
+  const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -170,7 +179,7 @@ export function Deploy() {
     onRefresh: refetch,
   })
 
-  const isRefreshing = deploymentsRefreshing
+  const isRefreshing = deploymentsRefreshing || showIndicator
   const isFetching = deploymentsLoading || isRefreshing || showIndicator
 
   // Handle addCard URL param - open modal and clear param
@@ -241,6 +250,7 @@ export function Deploy() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="deploy-auto-refresh"
+        lastUpdated={lastUpdated}
       />
 
       {/* Deploy Stats Banner */}
@@ -315,6 +325,9 @@ export function Deploy() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

@@ -50,6 +50,9 @@ interface SortableCardProps {
   onConfigure: () => void
   onWidthChange: (width: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableCard = memo(function SortableCard({
@@ -58,6 +61,9 @@ const SortableCard = memo(function SortableCard({
   onConfigure,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableCardProps) {
   const {
     attributes,
@@ -92,6 +98,9 @@ const SortableCard = memo(function SortableCard({
         cardWidth={width}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
             <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -137,8 +146,9 @@ const DEFAULT_COST_CARDS = [
 
 export function Cost() {
   const location = useLocation()
-  const { clusters, isLoading, refetch, lastUpdated, isRefreshing } = useClusters()
+  const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -408,6 +418,9 @@ export function Cost() {
                   onConfigure={() => handleConfigureCard(card.id)}
                   onWidthChange={(width) => handleWidthChange(card.id, width)}
                   isDragging={activeId === card.id}
+                  isRefreshing={isRefreshing}
+                  onRefresh={triggerRefresh}
+                  lastUpdated={lastUpdated}
                 />
               ))}
             </div>

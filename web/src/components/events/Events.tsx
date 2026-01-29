@@ -51,6 +51,9 @@ interface SortableEventCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableEventCard = memo(function SortableEventCard({
@@ -59,6 +62,9 @@ const SortableEventCard = memo(function SortableEventCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableEventCardProps) {
   const {
     attributes,
@@ -95,6 +101,9 @@ const SortableEventCard = memo(function SortableEventCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -230,7 +239,7 @@ export function Events() {
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
 
   const isLoading = loadingAll
-  const isRefreshing = refreshingAll
+  const isRefreshing = refreshingAll || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
   const lastUpdated = allUpdated ? new Date(allUpdated) : null
 
@@ -692,6 +701,9 @@ export function Events() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

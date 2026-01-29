@@ -49,6 +49,9 @@ interface SortablePodCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortablePodCard = memo(function SortablePodCard({
@@ -57,6 +60,9 @@ const SortablePodCard = memo(function SortablePodCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortablePodCardProps) {
   const {
     attributes,
@@ -93,6 +99,9 @@ const SortablePodCard = memo(function SortablePodCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -171,7 +180,7 @@ export function Pods() {
 
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || clustersLoading
-  const isRefreshing = podIssuesRefreshing
+  const isRefreshing = podIssuesRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
   const showSkeletons = podIssues.length === 0 && isLoading
 
@@ -311,6 +320,7 @@ export function Pods() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="pods-auto-refresh"
+        lastUpdated={lastUpdated}
       />
 
       {/* Stats Overview */}
@@ -373,6 +383,9 @@ export function Pods() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

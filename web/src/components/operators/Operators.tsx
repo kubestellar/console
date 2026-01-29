@@ -46,6 +46,9 @@ interface SortableOperatorsCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableOperatorsCard = memo(function SortableOperatorsCard({
@@ -54,6 +57,9 @@ const SortableOperatorsCard = memo(function SortableOperatorsCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableOperatorsCardProps) {
   const {
     attributes,
@@ -88,6 +94,9 @@ const SortableOperatorsCard = memo(function SortableOperatorsCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -125,7 +134,7 @@ function OperatorsDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Operators() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { subscriptions: operatorSubs, refetch: refetchSubs } = useOperatorSubscriptions()
   const { operators: allOperators, refetch: refetchOps } = useOperators()
   const { drillToOperator: _drillToOperator, drillToAllOperators, drillToAllClusters } = useDrillDownActions()
@@ -180,6 +189,7 @@ export function Operators() {
   }, [refetch, refetchSubs, refetchOps])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
 
   const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
@@ -387,6 +397,9 @@ export function Operators() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

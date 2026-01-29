@@ -46,6 +46,9 @@ interface SortableServicesCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableServicesCard = memo(function SortableServicesCard({
@@ -54,6 +57,9 @@ const SortableServicesCard = memo(function SortableServicesCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableServicesCardProps) {
   const {
     attributes,
@@ -88,6 +94,9 @@ const SortableServicesCard = memo(function SortableServicesCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -125,8 +134,9 @@ function ServicesDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Services() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
   const { services } = useServices()
   const { drillToService: _drillToService, drillToAllServices, drillToAllClusters } = useDrillDownActions()
@@ -271,6 +281,7 @@ export function Services() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="services-auto-refresh"
+        lastUpdated={lastUpdated}
       />
 
       {/* Stats Overview */}
@@ -332,6 +343,9 @@ export function Services() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

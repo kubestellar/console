@@ -397,6 +397,24 @@ class CacheStore<T> {
     this.notify()
   }
 
+  // Mark store as ready (not loading) — used when fetching is disabled (demo mode)
+  markReady(): void {
+    if (this.state.isLoading) {
+      this.setState({ isLoading: false, lastRefresh: Date.now() })
+    }
+  }
+
+  // Visual-only refresh for demo/disabled mode — triggers isRefreshing without fetching
+  simulateRefresh(): void {
+    if (this.fetchingRef) return
+    this.fetchingRef = true
+    this.setState({ isRefreshing: true })
+    setTimeout(() => {
+      this.setState({ isRefreshing: false, lastRefresh: Date.now() })
+      this.fetchingRef = false
+    }, MIN_REFRESH_INDICATOR_MS)
+  }
+
   // Fetching
   async fetch(fetcher: () => Promise<T>, merge?: (old: T, new_: T) => T): Promise<void> {
     if (this.fetchingRef) return
@@ -579,7 +597,10 @@ export function useCache<T>({
   mergeRef.current = merge
 
   const refetch = useCallback(async () => {
-    if (!enabled) return
+    if (!enabled) {
+      store.simulateRefresh()
+      return
+    }
     await store.fetch(() => fetcherRef.current(), mergeRef.current)
   }, [enabled, store])
 
@@ -592,7 +613,13 @@ export function useCache<T>({
   const effectiveInterval = refreshInterval ?? REFRESH_RATES[category]
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      // In demo/disabled mode, no fetch will run — mark loading as done
+      // and trigger a brief refresh animation so cards pulse on page open
+      store.markReady()
+      store.simulateRefresh()
+      return
+    }
 
     // Initial fetch
     refetch()
@@ -602,7 +629,7 @@ export function useCache<T>({
       const intervalId = setInterval(refetch, effectiveInterval)
       return () => clearInterval(intervalId)
     }
-  }, [enabled, autoRefresh, effectiveInterval, refetch])
+  }, [enabled, autoRefresh, effectiveInterval, refetch, store])
 
   // Cleanup non-shared stores on unmount
   useEffect(() => {

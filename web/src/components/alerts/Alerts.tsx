@@ -39,11 +39,14 @@ const DEFAULT_ALERT_CARDS = [
 
 
 // Sortable card component
-function SortableCard({ card, onRemove, onReplace, onConfigure }: {
+function SortableCard({ card, onRemove, onReplace, onConfigure, isRefreshing, onRefresh, lastUpdated }: {
   card: DashboardCard
   onRemove: (id: string) => void
   onReplace: (id: string) => void
   onConfigure: (id: string) => void
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }) {
   const {
     attributes,
@@ -82,6 +85,9 @@ function SortableCard({ card, onRemove, onReplace, onConfigure }: {
         onReplace={() => onReplace(card.id)}
         onConfigure={() => onConfigure(card.id)}
         isDemoData={isDemoData}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -102,7 +108,7 @@ function SortableCard({ card, onRemove, onReplace, onConfigure }: {
 export function Alerts() {
   const { stats, evaluateConditions } = useAlerts()
   const { rules } = useAlertRules()
-  const { isRefreshing, refetch } = useClusters()
+  const { isRefreshing: dataRefreshing, refetch } = useClusters()
   const { drillToAlert } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
@@ -182,6 +188,7 @@ export function Alerts() {
   }, [refetch, evaluateConditions])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isRefreshing || showIndicator
 
   const enabledRulesCount = rules.filter(r => r.enabled).length
@@ -270,6 +277,9 @@ export function Alerts() {
                 onRemove={handleRemoveCard}
                 onReplace={handleReplaceCard}
                 onConfigure={handleConfigureCard}
+                isRefreshing={isRefreshing}
+                onRefresh={triggerRefresh}
+                lastUpdated={lastUpdated}
               />
             ))}
           </div>

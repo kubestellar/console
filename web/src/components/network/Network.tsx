@@ -45,6 +45,9 @@ interface SortableNetworkCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableNetworkCard = memo(function SortableNetworkCard({
@@ -53,6 +56,9 @@ const SortableNetworkCard = memo(function SortableNetworkCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableNetworkCardProps) {
   const {
     attributes,
@@ -89,6 +95,9 @@ const SortableNetworkCard = memo(function SortableNetworkCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -128,6 +137,7 @@ export function Network() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch } = useServices()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = servicesRefreshing || showIndicator
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -166,7 +176,7 @@ export function Network() {
   })
 
   // Show loading spinner when fetching (initial or refresh)
-  const isFetching = servicesLoading || servicesRefreshing || showIndicator
+  const isFetching = servicesLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = services.length === 0 && servicesLoading
 
@@ -350,6 +360,9 @@ export function Network() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

@@ -2041,7 +2041,16 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     // Skip backend fetch in demo mode or when backend is unavailable
     const token = localStorage.getItem('token')
     if (!token || token === 'demo-token' || isBackendUnavailable()) {
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
       setIsLoading(false)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
       return
     }
 
@@ -2245,6 +2254,22 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip backend fetch in demo mode
+    const token = localStorage.getItem('token')
+    if (!token || token === 'demo-token') {
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
+      setIsLoading(false)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       // Always set isRefreshing first so indicator shows
@@ -2381,8 +2406,16 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       if (!eventsCache) {
         setEvents(getDemoEvents())
       }
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
       setIsLoading(false)
-      setIsRefreshing(false)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
       return
     }
 
@@ -2548,6 +2581,25 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip backend fetch in demo mode
+    const token = localStorage.getItem('token')
+    if (!token || token === 'demo-token') {
+      if (!deploymentIssuesCache) {
+        setIssues(getDemoDeploymentIssues())
+      }
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
+      setIsLoading(false)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       // Always set isRefreshing first so indicator shows
@@ -2754,8 +2806,11 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
         setDeployments([])
+        const now = new Date()
+        setLastUpdated(now)
+        setLastRefresh(now)
         setIsLoading(false)
-        setIsRefreshing(false)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
       }
 
@@ -2967,8 +3022,11 @@ export function useServices(cluster?: string, namespace?: string) {
           (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
         )
         setServices(demoServices)
+        const now = new Date()
+        setLastUpdated(now)
+        setLastRefresh(now)
         setIsLoading(false)
-        setIsRefreshing(false)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
       }
 
@@ -3655,8 +3713,15 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
         if (!warningEventsCache) {
           setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
         }
+        const now = new Date()
+        setLastUpdated(now)
         setIsLoading(false)
-        setIsRefreshing(false)
+        if (!silent) {
+          setIsRefreshing(true)
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
         return
       }
 
@@ -4300,8 +4365,16 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
         setIssues(getDemoSecurityIssues())
+        const now = new Date()
+        setLastUpdated(now)
+        setLastRefresh(now)
         setIsLoading(false)
-        setIsRefreshing(false)
+        if (!silent) {
+          setIsRefreshing(true)
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
         setIsUsingDemoData(true)
         return
       }
@@ -4399,8 +4472,14 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
         setDrifts(getDemoGitOpsDrifts())
+        setLastRefresh(new Date())
         setIsLoading(false)
-        setIsRefreshing(false)
+        if (!silent) {
+          setIsRefreshing(true)
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
         return
       }
 
@@ -5856,9 +5935,18 @@ export function useHelmReleases(cluster?: string) {
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
+        setLastRefresh(Date.now())
         setIsLoading(false)
-        setIsRefreshing(false)
-        notifyListeners(false)
+        if (!silent) {
+          setIsRefreshing(true)
+          setTimeout(() => {
+            setIsRefreshing(false)
+            notifyListeners(false)
+          }, MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+          notifyListeners(false)
+        }
         return
       }
 
@@ -5990,7 +6078,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
         setIsLoading(false)
-        setIsRefreshing(false)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
       }
 
@@ -6117,7 +6205,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
         setIsLoading(false)
-        setIsRefreshing(false)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
       }
 
@@ -6217,7 +6305,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
         const token = localStorage.getItem('token')
         if (!token || token === 'demo-token') {
           setIsLoading(false)
-          setIsRefreshing(false)
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
           return
         }
 

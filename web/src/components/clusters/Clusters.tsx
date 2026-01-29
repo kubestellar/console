@@ -55,6 +55,9 @@ interface SortableClusterCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableClusterCard = memo(function SortableClusterCard({
@@ -63,6 +66,9 @@ const SortableClusterCard = memo(function SortableClusterCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableClusterCardProps) {
   const {
     attributes,
@@ -97,6 +103,9 @@ const SortableClusterCard = memo(function SortableClusterCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -1452,8 +1461,9 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
 }
 
 export function Clusters() {
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
@@ -1795,6 +1805,7 @@ export function Clusters() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="clusters-auto-refresh"
+        lastUpdated={lastUpdated}
       />
 
       {/* Stats Overview - collapsible */}
@@ -1808,11 +1819,6 @@ export function Clusters() {
             <span>Stats Overview</span>
             {showStats ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
         </div>
 
         {showStats && (
@@ -2060,6 +2066,9 @@ export function Clusters() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

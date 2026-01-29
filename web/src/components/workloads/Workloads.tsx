@@ -50,6 +50,9 @@ interface SortableWorkloadCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableWorkloadCard = memo(function SortableWorkloadCard({
@@ -58,6 +61,9 @@ const SortableWorkloadCard = memo(function SortableWorkloadCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableWorkloadCardProps) {
   const {
     attributes,
@@ -94,6 +100,9 @@ const SortableWorkloadCard = memo(function SortableWorkloadCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -191,7 +200,7 @@ export function Workloads() {
 
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
-  const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
+  const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
   // Only show skeletons when we have no data yet
   const showSkeletons = (allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading
@@ -409,6 +418,7 @@ export function Workloads() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="workloads-auto-refresh"
+        lastUpdated={lastUpdated}
       />
 
       {/* Stats Overview - configurable */}
@@ -472,6 +482,9 @@ export function Workloads() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

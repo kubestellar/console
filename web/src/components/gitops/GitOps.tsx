@@ -95,6 +95,9 @@ interface SortableCardProps {
   onConfigure: () => void
   onWidthChange: (width: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableCard = memo(function SortableCard({
@@ -103,6 +106,9 @@ const SortableCard = memo(function SortableCard({
   onConfigure,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableCardProps) {
   const {
     attributes,
@@ -137,6 +143,9 @@ const SortableCard = memo(function SortableCard({
         cardWidth={width}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
             <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -217,7 +226,7 @@ function getTimeAgo(timestamp: string | undefined): string {
 }
 
 export function GitOps() {
-  const { clusters, isRefreshing, refetch } = useClusters()
+  const { clusters, isRefreshing: dataRefreshing, refetch } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToHelm: _drillToHelm, drillToOperator: _drillToOperator, drillToAllHelm, drillToAllOperators } = useDrillDownActions()
@@ -308,6 +317,7 @@ export function GitOps() {
   }, [refetch])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isRefreshing || showIndicator
 
   // Detect drift for all apps on mount
@@ -708,6 +718,9 @@ export function GitOps() {
                   onConfigure={() => handleConfigureCard(card.id)}
                   onWidthChange={(width) => handleWidthChange(card.id, width)}
                   isDragging={activeId === card.id}
+                  isRefreshing={isRefreshing}
+                  onRefresh={triggerRefresh}
+                  lastUpdated={lastUpdated}
                 />
               ))}
             </div>

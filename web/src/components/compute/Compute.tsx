@@ -47,6 +47,9 @@ interface SortableComputeCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableComputeCard = memo(function SortableComputeCard({
@@ -55,6 +58,9 @@ const SortableComputeCard = memo(function SortableComputeCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableComputeCardProps) {
   const {
     attributes,
@@ -89,6 +95,9 @@ const SortableComputeCard = memo(function SortableComputeCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -128,8 +137,9 @@ export function Compute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = dataRefreshing || showIndicator
   const { nodes: gpuNodes } = useGPUNodes()
   const {
     selectedClusters: globalSelectedClusters,
@@ -532,6 +542,9 @@ export function Compute() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>

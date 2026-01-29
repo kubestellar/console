@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, memo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { GripVertical, AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle, X } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -17,10 +17,8 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { api, BackendUnavailableError } from '../../lib/api'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
@@ -29,8 +27,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
-import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
@@ -40,7 +37,8 @@ import { TemplatesModal } from './TemplatesModal'
 import { CreateDashboardModal } from './CreateDashboardModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { DashboardTemplate } from './templates'
-import { formatCardTitle } from '../../lib/formatCardTitle'
+import { SortableCard, DragPreviewCard } from './SharedSortableCard'
+import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
@@ -70,21 +68,6 @@ const DEFAULT_DASHBOARD_CARDS: Card[] = [
   { id: 'default-7', card_type: 'pod_issues', config: {}, position: { x: 6, y: 7, w: 6, h: 3 } },
 ]
 
-interface Card {
-  id: string
-  card_type: string
-  config: Record<string, unknown>
-  position: { x: number; y: number; w: number; h: number }
-  last_summary?: string
-  title?: string
-}
-
-interface DashboardData {
-  id: string
-  name: string
-  is_default?: boolean
-  cards: Card[]
-}
 
 export function Dashboard() {
   // Initialize from cache if available (progressive disclosure - no skeletons on navigation)
@@ -136,8 +119,9 @@ export function Dashboard() {
 
   // Cluster data for refresh functionality and stats - most cards depend on this
   // Use deduplicated clusters to avoid double-counting same server with different contexts
-  const { deduplicatedClusters: clusters, isRefreshing, lastUpdated, refetch, isLoading: isClustersLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isRefreshing: dataRefreshing, lastUpdated, refetch, isLoading: isClustersLoading } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isClustersLoading || isRefreshing || showIndicator
   const { drillToCluster: _drillToCluster, drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
 
@@ -800,6 +784,9 @@ export function Dashboard() {
                 onRemove={() => handleRemoveCard(card.id)}
                 onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                 isDragging={activeId === card.id}
+                isRefreshing={isRefreshing}
+                onRefresh={triggerRefresh}
+                lastUpdated={lastUpdated}
               />
             ))}
           </div>
@@ -868,108 +855,6 @@ export function Dashboard() {
         onCreate={handleCreateDashboardConfirm}
         existingNames={dashboards.map(d => d.name)}
       />
-    </div>
-  )
-}
-
-// Sortable card component with drag handle - memoized to prevent unnecessary re-renders
-interface SortableCardProps {
-  card: Card
-  onConfigure: () => void
-  onReplace: () => void
-  onRemove: () => void
-  onWidthChange: (newWidth: number) => void
-  isDragging: boolean
-}
-
-const SortableCard = memo(function SortableCard({ card, onConfigure, onReplace, onRemove, onWidthChange, isDragging }: SortableCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: card.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    gridColumn: `span ${card.position.w}`,
-    gridRow: `span ${card.position.h}`,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-
-  return (
-    <div ref={setNodeRef} style={style} className="h-full">
-      <CardWrapper
-        cardId={card.id}
-        cardType={card.card_type}
-        lastSummary={card.last_summary}
-        title={card.title}
-        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
-        isLive={LIVE_DATA_CARDS.has(card.card_type)}
-        cardWidth={card.position.w}
-        onConfigure={onConfigure}
-        onReplace={onReplace}
-        onRemove={onRemove}
-        onWidthChange={onWidthChange}
-        dragHandle={
-          <button
-            {...attributes}
-            {...listeners}
-            className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            title="Drag to reorder"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        }
-      >
-        {CardComponent ? (
-          <CardComponent config={card.config} />
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>Card type: {card.card_type}</p>
-          </div>
-        )}
-      </CardWrapper>
-    </div>
-  )
-}, (prevProps, nextProps) => {
-  // Custom comparison - only re-render if card data or drag state changes
-  // Ignore callback references as they're stable via useCallback
-  return (
-    prevProps.card.id === nextProps.card.id &&
-    prevProps.card.card_type === nextProps.card.card_type &&
-    prevProps.card.position.w === nextProps.card.position.w &&
-    prevProps.card.position.h === nextProps.card.position.h &&
-    prevProps.card.title === nextProps.card.title &&
-    prevProps.card.last_summary === nextProps.card.last_summary &&
-    JSON.stringify(prevProps.card.config) === JSON.stringify(nextProps.card.config) &&
-    prevProps.isDragging === nextProps.isDragging
-  )
-})
-
-// Preview card shown during drag
-function DragPreviewCard({ card }: { card: Card }) {
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-
-  return (
-    <div
-      className="rounded-lg glass border border-purple-500/50 p-4 shadow-xl"
-      style={{
-        width: `${card.position.w * 100}px`,
-        minWidth: '200px',
-        maxWidth: '400px',
-      }}
-    >
-      <div className="text-sm font-medium text-foreground mb-2">
-        {formatCardTitle(card.card_type)}
-      </div>
-      <div className="h-24 flex items-center justify-center text-muted-foreground">
-        {CardComponent ? 'Moving card...' : `Card type: ${card.card_type}`}
-      </div>
     </div>
   )
 }

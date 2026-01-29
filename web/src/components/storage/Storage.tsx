@@ -148,6 +148,9 @@ interface SortableStorageCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 const SortableStorageCard = memo(function SortableStorageCard({
@@ -156,6 +159,9 @@ const SortableStorageCard = memo(function SortableStorageCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableStorageCardProps) {
   const {
     attributes,
@@ -192,6 +198,9 @@ const SortableStorageCard = memo(function SortableStorageCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}
@@ -230,8 +239,9 @@ function StorageDragPreviewCard({ card }: { card: DashboardCard }) {
 export function Storage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+  const isRefreshing = dataRefreshing || showIndicator
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -528,6 +538,9 @@ export function Storage() {
                         onRemove={() => handleRemoveCard(card.id)}
                         onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
                         isDragging={activeId === card.id}
+                        isRefreshing={isRefreshing}
+                        onRefresh={triggerRefresh}
+                        lastUpdated={lastUpdated}
                       />
                     ))}
                   </div>
