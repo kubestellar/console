@@ -29,6 +29,14 @@ interface ScrollPositions {
 }
 
 /**
+ * Get the scrollable main content element.
+ * The layout uses a <main> with overflow-y-auto, not window scroll.
+ */
+function getScrollContainer(): Element | null {
+  return document.querySelector('main')
+}
+
+/**
  * Hook to persist and restore the last visited route and scroll position.
  * Saves the current route on navigation and scroll position on scroll/unload.
  * On initial app load, redirects to the last route and restores scroll.
@@ -37,7 +45,10 @@ export function useLastRoute() {
   const location = useLocation()
   const navigate = useNavigate()
   const hasRestoredRef = useRef(false)
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pathnameRef = useRef(location.pathname)
+
+  // Keep pathnameRef in sync for use in cleanup functions
+  pathnameRef.current = location.pathname
 
   // Get stored scroll positions
   const getScrollPositions = useCallback((): ScrollPositions => {
@@ -48,37 +59,38 @@ export function useLastRoute() {
     }
   }, [])
 
-  // Save scroll position for current path (debounced)
-  const saveScrollPosition = useCallback(() => {
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current)
-    }
-    scrollTimeoutRef.current = setTimeout(() => {
-      try {
+  // Save scroll position for a given path immediately (no debounce)
+  const saveScrollPositionNow = useCallback((path: string) => {
+    try {
+      const container = getScrollContainer()
+      const scrollTop = container ? container.scrollTop : 0
+      if (scrollTop > 0) {
         const positions = getScrollPositions()
-        positions[location.pathname] = window.scrollY
+        positions[path] = scrollTop
         localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
-      } catch {
-        // Ignore localStorage errors
       }
-    }, 100) // Debounce for 100ms
-  }, [location.pathname, getScrollPositions])
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [getScrollPositions])
 
   // Restore scroll position for a path
   const restoreScrollPosition = useCallback((path: string) => {
     const positions = getScrollPositions()
     const savedPosition = positions[path]
     if (savedPosition !== undefined && savedPosition > 0) {
-      // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(() => {
-        window.scrollTo({ top: savedPosition, behavior: 'instant' })
+        const container = getScrollContainer()
+        if (container) {
+          container.scrollTo({ top: savedPosition, behavior: 'instant' })
+        }
       })
     }
   }, [getScrollPositions])
 
-  // Save last route on path change
+  // Save last route and scroll position on path change
   useEffect(() => {
-    // Don't track auth-related pages or the root path (which is a redirect target)
+    // Don't track auth-related pages or the root path
     if (location.pathname.startsWith('/auth') ||
         location.pathname === '/login' ||
         location.pathname === '/onboarding' ||
@@ -91,30 +103,30 @@ export function useLastRoute() {
     } catch {
       // Ignore localStorage errors
     }
-  }, [location.pathname])
+
+    // On cleanup (path change), save scroll position of the page being left
+    return () => {
+      saveScrollPositionNow(location.pathname)
+    }
+  }, [location.pathname, saveScrollPositionNow])
 
   // Restore last route on initial mount
   useEffect(() => {
     if (hasRestoredRef.current) return
     hasRestoredRef.current = true
 
-    // Only redirect if we're on the root path
     if (location.pathname !== '/') return
 
     try {
       const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
-      // Always check for a first-sidebar-item override first
       const firstSidebarRoute = getFirstDashboardRoute()
 
       if (lastRoute && lastRoute !== '/' && lastRoute !== location.pathname) {
-        // Navigate to last visited route and restore scroll after navigation
         navigate(lastRoute, { replace: true })
-        // Restore scroll position after a short delay to allow page to render
         setTimeout(() => {
           restoreScrollPosition(lastRoute)
-        }, 100)
+        }, 150)
       } else if (firstSidebarRoute && firstSidebarRoute !== '/') {
-        // No saved route or it's root — navigate to first sidebar item
         navigate(firstSidebarRoute, { replace: true })
       }
     } catch {
@@ -122,26 +134,19 @@ export function useLastRoute() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Set up scroll listener
+  // Save scroll position on beforeunload
   useEffect(() => {
-    window.addEventListener('scroll', saveScrollPosition, { passive: true })
-    window.addEventListener('beforeunload', saveScrollPosition)
-
-    return () => {
-      window.removeEventListener('scroll', saveScrollPosition)
-      window.removeEventListener('beforeunload', saveScrollPosition)
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
+    const handleBeforeUnload = () => {
+      saveScrollPositionNow(pathnameRef.current)
     }
-  }, [saveScrollPosition])
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [saveScrollPositionNow])
 
   // Restore scroll when navigating to a previously visited page
   useEffect(() => {
-    // Skip the initial restore which is handled separately
     if (!hasRestoredRef.current) return
 
-    // Small delay to allow page content to render
     const timeoutId = setTimeout(() => {
       restoreScrollPosition(location.pathname)
     }, 50)
