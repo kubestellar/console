@@ -62,7 +62,10 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Demo Mode Banner */}
       {isDemoMode && (
-        <div className="fixed top-16 left-0 right-0 z-40 bg-yellow-500/10 border-b border-yellow-500/20">
+        <div className={cn(
+          "fixed top-16 right-0 z-40 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
+          config.collapsed ? "left-20" : "left-64",
+        )}>
           <div className="flex items-center justify-center gap-3 py-1.5 px-4">
             <Box className="w-4 h-4 text-yellow-400" />
             <span className="text-sm text-yellow-400 font-medium">
