@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
-import type { DeployStartedPayload } from '../lib/cardEvents'
+import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
+
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 export type DeployMissionStatus = 'launching' | 'deploying' | 'orbit' | 'abort' | 'partial'
 
@@ -9,6 +14,7 @@ export interface DeployClusterStatus {
   status: 'pending' | 'applying' | 'running' | 'failed'
   replicas: number
   readyReplicas: number
+  logs?: string[]
 }
 
 export interface DeployMission {
@@ -23,36 +29,70 @@ export interface DeployMission {
   clusterStatuses: DeployClusterStatus[]
   startedAt: number
   completedAt?: number
+  /** Number of poll cycles completed (used to fetch logs on early cycles) */
+  pollCount?: number
+  /** Dependencies resolved and applied during deployment */
+  dependencies?: DeployedDep[]
+  /** Warnings from dependency resolution */
+  warnings?: string[]
 }
 
-const HISTORY_KEY = 'kubestellar-missions-history'
+const MISSIONS_KEY = 'kubestellar-missions'
 const POLL_INTERVAL_MS = 5000
-const MAX_HISTORY = 50
+const MAX_MISSIONS = 50
+/** Stop polling completed missions after this duration */
+const COMPLETED_POLL_CUTOFF_MS = 5 * 60 * 1000
 
-function loadHistory(): DeployMission[] {
+function loadMissions(): DeployMission[] {
   try {
-    const stored = localStorage.getItem(HISTORY_KEY)
+    const stored = localStorage.getItem(MISSIONS_KEY)
     if (stored) return JSON.parse(stored)
+    // Migrate from old split keys
+    const oldActive = localStorage.getItem('kubestellar-missions-active')
+    const oldHistory = localStorage.getItem('kubestellar-missions-history')
+    if (oldActive || oldHistory) {
+      const active: DeployMission[] = oldActive ? JSON.parse(oldActive) : []
+      const history: DeployMission[] = oldHistory ? JSON.parse(oldHistory) : []
+      const merged = [...active, ...history].slice(0, MAX_MISSIONS)
+      localStorage.removeItem('kubestellar-missions-active')
+      localStorage.removeItem('kubestellar-missions-history')
+      if (merged.length > 0) {
+        localStorage.setItem(MISSIONS_KEY, JSON.stringify(merged))
+        return merged
+      }
+    }
   } catch {
     // ignore
   }
   return []
 }
 
-function saveHistory(missions: DeployMission[]) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(missions.slice(0, MAX_HISTORY)))
+function saveMissions(missions: DeployMission[]) {
+  // Strip logs before persisting (transient data, re-fetched during polling)
+  const clean = missions.slice(0, MAX_MISSIONS).map(m => ({
+    ...m,
+    clusterStatuses: m.clusterStatuses.map(cs => ({ ...cs, logs: undefined })),
+  }))
+  localStorage.setItem(MISSIONS_KEY, JSON.stringify(clean))
 }
 
 /**
  * Hook for tracking deployment missions.
  * Subscribes to deploy:started events from the card event bus
- * and polls deploy status until all clusters report ready or failed.
+ * and polls deploy status. Completed missions stay in the list
+ * (sorted below active ones) and continue to be monitored.
  */
 export function useDeployMissions() {
-  const [activeMissions, setActiveMissions] = useState<DeployMission[]>([])
-  const [history, setHistory] = useState<DeployMission[]>(loadHistory)
+  const [missions, setMissions] = useState<DeployMission[]>(() => loadMissions())
   const subscribe = useCardSubscribe()
   const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const missionsRef = useRef(missions)
+  missionsRef.current = missions
+
+  // Persist missions to localStorage
+  useEffect(() => {
+    saveMissions(missions)
+  }, [missions])
 
   // Subscribe to deploy:started events
   useEffect(() => {
@@ -73,33 +113,53 @@ export function useDeployMissions() {
           replicas: 0,
           readyReplicas: 0,
         })),
-        startedAt: p.timestamp,
+        startedAt: Date.now(),
+        pollCount: 0,
       }
-      setActiveMissions(prev => [mission, ...prev])
+      setMissions(prev => [mission, ...prev].slice(0, MAX_MISSIONS))
     })
     return unsub
   }, [subscribe])
 
-  // Poll deploy status for active missions
+  // Subscribe to deploy:result events (carries dependency info from API response)
   useEffect(() => {
-    if (activeMissions.length === 0) {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = undefined
-      }
-      return
-    }
+    const unsub = subscribe('deploy:result', (event) => {
+      const p: DeployResultPayload = event.payload
+      setMissions(prev => prev.map(m => {
+        if (m.id !== p.id) return m
+        return {
+          ...m,
+          dependencies: p.dependencies,
+          warnings: p.warnings,
+        }
+      }))
+    })
+    return unsub
+  }, [subscribe])
 
+  // Poll deploy status for missions using ref to avoid re-render loop
+  useEffect(() => {
     const poll = async () => {
+      const current = missionsRef.current
+      if (current.length === 0) return
+
       const updated = await Promise.all(
-        activeMissions.map(async (mission) => {
-          if (mission.status === 'orbit' || mission.status === 'abort') return mission
+        current.map(async (mission) => {
+          const isCompleted = mission.status === 'orbit' || mission.status === 'abort'
+          // Stop polling completed missions after cutoff
+          if (isCompleted && mission.completedAt &&
+              (Date.now() - mission.completedAt) > COMPLETED_POLL_CUTOFF_MS) {
+            return mission
+          }
+
+          const pollCount = (mission.pollCount ?? 0) + 1
 
           const statuses = await Promise.all(
             mission.targetClusters.map(async (cluster) => {
               try {
                 const res = await fetch(
-                  `/api/workloads/deploy-status/${encodeURIComponent(cluster)}/${encodeURIComponent(mission.namespace)}/${encodeURIComponent(mission.workload)}`
+                  `/api/workloads/deploy-status/${encodeURIComponent(cluster)}/${encodeURIComponent(mission.namespace)}/${encodeURIComponent(mission.workload)}`,
+                  { headers: authHeaders() }
                 )
                 if (!res.ok) {
                   return { cluster, status: 'pending' as const, replicas: 0, readyReplicas: 0 }
@@ -113,11 +173,29 @@ export function useDeployMissions() {
                 } else if (data.readyReplicas > 0) {
                   status = 'applying'
                 }
+                // Always fetch deploy events/logs (k8s events are useful at any stage)
+                let logs: string[] | undefined
+                try {
+                  const logRes = await fetch(
+                    `/api/workloads/deploy-logs/${encodeURIComponent(cluster)}/${encodeURIComponent(mission.namespace)}/${encodeURIComponent(mission.workload)}?tail=8`,
+                    { headers: authHeaders() }
+                  )
+                  if (logRes.ok) {
+                    const logData = await logRes.json()
+                    if (Array.isArray(logData.logs) && logData.logs.length > 0) {
+                      logs = logData.logs
+                    }
+                  }
+                } catch {
+                  // Non-critical: skip logs on error
+                }
+
                 return {
                   cluster,
                   status,
                   replicas: data.replicas ?? 0,
                   readyReplicas: data.readyReplicas ?? 0,
+                  logs,
                 }
               } catch {
                 return { cluster, status: 'pending' as const, replicas: 0, readyReplicas: 0 }
@@ -139,57 +217,58 @@ export function useDeployMissions() {
             missionStatus = 'partial'
           }
 
+          // Grace period: keep mission in deploying state for at least 10s
+          const elapsed = Date.now() - mission.startedAt
+          const MIN_ACTIVE_MS = 10000
+          if ((missionStatus === 'orbit' || missionStatus === 'abort') && elapsed < MIN_ACTIVE_MS) {
+            missionStatus = 'deploying'
+          }
+
           return {
             ...mission,
             clusterStatuses: statuses,
             status: missionStatus,
-            completedAt: missionStatus === 'orbit' || missionStatus === 'abort' ? Date.now() : undefined,
+            pollCount,
+            completedAt: (missionStatus === 'orbit' || missionStatus === 'abort')
+              ? (mission.completedAt ?? Date.now())
+              : undefined,
           }
         })
       )
 
-      // Move completed missions to history
-      const stillActive: DeployMission[] = []
-      const newlyCompleted: DeployMission[] = []
+      // Sort: active missions first (newest first), completed missions below (newest first)
+      const active = updated.filter(m => m.status !== 'orbit' && m.status !== 'abort')
+      const completed = updated.filter(m => m.status === 'orbit' || m.status === 'abort')
+      active.sort((a, b) => b.startedAt - a.startedAt)
+      completed.sort((a, b) => (b.completedAt ?? b.startedAt) - (a.completedAt ?? a.startedAt))
 
-      for (const m of updated) {
-        if (m.status === 'orbit' || m.status === 'abort') {
-          newlyCompleted.push(m)
-        } else {
-          stillActive.push(m)
-        }
-      }
-
-      setActiveMissions(stillActive)
-      if (newlyCompleted.length > 0) {
-        setHistory(prev => {
-          const next = [...newlyCompleted, ...prev].slice(0, MAX_HISTORY)
-          saveHistory(next)
-          return next
-        })
-      }
+      setMissions([...active, ...completed])
     }
 
-    // Initial poll immediately
-    poll()
+    // Poll on interval (first poll after 1s delay, then every POLL_INTERVAL_MS)
+    const initialTimeout = setTimeout(() => {
+      poll()
+      pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
+    }, 1000)
 
-    // Then poll on interval
-    pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
     return () => {
+      clearTimeout(initialTimeout)
       if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [activeMissions])
+  }, []) // No dependencies - uses ref for current missions
 
-  const clearHistory = useCallback(() => {
-    setHistory([])
-    localStorage.removeItem(HISTORY_KEY)
+  const activeMissions = missions.filter(m => m.status !== 'orbit' && m.status !== 'abort')
+  const completedMissions = missions.filter(m => m.status === 'orbit' || m.status === 'abort')
+
+  const clearCompleted = useCallback(() => {
+    setMissions(prev => prev.filter(m => m.status !== 'orbit' && m.status !== 'abort'))
   }, [])
 
   return {
+    missions,
     activeMissions,
-    history,
-    allMissions: [...activeMissions, ...history],
+    completedMissions,
     hasActive: activeMissions.length > 0,
-    clearHistory,
+    clearCompleted,
   }
 }

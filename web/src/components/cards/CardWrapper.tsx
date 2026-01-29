@@ -178,6 +178,7 @@ const CARD_TITLES: Record<string, string> = {
 
   // Workload and deployment cards
   app_status: 'Workload Status',
+  workload_deployment: 'Workloads',
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
   deployment_issues: 'Deployment Issues',

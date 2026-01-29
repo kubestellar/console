@@ -161,8 +161,12 @@ When the user asks you to do something, ACTUALLY DO IT using the tools available
 func (c *ClaudeCodeProvider) buildPromptWithHistory(req *ChatRequest) string {
 	var sb strings.Builder
 
-	// Always include system prompt for Claude Code
-	sb.WriteString(ClaudeCodeSystemPrompt)
+	// Use caller's system prompt if provided, otherwise default
+	if req.SystemPrompt != "" {
+		sb.WriteString(req.SystemPrompt)
+	} else {
+		sb.WriteString(ClaudeCodeSystemPrompt)
+	}
 	sb.WriteString("\n\n---\n\n")
 
 	if len(req.History) > 0 {

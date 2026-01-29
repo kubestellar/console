@@ -24,7 +24,7 @@ interface ClusterInfo {
   region?: string
 }
 
-function getClusterInfo(cluster: string): ClusterInfo {
+export function getClusterInfo(cluster: string): ClusterInfo {
   const lowerCluster = cluster.toLowerCase()
 
   // Detect region from common patterns

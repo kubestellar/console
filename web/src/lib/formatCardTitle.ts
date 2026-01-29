@@ -5,6 +5,7 @@ const CUSTOM_TITLES: Record<string, string> = {
   helm_release_status: 'Helm Release Status',
   helm_history: 'Helm History',
   helm_values_diff: 'Helm Values Diff',
+  resource_marshall: 'Resource Marshall',
 }
 
 // Known acronyms that should stay uppercase

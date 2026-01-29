@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
@@ -40,30 +42,36 @@ var (
 
 // ListWorkloads lists all workloads across clusters
 func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespace, workloadType string) (*v1alpha1.WorkloadList, error) {
-	m.mu.RLock()
-	clusters := make([]string, 0, len(m.clients))
+	var clusterNames []string
 	if cluster != "" {
-		clusters = append(clusters, cluster)
+		clusterNames = []string{cluster}
 	} else {
-		for name := range m.clients {
-			clusters = append(clusters, name)
+		// Use DeduplicatedClusters to discover all unique clusters from kubeconfig
+		dedupClusters, err := m.DeduplicatedClusters(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list clusters: %w", err)
+		}
+		for _, c := range dedupClusters {
+			clusterNames = append(clusterNames, c.Name)
 		}
 	}
-	m.mu.RUnlock()
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	workloads := make([]v1alpha1.Workload, 0)
 
-	for _, clusterName := range clusters {
+	log.Printf("[ListWorkloads] Listing workloads across %d clusters: %v", len(clusterNames), clusterNames)
+	for _, clusterName := range clusterNames {
 		wg.Add(1)
 		go func(c string) {
 			defer wg.Done()
 
 			clusterWorkloads, err := m.ListWorkloadsForCluster(ctx, c, namespace, workloadType)
 			if err != nil {
+				log.Printf("[ListWorkloads] Error listing workloads for cluster %q: %v", c, err)
 				return
 			}
+			log.Printf("[ListWorkloads] Found %d workloads in cluster %q", len(clusterWorkloads), c)
 
 			mu.Lock()
 			workloads = append(workloads, clusterWorkloads...)
@@ -83,7 +91,7 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contextName, namespace, workloadType string) ([]v1alpha1.Workload, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetDynamicClient(%s): %w", contextName, err)
 	}
 
 	workloads := make([]v1alpha1.Workload, 0)
@@ -96,8 +104,11 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 		} else {
 			deployments, err = dynamicClient.Resource(gvrDeployments).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
-		if err == nil {
-			workloads = append(workloads, m.parseDeploymentsAsWorkloads(deployments, contextName)...)
+		if err != nil {
+			log.Printf("[ListWorkloadsForCluster] %s: error listing deployments: %v", contextName, err)
+		} else {
+			parsed := m.parseDeploymentsAsWorkloads(deployments, contextName)
+			workloads = append(workloads, parsed...)
 		}
 	}
 
@@ -109,8 +120,11 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 		} else {
 			statefulsets, err = dynamicClient.Resource(gvrStatefulSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
-		if err == nil {
-			workloads = append(workloads, m.parseStatefulSetsAsWorkloads(statefulsets, contextName)...)
+		if err != nil {
+			log.Printf("[ListWorkloadsForCluster] %s: error listing statefulsets: %v", contextName, err)
+		} else {
+			parsed := m.parseStatefulSetsAsWorkloads(statefulsets, contextName)
+			workloads = append(workloads, parsed...)
 		}
 	}
 
@@ -122,8 +136,11 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 		} else {
 			daemonsets, err = dynamicClient.Resource(gvrDaemonSets).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		}
-		if err == nil {
-			workloads = append(workloads, m.parseDaemonSetsAsWorkloads(daemonsets, contextName)...)
+		if err != nil {
+			log.Printf("[ListWorkloadsForCluster] %s: error listing daemonsets: %v", contextName, err)
+		} else {
+			parsed := m.parseDaemonSetsAsWorkloads(daemonsets, contextName)
+			workloads = append(workloads, parsed...)
 		}
 	}
 
@@ -134,76 +151,71 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
 	workloads := make([]v1alpha1.Workload, 0)
 
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetLabels() map[string]string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				w := v1alpha1.Workload{
-					Name:      item.GetName(),
-					Namespace: item.GetNamespace(),
-					Type:      v1alpha1.WorkloadTypeDeployment,
-					Labels:    item.GetLabels(),
-					CreatedAt: item.GetCreationTimestamp().Time,
-					TargetClusters: []string{contextName},
-				}
+	uList, ok := list.(*unstructured.UnstructuredList)
+	if !ok {
+		return workloads
+	}
 
-				content := item.UnstructuredContent()
+	for i := range uList.Items {
+		item := &uList.Items[i]
+		w := v1alpha1.Workload{
+			Name:           item.GetName(),
+			Namespace:      item.GetNamespace(),
+			Type:           v1alpha1.WorkloadTypeDeployment,
+			Labels:         item.GetLabels(),
+			CreatedAt:      item.GetCreationTimestamp().Time,
+			TargetClusters: []string{contextName},
+		}
 
-				// Parse spec.replicas
-				if spec, ok := content["spec"].(map[string]interface{}); ok {
-					if replicas, ok := spec["replicas"].(int64); ok {
-						w.Replicas = int32(replicas)
-					}
-					// Parse image from first container
-					if template, ok := spec["template"].(map[string]interface{}); ok {
-						if templateSpec, ok := template["spec"].(map[string]interface{}); ok {
-							if containers, ok := templateSpec["containers"].([]interface{}); ok && len(containers) > 0 {
-								if container, ok := containers[0].(map[string]interface{}); ok {
-									if image, ok := container["image"].(string); ok {
-										w.Image = image
-									}
-								}
+		content := item.UnstructuredContent()
+
+		// Parse spec.replicas
+		if spec, ok := content["spec"].(map[string]interface{}); ok {
+			if replicas, ok := spec["replicas"].(int64); ok {
+				w.Replicas = int32(replicas)
+			}
+			// Parse image from first container
+			if template, ok := spec["template"].(map[string]interface{}); ok {
+				if templateSpec, ok := template["spec"].(map[string]interface{}); ok {
+					if containers, ok := templateSpec["containers"].([]interface{}); ok && len(containers) > 0 {
+						if container, ok := containers[0].(map[string]interface{}); ok {
+							if image, ok := container["image"].(string); ok {
+								w.Image = image
 							}
 						}
 					}
 				}
-
-				// Parse status
-				if status, ok := content["status"].(map[string]interface{}); ok {
-					if readyReplicas, ok := status["readyReplicas"].(int64); ok {
-						w.ReadyReplicas = int32(readyReplicas)
-					}
-					if availableReplicas, ok := status["availableReplicas"].(int64); ok {
-						if int32(availableReplicas) == w.Replicas {
-							w.Status = v1alpha1.WorkloadStatusRunning
-						} else if availableReplicas > 0 {
-							w.Status = v1alpha1.WorkloadStatusDegraded
-						} else {
-							w.Status = v1alpha1.WorkloadStatusPending
-						}
-					} else {
-						w.Status = v1alpha1.WorkloadStatusPending
-					}
-				}
-
-				// Add cluster deployment info
-				w.Deployments = []v1alpha1.ClusterDeployment{{
-					Cluster:       contextName,
-					Status:        w.Status,
-					Replicas:      w.Replicas,
-					ReadyReplicas: w.ReadyReplicas,
-					LastUpdated:   time.Now(),
-				}}
-
-				workloads = append(workloads, w)
 			}
-			return nil
-		})
+		}
+
+		// Parse status
+		if status, ok := content["status"].(map[string]interface{}); ok {
+			if readyReplicas, ok := status["readyReplicas"].(int64); ok {
+				w.ReadyReplicas = int32(readyReplicas)
+			}
+			if availableReplicas, ok := status["availableReplicas"].(int64); ok {
+				if int32(availableReplicas) == w.Replicas {
+					w.Status = v1alpha1.WorkloadStatusRunning
+				} else if availableReplicas > 0 {
+					w.Status = v1alpha1.WorkloadStatusDegraded
+				} else {
+					w.Status = v1alpha1.WorkloadStatusPending
+				}
+			} else {
+				w.Status = v1alpha1.WorkloadStatusPending
+			}
+		}
+
+		// Add cluster deployment info
+		w.Deployments = []v1alpha1.ClusterDeployment{{
+			Cluster:       contextName,
+			Status:        w.Status,
+			Replicas:      w.Replicas,
+			ReadyReplicas: w.ReadyReplicas,
+			LastUpdated:   time.Now(),
+		}}
+
+		workloads = append(workloads, w)
 	}
 
 	return workloads
@@ -213,60 +225,55 @@ func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, conte
 func (m *MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
 	workloads := make([]v1alpha1.Workload, 0)
 
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetLabels() map[string]string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				w := v1alpha1.Workload{
-					Name:           item.GetName(),
-					Namespace:      item.GetNamespace(),
-					Type:           v1alpha1.WorkloadTypeStatefulSet,
-					Labels:         item.GetLabels(),
-					CreatedAt:      item.GetCreationTimestamp().Time,
-					TargetClusters: []string{contextName},
-					Status:         v1alpha1.WorkloadStatusUnknown,
-				}
+	uList, ok := list.(*unstructured.UnstructuredList)
+	if !ok {
+		return workloads
+	}
 
-				content := item.UnstructuredContent()
+	for i := range uList.Items {
+		item := &uList.Items[i]
+		w := v1alpha1.Workload{
+			Name:           item.GetName(),
+			Namespace:      item.GetNamespace(),
+			Type:           v1alpha1.WorkloadTypeStatefulSet,
+			Labels:         item.GetLabels(),
+			CreatedAt:      item.GetCreationTimestamp().Time,
+			TargetClusters: []string{contextName},
+			Status:         v1alpha1.WorkloadStatusUnknown,
+		}
 
-				// Parse spec.replicas
-				if spec, ok := content["spec"].(map[string]interface{}); ok {
-					if replicas, ok := spec["replicas"].(int64); ok {
-						w.Replicas = int32(replicas)
-					}
-				}
+		content := item.UnstructuredContent()
 
-				// Parse status
-				if status, ok := content["status"].(map[string]interface{}); ok {
-					if readyReplicas, ok := status["readyReplicas"].(int64); ok {
-						w.ReadyReplicas = int32(readyReplicas)
-					}
-					if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
-						w.Status = v1alpha1.WorkloadStatusRunning
-					} else if w.ReadyReplicas > 0 {
-						w.Status = v1alpha1.WorkloadStatusDegraded
-					} else {
-						w.Status = v1alpha1.WorkloadStatusPending
-					}
-				}
-
-				w.Deployments = []v1alpha1.ClusterDeployment{{
-					Cluster:       contextName,
-					Status:        w.Status,
-					Replicas:      w.Replicas,
-					ReadyReplicas: w.ReadyReplicas,
-					LastUpdated:   time.Now(),
-				}}
-
-				workloads = append(workloads, w)
+		// Parse spec.replicas
+		if spec, ok := content["spec"].(map[string]interface{}); ok {
+			if replicas, ok := spec["replicas"].(int64); ok {
+				w.Replicas = int32(replicas)
 			}
-			return nil
-		})
+		}
+
+		// Parse status
+		if status, ok := content["status"].(map[string]interface{}); ok {
+			if readyReplicas, ok := status["readyReplicas"].(int64); ok {
+				w.ReadyReplicas = int32(readyReplicas)
+			}
+			if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
+				w.Status = v1alpha1.WorkloadStatusRunning
+			} else if w.ReadyReplicas > 0 {
+				w.Status = v1alpha1.WorkloadStatusDegraded
+			} else {
+				w.Status = v1alpha1.WorkloadStatusPending
+			}
+		}
+
+		w.Deployments = []v1alpha1.ClusterDeployment{{
+			Cluster:       contextName,
+			Status:        w.Status,
+			Replicas:      w.Replicas,
+			ReadyReplicas: w.ReadyReplicas,
+			LastUpdated:   time.Now(),
+		}}
+
+		workloads = append(workloads, w)
 	}
 
 	return workloads
@@ -276,56 +283,51 @@ func (m *MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, cont
 func (m *MultiClusterClient) parseDaemonSetsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
 	workloads := make([]v1alpha1.Workload, 0)
 
-	if listMap, ok := list.(interface{ EachListItem(func(interface{}) error) error }); ok {
-		_ = listMap.EachListItem(func(obj interface{}) error {
-			if item, ok := obj.(interface {
-				GetName() string
-				GetNamespace() string
-				GetLabels() map[string]string
-				GetCreationTimestamp() metav1.Time
-				UnstructuredContent() map[string]interface{}
-			}); ok {
-				w := v1alpha1.Workload{
-					Name:           item.GetName(),
-					Namespace:      item.GetNamespace(),
-					Type:           v1alpha1.WorkloadTypeDaemonSet,
-					Labels:         item.GetLabels(),
-					CreatedAt:      item.GetCreationTimestamp().Time,
-					TargetClusters: []string{contextName},
-					Status:         v1alpha1.WorkloadStatusUnknown,
-				}
+	uList, ok := list.(*unstructured.UnstructuredList)
+	if !ok {
+		return workloads
+	}
 
-				content := item.UnstructuredContent()
+	for i := range uList.Items {
+		item := &uList.Items[i]
+		w := v1alpha1.Workload{
+			Name:           item.GetName(),
+			Namespace:      item.GetNamespace(),
+			Type:           v1alpha1.WorkloadTypeDaemonSet,
+			Labels:         item.GetLabels(),
+			CreatedAt:      item.GetCreationTimestamp().Time,
+			TargetClusters: []string{contextName},
+			Status:         v1alpha1.WorkloadStatusUnknown,
+		}
 
-				// Parse status
-				if status, ok := content["status"].(map[string]interface{}); ok {
-					if desiredNumber, ok := status["desiredNumberScheduled"].(int64); ok {
-						w.Replicas = int32(desiredNumber)
-					}
-					if readyNumber, ok := status["numberReady"].(int64); ok {
-						w.ReadyReplicas = int32(readyNumber)
-					}
-					if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
-						w.Status = v1alpha1.WorkloadStatusRunning
-					} else if w.ReadyReplicas > 0 {
-						w.Status = v1alpha1.WorkloadStatusDegraded
-					} else {
-						w.Status = v1alpha1.WorkloadStatusPending
-					}
-				}
+		content := item.UnstructuredContent()
 
-				w.Deployments = []v1alpha1.ClusterDeployment{{
-					Cluster:       contextName,
-					Status:        w.Status,
-					Replicas:      w.Replicas,
-					ReadyReplicas: w.ReadyReplicas,
-					LastUpdated:   time.Now(),
-				}}
-
-				workloads = append(workloads, w)
+		// Parse status
+		if status, ok := content["status"].(map[string]interface{}); ok {
+			if desiredNumber, ok := status["desiredNumberScheduled"].(int64); ok {
+				w.Replicas = int32(desiredNumber)
 			}
-			return nil
-		})
+			if readyNumber, ok := status["numberReady"].(int64); ok {
+				w.ReadyReplicas = int32(readyNumber)
+			}
+			if w.ReadyReplicas == w.Replicas && w.Replicas > 0 {
+				w.Status = v1alpha1.WorkloadStatusRunning
+			} else if w.ReadyReplicas > 0 {
+				w.Status = v1alpha1.WorkloadStatusDegraded
+			} else {
+				w.Status = v1alpha1.WorkloadStatusPending
+			}
+		}
+
+		w.Deployments = []v1alpha1.ClusterDeployment{{
+			Cluster:       contextName,
+			Status:        w.Status,
+			Replicas:      w.Replicas,
+			ReadyReplicas: w.ReadyReplicas,
+			LastUpdated:   time.Now(),
+		}}
+
+		workloads = append(workloads, w)
 	}
 
 	return workloads
@@ -345,6 +347,49 @@ func (m *MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace
 	}
 
 	return nil, nil
+}
+
+// ResolveWorkloadDependencies fetches a workload by name (trying Deployment/StatefulSet/DaemonSet)
+// and resolves its dependency tree without deploying. Used for dry-run preview.
+func (m *MultiClusterClient) ResolveWorkloadDependencies(
+	ctx context.Context, cluster, namespace, name string,
+) (string, *DependencyBundle, error) {
+	sourceClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get cluster client for %s: %w", cluster, err)
+	}
+
+	gvrs := []struct {
+		gvr  schema.GroupVersionResource
+		kind string
+	}{
+		{gvrDeployments, "Deployment"},
+		{gvrStatefulSets, "StatefulSet"},
+		{gvrDaemonSets, "DaemonSet"},
+	}
+
+	var sourceObj *unstructured.Unstructured
+	var workloadKind string
+	for _, g := range gvrs {
+		obj, getErr := sourceClient.Resource(g.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if getErr == nil {
+			sourceObj = obj
+			workloadKind = g.kind
+			break
+		}
+	}
+
+	if sourceObj == nil {
+		return "", nil, fmt.Errorf("workload %s/%s not found in cluster %s", namespace, name, cluster)
+	}
+
+	opts := &DeployOptions{DeployedBy: "dry-run"}
+	bundle, err := m.ResolveDependencies(ctx, cluster, namespace, sourceObj, opts)
+	if err != nil {
+		return workloadKind, nil, fmt.Errorf("dependency resolution failed: %w", err)
+	}
+
+	return workloadKind, bundle, nil
 }
 
 // DeployOptions configures how a workload is deployed across clusters
@@ -390,7 +435,19 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 		return nil, fmt.Errorf("workload %s/%s not found in cluster %s", namespace, name, sourceCluster)
 	}
 
-	// 2. Clean the manifest for cross-cluster apply
+	// 2. Resolve dependencies (ConfigMaps, Secrets, SA, RBAC, PVCs, Services, Ingress, NetworkPolicy, HPA, PDB)
+	bundle, err := m.ResolveDependencies(ctx, sourceCluster, namespace, sourceObj, opts)
+	if err != nil {
+		log.Printf("[deploy] Warning: dependency resolution failed: %v", err)
+		bundle = &DependencyBundle{Workload: sourceObj}
+	}
+	if len(bundle.Warnings) > 0 {
+		for _, w := range bundle.Warnings {
+			log.Printf("[deploy] %s", w)
+		}
+	}
+
+	// 3. Clean the workload manifest for cross-cluster apply
 	cleanedObj := cleanManifestForDeploy(sourceObj, opts)
 
 	// Override replicas if specified
@@ -400,12 +457,13 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 		}
 	}
 
-	// 3. Apply to each target cluster in parallel
+	// 4. Apply to each target cluster in parallel
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	deployed := make([]string, 0, len(targetClusters))
 	failed := make([]string, 0)
 	var lastErr error
+	allDepResults := make([]v1alpha1.DeployedDep, 0)
 
 	for _, target := range targetClusters {
 		wg.Add(1)
@@ -421,17 +479,25 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 				return
 			}
 
-			// Deep copy the object for this cluster
-			objCopy := cleanedObj.DeepCopy()
-
-			// Normalize image names for CRI-O clusters (short names → fully qualified)
-			normalizeImageNames(objCopy)
-
-			// Create a per-cluster timeout context
-			clusterCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			clusterCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			defer cancel()
 
-			// Try to create; if exists, update
+			// 4a. Ensure namespace exists on target
+			nsErr := m.ensureNamespace(clusterCtx, targetClient, namespace, opts)
+			if nsErr != nil {
+				log.Printf("[deploy] Warning: namespace ensure failed on %s: %v", targetCluster, nsErr)
+			}
+
+			// 4b. Apply dependencies in order before the workload
+			depResults := applyDependencies(clusterCtx, targetClient, bundle.Dependencies)
+			mu.Lock()
+			allDepResults = append(allDepResults, depResults...)
+			mu.Unlock()
+
+			// 4c. Apply the workload itself
+			objCopy := cleanedObj.DeepCopy()
+			normalizeImageNames(objCopy)
+
 			_, err = targetClient.Resource(sourceGVR).Namespace(namespace).Create(clusterCtx, objCopy, metav1.CreateOptions{})
 			if err != nil {
 				// If already exists, try update
@@ -443,7 +509,6 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 					mu.Unlock()
 					return
 				}
-				// Copy resourceVersion for update
 				objCopy.SetResourceVersion(existing.GetResourceVersion())
 				_, err = targetClient.Resource(sourceGVR).Namespace(namespace).Update(clusterCtx, objCopy, metav1.UpdateOptions{})
 				if err != nil {
@@ -463,21 +528,139 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 
 	wg.Wait()
 
+	// Deduplicate dependency results (same dep applied to multiple clusters)
+	depResultMap := make(map[string]v1alpha1.DeployedDep)
+	for _, dr := range allDepResults {
+		key := dr.Kind + "/" + dr.Name
+		existing, exists := depResultMap[key]
+		if !exists || dr.Action == "failed" {
+			depResultMap[key] = dr
+		} else if existing.Action == "skipped" && (dr.Action == "created" || dr.Action == "updated") {
+			depResultMap[key] = dr
+		}
+	}
+	dedupedDeps := make([]v1alpha1.DeployedDep, 0, len(depResultMap))
+	for _, dr := range depResultMap {
+		dedupedDeps = append(dedupedDeps, dr)
+	}
+
 	resp := &v1alpha1.DeployResponse{
 		Success:        len(failed) == 0,
 		DeployedTo:     deployed,
 		FailedClusters: failed,
+		Dependencies:   dedupedDeps,
+		Warnings:       bundle.Warnings,
+	}
+
+	depSummary := ""
+	if len(dedupedDeps) > 0 {
+		depSummary = fmt.Sprintf(" (+ %d dependencies)", len(dedupedDeps))
 	}
 
 	if len(failed) == 0 {
-		resp.Message = fmt.Sprintf("Deployed %s/%s to %d cluster(s)", namespace, name, len(deployed))
+		resp.Message = fmt.Sprintf("Deployed %s/%s to %d cluster(s)%s", namespace, name, len(deployed), depSummary)
 	} else if len(deployed) > 0 {
-		resp.Message = fmt.Sprintf("Partially deployed: %d succeeded, %d failed", len(deployed), len(failed))
+		resp.Message = fmt.Sprintf("Partially deployed: %d succeeded, %d failed%s", len(deployed), len(failed), depSummary)
 	} else {
 		resp.Message = fmt.Sprintf("Deployment failed on all clusters: %v", lastErr)
 	}
 
 	return resp, nil
+}
+
+// ensureNamespace creates the namespace on the target cluster if it doesn't exist
+func (m *MultiClusterClient) ensureNamespace(
+	ctx context.Context, client dynamic.Interface, namespace string, opts *DeployOptions,
+) error {
+	_, err := client.Resource(gvrNamespaces).Get(ctx, namespace, metav1.GetOptions{})
+	if err == nil {
+		return nil // already exists
+	}
+	nsObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Namespace",
+			"metadata": map[string]interface{}{
+				"name": namespace,
+				"labels": map[string]interface{}{
+					"kubestellar.io/managed-by": "kubestellar-console",
+				},
+			},
+		},
+	}
+	if opts != nil && opts.DeployedBy != "" {
+		labels := nsObj.GetLabels()
+		labels["kubestellar.io/deployed-by"] = opts.DeployedBy
+		nsObj.SetLabels(labels)
+	}
+	_, err = client.Resource(gvrNamespaces).Create(ctx, nsObj, metav1.CreateOptions{})
+	if err != nil && strings.Contains(err.Error(), "already exists") {
+		return nil
+	}
+	return err
+}
+
+// applyDependencies applies each dependency to the target cluster.
+// Uses skip-if-exists logic: skips user-managed resources, updates console-managed ones.
+func applyDependencies(
+	ctx context.Context, client dynamic.Interface, deps []Dependency,
+) []v1alpha1.DeployedDep {
+	results := make([]v1alpha1.DeployedDep, 0, len(deps))
+	for _, dep := range deps {
+		if dep.Object == nil {
+			continue
+		}
+
+		result := v1alpha1.DeployedDep{
+			Kind: string(dep.Kind),
+			Name: dep.Name,
+		}
+
+		objCopy := dep.Object.DeepCopy()
+		var resource dynamic.ResourceInterface
+		if dep.Namespace != "" {
+			resource = client.Resource(dep.GVR).Namespace(dep.Namespace)
+		} else {
+			resource = client.Resource(dep.GVR)
+		}
+
+		// Check if resource already exists on target
+		existing, err := resource.Get(ctx, dep.Name, metav1.GetOptions{})
+		if err == nil {
+			// Resource exists — check if console-managed
+			existingLabels := existing.GetLabels()
+			if existingLabels["kubestellar.io/managed-by"] != "kubestellar-console" {
+				// Not managed by console — skip to avoid overwriting user resources
+				result.Action = "skipped"
+				results = append(results, result)
+				log.Printf("[deploy] Skipped %s %s (not console-managed)", dep.Kind, dep.Name)
+				continue
+			}
+			// Console-managed — update
+			objCopy.SetResourceVersion(existing.GetResourceVersion())
+			_, err = resource.Update(ctx, objCopy, metav1.UpdateOptions{})
+			if err != nil {
+				result.Action = "failed"
+				log.Printf("[deploy] Failed to update %s %s: %v", dep.Kind, dep.Name, err)
+			} else {
+				result.Action = "updated"
+				log.Printf("[deploy] Updated %s %s", dep.Kind, dep.Name)
+			}
+		} else {
+			// Resource doesn't exist — create
+			_, err = resource.Create(ctx, objCopy, metav1.CreateOptions{})
+			if err != nil {
+				result.Action = "failed"
+				log.Printf("[deploy] Failed to create %s %s: %v", dep.Kind, dep.Name, err)
+			} else {
+				result.Action = "created"
+				log.Printf("[deploy] Created %s %s", dep.Kind, dep.Name)
+			}
+		}
+
+		results = append(results, result)
+	}
+	return results
 }
 
 // cleanManifestForDeploy strips cluster-specific metadata and adds console labels

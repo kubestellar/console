@@ -1,0 +1,317 @@
+import { useState, useCallback, useMemo } from 'react'
+import {
+  Package,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  AlertTriangle,
+  FileText,
+  KeyRound,
+  User,
+  Network,
+  Globe,
+  HardDrive,
+  Shield,
+  Gauge,
+  ShieldCheck,
+  Server,
+  Search,
+} from 'lucide-react'
+import { useClusters } from '../../hooks/useMCP'
+import { useNamespaces } from '../../hooks/useMCP'
+import { useWorkloads } from '../../hooks/useWorkloads'
+import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
+import { cn } from '../../lib/cn'
+
+// Category grouping for dependency kinds
+const DEP_CATEGORIES: { label: string; kinds: string[]; icon: typeof Shield }[] = [
+  { label: 'RBAC & Identity', kinds: ['ServiceAccount', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding'], icon: Shield },
+  { label: 'Configuration', kinds: ['ConfigMap', 'Secret'], icon: FileText },
+  { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy'], icon: Network },
+  { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget'], icon: Gauge },
+  { label: 'Storage', kinds: ['PersistentVolumeClaim'], icon: HardDrive },
+]
+
+// Icon per dependency kind
+const KIND_ICONS: Record<string, typeof Shield> = {
+  ServiceAccount: User,
+  Role: Shield,
+  RoleBinding: ShieldCheck,
+  ClusterRole: Shield,
+  ClusterRoleBinding: ShieldCheck,
+  ConfigMap: FileText,
+  Secret: KeyRound,
+  Service: Server,
+  Ingress: Globe,
+  NetworkPolicy: Network,
+  HorizontalPodAutoscaler: Gauge,
+  PodDisruptionBudget: Shield,
+  PersistentVolumeClaim: HardDrive,
+}
+
+function groupDependencies(deps: ResolvedDependency[]) {
+  const groups: { label: string; icon: typeof Shield; deps: ResolvedDependency[] }[] = []
+
+  for (const cat of DEP_CATEGORIES) {
+    const matching = deps.filter(d => cat.kinds.includes(d.kind))
+    if (matching.length > 0) {
+      groups.push({ label: cat.label, icon: cat.icon, deps: matching })
+    }
+  }
+
+  // Catch-all for any kinds not in categories
+  const knownKinds = new Set(DEP_CATEGORIES.flatMap(c => c.kinds))
+  const uncategorized = deps.filter(d => !knownKinds.has(d.kind))
+  if (uncategorized.length > 0) {
+    groups.push({ label: 'Other', icon: FileText, deps: uncategorized })
+  }
+
+  return groups
+}
+
+export function ResourceMarshall() {
+  const { deduplicatedClusters: clusters } = useClusters()
+
+  const [selectedCluster, setSelectedCluster] = useState<string>('')
+  const [selectedNamespace, setSelectedNamespace] = useState<string>('')
+  const [selectedWorkload, setSelectedWorkload] = useState<string>('')
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  // Fetch namespaces for selected cluster
+  const { namespaces, isLoading: nsLoading } = useNamespaces(selectedCluster || undefined)
+
+  // Fetch workloads for selected cluster + namespace
+  const workloadOpts = useMemo(() => {
+    if (!selectedCluster || !selectedNamespace) return undefined
+    return { cluster: selectedCluster, namespace: selectedNamespace }
+  }, [selectedCluster, selectedNamespace])
+  const { data: workloads, isLoading: wlLoading } = useWorkloads(workloadOpts)
+
+  // Dependency resolution
+  const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
+
+  // Cluster names
+  const clusterNames = useMemo(
+    () => clusters.map(c => c.name).sort(),
+    [clusters],
+  )
+
+  // Handle cluster change
+  const handleClusterChange = useCallback((cluster: string) => {
+    setSelectedCluster(cluster)
+    setSelectedNamespace('')
+    setSelectedWorkload('')
+    setExpandedGroups(new Set())
+    reset()
+  }, [reset])
+
+  // Handle namespace change
+  const handleNamespaceChange = useCallback((ns: string) => {
+    setSelectedNamespace(ns)
+    setSelectedWorkload('')
+    setExpandedGroups(new Set())
+    reset()
+  }, [reset])
+
+  // Handle workload selection
+  const handleWorkloadChange = useCallback((name: string) => {
+    setSelectedWorkload(name)
+    setExpandedGroups(new Set())
+    if (name && selectedCluster && selectedNamespace) {
+      resolve(selectedCluster, selectedNamespace, name)
+    } else {
+      reset()
+    }
+  }, [selectedCluster, selectedNamespace, resolve, reset])
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
+
+  const groups = depData ? groupDependencies(depData.dependencies) : []
+  const totalDeps = depData?.dependencies.length ?? 0
+  const hasWarnings = depData?.warnings && depData.warnings.length > 0
+
+  return (
+    <div className="space-y-3">
+      {/* Cascading dropdowns */}
+      <div className="space-y-2">
+        {/* Cluster selector */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground w-20 shrink-0">Cluster</label>
+          <select
+            value={selectedCluster}
+            onChange={(e) => handleClusterChange(e.target.value)}
+            className="flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+          >
+            <option value="">Select cluster...</option>
+            {clusterNames.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Namespace selector */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground w-20 shrink-0">Namespace</label>
+          <select
+            value={selectedNamespace}
+            onChange={(e) => handleNamespaceChange(e.target.value)}
+            disabled={!selectedCluster || nsLoading}
+            className={cn(
+              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50',
+              (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
+            )}
+          >
+            <option value="">
+              {nsLoading ? 'Loading...' : 'Select namespace...'}
+            </option>
+            {namespaces.map(ns => (
+              <option key={ns} value={ns}>{ns}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Workload selector */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground w-20 shrink-0">Workload</label>
+          <select
+            value={selectedWorkload}
+            onChange={(e) => handleWorkloadChange(e.target.value)}
+            disabled={!selectedNamespace || wlLoading}
+            className={cn(
+              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50',
+              (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
+            )}
+          >
+            <option value="">
+              {wlLoading ? 'Loading...' : 'Select workload...'}
+            </option>
+            {workloads?.map(w => (
+              <option key={`${w.type}-${w.name}`} value={w.name}>
+                {w.name} ({w.type})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Empty state */}
+      {!selectedWorkload && !depLoading && (
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <Search className="w-8 h-8 text-muted-foreground/40 mb-2" />
+          <p className="text-sm text-muted-foreground">
+            Select a cluster, namespace, and workload to explore its dependency tree.
+          </p>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {depLoading && (
+        <div className="flex items-center justify-center py-6 gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+          <span className="text-sm text-muted-foreground">Resolving dependencies...</span>
+        </div>
+      )}
+
+      {/* Error state */}
+      {depError && !depLoading && (
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-yellow-400 font-medium">Could not resolve dependencies</p>
+            <p className="text-xs text-yellow-400/70 mt-0.5">{depError.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Dependency tree */}
+      {depData && !depLoading && (
+        <div>
+          {/* Workload header */}
+          <div className="rounded-lg bg-card/50 border border-border p-2.5 mb-2 flex items-center gap-2">
+            <Package className="w-4 h-4 text-purple-400 shrink-0" />
+            <span className="text-sm font-medium text-foreground">{depData.workload}</span>
+            {depData.kind && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                {depData.kind}
+              </span>
+            )}
+            <span className="ml-auto text-xs text-muted-foreground">
+              {totalDeps} dep{totalDeps !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {/* No deps */}
+          {totalDeps === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-3">
+              No additional dependencies detected.
+            </p>
+          )}
+
+          {/* Grouped dependency list */}
+          {groups.map(group => {
+            const GroupIcon = group.icon
+            const isExpanded = expandedGroups.has(group.label)
+
+            return (
+              <div key={group.label} className="border-b border-border/50 last:border-0">
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="w-full flex items-center gap-2 py-2 px-1 text-left hover:bg-card/30 rounded transition-colors"
+                >
+                  {isExpanded
+                    ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
+                    : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
+                  <GroupIcon className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                  <span className="text-sm text-foreground flex-1">{group.label}</span>
+                  <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">
+                    {group.deps.length}
+                  </span>
+                </button>
+
+                {isExpanded && (
+                  <div className="ml-8 mb-2 space-y-0.5">
+                    {group.deps.map(dep => {
+                      const DepIcon = KIND_ICONS[dep.kind] ?? FileText
+                      return (
+                        <div
+                          key={`${dep.kind}-${dep.name}`}
+                          className="flex items-center gap-2 py-0.5 text-xs"
+                        >
+                          <DepIcon className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <span className="text-muted-foreground w-24 truncate shrink-0">{dep.kind}</span>
+                          <span className="text-foreground truncate flex-1">{dep.name}</span>
+                          {dep.optional && (
+                            <span className="text-[10px] text-yellow-500 shrink-0">optional</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Warnings */}
+          {hasWarnings && (
+            <div className="mt-2 space-y-1">
+              {depData.warnings.map((w, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs">
+                  <AlertTriangle className="w-3 h-3 text-yellow-400 mt-0.5 shrink-0" />
+                  <span className="text-yellow-400/80">{w}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

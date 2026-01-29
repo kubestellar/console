@@ -1,17 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Rocket,
   XCircle,
   AlertTriangle,
   Loader2,
-  Trash2,
   ChevronDown,
   ChevronRight,
   Orbit,
+  Terminal,
+  Stethoscope,
+  Wrench,
+  Package,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { ClusterBadge } from '../ui/ClusterBadge'
-import { useDeployMissions, DeployMission, DeployMissionStatus, DeployClusterStatus } from '../../hooks/useDeployMissions'
+import { ClusterBadge, getClusterInfo } from '../ui/ClusterBadge'
+import { useDeployMissions } from '../../hooks/useDeployMissions'
+import type { DeployMission, DeployMissionStatus, DeployClusterStatus } from '../../hooks/useDeployMissions'
+import type { DeployedDep } from '../../lib/cardEvents'
 
 interface MissionsProps {
   config?: Record<string, unknown>
@@ -71,9 +76,9 @@ const CLUSTER_STATUS_CONFIG: Record<DeployClusterStatus['status'], {
 }
 
 export function Missions(_props: MissionsProps) {
-  const { activeMissions, history, hasActive, clearHistory } = useDeployMissions()
-  const [showHistory, setShowHistory] = useState(false)
+  const { missions, activeMissions, completedMissions, hasActive } = useDeployMissions()
   const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set())
+  const [hideCompleted, setHideCompleted] = useState(false)
 
   const toggleMission = (id: string) => {
     setExpandedMissions(prev => {
@@ -83,6 +88,8 @@ export function Missions(_props: MissionsProps) {
       return next
     })
   }
+
+  const visibleMissions = hideCompleted ? activeMissions : missions
 
   return (
     <div className="space-y-3">
@@ -96,18 +103,18 @@ export function Missions(_props: MissionsProps) {
               : 'Mission Control'}
           </span>
         </div>
-        {history.length > 0 && (
+        {completedMissions.length > 0 && (
           <button
-            onClick={() => setShowHistory(!showHistory)}
+            onClick={() => setHideCompleted(!hideCompleted)}
             className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
           >
-            {showHistory ? 'Hide' : 'Show'} History ({history.length})
+            {hideCompleted ? `Show completed (${completedMissions.length})` : 'Hide completed'}
           </button>
         )}
       </div>
 
-      {/* Active Missions */}
-      {activeMissions.length === 0 && !showHistory ? (
+      {/* All Missions (active first, then completed) */}
+      {visibleMissions.length === 0 && !hideCompleted ? (
         <div className="text-center py-6">
           <Rocket className="w-8 h-8 mx-auto mb-2 text-gray-600" />
           <p className="text-sm text-gray-500">No active missions</p>
@@ -117,6 +124,7 @@ export function Missions(_props: MissionsProps) {
         </div>
       ) : (
         <div className="space-y-2">
+          {/* Active missions */}
           {activeMissions.map(mission => (
             <MissionRow
               key={mission.id}
@@ -126,25 +134,18 @@ export function Missions(_props: MissionsProps) {
               isActive
             />
           ))}
-        </div>
-      )}
 
-      {/* History Section */}
-      {showHistory && history.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-            <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
-              Mission History
-            </span>
-            <button
-              onClick={clearHistory}
-              className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-red-400 transition-colors"
-            >
-              <Trash2 className="w-2.5 h-2.5" />
-              Clear
-            </button>
-          </div>
-          {history.slice(0, 10).map(mission => (
+          {/* Separator between active and completed */}
+          {!hideCompleted && activeMissions.length > 0 && completedMissions.length > 0 && (
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex-1 h-px bg-gray-800" />
+              <span className="text-[9px] text-gray-600 uppercase tracking-wider">Completed</span>
+              <div className="flex-1 h-px bg-gray-800" />
+            </div>
+          )}
+
+          {/* Completed missions */}
+          {!hideCompleted && completedMissions.map(mission => (
             <MissionRow
               key={mission.id}
               mission={mission}
@@ -192,6 +193,15 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
   const config = STATUS_CONFIG[mission.status]
   const StatusIcon = config.icon
   const elapsed = getElapsed(mission.startedAt, mission.completedAt)
+  const [showLogs, setShowLogs] = useState(false)
+
+  // Auto-show logs when deploying (keep visible after completion for review)
+  const isDeploying = mission.status === 'launching' || mission.status === 'deploying'
+  const hasLogs = mission.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
+
+  useEffect(() => {
+    if (isDeploying && hasLogs) setShowLogs(true)
+  }, [isDeploying, hasLogs])
 
   // Calculate overall progress
   const totalClusters = mission.clusterStatuses.length
@@ -243,13 +253,25 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
           </div>
         </div>
 
-        {/* Status badge */}
-        <span className={cn(
-          'text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0',
-          config.bg, config.color,
-        )}>
-          {config.label}
-        </span>
+        {/* Log toggle + Status badge */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowLogs(!showLogs) }}
+            className={cn(
+              'p-0.5 rounded transition-colors',
+              showLogs ? 'text-green-400 bg-green-500/20' : 'text-gray-500 hover:text-gray-300',
+            )}
+            title={showLogs ? 'Hide events' : 'Show events'}
+          >
+            <Terminal className="w-3 h-3" />
+          </button>
+          <span className={cn(
+            'text-[10px] px-1.5 py-0.5 rounded font-medium',
+            config.bg, config.color,
+          )}>
+            {config.label}
+          </span>
+        </div>
       </button>
 
       {/* Progress bar */}
@@ -267,6 +289,71 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
         </div>
       )}
 
+      {/* AI action buttons for failed missions */}
+      {(mission.status === 'abort' || mission.status === 'partial') && (
+        <div className="px-3 pb-2 flex items-center gap-2">
+          <button
+            onClick={() => console.log('AI Diagnose:', mission.id)}
+            className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/20 transition-colors"
+            title="AI will analyze pod events, logs, and resource limits to diagnose the failure"
+          >
+            <Stethoscope className="w-3 h-3" />
+            Diagnose
+          </button>
+          <button
+            onClick={() => console.log('AI Repair:', mission.id)}
+            className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/20 transition-colors"
+            title="AI will attempt to fix the issue (restart pods, adjust resources, etc.)"
+          >
+            <Wrench className="w-3 h-3" />
+            Repair
+          </button>
+        </div>
+      )}
+
+      {/* Deploy events (always available, toggle with Terminal button) */}
+      {showLogs && (
+        <div className="px-3 pb-2">
+          <div className="rounded bg-gray-900/80 border border-gray-800/50 overflow-hidden">
+            <div className="px-2 py-1 border-b border-gray-800/50 flex items-center gap-1.5">
+              <Terminal className="w-2.5 h-2.5 text-green-400" />
+              <span className="text-[10px] text-green-400 font-medium">Deploy Events</span>
+            </div>
+            <div className="px-2 py-1.5 max-h-32 overflow-y-auto">
+              {hasLogs ? (
+                mission.clusterStatuses
+                  .filter(cs => cs.logs && cs.logs.length > 0)
+                  .map(cs => {
+                    const clusterInfo = getClusterInfo(cs.cluster)
+                    return (
+                      <div key={cs.cluster}>
+                        {mission.clusterStatuses.length > 1 && (
+                          <div className={cn('text-[9px] font-medium mt-1 first:mt-0', clusterInfo.colors.text)}>
+                            {cs.cluster}
+                          </div>
+                        )}
+                        {cs.logs!.map((line, i) => (
+                          <div
+                            key={i}
+                            className="text-[10px] font-mono text-gray-400 leading-relaxed truncate flex items-start gap-1.5"
+                          >
+                            <span className={cn('inline-block w-1.5 h-1.5 rounded-full mt-[5px] shrink-0', clusterInfo.colors.bg, clusterInfo.colors.border, 'border')} />
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })
+              ) : (
+                <div className="text-[10px] text-gray-600 italic py-1">
+                  Waiting for events...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Expanded cluster details */}
       {isExpanded && (
         <div className="px-3 pb-2.5 pt-1 border-t border-gray-800/50 space-y-1.5">
@@ -278,6 +365,23 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
           {mission.clusterStatuses.map(cs => (
             <ClusterStatusRow key={cs.cluster} status={cs} />
           ))}
+
+          {/* Dependencies summary */}
+          {mission.dependencies && mission.dependencies.length > 0 && (
+            <DependencySummary dependencies={mission.dependencies} />
+          )}
+
+          {/* Warnings */}
+          {mission.warnings && mission.warnings.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              {mission.warnings.map((w, i) => (
+                <div key={i} className="text-[10px] text-yellow-500/80 flex items-start gap-1">
+                  <AlertTriangle className="w-2.5 h-2.5 mt-[2px] shrink-0" />
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -319,6 +423,59 @@ function ClusterStatusRow({ status }: ClusterStatusRowProps) {
       <span className={cn('text-[10px] shrink-0', config.color)}>
         {config.label}
       </span>
+    </div>
+  )
+}
+
+// ============================================================================
+// Dependency Summary
+// ============================================================================
+
+const DEP_ACTION_STYLES: Record<string, { color: string; label: string }> = {
+  created: { color: 'text-green-400', label: 'Created' },
+  updated: { color: 'text-blue-400', label: 'Updated' },
+  skipped: { color: 'text-gray-500', label: 'Skipped' },
+  failed: { color: 'text-red-400', label: 'Failed' },
+}
+
+function DependencySummary({ dependencies }: { dependencies: DeployedDep[] }) {
+  // Group by kind for summary line
+  const kindCounts: Record<string, number> = {}
+  for (const dep of dependencies) {
+    kindCounts[dep.kind] = (kindCounts[dep.kind] || 0) + 1
+  }
+  const summary = Object.entries(kindCounts)
+    .map(([kind, count]) => `${count} ${kind}${count !== 1 ? 's' : ''}`)
+    .join(', ')
+
+  const [showAll, setShowAll] = useState(false)
+
+  return (
+    <div className="mt-1.5">
+      <button
+        onClick={() => setShowAll(!showAll)}
+        className="flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+      >
+        <Package className="w-2.5 h-2.5" />
+        <span>Deployed {summary}</span>
+        {showAll
+          ? <ChevronDown className="w-2.5 h-2.5" />
+          : <ChevronRight className="w-2.5 h-2.5" />}
+      </button>
+      {showAll && (
+        <div className="mt-1 ml-4 space-y-0.5">
+          {dependencies.map((dep, i) => {
+            const style = DEP_ACTION_STYLES[dep.action] ?? DEP_ACTION_STYLES.created
+            return (
+              <div key={i} className="flex items-center gap-2 text-[10px]">
+                <span className="text-gray-600 w-28 truncate">{dep.kind}</span>
+                <span className="text-gray-400 flex-1 truncate">{dep.name}</span>
+                <span className={cn('shrink-0', style.color)}>{style.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

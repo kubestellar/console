@@ -31,10 +31,27 @@ export interface DeployCompletedPayload {
   timestamp: number
 }
 
+export interface DeployedDep {
+  kind: string
+  name: string
+  action: 'created' | 'updated' | 'skipped' | 'failed'
+}
+
+export interface DeployResultPayload {
+  id: string
+  success: boolean
+  message: string
+  deployedTo?: string[]
+  failedClusters?: string[]
+  dependencies?: DeployedDep[]
+  warnings?: string[]
+}
+
 export type CardEvent =
   | { type: 'deploy:started'; payload: DeployStartedPayload }
   | { type: 'deploy:progress'; payload: DeployProgressPayload }
   | { type: 'deploy:completed'; payload: DeployCompletedPayload }
+  | { type: 'deploy:result'; payload: DeployResultPayload }
 
 export type CardEventType = CardEvent['type']
 

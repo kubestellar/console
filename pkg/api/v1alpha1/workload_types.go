@@ -88,12 +88,21 @@ type DeployRequest struct {
 	Replicas       int32    `json:"replicas,omitempty"`
 }
 
+// DeployedDep describes a dependency resource that was applied during deployment
+type DeployedDep struct {
+	Kind   string `json:"kind"`
+	Name   string `json:"name"`
+	Action string `json:"action"` // "created", "updated", "skipped", "failed"
+}
+
 // DeployResponse represents the response from a deploy request
 type DeployResponse struct {
-	Success        bool     `json:"success"`
-	Message        string   `json:"message"`
-	DeployedTo     []string `json:"deployedTo,omitempty"`
-	FailedClusters []string `json:"failedClusters,omitempty"`
+	Success        bool          `json:"success"`
+	Message        string        `json:"message"`
+	DeployedTo     []string      `json:"deployedTo,omitempty"`
+	FailedClusters []string      `json:"failedClusters,omitempty"`
+	Dependencies   []DeployedDep `json:"dependencies,omitempty"`
+	Warnings       []string      `json:"warnings,omitempty"`
 }
 
 // BindingPolicy represents a KubeStellar BindingPolicy for workload placement

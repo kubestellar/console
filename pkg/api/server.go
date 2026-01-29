@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -125,6 +126,12 @@ func NewServer(cfg Config) (*Server, error) {
 		if err := k8sClient.StartWatching(); err != nil {
 			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
 		}
+	}
+
+	// Initialize AI providers (Claude Code CLI, API keys, etc.)
+	if err := agent.InitializeProviders(); err != nil {
+		log.Printf("Warning: %v", err)
+		// Don't fail - core functionality works without AI
 	}
 
 	// Initialize MCP bridge (optional - starts in background)
@@ -364,6 +371,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
 	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
 	api.Get("/workloads/deploy-status/:cluster/:namespace/:name", workloadHandlers.GetDeployStatus)
+	api.Get("/workloads/deploy-logs/:cluster/:namespace/:name", workloadHandlers.GetDeployLogs)
+	api.Get("/workloads/resolve-deps/:cluster/:namespace/:name", workloadHandlers.ResolveDependencies)
 	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
 	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
 	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)

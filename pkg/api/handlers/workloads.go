@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,6 +14,8 @@ import (
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -122,6 +125,59 @@ func (h *WorkloadHandlers) DeployWorkload(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(result)
+}
+
+// ResolveDependencies returns the dependency tree for a workload without deploying (dry-run).
+// GET /api/workloads/resolve-deps/:cluster/:namespace/:name
+func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+	}
+
+	cluster := c.Params("cluster")
+	namespace := c.Params("namespace")
+	name := c.Params("name")
+
+	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(c.Context(), cluster, namespace, name)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return c.Status(404).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	type depDTO struct {
+		Kind      string `json:"kind"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+		Optional  bool   `json:"optional"`
+		Order     int    `json:"order"`
+	}
+
+	deps := make([]depDTO, 0, len(bundle.Dependencies))
+	for _, d := range bundle.Dependencies {
+		deps = append(deps, depDTO{
+			Kind:      string(d.Kind),
+			Name:      d.Name,
+			Namespace: d.Namespace,
+			Optional:  d.Optional,
+			Order:     d.Order,
+		})
+	}
+
+	warnings := bundle.Warnings
+	if warnings == nil {
+		warnings = []string{}
+	}
+
+	return c.JSON(fiber.Map{
+		"workload":     name,
+		"kind":         workloadKind,
+		"namespace":    namespace,
+		"cluster":      cluster,
+		"dependencies": deps,
+		"warnings":     warnings,
+	})
 }
 
 // GetDeployStatus returns the current replica status of a deployment on a cluster
@@ -333,21 +389,38 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
 	defer cancel()
 
-	// Get all cluster health data
-	healthData, err := h.k8sClient.GetAllClusterHealth(ctx)
+	// Deduplicate clusters — multiple kubeconfig contexts can point to the
+	// same physical cluster (e.g. "vllm-d" and "default/api-fmaas-vllm-d-…").
+	// We only want one result per unique server URL.
+	dedupClusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to list clusters: " + err.Error()})
+	}
+	primaryNames := make(map[string]bool, len(dedupClusters))
+	for _, cl := range dedupClusters {
+		primaryNames[cl.Name] = true
+	}
+
+	// Get all cluster health data and keep only deduplicated entries
+	allHealth, err := h.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to get cluster health: " + err.Error()})
 	}
+	healthData := make([]k8s.ClusterHealth, 0, len(dedupClusters))
+	for _, h := range allHealth {
+		if primaryNames[h.Cluster] {
+			healthData = append(healthData, h)
+		}
+	}
 
-	// Fetch nodes for label selector matching and GPU filtering
+	// Fetch nodes only for deduplicated clusters
 	nodesByCluster := make(map[string][]k8s.NodeInfo)
 	needNodes := query.LabelSelector != "" || hasGPUFilter(query.Filters)
 	if needNodes {
-		clusters, _ := h.k8sClient.ListClusters(ctx)
-		for _, cluster := range clusters {
-			nodes, err := h.k8sClient.GetNodes(ctx, cluster.Name)
+		for _, cl := range dedupClusters {
+			nodes, err := h.k8sClient.GetNodes(ctx, cl.Name)
 			if err == nil {
-				nodesByCluster[cluster.Name] = nodes
+				nodesByCluster[cl.Name] = nodes
 			}
 		}
 	}
@@ -461,7 +534,7 @@ func clusterGPUTypes(nodes []k8s.NodeInfo) []string {
 func compareStringSet(actual []string, op, value string) bool {
 	valueLower := strings.ToLower(value)
 	switch op {
-	case "eq":
+	case "eq", "contains":
 		// Any type matches (case-insensitive, substring)
 		for _, s := range actual {
 			if strings.EqualFold(s, value) || strings.Contains(strings.ToLower(s), valueLower) {
@@ -469,7 +542,7 @@ func compareStringSet(actual []string, op, value string) bool {
 			}
 		}
 		return false
-	case "neq":
+	case "neq", "excludes":
 		// None of the types match
 		for _, s := range actual {
 			if strings.EqualFold(s, value) || strings.Contains(strings.ToLower(s), valueLower) {
@@ -737,4 +810,142 @@ func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(policies)
+}
+
+// GetDeployLogs returns Kubernetes events and recent log lines from a workload's pods.
+// Events are more useful than pod stdout during deployment (image pulls, scheduling, etc.).
+// GET /api/workloads/deploy-logs/:cluster/:namespace/:name?tail=8
+func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+	}
+
+	cluster := c.Params("cluster")
+	namespace := c.Params("namespace")
+	name := c.Params("name")
+	tailLines := c.QueryInt("tail", 8)
+
+	client, err := h.k8sClient.GetClient(cluster)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": fmt.Sprintf("cluster %s: %v", cluster, err)})
+	}
+
+	ctx := c.Context()
+
+	// Try label selector first: app=<name>
+	pods, err := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", name),
+	})
+	if err != nil || len(pods.Items) == 0 {
+		// Fallback: list all pods and filter by name prefix
+		allPods, listErr := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+		if listErr != nil {
+			return c.Status(500).JSON(fiber.Map{"error": listErr.Error()})
+		}
+		filtered := allPods.DeepCopy()
+		filtered.Items = nil
+		for _, p := range allPods.Items {
+			if strings.HasPrefix(p.Name, name+"-") || p.Name == name {
+				filtered.Items = append(filtered.Items, p)
+			}
+		}
+		pods = filtered
+	}
+
+	// Collect k8s events for the deployment and its pods
+	var eventLines []string
+
+	// Events for the deployment itself
+	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("involvedObject.name=%s", name),
+	})
+	if deployEvents != nil {
+		for _, ev := range deployEvents.Items {
+			eventLines = append(eventLines, formatEvent(ev))
+		}
+	}
+
+	// Events for each pod
+	for _, pod := range pods.Items {
+		podEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name),
+		})
+		if podEvents != nil {
+			for _, ev := range podEvents.Items {
+				eventLines = append(eventLines, formatEvent(ev))
+			}
+		}
+	}
+
+	// Sort events by timestamp (newest last) and take tail
+	sort.Slice(eventLines, func(i, j int) bool {
+		return eventLines[i] < eventLines[j]
+	})
+	if len(eventLines) > tailLines {
+		eventLines = eventLines[len(eventLines)-tailLines:]
+	}
+
+	// If we got events, prefer those over pod stdout
+	if len(eventLines) > 0 {
+		podName := ""
+		if len(pods.Items) > 0 {
+			podName = pods.Items[0].Name
+		}
+		return c.JSON(fiber.Map{
+			"logs": eventLines,
+			"pod":  podName,
+			"type": "events",
+		})
+	}
+
+	// Fallback: get pod stdout logs if no events found
+	if len(pods.Items) == 0 {
+		return c.JSON(fiber.Map{
+			"logs": []string{},
+			"pod":  "",
+		})
+	}
+
+	sort.Slice(pods.Items, func(i, j int) bool {
+		return pods.Items[i].CreationTimestamp.After(pods.Items[j].CreationTimestamp.Time)
+	})
+
+	podName := pods.Items[0].Name
+	logs, err := h.k8sClient.GetPodLogs(ctx, cluster, namespace, podName, "", int64(tailLines))
+	if err != nil {
+		return c.JSON(fiber.Map{
+			"logs":  []string{},
+			"pod":   podName,
+			"error": err.Error(),
+		})
+	}
+
+	lines := strings.Split(strings.TrimRight(logs, "\n"), "\n")
+	if len(lines) == 1 && lines[0] == "" {
+		lines = []string{}
+	}
+
+	return c.JSON(fiber.Map{
+		"logs": lines,
+		"pod":  podName,
+		"type": "stdout",
+	})
+}
+
+// formatEvent formats a k8s event into a compact log line for mission display.
+func formatEvent(ev corev1.Event) string {
+	ts := ev.LastTimestamp.Time
+	if ts.IsZero() {
+		ts = ev.CreationTimestamp.Time
+	}
+	prefix := ""
+	if ev.Type == "Warning" {
+		prefix = "⚠ "
+	}
+	return fmt.Sprintf("%s %s%s: %s",
+		ts.Format("15:04:05"),
+		prefix,
+		ev.Reason,
+		ev.Message,
+	)
 }

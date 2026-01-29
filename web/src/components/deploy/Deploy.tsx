@@ -1,4 +1,4 @@
-import { useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitBranch, RefreshCw } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
@@ -25,7 +25,8 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useDeployments } from '../../hooks/useMCP'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
-import { useCardPublish } from '../../lib/cardEvents'
+import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
+import { DeployConfirmDialog } from './DeployConfirmDialog'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
@@ -49,7 +50,7 @@ const DEFAULT_DEPLOY_CARDS = [
   { type: 'kustomization_status', title: 'Kustomizations', position: { w: 6, h: 4 } },
   { type: 'overlay_comparison', title: 'Overlay Comparison', position: { w: 8, h: 4 } },
   // Workload Deployment
-  { type: 'workload_deployment', title: 'Workload Deployment', position: { w: 6, h: 4 } },
+  { type: 'workload_deployment', title: 'Workloads', position: { w: 6, h: 4 } },
   // Cross-card deploy
   { type: 'cluster_groups', title: 'Cluster Groups', position: { w: 4, h: 4 } },
   { type: 'deployment_missions', title: 'Deployment Missions', position: { w: 5, h: 4 } },
@@ -134,7 +135,7 @@ const SortableDeployCard = memo(function SortableDeployCard({
 
 // Drag preview for overlay
 function DeployDragPreviewCard({ card }: { card: DashboardCard }) {
-  const cardWidth = card.position?.w || 4
+  const cardWidth = card?.position?.w || 4
   return (
     <div
       className="glass rounded-lg p-4 shadow-xl"
@@ -191,6 +192,15 @@ export function Deploy() {
   const isRefreshing = deploymentsRefreshing || showIndicator
   const isFetching = deploymentsLoading || isRefreshing || showIndicator
 
+  // Pending deploy state for confirmation dialog
+  const [pendingDeploy, setPendingDeploy] = useState<{
+    workloadName: string
+    namespace: string
+    sourceCluster: string
+    targetClusters: string[]
+    groupName: string
+  } | null>(null)
+
   // Wrap DnD handler to support cross-card deploy drops
   const handleDeployDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
@@ -199,7 +209,7 @@ export function Deploy() {
       return
     }
 
-    // Workload dropped on cluster group → trigger deploy
+    // Workload dropped on cluster group → show confirmation dialog
     if (
       active.data.current?.type === 'workload' &&
       String(over.id).startsWith('cluster-group-')
@@ -215,38 +225,78 @@ export function Deploy() {
       }
 
       if (groupData?.clusters?.length > 0) {
-        const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
-        publishCardEvent({
-          type: 'deploy:started',
-          payload: {
-            id: deployId,
-            workload: workloadData.name,
-            namespace: workloadData.namespace,
-            sourceCluster: workloadData.sourceCluster,
-            targetClusters: groupData.clusters,
-            groupName: groupData.groupName,
-            timestamp: Date.now(),
-          },
+        setPendingDeploy({
+          workloadName: workloadData.name,
+          namespace: workloadData.namespace,
+          sourceCluster: workloadData.sourceCluster,
+          targetClusters: groupData.clusters,
+          groupName: groupData.groupName,
         })
-
-        try {
-          await deployWorkload({
-            workloadName: workloadData.name,
-            namespace: workloadData.namespace,
-            sourceCluster: workloadData.sourceCluster,
-            targetClusters: groupData.clusters,
-          })
-        } catch (err) {
-          console.error('Deploy failed:', err)
-        }
       }
       return
     }
 
     // Fall through to normal reorder
     reorderDragEnd(event)
-  }, [reorderDragEnd, publishCardEvent, deployWorkload])
+  }, [reorderDragEnd])
+
+  // Handle confirmed deploy
+  const handleConfirmDeploy = useCallback(async () => {
+    if (!pendingDeploy) return
+    const { workloadName, namespace, sourceCluster, targetClusters, groupName } = pendingDeploy
+    setPendingDeploy(null)
+
+    const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+    publishCardEvent({
+      type: 'deploy:started',
+      payload: {
+        id: deployId,
+        workload: workloadName,
+        namespace,
+        sourceCluster,
+        targetClusters,
+        groupName,
+        timestamp: Date.now(),
+      },
+    })
+
+    try {
+      await deployWorkload({
+        workloadName,
+        namespace,
+        sourceCluster,
+        targetClusters,
+      }, {
+        onSuccess: (result) => {
+          const resp = result as unknown as {
+            success?: boolean
+            message?: string
+            deployedTo?: string[]
+            failedClusters?: string[]
+            dependencies?: { kind: string; name: string; action: string }[]
+            warnings?: string[]
+          }
+          if (resp && typeof resp === 'object') {
+            publishCardEvent({
+              type: 'deploy:result',
+              payload: {
+                id: deployId,
+                success: resp.success ?? true,
+                message: resp.message ?? '',
+                deployedTo: resp.deployedTo,
+                failedClusters: resp.failedClusters,
+                dependencies: resp.dependencies as DeployResultPayload['dependencies'],
+                warnings: resp.warnings,
+              },
+            })
+          }
+        },
+      })
+    } catch (err) {
+      console.error('Deploy failed:', err)
+    }
+  }, [pendingDeploy, publishCardEvent, deployWorkload])
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -401,7 +451,21 @@ export function Deploy() {
                 <DragOverlay>
                   {activeId ? (
                     <div className="opacity-80 rotate-3 scale-105">
-                      <DeployDragPreviewCard card={cards.find(c => c.id === activeId)!} />
+                      {String(activeId).startsWith('workload-') ? (
+                        <div className="glass rounded-lg p-3 shadow-xl" style={{ minWidth: 200, maxWidth: 400 }}>
+                          <div className="flex items-center gap-2">
+                            <GripVertical className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm font-medium truncate">
+                              {String(activeId).replace('workload-', '').replace(/-/g, ' / ')}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        (() => {
+                          const card = cards.find(c => c.id === activeId)
+                          return card ? <DeployDragPreviewCard card={card} /> : null
+                        })()
+                      )}
                     </div>
                   ) : null}
                 </DragOverlay>
@@ -440,6 +504,18 @@ export function Deploy() {
         card={configureCardData}
         onClose={() => setConfiguringCard(null)}
         onSave={handleSaveCardConfig}
+      />
+
+      {/* Pre-deploy Confirmation Dialog */}
+      <DeployConfirmDialog
+        isOpen={pendingDeploy !== null}
+        onClose={() => setPendingDeploy(null)}
+        onConfirm={handleConfirmDeploy}
+        workloadName={pendingDeploy?.workloadName ?? ''}
+        namespace={pendingDeploy?.namespace ?? ''}
+        sourceCluster={pendingDeploy?.sourceCluster ?? ''}
+        targetClusters={pendingDeploy?.targetClusters ?? []}
+        groupName={pendingDeploy?.groupName}
       />
     </div>
   )

@@ -5,11 +5,20 @@ export interface Workload {
   name: string
   namespace: string
   type: 'Deployment' | 'StatefulSet' | 'DaemonSet'
-  cluster: string
+  cluster?: string
+  targetClusters?: string[]
   replicas: number
   readyReplicas: number
   status: 'Running' | 'Degraded' | 'Failed' | 'Pending'
   image: string
+  labels?: Record<string, string>
+  deployments?: Array<{
+    cluster: string
+    status: string
+    replicas: number
+    readyReplicas: number
+    lastUpdated: string
+  }>
   createdAt: string
 }
 
@@ -37,6 +46,13 @@ export interface DeployResult {
   message: string
 }
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
 // Fetch all workloads across clusters
 export function useWorkloads(options?: {
   cluster?: string
@@ -60,12 +76,13 @@ export function useWorkloads(options?: {
       const queryString = params.toString()
       const url = `/api/workloads${queryString ? `?${queryString}` : ''}`
 
-      const res = await fetch(url)
+      const res = await fetch(url, { headers: authHeaders() })
       if (!res.ok) {
         throw new Error(`Failed to fetch workloads: ${res.statusText}`)
       }
-      const workloads = await res.json()
-      setData(workloads)
+      const result = await res.json()
+      // Backend returns { items: [...], totalCount: N }
+      setData(result.items || result)
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'))
     } finally {
@@ -93,7 +110,7 @@ export function useClusterCapabilities() {
     setError(null)
 
     try {
-      const res = await fetch('/api/workloads/capabilities')
+      const res = await fetch('/api/workloads/capabilities', { headers: authHeaders() })
       if (!res.ok) {
         throw new Error(`Failed to fetch capabilities: ${res.statusText}`)
       }
@@ -133,7 +150,7 @@ export function useDeployWorkload() {
     try {
       const res = await fetch('/api/workloads/deploy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
       })
       if (!res.ok) {
@@ -179,7 +196,7 @@ export function useScaleWorkload() {
     try {
       const res = await fetch('/api/workloads/scale', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
       })
       if (!res.ok) {
@@ -224,6 +241,7 @@ export function useDeleteWorkload() {
     try {
       const res = await fetch(`/api/workloads/${params.cluster}/${params.namespace}/${params.name}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       })
       if (!res.ok) {
         const errorData = await res.json()

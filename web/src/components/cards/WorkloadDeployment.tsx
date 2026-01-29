@@ -16,10 +16,11 @@ import {
   ArrowUpRight,
   GripVertical,
   Filter,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls, SortDirection } from '../ui/CardControls'
+import { Pagination, usePagination } from '../ui/Pagination'
 import { useChartFilters } from '../../lib/cards'
 import { cn } from '../../lib/cn'
 import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
@@ -151,6 +152,7 @@ const DEMO_WORKLOADS: Workload[] = [
 
 const DEMO_STATS = {
   totalWorkloads: 24,
+  uniqueWorkloads: 24,
   runningCount: 18,
   degradedCount: 3,
   pendingCount: 2,
@@ -209,7 +211,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
   const sourceCluster = workload.targetClusters[0] || 'unknown'
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `workload-${workload.namespace}-${workload.name}`,
+    id: `workload-${sourceCluster}-${workload.namespace}-${workload.name}`,
     data: {
       type: 'workload',
       workload: {
@@ -233,8 +235,10 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
-        'p-3 transition-colors',
+        'p-3 transition-colors cursor-grab active:cursor-grabbing',
         isDragging
           ? 'bg-blue-100 dark:bg-blue-900/40 shadow-lg rounded-lg opacity-90'
           : 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
@@ -243,15 +247,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 min-w-0">
-          {/* Drag handle */}
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 -ml-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-            title="Drag to deploy to cluster"
-          >
-            <GripVertical className="h-4 w-4 text-gray-400" />
-          </div>
+          <GripVertical className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
           <TypeIcon type={workload.type} />
           <div className="min-w-0" onClick={onSelect}>
             <div className="flex items-center gap-2 cursor-pointer">
@@ -351,6 +347,9 @@ const SORT_OPTIONS = [
 
 const workloadStatusOrder: Record<string, number> = { Failed: 0, Degraded: 1, Pending: 2, Running: 3, Unknown: 4 }
 
+const worseStatus = (a: WorkloadStatus, b: WorkloadStatus): WorkloadStatus =>
+  (workloadStatusOrder[a] ?? 4) < (workloadStatusOrder[b] ?? 4) ? a : b
+
 interface WorkloadDeploymentProps {
   config?: Record<string, unknown>
 }
@@ -385,47 +384,78 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const workloads: Workload[] = useMemo(() => {
     if (isDemo) return DEMO_WORKLOADS
     // Transform API workloads to card format
-    return realWorkloads.map((w: ApiWorkload) => ({
-      name: w.name,
-      namespace: w.namespace,
-      type: w.type as WorkloadType,
-      status: w.status as WorkloadStatus,
-      replicas: w.replicas,
-      readyReplicas: w.readyReplicas,
-      image: w.image,
-      labels: {},
-      targetClusters: [w.cluster],
-      deployments: [{
-        cluster: w.cluster,
+    const mapped = realWorkloads.map((w: ApiWorkload) => {
+      const clusters = w.targetClusters || (w.cluster ? [w.cluster] : [])
+      const deployments: ClusterDeployment[] = w.deployments
+        ? w.deployments.map(d => ({
+            cluster: d.cluster,
+            status: d.status as WorkloadStatus,
+            replicas: d.replicas,
+            readyReplicas: d.readyReplicas,
+            lastUpdated: d.lastUpdated,
+          }))
+        : clusters.map(c => ({
+            cluster: c,
+            status: w.status as WorkloadStatus,
+            replicas: w.replicas,
+            readyReplicas: w.readyReplicas,
+            lastUpdated: w.createdAt,
+          }))
+      return {
+        name: w.name,
+        namespace: w.namespace,
+        type: w.type as WorkloadType,
         status: w.status as WorkloadStatus,
-        replicas: w.replicas,
-        readyReplicas: w.readyReplicas,
-        lastUpdated: w.createdAt,
-      }],
-      createdAt: w.createdAt,
-    }))
+        replicas: w.replicas || 0,
+        readyReplicas: w.readyReplicas || 0,
+        image: w.image,
+        labels: w.labels || {},
+        targetClusters: clusters,
+        deployments,
+        createdAt: w.createdAt,
+      }
+    })
+
+    // Deduplicate: group by namespace/name, merge clusters
+    const grouped = new Map<string, Workload>()
+    for (const w of mapped) {
+      const key = `${w.namespace}/${w.name}`
+      const existing = grouped.get(key)
+      if (existing) {
+        existing.targetClusters = [...new Set([...existing.targetClusters, ...w.targetClusters])]
+        existing.deployments = [...existing.deployments, ...w.deployments]
+        existing.replicas += w.replicas || 0
+        existing.readyReplicas += w.readyReplicas || 0
+        existing.status = worseStatus(existing.status, w.status)
+      } else {
+        grouped.set(key, { ...w })
+      }
+    }
+    return Array.from(grouped.values())
   }, [realWorkloads, isDemo])
 
   // Calculate stats from actual workloads
   const stats = useMemo(() => {
     if (isDemo) return DEMO_STATS
     return {
-      totalWorkloads: workloads.length,
+      totalWorkloads: realWorkloads?.length ?? workloads.length,
+      uniqueWorkloads: workloads.length,
       runningCount: workloads.filter(w => w.status === 'Running').length,
       degradedCount: workloads.filter(w => w.status === 'Degraded').length,
       pendingCount: workloads.filter(w => w.status === 'Pending').length,
       failedCount: workloads.filter(w => w.status === 'Failed').length,
       totalClusters: new Set(workloads.flatMap(w => w.targetClusters)).size,
     }
-  }, [workloads, isDemo])
+  }, [workloads, realWorkloads, isDemo])
 
-  const filteredWorkloads = useMemo(() => {
+  const filteredSorted = useMemo(() => {
     let result = workloads.filter((w) => {
+      const q = search.toLowerCase()
       const matchesSearch =
         search === '' ||
-        w.name.toLowerCase().includes(search.toLowerCase()) ||
-        w.namespace.toLowerCase().includes(search.toLowerCase()) ||
-        w.image.toLowerCase().includes(search.toLowerCase())
+        (w.name || '').toLowerCase().includes(q) ||
+        (w.namespace || '').toLowerCase().includes(q) ||
+        (w.image || '').toLowerCase().includes(q)
       const matchesType = typeFilter === 'All' || w.type === typeFilter
       const matchesStatus = statusFilter === 'All' || w.status === statusFilter
       // Apply local cluster filter
@@ -443,12 +473,20 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       return sortDirection === 'asc' ? cmp : -cmp
     })
 
-    // Apply limit
-    if (limit !== 'unlimited') {
-      return sorted.slice(0, limit)
-    }
     return sorted
-  }, [workloads, search, typeFilter, statusFilter, localClusterFilter, sortBy, sortDirection, limit])
+  }, [workloads, search, typeFilter, statusFilter, localClusterFilter, sortBy, sortDirection])
+
+  // Paginate using shared hook
+  const effectivePerPage = limit === 'unlimited' ? 10000 : limit
+  const {
+    paginatedItems: filteredWorkloads,
+    currentPage,
+    totalPages,
+    totalItems: totalFiltered,
+    itemsPerPage: perPage,
+    goToPage,
+    needsPagination,
+  } = usePagination(filteredSorted, effectivePerPage)
 
   const workloadTypes: (WorkloadType | 'All')[] = ['All', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob']
   const workloadStatuses: (WorkloadStatus | 'All')[] = ['All', 'Running', 'Degraded', 'Pending', 'Failed']
@@ -459,7 +497,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       <div className="flex items-center justify-between mb-2 flex-shrink-0 px-3 pt-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {stats.totalWorkloads} workloads
+            {stats.totalWorkloads} total &middot; {stats.uniqueWorkloads} unique
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -540,10 +578,14 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+      <div className="grid grid-cols-6 gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
         <div className="text-center">
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.totalWorkloads}</div>
           <div className="text-xs text-gray-500">Total</div>
+        </div>
+        <div className="text-center">
+          <div className="text-lg font-semibold text-purple-500">{stats.uniqueWorkloads}</div>
+          <div className="text-xs text-gray-500">Unique</div>
         </div>
         <div className="text-center">
           <div className="text-lg font-semibold text-green-600">{stats.runningCount}</div>
@@ -588,10 +630,9 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
               </option>
             ))}
           </select>
-          <button className="ml-auto flex items-center gap-1 text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">
-            <Plus className="h-3 w-3" />
-            Deploy
-          </button>
+          <span className="ml-auto text-[10px] text-muted-foreground italic">
+            Drag onto Cluster Groups to deploy
+          </span>
         </div>
       </div>
 
@@ -617,6 +658,20 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {needsPagination && limit !== 'unlimited' && (
+        <div className="pt-2 border-t border-border/50 mt-2">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalFiltered}
+            itemsPerPage={perPage}
+            onPageChange={goToPage}
+            showItemsPerPage={false}
+          />
+        </div>
+      )}
     </div>
   )
 }

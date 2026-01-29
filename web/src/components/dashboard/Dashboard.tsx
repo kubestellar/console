@@ -44,8 +44,9 @@ import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { useCardPublish } from '../../lib/cardEvents'
+import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
+import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -141,6 +142,15 @@ export function Dashboard() {
   // Inter-card event bus for cross-card deploy
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
+
+  // Pending deploy state for confirmation dialog
+  const [pendingDeploy, setPendingDeploy] = useState<{
+    workloadName: string
+    namespace: string
+    sourceCluster: string
+    targetClusters: string[]
+    groupName: string
+  } | null>(null)
 
   // Stats calculations for StatsOverview
   const healthyClusters = clusters.filter(c => c.healthy).length
@@ -254,42 +264,13 @@ export function Dashboard() {
       }
 
       if (groupData?.clusters?.length > 0) {
-        const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
-        // Publish deploy:started event immediately for the Missions card
-        publishCardEvent({
-          type: 'deploy:started',
-          payload: {
-            id: deployId,
-            workload: workloadData.name,
-            namespace: workloadData.namespace,
-            sourceCluster: workloadData.sourceCluster,
-            targetClusters: groupData.clusters,
-            groupName: groupData.groupName,
-            timestamp: Date.now(),
-          },
+        setPendingDeploy({
+          workloadName: workloadData.name,
+          namespace: workloadData.namespace,
+          sourceCluster: workloadData.sourceCluster,
+          targetClusters: groupData.clusters,
+          groupName: groupData.groupName,
         })
-
-        showToast(
-          `Deploying ${workloadData.name} to ${groupData.clusters.length} cluster${groupData.clusters.length !== 1 ? 's' : ''} in "${groupData.groupName}"`,
-          'success'
-        )
-
-        // Fire the actual deploy API call
-        try {
-          await deployWorkload({
-            workloadName: workloadData.name,
-            namespace: workloadData.namespace,
-            sourceCluster: workloadData.sourceCluster,
-            targetClusters: groupData.clusters,
-          })
-        } catch (err) {
-          console.error('Deploy failed:', err)
-          showToast(
-            `Deploy failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-            'error'
-          )
-        }
       }
       return
     }
@@ -328,6 +309,73 @@ export function Dashboard() {
     setIsDragging(false)
     setDragOverDashboard(null)
   }
+
+  // Handle confirmed deploy from confirmation dialog
+  const handleConfirmDeploy = useCallback(async () => {
+    if (!pendingDeploy) return
+    const { workloadName, namespace, sourceCluster, targetClusters, groupName } = pendingDeploy
+    setPendingDeploy(null)
+
+    const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+    publishCardEvent({
+      type: 'deploy:started',
+      payload: {
+        id: deployId,
+        workload: workloadName,
+        namespace,
+        sourceCluster,
+        targetClusters,
+        groupName,
+        timestamp: Date.now(),
+      },
+    })
+
+    showToast(
+      `Deploying ${workloadName} to ${targetClusters.length} cluster${targetClusters.length !== 1 ? 's' : ''} in "${groupName}"`,
+      'success'
+    )
+
+    try {
+      await deployWorkload({
+        workloadName,
+        namespace,
+        sourceCluster,
+        targetClusters,
+      }, {
+        onSuccess: (result) => {
+          const resp = result as unknown as {
+            success?: boolean
+            message?: string
+            deployedTo?: string[]
+            failedClusters?: string[]
+            dependencies?: { kind: string; name: string; action: string }[]
+            warnings?: string[]
+          }
+          if (resp && typeof resp === 'object') {
+            publishCardEvent({
+              type: 'deploy:result',
+              payload: {
+                id: deployId,
+                success: resp.success ?? true,
+                message: resp.message ?? '',
+                deployedTo: resp.deployedTo,
+                failedClusters: resp.failedClusters,
+                dependencies: resp.dependencies as DeployResultPayload['dependencies'],
+                warnings: resp.warnings,
+              },
+            })
+          }
+        },
+      })
+    } catch (err) {
+      console.error('Deploy failed:', err)
+      showToast(
+        `Deploy failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        'error'
+      )
+    }
+  }, [pendingDeploy, publishCardEvent, deployWorkload, showToast])
 
   const handleCreateDashboard = () => {
     setIsCreateDashboardOpen(true)
@@ -917,6 +965,18 @@ export function Dashboard() {
         onClose={() => setIsCreateDashboardOpen(false)}
         onCreate={handleCreateDashboardConfirm}
         existingNames={dashboards.map(d => d.name)}
+      />
+
+      {/* Pre-deploy Confirmation Dialog */}
+      <DeployConfirmDialog
+        isOpen={pendingDeploy !== null}
+        onClose={() => setPendingDeploy(null)}
+        onConfirm={handleConfirmDeploy}
+        workloadName={pendingDeploy?.workloadName ?? ''}
+        namespace={pendingDeploy?.namespace ?? ''}
+        sourceCluster={pendingDeploy?.sourceCluster ?? ''}
+        targetClusters={pendingDeploy?.targetClusters ?? []}
+        groupName={pendingDeploy?.groupName}
       />
     </div>
   )

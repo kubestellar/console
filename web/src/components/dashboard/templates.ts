@@ -605,6 +605,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'helm_release_status', position: { w: 6, h: 2 } },
       { card_type: 'kustomization_status', position: { w: 6, h: 2 } },
       { card_type: 'workload_deployment', position: { w: 6, h: 2 } },
+      { card_type: 'resource_marshall', position: { w: 6, h: 2 } },
       { card_type: 'upgrade_status', position: { w: 4, h: 2 } },
     ],
   },
