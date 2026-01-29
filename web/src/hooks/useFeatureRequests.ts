@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 
-// Check if user is in demo mode (demo-token)
+// Check if user is in demo mode — no token or explicit demo-token
 function isDemoUser(): boolean {
   const token = localStorage.getItem('token')
-  return token === 'demo-token'
+  return !token || token === 'demo-token'
 }
 
 // Types

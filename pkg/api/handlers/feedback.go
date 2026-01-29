@@ -820,6 +820,79 @@ func (h *FeedbackHandler) HandleGitHubWebhook(c *fiber.Ctx) error {
 	}
 }
 
+// ensureFeatureRequestExists looks up or creates a DB record for a GitHub issue.
+// This bridges issues created externally (via GitHub UI/API) with the Console's
+// notification system. Returns the request and whether it was newly created.
+func (h *FeedbackHandler) ensureFeatureRequestExists(issueNumber int, issue map[string]interface{}) (*models.FeatureRequest, bool, error) {
+	// Check if record already exists
+	request, err := h.store.GetFeatureRequestByIssueNumber(issueNumber)
+	if err == nil && request != nil {
+		return request, false, nil
+	}
+
+	// Extract issue data
+	issueURL, _ := issue["html_url"].(string)
+	title, _ := issue["title"].(string)
+	body, _ := issue["body"].(string)
+
+	// Determine request type from labels
+	requestType := models.RequestTypeFeature
+	labels, _ := issue["labels"].([]interface{})
+	for _, l := range labels {
+		if lm, ok := l.(map[string]interface{}); ok {
+			if name, _ := lm["name"].(string); name == "bug" {
+				requestType = models.RequestTypeBug
+			}
+		}
+	}
+
+	// Try to find the Console user by GitHub ID
+	var userID uuid.UUID
+	if user, _ := issue["user"].(map[string]interface{}); user != nil {
+		if ghID, ok := user["id"].(float64); ok {
+			if dbUser, _ := h.store.GetUserByGitHubID(fmt.Sprintf("%d", int(ghID))); dbUser != nil {
+				userID = dbUser.ID
+			}
+		}
+	}
+	// If no matching Console user, use a nil UUID (system-created)
+	if userID == uuid.Nil {
+		userID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	}
+
+	request = &models.FeatureRequest{
+		UserID:            userID,
+		Title:             title,
+		Description:       body,
+		RequestType:       requestType,
+		GitHubIssueNumber: &issueNumber,
+		GitHubIssueURL:    issueURL,
+		Status:            models.RequestStatusOpen,
+	}
+
+	if err := h.store.CreateFeatureRequest(request); err != nil {
+		log.Printf("[Webhook] Failed to create feature request for issue #%d: %v", issueNumber, err)
+		return nil, false, err
+	}
+
+	log.Printf("[Webhook] Created DB record for external issue #%d (user=%s)", issueNumber, userID)
+	return request, true, nil
+}
+
+// pipelineLabels maps GitHub labels to status updates and notification types
+var pipelineLabels = map[string]struct {
+	status    models.RequestStatus
+	notifType models.NotificationType
+	message   string
+}{
+	"triage/accepted":        {models.RequestStatusTriageAccepted, models.NotificationTypeTriageAccepted, "A maintainer has accepted this issue for processing."},
+	"ai-processing":          {models.RequestStatusFeasibilityStudy, models.NotificationTypeFeasibilityStudy, "AI is analyzing this issue and working on a fix."},
+	"ai-awaiting-fix":        {models.RequestStatusFeasibilityStudy, models.NotificationTypeFeasibilityStudy, "AI is working on a fix for this issue."},
+	"ai-pr-draft":            {models.RequestStatusFixReady, models.NotificationTypeFixReady, "A draft PR has been created for this issue."},
+	"ai-pr-ready":            {models.RequestStatusFixReady, models.NotificationTypeFixReady, "A PR is ready for review."},
+	"ai-processing-complete": {models.RequestStatusFixComplete, models.NotificationTypeFixComplete, "AI processing is complete."},
+}
+
 // handleIssueEvent processes issue events
 func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error {
 	action, _ := payload["action"].(string)
@@ -833,14 +906,71 @@ func (h *FeedbackHandler) handleIssueEvent(payload map[string]interface{}) error
 
 	log.Printf("[Webhook] Issue #%d %s", issueNumber, action)
 
-	// Handle label events
+	// Handle label events — track pipeline progression
 	if action == "labeled" {
 		label, _ := payload["label"].(map[string]interface{})
-		if label != nil {
-			labelName, _ := label["name"].(string)
-			if labelName == "ai-processing-complete" {
-				// AI processing complete - check if there's a PR or needs human review
-				return h.handleAIProcessingComplete(issueNumber, issueURL, issue)
+		if label == nil {
+			return nil
+		}
+		labelName, _ := label["name"].(string)
+
+		// Special case: ai-processing-complete needs extra logic
+		if labelName == "ai-processing-complete" {
+			return h.handleAIProcessingComplete(issueNumber, issueURL, issue)
+		}
+
+		// Handle pipeline label transitions
+		if info, ok := pipelineLabels[labelName]; ok {
+			request, created, err := h.ensureFeatureRequestExists(issueNumber, issue)
+			if err != nil || request == nil {
+				return nil
+			}
+
+			h.store.UpdateFeatureRequestStatus(request.ID, info.status)
+
+			// Create notification (skip if we just auto-created the record — avoid duplicate "created" noise)
+			if !created || info.notifType != models.NotificationTypeIssueCreated {
+				h.createNotification(
+					request.UserID,
+					&request.ID,
+					info.notifType,
+					fmt.Sprintf("Issue #%d: %s", issueNumber, info.message),
+					info.message,
+					issueURL,
+				)
+			}
+			return nil
+		}
+
+		// Handle ai-fix-requested label — ensure DB record exists
+		if labelName == "ai-fix-requested" {
+			request, created, err := h.ensureFeatureRequestExists(issueNumber, issue)
+			if err != nil || request == nil {
+				return nil
+			}
+			if created {
+				h.createNotification(
+					request.UserID,
+					&request.ID,
+					models.NotificationTypeIssueCreated,
+					fmt.Sprintf("Issue #%d Tracked", issueNumber),
+					"This issue is now being tracked for AI processing.",
+					issueURL,
+				)
+			}
+			return nil
+		}
+	}
+
+	// Handle issue opened with ai-fix-requested label — auto-create record
+	if action == "opened" {
+		labels, _ := issue["labels"].([]interface{})
+		for _, l := range labels {
+			if lm, ok := l.(map[string]interface{}); ok {
+				if name, _ := lm["name"].(string); name == "ai-fix-requested" {
+					_, _, _ = h.ensureFeatureRequestExists(issueNumber, issue)
+					break
+				}
 			}
 		}
 	}

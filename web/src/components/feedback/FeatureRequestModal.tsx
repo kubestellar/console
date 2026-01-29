@@ -259,9 +259,16 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
 
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
-        <h2 className="text-lg font-semibold text-foreground">
-          Feedback
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">
+            Feedback
+          </h2>
+          {!canPerformActions && (
+            <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-500/20 text-amber-400 uppercase tracking-wider">
+              Demo
+            </span>
+          )}
+        </div>
         <button
           onClick={handleClose}
           disabled={isSubmitting}
@@ -462,6 +469,11 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
                                     <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
                                       {statusInfo.label}
                                     </span>
+                                    {request.status === 'fix_complete' && (
+                                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-gray-500/20 text-gray-400">
+                                        Closed
+                                      </span>
+                                    )}
                                     {getStatusDescription(request.status, request.closed_by_user) && (
                                       <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-sm select-none' : ''}`}>
                                         {getStatusDescription(request.status, request.closed_by_user)}

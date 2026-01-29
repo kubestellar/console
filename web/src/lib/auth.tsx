@@ -41,23 +41,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dashboardSync.clearCache()
   }, [])
 
+  const setDemoMode = useCallback(() => {
+    const demoOnboarded = localStorage.getItem('demo-user-onboarded') === 'true'
+    localStorage.setItem('token', 'demo-token')
+    setTokenState('demo-token')
+    setUser({
+      id: 'demo-user',
+      github_id: '12345',
+      github_login: 'demo-user',
+      email: 'demo@example.com',
+      avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
+      role: 'viewer',
+      onboarded: demoOnboarded,
+    })
+  }, [])
+
   const refreshUser = useCallback(async (overrideToken?: string) => {
     const effectiveToken = overrideToken || localStorage.getItem('token')
-    if (!effectiveToken) return
+    if (!effectiveToken) {
+      setDemoMode()
+      return
+    }
 
     // Demo token - set demo user directly without API call
     if (effectiveToken === 'demo-token') {
-      // Check if demo user has completed onboarding (stored in localStorage)
-      const demoOnboarded = localStorage.getItem('demo-user-onboarded') === 'true'
-      setUser({
-        id: 'demo-user',
-        github_id: '12345',
-        github_login: 'demo-user',
-        email: 'demo@example.com',
-        avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
-        role: 'viewer',
-        onboarded: demoOnboarded,
-      })
+      setDemoMode()
       return
     }
 
@@ -67,10 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       setUser(response.data)
     } catch (error) {
-      console.error('Failed to fetch user:', error)
-      logout()
+      console.error('Failed to fetch user, falling back to demo mode:', error)
+      setDemoMode()
     }
-  }, [logout])
+  }, [setDemoMode])
 
   const login = useCallback(async () => {
     // Demo mode enabled via:
@@ -86,20 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isDemoMode = explicitDemoMode || !backendAvailable
 
     if (isDemoMode) {
-      // Demo mode provides read-only viewer access, not admin
-      localStorage.setItem('token', 'demo-token')
-      setTokenState('demo-token')
-      // Check if demo user has completed onboarding (stored in localStorage)
-      const demoOnboarded = localStorage.getItem('demo-user-onboarded') === 'true'
-      setUser({
-        id: 'demo-user',
-        github_id: '12345',
-        github_login: 'demo-user',
-        email: 'demo@example.com',
-        avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
-        role: 'viewer', // Demo users get viewer role, not admin
-        onboarded: demoOnboarded,
-      })
+      setDemoMode()
       return
     }
     window.location.href = '/auth/github'
