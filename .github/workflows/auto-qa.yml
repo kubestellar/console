@@ -1,0 +1,388 @@
+name: Auto-QA Agent
+# Runs hourly quality checks on main and opens GitHub issues for failures.
+# Issues carry labels that feed into the Copilot automation pipeline.
+
+on:
+  schedule:
+    - cron: '17 * * * *' # Every hour at :17 (offset from :00 to reduce congestion)
+  workflow_dispatch:
+    inputs:
+      auto_triage:
+        description: 'Auto-triage created issues (post /triage accepted to start Copilot)'
+        required: false
+        default: false
+        type: boolean
+      skip_audit:
+        description: 'Skip npm audit check'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  BUNDLE_SIZE_LIMIT_KB: 5120 # 5 MB max for web/dist directory
+  MAX_ISSUES_PER_RUN: 3      # Rate limit: max issues created per run
+  ISSUE_PREFIX: "[Auto-QA]"  # Title prefix for deduplication
+  NODE_VERSION: "20"
+  GO_VERSION: "1.23"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  auto-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── Setup ──────────────────────────────────────────────────────
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+
+      # ── Quality Checks ─────────────────────────────────────────────
+
+      - name: "Check: TypeScript build"
+        id: build_check
+        working-directory: web
+        continue-on-error: true
+        run: npm run build 2>&1 | tee /tmp/build-output.txt
+
+      - name: "Check: ESLint"
+        id: lint_check
+        working-directory: web
+        continue-on-error: true
+        run: npm run lint 2>&1 | tee /tmp/lint-output.txt
+
+      - name: "Check: Go backend build"
+        id: go_build_check
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1
+          CGO_ENABLED=1 go build -o /dev/null ./cmd/console 2>&1 | tee /tmp/go-build-output.txt
+
+      - name: "Check: Bundle size"
+        id: bundle_check
+        if: steps.build_check.outcome == 'success'
+        run: |
+          if [ -d "web/dist" ]; then
+            SIZE_KB=$(du -sk web/dist | cut -f1)
+            echo "size_kb=$SIZE_KB" >> "$GITHUB_OUTPUT"
+            if [ "$SIZE_KB" -gt "$BUNDLE_SIZE_LIMIT_KB" ]; then
+              echo "exceeded=true" >> "$GITHUB_OUTPUT"
+              echo "Bundle size ${SIZE_KB}KB exceeds limit ${BUNDLE_SIZE_LIMIT_KB}KB"
+              du -sh web/dist/assets/* 2>/dev/null | sort -rh | head -20 > /tmp/bundle-breakdown.txt
+            else
+              echo "exceeded=false" >> "$GITHUB_OUTPUT"
+              echo "Bundle size ${SIZE_KB}KB is within limit ${BUNDLE_SIZE_LIMIT_KB}KB"
+            fi
+          else
+            echo "exceeded=false" >> "$GITHUB_OUTPUT"
+            echo "No dist directory found"
+          fi
+
+      - name: "Check: npm audit"
+        id: audit_check
+        if: inputs.skip_audit != true
+        working-directory: web
+        run: |
+          # Run audit with retry for network flakes
+          AUDIT_EXIT=0
+          npm audit --audit-level=high --json > /tmp/audit-output.json 2>/dev/null || AUDIT_EXIT=$?
+
+          # Retry once on network error (exit code 1 can mean network or findings)
+          if [ "$AUDIT_EXIT" -ne 0 ] && ! jq -e '.metadata' /tmp/audit-output.json > /dev/null 2>&1; then
+            echo "First audit attempt failed (possibly network), retrying in 30s..."
+            sleep 30
+            npm audit --audit-level=high --json > /tmp/audit-output.json 2>/dev/null || true
+          fi
+
+          # Parse results (jq returns 0/null if key missing)
+          CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' /tmp/audit-output.json 2>/dev/null || echo "0")
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' /tmp/audit-output.json 2>/dev/null || echo "0")
+          TOTAL=$((CRITICAL + HIGH))
+
+          echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
+          echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+
+          if [ "$TOTAL" -gt "0" ]; then
+            echo "has_vulnerabilities=true" >> "$GITHUB_OUTPUT"
+            echo "Found $CRITICAL critical + $HIGH high vulnerabilities"
+            npm audit --audit-level=high 2>/dev/null | tail -50 > /tmp/audit-summary.txt || true
+          else
+            echo "has_vulnerabilities=false" >> "$GITHUB_OUTPUT"
+            echo "No high/critical vulnerabilities found"
+          fi
+
+      # ── Issue Creation ──────────────────────────────────────────────
+
+      - name: Ensure auto-qa label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "auto-qa" \
+            --repo "${{ github.repository }}" \
+            --color "FF6B35" \
+            --description "Issue detected by automated QA" \
+            2>/dev/null || true
+
+      - name: Create issues for failures
+        uses: actions/github-script@v7
+        env:
+          BUILD_OUTCOME: ${{ steps.build_check.outcome }}
+          LINT_OUTCOME: ${{ steps.lint_check.outcome }}
+          GO_BUILD_OUTCOME: ${{ steps.go_build_check.outcome }}
+          BUNDLE_EXCEEDED: ${{ steps.bundle_check.outputs.exceeded }}
+          BUNDLE_SIZE_KB: ${{ steps.bundle_check.outputs.size_kb }}
+          HAS_VULNS: ${{ steps.audit_check.outputs.has_vulnerabilities }}
+          VULN_CRITICAL: ${{ steps.audit_check.outputs.critical }}
+          VULN_HIGH: ${{ steps.audit_check.outputs.high }}
+          AUTO_TRIAGE: ${{ inputs.auto_triage }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const fs = require('fs');
+            const prefix = process.env.ISSUE_PREFIX;
+            const maxIssues = parseInt(process.env.MAX_ISSUES_PER_RUN);
+            const sha = process.env.COMMIT_SHA.substring(0, 7);
+            const fullSha = process.env.COMMIT_SHA;
+            const runUrl = process.env.RUN_URL;
+            const now = new Date().toISOString();
+
+            // Helper: read file safely, return last N lines
+            function readOutput(path, lines = 80) {
+              try {
+                const content = fs.readFileSync(path, 'utf8');
+                return content.split('\n').slice(-lines).join('\n').trim();
+              } catch {
+                return '(output not available)';
+              }
+            }
+
+            // Helper: build issue body
+            function buildBody(checkName, command, output, fixes) {
+              return [
+                `## Auto-QA: ${checkName} Failure`,
+                '',
+                `**Detected:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+                '',
+                '### Reproduction',
+                '```bash',
+                `git checkout ${fullSha}`,
+                command,
+                '```',
+                '',
+                '### Error Output',
+                '```',
+                output,
+                '```',
+                '',
+                '### How to Fix',
+                ...fixes.map(f => `- ${f}`),
+                '',
+                '---',
+                `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
+                '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
+              ].join('\n');
+            }
+
+            // Collect failures
+            const checks = [];
+
+            // 1. TypeScript Build
+            if (process.env.BUILD_OUTCOME === 'failure') {
+              checks.push({
+                title: `${prefix} TypeScript build failure on main`,
+                body: buildBody(
+                  'TypeScript Build',
+                  'cd web && npm run build',
+                  readOutput('/tmp/build-output.txt'),
+                  [
+                    'Check the TypeScript errors shown above',
+                    'Fix type errors, missing imports, or syntax issues',
+                    'Run `cd web && npm run build` to verify the fix',
+                  ]
+                ),
+              });
+            }
+
+            // 2. ESLint
+            if (process.env.LINT_OUTCOME === 'failure') {
+              checks.push({
+                title: `${prefix} ESLint violations on main`,
+                body: buildBody(
+                  'ESLint',
+                  'cd web && npm run lint',
+                  readOutput('/tmp/lint-output.txt'),
+                  [
+                    'Fix the ESLint errors listed above',
+                    'Common fixes: remove unused imports, add missing hook dependencies',
+                    'Run `cd web && npm run lint` to verify the fix',
+                  ]
+                ),
+              });
+            }
+
+            // 3. Go Backend Build
+            if (process.env.GO_BUILD_OUTCOME === 'failure') {
+              checks.push({
+                title: `${prefix} Go backend build failure on main`,
+                body: buildBody(
+                  'Go Build',
+                  'CGO_ENABLED=1 go build -o /dev/null ./cmd/console',
+                  readOutput('/tmp/go-build-output.txt'),
+                  [
+                    'Fix the Go compilation errors shown above',
+                    'Check for missing dependencies, type errors, or undefined references',
+                    'Run `go build ./cmd/console` to verify the fix',
+                  ]
+                ),
+              });
+            }
+
+            // 4. Bundle Size
+            if (process.env.BUNDLE_EXCEEDED === 'true') {
+              const sizeKB = process.env.BUNDLE_SIZE_KB;
+              const limitKB = process.env.BUNDLE_SIZE_LIMIT_KB || '5120';
+              let breakdown = '(breakdown not available)';
+              try { breakdown = fs.readFileSync('/tmp/bundle-breakdown.txt', 'utf8').trim(); } catch {}
+              checks.push({
+                title: `${prefix} Bundle size exceeds ${limitKB}KB (currently ${sizeKB}KB)`,
+                body: [
+                  `## Auto-QA: Bundle Size Exceeded`,
+                  '',
+                  `**Detected:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+                  '',
+                  `The production bundle size is **${sizeKB}KB**, exceeding the **${limitKB}KB** threshold.`,
+                  '',
+                  '### Largest Assets',
+                  '```',
+                  breakdown,
+                  '```',
+                  '',
+                  '### How to Fix',
+                  '- Check for recently added large dependencies',
+                  '- Use dynamic imports (`React.lazy`) for heavy components',
+                  '- Review bundle with `npx vite-bundle-visualizer`',
+                  '- If the size increase is intentional, update `BUNDLE_SIZE_LIMIT_KB` in `.github/workflows/auto-qa.yml`',
+                  '',
+                  '---',
+                  `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
+                  '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
+                ].join('\n'),
+              });
+            }
+
+            // 5. npm Audit
+            if (process.env.HAS_VULNS === 'true') {
+              const critical = process.env.VULN_CRITICAL || '0';
+              const high = process.env.VULN_HIGH || '0';
+              let summary = '(audit summary not available)';
+              try { summary = fs.readFileSync('/tmp/audit-summary.txt', 'utf8').trim(); } catch {}
+              checks.push({
+                title: `${prefix} npm audit: ${critical} critical, ${high} high vulnerabilities`,
+                body: [
+                  `## Auto-QA: Security Vulnerabilities`,
+                  '',
+                  `**Detected:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+                  '',
+                  `Found **${critical} critical** and **${high} high** severity vulnerabilities.`,
+                  '',
+                  '### Audit Summary',
+                  '```',
+                  summary,
+                  '```',
+                  '',
+                  '### How to Fix',
+                  '- Run `cd web && npm audit fix` to auto-fix compatible updates',
+                  '- For breaking changes, run `cd web && npm audit fix --force` (test thoroughly)',
+                  '- Check advisories for manual remediation steps',
+                  '- Run `cd web && npm audit --audit-level=high` to verify the fix',
+                  '',
+                  '---',
+                  `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
+                  '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
+                ].join('\n'),
+              });
+            }
+
+            if (checks.length === 0) {
+              core.info('All checks passed. No issues to create.');
+              return;
+            }
+
+            core.info(`${checks.length} check(s) failed. Processing issue creation...`);
+
+            // Fetch existing open auto-qa issues for deduplication
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'auto-qa',
+              per_page: 100,
+            });
+
+            const issueLabels = ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'needs-triage'];
+            let created = 0;
+
+            for (const check of checks) {
+              if (created >= maxIssues) {
+                core.warning(`Rate limit reached (${maxIssues} issues). Remaining failures skipped.`);
+                break;
+              }
+
+              // Deduplication: check if same title already open
+              const duplicate = existingIssues.find(i => i.title === check.title);
+              if (duplicate) {
+                core.info(`Duplicate found: "${check.title}" (existing #${duplicate.number}). Adding re-detection comment.`);
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: duplicate.number,
+                  body: `**Re-detected** at ${now} on commit \`${sha}\`.\n\n[Workflow run](${runUrl})`,
+                });
+                continue;
+              }
+
+              // Create issue
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: check.title,
+                body: check.body,
+                labels: issueLabels,
+              });
+
+              core.info(`Created issue #${issue.number}: ${check.title}`);
+              created++;
+
+              // Auto-triage if requested (triggers Copilot pipeline via triage-command.yml)
+              if (process.env.AUTO_TRIAGE === 'true') {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: '/triage accepted',
+                });
+                core.info(`Auto-triaged issue #${issue.number}`);
+              }
+            }
+
+            core.info(`Auto-QA complete: ${created} issue(s) created, ${checks.length} failure(s) detected.`);
