@@ -2,10 +2,13 @@ package k8s
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
@@ -344,18 +347,249 @@ func (m *MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace
 	return nil, nil
 }
 
-// DeployWorkload deploys a workload to target clusters (placeholder - would use MCP or direct apply)
-func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, namespace, name string, targetClusters []string, replicas int32) (*v1alpha1.DeployResponse, error) {
-	// This is a placeholder - in a real implementation, this would:
-	// 1. Get the workload manifest from the source cluster
-	// 2. Apply it to each target cluster
-	// 3. Or create a KubeStellar BindingPolicy for the workload
+// DeployOptions configures how a workload is deployed across clusters
+type DeployOptions struct {
+	DeployedBy string
+	GroupName  string
+}
 
-	return &v1alpha1.DeployResponse{
-		Success:    true,
-		Message:    "Workload deployment initiated",
-		DeployedTo: targetClusters,
-	}, nil
+// DeployWorkload fetches a workload manifest from the source cluster and applies it to target clusters
+func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, namespace, name string, targetClusters []string, replicas int32, opts *DeployOptions) (*v1alpha1.DeployResponse, error) {
+	if opts == nil {
+		opts = &DeployOptions{DeployedBy: "anonymous"}
+	}
+
+	// 1. Fetch the workload from the source cluster
+	sourceClient, err := m.GetDynamicClient(sourceCluster)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get source cluster client: %w", err)
+	}
+
+	// Try Deployment, StatefulSet, DaemonSet in order
+	gvrs := []struct {
+		gvr  schema.GroupVersionResource
+		kind string
+	}{
+		{gvrDeployments, "Deployment"},
+		{gvrStatefulSets, "StatefulSet"},
+		{gvrDaemonSets, "DaemonSet"},
+	}
+
+	var sourceObj *unstructured.Unstructured
+	var sourceGVR schema.GroupVersionResource
+	for _, g := range gvrs {
+		obj, getErr := sourceClient.Resource(g.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if getErr == nil {
+			sourceObj = obj
+			sourceGVR = g.gvr
+			break
+		}
+	}
+
+	if sourceObj == nil {
+		return nil, fmt.Errorf("workload %s/%s not found in cluster %s", namespace, name, sourceCluster)
+	}
+
+	// 2. Clean the manifest for cross-cluster apply
+	cleanedObj := cleanManifestForDeploy(sourceObj, opts)
+
+	// Override replicas if specified
+	if replicas > 0 {
+		if spec, ok := cleanedObj.Object["spec"].(map[string]interface{}); ok {
+			spec["replicas"] = int64(replicas)
+		}
+	}
+
+	// 3. Apply to each target cluster in parallel
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	deployed := make([]string, 0, len(targetClusters))
+	failed := make([]string, 0)
+	var lastErr error
+
+	for _, target := range targetClusters {
+		wg.Add(1)
+		go func(targetCluster string) {
+			defer wg.Done()
+
+			targetClient, err := m.GetDynamicClient(targetCluster)
+			if err != nil {
+				mu.Lock()
+				failed = append(failed, targetCluster)
+				lastErr = fmt.Errorf("cluster %s: %w", targetCluster, err)
+				mu.Unlock()
+				return
+			}
+
+			// Deep copy the object for this cluster
+			objCopy := cleanedObj.DeepCopy()
+
+			// Normalize image names for CRI-O clusters (short names → fully qualified)
+			normalizeImageNames(objCopy)
+
+			// Create a per-cluster timeout context
+			clusterCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+
+			// Try to create; if exists, update
+			_, err = targetClient.Resource(sourceGVR).Namespace(namespace).Create(clusterCtx, objCopy, metav1.CreateOptions{})
+			if err != nil {
+				// If already exists, try update
+				existing, getErr := targetClient.Resource(sourceGVR).Namespace(namespace).Get(clusterCtx, name, metav1.GetOptions{})
+				if getErr != nil {
+					mu.Lock()
+					failed = append(failed, targetCluster)
+					lastErr = fmt.Errorf("cluster %s: create failed: %w", targetCluster, err)
+					mu.Unlock()
+					return
+				}
+				// Copy resourceVersion for update
+				objCopy.SetResourceVersion(existing.GetResourceVersion())
+				_, err = targetClient.Resource(sourceGVR).Namespace(namespace).Update(clusterCtx, objCopy, metav1.UpdateOptions{})
+				if err != nil {
+					mu.Lock()
+					failed = append(failed, targetCluster)
+					lastErr = fmt.Errorf("cluster %s: update failed: %w", targetCluster, err)
+					mu.Unlock()
+					return
+				}
+			}
+
+			mu.Lock()
+			deployed = append(deployed, targetCluster)
+			mu.Unlock()
+		}(target)
+	}
+
+	wg.Wait()
+
+	resp := &v1alpha1.DeployResponse{
+		Success:        len(failed) == 0,
+		DeployedTo:     deployed,
+		FailedClusters: failed,
+	}
+
+	if len(failed) == 0 {
+		resp.Message = fmt.Sprintf("Deployed %s/%s to %d cluster(s)", namespace, name, len(deployed))
+	} else if len(deployed) > 0 {
+		resp.Message = fmt.Sprintf("Partially deployed: %d succeeded, %d failed", len(deployed), len(failed))
+	} else {
+		resp.Message = fmt.Sprintf("Deployment failed on all clusters: %v", lastErr)
+	}
+
+	return resp, nil
+}
+
+// cleanManifestForDeploy strips cluster-specific metadata and adds console labels
+func cleanManifestForDeploy(obj *unstructured.Unstructured, opts *DeployOptions) *unstructured.Unstructured {
+	clean := obj.DeepCopy()
+
+	// Strip cluster-specific fields
+	clean.SetResourceVersion("")
+	clean.SetUID("")
+	clean.SetSelfLink("")
+	clean.SetGeneration(0)
+	clean.SetManagedFields(nil)
+	clean.SetCreationTimestamp(metav1.Time{})
+
+	// Remove status
+	delete(clean.Object, "status")
+
+	// Remove owner references (cluster-specific)
+	clean.SetOwnerReferences(nil)
+
+	// Add console labels
+	labels := clean.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels["kubestellar.io/managed-by"] = "kubestellar-console"
+	if opts.DeployedBy != "" {
+		labels["kubestellar.io/deployed-by"] = opts.DeployedBy
+	}
+	if opts.GroupName != "" {
+		labels["kubestellar.io/group"] = opts.GroupName
+	}
+	clean.SetLabels(labels)
+
+	// Add annotations
+	annotations := clean.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["kubestellar.io/deploy-timestamp"] = time.Now().UTC().Format(time.RFC3339)
+	annotations["kubestellar.io/source-cluster"] = obj.GetNamespace()
+	clean.SetAnnotations(annotations)
+
+	return clean
+}
+
+// normalizeImageNames converts short image names to fully-qualified for CRI-O compatibility
+func normalizeImageNames(obj *unstructured.Unstructured) {
+	spec, ok := obj.Object["spec"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	template, ok := spec["template"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	templateSpec, ok := template["spec"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	containers, ok := templateSpec["containers"].([]interface{})
+	if !ok {
+		return
+	}
+
+	for _, c := range containers {
+		container, ok := c.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		image, ok := container["image"].(string)
+		if !ok {
+			continue
+		}
+		container["image"] = normalizeImageRef(image)
+	}
+
+	// Also handle init containers
+	initContainers, ok := templateSpec["initContainers"].([]interface{})
+	if !ok {
+		return
+	}
+	for _, c := range initContainers {
+		container, ok := c.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		image, ok := container["image"].(string)
+		if !ok {
+			continue
+		}
+		container["image"] = normalizeImageRef(image)
+	}
+}
+
+// normalizeImageRef converts short Docker Hub names to fully-qualified
+// e.g. "nginx:1.27" → "docker.io/library/nginx:1.27"
+// e.g. "myorg/myimage:v1" → "docker.io/myorg/myimage:v1"
+func normalizeImageRef(image string) string {
+	// Already fully qualified (contains a dot in the registry part)
+	parts := strings.SplitN(image, "/", 2)
+	if len(parts) > 1 && strings.Contains(parts[0], ".") {
+		return image
+	}
+
+	// Single-name image (e.g. "nginx:tag") → docker.io/library/name
+	if !strings.Contains(image, "/") {
+		return "docker.io/library/" + image
+	}
+
+	// Two-part name without registry (e.g. "org/image:tag") → docker.io/org/image
+	return "docker.io/" + image
 }
 
 // ScaleWorkload scales a workload across clusters
@@ -420,6 +654,71 @@ func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alp
 		Items:      capabilities,
 		TotalCount: len(capabilities),
 	}, nil
+}
+
+// LabelClusterNodes labels all nodes in a cluster with the given labels
+func (m *MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster string, labels map[string]string) error {
+	dynamicClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	nodeList, err := dynamicClient.Resource(gvrNodes).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list nodes in %s: %w", cluster, err)
+	}
+
+	for _, node := range nodeList.Items {
+		existing := node.GetLabels()
+		if existing == nil {
+			existing = make(map[string]string)
+		}
+		for k, v := range labels {
+			existing[k] = v
+		}
+		node.SetLabels(existing)
+		_, err := dynamicClient.Resource(gvrNodes).Update(ctx, &node, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to label node %s in %s: %w", node.GetName(), cluster, err)
+		}
+	}
+	return nil
+}
+
+// RemoveClusterNodeLabels removes specified labels from all nodes in a cluster
+func (m *MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluster string, labelKeys []string) error {
+	dynamicClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	nodeList, err := dynamicClient.Resource(gvrNodes).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list nodes in %s: %w", cluster, err)
+	}
+
+	for _, node := range nodeList.Items {
+		existing := node.GetLabels()
+		if existing == nil {
+			continue
+		}
+		changed := false
+		for _, k := range labelKeys {
+			if _, ok := existing[k]; ok {
+				delete(existing, k)
+				changed = true
+			}
+		}
+		if !changed {
+			continue
+		}
+		node.SetLabels(existing)
+		_, err := dynamicClient.Resource(gvrNodes).Update(ctx, &node, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to update node %s in %s: %w", node.GetName(), cluster, err)
+		}
+	}
+	return nil
 }
 
 // ListBindingPolicies lists binding policies (placeholder)

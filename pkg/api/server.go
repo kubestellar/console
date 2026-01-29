@@ -363,10 +363,18 @@ func (s *Server) setupRoutes() {
 	api.Get("/workloads", workloadHandlers.ListWorkloads)
 	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
 	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
+	api.Get("/workloads/deploy-status/:cluster/:namespace/:name", workloadHandlers.GetDeployStatus)
 	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
 	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
 	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)
 	api.Delete("/workloads/:cluster/:namespace/:name", workloadHandlers.DeleteWorkload)
+
+	// Cluster Group routes
+	api.Get("/cluster-groups", workloadHandlers.ListClusterGroups)
+	api.Post("/cluster-groups", workloadHandlers.CreateClusterGroup)
+	api.Post("/cluster-groups/sync", workloadHandlers.SyncClusterGroups)
+	api.Put("/cluster-groups/:name", workloadHandlers.UpdateClusterGroup)
+	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
 
 	// Feature requests and feedback routes
 	feedback := handlers.NewFeedbackHandler(s.store, handlers.FeedbackConfig{
