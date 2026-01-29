@@ -53,7 +53,7 @@ import {
   DragPreviewCard,
 } from './DashboardComponents'
 import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
-import { DashboardStatsType } from '../../components/ui/StatsConfig'
+import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
 import { AddCardModal } from '../../components/dashboard/AddCardModal'
 import { TemplatesModal } from '../../components/dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'

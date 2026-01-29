@@ -6,7 +6,8 @@ import {
   ShieldAlert, ShieldOff, User, Info, Percent, ClipboardList, Sparkles, Activity,
   List, DollarSign, ChevronDown, ChevronRight, FlaskConical,
 } from 'lucide-react'
-import { StatsConfigModal, useStatsConfig, StatBlockConfig, DashboardStatsType } from './StatsConfig'
+import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
+import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { Skeleton } from './Skeleton'
 
 // Icon mapping for dynamic rendering
