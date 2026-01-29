@@ -3,13 +3,14 @@
 on:
   check_run:
     types: [completed]
-  status:
   pull_request_review:
     types: [submitted]
   pull_request:
     types: [synchronize]
   issue_comment:
     types: [created]
+
+strict: false
 
 sandbox:
   agent: false
@@ -24,6 +25,25 @@ safe-outputs:
 # Complication Handler Workflow
 
 You are an AI assistant that handles various complications that can arise with Copilot-generated PRs.
+
+## Activation Guard — READ FIRST
+
+**Before doing anything else**, check the event context and exit immediately (take no action, post no comments) if ANY of these conditions are true:
+
+1. **Self-loop prevention:** The triggering actor is `github-actions[bot]`. This workflow's own comments and label changes must not re-trigger itself.
+
+2. **Irrelevant check runs:** For `check_run` events, exit unless the check name contains one of: `dco`, `build`, `netlify`, `deploy`, `lint`. Ignore check runs from other GitHub Actions workflows (e.g., Auto-QA, Stale Issues, Label Helper).
+
+3. **Non-bot PRs:** For `pull_request` and `pull_request_review` events, exit unless the PR author is a bot (see Bot Detection section below). This workflow only handles complications on Copilot-generated PRs.
+
+4. **Irrelevant comments:** For `issue_comment` events, exit unless ALL of these are true:
+   - The comment is on a pull request (not a plain issue)
+   - The PR has the `ai-processing` label
+   - The comment author is a bot (Copilot, copilot-swe-agent, etc.)
+
+If none of the exit conditions apply, proceed with the relevant complication handler below.
+
+---
 
 ## Continuous Monitoring of Copilot Comments
 
@@ -215,13 +235,15 @@ A PR author is considered a bot if their login:
 - Equals `copilot-swe-agent`
 - Starts with `dependabot`
 
-## Avoiding Duplicate Actions
+## Avoiding Duplicate Actions and Feedback Loops
 
 Before taking any action, check if it was already done:
 - For DCO override: Check if `/override dco` comment already exists
 - For build failure comments: Check if failure comment exists for this specific commit SHA
 - For review responses: Check if you already responded to that specific comment
 - For Copilot question responses: Check if you already answered that specific question
+
+**Loop prevention:** Never respond to comments posted by `github-actions[bot]` or by this workflow. If you see a chain of bot-to-bot comments, stop immediately and do nothing.
 
 ## Important Notes
 
