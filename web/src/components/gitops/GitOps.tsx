@@ -562,7 +562,7 @@ export function GitOps() {
         dashboardType="gitops"
         getStatValue={getStatValue}
         hasData={stats.total > 0}
-        isLoading={isRefreshing}
+        isLoading={false}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-gitops-stats-collapsed"
       />

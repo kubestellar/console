@@ -257,7 +257,7 @@ export function Alerts() {
         dashboardType="alerts"
         getStatValue={getStatValue}
         hasData={stats.firing > 0 || enabledRulesCount > 0}
-        isLoading={isRefreshing}
+        isLoading={false}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-alerts-stats-collapsed"
       />

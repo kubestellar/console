@@ -616,7 +616,7 @@ export function Security() {
         dashboardType="security"
         getStatValue={getStatValue}
         hasData={stats.total > 0}
-        isLoading={isRefreshing}
+        isLoading={false}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-security-stats-collapsed"
       />
