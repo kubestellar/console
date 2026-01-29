@@ -187,8 +187,10 @@ export const COMPUTE_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'cpus', name: 'CPUs', icon: 'Cpu', visible: true, color: 'blue' },
   { id: 'memory', name: 'Memory', icon: 'MemoryStick', visible: true, color: 'green' },
   { id: 'gpus', name: 'GPUs', icon: 'Zap', visible: true, color: 'yellow' },
+  { id: 'tpus', name: 'TPUs', icon: 'Sparkles', visible: true, color: 'orange' },
   { id: 'pods', name: 'Pods', icon: 'Layers', visible: true, color: 'cyan' },
   { id: 'cpu_util', name: 'CPU Util', icon: 'Activity', visible: true, color: 'blue' },
+  { id: 'memory_util', name: 'Memory Util', icon: 'Activity', visible: true, color: 'green' },
 ]
 
 /**
