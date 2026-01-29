@@ -408,8 +408,8 @@ The AI missions feature requires the local agent to be running.
         const payload = message.payload as ChatStreamPayload
         const lastMsg = m.messages[m.messages.length - 1]
 
-        if (lastMsg?.role === 'assistant' && !payload.done) {
-          // Append to existing assistant message, preserve agent
+        if (lastMsg?.role === 'assistant' && !payload.done && m.status === 'running') {
+          // Append to existing assistant message mid-stream, preserve agent
           return {
             ...m,
             status: 'running' as MissionStatus,
