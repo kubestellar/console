@@ -152,6 +152,10 @@ import { GatewayStatus } from './GatewayStatus'
 import { ServiceTopology } from './ServiceTopology'
 // Workload Deployment card
 import { WorkloadDeployment } from './WorkloadDeployment'
+// Cluster Groups card (drag-and-drop deploy target)
+import { ClusterGroups } from './ClusterGroups'
+// Missions card (deploy progress tracking)
+import { Missions } from './Missions'
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -322,6 +326,10 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   service_topology: ServiceTopology,
   // Workload Deployment card
   workload_deployment: WorkloadDeployment,
+  // Cluster Groups card (drag-and-drop deploy target)
+  cluster_groups: ClusterGroups,
+  // Missions card (deploy progress tracking)
+  missions: Missions,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -413,6 +421,8 @@ export const LIVE_DATA_CARDS = new Set([
   'llm_models',
   // cert-manager card with real data
   'cert_manager',
+  // Missions card - polls deploy status in real time
+  'missions',
 ])
 
 /**
@@ -444,6 +454,11 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Workload Deployment - wide for workload list
   workload_deployment: 6,
+
+  // Cluster Groups card
+  cluster_groups: 4,
+  // Missions card
+  missions: 5,
 
   // Event dashboard cards
   event_summary: 6,

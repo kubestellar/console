@@ -40,6 +40,7 @@ import { DrillDownProvider } from './hooks/useDrillDown'
 import { DashboardProvider, useDashboardContext } from './hooks/useDashboardContext'
 import { GlobalFiltersProvider } from './hooks/useGlobalFilters'
 import { MissionProvider } from './hooks/useMissions'
+import { CardEventProvider } from './lib/cardEvents'
 import { ToastProvider } from './components/ui/Toast'
 import { AlertsProvider } from './contexts/AlertsContext'
 import { RewardsProvider } from './hooks/useRewards'
@@ -100,6 +101,7 @@ function App() {
       <ToastProvider>
       <GlobalFiltersProvider>
       <MissionProvider>
+      <CardEventProvider>
       <AlertsProvider>
       <DashboardProvider>
       <DrillDownProvider>
@@ -481,6 +483,7 @@ function App() {
       </DrillDownProvider>
       </DashboardProvider>
       </AlertsProvider>
+      </CardEventProvider>
       </MissionProvider>
       </GlobalFiltersProvider>
       </ToastProvider>

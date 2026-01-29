@@ -44,6 +44,8 @@ import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useCardPublish } from '../../lib/cardEvents'
+import { useDeployWorkload } from '../../hooks/useWorkloads'
 
 // Module-level cache for dashboard data (survives navigation)
 interface CachedDashboard {
@@ -135,6 +137,10 @@ export function Dashboard() {
 
   // Universal stats for cross-dashboard stat blocks
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
+
+  // Inter-card event bus for cross-card deploy
+  const publishCardEvent = useCardPublish()
+  const { mutate: deployWorkload } = useDeployWorkload()
 
   // Stats calculations for StatsOverview
   const healthyClusters = clusters.filter(c => c.healthy).length
@@ -230,6 +236,63 @@ export function Dashboard() {
     setDragOverDashboard(null)
 
     if (!over) return
+
+    // Check if a workload was dropped on a cluster group (cross-card deploy)
+    if (
+      active.data.current?.type === 'workload' &&
+      String(over.id).startsWith('cluster-group-')
+    ) {
+      const workloadData = active.data.current.workload as {
+        name: string
+        namespace: string
+        sourceCluster: string
+        currentClusters: string[]
+      }
+      const groupData = over.data.current as {
+        groupName: string
+        clusters: string[]
+      }
+
+      if (groupData?.clusters?.length > 0) {
+        const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+        // Publish deploy:started event immediately for the Missions card
+        publishCardEvent({
+          type: 'deploy:started',
+          payload: {
+            id: deployId,
+            workload: workloadData.name,
+            namespace: workloadData.namespace,
+            sourceCluster: workloadData.sourceCluster,
+            targetClusters: groupData.clusters,
+            groupName: groupData.groupName,
+            timestamp: Date.now(),
+          },
+        })
+
+        showToast(
+          `Deploying ${workloadData.name} to ${groupData.clusters.length} cluster${groupData.clusters.length !== 1 ? 's' : ''} in "${groupData.groupName}"`,
+          'success'
+        )
+
+        // Fire the actual deploy API call
+        try {
+          await deployWorkload({
+            workloadName: workloadData.name,
+            namespace: workloadData.namespace,
+            sourceCluster: workloadData.sourceCluster,
+            targetClusters: groupData.clusters,
+          })
+        } catch (err) {
+          console.error('Deploy failed:', err)
+          showToast(
+            `Deploy failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            'error'
+          )
+        }
+      }
+      return
+    }
 
     // Check if dropped on another dashboard
     if (String(over.id).startsWith('dashboard-drop-')) {

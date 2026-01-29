@@ -22,6 +22,8 @@ const CARD_CATALOG = {
     { type: 'top_pods', title: 'Top Pods', description: 'Highest resource consuming pods', visualization: 'bar' },
     { type: 'app_status', title: 'Workload Status', description: 'Workload health overview', visualization: 'donut' },
     { type: 'workload_deployment', title: 'Workload Deployment', description: 'Multi-cluster workload deployment with status and scaling', visualization: 'table' },
+    { type: 'cluster_groups', title: 'Cluster Groups', description: 'Define cluster groups and deploy workloads by dragging onto them', visualization: 'status' },
+    { type: 'missions', title: 'Missions', description: 'Track deployment missions with per-cluster rollout progress', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },
