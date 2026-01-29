@@ -239,9 +239,49 @@ Row 3: [Search input]
 
 ---
 
+## Phase 5: Agent API Endpoint Testing
+
+**Instruction:** Please test all API endpoints in the agent and determine that they work correctly.
+
+### Agent Endpoints (http://127.0.0.1:8585)
+
+#### HTTP Endpoints
+
+| # | Method | Path | Auth | Test |
+|---|--------|------|------|------|
+| 1 | GET | /health | No | Health check: status, version, cluster count, AI provider |
+| 2 | GET | /clusters | Yes | List all kubeconfig contexts |
+| 3 | POST | /rename-context | Yes | Rename a kubeconfig context (body: oldName, newName) |
+| 4 | GET | /nodes | Yes | List nodes (query: cluster) |
+| 5 | GET | /gpu-nodes | Yes | List GPU-enabled nodes (query: cluster) |
+| 6 | GET | /pods | Yes | List pods (query: cluster, namespace) |
+| 7 | GET | /events | No | Get events (query: cluster, namespace, object, limit) |
+| 8 | GET | /namespaces | No | List namespaces (query: cluster) |
+| 9 | GET | /deployments | No | List deployments (query: cluster, namespace) |
+| 10 | GET | /cluster-health | Yes | Get cluster health status (query: cluster) |
+| 11 | GET | /settings/keys | No | Get API key status (without exposing keys) |
+| 12 | POST | /settings/keys | No | Save/configure API key (body: provider, apiKey, model) |
+| 13 | DELETE | /settings/keys/{provider} | No | Remove API key (providers: claude, openai, gemini) |
+
+#### WebSocket Endpoint
+
+| # | Path | Auth | Message Types |
+|---|------|------|--------------|
+| 14 | WS /ws | Yes | health, clusters, kubectl, chat, claude, list_agents, select_agent |
+
+#### Test Protocol
+1. `curl -s http://127.0.0.1:8585/health | jq` — Verify agent is running
+2. For each GET endpoint: `curl -s http://127.0.0.1:8585/{path}?{params} | jq`
+3. Verify response status, data structure, and content
+4. Check for errors, empty responses, or unexpected data
+5. Test WebSocket via `websocat ws://127.0.0.1:8585/ws`
+
+---
+
 ## Test Environment
 - Frontend: http://localhost:5174 (Vite dev server)
 - Backend: http://localhost:8080 (Go backend)
+- Agent: http://127.0.0.1:8585 (KSC Agent)
 - Chrome DevTools: ws://127.0.0.1:9222
 - Branch: consistency-testing
 - Testing method: Chrome DevTools Protocol via websocat
