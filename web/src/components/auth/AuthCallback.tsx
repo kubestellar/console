@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
+import { getLastRoute } from '../../hooks/useLastRoute'
 
 export function AuthCallback() {
   const navigate = useNavigate()
@@ -30,35 +31,27 @@ export function AuthCallback() {
       setToken(token, onboarded)
       setStatus('Fetching user info...')
 
+      // Navigate directly to the last visited dashboard route instead of '/'
+      // to avoid a flash of the default dashboard before useLastRoute redirects.
+      const destination = onboarded ? (getLastRoute() || '/') : '/onboarding'
+
       // Add timeout to prevent hanging forever
       const timeoutId = setTimeout(() => {
         console.warn('[AuthCallback] Auth timeout - proceeding anyway')
-        if (onboarded) {
-          navigate('/')
-        } else {
-          navigate('/onboarding')
-        }
+        navigate(destination)
       }, 5000)
 
       refreshUser(token).then(() => {
         clearTimeout(timeoutId)
-        console.log('[AuthCallback] User refreshed, navigating', { onboarded })
-        if (onboarded) {
-          navigate('/')
-        } else {
-          navigate('/onboarding')
-        }
+        console.log('[AuthCallback] User refreshed, navigating', { onboarded, destination })
+        navigate(destination)
       }).catch((err) => {
         clearTimeout(timeoutId)
         console.error('Failed to refresh user:', err)
         // Still try to proceed if we have a token
         setStatus('Completing sign in...')
         setTimeout(() => {
-          if (onboarded) {
-            navigate('/')
-          } else {
-            navigate('/onboarding')
-          }
+          navigate(destination)
         }, 500)
       })
     } else {
