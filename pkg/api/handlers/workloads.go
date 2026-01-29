@@ -1,12 +1,19 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // WorkloadHandlers handles workload API endpoints
@@ -156,12 +163,28 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 	})
 }
 
-// ClusterGroup represents a user-defined group of clusters
+// ClusterFilter is a single condition on cluster metadata
+type ClusterFilter struct {
+	Field    string `json:"field"`    // healthy, distribution, cpuCores, memoryGB, gpuCount, nodeCount, podCount
+	Operator string `json:"operator"` // eq, neq, gt, gte, lt, lte, in
+	Value    string `json:"value"`
+}
+
+// ClusterGroupQuery defines how dynamic groups select clusters
+type ClusterGroupQuery struct {
+	LabelSelector string          `json:"labelSelector,omitempty"` // k8s label selector syntax
+	Filters       []ClusterFilter `json:"filters,omitempty"`       // resource-based conditions (AND logic)
+}
+
+// ClusterGroup represents a user-defined group of clusters (static or dynamic)
 type ClusterGroup struct {
-	Name     string   `json:"name"`
-	Clusters []string `json:"clusters"`
-	Color    string   `json:"color,omitempty"`
-	Icon     string   `json:"icon,omitempty"`
+	Name          string             `json:"name"`
+	Kind          string             `json:"kind"`                    // "static" or "dynamic"
+	Clusters      []string           `json:"clusters"`                // static: user-selected; dynamic: last evaluation result
+	Color         string             `json:"color,omitempty"`
+	Icon          string             `json:"icon,omitempty"`
+	Query         *ClusterGroupQuery `json:"query,omitempty"`         // only for dynamic groups
+	LastEvaluated string             `json:"lastEvaluated,omitempty"` // RFC3339 timestamp
 }
 
 // In-memory cluster group store (persisted via frontend localStorage; backend is source of truth for labels)
@@ -193,7 +216,8 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 	if group.Name == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "name is required"})
 	}
-	if len(group.Clusters) == 0 {
+	// Dynamic groups may start with no clusters (evaluated on demand)
+	if group.Kind != "dynamic" && len(group.Clusters) == 0 {
 		return c.Status(400).JSON(fiber.Map{"error": "at least one cluster is required"})
 	}
 
@@ -292,6 +316,272 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 	clusterGroupsMu.Unlock()
 
 	return c.JSON(fiber.Map{"synced": len(groups)})
+}
+
+// EvaluateClusterQuery evaluates a dynamic group query against current cluster state
+// POST /api/cluster-groups/evaluate
+func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+	}
+
+	var query ClusterGroupQuery
+	if err := c.BodyParser(&query); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid query: " + err.Error()})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
+	defer cancel()
+
+	// Get all cluster health data
+	healthData, err := h.k8sClient.GetAllClusterHealth(ctx)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to get cluster health: " + err.Error()})
+	}
+
+	// Only fetch nodes if label selector is specified (expensive operation)
+	nodesByCluster := make(map[string][]k8s.NodeInfo)
+	if query.LabelSelector != "" {
+		clusters, _ := h.k8sClient.ListClusters(ctx)
+		for _, cluster := range clusters {
+			nodes, err := h.k8sClient.GetNodes(ctx, cluster.Name)
+			if err == nil {
+				nodesByCluster[cluster.Name] = nodes
+			}
+		}
+	}
+
+	matching := make([]string, 0)
+	for _, health := range healthData {
+		if clusterMatchesQuery(health, nodesByCluster[health.Cluster], &query) {
+			matching = append(matching, health.Cluster)
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"clusters":    matching,
+		"count":       len(matching),
+		"evaluatedAt": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// clusterMatchesQuery checks if a cluster matches all query conditions
+func clusterMatchesQuery(health k8s.ClusterHealth, nodes []k8s.NodeInfo, query *ClusterGroupQuery) bool {
+	// Check label selector against node labels
+	if query.LabelSelector != "" {
+		if !clusterMatchesLabelSelector(nodes, query.LabelSelector) {
+			return false
+		}
+	}
+
+	// Check each filter (AND logic)
+	for _, filter := range query.Filters {
+		if !clusterMatchesFilter(health, filter) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// clusterMatchesLabelSelector returns true if at least one node matches the selector
+func clusterMatchesLabelSelector(nodes []k8s.NodeInfo, selectorStr string) bool {
+	selector, err := labels.Parse(selectorStr)
+	if err != nil {
+		return false
+	}
+	for _, node := range nodes {
+		if selector.Matches(labels.Set(node.Labels)) {
+			return true
+		}
+	}
+	return false
+}
+
+// clusterMatchesFilter checks a single filter condition against cluster health data
+func clusterMatchesFilter(health k8s.ClusterHealth, f ClusterFilter) bool {
+	switch f.Field {
+	case "healthy":
+		return compareBool(health.Healthy, f.Operator, f.Value)
+	case "cpuCores":
+		return compareInt(int64(health.CpuCores), f.Operator, f.Value)
+	case "memoryGB":
+		return compareFloat(health.MemoryGB, f.Operator, f.Value)
+	case "nodeCount":
+		return compareInt(int64(health.NodeCount), f.Operator, f.Value)
+	case "podCount":
+		return compareInt(int64(health.PodCount), f.Operator, f.Value)
+	case "reachable":
+		return compareBool(health.Reachable, f.Operator, f.Value)
+	default:
+		return true // unknown fields pass (don't block)
+	}
+}
+
+func compareBool(actual bool, op, value string) bool {
+	expected := strings.EqualFold(value, "true")
+	switch op {
+	case "eq":
+		return actual == expected
+	case "neq":
+		return actual != expected
+	default:
+		return actual == expected
+	}
+}
+
+func compareInt(actual int64, op, value string) bool {
+	expected, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return false
+	}
+	switch op {
+	case "eq":
+		return actual == expected
+	case "neq":
+		return actual != expected
+	case "gt":
+		return actual > expected
+	case "gte":
+		return actual >= expected
+	case "lt":
+		return actual < expected
+	case "lte":
+		return actual <= expected
+	default:
+		return false
+	}
+}
+
+func compareFloat(actual float64, op, value string) bool {
+	expected, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return false
+	}
+	switch op {
+	case "eq":
+		return actual == expected
+	case "neq":
+		return actual != expected
+	case "gt":
+		return actual > expected
+	case "gte":
+		return actual >= expected
+	case "lt":
+		return actual < expected
+	case "lte":
+		return actual <= expected
+	default:
+		return false
+	}
+}
+
+// GenerateClusterQuery uses AI to convert natural language to a structured cluster query
+// POST /api/cluster-groups/ai-query
+func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
+	type AIQueryRequest struct {
+		Prompt string `json:"prompt"`
+	}
+
+	var req AIQueryRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if req.Prompt == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "prompt is required"})
+	}
+
+	// Build cluster context for the AI
+	var clusterContext string
+	if h.k8sClient != nil {
+		ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
+		defer cancel()
+		healthData, _ := h.k8sClient.GetAllClusterHealth(ctx)
+		clusterContext = buildClusterContextForAI(healthData)
+	}
+
+	// Get the default AI provider
+	registry := agent.GetRegistry()
+	provider, err := registry.GetDefault()
+	if err != nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No AI provider available: " + err.Error()})
+	}
+
+	systemPrompt := `You are a Kubernetes cluster query generator. Given a natural language description, generate a structured JSON query for selecting clusters from a multi-cluster environment.
+
+Respond with ONLY valid JSON, no markdown code fences, no explanation. The JSON format:
+{
+  "suggestedName": "short-kebab-case-group-name",
+  "query": {
+    "labelSelector": "optional kubernetes label selector string",
+    "filters": [
+      {"field": "fieldName", "operator": "op", "value": "val"}
+    ]
+  }
+}
+
+Available filter fields and their types:
+- healthy (bool) — cluster is reachable and healthy
+- reachable (bool) — cluster API server is reachable
+- cpuCores (int) — total allocatable CPU cores
+- memoryGB (float) — total allocatable memory in GB
+- nodeCount (int) — number of nodes
+- podCount (int) — number of running pods
+
+Operators: eq, neq, gt, gte, lt, lte
+
+Label selectors use standard Kubernetes syntax (e.g., "topology.kubernetes.io/zone in (us-east-1a,us-east-1b)").
+
+If the user's request doesn't need label selectors, omit the labelSelector field. If it doesn't need resource filters, use an empty filters array.
+
+` + clusterContext
+
+	chatReq := &agent.ChatRequest{
+		Prompt:       req.Prompt,
+		SystemPrompt: systemPrompt,
+	}
+
+	resp, err := provider.Chat(c.Context(), chatReq)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "AI query generation failed: " + err.Error()})
+	}
+
+	// Try to parse the AI response as structured JSON
+	content := strings.TrimSpace(resp.Content)
+	// Strip markdown code fences if present
+	content = strings.TrimPrefix(content, "```json")
+	content = strings.TrimPrefix(content, "```")
+	content = strings.TrimSuffix(content, "```")
+	content = strings.TrimSpace(content)
+
+	var result struct {
+		SuggestedName string           `json:"suggestedName"`
+		Query         ClusterGroupQuery `json:"query"`
+	}
+	if err := json.Unmarshal([]byte(content), &result); err != nil {
+		return c.JSON(fiber.Map{
+			"raw":   resp.Content,
+			"error": "Could not parse AI response as structured query: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"suggestedName": result.SuggestedName,
+		"query":         result.Query,
+	})
+}
+
+func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
+	if len(healthData) == 0 {
+		return "No cluster data available."
+	}
+	var sb strings.Builder
+	sb.WriteString("Current clusters in the environment:\n")
+	for _, h := range healthData {
+		sb.WriteString(fmt.Sprintf("- %s: healthy=%v, reachable=%v, cpuCores=%d, memoryGB=%.1f, nodes=%d, pods=%d\n",
+			h.Cluster, h.Healthy, h.Reachable, h.CpuCores, h.MemoryGB, h.NodeCount, h.PodCount))
+	}
+	return sb.String()
 }
 
 // ScaleWorkload scales a workload in specified clusters

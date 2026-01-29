@@ -373,6 +373,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/cluster-groups", workloadHandlers.ListClusterGroups)
 	api.Post("/cluster-groups", workloadHandlers.CreateClusterGroup)
 	api.Post("/cluster-groups/sync", workloadHandlers.SyncClusterGroups)
+	api.Post("/cluster-groups/evaluate", workloadHandlers.EvaluateClusterQuery)
+	api.Post("/cluster-groups/ai-query", workloadHandlers.GenerateClusterQuery)
 	api.Put("/cluster-groups/:name", workloadHandlers.UpdateClusterGroup)
 	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
 
