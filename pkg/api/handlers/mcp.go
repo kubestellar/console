@@ -159,7 +159,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -217,7 +217,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -264,7 +264,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -311,7 +311,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -358,7 +358,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -407,7 +407,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -455,7 +455,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -502,7 +502,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -549,7 +549,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -596,7 +596,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -643,7 +643,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -690,7 +690,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -737,7 +737,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -784,7 +784,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -830,7 +830,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -877,7 +877,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -924,7 +924,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 
 	if h.k8sClient != nil {
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -1067,9 +1067,11 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {
-		// If no cluster specified, query all clusters in parallel with timeout
+		// If no cluster specified, query deduplicated clusters in parallel with timeout
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			// Use deduplicated clusters to avoid querying the same physical cluster
+			// via multiple kubeconfig contexts (e.g. "vllm-d" and its long OpenShift name)
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -1137,9 +1139,9 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 	// Fall back to direct k8s client
 	if h.k8sClient != nil {
-		// If no cluster specified, query all clusters in parallel
+		// If no cluster specified, query deduplicated clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
@@ -1198,7 +1200,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		// If no cluster specified, query all clusters in parallel
 		if cluster == "" {
-			clusters, err := h.k8sClient.ListClusters(c.Context())
+			clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 			if err != nil {
 				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}

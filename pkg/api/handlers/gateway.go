@@ -92,7 +92,7 @@ func (h *GatewayHandlers) GetGatewayAPIStatus(c *fiber.Ctx) error {
 		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
 	}
 
-	clusters, err := h.k8sClient.ListClusters(c.Context())
+	clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

@@ -163,7 +163,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.ListClusters(c.Context())
+		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "releases": []HelmRelease{}})
 		}
@@ -246,7 +246,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.ListClusters(c.Context())
+		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "kustomizations": []Kustomization{}})
 		}
@@ -367,7 +367,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 
 	// Query all clusters in parallel with timeout
 	if h.k8sClient != nil {
-		clusters, err := h.k8sClient.ListClusters(c.Context())
+		clusters, err := h.k8sClient.DeduplicatedClusters(c.Context())
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error(), "operators": []Operator{}})
 		}

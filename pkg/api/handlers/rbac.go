@@ -171,7 +171,7 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	}
 
 	// Get SAs from all clusters
-	clusters, err := h.k8sClient.ListClusters(ctx)
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list clusters")
 	}
