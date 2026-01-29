@@ -135,56 +135,60 @@ export const COMPLIANCE_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'passing', name: 'Passing', icon: 'CheckCircle2', visible: true, color: 'green' },
   { id: 'failing', name: 'Failing', icon: 'XCircle', visible: true, color: 'red' },
 
-  // Compliance frameworks
-  { id: 'soc2', name: 'SOC 2', icon: 'ShieldCheck', visible: true, color: 'cyan' },
-  { id: 'hipaa', name: 'HIPAA', icon: 'ShieldCheck', visible: true, color: 'blue' },
-  { id: 'pci_dss', name: 'PCI DSS', icon: 'ShieldCheck', visible: true, color: 'purple' },
-  { id: 'nist', name: 'NIST', icon: 'ShieldCheck', visible: true, color: 'gray' },
-  { id: 'cis', name: 'CIS', icon: 'ShieldCheck', visible: true, color: 'cyan' },
+  // Framework compliance scores
+  { id: 'cis_score', name: 'CIS', icon: 'ShieldCheck', visible: true, color: 'cyan' },
+  { id: 'nsa_score', name: 'NSA', icon: 'ShieldCheck', visible: true, color: 'blue' },
+  { id: 'pci_score', name: 'PCI DSS', icon: 'ShieldCheck', visible: true, color: 'purple' },
 
-  // Issues
-  { id: 'critical_issues', name: 'Critical', icon: 'AlertCircle', visible: true, color: 'red' },
-  { id: 'high_issues', name: 'High', icon: 'AlertTriangle', visible: true, color: 'orange' },
-  { id: 'medium_issues', name: 'Medium', icon: 'AlertTriangle', visible: true, color: 'yellow' },
+  // Policy enforcement
+  { id: 'gatekeeper_violations', name: 'Gatekeeper', icon: 'ShieldAlert', visible: true, color: 'orange' },
+  { id: 'kyverno_violations', name: 'Kyverno', icon: 'ShieldAlert', visible: true, color: 'yellow' },
+  { id: 'kubescape_score', name: 'Kubescape', icon: 'Shield', visible: true, color: 'green' },
+
+  // Vulnerability scanning
+  { id: 'critical_vulns', name: 'Critical CVEs', icon: 'AlertCircle', visible: true, color: 'red' },
+  { id: 'high_vulns', name: 'High CVEs', icon: 'AlertTriangle', visible: true, color: 'orange' },
 ]
 
 /**
  * Default stat blocks for the Data Compliance dashboard
  */
 export const DATA_COMPLIANCE_STAT_BLOCKS: StatBlockConfig[] = [
-  // Overall status
-  { id: 'total_data_stores', name: 'Data Stores', icon: 'Database', visible: true, color: 'purple' },
-  { id: 'compliant', name: 'Compliant', icon: 'CheckCircle2', visible: true, color: 'green' },
-  { id: 'non_compliant', name: 'Non-Compliant', icon: 'XCircle', visible: true, color: 'red' },
-  { id: 'under_review', name: 'Under Review', icon: 'Clock', visible: true, color: 'yellow' },
+  // Encryption
+  { id: 'encryption_score', name: 'Encryption', icon: 'ShieldCheck', visible: true, color: 'green' },
+  { id: 'encrypted_secrets', name: 'Encrypted', icon: 'Lock', visible: true, color: 'blue' },
+  { id: 'unencrypted_secrets', name: 'Unencrypted', icon: 'Unlock', visible: true, color: 'red' },
 
-  // Data protection
-  { id: 'encrypted_at_rest', name: 'Encrypted at Rest', icon: 'ShieldCheck', visible: true, color: 'green' },
-  { id: 'encrypted_in_transit', name: 'Encrypted in Transit', icon: 'ShieldCheck', visible: true, color: 'blue' },
-  { id: 'backup_enabled', name: 'Backup Enabled', icon: 'Database', visible: true, color: 'cyan' },
-  { id: 'audit_logging', name: 'Audit Logging', icon: 'FileText', visible: true, color: 'purple' },
-
-  // Data sovereignty
-  { id: 'gdpr_compliant', name: 'GDPR Compliant', icon: 'Globe', visible: true, color: 'blue' },
-  { id: 'ccpa_compliant', name: 'CCPA Compliant', icon: 'Shield', visible: true, color: 'cyan' },
-  { id: 'data_residency_issues', name: 'Residency Issues', icon: 'AlertTriangle', visible: true, color: 'orange' },
+  // Data residency & access
+  { id: 'regions_compliant', name: 'Regions', icon: 'Globe', visible: true, color: 'cyan' },
+  { id: 'rbac_policies', name: 'RBAC Policies', icon: 'Shield', visible: true, color: 'purple' },
+  { id: 'excessive_permissions', name: 'Excessive', icon: 'AlertTriangle', visible: true, color: 'orange' },
 
   // Sensitive data
   { id: 'pii_detected', name: 'PII Detected', icon: 'User', visible: true, color: 'yellow' },
-  { id: 'phi_detected', name: 'PHI Detected', icon: 'Heart', visible: true, color: 'red' },
-  { id: 'pci_detected', name: 'PCI Data Detected', icon: 'CreditCard', visible: true, color: 'orange' },
+  { id: 'pii_protected', name: 'PII Protected', icon: 'UserCheck', visible: true, color: 'green' },
+
+  // Audit
+  { id: 'audit_enabled', name: 'Audit', icon: 'FileText', visible: true, color: 'purple' },
+  { id: 'retention_days', name: 'Retention', icon: 'Calendar', visible: true, color: 'blue' },
+
+  // Framework scores
+  { id: 'gdpr_score', name: 'GDPR', icon: 'Globe', visible: true, color: 'blue' },
+  { id: 'hipaa_score', name: 'HIPAA', icon: 'Heart', visible: true, color: 'red' },
+  { id: 'pci_score', name: 'PCI-DSS', icon: 'CreditCard', visible: true, color: 'orange' },
+  { id: 'soc2_score', name: 'SOC 2', icon: 'ShieldCheck', visible: true, color: 'cyan' },
 ]
 
 /**
  * Default stat blocks for the Compute dashboard
  */
 export const COMPUTE_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'cpu_usage', name: 'CPU Usage', icon: 'Cpu', visible: true, color: 'blue' },
-  { id: 'memory_usage', name: 'Memory Usage', icon: 'MemoryStick', visible: true, color: 'green' },
-  { id: 'storage_usage', name: 'Storage Usage', icon: 'HardDrive', visible: true, color: 'purple' },
-  { id: 'gpu_usage', name: 'GPU Usage', icon: 'Zap', visible: true, color: 'yellow' },
-  { id: 'network_io', name: 'Network I/O', icon: 'Network', visible: true, color: 'cyan' },
-  { id: 'disk_io', name: 'Disk I/O', icon: 'HardDrive', visible: true, color: 'orange' },
+  { id: 'nodes', name: 'Nodes', icon: 'Server', visible: true, color: 'purple' },
+  { id: 'cpus', name: 'CPUs', icon: 'Cpu', visible: true, color: 'blue' },
+  { id: 'memory', name: 'Memory', icon: 'MemoryStick', visible: true, color: 'green' },
+  { id: 'gpus', name: 'GPUs', icon: 'Zap', visible: true, color: 'yellow' },
+  { id: 'pods', name: 'Pods', icon: 'Layers', visible: true, color: 'cyan' },
+  { id: 'cpu_util', name: 'CPU Util', icon: 'Activity', visible: true, color: 'blue' },
 ]
 
 /**
@@ -194,7 +198,8 @@ export const EVENTS_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'total', name: 'Total Events', icon: 'Activity', visible: true, color: 'purple' },
   { id: 'warnings', name: 'Warnings', icon: 'AlertTriangle', visible: true, color: 'yellow' },
   { id: 'errors', name: 'Errors', icon: 'XCircle', visible: true, color: 'red' },
-  { id: 'info', name: 'Info', icon: 'Info', visible: true, color: 'blue' },
+  { id: 'normal', name: 'Normal', icon: 'Info', visible: true, color: 'blue' },
+  { id: 'recent', name: 'Recent (1h)', icon: 'Clock', visible: true, color: 'cyan' },
 ]
 
 /**
@@ -202,20 +207,22 @@ export const EVENTS_STAT_BLOCKS: StatBlockConfig[] = [
  */
 export const COST_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'total_cost', name: 'Total Cost', icon: 'DollarSign', visible: true, color: 'purple' },
-  { id: 'compute_cost', name: 'Compute', icon: 'Cpu', visible: true, color: 'blue' },
+  { id: 'cpu_cost', name: 'CPU', icon: 'Cpu', visible: true, color: 'blue' },
+  { id: 'memory_cost', name: 'Memory', icon: 'MemoryStick', visible: true, color: 'green' },
   { id: 'storage_cost', name: 'Storage', icon: 'HardDrive', visible: true, color: 'cyan' },
-  { id: 'network_cost', name: 'Network', icon: 'Network', visible: true, color: 'green' },
-  { id: 'cost_trend', name: 'Trend', icon: 'TrendingUp', visible: true, color: 'yellow' },
+  { id: 'network_cost', name: 'Network', icon: 'Network', visible: true, color: 'yellow' },
+  { id: 'gpu_cost', name: 'GPU', icon: 'Zap', visible: true, color: 'orange' },
 ]
 
 /**
  * Default stat blocks for the Alerts dashboard
  */
 export const ALERTS_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'total_alerts', name: 'Total Alerts', icon: 'AlertCircle', visible: true, color: 'purple' },
-  { id: 'critical', name: 'Critical', icon: 'AlertOctagon', visible: true, color: 'red' },
-  { id: 'warning', name: 'Warning', icon: 'AlertTriangle', visible: true, color: 'yellow' },
-  { id: 'info', name: 'Info', icon: 'Info', visible: true, color: 'blue' },
+  { id: 'firing', name: 'Firing', icon: 'AlertCircle', visible: true, color: 'red' },
+  { id: 'pending', name: 'Pending', icon: 'Clock', visible: true, color: 'yellow' },
+  { id: 'resolved', name: 'Resolved', icon: 'CheckCircle2', visible: true, color: 'green' },
+  { id: 'rules_enabled', name: 'Rules Enabled', icon: 'Shield', visible: true, color: 'blue' },
+  { id: 'rules_disabled', name: 'Rules Disabled', icon: 'ShieldOff', visible: true, color: 'gray' },
 ]
 
 /**
@@ -223,27 +230,25 @@ export const ALERTS_STAT_BLOCKS: StatBlockConfig[] = [
  */
 export const DASHBOARD_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'purple' },
-  { id: 'nodes', name: 'Nodes', icon: 'Box', visible: true, color: 'cyan' },
+  { id: 'healthy', name: 'Healthy', icon: 'CheckCircle2', visible: true, color: 'green' },
   { id: 'pods', name: 'Pods', icon: 'Layers', visible: true, color: 'blue' },
-  { id: 'alerts', name: 'Alerts', icon: 'AlertCircle', visible: true, color: 'red' },
-  { id: 'cpu', name: 'CPU', icon: 'Cpu', visible: true, color: 'green' },
-  { id: 'memory', name: 'Memory', icon: 'MemoryStick', visible: true, color: 'purple' },
+  { id: 'nodes', name: 'Nodes', icon: 'Box', visible: true, color: 'cyan' },
+  { id: 'namespaces', name: 'Namespaces', icon: 'FolderTree', visible: true, color: 'purple' },
+  { id: 'errors', name: 'Errors', icon: 'XCircle', visible: true, color: 'red' },
 ]
 
 /**
  * Default stat blocks for the Operators dashboard
  */
 export const OPERATORS_STAT_BLOCKS: StatBlockConfig[] = [
-  { id: 'total', name: 'Total Operators', icon: 'Settings', visible: true, color: 'purple' },
-  { id: 'running', name: 'Running', icon: 'CheckCircle2', visible: true, color: 'green' },
-  { id: 'pending', name: 'Pending', icon: 'Clock', visible: true, color: 'yellow' },
-  { id: 'failed', name: 'Failed', icon: 'XCircle', visible: true, color: 'red' },
-  { id: 'succeeded', name: 'Succeeded', icon: 'CheckCircle2', visible: true, color: 'blue' },
-  { id: 'installed', name: 'Installed', icon: 'Package', visible: true, color: 'cyan' },
-  { id: 'creating', name: 'Creating', icon: 'Loader', visible: true, color: 'blue' },
-  { id: 'deleting', name: 'Deleting', icon: 'Trash2', visible: true, color: 'orange' },
-  { id: 'upgrading', name: 'Upgrading', icon: 'ArrowUp', visible: true, color: 'cyan' },
-  { id: 'unknown', name: 'Unknown', icon: 'HelpCircle', visible: true, color: 'gray' },
+  { id: 'operators', name: 'Total', icon: 'Settings', visible: true, color: 'purple' },
+  { id: 'installed', name: 'Installed', icon: 'CheckCircle2', visible: true, color: 'green' },
+  { id: 'installing', name: 'Installing', icon: 'RefreshCw', visible: true, color: 'blue' },
+  { id: 'failing', name: 'Failing', icon: 'XCircle', visible: true, color: 'red' },
+  { id: 'upgrades', name: 'Upgrades', icon: 'ArrowUpCircle', visible: true, color: 'orange' },
+  { id: 'subscriptions', name: 'Subscriptions', icon: 'Newspaper', visible: true, color: 'indigo' },
+  { id: 'crds', name: 'CRDs', icon: 'FileCode', visible: true, color: 'cyan' },
+  { id: 'clusters', name: 'Clusters', icon: 'Server', visible: true, color: 'blue' },
 ]
 
 /**
