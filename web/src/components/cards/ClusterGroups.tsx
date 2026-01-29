@@ -52,9 +52,18 @@ const FILTER_FIELDS = [
   { field: 'reachable', label: 'Reachable', type: 'bool' as const },
   { field: 'cpuCores', label: 'CPU Cores', type: 'number' as const },
   { field: 'memoryGB', label: 'Memory (GB)', type: 'number' as const },
+  { field: 'gpuCount', label: 'GPU Count', type: 'number' as const },
+  { field: 'gpuType', label: 'GPU Type', type: 'text' as const },
   { field: 'nodeCount', label: 'Nodes', type: 'number' as const },
   { field: 'podCount', label: 'Pods', type: 'number' as const },
 ]
+
+const TEXT_OPERATORS = [
+  { value: 'eq', label: 'contains' },
+  { value: 'neq', label: 'excludes' },
+]
+
+const MAX_INLINE_BADGES = 4
 
 const NUM_OPERATORS = [
   { value: 'gt', label: '>' },
@@ -69,7 +78,12 @@ function getGroupColor(colorName?: string) {
 }
 
 function formatFilter(f: ClusterFilter): string {
-  const field = FILTER_FIELDS.find(ff => ff.field === f.field)?.label ?? f.field
+  const fieldDef = FILTER_FIELDS.find(ff => ff.field === f.field)
+  const field = fieldDef?.label ?? f.field
+  if (fieldDef?.type === 'text') {
+    const op = TEXT_OPERATORS.find(o => o.value === f.operator)?.label ?? f.operator
+    return `${field} ${op} "${f.value}"`
+  }
   const op = NUM_OPERATORS.find(o => o.value === f.operator)?.label ?? f.operator
   return `${field} ${op} ${f.value}`
 }
@@ -263,6 +277,25 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
             </span>
           )}
         </span>
+
+        {/* Compact cluster badges */}
+        <div className="flex items-center gap-1">
+          {group.clusters.slice(0, MAX_INLINE_BADGES).map(cluster => (
+            <div
+              key={cluster}
+              className={cn(
+                'w-2 h-2 rounded-full border border-gray-700',
+                clusterHealthMap.get(cluster) === false ? 'bg-red-500' : 'bg-green-500'
+              )}
+              title={`${cluster} — ${clusterHealthMap.get(cluster) === false ? 'unhealthy' : 'healthy'}`}
+            />
+          ))}
+          {group.clusters.length > MAX_INLINE_BADGES && (
+            <span className="text-[9px] text-gray-500">
+              +{group.clusters.length - MAX_INLINE_BADGES}
+            </span>
+          )}
+        </div>
 
         {/* Cluster count + health */}
         <span className="text-[10px] text-gray-500">
@@ -758,7 +791,7 @@ function QueryBuilder({
         <div className="space-y-1.5">
           {filters.map((f, i) => {
             const fieldDef = FILTER_FIELDS.find(ff => ff.field === f.field)
-            const isBool = fieldDef?.type === 'bool'
+            const fieldType = fieldDef?.type ?? 'number'
             return (
               <div key={i} className="flex items-center gap-1.5">
                 {/* Field */}
@@ -768,6 +801,8 @@ function QueryBuilder({
                     const newField = FILTER_FIELDS.find(ff => ff.field === e.target.value)
                     if (newField?.type === 'bool') {
                       onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: 'true' })
+                    } else if (newField?.type === 'text') {
+                      onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: '' })
                     } else {
                       onUpdateFilter(i, { field: e.target.value, operator: 'gte', value: '1' })
                     }
@@ -779,7 +814,7 @@ function QueryBuilder({
                   ))}
                 </select>
 
-                {isBool ? (
+                {fieldType === 'bool' ? (
                   // Bool: just a toggle
                   <select
                     value={f.value}
@@ -789,9 +824,30 @@ function QueryBuilder({
                     <option value="true">true</option>
                     <option value="false">false</option>
                   </select>
+                ) : fieldType === 'text' ? (
+                  <>
+                    {/* Text operator */}
+                    <select
+                      value={f.operator}
+                      onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
+                      className="w-16 px-1 py-1 text-[10px] rounded bg-gray-900/50 border border-gray-700 text-gray-300 focus:outline-none focus:border-purple-500"
+                    >
+                      {TEXT_OPERATORS.map(op => (
+                        <option key={op.value} value={op.value}>{op.label}</option>
+                      ))}
+                    </select>
+                    {/* Text value */}
+                    <input
+                      type="text"
+                      value={f.value}
+                      onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
+                      placeholder="e.g. A100"
+                      className="w-20 px-1.5 py-1 text-[10px] rounded bg-gray-900/50 border border-gray-700 text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </>
                 ) : (
                   <>
-                    {/* Operator */}
+                    {/* Numeric operator */}
                     <select
                       value={f.operator}
                       onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
@@ -801,7 +857,7 @@ function QueryBuilder({
                         <option key={op.value} value={op.value}>{op.label}</option>
                       ))}
                     </select>
-                    {/* Value */}
+                    {/* Numeric value */}
                     <input
                       type="number"
                       value={f.value}

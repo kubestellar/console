@@ -329,7 +329,7 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   // Cluster Groups card (drag-and-drop deploy target)
   cluster_groups: ClusterGroups,
   // Missions card (deploy progress tracking)
-  missions: Missions,
+  deployment_missions: Missions,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -421,8 +421,8 @@ export const LIVE_DATA_CARDS = new Set([
   'llm_models',
   // cert-manager card with real data
   'cert_manager',
-  // Missions card - polls deploy status in real time
-  'missions',
+  // Deployment Missions card - polls deploy status in real time
+  'deployment_missions',
 ])
 
 /**
@@ -457,8 +457,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Cluster Groups card
   cluster_groups: 4,
-  // Missions card
-  missions: 5,
+  // Deployment Missions card
+  deployment_missions: 5,
 
   // Event dashboard cards
   event_summary: 6,

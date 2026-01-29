@@ -339,9 +339,10 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to get cluster health: " + err.Error()})
 	}
 
-	// Only fetch nodes if label selector is specified (expensive operation)
+	// Fetch nodes for label selector matching and GPU filtering
 	nodesByCluster := make(map[string][]k8s.NodeInfo)
-	if query.LabelSelector != "" {
+	needNodes := query.LabelSelector != "" || hasGPUFilter(query.Filters)
+	if needNodes {
 		clusters, _ := h.k8sClient.ListClusters(ctx)
 		for _, cluster := range clusters {
 			nodes, err := h.k8sClient.GetNodes(ctx, cluster.Name)
@@ -376,7 +377,7 @@ func clusterMatchesQuery(health k8s.ClusterHealth, nodes []k8s.NodeInfo, query *
 
 	// Check each filter (AND logic)
 	for _, filter := range query.Filters {
-		if !clusterMatchesFilter(health, filter) {
+		if !clusterMatchesFilter(health, nodes, filter) {
 			return false
 		}
 	}
@@ -398,8 +399,8 @@ func clusterMatchesLabelSelector(nodes []k8s.NodeInfo, selectorStr string) bool 
 	return false
 }
 
-// clusterMatchesFilter checks a single filter condition against cluster health data
-func clusterMatchesFilter(health k8s.ClusterHealth, f ClusterFilter) bool {
+// clusterMatchesFilter checks a single filter condition against cluster health + node data
+func clusterMatchesFilter(health k8s.ClusterHealth, nodes []k8s.NodeInfo, f ClusterFilter) bool {
 	switch f.Field {
 	case "healthy":
 		return compareBool(health.Healthy, f.Operator, f.Value)
@@ -413,8 +414,71 @@ func clusterMatchesFilter(health k8s.ClusterHealth, f ClusterFilter) bool {
 		return compareInt(int64(health.PodCount), f.Operator, f.Value)
 	case "reachable":
 		return compareBool(health.Reachable, f.Operator, f.Value)
+	case "gpuCount":
+		total := clusterGPUCount(nodes)
+		return compareInt(int64(total), f.Operator, f.Value)
+	case "gpuType":
+		types := clusterGPUTypes(nodes)
+		return compareStringSet(types, f.Operator, f.Value)
 	default:
 		return true // unknown fields pass (don't block)
+	}
+}
+
+// hasGPUFilter returns true if any filter references GPU fields
+func hasGPUFilter(filters []ClusterFilter) bool {
+	for _, f := range filters {
+		if f.Field == "gpuCount" || f.Field == "gpuType" {
+			return true
+		}
+	}
+	return false
+}
+
+// clusterGPUCount returns total GPU count across all nodes in a cluster
+func clusterGPUCount(nodes []k8s.NodeInfo) int {
+	total := 0
+	for _, n := range nodes {
+		total += n.GPUCount
+	}
+	return total
+}
+
+// clusterGPUTypes returns the set of GPU types across all nodes in a cluster
+func clusterGPUTypes(nodes []k8s.NodeInfo) []string {
+	seen := make(map[string]bool)
+	var types []string
+	for _, n := range nodes {
+		if n.GPUType != "" && !seen[n.GPUType] {
+			seen[n.GPUType] = true
+			types = append(types, n.GPUType)
+		}
+	}
+	return types
+}
+
+// compareStringSet checks if any string in the set matches the condition
+func compareStringSet(actual []string, op, value string) bool {
+	valueLower := strings.ToLower(value)
+	switch op {
+	case "eq":
+		// Any type matches (case-insensitive, substring)
+		for _, s := range actual {
+			if strings.EqualFold(s, value) || strings.Contains(strings.ToLower(s), valueLower) {
+				return true
+			}
+		}
+		return false
+	case "neq":
+		// None of the types match
+		for _, s := range actual {
+			if strings.EqualFold(s, value) || strings.Contains(strings.ToLower(s), valueLower) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
 	}
 }
 
