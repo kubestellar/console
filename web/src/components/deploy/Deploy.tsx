@@ -13,6 +13,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { DragEndEvent } from '@dnd-kit/core'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -24,6 +25,8 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useDeployments } from '../../hooks/useMCP'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { useCardPublish } from '../../lib/cardEvents'
+import { useDeployWorkload } from '../../hooks/useWorkloads'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -47,6 +50,9 @@ const DEFAULT_DEPLOY_CARDS = [
   { type: 'overlay_comparison', title: 'Overlay Comparison', position: { w: 8, h: 4 } },
   // Workload Deployment
   { type: 'workload_deployment', title: 'Workload Deployment', position: { w: 6, h: 4 } },
+  // Cross-card deploy
+  { type: 'cluster_groups', title: 'Cluster Groups', position: { w: 4, h: 4 } },
+  { type: 'missions', title: 'Missions', position: { w: 5, h: 4 } },
   // Upgrade tracking
   { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 4 } },
 ]
@@ -170,7 +176,7 @@ export function Deploy() {
     showCards,
     setShowCards,
     expandCards,
-    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
+    dnd: { sensors, activeId, handleDragStart, handleDragEnd: reorderDragEnd },
     autoRefresh,
     setAutoRefresh,
   } = useDashboard({
@@ -179,8 +185,68 @@ export function Deploy() {
     onRefresh: refetch,
   })
 
+  const publishCardEvent = useCardPublish()
+  const { mutate: deployWorkload } = useDeployWorkload()
+
   const isRefreshing = deploymentsRefreshing || showIndicator
   const isFetching = deploymentsLoading || isRefreshing || showIndicator
+
+  // Wrap DnD handler to support cross-card deploy drops
+  const handleDeployDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over) {
+      reorderDragEnd(event)
+      return
+    }
+
+    // Workload dropped on cluster group → trigger deploy
+    if (
+      active.data.current?.type === 'workload' &&
+      String(over.id).startsWith('cluster-group-')
+    ) {
+      const workloadData = active.data.current.workload as {
+        name: string
+        namespace: string
+        sourceCluster: string
+      }
+      const groupData = over.data.current as {
+        groupName: string
+        clusters: string[]
+      }
+
+      if (groupData?.clusters?.length > 0) {
+        const deployId = `deploy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+        publishCardEvent({
+          type: 'deploy:started',
+          payload: {
+            id: deployId,
+            workload: workloadData.name,
+            namespace: workloadData.namespace,
+            sourceCluster: workloadData.sourceCluster,
+            targetClusters: groupData.clusters,
+            groupName: groupData.groupName,
+            timestamp: Date.now(),
+          },
+        })
+
+        try {
+          await deployWorkload({
+            workloadName: workloadData.name,
+            namespace: workloadData.namespace,
+            sourceCluster: workloadData.sourceCluster,
+            targetClusters: groupData.clusters,
+          })
+        } catch (err) {
+          console.error('Deploy failed:', err)
+        }
+      }
+      return
+    }
+
+    // Fall through to normal reorder
+    reorderDragEnd(event)
+  }, [reorderDragEnd, publishCardEvent, deployWorkload])
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
@@ -313,7 +379,7 @@ export function Deploy() {
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
+                onDragEnd={handleDeployDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
                   <div className="grid grid-cols-12 gap-4">
