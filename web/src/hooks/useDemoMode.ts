@@ -7,10 +7,17 @@ const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
 let globalDemoMode = false
 const listeners = new Set<(value: boolean) => void>()
 
-// Initialize from localStorage
+// Auto-enable demo mode on Netlify preview builds (VITE_DEMO_MODE=true in netlify.toml)
+const isNetlifyPreview = typeof window !== 'undefined' && (
+  import.meta.env.VITE_DEMO_MODE === 'true' ||
+  window.location.hostname.includes('netlify.app') ||
+  window.location.hostname.includes('deploy-preview-')
+)
+
+// Initialize from localStorage, or auto-enable on Netlify previews
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
-  globalDemoMode = stored === 'true'
+  globalDemoMode = isNetlifyPreview || stored === 'true'
 
   // Clear any stale demo GPU data if demo mode is off
   // This handles the case where demo data was incorrectly cached
