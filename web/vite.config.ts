@@ -53,6 +53,38 @@ export default defineConfig(({ mode }) => ({
         forceBuildInstrument: true,
       }),
   ].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Split Three.js into its own chunk
+          if (id.includes('three') || id.includes('@react-three')) {
+            return 'three'
+          }
+          // Split recharts into its own chunk
+          if (id.includes('recharts')) {
+            return 'recharts'
+          }
+          // Split react-markdown and related into its own chunk
+          if (id.includes('react-markdown') || id.includes('remark-') || id.includes('unified') || id.includes('micromark')) {
+            return 'markdown'
+          }
+          // Split syntax highlighter into its own chunk
+          if (id.includes('react-syntax-highlighter') || id.includes('refractor') || id.includes('prismjs')) {
+            return 'syntax-highlighter'
+          }
+          // Split i18n into its own chunk
+          if (id.includes('i18next')) {
+            return 'i18n'
+          }
+          // Split node_modules into vendor chunks
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5174,
     strictPort: true, // Fail if port 5174 is already in use

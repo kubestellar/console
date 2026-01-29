@@ -1,11 +1,11 @@
-import { useMemo, useState, useRef, useCallback } from 'react'
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import { Globe, Server, Cloud, ZoomIn, ZoomOut, Maximize2, Filter, X } from 'lucide-react'
 import { useClusters, type ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
-import WorldMapSvg from '../../assets/world-map.svg?raw'
+import WorldMapSvgUrl from '../../assets/world-map.svg'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -218,6 +218,17 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+
+  // Map SVG state
+  const [mapSvg, setMapSvg] = useState<string>('')
+
+  // Fetch SVG content
+  useEffect(() => {
+    fetch(WorldMapSvgUrl)
+      .then(res => res.text())
+      .then(setMapSvg)
+      .catch(console.error)
+  }, [])
 
   // Map controls state
   const [zoom, setZoom] = useState(1)
@@ -455,7 +466,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
             {/* SVG Map Background */}
             <div
               className="absolute inset-0 [&_svg]:w-full [&_svg]:h-full [&_rect]:fill-transparent [&_path]:fill-emerald-800/40 [&_path]:stroke-emerald-600/20 [&_path]:stroke-[0.3]"
-              dangerouslySetInnerHTML={{ __html: WorldMapSvg }}
+              dangerouslySetInnerHTML={{ __html: mapSvg }}
             />
 
             {/* Cluster Markers */}

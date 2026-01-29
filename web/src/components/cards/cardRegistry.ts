@@ -1,169 +1,131 @@
-import React from 'react'
-import { ClusterHealth } from './ClusterHealth'
-import { EventStream } from './EventStream'
-import { PodIssues } from './PodIssues'
-import { TopPods } from './TopPods'
-import { AppStatus } from './AppStatus'
-import { ResourceUsage } from './ResourceUsage'
-import { ClusterMetrics } from './ClusterMetrics'
-import { DeploymentStatus } from './DeploymentStatus'
-import { DeploymentProgress } from './DeploymentProgress'
-import { DeploymentIssues } from './DeploymentIssues'
-import { GitOpsDrift } from './GitOpsDrift'
-import { UpgradeStatus } from './UpgradeStatus'
-import { ResourceCapacity } from './ResourceCapacity'
-import { GPUInventory } from './GPUInventory'
-import { GPUStatus } from './GPUStatus'
-import { GPUOverview } from './GPUOverview'
-import { GPUWorkloads } from './GPUWorkloads'
-import { SecurityIssues } from './SecurityIssues'
-// Event dashboard cards
-import { EventSummary } from './EventSummary'
-import { WarningEvents } from './WarningEvents'
-import { RecentEvents } from './RecentEvents'
-// Live data trend cards
-import { EventsTimeline } from './EventsTimeline'
-import { PodHealthTrend } from './PodHealthTrend'
-import { ResourceTrend } from './ResourceTrend'
-import { GPUUtilization } from './GPUUtilization'
-import { GPUUsageTrend } from './GPUUsageTrend'
-import { ClusterResourceTree } from './ClusterResourceTree'
-// Dashboard-specific cards
-import { StorageOverview } from './StorageOverview'
-import { PVCStatus } from './PVCStatus'
-import { NetworkOverview } from './NetworkOverview'
-import { ServiceStatus } from './ServiceStatus'
-import { ComputeOverview } from './ComputeOverview'
-// Cluster-scoped cards
-import { ClusterFocus } from './ClusterFocus'
-import { ClusterComparison } from './ClusterComparison'
-import { ClusterCosts } from './ClusterCosts'
-import { ClusterNetwork } from './ClusterNetwork'
-import { ClusterLocations } from './ClusterLocations'
-// Namespace-scoped cards
-import { NamespaceOverview } from './NamespaceOverview'
-import { NamespaceQuotas } from './NamespaceQuotas'
-import { NamespaceRBAC } from './NamespaceRBAC'
-import { NamespaceEvents } from './NamespaceEvents'
-import { NamespaceMonitor } from './NamespaceMonitor'
-// Operator-scoped cards
-import { OperatorStatus } from './OperatorStatus'
-import { OperatorSubscriptions } from './OperatorSubscriptions'
-import { CRDHealth } from './CRDHealth'
-// Helm-scoped cards
-import { HelmReleaseStatus } from './HelmReleaseStatus'
-import { HelmValuesDiff } from './HelmValuesDiff'
-import { HelmHistory } from './HelmHistory'
-import { ChartVersions } from './ChartVersions'
-// Kustomize-scoped cards
-import { KustomizationStatus } from './KustomizationStatus'
-import { OverlayComparison } from './OverlayComparison'
-// ArgoCD cards
-import { ArgoCDApplications } from './ArgoCDApplications'
-import { ArgoCDSyncStatus } from './ArgoCDSyncStatus'
-import { ArgoCDHealth } from './ArgoCDHealth'
-// User management card
-import { UserManagement } from './UserManagement'
-// AI mission cards
-import { ConsoleIssuesCard, ConsoleKubeconfigAuditCard, ConsoleHealthCheckCard, ConsoleOfflineDetectionCard } from './ConsoleMissions'
-// Alerting cards
-import { ActiveAlerts } from './ActiveAlerts'
-import { AlertRulesCard } from './AlertRules'
-// Cost management integrations
-import { OpenCostOverview } from './OpenCostOverview'
-import { KubecostOverview } from './KubecostOverview'
-// Policy management cards
-import { OPAPolicies } from './OPAPolicies'
-import { KyvernoPolicies } from './KyvernoPolicies'
-// Compliance tool cards
-import { FalcoAlerts, TrivyScan, KubescapeScan, PolicyViolations, ComplianceScore } from './ComplianceCards'
-// Data compliance tool cards
-import { VaultSecrets, ExternalSecrets, CertManager } from './DataComplianceCards'
-// Workload detection cards
-import { ProwJobs, ProwStatus, ProwHistory, LLMInference, LLMModels, MLJobs, MLNotebooks } from './WorkloadDetectionCards'
-// Weather card
-import { Weather } from './Weather'
-// GitHub Activity Monitoring card
-import { GitHubActivity } from './GitHubActivity'
-// RSS Feed card
-import { RSSFeed } from './RSSFeed'
-// Kubectl card
-import { Kubectl } from './Kubectl'
-// Sudoku game card
-import { SudokuGame } from './SudokuGame'
-// Kube Match card
-import { MatchGame } from './MatchGame'
-// Kube Solitaire card
-import { Solitaire } from './Solitaire'
-// AI Checkers card
-import { Checkers } from './Checkers'
-// Kube 2048 card
-import { Game2048 } from './Game2048'
-// Stock Market Ticker card
-import { StockMarketTicker } from './StockMarketTicker'
-// Kubedle card
-import { Kubedle } from './Kubedle'
-// Pod Sweeper card
-import { PodSweeper } from './PodSweeper'
-// Container Tetris card
-import { ContainerTetris } from './ContainerTetris'
-// Flappy Pod card
-import { FlappyPod } from './FlappyPod'
-// Kube-Man (Pac-Man) card
-import { KubeMan } from './KubeMan'
-// Kube Kong (Donkey Kong) card
-import { KubeKong } from './KubeKong'
-// Pod Pitfall card
-import { PodPitfall } from './PodPitfall'
-// Node Invaders (Space Invaders) card
-import { NodeInvaders } from './NodeInvaders'
-// Pod Crosser (Frogger) card
-import { PodCrosser } from './PodCrosser'
-// Pod Brothers (Mario Bros) card
-import { PodBrothers } from './PodBrothers'
-// Kube Kart (racing) card
-import { KubeKart } from './KubeKart'
-// Kube Pong card
-import { KubePong } from './KubePong'
-// Kube Snake card
-import { KubeSnake } from './KubeSnake'
-// Kube Galaga card
-import { KubeGalaga } from './KubeGalaga'
-// Kube Doom card
-import { KubeDoom } from './KubeDoom'
-// KubeCraft (Minecraft) card
-import { KubeCraft } from './KubeCraft'
-// Generic Iframe Embed card
-import { IframeEmbed } from './IframeEmbed'
-// Network Utilities card
-import { NetworkUtils } from './NetworkUtils'
-// Mobile Browser card
-import { MobileBrowser } from './MobileBrowser'
-// Kube Chess card
-import { KubeChess } from './KubeChess'
-// KubeCraft 3D card
-import { KubeCraft3D } from './KubeCraft3D'
-// MCS (Multi-Cluster Service) cards
-import { ServiceExports } from './ServiceExports'
-import { ServiceImports } from './ServiceImports'
-// Gateway API cards
-import { GatewayStatus } from './GatewayStatus'
-// Service Topology card
-import { ServiceTopology } from './ServiceTopology'
-// Workload Deployment card
-import { WorkloadDeployment } from './WorkloadDeployment'
-// Cluster Groups card (drag-and-drop deploy target)
-import { ClusterGroups } from './ClusterGroups'
-// Missions card (deploy progress tracking)
-import { Missions } from './Missions'
-// Resource Marshall card (dependency tree explorer)
-import { ResourceMarshall } from './ResourceMarshall'
+import { lazy, ComponentType } from 'react'
+
+// Lazy load all card components for better code splitting
+const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
+const EventStream = lazy(() => import('./EventStream').then(m => ({ default: m.EventStream })))
+const PodIssues = lazy(() => import('./PodIssues').then(m => ({ default: m.PodIssues })))
+const TopPods = lazy(() => import('./TopPods').then(m => ({ default: m.TopPods })))
+const AppStatus = lazy(() => import('./AppStatus').then(m => ({ default: m.AppStatus })))
+const ResourceUsage = lazy(() => import('./ResourceUsage').then(m => ({ default: m.ResourceUsage })))
+const ClusterMetrics = lazy(() => import('./ClusterMetrics').then(m => ({ default: m.ClusterMetrics })))
+const DeploymentStatus = lazy(() => import('./DeploymentStatus').then(m => ({ default: m.DeploymentStatus })))
+const DeploymentProgress = lazy(() => import('./DeploymentProgress').then(m => ({ default: m.DeploymentProgress })))
+const DeploymentIssues = lazy(() => import('./DeploymentIssues').then(m => ({ default: m.DeploymentIssues })))
+const GitOpsDrift = lazy(() => import('./GitOpsDrift').then(m => ({ default: m.GitOpsDrift })))
+const UpgradeStatus = lazy(() => import('./UpgradeStatus').then(m => ({ default: m.UpgradeStatus })))
+const ResourceCapacity = lazy(() => import('./ResourceCapacity').then(m => ({ default: m.ResourceCapacity })))
+const GPUInventory = lazy(() => import('./GPUInventory').then(m => ({ default: m.GPUInventory })))
+const GPUStatus = lazy(() => import('./GPUStatus').then(m => ({ default: m.GPUStatus })))
+const GPUOverview = lazy(() => import('./GPUOverview').then(m => ({ default: m.GPUOverview })))
+const GPUWorkloads = lazy(() => import('./GPUWorkloads').then(m => ({ default: m.GPUWorkloads })))
+const SecurityIssues = lazy(() => import('./SecurityIssues').then(m => ({ default: m.SecurityIssues })))
+const EventSummary = lazy(() => import('./EventSummary').then(m => ({ default: m.EventSummary })))
+const WarningEvents = lazy(() => import('./WarningEvents').then(m => ({ default: m.WarningEvents })))
+const RecentEvents = lazy(() => import('./RecentEvents').then(m => ({ default: m.RecentEvents })))
+const EventsTimeline = lazy(() => import('./EventsTimeline').then(m => ({ default: m.EventsTimeline })))
+const PodHealthTrend = lazy(() => import('./PodHealthTrend').then(m => ({ default: m.PodHealthTrend })))
+const ResourceTrend = lazy(() => import('./ResourceTrend').then(m => ({ default: m.ResourceTrend })))
+const GPUUtilization = lazy(() => import('./GPUUtilization').then(m => ({ default: m.GPUUtilization })))
+const GPUUsageTrend = lazy(() => import('./GPUUsageTrend').then(m => ({ default: m.GPUUsageTrend })))
+const ClusterResourceTree = lazy(() => import('./ClusterResourceTree').then(m => ({ default: m.ClusterResourceTree })))
+const StorageOverview = lazy(() => import('./StorageOverview').then(m => ({ default: m.StorageOverview })))
+const PVCStatus = lazy(() => import('./PVCStatus').then(m => ({ default: m.PVCStatus })))
+const NetworkOverview = lazy(() => import('./NetworkOverview').then(m => ({ default: m.NetworkOverview })))
+const ServiceStatus = lazy(() => import('./ServiceStatus').then(m => ({ default: m.ServiceStatus })))
+const ComputeOverview = lazy(() => import('./ComputeOverview').then(m => ({ default: m.ComputeOverview })))
+const ClusterFocus = lazy(() => import('./ClusterFocus').then(m => ({ default: m.ClusterFocus })))
+const ClusterComparison = lazy(() => import('./ClusterComparison').then(m => ({ default: m.ClusterComparison })))
+const ClusterCosts = lazy(() => import('./ClusterCosts').then(m => ({ default: m.ClusterCosts })))
+const ClusterNetwork = lazy(() => import('./ClusterNetwork').then(m => ({ default: m.ClusterNetwork })))
+const ClusterLocations = lazy(() => import('./ClusterLocations').then(m => ({ default: m.ClusterLocations })))
+const NamespaceOverview = lazy(() => import('./NamespaceOverview').then(m => ({ default: m.NamespaceOverview })))
+const NamespaceQuotas = lazy(() => import('./NamespaceQuotas').then(m => ({ default: m.NamespaceQuotas })))
+const NamespaceRBAC = lazy(() => import('./NamespaceRBAC').then(m => ({ default: m.NamespaceRBAC })))
+const NamespaceEvents = lazy(() => import('./NamespaceEvents').then(m => ({ default: m.NamespaceEvents })))
+const NamespaceMonitor = lazy(() => import('./NamespaceMonitor').then(m => ({ default: m.NamespaceMonitor })))
+const OperatorStatus = lazy(() => import('./OperatorStatus').then(m => ({ default: m.OperatorStatus })))
+const OperatorSubscriptions = lazy(() => import('./OperatorSubscriptions').then(m => ({ default: m.OperatorSubscriptions })))
+const CRDHealth = lazy(() => import('./CRDHealth').then(m => ({ default: m.CRDHealth })))
+const HelmReleaseStatus = lazy(() => import('./HelmReleaseStatus').then(m => ({ default: m.HelmReleaseStatus })))
+const HelmValuesDiff = lazy(() => import('./HelmValuesDiff').then(m => ({ default: m.HelmValuesDiff })))
+const HelmHistory = lazy(() => import('./HelmHistory').then(m => ({ default: m.HelmHistory })))
+const ChartVersions = lazy(() => import('./ChartVersions').then(m => ({ default: m.ChartVersions })))
+const KustomizationStatus = lazy(() => import('./KustomizationStatus').then(m => ({ default: m.KustomizationStatus })))
+const OverlayComparison = lazy(() => import('./OverlayComparison').then(m => ({ default: m.OverlayComparison })))
+const ArgoCDApplications = lazy(() => import('./ArgoCDApplications').then(m => ({ default: m.ArgoCDApplications })))
+const ArgoCDSyncStatus = lazy(() => import('./ArgoCDSyncStatus').then(m => ({ default: m.ArgoCDSyncStatus })))
+const ArgoCDHealth = lazy(() => import('./ArgoCDHealth').then(m => ({ default: m.ArgoCDHealth })))
+const UserManagement = lazy(() => import('./UserManagement').then(m => ({ default: m.UserManagement })))
+const ConsoleIssuesCard = lazy(() => import('./ConsoleMissions').then(m => ({ default: m.ConsoleIssuesCard })))
+const ConsoleKubeconfigAuditCard = lazy(() => import('./ConsoleMissions').then(m => ({ default: m.ConsoleKubeconfigAuditCard })))
+const ConsoleHealthCheckCard = lazy(() => import('./ConsoleMissions').then(m => ({ default: m.ConsoleHealthCheckCard })))
+const ConsoleOfflineDetectionCard = lazy(() => import('./ConsoleMissions').then(m => ({ default: m.ConsoleOfflineDetectionCard })))
+const ActiveAlerts = lazy(() => import('./ActiveAlerts').then(m => ({ default: m.ActiveAlerts })))
+const AlertRulesCard = lazy(() => import('./AlertRules').then(m => ({ default: m.AlertRulesCard })))
+const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ default: m.OpenCostOverview })))
+const KubecostOverview = lazy(() => import('./KubecostOverview').then(m => ({ default: m.KubecostOverview })))
+const OPAPolicies = lazy(() => import('./OPAPolicies').then(m => ({ default: m.OPAPolicies })))
+const KyvernoPolicies = lazy(() => import('./KyvernoPolicies').then(m => ({ default: m.KyvernoPolicies })))
+const FalcoAlerts = lazy(() => import('./ComplianceCards').then(m => ({ default: m.FalcoAlerts })))
+const TrivyScan = lazy(() => import('./ComplianceCards').then(m => ({ default: m.TrivyScan })))
+const KubescapeScan = lazy(() => import('./ComplianceCards').then(m => ({ default: m.KubescapeScan })))
+const PolicyViolations = lazy(() => import('./ComplianceCards').then(m => ({ default: m.PolicyViolations })))
+const ComplianceScore = lazy(() => import('./ComplianceCards').then(m => ({ default: m.ComplianceScore })))
+const VaultSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.VaultSecrets })))
+const ExternalSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.ExternalSecrets })))
+const CertManager = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.CertManager })))
+const ProwJobs = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.ProwJobs })))
+const ProwStatus = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.ProwStatus })))
+const ProwHistory = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.ProwHistory })))
+const LLMInference = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.LLMInference })))
+const LLMModels = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.LLMModels })))
+const MLJobs = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.MLJobs })))
+const MLNotebooks = lazy(() => import('./WorkloadDetectionCards').then(m => ({ default: m.MLNotebooks })))
+const Weather = lazy(() => import('./Weather').then(m => ({ default: m.Weather })))
+const GitHubActivity = lazy(() => import('./GitHubActivity').then(m => ({ default: m.GitHubActivity })))
+const RSSFeed = lazy(() => import('./RSSFeed').then(m => ({ default: m.RSSFeed })))
+const Kubectl = lazy(() => import('./Kubectl').then(m => ({ default: m.Kubectl })))
+const SudokuGame = lazy(() => import('./SudokuGame').then(m => ({ default: m.SudokuGame })))
+const MatchGame = lazy(() => import('./MatchGame').then(m => ({ default: m.MatchGame })))
+const Solitaire = lazy(() => import('./Solitaire').then(m => ({ default: m.Solitaire })))
+const Checkers = lazy(() => import('./Checkers').then(m => ({ default: m.Checkers })))
+const Game2048 = lazy(() => import('./Game2048').then(m => ({ default: m.Game2048 })))
+const StockMarketTicker = lazy(() => import('./StockMarketTicker').then(m => ({ default: m.StockMarketTicker })))
+const Kubedle = lazy(() => import('./Kubedle').then(m => ({ default: m.Kubedle })))
+const PodSweeper = lazy(() => import('./PodSweeper').then(m => ({ default: m.PodSweeper })))
+const ContainerTetris = lazy(() => import('./ContainerTetris').then(m => ({ default: m.ContainerTetris })))
+const FlappyPod = lazy(() => import('./FlappyPod').then(m => ({ default: m.FlappyPod })))
+const KubeMan = lazy(() => import('./KubeMan').then(m => ({ default: m.KubeMan })))
+const KubeKong = lazy(() => import('./KubeKong').then(m => ({ default: m.KubeKong })))
+const PodPitfall = lazy(() => import('./PodPitfall').then(m => ({ default: m.PodPitfall })))
+const NodeInvaders = lazy(() => import('./NodeInvaders').then(m => ({ default: m.NodeInvaders })))
+const PodCrosser = lazy(() => import('./PodCrosser').then(m => ({ default: m.PodCrosser })))
+const PodBrothers = lazy(() => import('./PodBrothers').then(m => ({ default: m.PodBrothers })))
+const KubeKart = lazy(() => import('./KubeKart').then(m => ({ default: m.KubeKart })))
+const KubePong = lazy(() => import('./KubePong').then(m => ({ default: m.KubePong })))
+const KubeSnake = lazy(() => import('./KubeSnake').then(m => ({ default: m.KubeSnake })))
+const KubeGalaga = lazy(() => import('./KubeGalaga').then(m => ({ default: m.KubeGalaga })))
+const KubeDoom = lazy(() => import('./KubeDoom').then(m => ({ default: m.KubeDoom })))
+const KubeCraft = lazy(() => import('./KubeCraft').then(m => ({ default: m.KubeCraft })))
+const IframeEmbed = lazy(() => import('./IframeEmbed').then(m => ({ default: m.IframeEmbed })))
+const NetworkUtils = lazy(() => import('./NetworkUtils').then(m => ({ default: m.NetworkUtils })))
+const MobileBrowser = lazy(() => import('./MobileBrowser').then(m => ({ default: m.MobileBrowser })))
+const KubeChess = lazy(() => import('./KubeChess').then(m => ({ default: m.KubeChess })))
+const KubeCraft3D = lazy(() => import('./KubeCraft3D').then(m => ({ default: m.KubeCraft3D })))
+const ServiceExports = lazy(() => import('./ServiceExports').then(m => ({ default: m.ServiceExports })))
+const ServiceImports = lazy(() => import('./ServiceImports').then(m => ({ default: m.ServiceImports })))
+const GatewayStatus = lazy(() => import('./GatewayStatus').then(m => ({ default: m.GatewayStatus })))
+const ServiceTopology = lazy(() => import('./ServiceTopology').then(m => ({ default: m.ServiceTopology })))
+const WorkloadDeployment = lazy(() => import('./WorkloadDeployment').then(m => ({ default: m.WorkloadDeployment })))
+const ClusterGroups = lazy(() => import('./ClusterGroups').then(m => ({ default: m.ClusterGroups })))
+const Missions = lazy(() => import('./Missions').then(m => ({ default: m.Missions })))
+const ResourceMarshall = lazy(() => import('./ResourceMarshall').then(m => ({ default: m.ResourceMarshall })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
 
 // Card component type
-export type CardComponent = React.ComponentType<CardComponentProps>
+export type CardComponent = ComponentType<CardComponentProps>
 
 /**
  * Central registry of all card components.
