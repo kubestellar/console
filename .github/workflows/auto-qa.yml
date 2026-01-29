@@ -14,11 +14,6 @@ on:
     - cron: '17 * * * *' # Every hour at :17 (offset from :00 to reduce congestion)
   workflow_dispatch:
     inputs:
-      auto_triage:
-        description: 'Auto-triage created issues (post /triage accepted to start Copilot)'
-        required: false
-        default: true
-        type: boolean
       skip_audit:
         description: 'Skip npm audit check'
         required: false
@@ -857,7 +852,6 @@ jobs:
           FOCUS_ROUTES: ${{ steps.focus_routes.outputs.found }}
           FOCUS_MODAL_CONSISTENCY: ${{ steps.focus_modal_consistency.outputs.found }}
           # Control
-          AUTO_TRIAGE: ${{ inputs.auto_triage || 'true' }}
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
@@ -938,7 +932,7 @@ jobs:
                   ['Check the TypeScript errors shown above',
                    'Fix type errors, missing imports, or syntax issues',
                    'Run `cd web && npm run build` to verify the fix']),
-                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'needs-triage'],
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted'],
               });
             }
 
@@ -950,7 +944,7 @@ jobs:
                   ['Fix the ESLint errors listed above',
                    'Common fixes: remove unused imports, add missing hook dependencies',
                    'Run `cd web && npm run lint` to verify the fix']),
-                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'needs-triage'],
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted'],
               });
             }
 
@@ -962,7 +956,7 @@ jobs:
                   ['Fix the Go compilation errors shown above',
                    'Check for missing dependencies, type errors, or undefined references',
                    'Run `go build ./cmd/console` to verify the fix']),
-                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'needs-triage'],
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted'],
               });
             }
 
@@ -987,7 +981,7 @@ jobs:
                   `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
                   '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
                 ].join('\n'),
-                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'needs-triage'],
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted'],
               });
             }
 
@@ -1012,7 +1006,7 @@ jobs:
                   `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
                   '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
                 ].join('\n'),
-                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'needs-triage'],
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted'],
               });
             }
 
@@ -1313,17 +1307,7 @@ jobs:
               core.info(`Created issue #${issue.number}: ${check.title}`);
               created++;
 
-              // Auto-triage: scheduled runs always auto-triage; dispatch respects input
-              const shouldTriage = process.env.AUTO_TRIAGE === 'true';
-              if (shouldTriage) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: '/triage accepted',
-                });
-                core.info(`Auto-triaged issue #${issue.number}`);
-              }
+              // Auto-triage is handled by including triage/accepted in the issue labels at creation
             }
 
             core.info(`Auto-QA complete (focus: ${focusArea}): ${created} issue(s) created, ${checks.length} finding(s) total.`);
