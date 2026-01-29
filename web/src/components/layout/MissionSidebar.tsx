@@ -1074,9 +1074,9 @@ export function MissionSidebar() {
   if (isSidebarMinimized) {
     return (
       <div className={cn(
-        "fixed top-20 right-4 bottom-4 w-12 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-xl z-40 flex flex-col items-center py-4",
+        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-40 flex flex-col items-center py-4",
         "transition-transform duration-300 ease-in-out",
-        !isSidebarOpen && "translate-x-[calc(100%+2rem)] pointer-events-none"
+        !isSidebarOpen && "translate-x-full pointer-events-none"
       )}>
         <button
           onClick={expandSidebar}
@@ -1108,12 +1108,12 @@ export function MissionSidebar() {
     <div
       data-tour="ai-missions"
       className={cn(
-        "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col overflow-hidden rounded-lg",
+        "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col overflow-hidden",
         "transition-[width,top,border,transform] duration-300 ease-in-out",
         isFullScreen
           ? "inset-0 top-16 border-l-0 rounded-none"
-          : "top-20 right-4 bottom-4 w-[520px] border shadow-xl",
-        !isSidebarOpen && "translate-x-[calc(100%+2rem)] pointer-events-none"
+          : "top-16 right-0 bottom-0 w-[520px] border-l shadow-xl",
+        !isSidebarOpen && "translate-x-full pointer-events-none"
       )}
     >
       {/* Header */}
