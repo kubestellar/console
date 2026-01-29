@@ -17,6 +17,10 @@ import { GPUStatus } from './GPUStatus'
 import { GPUOverview } from './GPUOverview'
 import { GPUWorkloads } from './GPUWorkloads'
 import { SecurityIssues } from './SecurityIssues'
+// Event dashboard cards
+import { EventSummary } from './EventSummary'
+import { WarningEvents } from './WarningEvents'
+import { RecentEvents } from './RecentEvents'
 // Live data trend cards
 import { EventsTimeline } from './EventsTimeline'
 import { PodHealthTrend } from './PodHealthTrend'
@@ -163,6 +167,9 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   // Core cards
   cluster_health: ClusterHealth,
   event_stream: EventStream,
+  event_summary: EventSummary,
+  warning_events: WarningEvents,
+  recent_events: RecentEvents,
   pod_issues: PodIssues,
   top_pods: TopPods,
   app_status: AppStatus,
@@ -387,6 +394,9 @@ export const LIVE_DATA_CARDS = new Set([
   // Real-time status cards
   'cluster_metrics',
   'events_timeline',
+  'event_summary',
+  'warning_events',
+  'recent_events',
   'gpu_utilization',
   // Overview cards with live data
   'service_status',
@@ -434,6 +444,11 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
 
   // Workload Deployment - wide for workload list
   workload_deployment: 6,
+
+  // Event dashboard cards
+  event_summary: 6,
+  warning_events: 6,
+  recent_events: 6,
 
   // Medium cards (5-6 columns) - lists and tables
   event_stream: 6,

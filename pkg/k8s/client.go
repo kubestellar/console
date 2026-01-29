@@ -581,6 +581,70 @@ func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, e
 	return clusters, nil
 }
 
+// DeduplicatedClusters returns one cluster per unique server URL, preferring
+// short/user-friendly context names over auto-generated OpenShift names.
+// This prevents double-counting when the same physical cluster is reachable
+// via multiple kubeconfig contexts (e.g. "vllm-d" and
+// "default/api-fmaas-vllm-d-fmaas-res-ibm-com:6443/...").
+func (m *MultiClusterClient) DeduplicatedClusters(ctx context.Context) ([]ClusterInfo, error) {
+	clusters, err := m.ListClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Group by server URL
+	type group struct {
+		primary ClusterInfo
+		others  []string
+	}
+	serverGroups := make(map[string]*group)
+	var noServer []ClusterInfo
+
+	for _, cl := range clusters {
+		if cl.Server == "" {
+			noServer = append(noServer, cl)
+			continue
+		}
+		g, exists := serverGroups[cl.Server]
+		if !exists {
+			serverGroups[cl.Server] = &group{primary: cl}
+			continue
+		}
+		// Pick the shorter/friendlier name as primary
+		if isBetterClusterName(cl.Name, g.primary.Name) {
+			g.others = append(g.others, g.primary.Name)
+			g.primary = cl
+		} else {
+			g.others = append(g.others, cl.Name)
+		}
+	}
+
+	result := make([]ClusterInfo, 0, len(serverGroups)+len(noServer))
+	for _, g := range serverGroups {
+		result = append(result, g.primary)
+	}
+	result = append(result, noServer...)
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+	return result, nil
+}
+
+// isBetterClusterName returns true if candidate is a better (more user-friendly)
+// name than current. Prefers shorter names without slashes or port numbers.
+func isBetterClusterName(candidate, current string) bool {
+	candidateAuto := strings.Contains(candidate, "/") && strings.Contains(candidate, ":")
+	currentAuto := strings.Contains(current, "/") && strings.Contains(current, ":")
+	if !candidateAuto && currentAuto {
+		return true
+	}
+	if candidateAuto && !currentAuto {
+		return false
+	}
+	return len(candidate) < len(current)
+}
+
 // GetClient returns a kubernetes client for the specified context
 func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientset, error) {
 	m.mu.RLock()
