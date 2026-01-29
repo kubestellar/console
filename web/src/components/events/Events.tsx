@@ -13,7 +13,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useEvents, useWarningEvents } from '../../hooks/useMCP'
+import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
@@ -210,15 +210,18 @@ export function Events() {
   const { drillToEvents: _drillToEvents, drillToAllEvents } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
-  // Get events - fetch all, filter client-side with global filter
-  const { events: allEvents, isLoading: loadingAll, isRefreshing: refreshingAll, lastUpdated: allUpdated, refetch: refetchAll } = useEvents(undefined)
-  const { events: warningEvents, isLoading: loadingWarnings, isRefreshing: refreshingWarnings, lastUpdated: warningsUpdated, refetch: refetchWarnings } = useWarningEvents(undefined)
-
-  const combinedRefetch = useCallback(() => {
-    refetchAll()
-    refetchWarnings()
-  }, [refetchAll, refetchWarnings])
-  const { showIndicator, triggerRefresh } = useRefreshIndicator(combinedRefetch)
+  // Get events — use same hook + limit as EventStream card so counts match
+  const EVENT_LIMIT = 100
+  const {
+    events: allEvents,
+    isLoading: loadingAll,
+    isRefreshing: refreshingAll,
+    lastRefresh: allUpdated,
+    refetch: refetchAll,
+  } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
+  // Derive warnings client-side from the same dataset (warnings are a subset of all events)
+  const warningEvents = useMemo(() => allEvents.filter(e => e.type === 'Warning'), [allEvents])
+  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetchAll)
 
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [selectedReason, setSelectedReason] = useState<string>('')
@@ -226,10 +229,10 @@ export function Events() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
 
-  const isLoading = filter === 'warning' ? loadingWarnings : loadingAll
-  const isRefreshing = filter === 'warning' ? refreshingWarnings : refreshingAll
+  const isLoading = loadingAll
+  const isRefreshing = refreshingAll
   const isFetching = isLoading || isRefreshing || showIndicator
-  const lastUpdated = filter === 'warning' ? warningsUpdated : allUpdated
+  const lastUpdated = allUpdated ? new Date(allUpdated) : null
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -258,11 +261,7 @@ export function Events() {
     storageKey: EVENTS_CARDS_KEY,
     defaultCards: DEFAULT_EVENTS_CARDS,
     onRefresh: () => {
-      if (filter === 'warning') {
-        refetchWarnings()
-      } else {
-        refetchAll()
-      }
+      refetchAll()
     },
   })
 
@@ -333,28 +332,10 @@ export function Events() {
     return result
   }, [allEvents, globalSelectedClusters, isAllClustersSelected, globalCustomFilter])
 
-  const globalFilteredWarningEvents = useMemo(() => {
-    let result = warningEvents
-
-    // Apply global cluster filter
-    if (!isAllClustersSelected) {
-      result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
-    }
-
-    // Apply global custom text filter
-    if (globalCustomFilter.trim()) {
-      const query = globalCustomFilter.toLowerCase()
-      result = result.filter(e =>
-        e.reason.toLowerCase().includes(query) ||
-        e.message.toLowerCase().includes(query) ||
-        e.object.toLowerCase().includes(query) ||
-        e.namespace.toLowerCase().includes(query) ||
-        (e.cluster && e.cluster.toLowerCase().includes(query))
-      )
-    }
-
-    return result
-  }, [warningEvents, globalSelectedClusters, isAllClustersSelected, globalCustomFilter])
+  const globalFilteredWarningEvents = useMemo(
+    () => globalFilteredAllEvents.filter(e => e.type === 'Warning'),
+    [globalFilteredAllEvents]
+  )
 
   // Extract unique namespaces and reasons from globally filtered events for filter dropdowns
   const { namespaces, reasons } = useMemo(() => {
@@ -530,23 +511,29 @@ export function Events() {
     ? { ...stats, ...eventsStatsCache }
     : stats
 
+  // Format stat with "+" suffix when we've hit the fetch limit
+  const formatEventStat = useCallback((count: number) => {
+    const formatted = formatStat(count)
+    return count >= EVENT_LIMIT ? `${formatted}+` : formatted
+  }, [])
+
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'total':
-        return { value: formatStat(displayStats.total), sublabel: 'events', onClick: () => drillToAllEvents(), isClickable: displayStats.total > 0 }
+        return { value: formatEventStat(displayStats.total), sublabel: 'events', onClick: () => drillToAllEvents(), isClickable: displayStats.total > 0 }
       case 'warnings':
-        return { value: formatStat(displayStats.warnings), sublabel: 'warning events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
+        return { value: formatEventStat(displayStats.warnings), sublabel: 'warning events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
       case 'normal':
-        return { value: formatStat(displayStats.normal), sublabel: 'normal events', onClick: () => drillToAllEvents('normal'), isClickable: displayStats.normal > 0 }
+        return { value: formatEventStat(displayStats.normal), sublabel: 'normal events', onClick: () => drillToAllEvents('normal'), isClickable: displayStats.normal > 0 }
       case 'recent':
-        return { value: formatStat(displayStats.recentCount), sublabel: 'in last hour', onClick: () => drillToAllEvents('recent'), isClickable: displayStats.recentCount > 0 }
+        return { value: formatEventStat(displayStats.recentCount), sublabel: 'in last hour', onClick: () => drillToAllEvents('recent'), isClickable: displayStats.recentCount > 0 }
       case 'errors':
-        return { value: formatStat(displayStats.warnings), sublabel: 'error events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
+        return { value: formatEventStat(displayStats.warnings), sublabel: 'error events', onClick: () => drillToAllEvents('warning'), isClickable: displayStats.warnings > 0 }
       default:
         return { value: '-', sublabel: '' }
     }
-  }, [displayStats, drillToAllEvents])
+  }, [displayStats, drillToAllEvents, formatEventStat])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
