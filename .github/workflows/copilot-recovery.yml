@@ -35,7 +35,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Override DCO for bot PRs automatically (handles both Check Runs and Status API)
+  # Gate job ensures the workflow always has at least one job that runs,
+  # preventing GitHub from reporting "No jobs were run" as a failure
+  # and sending noisy email notifications.
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Event ${{ github.event_name }} received"
+
+  # Override DCO for bot PRs automatically
   override-dco-for-bots:
     if: |
       github.event_name == 'check_run' &&
