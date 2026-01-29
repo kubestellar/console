@@ -280,26 +280,20 @@
   animation: card-flash-error 1s ease-out;
 }
 
-/* Card refresh pulse - bright blue border glow + top shimmer sweep */
+/* Card refresh pulse - subtle border tint on refresh */
 @keyframes card-refresh-pulse {
   0% {
-    box-shadow: 0 0 8px 2px rgba(59, 130, 246, 0.5), inset 0 2px 4px rgba(59, 130, 246, 0.15);
-    border-color: rgba(59, 130, 246, 0.8);
-  }
-  50% {
-    box-shadow: 0 0 20px 6px rgba(59, 130, 246, 0.4), inset 0 2px 8px rgba(59, 130, 246, 0.1);
-    border-color: rgba(59, 130, 246, 1);
+    border-color: rgba(59, 130, 246, 0.35);
+    border-width: 2px;
   }
   100% {
-    box-shadow: 0 0 0 0 transparent;
     border-color: var(--glass-border);
+    border-width: 1px;
   }
 }
 
 .animate-card-refresh-pulse {
-  animation: card-refresh-pulse 0.8s ease-out;
-  border-color: rgba(59, 130, 246, 0.8) !important;
-  border-width: 2px !important;
+  animation: card-refresh-pulse 1s ease-out;
 }
 
 /* Disable card flash animations when reduce motion is enabled */
