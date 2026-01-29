@@ -589,10 +589,13 @@ Available filter fields and their types:
 - reachable (bool) — cluster API server is reachable
 - cpuCores (int) — total allocatable CPU cores
 - memoryGB (float) — total allocatable memory in GB
+- gpuCount (int) — total GPU count across all nodes
+- gpuType (string) — GPU product type (e.g., "NVIDIA-A100-SXM4-80GB", "AMD GPU"). Use eq for substring match, neq to exclude.
 - nodeCount (int) — number of nodes
 - podCount (int) — number of running pods
 
-Operators: eq, neq, gt, gte, lt, lte
+Operators for numeric/bool: eq, neq, gt, gte, lt, lte
+Operators for string: eq (contains/matches), neq (excludes)
 
 Label selectors use standard Kubernetes syntax (e.g., "topology.kubernetes.io/zone in (us-east-1a,us-east-1b)").
 

@@ -63,6 +63,13 @@ function saveGroups(groups: ClusterGroup[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
 }
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
+}
+
 // ============================================================================
 // Hook
 // ============================================================================
@@ -92,7 +99,7 @@ export function useClusterGroups() {
     try {
       await fetch('/api/cluster-groups', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(group),
       })
     } catch {
@@ -111,7 +118,7 @@ export function useClusterGroups() {
       try {
         await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(),
           body: JSON.stringify({ ...group, ...updates }),
         })
       } catch {
@@ -126,6 +133,7 @@ export function useClusterGroups() {
     try {
       await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       })
     } catch {
       // best-effort
@@ -146,7 +154,7 @@ export function useClusterGroups() {
     try {
       const resp = await fetch('/api/cluster-groups/evaluate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(group.query),
       })
       if (!resp.ok) return group.clusters
@@ -171,7 +179,7 @@ export function useClusterGroups() {
     try {
       const resp = await fetch('/api/cluster-groups/evaluate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(query),
       })
       if (!resp.ok) return { clusters: [], count: 0 }
@@ -188,7 +196,7 @@ export function useClusterGroups() {
     try {
       const resp = await fetch('/api/cluster-groups/ai-query', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ prompt }),
       })
       if (!resp.ok) {
