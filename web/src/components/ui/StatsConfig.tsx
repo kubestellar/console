@@ -522,9 +522,12 @@ export function useStatsConfig(
       const saved = localStorage.getItem(key)
       if (saved) {
         const parsed = JSON.parse(saved) as StatBlockConfig[]
+        // Remove stale saved blocks whose IDs no longer exist in any definition
+        const validIds = new Set(ALL_STAT_BLOCKS.map(b => b.id))
+        const cleaned = parsed.filter(b => validIds.has(b.id))
         // Merge with defaults to handle new blocks added in updates
-        const savedIds = new Set(parsed.map(b => b.id))
-        const merged = [...parsed]
+        const savedIds = new Set(cleaned.map(b => b.id))
+        const merged = [...cleaned]
         defaultBlocks.forEach(defaultBlock => {
           if (!savedIds.has(defaultBlock.id)) {
             merged.push(defaultBlock)
