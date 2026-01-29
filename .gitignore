@@ -56,8 +56,6 @@ vendor/
 # Coordination file (local only)
 .claude-coord.md
 /kc-agent
-/ksc-agent
-/kkc-agent
 
 # Claude Code local files
 .bob/
