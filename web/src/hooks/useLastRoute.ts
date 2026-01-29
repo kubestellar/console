@@ -74,18 +74,35 @@ export function useLastRoute() {
     }
   }, [getScrollPositions])
 
-  // Restore scroll position for a path
+  // Restore scroll position for a path, iterating as lazy content loads
   const restoreScrollPosition = useCallback((path: string) => {
     const positions = getScrollPositions()
     const savedPosition = positions[path]
-    if (savedPosition !== undefined && savedPosition > 0) {
+    if (savedPosition === undefined || savedPosition <= 0) return
+
+    const container = getScrollContainer()
+    if (!container) return
+
+    let attempts = 0
+    const maxAttempts = 20 // 20 × 150ms = 3s max
+
+    const tryRestore = () => {
+      container.scrollTo({ top: savedPosition, behavior: 'instant' })
+      attempts++
+
+      // Close enough (within 50px) or reached max attempts
+      if (Math.abs(container.scrollTop - savedPosition) < 50 || attempts >= maxAttempts) {
+        return
+      }
+
+      // Content is lazy-loaded — scrolling reveals more cards which grows height.
+      // Wait for new content to render, then try again.
       requestAnimationFrame(() => {
-        const container = getScrollContainer()
-        if (container) {
-          container.scrollTo({ top: savedPosition, behavior: 'instant' })
-        }
+        setTimeout(tryRestore, 150)
       })
     }
+
+    tryRestore()
   }, [getScrollPositions])
 
   // Save last route and scroll position on path change
