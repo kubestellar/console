@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubestellar/console/pkg/models"
 )
@@ -27,6 +28,9 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 		return nil, err
 	}
 
+	// Pre-fetch all bindings once to avoid N+1 queries per SA
+	saRolesMap := m.buildServiceAccountRolesMap(ctx, client, namespace)
+
 	var result []models.K8sServiceAccount
 	for _, sa := range sas.Items {
 		var secrets []string
@@ -34,8 +38,8 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 			secrets = append(secrets, s.Name)
 		}
 
-		// Get roles bound to this SA
-		roles, _ := m.getServiceAccountRoles(ctx, contextName, sa.Namespace, sa.Name)
+		key := sa.Namespace + "/" + sa.Name
+		roles := saRolesMap[key]
 
 		result = append(result, models.K8sServiceAccount{
 			Name:      sa.Name,
@@ -50,22 +54,23 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 	return result, nil
 }
 
-// getServiceAccountRoles returns the roles bound to a service account
-func (m *MultiClusterClient) getServiceAccountRoles(ctx context.Context, contextName, namespace, saName string) ([]string, error) {
-	client, err := m.GetClient(contextName)
-	if err != nil {
-		return nil, err
-	}
+// buildServiceAccountRolesMap fetches RoleBindings and ClusterRoleBindings once,
+// then builds a map of "namespace/name" -> []role for all service account subjects.
+func (m *MultiClusterClient) buildServiceAccountRolesMap(ctx context.Context, client kubernetes.Interface, namespace string) map[string][]string {
+	result := make(map[string][]string)
 
-	var roles []string
-
-	// Check RoleBindings in the same namespace
+	// Check RoleBindings in the namespace
 	rbs, err := client.RbacV1().RoleBindings(namespace).List(ctx, metav1.ListOptions{})
 	if err == nil {
 		for _, rb := range rbs.Items {
 			for _, subject := range rb.Subjects {
-				if subject.Kind == "ServiceAccount" && subject.Name == saName && subject.Namespace == namespace {
-					roles = append(roles, rb.RoleRef.Name)
+				if subject.Kind == "ServiceAccount" {
+					ns := subject.Namespace
+					if ns == "" {
+						ns = rb.Namespace
+					}
+					key := ns + "/" + subject.Name
+					result[key] = append(result[key], rb.RoleRef.Name)
 				}
 			}
 		}
@@ -76,15 +81,18 @@ func (m *MultiClusterClient) getServiceAccountRoles(ctx context.Context, context
 	if err == nil {
 		for _, crb := range crbs.Items {
 			for _, subject := range crb.Subjects {
-				if subject.Kind == "ServiceAccount" && subject.Name == saName && subject.Namespace == namespace {
-					roles = append(roles, crb.RoleRef.Name+" (cluster)")
+				if subject.Kind == "ServiceAccount" {
+					ns := subject.Namespace
+					key := ns + "/" + subject.Name
+					result[key] = append(result[key], crb.RoleRef.Name+" (cluster)")
 				}
 			}
 		}
 	}
 
-	return roles, nil
+	return result
 }
+
 
 // ListRoles returns all Roles in a namespace
 func (m *MultiClusterClient) ListRoles(ctx context.Context, contextName, namespace string) ([]models.K8sRole, error) {

@@ -480,7 +480,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       params.set('cluster', cluster)
       if (namespace) params.set('namespace', namespace)
-      const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`)
+      const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`, { timeout: 60000 })
       setServiceAccounts(data || [])
       setError(null)
     } catch (err) {
@@ -557,7 +557,7 @@ export function useAllK8sServiceAccounts(clusters: Array<{ name: string }>) {
     const results = await Promise.allSettled(
       clusters.map(async (cluster) => {
         try {
-          const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`)
+          const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`, { timeout: 60000 })
           return { cluster: cluster.name, sas: data || [] }
         } catch {
           // Mark cluster as failed but don't break the whole fetch
@@ -609,7 +609,7 @@ export function useK8sRoles(cluster: string, namespace?: string, includeSystem?:
       const params = new URLSearchParams({ cluster })
       if (namespace) params.set('namespace', namespace)
       if (includeSystem) params.set('includeSystem', 'true')
-      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`)
+      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: 60000 })
       setRoles(data || [])
     } catch {
       // Silently fail - backend may be unavailable
@@ -642,7 +642,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
       const params = new URLSearchParams({ cluster })
       if (namespace) params.set('namespace', namespace)
       if (includeSystem) params.set('includeSystem', 'true')
-      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`)
+      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: 60000 })
       setBindings(data || [])
     } catch {
       // Silently fail - backend may be unavailable

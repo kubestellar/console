@@ -5710,7 +5710,7 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
       if (namespace) params.append('namespace', namespace)
       if (includeSystem) params.append('includeSystem', 'true')
 
-      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`)
+      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: 60000 })
       setRoles(data || [])
       setError(null)
     } catch (err) {
@@ -5757,7 +5757,7 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
       if (namespace) params.append('namespace', namespace)
       if (includeSystem) params.append('includeSystem', 'true')
 
-      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`)
+      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: 60000 })
       setBindings(data || [])
       setError(null)
     } catch (err) {
@@ -5797,7 +5797,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
 
-      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`)
+      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`, { timeout: 60000 })
       setServiceAccounts(data || [])
       setError(null)
     } catch (err) {
