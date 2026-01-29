@@ -111,14 +111,14 @@ jobs:
       - name: Mark PR ready when build and lint pass
         if: steps.build.outcome == 'success' && steps.lint.outcome == 'success' && steps.find_pr.outputs.pr_number != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
         run: |
           PR_NUM="${{ steps.find_pr.outputs.pr_number }}"
 
-          # Check if PR is draft
+          # Check if PR is draft — use CONSOLE_AUTO PAT to modify Copilot-created PRs
           IS_DRAFT=$(gh pr view "$PR_NUM" --repo "${{ github.repository }}" --json isDraft --jq '.isDraft')
           if [ "$IS_DRAFT" = "true" ]; then
-            gh pr ready "$PR_NUM" --repo "${{ github.repository }}"
+            gh pr ready "$PR_NUM" --repo "${{ github.repository }}" || echo "Warning: failed to mark ready with primary token"
             echo "Marked PR #$PR_NUM as ready for review"
           fi
 

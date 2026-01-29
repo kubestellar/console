@@ -406,17 +406,17 @@ jobs:
       - name: Mark PR ready if build passes and PR is draft
         if: steps.wait_netlify.outputs.netlify_conclusion == 'success'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
         run: |
           PR_NUM="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
 
-          # Check if PR is still a draft
+          # Check if PR is still a draft — use CONSOLE_AUTO PAT for Copilot-created PRs
           IS_DRAFT=$(gh pr view "$PR_NUM" --repo "$REPO" --json isDraft --jq '.isDraft')
 
           if [ "$IS_DRAFT" = "true" ]; then
             echo "PR #$PR_NUM is a draft with passing build, marking as ready..."
-            gh pr ready "$PR_NUM" --repo "$REPO"
+            gh pr ready "$PR_NUM" --repo "$REPO" || echo "Warning: failed to mark ready"
 
             # Also clean up labels
             gh pr edit "$PR_NUM" --repo "$REPO" --remove-label "do-not-merge/work-in-progress" 2>/dev/null || true

@@ -24,6 +24,7 @@ jobs:
       - name: Check Copilot PRs (3x with 20s intervals)
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
           script: |
             const sleep = ms => new Promise(r => setTimeout(r, ms));
 

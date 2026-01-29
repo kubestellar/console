@@ -371,7 +371,7 @@ jobs:
       - name: Auto-mark PR ready for review
         if: steps.pr_info.outputs.is_copilot == 'true' && steps.pr_info.outputs.is_draft == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO || secrets.GITHUB_TOKEN }}
         run: |
           PR_NUM="${{ steps.pr_info.outputs.pr_number }}"
 
