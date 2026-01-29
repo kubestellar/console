@@ -77,7 +77,7 @@ jobs:
             echo "Focus override: $OVERRIDE"
           else
             DOY=$(date -u +%j)  # Day of year (1-366)
-            SLOT=$(( DOY % 8 ))
+            SLOT=$(( 10#$DOY % 8 ))  # 10# forces base-10 (date +%j zero-pads, which bash reads as octal)
             case $SLOT in
               0) FOCUS="performance" ;;
               1) FOCUS="security" ;;
