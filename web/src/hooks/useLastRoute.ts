@@ -78,10 +78,11 @@ export function useLastRoute() {
 
   // Save last route on path change
   useEffect(() => {
-    // Don't track auth-related pages
+    // Don't track auth-related pages or the root path (which is a redirect target)
     if (location.pathname.startsWith('/auth') ||
         location.pathname === '/login' ||
-        location.pathname === '/onboarding') {
+        location.pathname === '/onboarding' ||
+        location.pathname === '/') {
       return
     }
 
@@ -102,19 +103,19 @@ export function useLastRoute() {
 
     try {
       const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
+      // Always check for a first-sidebar-item override first
+      const firstSidebarRoute = getFirstDashboardRoute()
+
       if (lastRoute && lastRoute !== '/' && lastRoute !== location.pathname) {
-        // Navigate to last route and restore scroll after navigation
+        // Navigate to last visited route and restore scroll after navigation
         navigate(lastRoute, { replace: true })
         // Restore scroll position after a short delay to allow page to render
         setTimeout(() => {
           restoreScrollPosition(lastRoute)
         }, 100)
-      } else {
-        // No saved route or it's root - navigate to first dashboard in sidebar
-        const firstDashboard = getFirstDashboardRoute()
-        if (firstDashboard && firstDashboard !== '/') {
-          navigate(firstDashboard, { replace: true })
-        }
+      } else if (firstSidebarRoute && firstSidebarRoute !== '/') {
+        // No saved route or it's root — navigate to first sidebar item
+        navigate(firstSidebarRoute, { replace: true })
       }
     } catch {
       // Ignore localStorage errors
