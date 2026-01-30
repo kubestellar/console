@@ -1,9 +1,11 @@
-import { useState } from 'react'
 import { ExternalLink, AlertCircle } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
-import { usePagination, Pagination } from '../../ui/Pagination'
+import { useCardData } from '../../../lib/cards/cardHooks'
+import { CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { DEMO_NOTEBOOKS, useDemoData } from './shared'
+
+type Notebook = typeof DEMO_NOTEBOOKS[number]
 
 interface MLNotebooksProps {
   config?: Record<string, unknown>
@@ -11,10 +13,20 @@ interface MLNotebooksProps {
 
 export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
-  const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(notebooks, effectivePerPage)
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage } = useCardData<Notebook, 'name'>(notebooks, {
+    filter: {
+      searchFields: ['name', 'user', 'status'] as (keyof Notebook)[],
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: {
+        name: (a, b) => a.name.localeCompare(b.name),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -46,7 +58,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
         <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
           {notebooks.filter(n => n.status === 'running').length} active
         </span>
-        <CardControls limit={limit} onLimitChange={setLimit} />
+        <CardControls limit={itemsPerPage} onLimitChange={setItemsPerPage} />
       </div>
 
       {/* Integration notice */}
@@ -75,7 +87,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
             </tr>
           </thead>
           <tbody>
-            {paginatedItems.map((nb, idx) => (
+            {items.map((nb, idx) => (
               <tr key={idx} className="border-b border-border/30 hover:bg-secondary/30">
                 <td className="py-2 font-medium text-foreground">{nb.name}</td>
                 <td className="py-2 text-muted-foreground">{nb.user}</td>
@@ -90,18 +102,14 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={effectivePerPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
+        onPageChange={goToPage}
+        needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+      />
     </div>
   )
 }

@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { AlertTriangle, CheckCircle2, Server, ChevronDown } from 'lucide-react'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { Pagination, usePagination } from '../ui/Pagination'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import type { ClusterEvent } from '../../hooks/useMCP'
 
 function getTimeAgo(timestamp: string | undefined): string {
   if (!timestamp) return 'Unknown'
@@ -23,6 +23,14 @@ function getTimeAgo(timestamp: string | undefined): string {
   return 'Just now'
 }
 
+type SortByOption = 'time' | 'count' | 'reason'
+
+const SORT_OPTIONS = [
+  { value: 'time' as const, label: 'Time' },
+  { value: 'count' as const, label: 'Count' },
+  { value: 'reason' as const, label: 'Reason' },
+]
+
 export function WarningEvents() {
   const {
     events,
@@ -33,29 +41,52 @@ export function WarningEvents() {
     consecutiveFailures,
     lastRefresh,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
-  const { filterByCluster } = useGlobalFilters()
+
+  // Pre-filter to only warning events before passing to useCardData
+  const warningOnly = useMemo(() => events.filter(e => e.type === 'Warning'), [events])
 
   const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'warning-events',
+    items: displayedEvents,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting,
+  } = useCardData<ClusterEvent, SortByOption>(warningOnly, {
+    filter: {
+      searchFields: ['reason', 'message', 'object', 'namespace'],
+      clusterField: 'cluster',
+      storageKey: 'warning-events',
+    },
+    sort: {
+      defaultField: 'time',
+      defaultDirection: 'desc',
+      comparators: {
+        time: (a, b) => {
+          const aTime = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
+          const bTime = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
+          return aTime - bTime
+        },
+        count: commonComparators.number<ClusterEvent>('count'),
+        reason: commonComparators.string<ClusterEvent>('reason'),
+      },
+    },
+    defaultLimit: 5,
   })
-
-  const warningEvents = useMemo(() => {
-    let result = filterByCluster(events).filter(e => e.type === 'Warning')
-    if (localClusterFilter.length > 0) {
-      result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
-    }
-    return result
-  }, [events, filterByCluster, localClusterFilter])
-
-  const { paginatedItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setPerPage } = usePagination(warningEvents, 5)
 
   if (isLoading) {
     return (
@@ -72,37 +103,29 @@ export function WarningEvents() {
       {/* Header controls */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          {warningEvents.length} warning{warningEvents.length !== 1 ? 's' : ''}
+          {totalItems} warning{totalItems !== 1 ? 's' : ''}
         </span>
         <div className="flex items-center gap-2">
-          {availableClusters.length > 1 && (
-            <div className="relative" ref={clusterFilterRef}>
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 transition-colors"
-              >
-                <Server className="w-3 h-3" />
-                {localClusterFilter.length > 0 ? `${localClusterFilter.length} cluster${localClusterFilter.length > 1 ? 's' : ''}` : 'All'}
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              {showClusterFilter && (
-                <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[160px]">
-                  <button onClick={clearClusterFilter} className="w-full text-left text-xs px-2 py-1 rounded hover:bg-secondary text-muted-foreground">
-                    All Clusters
-                  </button>
-                  {availableClusters.map(cluster => (
-                    <button
-                      key={cluster.name}
-                      onClick={() => toggleClusterFilter(cluster.name)}
-                      className={`w-full text-left text-xs px-2 py-1 rounded hover:bg-secondary ${localClusterFilter.includes(cluster.name) ? 'text-foreground font-medium' : 'text-muted-foreground'}`}
-                    >
-                      {localClusterFilter.includes(cluster.name) ? '✓ ' : ''}{cluster.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <CardControlsRow
+            clusterFilter={{
+              availableClusters,
+              selectedClusters: localClusterFilter,
+              onToggle: toggleClusterFilter,
+              onClear: clearClusterFilter,
+              isOpen: showClusterFilter,
+              setIsOpen: setShowClusterFilter,
+              containerRef: clusterFilterRef,
+            }}
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy: sorting.sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+              sortDirection: sorting.sortDirection,
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
+          />
           <RefreshButton
             isRefreshing={isRefreshing}
             onRefresh={refetch}
@@ -113,15 +136,22 @@ export function WarningEvents() {
         </div>
       </div>
 
+      {/* Search */}
+      <CardSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search warnings..."
+      />
+
       {/* Warning events list */}
-      {warningEvents.length === 0 ? (
+      {totalItems === 0 ? (
         <div className="text-center py-6">
           <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />
           <p className="text-sm text-muted-foreground">No warnings</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {paginatedItems.map((event, i) => (
+          {displayedEvents.map((event, i) => (
             <div
               key={`${event.object}-${event.reason}-${i}`}
               className="p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20"
@@ -136,7 +166,7 @@ export function WarningEvents() {
                     <span className="text-xs text-foreground truncate">{event.object}</span>
                     {event.count > 1 && (
                       <span className="text-xs px-1 py-0.5 rounded bg-card text-muted-foreground">
-                        ×{event.count}
+                        x{event.count}
                       </span>
                     )}
                   </div>
@@ -156,16 +186,14 @@ export function WarningEvents() {
       )}
 
       {/* Pagination */}
-      {needsPagination && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={warningEvents.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={goToPage}
-          onItemsPerPageChange={setPerPage}
-        />
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
     </div>
   )
 }

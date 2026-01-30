@@ -1,10 +1,16 @@
-import { useState } from 'react'
 import { Layers, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
-import { CardControls } from '../../ui/CardControls'
-import { usePagination, Pagination } from '../../ui/Pagination'
+import { useCardData } from '../../../lib/cards/cardHooks'
+import { CardPaginationFooter, CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdModels } from '../../../hooks/useCachedData'
 import { LLMD_CLUSTERS } from './shared'
+import type { LLMdModel } from '../../../hooks/useLLMd'
+
+type SortByOption = 'name'
+
+const SORT_OPTIONS = [
+  { value: 'name' as const, label: 'Name' },
+]
 
 interface LLMModelsProps {
   config?: Record<string, unknown>
@@ -12,10 +18,31 @@ interface LLMModelsProps {
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
   const { models, isLoading } = useCachedLLMdModels(LLMD_CLUSTERS)
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
 
-  const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(models, effectivePerPage)
+  const {
+    items: paginatedItems,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    sorting,
+  } = useCardData<LLMdModel, SortByOption>(models, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster'] as (keyof LLMdModel)[],
+      clusterField: 'cluster' as keyof LLMdModel,
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: {
+        name: (a, b) => a.name.localeCompare(b.name),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -49,9 +76,17 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
         <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
           {models.filter(m => m.status === 'loaded').length} loaded
         </span>
-        <div className="flex items-center gap-2">
-          <CardControls limit={limit} onLimitChange={setLimit} />
-        </div>
+        <CardControlsRow
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+        />
       </div>
 
       {/* Integration notice */}
@@ -98,18 +133,14 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={effectivePerPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 100}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
     </div>
   )
 }

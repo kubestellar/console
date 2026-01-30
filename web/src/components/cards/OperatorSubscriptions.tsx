@@ -1,12 +1,20 @@
-import { useState, useMemo } from 'react'
-import { Clock, AlertTriangle, Settings, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
-import { useClusters, useOperatorSubscriptions } from '../../hooks/useMCP'
-import { useChartFilters } from '../../lib/cards'
+import { useMemo } from 'react'
+import { Clock, AlertTriangle, Settings, ChevronRight } from 'lucide-react'
+import { useClusters, useOperatorSubscriptions, OperatorSubscription } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import {
+  useCardData,
+  useCardFilters,
+  commonComparators,
+  type SortDirection,
+} from '../../lib/cards'
+import {
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards/CardComponents'
 
 interface OperatorSubscriptionsProps {
   config?: {
@@ -23,91 +31,81 @@ const SORT_OPTIONS = [
   { value: 'channel' as const, label: 'Channel' },
 ]
 
+const SUBSCRIPTION_SORT_COMPARATORS = {
+  pending: (a: OperatorSubscription, b: OperatorSubscription) =>
+    (a.pendingUpgrade ? 0 : 1) - (b.pendingUpgrade ? 0 : 1),
+  name: commonComparators.string<OperatorSubscription>('name'),
+  approval: commonComparators.string<OperatorSubscription>('installPlanApproval'),
+  channel: commonComparators.string<OperatorSubscription>('channel'),
+}
+
+// Shared filter config for counting and display
+const FILTER_CONFIG = {
+  searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
+  clusterField: 'cluster' as keyof OperatorSubscription,
+  storageKey: 'operator-subscriptions',
+}
+
 export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
   const { isLoading: clustersLoading } = useClusters()
-
-  // Use chart filters hook for cluster filtering
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    filteredClusters: clusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({ storageKey: 'operator-subscriptions' })
-
-  const [sortBy, setSortBy] = useState<SortByOption>('pending')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
   const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading } = useOperatorSubscriptions(undefined)
 
-  // Filter and sort subscriptions
-  const sortedSubscriptions = useMemo(() => {
-    let result = [...rawSubscriptions]
+  // Use useCardFilters for summary counts (globally filtered, before local search/pagination)
+  const { filtered: globalFilteredSubscriptions } = useCardFilters(rawSubscriptions, FILTER_CONFIG)
 
-    // Apply cluster filter (from useChartFilters)
-    const clusterNames = new Set(clusters.map(c => c.name))
-    result = result.filter(sub => {
-      const clusterName = sub.cluster?.split('/')[0] || ''
-      return clusterNames.has(clusterName) || clusterNames.has(sub.cluster || '')
-    })
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(sub =>
-        sub.name.toLowerCase().includes(query) ||
-        sub.namespace.toLowerCase().includes(query) ||
-        sub.channel.toLowerCase().includes(query) ||
-        sub.currentCSV.toLowerCase().includes(query)
-      )
-    }
-
-    return result.sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'pending':
-          compare = (a.pendingUpgrade ? 0 : 1) - (b.pendingUpgrade ? 0 : 1)
-          break
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'approval':
-          compare = a.installPlanApproval.localeCompare(b.installPlanApproval)
-          break
-        case 'channel':
-          compare = a.channel.localeCompare(b.channel)
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-  }, [rawSubscriptions, clusters, sortBy, sortDirection, localSearch])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: subscriptions,
+    items: subscriptions,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedSubscriptions, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: searchQuery,
+      setSearch: setSearchQuery,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
+    filter: {
+      searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
+      clusterField: 'cluster',
+      storageKey: 'operator-subscriptions',
+    },
+    sort: {
+      defaultField: 'pending',
+      defaultDirection: 'asc' as SortDirection,
+      comparators: SUBSCRIPTION_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   const isLoading = clustersLoading || subscriptionsLoading
   const showSkeleton = isLoading && rawSubscriptions.length === 0
 
-  // Use sortedSubscriptions for total counts (after filtering, not raw data)
-  const autoCount = sortedSubscriptions.filter(s => s.installPlanApproval === 'Automatic').length
-  const manualCount = sortedSubscriptions.filter(s => s.installPlanApproval === 'Manual').length
-  const pendingCount = sortedSubscriptions.filter(s => s.pendingUpgrade).length
+  // Summary counts from globally filtered data (before local search/pagination)
+  const { autoCount, manualCount, pendingCount } = useMemo(() => ({
+    autoCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Automatic').length,
+    manualCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Manual').length,
+    pendingCount: globalFilteredSubscriptions.filter(s => s.pendingUpgrade).length,
+  }), [globalFilteredSubscriptions])
 
   if (showSkeleton) {
     return (
@@ -130,73 +128,37 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
       {/* Controls - single row */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {clusters.length}/{availableClusters.length}
-            </span>
-          )}
           {pendingCount > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
               {pendingCount} pending
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster Filter */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
+        <CardControlsRow
+          clusterIndicator={localClusterFilter.length > 0 ? {
+            selectedCount: localClusterFilter.length,
+            totalCount: availableClusters.length,
+          } : undefined}
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1,
+          }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection,
+          }}
+        />
       </div>
 
       {availableClusters.length > 0 && (
@@ -211,22 +173,18 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
               </span>
             ) : (
               <span className="text-xs px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400">
-                All Clusters ({clusters.length})
+                All Clusters ({availableClusters.length})
               </span>
             )}
           </div>
 
           {/* Local Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Search subscriptions..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-            />
-          </div>
+          <CardSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search subscriptions..."
+            className="mb-4"
+          />
 
           {/* Summary badges */}
           <div className="flex gap-2 mb-4 text-xs">
@@ -298,22 +256,18 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           </div>
 
           {/* Pagination */}
-          {needsPagination && limit !== 'unlimited' && (
-            <div className="pt-2 border-t border-border/50 mt-2">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={perPage}
-                onPageChange={goToPage}
-                showItemsPerPage={false}
-              />
-            </div>
-          )}
+          <CardPaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+            onPageChange={goToPage}
+            needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+          />
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            {totalItems} subscription{totalItems !== 1 ? 's' : ''} {localClusterFilter.length === 1 ? `on ${localClusterFilter[0]}` : `across ${clusters.length} cluster${clusters.length !== 1 ? 's' : ''}`}
+            {totalItems} subscription{totalItems !== 1 ? 's' : ''} {localClusterFilter.length === 1 ? `on ${localClusterFilter[0]}` : `across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
           </div>
         </>
       )}

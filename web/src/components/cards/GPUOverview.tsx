@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Filter, ChevronDown, Server } from 'lucide-react'
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { CardControls, SortDirection } from '../ui/CardControls'
 import { Skeleton } from '../ui/Skeleton'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardControlsRow } from '../../lib/cards/CardComponents'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
@@ -30,44 +29,42 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
 
-  // Local cluster filter
+  const [selectedGpuType, setSelectedGpuType] = useState<string>('all')
+
+  // Use useCardData for filtering and sort state management
   const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'gpu-overview',
+    items: filteredNodes,
+    filters,
+    sorting,
+  } = useCardData(rawNodes, {
+    filter: {
+      searchFields: ['gpuType' as keyof typeof rawNodes[number]],
+      clusterField: 'cluster' as keyof typeof rawNodes[number],
+      storageKey: 'gpu-overview',
+    },
+    sort: {
+      defaultField: 'count' as SortByOption,
+      defaultDirection: 'desc',
+      comparators: {
+        count: commonComparators.number('gpuCount' as keyof typeof rawNodes[number]),
+        name: commonComparators.string('gpuType' as keyof typeof rawNodes[number]),
+      } as Record<SortByOption, (a: typeof rawNodes[number], b: typeof rawNodes[number]) => number>,
+    },
+    defaultLimit: 'unlimited',
   })
 
-  const [selectedGpuType, setSelectedGpuType] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<SortByOption>('count')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  // Apply GPU type filter on top of useCardData filtered nodes
+  const nodes = useMemo(() => {
+    if (selectedGpuType === 'all') return filteredNodes
+    return filteredNodes.filter(n => n.gpuType === selectedGpuType)
+  }, [filteredNodes, selectedGpuType])
 
-  // Get all unique GPU types for filter dropdown
+  // Get all unique GPU types for filter dropdown (from raw data)
   const allGpuTypes = useMemo(() => {
     const types = new Set<string>()
     rawNodes.forEach(n => types.add(n.gpuType))
     return Array.from(types).sort()
   }, [rawNodes])
-
-  // Filter nodes by global cluster selection, local filter, and GPU type
-  const nodes = useMemo(() => {
-    let result = rawNodes
-    if (!isAllClustersSelected) {
-      result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-    }
-    if (localClusterFilter.length > 0) {
-      result = result.filter(n => localClusterFilter.some(c => n.cluster.startsWith(c)))
-    }
-    if (selectedGpuType !== 'all') {
-      result = result.filter(n => n.gpuType === selectedGpuType)
-    }
-    return result
-  }, [rawNodes, selectedClusters, isAllClustersSelected, selectedGpuType, localClusterFilter])
 
   // Check if any selected clusters are reachable
   const filteredClusters = useMemo(() => {
@@ -120,12 +117,12 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
 
   const sortedGpuTypes = Object.entries(gpuTypesMap).sort((a, b) => {
     let compare = 0
-    if (sortBy === 'count') {
+    if (sorting.sortBy === 'count') {
       compare = a[1] - b[1]
     } else {
       compare = a[0].localeCompare(b[0])
     }
-    return sortDirection === 'asc' ? compare : -compare
+    return sorting.sortDirection === 'asc' ? compare : -compare
   })
 
   const clusterCount = new Set(nodes.map(n => n.cluster)).size
@@ -134,68 +131,37 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     <div className="h-full flex flex-col content-loaded">
       {/* Header */}
       <div className="flex items-center justify-end mb-4">
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-            showLimit={false}
-          />
-        </div>
+        <CardControlsRow
+          clusterIndicator={
+            filters.localClusterFilter.length > 0
+              ? { selectedCount: filters.localClusterFilter.length, totalCount: filters.availableClusters.length }
+              : undefined
+          }
+          clusterFilter={
+            filters.availableClusters.length >= 1
+              ? {
+                  availableClusters: filters.availableClusters,
+                  selectedClusters: filters.localClusterFilter,
+                  onToggle: filters.toggleClusterFilter,
+                  onClear: filters.clearClusterFilter,
+                  isOpen: filters.showClusterFilter,
+                  setIsOpen: filters.setShowClusterFilter,
+                  containerRef: filters.clusterFilterRef,
+                  minClusters: 1,
+                }
+              : undefined
+          }
+          cardControls={{
+            limit: 'unlimited',
+            onLimitChange: () => {},
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+          className="mb-0"
+        />
       </div>
 
       {/* GPU Type Filter */}

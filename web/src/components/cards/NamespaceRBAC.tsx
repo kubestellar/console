@@ -1,13 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Users, Key, Lock, ChevronRight, Search, Server, Filter, ChevronDown } from 'lucide-react'
+import { Users, Key, Lock, ChevronRight } from 'lucide-react'
 import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 
 interface NamespaceRBACProps {
   config?: {
@@ -38,16 +37,6 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
-  const [sortBy, setSortBy] = useState<SortByOption>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
-
-  // Local cluster filter
-  const {
-    localClusterFilter, toggleClusterFilter, clearClusterFilter,
-    availableClusters, showClusterFilter, setShowClusterFilter, clusterFilterRef,
-  } = useChartFilters({ storageKey: 'namespace-rbac' })
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
   const { namespaces } = useNamespaces(selectedCluster || undefined)
@@ -78,86 +67,83 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const isLoading = isInitialLoading
   const showSkeleton = isLoading && clusters.length === 0
 
-  // Transform RBAC data to the display format
-  const rbacData = useMemo(() => {
-    if (!selectedCluster || !selectedNamespace) {
-      return { roles: [], bindings: [], serviceaccounts: [] }
-    }
-
-    // Sort function
-    const sortItems = (items: RBACItem[]) => {
-      return [...items].sort((a, b) => {
-        let compare = 0
-        switch (sortBy) {
-          case 'name':
-            compare = a.name.localeCompare(b.name)
-            break
-          case 'rules':
-            compare = (a.rules || 0) - (b.rules || 0)
-            break
-        }
-        return sortDirection === 'asc' ? compare : -compare
-      })
-    }
-
-    // Filter function for local search
-    const filterItems = (items: RBACItem[]) => {
-      if (!localSearch.trim()) return items
-      const query = localSearch.toLowerCase()
-      return items.filter(item =>
-        item.name.toLowerCase().includes(query) ||
-        (item.subjects || []).some(s => s.toLowerCase().includes(query))
-      )
-    }
-
-    // Transform roles to RBACItem format
-    const roles: RBACItem[] = sortItems(filterItems(k8sRoles
+  // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
+  const rbacRoles: RBACItem[] = useMemo(() => {
+    if (!selectedCluster || !selectedNamespace) return []
+    return k8sRoles
       .filter(r => !r.namespace || r.namespace === selectedNamespace)
       .map(r => ({
         name: r.name,
         type: 'Role' as const,
         rules: r.ruleCount,
         cluster: r.cluster,
-      }))))
+      }))
+  }, [selectedCluster, selectedNamespace, k8sRoles])
 
-    // Transform bindings to RBACItem format
-    const bindings: RBACItem[] = sortItems(filterItems(k8sBindings
+  const rbacBindings: RBACItem[] = useMemo(() => {
+    if (!selectedCluster || !selectedNamespace) return []
+    return k8sBindings
       .filter(b => !b.namespace || b.namespace === selectedNamespace)
       .map(b => ({
         name: b.name,
         type: 'RoleBinding' as const,
         subjects: b.subjects.map(s => s.name),
         cluster: b.cluster,
-      }))))
+      }))
+  }, [selectedCluster, selectedNamespace, k8sBindings])
 
-    // Transform service accounts to RBACItem format
-    const serviceaccounts: RBACItem[] = sortItems(filterItems(k8sServiceAccounts
+  const rbacServiceAccounts: RBACItem[] = useMemo(() => {
+    if (!selectedCluster || !selectedNamespace) return []
+    return k8sServiceAccounts
       .filter(sa => sa.namespace === selectedNamespace)
       .map(sa => ({
         name: sa.name,
         type: 'ServiceAccount' as const,
         cluster: sa.cluster,
-      }))))
+      }))
+  }, [selectedCluster, selectedNamespace, k8sServiceAccounts])
 
-    return { roles, bindings, serviceaccounts }
-  }, [selectedCluster, selectedNamespace, k8sRoles, k8sBindings, k8sServiceAccounts, sortBy, sortDirection, localSearch])
+  // Select the active tab's data
+  const activeTabItems = activeTab === 'roles'
+    ? rbacRoles
+    : activeTab === 'bindings'
+      ? rbacBindings
+      : rbacServiceAccounts
 
-  // Pagination for current tab
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Apply useCardData for filtering, sorting, and pagination on the active tab
   const {
-    paginatedItems: paginatedItems,
+    items: paginatedItems,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(rbacData[activeTab], effectivePerPage)
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<RBACItem, SortByOption>(activeTabItems, {
+    filter: {
+      searchFields: ['name'] as (keyof RBACItem)[],
+      storageKey: 'namespace-rbac',
+      customPredicate: (item, query) =>
+        (item.subjects || []).some(s => s.toLowerCase().includes(query)),
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: {
+        name: commonComparators.string<RBACItem>('name'),
+        rules: commonComparators.number<RBACItem>('rules'),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const tabs = [
-    { key: 'roles' as const, label: 'Roles', icon: Key, count: rbacData.roles.length },
-    { key: 'bindings' as const, label: 'Bindings', icon: Lock, count: rbacData.bindings.length },
-    { key: 'serviceaccounts' as const, label: 'SAs', icon: Users, count: rbacData.serviceaccounts.length },
+    { key: 'roles' as const, label: 'Roles', icon: Key, count: rbacRoles.length },
+    { key: 'bindings' as const, label: 'Bindings', icon: Lock, count: rbacBindings.length },
+    { key: 'serviceaccounts' as const, label: 'SAs', icon: Users, count: rbacServiceAccounts.length },
   ]
 
   if (showSkeleton) {
@@ -183,72 +169,34 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-            {activeTab === 'roles' ? `${rbacData.roles.length} roles` : activeTab === 'bindings' ? `${rbacData.bindings.length} bindings` : `${rbacData.serviceaccounts.length} service accounts`}
+            {activeTab === 'roles' ? `${rbacRoles.length} roles` : activeTab === 'bindings' ? `${rbacBindings.length} bindings` : `${rbacServiceAccounts.length} service accounts`}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(c => (
-                      <button
-                        key={c.name}
-                        onClick={() => toggleClusterFilter(c.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
+        <CardControlsRow
+          clusterIndicator={{
+            selectedCount: filters.localClusterFilter.length,
+            totalCount: filters.availableClusters.length,
+          }}
+          clusterFilter={{
+            availableClusters: filters.availableClusters,
+            selectedClusters: filters.localClusterFilter,
+            onToggle: filters.toggleClusterFilter,
+            onClear: filters.clearClusterFilter,
+            isOpen: filters.showClusterFilter,
+            setIsOpen: filters.setShowClusterFilter,
+            containerRef: filters.clusterFilterRef,
+          }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+          className="mb-0"
+        />
       </div>
 
       {/* Selectors */}
@@ -286,16 +234,12 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
       ) : (
         <>
           {/* Local Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Search RBAC..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-            />
-          </div>
+          <CardSearchInput
+            value={filters.search}
+            onChange={filters.setSearch}
+            placeholder="Search RBAC..."
+            className="mb-4"
+          />
 
           {/* Scope badge */}
           <div className="flex items-center gap-2 mb-4">
@@ -374,24 +318,20 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
           </div>
 
           {/* Pagination */}
-          {needsPagination && limit !== 'unlimited' && (
-            <div className="pt-2 border-t border-border/50 mt-2">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={perPage}
-                onPageChange={goToPage}
-                showItemsPerPage={false}
-              />
-            </div>
-          )}
+          <CardPaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+            onPageChange={goToPage}
+            needsPagination={needsPagination}
+          />
 
           {/* Summary */}
           <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{rbacData.roles.length} Roles</span>
-            <span>{rbacData.bindings.length} Bindings</span>
-            <span>{rbacData.serviceaccounts.length} ServiceAccounts</span>
+            <span>{rbacRoles.length} Roles</span>
+            <span>{rbacBindings.length} Bindings</span>
+            <span>{rbacServiceAccounts.length} ServiceAccounts</span>
           </div>
         </>
       )}

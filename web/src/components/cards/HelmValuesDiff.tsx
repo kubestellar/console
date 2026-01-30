@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { ChevronRight, Plus, Edit, Search, Filter, ChevronDown, Server, RotateCcw } from 'lucide-react'
+import { ChevronRight, Plus, Edit, Filter, ChevronDown, Server, RotateCcw } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 
 interface HelmValuesDiffProps {
   config?: {
@@ -41,7 +41,7 @@ function flattenValues(obj: Record<string, unknown>, prefix = ''): ValueEntry[] 
   return entries
 }
 
-type SortField = 'name' | 'cluster'
+type SortByOption = 'name' | 'cluster'
 
 const SORT_OPTIONS = [
   { value: 'name' as const, label: 'Name' },
@@ -52,24 +52,23 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
-  const [localSearch, setLocalSearch] = useState('')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortField>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const { drillToHelm } = useDrillDownActions()
 
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters: chartFilterClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'helm-values-diff',
-  })
+  // Local cluster filter (card-specific, kept as separate state)
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Track local selection state for global filter sync
   const savedLocalCluster = useRef<string>('')
@@ -156,6 +155,23 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
+  // Available clusters for the local cluster filter dropdown
+  const chartFilterClusters = useMemo(() => {
+    return clusters.filter(c => c.reachable !== false)
+  }, [clusters])
+
+  const toggleClusterFilter = (clusterName: string) => {
+    if (localClusterFilter.includes(clusterName)) {
+      setLocalClusterFilter(localClusterFilter.filter(c => c !== clusterName))
+    } else {
+      setLocalClusterFilter([...localClusterFilter, clusterName])
+    }
+  }
+
+  const clearClusterFilter = () => {
+    setLocalClusterFilter([])
+  }
+
   // Filter releases locally by selected cluster (no API call)
   const filteredReleases = useMemo(() => {
     if (!selectedCluster) return allHelmReleases
@@ -168,8 +184,8 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     return Array.from(releaseSet).sort()
   }, [filteredReleases])
 
-  // Process values into entries
-  const valueEntries = useMemo(() => {
+  // Process values into entries (before useCardData filtering)
+  const rawValueEntries = useMemo(() => {
     if (!values) return []
 
     let entries: ValueEntry[] = []
@@ -181,17 +197,35 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
       entries = flattenValues(values as Record<string, unknown>)
     }
 
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      entries = entries.filter(e =>
-        e.path.toLowerCase().includes(query) ||
-        e.value.toLowerCase().includes(query)
-      )
-    }
-
     return entries
-  }, [values, format, localSearch])
+  }, [values, format])
+
+  // Use useCardData for filtering, sorting, and pagination
+  const {
+    items: valueEntries,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<ValueEntry, SortByOption>(rawValueEntries, {
+    filter: {
+      searchFields: ['path', 'value'],
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: {
+        name: commonComparators.string<ValueEntry>('path'),
+        cluster: commonComparators.string<ValueEntry>('value'),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   if (isLoading) {
     return (
@@ -216,7 +250,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {valueEntries.length} values
+            {totalItems} values
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -272,29 +306,27 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
             </div>
           )}
 
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+          <CardControlsRow
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy: sorting.sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+              sortDirection: sorting.sortDirection,
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
           />
         </div>
       </div>
 
       {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search values..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search values..."
+        className="mb-3"
+      />
 
       {/* Selectors */}
       <div className="flex gap-2 mb-4">
@@ -344,7 +376,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
             onClick={() => {
               if (selectedCluster && selectedRelease && selectedReleaseNamespace) {
                 drillToHelm(selectedCluster, selectedReleaseNamespace, selectedRelease, {
-                  valuesCount: valueEntries.length,
+                  valuesCount: totalItems,
                 })
               }
             }}
@@ -360,7 +392,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           <div className="flex gap-2 mb-4 text-xs">
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10 text-blue-400">
               <Edit className="w-3 h-3" />
-              <span>{valueEntries.length} custom values</span>
+              <span>{totalItems} custom values</span>
             </div>
           </div>
 
@@ -391,6 +423,16 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
               ))
             )}
           </div>
+
+          {/* Pagination footer */}
+          <CardPaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+            onPageChange={goToPage}
+            needsPagination={needsPagination}
+          />
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">

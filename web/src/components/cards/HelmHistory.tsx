@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
-import { useClusters, useHelmReleases, useHelmHistory } from '../../hooks/useMCP'
+import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
+import { useClusters, useHelmReleases, useHelmHistory, type HelmHistoryEntry } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useChartFilters } from '../../lib/cards'
+import {
+  useCardData,
+  CardSearchInput, CardControlsRow, CardPaginationFooter,
+} from '../../lib/cards'
 
 interface HelmHistoryProps {
   config?: {
@@ -25,14 +26,18 @@ const SORT_OPTIONS = [
   { value: 'updated' as const, label: 'Updated' },
 ]
 
+const STATUS_ORDER: Record<string, number> = {
+  failed: 0,
+  'pending-upgrade': 1,
+  'pending-rollback': 2,
+  deployed: 3,
+  superseded: 4,
+}
+
 export function HelmHistory({ config }: HelmHistoryProps) {
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
-  const [sortBy, setSortBy] = useState<SortByOption>('revision')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
 
   // Track local selection state for global filter sync
   const savedLocalCluster = useRef<string>('')
@@ -45,19 +50,6 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     customFilter,
   } = useGlobalFilters()
   const { drillToHelm } = useDrillDownActions()
-
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'helm-history',
-  })
 
   // Sync local selection with global filter changes
   useEffect(() => {
@@ -144,50 +136,50 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     return Array.from(releaseSet).sort()
   }, [filteredReleases])
 
-  // Sort and filter history
-  const sortedHistory = useMemo(() => {
-    const statusOrder: Record<string, number> = { failed: 0, 'pending-upgrade': 1, 'pending-rollback': 2, deployed: 3, superseded: 4 }
-    let result = [...rawHistory]
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(h =>
-        h.chart.toLowerCase().includes(query) ||
-        h.status.toLowerCase().includes(query) ||
-        (h.description?.toLowerCase() || '').includes(query) ||
-        String(h.revision).includes(query)
-      )
-    }
-
-    return result.sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'revision':
-          compare = b.revision - a.revision
-          break
-        case 'status':
-          compare = (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5)
-          break
-        case 'updated':
-          compare = new Date(b.updated).getTime() - new Date(a.updated).getTime()
-          break
-      }
-      return sortDirection === 'asc' ? -compare : compare
-    })
-  }, [rawHistory, sortBy, sortDirection, localSearch])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: history,
+    items: history,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedHistory, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<HelmHistoryEntry, SortByOption>(rawHistory, {
+    filter: {
+      searchFields: ['chart', 'status', 'description'] as (keyof HelmHistoryEntry)[],
+      customPredicate: (item, query) => String(item.revision).includes(query),
+      storageKey: 'helm-history',
+    },
+    sort: {
+      defaultField: 'revision',
+      defaultDirection: 'desc',
+      comparators: {
+        revision: (a, b) => a.revision - b.revision,
+        status: (a, b) => (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5),
+        updated: (a, b) => new Date(a.updated).getTime() - new Date(b.updated).getTime(),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -241,69 +233,31 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(c => (
-                      <button
-                        key={c.name}
-                        onClick={() => toggleClusterFilter(c.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
+        <CardControlsRow
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1,
+          }}
+          clusterIndicator={localClusterFilter.length > 0 ? {
+            selectedCount: localClusterFilter.length,
+            totalCount: availableClusters.length,
+          } : undefined}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection,
+          }}
+        />
       </div>
 
       {/* Selectors */}
@@ -365,16 +319,12 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           </button>
 
           {/* Local Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Search history..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-            />
-          </div>
+          <CardSearchInput
+            value={localSearch}
+            onChange={setLocalSearch}
+            placeholder="Search history..."
+            className="mb-4"
+          />
 
           {/* History timeline */}
           <div className="flex-1 overflow-y-auto">
@@ -446,18 +396,14 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           </div>
 
           {/* Pagination */}
-          {needsPagination && limit !== 'unlimited' && (
-            <div className="pt-2 border-t border-border/50 mt-2">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={perPage}
-                onPageChange={goToPage}
-                showItemsPerPage={false}
-              />
-            </div>
-          )}
+          <CardPaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 10}
+            onPageChange={goToPage}
+            needsPagination={needsPagination}
+          />
 
           {/* Footer */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
