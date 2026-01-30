@@ -30,10 +30,12 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
   const currentAgent = visibleAgents.find(a => a.name === selectedAgent) || visibleAgents[0]
   const hasAvailableAgents = visibleAgents.some(a => a.available)
 
-  // Connect to agent WebSocket on mount to load agents list
+  // Connect to agent WebSocket on mount and when leaving demo mode
   useEffect(() => {
-    connectToAgent()
-  }, [connectToAgent])
+    if (!isDemoMode) {
+      connectToAgent()
+    }
+  }, [connectToAgent, isDemoMode])
 
   // Close dropdown when clicking outside
   useEffect(() => {
