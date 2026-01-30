@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Plus, Layout, RotateCcw } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { ResetMode } from '../../hooks/useDashboardReset'
@@ -16,9 +16,7 @@ interface FloatingDashboardActionsProps {
 }
 
 /**
- * Floating action buttons for Add Card, Templates, and Reset to Defaults.
- * These buttons stay fixed at the bottom right of the viewport
- * so users can always access them when scrolling through dashboards.
+ * Floating "+" button that expands into a menu with Add Card, Templates, and Reset.
  * Shifts left when mission sidebar is open to avoid overlap.
  */
 export function FloatingDashboardActions({
@@ -29,14 +27,28 @@ export function FloatingDashboardActions({
   isCustomized,
 }: FloatingDashboardActionsProps) {
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
+  const [isOpen, setIsOpen] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  // Shift buttons left based on mission sidebar state
-  // w-96 = 384px (full sidebar), w-12 = 48px (minimized)
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  // Shift button left based on mission sidebar state
+  // w-[500px] = 500px (full sidebar), w-12 = 48px (minimized)
   const getRightOffset = () => {
     if (!isSidebarOpen) return 'right-6'
     if (isSidebarMinimized) return 'right-[72px]' // 48px + 24px margin
-    return 'right-[420px]' // 384px + 36px margin
+    return 'right-[536px]' // 500px + 36px margin
   }
   const rightOffset = getRightOffset()
 
@@ -45,50 +57,63 @@ export function FloatingDashboardActions({
     if (onReset) {
       onReset(mode)
     } else if (onResetToDefaults && mode === 'replace') {
-      // Legacy support for old onResetToDefaults prop
       onResetToDefaults()
     }
   }
 
-  const showResetButton = isCustomized && (onReset || onResetToDefaults)
+  const showResetOption = isCustomized && (onReset || onResetToDefaults)
 
   return (
     <>
-      <div className={`fixed bottom-20 ${rightOffset} z-40 flex flex-col gap-1.5 transition-all duration-300`}>
-        {/* Reset button */}
-        {showResetButton && (
-          <button
-            onClick={() => setShowResetDialog(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg"
-            title="Reset dashboard cards"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
-          </button>
+      <div ref={menuRef} className={`fixed bottom-20 ${rightOffset} z-40 flex flex-col items-end gap-1.5 transition-all duration-300`}>
+        {/* Expanded menu items */}
+        {isOpen && (
+          <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            {showResetOption && (
+              <button
+                onClick={() => { setIsOpen(false); setShowResetDialog(true) }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+                title="Reset dashboard cards"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset
+              </button>
+            )}
+            <button
+              onClick={() => { setIsOpen(false); onOpenTemplates() }}
+              data-tour="templates"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+              title="Browse dashboard templates"
+            >
+              <Layout className="w-3.5 h-3.5" />
+              Templates
+            </button>
+            <button
+              onClick={() => { setIsOpen(false); onAddCard() }}
+              data-tour="add-card"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+              title="Add a new card"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Card
+            </button>
+          </div>
         )}
-        {/* Templates button */}
+
+        {/* FAB toggle */}
         <button
-          onClick={onOpenTemplates}
-          data-tour="templates"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg"
-          title="Browse dashboard templates"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`flex items-center justify-center w-10 h-10 rounded-full shadow-lg transition-all duration-200 ${
+            isOpen
+              ? 'bg-card border border-border rotate-45'
+              : 'bg-gradient-ks hover:scale-110 hover:shadow-xl'
+          }`}
+          title={isOpen ? 'Close menu' : 'Dashboard actions'}
         >
-          <Layout className="w-3.5 h-3.5" />
-          Templates
-        </button>
-        {/* Add Card button */}
-        <button
-          onClick={onAddCard}
-          data-tour="add-card"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gradient-ks text-foreground rounded-md shadow-md transition-all hover:shadow-lg hover:scale-105"
-          title="Add a new card"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Card
+          <Plus className="w-5 h-5 text-foreground" />
         </button>
       </div>
 
-      {/* Reset Dialog */}
       <ResetDialog
         isOpen={showResetDialog}
         onClose={() => setShowResetDialog(false)}

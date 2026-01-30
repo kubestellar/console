@@ -1112,7 +1112,7 @@ export function MissionSidebar() {
         "transition-[width,top,border,transform] duration-300 ease-in-out",
         isFullScreen
           ? "inset-0 top-16 border-l-0 rounded-none"
-          : "top-16 right-0 bottom-0 w-[520px] border-l shadow-xl",
+          : "top-16 right-0 bottom-0 w-[500px] border-l shadow-xl",
         !isSidebarOpen && "translate-x-full pointer-events-none"
       )}
     >

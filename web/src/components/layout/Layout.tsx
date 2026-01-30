@@ -91,7 +91,7 @@ export function Layout({ children }: LayoutProps) {
           "fixed top-16 z-30 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
           config.collapsed ? "left-20" : "left-64",
           // Adjust right edge when mission sidebar is open
-          isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-96" : "right-0",
+          isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[500px]" : "right-0",
           isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
         )}>
           <div className="flex items-center justify-between py-1.5 px-4">
@@ -134,7 +134,7 @@ export function Layout({ children }: LayoutProps) {
           'flex-1 p-6 transition-all duration-300 overflow-y-auto',
           config.collapsed ? 'ml-20' : 'ml-64',
           // Don't apply margin when fullscreen is active - sidebar covers everything
-          isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-96',
+          isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
           isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
           {children}
