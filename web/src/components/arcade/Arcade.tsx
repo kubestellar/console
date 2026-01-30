@@ -26,6 +26,10 @@ const ARCADE_CARDS_KEY = 'kubestellar-arcade-cards'
 
 // Default cards for the arcade dashboard - ALL game cards
 const DEFAULT_ARCADE_CARDS = [
+  // Strategy games (featured)
+  { type: 'checkers', title: 'Kube Checkers', position: { w: 5, h: 4 } },
+  { type: 'kube_chess', title: 'Kube Chess', position: { w: 5, h: 4 } },
+  { type: 'sudoku_game', title: 'Kube Sudoku', position: { w: 6, h: 4 } },
   // Classic arcade games
   { type: 'flappy_pod', title: 'Flappy Pod', position: { w: 6, h: 4 } },
   { type: 'container_tetris', title: 'Container Tetris', position: { w: 6, h: 4 } },
@@ -44,11 +48,8 @@ const DEFAULT_ARCADE_CARDS = [
   { type: 'game_2048', title: 'Kube 2048', position: { w: 4, h: 4 } },
   { type: 'pod_sweeper', title: 'Pod Sweeper', position: { w: 6, h: 4 } },
   { type: 'match_game', title: 'Kube Match', position: { w: 6, h: 4 } },
-  { type: 'sudoku_game', title: 'Kube Sudoku', position: { w: 6, h: 4 } },
   { type: 'kubedle', title: 'Kubedle', position: { w: 6, h: 4 } },
-  // Strategy games
-  { type: 'checkers', title: 'Kube Checkers', position: { w: 5, h: 4 } },
-  { type: 'kube_chess', title: 'Kube Chess', position: { w: 5, h: 4 } },
+  // Strategy games (remaining)
   { type: 'solitaire', title: 'Kube Solitaire', position: { w: 6, h: 4 } },
   // Sandbox games
   { type: 'kube_craft', title: 'KubeCraft', position: { w: 5, h: 4 } },
@@ -253,7 +254,7 @@ export function Arcade() {
           <div className="flex items-center gap-2 text-sm">
             <Trophy className="w-5 h-5 text-yellow-400" />
             <span className="text-muted-foreground">High Scores:</span>
-            <span className="font-bold text-yellow-400">Local Storage</span>
+            <span className="font-bold text-yellow-400">Saved Locally</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Zap className="w-5 h-5 text-blue-400" />
