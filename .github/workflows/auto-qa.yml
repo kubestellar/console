@@ -788,7 +788,7 @@ jobs:
 
       - name: Ensure labels exist
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
         run: |
           LABELS=(
             "auto-qa:FF6B35:Issue detected by automated QA"
@@ -855,6 +855,7 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
           script: |
             const fs = require('fs');
             const prefix = process.env.ISSUE_PREFIX;
