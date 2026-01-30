@@ -7,6 +7,9 @@ import './index.css'
 import './lib/i18n'
 // Import cache migration utility
 import { migrateFromLocalStorage } from './lib/cache'
+// Import dynamic card/stats persistence loaders
+import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
+import { registerDynamicCardType } from './components/cards/cardRegistry'
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn
@@ -57,6 +60,13 @@ enableMocking()
     } catch (e) {
       console.warn('[Cache] Migration failed:', e)
     }
+
+    // Restore dynamic cards and stat blocks from localStorage
+    loadDynamicCards()
+    getAllDynamicCards().forEach(card => {
+      registerDynamicCardType(card.id, card.defaultWidth ?? 6)
+    })
+    loadDynamicStats()
 
     ReactDOM.createRoot(document.getElementById('root')!).render(
       <React.StrictMode>
