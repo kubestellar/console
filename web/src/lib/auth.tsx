@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       github_id: '12345',
       github_login: 'demo-user',
       email: 'demo@example.com',
-      avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
+      avatar_url: 'https://api.dicebear.com/9.x/bottts/svg?seed=stellar-commander&backgroundColor=0d1117',
       role: 'viewer',
       onboarded: demoOnboarded,
     }
