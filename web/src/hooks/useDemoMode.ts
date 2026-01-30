@@ -21,11 +21,14 @@ const isNetlifyPreview = typeof window !== 'undefined' && (
 export const isDemoModeForced = isNetlifyPreview
 
 // Initialize from localStorage, auto-enable on Netlify previews, or when auth
-// has set a demo-token (backend unavailable / no real JWT)
+// has set a demo-token (backend unavailable / no real JWT).
+// IMPORTANT: If the user has explicitly toggled demo mode off (stored === 'false'),
+// respect that choice — don't let a stale demo-token override it.
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
   const hasDemoToken = localStorage.getItem('token') === 'demo-token'
-  globalDemoMode = isNetlifyPreview || stored === 'true' || hasDemoToken
+  const userExplicitlyDisabled = stored === 'false'
+  globalDemoMode = isNetlifyPreview || stored === 'true' || (hasDemoToken && !userExplicitlyDisabled)
 
   // Clear any stale demo GPU data if demo mode is off
   // This handles the case where demo data was incorrectly cached
@@ -77,20 +80,18 @@ export function useDemoMode() {
   }, [])
 
   const toggleDemoMode = useCallback(() => {
+    // Never allow disabling demo mode on Netlify deployments
+    if (isNetlifyPreview && globalDemoMode) return
     globalDemoMode = !globalDemoMode
     localStorage.setItem(DEMO_MODE_KEY, String(globalDemoMode))
-    // NOTE: We no longer clear GPU cache here - the fetch logic handles
-    // transitioning from demo to real data, and clearing here causes
-    // loss of GPU data if the subsequent fetch fails.
     notifyListeners()
   }, [])
 
   const setDemoMode = useCallback((value: boolean) => {
+    // Never allow disabling demo mode on Netlify deployments
+    if (isNetlifyPreview && !value) return
     globalDemoMode = value
     localStorage.setItem(DEMO_MODE_KEY, String(value))
-    // NOTE: We no longer clear GPU cache here - the fetch logic handles
-    // transitioning from demo to real data, and clearing here causes
-    // loss of GPU data if the subsequent fetch fails.
     notifyListeners()
   }, [])
 

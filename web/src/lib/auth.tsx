@@ -114,7 +114,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.data)
       cacheUser(response.data)
     } catch (error) {
-      console.error('Failed to fetch user, falling back to demo mode:', error)
+      // If the backend is temporarily unreachable but we have a real token,
+      // keep the token and use cached user data instead of destroying the
+      // session by falling back to demo mode.
+      const cachedUser = getCachedUser()
+      if (cachedUser) {
+        console.warn('Backend unreachable, using cached user data')
+        setUser(cachedUser)
+        return
+      }
+      // No cached user — fall back to demo mode as last resort
+      console.error('Failed to fetch user and no cache, falling back to demo mode:', error)
       setDemoMode()
     }
   }, [setDemoMode])
