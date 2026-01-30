@@ -41,6 +41,7 @@
     "recharts": "^3.6.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
+    "sucrase": "^3.35.1",
     "tailwind-merge": "^2.6.0",
     "three": "^0.169.0"
   },

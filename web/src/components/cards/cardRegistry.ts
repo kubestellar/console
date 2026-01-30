@@ -1,4 +1,5 @@
 import { lazy, ComponentType } from 'react'
+import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -122,6 +123,7 @@ const ClusterGroups = lazy(() => import('./ClusterGroups').then(m => ({ default:
 const Missions = lazy(() => import('./Missions').then(m => ({ default: m.Missions })))
 const ResourceMarshall = lazy(() => import('./ResourceMarshall').then(m => ({ default: m.ResourceMarshall })))
 const WorkloadMonitor = lazy(() => import('./workload-monitor/WorkloadMonitor').then(m => ({ default: m.WorkloadMonitor })))
+const DynamicCard = lazy(() => import('./DynamicCard').then(m => ({ default: m.DynamicCard })))
 const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor').then(m => ({ default: m.LLMdStackMonitor })))
 const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
 const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
@@ -309,6 +311,9 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   prow_ci_monitor: ProwCIMonitor,
   github_ci_monitor: GitHubCIMonitor,
   cluster_health_monitor: ClusterHealthMonitor,
+
+  // Dynamic Card (Card Factory meta-component)
+  dynamic_card: DynamicCard,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -589,17 +594,35 @@ export function getDefaultCardWidth(cardType: string): number {
 
 /**
  * Get a card component by type.
- * Returns undefined if the card type is not registered.
+ * Falls back to the DynamicCard meta-component for dynamically registered types.
+ * Returns undefined if the card type is not registered anywhere.
  */
 export function getCardComponent(cardType: string): CardComponent | undefined {
-  return CARD_COMPONENTS[cardType]
+  // Check static registry first
+  const staticComponent = CARD_COMPONENTS[cardType]
+  if (staticComponent) return staticComponent
+
+  // Check dynamic registry — render via DynamicCard meta-component
+  if (isDynamicCardRegistered(cardType)) {
+    return CARD_COMPONENTS['dynamic_card']
+  }
+
+  return undefined
 }
 
 /**
- * Check if a card type is registered.
+ * Check if a card type is registered (static or dynamic).
  */
 export function isCardTypeRegistered(cardType: string): boolean {
-  return cardType in CARD_COMPONENTS
+  return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType)
+}
+
+/**
+ * Register a dynamic card type at runtime.
+ * This adds the type to the default widths map so it gets a proper grid size.
+ */
+export function registerDynamicCardType(cardType: string, width = 6): void {
+  CARD_DEFAULT_WIDTHS[cardType] = width
 }
 
 /**

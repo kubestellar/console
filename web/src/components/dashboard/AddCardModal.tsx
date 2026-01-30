@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Plus, Loader2, LayoutGrid, Search } from 'lucide-react'
+import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { CardFactoryModal } from './CardFactoryModal'
 
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
@@ -25,6 +26,7 @@ const CARD_CATALOG = {
     { type: 'cluster_groups', title: 'Cluster Groups', description: 'Define cluster groups and deploy workloads by dragging onto them', visualization: 'status' },
     { type: 'deployment_missions', title: 'Deployment Missions', description: 'Track deployment missions with per-cluster rollout progress', visualization: 'status' },
     { type: 'resource_marshall', title: 'Resource Marshall', description: 'Explore workload dependency trees — ConfigMaps, Secrets, RBAC, Services, and more', visualization: 'table' },
+    { type: 'workload_monitor', title: 'Workload Monitor', description: 'Monitor all resources for a workload with health status, alerts, and AI diagnose/repair', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },
@@ -124,6 +126,10 @@ const CARD_CATALOG = {
     { type: 'llm_models', title: 'llm-d models', description: 'Deployed language models with memory and GPU allocation', visualization: 'table' },
     { type: 'ml_jobs', title: 'ML Training Jobs', description: 'Kubeflow, Ray, or custom ML training job status', visualization: 'table' },
     { type: 'ml_notebooks', title: 'ML Notebooks', description: 'Running Jupyter notebook servers and resource usage', visualization: 'table' },
+    { type: 'llmd_stack_monitor', title: 'llm-d Stack Monitor', description: 'Monitor the full llm-d inference stack with AI diagnosis', visualization: 'status' },
+    { type: 'prow_ci_monitor', title: 'Prow CI Monitor', description: 'Monitor Prow CI jobs with stats, failure analysis, and AI repair', visualization: 'table' },
+    { type: 'github_ci_monitor', title: 'GitHub CI Monitor', description: 'Monitor GitHub Actions workflows across repos', visualization: 'table' },
+    { type: 'cluster_health_monitor', title: 'Cluster Health Monitor', description: 'Monitor cluster health with pod/deployment issue tracking', visualization: 'status' },
   ],
   'Arcade': [
     { type: 'kube_man', title: 'Kube-Man', description: 'Classic Pac-Man arcade game - eat dots and avoid ghosts in the cluster maze', visualization: 'status' },
@@ -748,6 +754,7 @@ function CardPreview({ card }: { card: HoveredCard }) {
 
 export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [] }: AddCardModalProps) {
   const [activeTab, setActiveTab] = useState<'ai' | 'browse'>('browse')
+  const [showCardFactory, setShowCardFactory] = useState(false)
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<CardSuggestion[]>([])
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
@@ -875,6 +882,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   ]
 
   return (
+    <>
     <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
       <BaseModal.Header
         title="Add Cards"
@@ -895,9 +903,9 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
             <div className="flex gap-4">
               {/* Left side - Card catalog */}
               <div className="flex-1 min-w-0">
-                {/* Search */}
-                <div className="mb-4">
-                  <div className="relative">
+                {/* Search + Create Custom */}
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       ref={searchInputRef}
@@ -908,6 +916,13 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                       className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     />
                   </div>
+                  <button
+                    onClick={() => setShowCardFactory(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium whitespace-nowrap shrink-0"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    Create Custom
+                  </button>
                 </div>
 
                 {/* Card catalog */}
@@ -1195,5 +1210,22 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
         </BaseModal.Footer>
       )}
     </BaseModal>
+
+      {/* Card Factory Modal */}
+      <CardFactoryModal
+        isOpen={showCardFactory}
+        onClose={() => setShowCardFactory(false)}
+        onCardCreated={(cardId) => {
+          // Add the newly created dynamic card to the dashboard
+          onAddCards([{
+            type: 'dynamic_card',
+            title: 'Custom Card',
+            description: 'Dynamically created card',
+            visualization: 'status',
+            config: { dynamicCardId: cardId },
+          }])
+        }}
+      />
+    </>
   )
 }
