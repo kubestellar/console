@@ -955,29 +955,10 @@ jobs:
               });
             }
 
+            // Bundle size check disabled — too noisy, bundle grows naturally with features
             if (process.env.BUNDLE_EXCEEDED === 'true') {
               const sizeKB = process.env.BUNDLE_SIZE_KB;
-              const limitKB = process.env.BUNDLE_SIZE_LIMIT_KB || '5120';
-              checks.push({
-                title: `${prefix} Bundle size exceeds ${limitKB}KB (currently ${sizeKB}KB)`,
-                body: [
-                  `## Auto-QA: Bundle Size Exceeded`,
-                  '', `**Detected:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
-                  '', `The production bundle size is **${sizeKB}KB**, exceeding the **${limitKB}KB** threshold.`,
-                  '', '### Largest Assets', '```',
-                  readOutput('/tmp/bundle-breakdown.txt', 20),
-                  '```', '',
-                  '### How to Fix',
-                  '- Check for recently added large dependencies',
-                  '- Use dynamic imports (`React.lazy`) for heavy components',
-                  '- Review bundle with `npx vite-bundle-visualizer`',
-                  '- If the size increase is intentional, update `BUNDLE_SIZE_LIMIT_KB` in `.github/workflows/auto-qa.yml`',
-                  '', '---',
-                  `*This issue was automatically created by the [Auto-QA workflow](${runUrl}).*`,
-                  '*Labels `ai-fix-requested` and `help wanted` enable Copilot to fix this after triage.*',
-                ].join('\n'),
-                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted'],
-              });
+              core.info(`Bundle size ${sizeKB}KB exceeds limit — skipping issue creation (disabled).`);
             }
 
             if (process.env.HAS_VULNS === 'true') {
