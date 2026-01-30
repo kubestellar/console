@@ -121,6 +121,7 @@ const WorkloadDeployment = lazy(() => import('./WorkloadDeployment').then(m => (
 const ClusterGroups = lazy(() => import('./ClusterGroups').then(m => ({ default: m.ClusterGroups })))
 const Missions = lazy(() => import('./Missions').then(m => ({ default: m.Missions })))
 const ResourceMarshall = lazy(() => import('./ResourceMarshall').then(m => ({ default: m.ResourceMarshall })))
+const WorkloadMonitor = lazy(() => import('./workload-monitor/WorkloadMonitor').then(m => ({ default: m.WorkloadMonitor })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -297,6 +298,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   deployment_missions: Missions,
   // Resource Marshall card (dependency tree explorer)
   resource_marshall: ResourceMarshall,
+  // Workload Monitor card (health monitoring with tree/list views)
+  workload_monitor: WorkloadMonitor,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -390,6 +393,8 @@ export const LIVE_DATA_CARDS = new Set([
   'cert_manager',
   // Deployment Missions card - polls deploy status in real time
   'deployment_missions',
+  // Workload Monitor - live health monitoring
+  'workload_monitor',
 ])
 
 /**
@@ -428,6 +433,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   deployment_missions: 5,
   // Resource Marshall card
   resource_marshall: 6,
+  // Workload Monitor card
+  workload_monitor: 8,
 
   // Event dashboard cards
   event_summary: 6,
