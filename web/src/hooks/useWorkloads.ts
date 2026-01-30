@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { clusterCacheRef } from './mcp/shared'
 
 // Types
 export interface Workload {
@@ -53,6 +54,67 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
+
+const AGENT_URL = 'http://127.0.0.1:8585'
+
+/** Fetch workloads from the local agent (fallback when backend is down) */
+async function fetchWorkloadsViaAgent(opts?: {
+  cluster?: string
+  namespace?: string
+}): Promise<Workload[] | null> {
+  const clusters = clusterCacheRef.clusters
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
+  if (clusters.length === 0) return null
+
+  const targets = opts?.cluster
+    ? clusters.filter(c => c.name === opts.cluster)
+    : clusters
+
+  const results = await Promise.allSettled(
+    targets.map(async ({ name, context }) => {
+      const params = new URLSearchParams()
+      params.append('cluster', context || name)
+      if (opts?.namespace) params.append('namespace', opts.namespace)
+
+      const ctrl = new AbortController()
+      const tid = setTimeout(() => ctrl.abort(), 15000)
+      const res = await fetch(`${AGENT_URL}/deployments?${params}`, {
+        signal: ctrl.signal,
+        headers: { Accept: 'application/json' },
+      })
+      clearTimeout(tid)
+
+      if (!res.ok) throw new Error(`Agent ${res.status}`)
+      const data = await res.json()
+      return ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
+        const st = String(d.status || 'running')
+        let ws: Workload['status'] = 'Running'
+        if (st === 'failed') ws = 'Failed'
+        else if (st === 'deploying') ws = 'Pending'
+        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+        return {
+          name: String(d.name || ''),
+          namespace: String(d.namespace || 'default'),
+          type: 'Deployment' as const,
+          cluster: name,
+          targetClusters: [name],
+          replicas: Number(d.replicas || 1),
+          readyReplicas: Number(d.readyReplicas || 0),
+          status: ws,
+          image: String(d.image || ''),
+          createdAt: new Date().toISOString(),
+        }
+      })
+    })
+  )
+
+  const items: Workload[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  return items.length > 0 ? items : null
+}
+
 // Fetch all workloads across clusters.
 // Pass enabled=false to skip fetching (returns undefined data with isLoading=false).
 export function useWorkloads(options?: {
@@ -75,6 +137,18 @@ export function useWorkloads(options?: {
     setIsLoading(true)
     setError(null)
 
+    // Try agent first (fast, no backend needed)
+    try {
+      const agentData = await fetchWorkloadsViaAgent(options)
+      if (agentData) {
+        setData(agentData)
+        return
+      }
+    } catch {
+      // Agent failed, try REST below
+    }
+
+    // Fall back to REST API
     try {
       const params = new URLSearchParams()
       if (options?.cluster) params.set('cluster', options.cluster)
@@ -89,10 +163,9 @@ export function useWorkloads(options?: {
         throw new Error(`Failed to fetch workloads: ${res.statusText}`)
       }
       const result = await res.json()
-      // Backend returns { items: [...], totalCount: N }
       setData(result.items || result)
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'))
+    } catch {
+      setError(new Error('No data source available'))
     } finally {
       setIsLoading(false)
     }

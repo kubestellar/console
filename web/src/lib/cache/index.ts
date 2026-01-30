@@ -29,7 +29,7 @@ import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 // ============================================================================
 
 /** Cache version - increment when cache structure changes to invalidate old caches */
-const CACHE_VERSION = 3
+const CACHE_VERSION = 4
 
 /** IndexedDB configuration */
 const DB_NAME = 'kc_cache'

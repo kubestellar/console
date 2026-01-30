@@ -93,13 +93,10 @@ export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
 
 // Fetch GPU nodes (shared across all consumers)
 let gpuFetchInProgress = false
-async function fetchGPUNodes(cluster?: string, source?: string) {
+async function fetchGPUNodes(cluster?: string, _source?: string) {
   const token = localStorage.getItem('token')
-  console.log('[GPU] fetchGPUNodes:', { source, cluster, demoMode: getDemoMode(), hasToken: !!token, inProgress: gpuFetchInProgress })
-
   // If demo mode is enabled, use demo data instead of fetching
   if (getDemoMode()) {
-    console.log('[GPU] Using demo data (demo mode enabled)')
     updateGPUNodeCache({
       nodes: getDemoGPUNodes(),
       lastUpdated: new Date(),
@@ -114,10 +111,7 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
 
   // Note: We don't skip for demo token because local agent works without auth
 
-  if (gpuFetchInProgress) {
-    console.log('[GPU] Fetch already in progress, skipping')
-    return
-  }
+  if (gpuFetchInProgress) return
   gpuFetchInProgress = true
 
   // NOTE: We no longer clear localStorage cache before fetch.
@@ -184,15 +178,7 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
     // Never replace good cached data with empty results
     const shouldUpdateCache = newDataHasContent || !currentCacheHasData
 
-    console.log('[GPU] Update decision:', {
-      newNodesCount: newNodes.length,
-      cacheCount: gpuNodeCache.nodes.length,
-      shouldUpdateCache,
-      reason: !shouldUpdateCache ? 'preserving cache' : (newDataHasContent ? 'got new data' : 'cache was empty')
-    })
-
     if (shouldUpdateCache && newDataHasContent) {
-      console.log('[GPU] Updating cache with', newNodes.length, 'nodes')
       updateGPUNodeCache({
         nodes: newNodes,
         lastUpdated: new Date(),
@@ -203,7 +189,6 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
         lastRefresh: new Date(),
       })
     } else {
-      console.log('[GPU] Preserving cache - empty fetch result or no change needed')
       updateGPUNodeCache({
         isLoading: false,
         isRefreshing: false,
@@ -213,13 +198,11 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
       })
     }
   } catch (err) {
-    console.log('[GPU] Fetch error:', err)
     const newFailures = gpuNodeCache.consecutiveFailures + 1
 
     // On error, preserve existing cached data
     // Only use demo data if demo mode is explicitly enabled
     if (gpuNodeCache.nodes.length === 0 && getDemoMode()) {
-      console.log('[GPU] No cache, using demo data (demo mode enabled)')
       updateGPUNodeCache({
         nodes: getDemoGPUNodes(),
         isLoading: false,
@@ -229,13 +212,10 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
         lastRefresh: new Date(),
       })
     } else {
-      console.log('[GPU] Preserving cache on error (or no demo data fallback)')
-
       // Try to restore from localStorage if memory cache is empty
       if (gpuNodeCache.nodes.length === 0) {
         const storedCache = loadGPUCacheFromStorage()
         if (storedCache.nodes.length > 0) {
-          console.log('[GPU] Restored', storedCache.nodes.length, 'nodes from localStorage')
           updateGPUNodeCache({
             ...storedCache,
             error: 'Using cached data - fetch failed',
@@ -268,7 +248,6 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
       const RETRY_DELAYS = [2000, 5000] // 2s, then 5s
       if (newFailures <= MAX_RETRIES && !getDemoMode()) {
         const delay = RETRY_DELAYS[newFailures - 1] || 5000
-        console.log(`[GPU] Scheduling retry ${newFailures}/${MAX_RETRIES} in ${delay}ms`)
         setTimeout(() => {
           fetchGPUNodes(cluster, `retry-${newFailures}`)
         }, delay)

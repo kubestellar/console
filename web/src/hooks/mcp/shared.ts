@@ -1,6 +1,6 @@
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode } from '../useDemoMode'
+import { getDemoMode, setGlobalDemoMode } from '../useDemoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getPresentationMode } from '../usePresentationMode'
 import type { ClusterInfo, ClusterHealth } from './types'
@@ -99,7 +99,8 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
     if (stored) {
       const parsed = JSON.parse(stored)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
+        // Filter out long context-path duplicates from cached data
+        return parsed.filter((c: ClusterInfo) => !c.name.includes('/'))
       }
     }
   } catch {
@@ -111,7 +112,8 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
 function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   try {
     // Only save clusters with meaningful data
-    const toSave = clusters.filter(c => c.name).map(c => ({
+    // Filter out long context-path duplicates before saving
+    const toSave = clusters.filter(c => c.name && !c.name.includes("/")).map(c => ({
       name: c.name,
       context: c.context,
       server: c.server,
@@ -664,10 +666,8 @@ if (import.meta.hot) {
 
 // Fetch basic cluster list from local agent (fast, no health check)
 async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
-  // Skip if agent is known to be unavailable (uses shared state from useLocalAgent)
-  if (isAgentUnavailable()) {
-    return null
-  }
+  // Always attempt to reach the agent — it may be running even if AgentManager
+  // has not detected it yet (e.g., AgentManager was blocked by demo mode at init)
 
   try {
     const controller = new AbortController()
@@ -749,11 +749,9 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
       if (response.ok) {
         const health = await response.json()
         reportAgentDataSuccess()
-        console.log(`[HealthCheck] HTTP success for ${clusterName}: nodeCount=${health.nodeCount}, podCount=${health.podCount}, cpuCores=${health.cpuCores}`)
         return health
       }
     } catch (err) {
-      console.log(`[HealthCheck] HTTP failed for ${clusterName}:`, err)
       // Agent HTTP failed, will try backend below
     }
   }
@@ -912,12 +910,9 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
 // Process a single cluster's health check
 async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
     // Use cluster.context for kubectl commands (full context path), cluster.name for cache key
-    console.log(`[HealthCheck] Processing: name="${cluster.name}", context="${cluster.context}"`)
     const health = await fetchSingleClusterHealth(cluster.name, cluster.context)
 
     if (health) {
-      console.log(`[HealthCheck] Result for "${cluster.name}": healthy=${health.healthy}, nodeCount=${health.nodeCount}`)
-      
       // If we got a health response (HTTP 200), the agent/backend is reachable
       // This is the key fix: receiving ANY response means connectivity is restored,
       // even if the response contains cached error data from a previous failure
@@ -937,9 +932,6 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
             updateSingleClusterInCache(cluster.name, { distribution, namespaces })
           }
         })
-
-        // Debug: log what we're about to cache
-        console.log(`[ProcessHealth] ${cluster.name}: cpuCores=${health.cpuCores}, cpuUsage=${health.cpuUsageCores?.toFixed(1)}, cpuRequests=${health.cpuRequestsCores?.toFixed(1)}, memGB=${health.memoryGB}, memUsage=${health.memoryUsageGB?.toFixed(1)}, memRequests=${health.memoryRequestsGB?.toFixed(1)}, metricsAvailable=${health.metricsAvailable}`)
 
         updateSingleClusterInCache(cluster.name, {
           // If we have nodes, consider healthy based on actual node readiness
@@ -1099,28 +1091,15 @@ export async function fullFetchClusters() {
     updateClusterCache(updates)
   }
 
-  // If demo mode is enabled, use demo data instead of fetching
-  if (getDemoMode()) {
-    await finishWithMinDuration({
-      clusters: getDemoClusters(),
-      isLoading: false,
-      isRefreshing: false,
-      error: null,
-    })
-    return
-  }
-
-  // Skip fetching if not authenticated (prevents errors on login page)
-  const token = localStorage.getItem('token')
-  if (!token) {
-    await finishWithMinDuration({ isLoading: false, isRefreshing: false })
-    return
-  }
-
+  // Try local agent first — even in demo mode, the agent may have real data.
+  // If the agent succeeds, auto-disable demo mode so cards show live indicators.
   try {
-    // Try local agent first - get cluster list quickly
     const agentClusters = await fetchClusterListFromAgent()
     if (agentClusters) {
+      // Agent has real data — disable demo mode
+      if (getDemoMode()) {
+        setGlobalDemoMode(false)
+      }
       // Merge new cluster list with existing cached health data (preserve stats during refresh)
       const existingClusters = clusterCache.clusters
       const mergedClusters = agentClusters.map(newCluster => {
@@ -1148,9 +1127,13 @@ export async function fullFetchClusters() {
         }
         return newCluster
       })
+      // Filter out long context-path duplicates (names containing '/')
+      // e.g. 'default/api-fmaas-vllm-d-...:6443/...' duplicates the short-named 'vllm-d'
+      const dedupedClusters = mergedClusters.filter(c => !c.name.includes('/'))
+
       // Show clusters immediately with preserved health data
       await finishWithMinDuration({
-        clusters: mergedClusters,
+        clusters: dedupedClusters,
         error: null,
         lastUpdated: new Date(),
         isLoading: false,
@@ -1161,10 +1144,33 @@ export async function fullFetchClusters() {
       })
       // Reset flag before returning - allows subsequent refresh calls
       fetchInProgress = false
-      // Check health progressively (non-blocking) - will update each cluster's data
-      checkHealthProgressively(agentClusters)
+      // Check health progressively (non-blocking) - use deduplicated list to avoid
+      // running health checks on long context-path duplicates
+      checkHealthProgressively(dedupedClusters)
       return
     }
+
+    // Agent unavailable — if demo mode is on and no real token, use demo data
+    if (getDemoMode()) {
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        await finishWithMinDuration({
+          clusters: getDemoClusters(),
+          isLoading: false,
+          isRefreshing: false,
+          error: null,
+        })
+        return
+      }
+    }
+
+    // Skip backend if not authenticated
+    const token = localStorage.getItem('token')
+    if (!token) {
+      await finishWithMinDuration({ isLoading: false, isRefreshing: false })
+      return
+    }
+
     // Fall back to backend API
     const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
     // Merge new cluster list with existing cached data (preserve distribution, health, etc.)

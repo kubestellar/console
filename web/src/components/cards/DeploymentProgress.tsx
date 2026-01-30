@@ -135,7 +135,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   }
 
   const handleDeploymentClick = (deployment: typeof deployments[0]) => {
-    const clusterName = deployment.cluster?.split('/').pop() || deployment.cluster || 'unknown'
+    const clusterName = deployment.cluster || 'unknown'
     drillToDeployment(clusterName, deployment.namespace, deployment.name, {
       status: deployment.status,
       version: extractVersion(deployment.image),
@@ -304,7 +304,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
           paginatedDeployments.map((deployment) => {
             const statusStyle = statusConfig[deployment.status]
             const StatusIcon = statusStyle.icon
-            const clusterName = deployment.cluster?.split('/').pop() || deployment.cluster || 'unknown'
+            const clusterName = deployment.cluster || 'unknown'
             const version = extractVersion(deployment.image)
 
             return (

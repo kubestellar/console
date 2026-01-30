@@ -43,22 +43,6 @@ export function ResourceUsage() {
     const usedCPUs = clusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
     const usedMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryRequestsGB || 0), 0)
 
-    // Debug: log cluster data to understand why values might be 0
-    if (clusters.length > 0) {
-      console.log('[ResourceUsage] Cluster data sample:', {
-        clusterCount: clusters.length,
-        firstCluster: clusters[0]?.name,
-        cpuCores: clusters[0]?.cpuCores,
-        cpuRequestsCores: clusters[0]?.cpuRequestsCores,
-        memoryGB: clusters[0]?.memoryGB,
-        memoryRequestsGB: clusters[0]?.memoryRequestsGB,
-        totalCPUs,
-        usedCPUs,
-        totalMemoryGB,
-        usedMemoryGB,
-      })
-    }
-
     // GPU data from GPU nodes
     const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
     const allocatedGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)

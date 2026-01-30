@@ -711,8 +711,6 @@ export function useDeployments(cluster?: string, namespace?: string) {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        console.log(`[useDeployments] Fetching from local agent for ${cluster}`)
-
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 15000)
         const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
@@ -724,7 +722,6 @@ export function useDeployments(cluster?: string, namespace?: string) {
         if (response.ok) {
           const data = await response.json()
           const deployData = (data.deployments || []).map((d: Deployment) => ({ ...d, cluster: d.cluster || cluster }))
-          console.log(`[useDeployments] Got ${deployData.length} deployments for ${cluster} from local agent`)
           const now = new Date()
           // Update cache
           deploymentsCache = { data: deployData, timestamp: now, key: cacheKey }
@@ -742,9 +739,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
           reportAgentDataSuccess()
           return
         }
-        console.log(`[useDeployments] Local agent returned ${response.status}, trying kubectl proxy`)
-      } catch (err) {
-        console.log(`[useDeployments] Local agent failed for ${cluster}:`, err)
+      } catch {
       }
     }
 
@@ -753,8 +748,6 @@ export function useDeployments(cluster?: string, namespace?: string) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
-        console.log(`[useDeployments] Fetching via kubectl proxy for ${cluster}`)
-
         // Add timeout to prevent hanging
         const deployPromise = kubectlProxy.getDeployments(kubectlContext, namespace)
         const timeoutPromise = new Promise<null>((resolve) =>
@@ -764,9 +757,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
 
         if (deployData && deployData.length >= 0) {
           const enriched = deployData.map((d: Deployment) => ({ ...d, cluster: d.cluster || cluster }))
-          console.log(`[useDeployments] Got ${enriched.length} deployments for ${cluster} from kubectl proxy`)
           const now = new Date()
-          // Update cache
           deploymentsCache = { data: enriched, timestamp: now, key: cacheKey }
           setDeployments(enriched)
           setError(null)
@@ -781,9 +772,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
           }
           return
         }
-        console.log(`[useDeployments] No data returned for ${cluster}, trying API`)
-      } catch (err) {
-        console.log(`[useDeployments] kubectl proxy failed for ${cluster}:`, err)
+      } catch {
       }
     }
 

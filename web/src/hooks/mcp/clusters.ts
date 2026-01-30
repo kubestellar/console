@@ -78,12 +78,10 @@ export function useClusters() {
   // Re-fetch when demo mode changes (not on initial mount)
   const initialMountRef = useRef(true)
   useEffect(() => {
-    console.log('[GPU] isDemoMode effect:', { isDemoMode, isInitialMount: initialMountRef.current })
     if (initialMountRef.current) {
       initialMountRef.current = false
       return
     }
-    console.log('[GPU] isDemoMode changed, refetching')
     // Reset fetch flag and failure tracking to allow re-fetching
     setInitialFetchStarted(false)
     setHealthCheckFailures(0)
@@ -148,21 +146,6 @@ export function useClusters() {
     // First share metrics between clusters with same server (so short names get metrics from long names)
     const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(localState.clusters)
     const result = deduplicateClustersByServer(sharedMetricsClusters)
-
-    // Debug: log what deduplication produced
-    if (result.length > 0) {
-      const sample = result.find(c => c.cpuCores && c.cpuCores > 100) || result[0]
-      console.log('[Dedup] Result sample:', {
-        name: sample?.name,
-        cpuCores: sample?.cpuCores,
-        cpuRequestsCores: sample?.cpuRequestsCores,
-        memoryGB: sample?.memoryGB,
-        memoryRequestsGB: sample?.memoryRequestsGB,
-        aliases: sample?.aliases?.length,
-        totalClusters: result.length,
-        withRequests: result.filter(c => c.cpuRequestsCores).length,
-      })
-    }
 
     return result
   }, [localState.clusters])

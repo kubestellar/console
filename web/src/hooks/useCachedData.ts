@@ -18,6 +18,7 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { clusterCacheRef } from './mcp/shared'
 import type {
   PodInfo,
   PodIssue,
@@ -35,9 +36,14 @@ import type { LLMdServer, LLMdStatus, LLMdModel } from './useLLMd'
 
 const getToken = () => localStorage.getItem('token')
 
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+
 const isDemoMode = () => {
+  // If we have cluster data from the agent, we have a real data source
+  if (clusterCacheRef.clusters.length > 0) return false
   const token = getToken()
-  return !token || token === 'demo-token' || isBackendUnavailable()
+  if (!token || token === 'demo-token') return true
+  return isBackendUnavailable()
 }
 
 async function fetchAPI<T>(
@@ -74,15 +80,16 @@ async function fetchAPI<T>(
   return response.json()
 }
 
-// Fetch list of available clusters
+// Fetch list of available clusters (filtered to short names only)
 async function fetchClusters(): Promise<string[]> {
   const data = await fetchAPI<{ clusters: Array<{ name: string; reachable?: boolean }> }>('clusters')
   return (data.clusters || [])
-    .filter(c => c.reachable !== false)
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
     .map(c => c.name)
 }
 
 // Fetch data from all clusters in parallel and merge results
+// Throws if ALL cluster fetches fail (so callers can fall back to agent)
 async function fetchFromAllClusters<T>(
   endpoint: string,
   resultKey: string,
@@ -96,7 +103,6 @@ async function fetchFromAllClusters<T>(
     clusters.map(async (cluster) => {
       const data = await fetchAPI<Record<string, T[]>>(endpoint, { ...params, cluster })
       const items = data[resultKey] || []
-      // Add cluster field to each item if requested
       if (addClusterField) {
         return items.map(item => ({ ...item, cluster }))
       }
@@ -112,7 +118,82 @@ async function fetchFromAllClusters<T>(
     }
   }
 
+  // If every cluster fetch failed, throw so callers can try agent fallback
+  if (allItems.length === 0 && results.length > 0 && results.every(r => r.status === 'rejected')) {
+    throw new Error('All cluster fetches failed')
+  }
+
   return allItems
+}
+
+// ============================================================================
+// Agent-based fetchers (used when backend is unavailable but agent is connected)
+// ============================================================================
+
+/** Get reachable cluster names from the shared cluster cache (deduplicated) */
+function getAgentClusters(): Array<{ name: string; context?: string }> {
+  // Skip long context-path names (contain '/') — these are duplicates of short-named aliases
+  // e.g. "default/api-fmaas-vllm-d-...:6443/..." duplicates "vllm-d"
+  return clusterCacheRef.clusters
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
+    .map(c => ({ name: c.name, context: c.context }))
+}
+
+/** Fetch pod issues from all clusters via agent kubectl proxy */
+async function fetchPodIssuesViaAgent(namespace?: string): Promise<PodIssue[]> {
+  const clusters = getAgentClusters()
+  if (clusters.length === 0) return []
+
+  const results = await Promise.allSettled(
+    clusters.map(async ({ name, context }) => {
+      const ctx = context || name
+      const issues = await kubectlProxy.getPodIssues(ctx, namespace)
+      // Always use the short name — kubectlProxy returns context path as cluster
+      return issues.map(i => ({ ...i, cluster: name }))
+    })
+  )
+
+  const items: PodIssue[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  return items
+}
+
+/** Fetch deployments from all clusters via agent HTTP endpoint */
+async function fetchDeploymentsViaAgent(namespace?: string): Promise<Deployment[]> {
+  const clusters = getAgentClusters()
+  if (clusters.length === 0) return []
+
+  const results = await Promise.allSettled(
+    clusters.map(async ({ name, context }) => {
+      const params = new URLSearchParams()
+      params.append('cluster', context || name)
+      if (namespace) params.append('namespace', namespace)
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+      const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) throw new Error(`Agent returned ${response.status}`)
+      const data = await response.json()
+      // Always use the short name — agent echoes back context path as cluster
+      return ((data.deployments || []) as Deployment[]).map(d => ({
+        ...d,
+        cluster: name,
+      }))
+    })
+  )
+
+  const items: Deployment[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  return items
 }
 
 // ============================================================================
@@ -281,19 +362,38 @@ export function useCachedPodIssues(
     key,
     category,
     initialData: getDemoPodIssues(),
-    enabled: !isDemoMode(),
+    enabled: true,
     fetcher: async () => {
       let issues: PodIssue[]
-      if (cluster) {
-        // Fetch from specific cluster
-        const data = await fetchAPI<{ issues: PodIssue[] }>('pod-issues', { cluster, namespace })
-        issues = (data.issues || []).map(i => ({ ...i, cluster }))
-      } else {
-        // Fetch from all clusters
-        issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', { namespace })
+
+      // Try agent first (fast, no backend needed)
+      if (clusterCacheRef.clusters.length > 0) {
+        if (cluster) {
+          const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
+          const ctx = clusterInfo?.context || cluster
+          issues = await kubectlProxy.getPodIssues(ctx, namespace)
+          // Always use the short name passed in, not the context path from kubectlProxy
+          issues = issues.map(i => ({ ...i, cluster: cluster }))
+        } else {
+          issues = await fetchPodIssuesViaAgent(namespace)
+        }
+        return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
       }
-      // Sort by restarts (descending)
-      return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+
+      // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        if (cluster) {
+          const data = await fetchAPI<{ issues: PodIssue[] }>('pod-issues', { cluster, namespace })
+          issues = (data.issues || []).map(i => ({ ...i, cluster }))
+        } else {
+          issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', { namespace })
+        }
+        return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+      }
+
+      return getDemoPodIssues()
     },
   })
 
@@ -325,10 +425,50 @@ export function useCachedDeploymentIssues(
     key,
     category,
     initialData: getDemoDeploymentIssues(),
-    enabled: !isDemoMode(),
+    enabled: true,
     fetcher: async () => {
-      const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
-      return data.issues || []
+      // Try agent first — derive deployment issues from deployment data
+      if (clusterCacheRef.clusters.length > 0) {
+        const deployments = cluster
+          ? await (async () => {
+              const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
+              const params = new URLSearchParams()
+              params.append('cluster', clusterInfo?.context || cluster)
+              if (namespace) params.append('namespace', namespace)
+              const ctrl = new AbortController()
+              const tid = setTimeout(() => ctrl.abort(), 15000)
+              const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+                signal: ctrl.signal, headers: { Accept: 'application/json' },
+              })
+              clearTimeout(tid)
+              if (!res.ok) return []
+              const data = await res.json()
+              return ((data.deployments || []) as Deployment[]).map(d => ({ ...d, cluster: cluster }))
+            })()
+          : await fetchDeploymentsViaAgent(namespace)
+
+        // Derive issues: deployments where readyReplicas < replicas
+        return deployments
+          .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
+          .map(d => ({
+            name: d.name,
+            namespace: d.namespace || 'default',
+            cluster: d.cluster,
+            replicas: d.replicas ?? 1,
+            readyReplicas: d.readyReplicas ?? 0,
+            reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
+          }))
+      }
+
+      // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
+        return data.issues || []
+      }
+
+      return getDemoDeploymentIssues()
     },
   })
 
@@ -360,16 +500,48 @@ export function useCachedDeployments(
     key,
     category,
     initialData: getDemoDeployments(),
-    enabled: !isDemoMode(),
+    enabled: true,
     fetcher: async () => {
-      if (cluster) {
-        // Fetch from specific cluster
-        const data = await fetchAPI<{ deployments: Deployment[] }>('deployments', { cluster, namespace })
-        const deployments = data.deployments || []
-        return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
+      // Try agent first (fast, no backend needed)
+      if (clusterCacheRef.clusters.length > 0) {
+        if (cluster) {
+          const params = new URLSearchParams()
+          const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
+          params.append('cluster', clusterInfo?.context || cluster)
+          if (namespace) params.append('namespace', namespace)
+
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 15000)
+          const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+          })
+          clearTimeout(timeoutId)
+
+          if (response.ok) {
+            const data = await response.json()
+            return ((data.deployments || []) as Deployment[]).map(d => ({
+              ...d,
+              cluster: cluster,
+            }))
+          }
+        }
+        return fetchDeploymentsViaAgent(namespace)
       }
-      // Fetch from all clusters so each deployment gets a cluster field
-      return fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
+
+      // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        if (cluster) {
+          const data = await fetchAPI<{ deployments: Deployment[] }>('deployments', { cluster, namespace })
+          const deployments = data.deployments || []
+          return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
+        }
+        return await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
+      }
+
+      return getDemoDeployments()
     },
   })
 
