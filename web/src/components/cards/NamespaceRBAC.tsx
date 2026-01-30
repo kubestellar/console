@@ -232,7 +232,7 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
           <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-xs font-medium text-red-400">Error loading data</p>
+            <p className="text-xs font-medium text-red-400">Error loading RBAC data</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">{error}</p>
           </div>
         </div>
