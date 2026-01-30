@@ -767,7 +767,7 @@ async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
         })
       }
     } catch (err) {
-      console.warn(`Error fetching from cluster ${cluster}:`, err)
+      console.error(`Error fetching from cluster ${cluster}:`, err)
     }
   }
   return allServers
@@ -835,7 +835,7 @@ async function fetchLLMdModels(clusters: string[]): Promise<LLMdModel[]> {
         })
       }
     } catch (err) {
-      console.warn(`Error fetching InferencePools from cluster ${cluster}:`, err)
+      console.error(`Error fetching InferencePools from cluster ${cluster}:`, err)
     }
   }
   return allModels

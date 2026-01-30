@@ -152,7 +152,7 @@ class IndexedDBStorage {
           }
         }
       } catch (e) {
-        console.warn('[Cache] IndexedDB not available:', e)
+        console.error('[Cache] IndexedDB not available:', e)
         this.isSupported = false
         reject(e)
       }
@@ -214,7 +214,7 @@ class IndexedDBStorage {
         }
       })
     } catch (e) {
-      console.warn('[Cache] IndexedDB set error:', e)
+      console.error('[Cache] IndexedDB set error:', e)
     }
   }
 
@@ -357,7 +357,7 @@ class CacheStore<T> {
     try {
       await idbStorage.set(this.key, data)
     } catch (e) {
-      console.warn(`[Cache] Failed to save ${this.key}:`, e)
+      console.error(`[Cache] Failed to save ${this.key}:`, e)
     }
   }
 
@@ -772,7 +772,7 @@ export async function migrateFromLocalStorage(): Promise<void> {
       // Remove old localStorage entry after migration
       localStorage.removeItem(fullKey)
     } catch (e) {
-      console.warn(`[Cache] Failed to migrate ${fullKey}:`, e)
+      console.error(`[Cache] Failed to migrate ${fullKey}:`, e)
       // Remove corrupted entry
       localStorage.removeItem(fullKey)
     }

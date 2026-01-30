@@ -106,7 +106,7 @@ export function useProgressiveData<T>(
           }
         }
       } catch (err) {
-        console.warn(`[useProgressiveData] Error fetching from source ${source.id}:`, err)
+        console.error(`[useProgressiveData] Error fetching from source ${source.id}:`, err)
         lastError = err instanceof Error ? err : new Error(String(err))
       }
     }

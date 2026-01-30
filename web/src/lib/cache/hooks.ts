@@ -154,7 +154,7 @@ export function useIndexedData<T>({
           setLastSaved(result.timestamp)
         }
       } catch (e) {
-        console.warn(`[IndexedData] Failed to load ${key}:`, e)
+        console.error(`[IndexedData] Failed to load ${key}:`, e)
       } finally {
         if (mounted) {
           setIsLoading(false)
@@ -175,7 +175,7 @@ export function useIndexedData<T>({
       const db = await openDatabase()
       await saveToDB(db, key, { data: newData, timestamp })
     } catch (e) {
-      console.warn(`[IndexedData] Failed to save ${key}:`, e)
+      console.error(`[IndexedData] Failed to save ${key}:`, e)
     }
   }, [key])
 
@@ -187,7 +187,7 @@ export function useIndexedData<T>({
       const db = await openDatabase()
       await deleteFromDB(db, key)
     } catch (e) {
-      console.warn(`[IndexedData] Failed to clear ${key}:`, e)
+      console.error(`[IndexedData] Failed to clear ${key}:`, e)
     }
   }, [key, defaultValue])
 

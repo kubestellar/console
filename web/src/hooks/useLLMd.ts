@@ -248,7 +248,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
                 allDeployments.push(...items)
               }
             } catch (err) {
-              console.log(`[useLLMdServers] Namespace ${ns} not found or error:`, err)
+              console.error(`[useLLMdServers] Namespace ${ns} not found or error:`, err)
             }
           }
 
@@ -391,7 +391,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             }
           }
         } catch (err) {
-          console.warn(`Error fetching from cluster ${cluster}:`, err)
+          console.error(`Error fetching from cluster ${cluster}:`, err)
         }
       }
 

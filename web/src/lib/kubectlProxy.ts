@@ -403,7 +403,7 @@ class KubectlProxy {
       console.log(`[ClusterUsage] ${context}: cpuMillicores=${totalCpuMillicores}, memBytes=${totalMemoryBytes}`)
       return { cpuUsageMillicores: totalCpuMillicores, memoryUsageBytes: totalMemoryBytes, metricsAvailable: true }
     } catch (err) {
-      console.log(`[ClusterUsage] ${context}: error getting usage -`, err)
+      console.error(`[ClusterUsage] ${context}: error getting usage -`, err)
       return { cpuUsageMillicores: 0, memoryUsageBytes: 0, metricsAvailable: false }
     }
   }
@@ -430,7 +430,7 @@ class KubectlProxy {
         usageMetrics = await Promise.race([usagePromise, timeoutPromise])
       } catch (err) {
         // Usage metrics failed or timed out - continue without them
-        console.log(`[ClusterHealth] ${context}: Usage metrics unavailable, using requests only`)
+        console.error(`[ClusterHealth] ${context}: Usage metrics unavailable, using requests only`, err)
       }
 
       const readyNodes = nodes.filter(n => n.ready).length

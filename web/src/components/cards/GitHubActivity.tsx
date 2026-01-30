@@ -170,7 +170,7 @@ function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) 
     localStorage.setItem(CACHE_KEY_PREFIX + repo.replace('/', '_'), JSON.stringify(cached))
   } catch (e) {
     // Storage might be full, ignore
-    console.warn('Failed to cache GitHub data:', e)
+    console.error('Failed to cache GitHub data:', e)
   }
 }
 
