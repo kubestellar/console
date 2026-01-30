@@ -25,6 +25,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     cards: [
       { card_type: 'provider_health', position: { w: 4, h: 3 } },
       { card_type: 'cluster_health', position: { w: 4, h: 2 } },
+      { card_type: 'cluster_health_monitor', position: { w: 6, h: 3 } },
       { card_type: 'compute_overview', position: { w: 4, h: 3 } },
       { card_type: 'storage_overview', position: { w: 4, h: 3 } },
       { card_type: 'network_overview', position: { w: 4, h: 3 } },
@@ -212,6 +213,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'app_status', position: { w: 4, h: 2 } },
       { card_type: 'deployment_status', position: { w: 4, h: 2 } },
       { card_type: 'deployment_progress', position: { w: 4, h: 2 } },
+      { card_type: 'workload_monitor', position: { w: 8, h: 4 } },
       { card_type: 'pod_issues', position: { w: 6, h: 3 } },
       { card_type: 'deployment_issues', position: { w: 6, h: 3 } },
     ],
@@ -409,6 +411,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     icon: '🚢',
     category: 'workloads',
     cards: [
+      { card_type: 'prow_ci_monitor', title: 'Prow CI Monitor', position: { w: 6, h: 4 } },
       { card_type: 'prow_jobs', title: 'Prow Jobs', position: { w: 6, h: 4 } },
       { card_type: 'prow_status', title: 'Prow Status', position: { w: 6, h: 2 } },
       { card_type: 'prow_history', title: 'Recent Jobs', position: { w: 6, h: 2 } },
@@ -423,6 +426,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     icon: '🤖',
     category: 'workloads',
     cards: [
+      { card_type: 'llmd_stack_monitor', title: 'llm-d Stack Monitor', position: { w: 6, h: 4 } },
       { card_type: 'llm_inference', title: 'llm-d inference status', position: { w: 6, h: 3 } },
       { card_type: 'llm_models', title: 'llm-d models', position: { w: 6, h: 3 } },
       { card_type: 'gpu_workloads', title: 'GPU Workloads', position: { w: 6, h: 3 } },
@@ -475,6 +479,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'pod_pitfall', title: 'Pod Pitfall', position: { w: 6, h: 4 } },
       { card_type: 'kube_man', title: 'Kube Man', position: { w: 6, h: 4 } },
       { card_type: 'kube_doom', title: 'Kube Doom', position: { w: 6, h: 4 } },
+      { card_type: 'pod_crosser', title: 'Pod Crosser', position: { w: 4, h: 4 } },
     ],
   },
   {
@@ -518,6 +523,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 4, h: 4 } },
       { card_type: 'kube_doom', title: 'Kube Doom', position: { w: 6, h: 4 } },
       { card_type: 'flappy_pod', title: 'Flappy Pod', position: { w: 4, h: 4 } },
+      { card_type: 'pod_crosser', title: 'Pod Crosser', position: { w: 4, h: 4 } },
     ],
   },
 
@@ -533,6 +539,22 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'pod_health_trend', position: { w: 6, h: 3 } },
       { card_type: 'resource_trend', position: { w: 6, h: 3 } },
       { card_type: 'gpu_utilization', position: { w: 6, h: 3 } },
+    ],
+  },
+
+  // Events Dashboard template
+  {
+    id: 'events-dashboard',
+    name: 'Events Dashboard',
+    description: 'Comprehensive event monitoring with summaries, warnings, and live feed',
+    icon: '📋',
+    category: 'custom',
+    cards: [
+      { card_type: 'event_summary', position: { w: 6, h: 3 } },
+      { card_type: 'warning_events', position: { w: 6, h: 3 } },
+      { card_type: 'recent_events', position: { w: 6, h: 3 } },
+      { card_type: 'events_timeline', position: { w: 6, h: 3 } },
+      { card_type: 'event_stream', position: { w: 12, h: 3 } },
     ],
   },
 
@@ -562,6 +584,8 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'network_utils', position: { w: 6, h: 3 } },
       { card_type: 'mobile_browser', position: { w: 6, h: 4 } },
       { card_type: 'github_activity', position: { w: 6, h: 3 } },
+      { card_type: 'github_ci_monitor', position: { w: 8, h: 3 } },
+      { card_type: 'rss_feed', position: { w: 6, h: 3 } },
       { card_type: 'stock_market_ticker', position: { w: 4, h: 2 } },
       { card_type: 'iframe_embed', position: { w: 8, h: 4 } },
     ],
