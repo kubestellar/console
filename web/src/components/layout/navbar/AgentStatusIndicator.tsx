@@ -12,16 +12,34 @@ export function AgentStatusIndicator() {
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const agentRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or moving mouse 20px away
+  const CLOSE_DISTANCE = 20
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (agentRef.current && !agentRef.current.contains(event.target as Node)) {
         setShowAgentStatus(false)
       }
     }
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!showAgentStatus || !agentRef.current) return
+      const rect = agentRef.current.getBoundingClientRect()
+      const dx = event.clientX < rect.left - CLOSE_DISTANCE ? rect.left - CLOSE_DISTANCE - event.clientX
+        : event.clientX > rect.right + CLOSE_DISTANCE ? event.clientX - rect.right - CLOSE_DISTANCE : 0
+      const dy = event.clientY < rect.top - CLOSE_DISTANCE ? rect.top - CLOSE_DISTANCE - event.clientY
+        : event.clientY > rect.bottom + CLOSE_DISTANCE ? event.clientY - rect.bottom - CLOSE_DISTANCE : 0
+      if (dx > 0 || dy > 0) {
+        setShowAgentStatus(false)
+      }
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    if (showAgentStatus) {
+      document.addEventListener('mousemove', handleMouseMove)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [showAgentStatus])
 
   return (
     <div className="relative" ref={agentRef}>
