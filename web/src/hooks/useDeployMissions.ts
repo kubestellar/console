@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
 import { getPresentationMode } from './usePresentationMode'
 import { clusterCacheRef } from './mcp/shared'
+import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 
 function authHeaders(): Record<string, string> {
@@ -10,6 +11,45 @@ function authHeaders(): Record<string, string> {
 }
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+
+/** Fetch K8s events for a deployment via kubectlProxy.
+ *  Fetches all events in the namespace and filters client-side to include
+ *  events for the Deployment itself AND its ReplicaSets / Pods (whose names
+ *  start with the deployment name). */
+async function fetchDeployEventsViaProxy(
+  context: string,
+  namespace: string,
+  workload: string,
+  tail = 8,
+): Promise<string[]> {
+  const response = await kubectlProxy.exec(
+    ['get', 'events', '-n', namespace,
+     '--sort-by=.lastTimestamp', '-o', 'json'],
+    { context, timeout: 10000 },
+  )
+  if (response.exitCode !== 0) return []
+  const data = JSON.parse(response.output)
+  interface KubeEvent {
+    lastTimestamp?: string
+    reason?: string
+    message?: string
+    involvedObject?: { name?: string }
+  }
+  const prefix = workload + '-'
+  const relevant = (data.items || []).filter((e: KubeEvent) => {
+    const name = e.involvedObject?.name || ''
+    return name === workload || name.startsWith(prefix)
+  })
+  return relevant
+    .slice(-tail)
+    .reverse()
+    .map((e: KubeEvent) => {
+      const ts = e.lastTimestamp
+        ? new Date(e.lastTimestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : ''
+      return `${ts} ${e.reason}: ${e.message}`
+    })
+}
 
 export type DeployMissionStatus = 'launching' | 'deploying' | 'orbit' | 'abort' | 'partial'
 
@@ -197,7 +237,15 @@ export function useDeployMissions() {
                       } else if (String(match.status) === 'failed') {
                         status = 'failed'
                       }
-                      return { cluster, status, replicas, readyReplicas }
+                      // Fetch K8s events via kubectlProxy
+                      let logs: string[] | undefined
+                      try {
+                        logs = await fetchDeployEventsViaProxy(
+                          clusterInfo.context || cluster, mission.namespace, mission.workload,
+                        )
+                        if (logs.length === 0) logs = undefined
+                      } catch { /* non-critical */ }
+                      return { cluster, status, replicas, readyReplicas, logs }
                     }
                     // Workload not found on this cluster yet — still pending
                     return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
