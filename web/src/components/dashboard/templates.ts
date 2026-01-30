@@ -483,7 +483,6 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'checkers', title: 'Kube Checkers', position: { w: 4, h: 4 } },
       { card_type: 'kube_chess', title: 'Kube Chess', position: { w: 4, h: 4 } },
       { card_type: 'sudoku_game', title: 'Kube Sudoku', position: { w: 4, h: 4 } },
-      { card_type: 'flappy_pod', title: 'Flappy Pod', position: { w: 4, h: 4 } },
       { card_type: 'container_tetris', title: 'Container Tetris', position: { w: 4, h: 4 } },
       { card_type: 'game_2048', title: 'Kube 2048', position: { w: 4, h: 4 } },
       { card_type: 'pod_sweeper', title: 'Pod Sweeper', position: { w: 4, h: 4 } },
@@ -502,6 +501,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'kube_craft', title: 'KubeCraft', position: { w: 4, h: 4 } },
       { card_type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 4, h: 4 } },
       { card_type: 'kube_doom', title: 'Kube Doom', position: { w: 6, h: 4 } },
+      { card_type: 'flappy_pod', title: 'Flappy Pod', position: { w: 4, h: 4 } },
     ],
   },
 

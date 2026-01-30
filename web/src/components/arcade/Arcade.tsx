@@ -31,7 +31,6 @@ const DEFAULT_ARCADE_CARDS = [
   { type: 'kube_chess', title: 'Kube Chess', position: { w: 5, h: 4 } },
   { type: 'sudoku_game', title: 'Kube Sudoku', position: { w: 6, h: 4 } },
   // Classic arcade games
-  { type: 'flappy_pod', title: 'Flappy Pod', position: { w: 6, h: 4 } },
   { type: 'container_tetris', title: 'Container Tetris', position: { w: 6, h: 4 } },
   { type: 'node_invaders', title: 'Node Invaders', position: { w: 6, h: 4 } },
   { type: 'kube_man', title: 'Kube-Man', position: { w: 6, h: 4 } },
@@ -54,6 +53,8 @@ const DEFAULT_ARCADE_CARDS = [
   // Sandbox games
   { type: 'kube_craft', title: 'KubeCraft', position: { w: 5, h: 4 } },
   { type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 6, h: 4 } },
+  // Classic (last)
+  { type: 'flappy_pod', title: 'Flappy Pod', position: { w: 6, h: 4 } },
 ]
 
 // Sortable card component with drag handle
