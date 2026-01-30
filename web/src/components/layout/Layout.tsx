@@ -34,6 +34,17 @@ export function Layout({ children }: LayoutProps) {
   // Show offline banner when agent is disconnected (not demo mode, not connecting)
   const showOfflineBanner = !isDemoMode && agentStatus === 'disconnected' && !offlineBannerDismissed
 
+  // Banner stacking: each banner's top offset depends on how many banners above it are visible.
+  // Navbar is 64px (top-16). Each banner is ~36px tall.
+  const NAVBAR_HEIGHT = 64
+  const BANNER_HEIGHT = 36
+  // Stack order: Network (top) → Demo → Agent Offline (bottom)
+  const networkBannerTop = NAVBAR_HEIGHT
+  const demoBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0)
+  const offlineBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0) + (isDemoMode ? BANNER_HEIGHT : 0)
+  const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showOfflineBanner ? 1 : 0)
+  const totalBannerHeight = activeBannerCount * BANNER_HEIGHT
+
   // Track navigation for behavior analysis
   useNavigationHistory()
 
@@ -68,13 +79,15 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Network Disconnected Banner */}
       {showNetworkBanner && (
-        <div className={cn(
-          "fixed top-16 right-0 z-50 border-b transition-[left] duration-300",
-          config.collapsed ? "left-20" : "left-64",
-          isOnline
-            ? "bg-green-500/10 border-green-500/20"
-            : "bg-red-500/10 border-red-500/20",
-        )}>
+        <div
+          style={{ top: networkBannerTop }}
+          className={cn(
+            "fixed right-0 z-50 border-b transition-[left] duration-300",
+            config.collapsed ? "left-20" : "left-64",
+            isOnline
+              ? "bg-green-500/10 border-green-500/20"
+              : "bg-red-500/10 border-red-500/20",
+          )}>
           <div className="flex items-center justify-center gap-3 py-1.5 px-4">
             {isOnline ? (
               <>
@@ -100,10 +113,12 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Demo Mode Banner */}
       {isDemoMode && (
-        <div className={cn(
-          "fixed top-16 right-0 z-40 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
-          config.collapsed ? "left-20" : "left-64",
-        )}>
+        <div
+          style={{ top: demoBannerTop }}
+          className={cn(
+            "fixed right-0 z-40 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
+            config.collapsed ? "left-20" : "left-64",
+          )}>
           <div className="flex items-center justify-center gap-3 py-1.5 px-4">
             <Box className="w-4 h-4 text-yellow-400" />
             <span className="text-sm text-yellow-400 font-medium">
@@ -132,9 +147,11 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
-        <div className={cn(
-          "fixed top-16 z-30 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
-          config.collapsed ? "left-20" : "left-64",
+        <div
+          style={{ top: offlineBannerTop }}
+          className={cn(
+            "fixed z-30 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
+            config.collapsed ? "left-20" : "left-64",
           // Adjust right edge when mission sidebar is open
           isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[500px]" : "right-0",
           isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
@@ -173,7 +190,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      <div className={cn("flex flex-1 overflow-hidden", (showNetworkBanner || isDemoMode || showOfflineBanner) ? "pt-[88px]" : "pt-16")}>
+      <div className="flex flex-1 overflow-hidden" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
         <main className={cn(
           'flex-1 p-6 transition-all duration-300 overflow-y-auto',
