@@ -1084,19 +1084,67 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 		return nil, err
 	}
 
+	// Waiting reasons that indicate a problem
+	problemWaitingReasons := map[string]bool{
+		"CrashLoopBackOff":           true,
+		"ImagePullBackOff":           true,
+		"ErrImagePull":               true,
+		"CreateContainerConfigError": true,
+		"InvalidImageName":           true,
+		"CreateContainerError":       true,
+		"RunContainerError":          true,
+		"PostStartHookError":         true,
+	}
+
+	now := time.Now()
+
 	var issues []PodIssue
 	for _, pod := range pods.Items {
+		// Skip completed/succeeded pods (e.g. finished Jobs)
+		if pod.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+
 		var podIssues []string
 		restarts := 0
+
+		// Determine effective status (mirrors kubectl logic)
+		effectiveStatus := string(pod.Status.Phase)
+
+		// Check init container statuses
+		for i, cs := range pod.Status.InitContainerStatuses {
+			restarts += int(cs.RestartCount)
+
+			if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
+				if problemWaitingReasons[cs.State.Waiting.Reason] {
+					podIssues = append(podIssues, fmt.Sprintf("Init:%s", cs.State.Waiting.Reason))
+					effectiveStatus = fmt.Sprintf("Init:%s", cs.State.Waiting.Reason)
+				}
+			}
+			if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+				podIssues = append(podIssues, fmt.Sprintf("Init container %d failed (exit %d)", i, cs.State.Terminated.ExitCode))
+			}
+			if cs.LastTerminationState.Terminated != nil && cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
+				podIssues = append(podIssues, "Init:OOMKilled")
+			}
+		}
 
 		// Check container statuses
 		for _, cs := range pod.Status.ContainerStatuses {
 			restarts += int(cs.RestartCount)
 
-			if cs.State.Waiting != nil {
+			if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
 				reason := cs.State.Waiting.Reason
-				if reason == "CrashLoopBackOff" || reason == "ImagePullBackOff" || reason == "ErrImagePull" {
+				if problemWaitingReasons[reason] {
 					podIssues = append(podIssues, reason)
+					effectiveStatus = reason
+				}
+			}
+
+			if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+				podIssues = append(podIssues, fmt.Sprintf("Exit code %d", cs.State.Terminated.ExitCode))
+				if cs.State.Terminated.Reason != "" {
+					effectiveStatus = cs.State.Terminated.Reason
 				}
 			}
 
@@ -1106,17 +1154,57 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 				}
 			}
 
+			// Container running but not ready for over 5 minutes
+			if cs.State.Running != nil && !cs.Ready {
+				age := now.Sub(cs.State.Running.StartedAt.Time)
+				if age > 5*time.Minute {
+					podIssues = append(podIssues, "Not ready")
+				}
+			}
+
 			if cs.RestartCount > 5 {
 				podIssues = append(podIssues, fmt.Sprintf("High restarts (%d)", cs.RestartCount))
 			}
 		}
 
+		// Check pod conditions for scheduling failures
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse {
+				msg := cond.Reason
+				if cond.Message != "" {
+					msg = cond.Message
+				}
+				podIssues = append(podIssues, fmt.Sprintf("Unschedulable: %s", msg))
+				effectiveStatus = "Unschedulable"
+			}
+		}
+
 		// Check pod phase
 		if pod.Status.Phase == corev1.PodPending {
-			podIssues = append(podIssues, "Pending")
+			// Only add "Pending" if no more specific issue was found
+			if len(podIssues) == 0 {
+				// Pending for over 2 minutes is suspicious
+				if pod.CreationTimestamp.Time.Before(now.Add(-2 * time.Minute)) {
+					podIssues = append(podIssues, "Pending")
+				}
+			}
 		}
 		if pod.Status.Phase == corev1.PodFailed {
-			podIssues = append(podIssues, "Failed")
+			reason := "Failed"
+			if pod.Status.Reason != "" {
+				reason = pod.Status.Reason
+			}
+			podIssues = append(podIssues, reason)
+			effectiveStatus = reason
+		}
+
+		// Stuck terminating (has deletion timestamp but still exists)
+		if pod.DeletionTimestamp != nil {
+			age := now.Sub(pod.DeletionTimestamp.Time)
+			if age > 5*time.Minute {
+				podIssues = append(podIssues, fmt.Sprintf("Stuck terminating (%dm)", int(age.Minutes())))
+				effectiveStatus = "Terminating"
+			}
 		}
 
 		if len(podIssues) > 0 {
@@ -1124,7 +1212,7 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 				Name:      pod.Name,
 				Namespace: pod.Namespace,
 				Cluster:   contextName,
-				Status:    string(pod.Status.Phase),
+				Status:    effectiveStatus,
 				Restarts:  restarts,
 				Issues:    podIssues,
 			})
