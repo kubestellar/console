@@ -14,6 +14,7 @@ const CARD_CATALOG = {
     { type: 'cluster_costs', title: 'Cluster Costs', description: 'Resource cost estimation', visualization: 'bar' },
     { type: 'upgrade_status', title: 'Cluster Upgrade Status', description: 'Available cluster upgrades', visualization: 'status' },
     { type: 'cluster_resource_tree', title: 'Cluster Resource Tree', description: 'Hierarchical view of cluster resources with search and filters', visualization: 'table' },
+    { type: 'provider_health', title: 'Provider Health', description: 'Health and status of AI and cloud infrastructure providers', visualization: 'status' },
   ],
   'Workloads': [
     { type: 'deployment_status', title: 'Deployment Status', description: 'Deployment health across clusters', visualization: 'donut' },
@@ -80,6 +81,9 @@ const CARD_CATALOG = {
   'Security & Events': [
     { type: 'security_issues', title: 'Security Issues', description: 'Security findings and vulnerabilities', visualization: 'table' },
     { type: 'event_stream', title: 'Event Stream', description: 'Live Kubernetes event feed', visualization: 'events' },
+    { type: 'event_summary', title: 'Event Summary', description: 'Aggregated event counts grouped by type and reason', visualization: 'status' },
+    { type: 'warning_events', title: 'Warning Events', description: 'Warning-level events that may need attention', visualization: 'events' },
+    { type: 'recent_events', title: 'Recent Events', description: 'Most recent events across all clusters', visualization: 'events' },
     { type: 'user_management', title: 'User Management', description: 'Console users and Kubernetes RBAC', visualization: 'table' },
   ],
   'Live Trends': [
@@ -154,6 +158,7 @@ const CARD_CATALOG = {
     { type: 'kube_craft', title: 'KubeCraft 2D', description: '2D Minecraft-style block builder with terrain generation', visualization: 'status' },
     { type: 'kube_craft_3d', title: 'KubeCraft 3D', description: 'Full 3D Minecraft-style game with first-person controls', visualization: 'status' },
     { type: 'kube_doom', title: 'Kube Doom', description: 'Raycasting FPS - eliminate rogue CrashPods, OOMKillers, and ZombieDeploys', visualization: 'status' },
+    { type: 'pod_crosser', title: 'Pod Crosser', description: 'Frogger-style game - guide your pod across traffic and rivers', visualization: 'status' },
   ],
   'Utilities': [
     { type: 'network_utils', title: 'Network Utils', description: 'Ping hosts, check ports, and view network information', visualization: 'status' },
@@ -187,6 +192,33 @@ interface AddCardModalProps {
 // Simulated AI response - in production this would call Claude API
 function generateCardSuggestions(query: string): CardSuggestion[] {
   const lowerQuery = query.toLowerCase()
+
+  // Provider/health-related queries
+  if (lowerQuery.includes('provider') || lowerQuery.includes('ai provider') || lowerQuery.includes('cloud provider') || lowerQuery.includes('infrastructure health')) {
+    return [
+      {
+        type: 'provider_health',
+        title: 'Provider Health',
+        description: 'Health and status of AI and cloud infrastructure providers',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'cluster_health',
+        title: 'Cluster Health',
+        description: 'Health status of all clusters',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'active_alerts',
+        title: 'Active Alerts',
+        description: 'Firing alerts with severity',
+        visualization: 'status',
+        config: {},
+      },
+    ]
+  }
 
   // GPU-related queries
   if (lowerQuery.includes('gpu')) {
