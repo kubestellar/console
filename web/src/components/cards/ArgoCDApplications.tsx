@@ -1,13 +1,19 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle, Search, Filter, ChevronDown, Server } from 'lucide-react'
+import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useChartFilters } from '../../lib/cards'
+import {
+  useCardData,
+  commonComparators,
+  type SortDirection,
+} from '../../lib/cards'
+import {
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards/CardComponents'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -122,114 +128,87 @@ const healthStatusConfig = {
   Unknown: { icon: AlertTriangle, color: 'text-gray-400' },
 }
 
+const syncOrder: Record<string, number> = { OutOfSync: 0, Unknown: 1, Synced: 2 }
+const healthOrder: Record<string, number> = { Degraded: 0, Missing: 1, Progressing: 2, Unknown: 3, Healthy: 4 }
+
+const ARGO_SORT_COMPARATORS = {
+  syncStatus: (a: ArgoApplication, b: ArgoApplication) => (syncOrder[a.syncStatus] ?? 5) - (syncOrder[b.syncStatus] ?? 5),
+  healthStatus: (a: ArgoApplication, b: ArgoApplication) => (healthOrder[a.healthStatus] ?? 5) - (healthOrder[b.healthStatus] ?? 5),
+  name: commonComparators.string<ArgoApplication>('name'),
+  namespace: commonComparators.string<ArgoApplication>('namespace'),
+}
+
 export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToArgoApp } = useDrillDownActions()
 
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'argocd-applications',
-  })
-
+  // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
-  const [sortBy, setSortBy] = useState<SortByOption>('syncStatus')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
 
-  const filteredClusters = useMemo(() => {
-    let clusterNames = isAllClustersSelected ? clusters.map(c => c.name) : selectedClusters
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      clusterNames = clusterNames.filter(c => localClusterFilter.includes(c))
-    }
-    return clusterNames
-  }, [clusters, selectedClusters, isAllClustersSelected, localClusterFilter])
+  // Step 1: Generate all mock apps (useCardData will handle cluster filtering)
+  const allClusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
+  const allApps = useMemo(() => getMockArgoApplications(allClusterNames), [allClusterNames])
 
-  const filteredAndSorted = useMemo(() => {
-    const allApps = getMockArgoApplications(filteredClusters)
-
-    // Filter by config
+  // Step 2: Pre-filter by config and status filter (card-specific)
+  const preFiltered = useMemo(() => {
     let filtered = allApps
-    if (config?.cluster) {
-      filtered = filtered.filter(a => a.cluster === config.cluster)
-    }
-    if (config?.namespace) {
-      filtered = filtered.filter(a => a.namespace === config.namespace)
-    }
+    if (config?.cluster) filtered = filtered.filter(a => a.cluster === config.cluster)
+    if (config?.namespace) filtered = filtered.filter(a => a.namespace === config.namespace)
+    if (selectedFilter === 'outOfSync') filtered = filtered.filter(a => a.syncStatus === 'OutOfSync')
+    else if (selectedFilter === 'unhealthy') filtered = filtered.filter(a => a.healthStatus !== 'Healthy')
+    return filtered
+  }, [allApps, config, selectedFilter])
 
-    // Filter by status
-    if (selectedFilter === 'outOfSync') {
-      filtered = filtered.filter(a => a.syncStatus === 'OutOfSync')
-    } else if (selectedFilter === 'unhealthy') {
-      filtered = filtered.filter(a => a.healthStatus !== 'Healthy')
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(a =>
-        a.name.toLowerCase().includes(query) ||
-        a.namespace.toLowerCase().includes(query) ||
-        a.cluster.toLowerCase().includes(query) ||
-        a.source.repoURL.toLowerCase().includes(query)
-      )
-    }
-
-    // Sort
-    const syncOrder: Record<string, number> = { OutOfSync: 0, Unknown: 1, Synced: 2 }
-    const healthOrder: Record<string, number> = { Degraded: 0, Missing: 1, Progressing: 2, Unknown: 3, Healthy: 4 }
-    const sorted = [...filtered].sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'syncStatus':
-          compare = (syncOrder[a.syncStatus] ?? 5) - (syncOrder[b.syncStatus] ?? 5)
-          break
-        case 'healthStatus':
-          compare = (healthOrder[a.healthStatus] ?? 5) - (healthOrder[b.healthStatus] ?? 5)
-          break
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'namespace':
-          compare = a.namespace.localeCompare(b.namespace)
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-
-    return sorted
-  }, [filteredClusters, config, selectedFilter, sortBy, sortDirection, localSearch])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Step 3: useCardData for search/cluster filter/sort/pagination
   const {
-    paginatedItems: applications,
+    items: applications,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredAndSorted, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: searchQuery,
+      setSearch: setSearchQuery,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<ArgoApplication, SortByOption>(preFiltered, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster'],
+      clusterField: 'cluster',
+      storageKey: 'argocd-applications',
+    },
+    sort: {
+      defaultField: 'syncStatus',
+      defaultDirection: 'asc' as SortDirection,
+      comparators: ARGO_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
+  // Stats computed from preFiltered (reflects status counts before search/pagination)
   const stats = useMemo(() => ({
-    synced: filteredAndSorted.filter(a => a.syncStatus === 'Synced').length,
-    outOfSync: filteredAndSorted.filter(a => a.syncStatus === 'OutOfSync').length,
-    healthy: filteredAndSorted.filter(a => a.healthStatus === 'Healthy').length,
-    unhealthy: filteredAndSorted.filter(a => a.healthStatus !== 'Healthy').length,
-  }), [filteredAndSorted])
+    synced: preFiltered.filter(a => a.syncStatus === 'Synced').length,
+    outOfSync: preFiltered.filter(a => a.syncStatus === 'OutOfSync').length,
+    healthy: preFiltered.filter(a => a.healthStatus === 'Healthy').length,
+    unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length,
+  }), [preFiltered])
 
-  const showSkeleton = isLoading && filteredAndSorted.length === 0
+  const showSkeleton = isLoading && allApps.length === 0
 
   if (showSkeleton) {
     return (
@@ -249,84 +228,51 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      {/* Header with controls */}
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
             {totalItems} apps
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
+          <CardControlsRow
+            clusterIndicator={localClusterFilter.length > 0 ? {
+              selectedCount: localClusterFilter.length,
+              totalCount: availableClusters.length,
+            } : undefined}
+            clusterFilter={{
+              availableClusters,
+              selectedClusters: localClusterFilter,
+              onToggle: toggleClusterFilter,
+              onClear: clearClusterFilter,
+              isOpen: showClusterFilter,
+              setIsOpen: setShowClusterFilter,
+              containerRef: clusterFilterRef,
+              minClusters: 1,
+            }}
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => setSortBy(v as SortByOption),
+              sortDirection,
+              onSortDirectionChange: setSortDirection,
+            }}
+            extra={
+              <a
+                href="https://argo-cd.readthedocs.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+                title="ArgoCD Documentation"
               >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            }
+            className="mb-0"
           />
-          <a
-            href="https://argo-cd.readthedocs.io/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="ArgoCD Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
         </div>
       </div>
 
@@ -345,16 +291,12 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search applications..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search applications..."
+        className="mb-3"
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-3">
@@ -395,61 +337,63 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
       )}
 
       {/* Applications list */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
-        {applications.map((app, idx) => {
-          const syncConfig = syncStatusConfig[app.syncStatus]
-          const healthConfig = healthStatusConfig[app.healthStatus]
-          const SyncIcon = syncConfig.icon
-          const HealthIcon = healthConfig.icon
+      <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
+        {applications.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+            No applications match the current filters
+          </div>
+        ) : (
+          applications.map((app, idx) => {
+            const syncConfig = syncStatusConfig[app.syncStatus]
+            const healthConfig = healthStatusConfig[app.healthStatus]
+            const SyncIcon = syncConfig.icon
+            const HealthIcon = healthConfig.icon
 
-          return (
-            <div
-              key={`${app.cluster}-${app.namespace}-${app.name}-${idx}`}
-              onClick={() => drillToArgoApp(app.cluster, app.namespace, app.name, {
-                syncStatus: app.syncStatus,
-                healthStatus: app.healthStatus,
-                source: app.source,
-                lastSynced: app.lastSynced,
-              })}
-              className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group"
-              title={`Click to view ${app.name} details`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">{app.name}</span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded ${syncConfig.bg} ${syncConfig.color}`}>
-                    <SyncIcon className="w-3 h-3 inline mr-1" />
-                    {app.syncStatus}
-                  </span>
-                  <HealthIcon className={`w-4 h-4 ${healthConfig.color}`} aria-label={app.healthStatus} />
+            return (
+              <div
+                key={`${app.cluster}-${app.namespace}-${app.name}-${idx}`}
+                onClick={() => drillToArgoApp(app.cluster, app.namespace, app.name, {
+                  syncStatus: app.syncStatus,
+                  healthStatus: app.healthStatus,
+                  source: app.source,
+                  lastSynced: app.lastSynced,
+                })}
+                className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group"
+                title={`Click to view ${app.name} details`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{app.name}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${syncConfig.bg} ${syncConfig.color}`}>
+                      <SyncIcon className="w-3 h-3 inline mr-1" />
+                      {app.syncStatus}
+                    </span>
+                    <HealthIcon className={`w-4 h-4 ${healthConfig.color}`} aria-label={app.healthStatus} />
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <ClusterBadge cluster={app.cluster} size="sm" />
-                  <span>/{app.namespace}</span>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <ClusterBadge cluster={app.cluster} size="sm" />
+                    <span>/{app.namespace}</span>
+                  </div>
+                  <span>{app.lastSynced}</span>
                 </div>
-                <span>{app.lastSynced}</span>
               </div>
-            </div>
-          )
-        })}
+            )
+          })
+        )}
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
     </div>
   )
 }

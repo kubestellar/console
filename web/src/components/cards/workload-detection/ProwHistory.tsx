@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   CheckCircle, XCircle, AlertTriangle, ExternalLink, Search
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
-import { usePagination, Pagination } from '../../ui/Pagination'
+import { Pagination } from '../../ui/Pagination'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
+import { useCardData } from '../../../lib/cards/cardHooks'
+import type { ProwJob } from '../../../hooks/useProw'
 
 interface ProwHistoryProps {
   config?: Record<string, unknown>
@@ -13,29 +15,26 @@ interface ProwHistoryProps {
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
   const { jobs, isLoading, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter to only completed jobs for history view
-  const completedJobs = useMemo(() => {
-    let filtered = jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted')
+  // Pre-filter to only completed jobs
+  const completedJobs = useMemo(() =>
+    jobs.filter(j => j.state === 'success' || j.state === 'failure' || j.state === 'error' || j.state === 'aborted'),
+    [jobs]
+  )
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.name.toLowerCase().includes(q) ||
-        j.state.toLowerCase().includes(q) ||
-        j.type.toLowerCase().includes(q) ||
-        j.duration.toLowerCase().includes(q)
-      )
-    }
-
-    return filtered
-  }, [jobs, searchQuery])
-
-  const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(completedJobs, effectivePerPage)
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters } = useCardData(completedJobs, {
+    filter: {
+      searchFields: ['name', 'state', 'type', 'duration'] as (keyof ProwJob)[],
+    },
+    sort: {
+      defaultField: 'started',
+      defaultDirection: 'desc',
+      comparators: {
+        started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   if (isLoading) {
     return (
@@ -52,12 +51,12 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-          {completedJobs.length} revisions
+          {totalItems} revisions
         </span>
         <div className="flex items-center gap-2">
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
           />
         </div>
       </div>
@@ -67,8 +66,8 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={filters.search}
+          onChange={(e) => filters.setSearch(e.target.value)}
           placeholder="Search history..."
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
@@ -78,7 +77,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       <div className="flex-1 overflow-y-auto relative">
         <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
         <div className="space-y-2">
-          {paginatedItems.map((job) => (
+          {items.map((job) => (
             <div key={job.id} className="relative pl-6 group">
               <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
                 job.state === 'success' ? 'bg-green-500' : job.state === 'aborted' ? 'bg-yellow-500' : 'bg-red-500'
@@ -111,13 +110,13 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={effectivePerPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

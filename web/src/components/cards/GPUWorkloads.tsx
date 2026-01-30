@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Search, Filter, ChevronDown, Server } from 'lucide-react'
 import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import type { PodInfo } from '../../hooks/useMCP'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -21,6 +21,23 @@ const SORT_OPTIONS = [
   { value: 'namespace' as const, label: 'Namespace' },
   { value: 'cluster' as const, label: 'Cluster' },
 ]
+
+const STATUS_ORDER: Record<string, number> = {
+  CrashLoopBackOff: 0,
+  Error: 1,
+  ImagePullBackOff: 2,
+  Pending: 3,
+  Running: 4,
+  Succeeded: 5,
+  Completed: 6,
+}
+
+const GPU_SORT_COMPARATORS: Record<SortByOption, (a: PodInfo, b: PodInfo) => number> = {
+  status: commonComparators.statusOrder<PodInfo>('status', STATUS_ORDER),
+  name: commonComparators.string<PodInfo>('name'),
+  namespace: commonComparators.string<PodInfo>('namespace'),
+  cluster: commonComparators.string<PodInfo>('cluster'),
+}
 
 // Check if any container in the pod requests GPUs
 function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
@@ -44,39 +61,21 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   } = useGPUNodes()
   const { pods: allPods, isLoading: podsLoading } = useAllPods()
   useClusters() // Keep hook for cache warming
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPod } = useDrillDownActions()
-
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'gpu-workloads',
-  })
-
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
 
   // Only show loading when no cached data exists
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
-  // Filter pods that are actual GPU workloads
+
+  // Pre-filter pods to only GPU workloads (domain-specific logic before hook)
   // Show pods that: 1) request GPU resources, 2) are assigned to GPU nodes, or 3) have GPU workload labels
-  const gpuWorkloads = useMemo(() => {
+  const gpuWorkloadSource = useMemo(() => {
     // Create a map of cluster+node combinations for fast lookup
     // Format: "cluster:nodename" -> true
     const gpuNodeKeys = new Set(
       gpuNodes.map(node => `${normalizeClusterName(node.cluster || '')}:${node.name}`)
     )
 
-    let filtered = allPods.filter(pod => {
+    return allPods.filter(pod => {
       // Must have a cluster
       if (!pod.cluster) return false
 
@@ -114,80 +113,33 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
 
       return false
     })
+  }, [allPods, gpuNodes])
 
-    // Apply global cluster filter
-    if (!isAllClustersSelected) {
-      filtered = filtered.filter(pod => {
-        const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
-        return selectedClusters.some(c => {
-          const normalizedSelectedCluster = normalizeClusterName(c)
-          // Exact match after normalization
-          return normalizedPodCluster === normalizedSelectedCluster
-        })
-      })
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      filtered = filtered.filter(pod => {
-        const normalizedPodCluster = normalizeClusterName(pod.cluster || '')
-        return localClusterFilter.some(c => normalizedPodCluster === c)
-      })
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(pod =>
-        pod.name.toLowerCase().includes(query) ||
-        (pod.namespace?.toLowerCase() || '').includes(query) ||
-        (pod.cluster?.toLowerCase() || '').includes(query) ||
-        (pod.node?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    return filtered
-  }, [allPods, gpuNodes, selectedClusters, isAllClustersSelected, localClusterFilter, localSearch])
-
-  // Sort workloads
-  const sortedWorkloads = useMemo(() => {
-    const statusOrder: Record<string, number> = {
-      CrashLoopBackOff: 0,
-      Error: 1,
-      ImagePullBackOff: 2,
-      Pending: 3,
-      Running: 4,
-      Succeeded: 5,
-      Completed: 6,
-    }
-
-    const sorted = [...gpuWorkloads].sort((a, b) => {
-      let result = 0
-      if (sortBy === 'status') {
-        result = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
-      } else if (sortBy === 'name') {
-        result = a.name.localeCompare(b.name)
-      } else if (sortBy === 'namespace') {
-        result = (a.namespace || '').localeCompare(b.namespace || '')
-      } else if (sortBy === 'cluster') {
-        result = (a.cluster || '').localeCompare(b.cluster || '')
-      }
-      return sortDirection === 'asc' ? result : -result
-    })
-    return sorted
-  }, [gpuWorkloads, sortBy, sortDirection])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use unified card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: displayWorkloads,
+    items: displayWorkloads,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedWorkloads, effectivePerPage)
+    itemsPerPage,
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<PodInfo, SortByOption>(gpuWorkloadSource, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster', 'node'] as (keyof PodInfo)[],
+      clusterField: 'cluster' as keyof PodInfo,
+      storageKey: 'gpu-workloads',
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc',
+      comparators: GPU_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   const handlePodClick = (pod: typeof allPods[0]) => {
     drillToPod(pod.cluster || '', pod.namespace || '', pod.name)
@@ -208,15 +160,15 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     }
   }
 
-  // Count summary
+  // Count summary (uses totalItems from hook which reflects filtered count)
   const summary = useMemo(() => {
-    const running = gpuWorkloads.filter(p => p.status === 'Running').length
-    const pending = gpuWorkloads.filter(p => p.status === 'Pending').length
-    const failed = gpuWorkloads.filter(p => ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'].includes(p.status)).length
-    return { running, pending, failed, total: gpuWorkloads.length }
-  }, [gpuWorkloads])
+    const running = gpuWorkloadSource.filter(p => p.status === 'Running').length
+    const pending = gpuWorkloadSource.filter(p => p.status === 'Pending').length
+    const failed = gpuWorkloadSource.filter(p => ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'].includes(p.status)).length
+    return { running, pending, failed, total: gpuWorkloadSource.length }
+  }, [gpuWorkloadSource])
 
-  if (isLoading && gpuWorkloads.length === 0) {
+  if (isLoading && gpuWorkloadSource.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-3">
@@ -264,20 +216,20 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
         ) : <div />}
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
+          {filters.localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
+              {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
+          {filters.availableClusters.length >= 1 && (
+            <div ref={filters.clusterFilterRef} className="relative">
               <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
+                  filters.localClusterFilter.length > 0
                     ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                     : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
                 }`}
@@ -287,23 +239,23 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
+              {filters.showClusterFilter && (
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
                     <button
-                      onClick={clearClusterFilter}
+                      onClick={filters.clearClusterFilter}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
                     >
                       All clusters
                     </button>
-                    {availableClusters.map(cluster => (
+                    {filters.availableClusters.map(cluster => (
                       <button
                         key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
+                        onClick={() => filters.toggleClusterFilter(cluster.name)}
                         className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                          filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                         }`}
                       >
                         {cluster.name}
@@ -316,13 +268,13 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
           )}
 
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
             sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+            onSortChange={sorting.setSortBy}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>
@@ -332,8 +284,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
+          value={filters.search}
+          onChange={(e) => filters.setSearch(e.target.value)}
           placeholder="Search workloads..."
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
@@ -408,13 +360,13 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

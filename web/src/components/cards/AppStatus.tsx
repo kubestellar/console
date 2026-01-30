@@ -1,12 +1,16 @@
-import { useState, useMemo } from 'react'
-import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2, Search, Filter, ChevronDown, Server } from 'lucide-react'
+import { useMemo } from 'react'
+import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCachedDeployments } from '../../hooks/useCachedData'
-import { useChartFilters } from '../../lib/cards'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import {
+  useCardData,
+  commonComparators,
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards'
 
 type SortByOption = 'status' | 'name' | 'clusters'
 
@@ -15,6 +19,16 @@ const SORT_OPTIONS = [
   { value: 'name' as const, label: 'Name' },
   { value: 'clusters' as const, label: 'Clusters' },
 ]
+
+const APP_SORT_COMPARATORS = {
+  status: (a: AppData, b: AppData) => {
+    const aScore = a.status.warning * 10 + a.status.pending
+    const bScore = b.status.warning * 10 + b.status.pending
+    return bScore - aScore
+  },
+  name: commonComparators.string<AppData>('name'),
+  clusters: (a: AppData, b: AppData) => b.clusters.length - a.clusters.length,
+}
 
 interface AppStatusProps {
   config?: any
@@ -35,24 +49,6 @@ export function AppStatus(_props: AppStatusProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
-
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'app-status',
-  })
-
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
 
   // Transform deployments into app data grouped by name
   const rawApps = useMemo((): AppData[] => {
@@ -88,27 +84,22 @@ export function AppStatus(_props: AppStatusProps) {
     return Array.from(appMap.values())
   }, [deployments])
 
-  const filteredAndSorted = useMemo(() => {
-    // Apply global filters first
+  // Pre-filter by global cluster filter and custom text filter
+  // (useCardData's clusterField doesn't support array fields, so we handle it here)
+  const preFilteredApps = useMemo(() => {
     let filtered = rawApps
 
-    // Filter by selected clusters
+    // Filter by global selected clusters (clusters is an array field)
     if (!isAllClustersSelected) {
       filtered = filtered.map(app => ({
         ...app,
-        clusters: app.clusters.filter(c => globalSelectedClusters.some(gc => gc.includes(c) || c.includes(gc.split('/').pop() || gc)))
+        clusters: app.clusters.filter(c =>
+          globalSelectedClusters.some(gc => gc.includes(c) || c.includes(gc.split('/').pop() || gc))
+        ),
       })).filter(app => app.clusters.length > 0)
     }
 
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      filtered = filtered.map(app => ({
-        ...app,
-        clusters: app.clusters.filter(c => localClusterFilter.includes(c))
-      })).filter(app => app.clusters.length > 0)
-    }
-
-    // Apply custom text filter
+    // Apply global custom text filter
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
       filtered = filtered.filter(app =>
@@ -117,41 +108,51 @@ export function AppStatus(_props: AppStatusProps) {
       )
     }
 
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(app =>
-        app.name.toLowerCase().includes(query) ||
-        app.namespace.toLowerCase().includes(query) ||
-        app.clusters.some(c => c.toLowerCase().includes(query))
-      )
-    }
+    return filtered
+  }, [rawApps, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-    const sorted = [...filtered].sort((a, b) => {
-      let result = 0
-      if (sortBy === 'status') {
-        // Sort by warning count (most warnings first)
-        const aScore = a.status.warning * 10 + a.status.pending
-        const bScore = b.status.warning * 10 + b.status.pending
-        result = bScore - aScore
-      } else if (sortBy === 'name') result = a.name.localeCompare(b.name)
-      else if (sortBy === 'clusters') result = b.clusters.length - a.clusters.length
-      return sortDirection === 'asc' ? -result : result
-    })
-    return sorted
-  }, [rawApps, sortBy, sortDirection, globalSelectedClusters, isAllClustersSelected, customFilter, localSearch, localClusterFilter])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for search, cluster filter, sorting, and pagination
   const {
-    paginatedItems: apps,
+    items: apps,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredAndSorted, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<AppData, SortByOption>(preFilteredApps, {
+    filter: {
+      searchFields: ['name', 'namespace'],
+      // No clusterField -- array cluster filtering is handled in preFilteredApps
+      storageKey: 'app-status',
+      customPredicate: (item, query) =>
+        item.clusters.some(c => c.toLowerCase().includes(query)),
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'desc',
+      comparators: APP_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   const handleAppClick = (app: AppData, cluster: string) => {
     // Drill down to the deployment in the specified cluster
@@ -168,83 +169,40 @@ export function AppStatus(_props: AppStatusProps) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster Filter */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
+      {/* Header with controls */}
+      <CardControlsRow
+        clusterIndicator={{
+          selectedCount: localClusterFilter.length,
+          totalCount: availableClusters.length,
+        }}
+        clusterFilter={{
+          availableClusters,
+          selectedClusters: localClusterFilter,
+          onToggle: toggleClusterFilter,
+          onClear: clearClusterFilter,
+          isOpen: showClusterFilter,
+          setIsOpen: setShowClusterFilter,
+          containerRef: clusterFilterRef,
+          minClusters: 1,
+        }}
+        cardControls={{
+          limit: itemsPerPage,
+          onLimitChange: setItemsPerPage,
+          sortBy,
+          sortOptions: SORT_OPTIONS,
+          onSortChange: setSortBy as (sortBy: string) => void,
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
 
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
-      </div>
-
-      {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search workloads..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      {/* Search */}
+      <CardSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search workloads..."
+        className="mb-3"
+      />
 
       <div className="flex-1 space-y-3 overflow-y-auto">
       {apps.length === 0 ? (
@@ -308,18 +266,14 @@ export function AppStatus(_props: AppStatusProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+        onPageChange={goToPage}
+        needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+      />
     </div>
   )
 }

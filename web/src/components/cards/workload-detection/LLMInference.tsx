@@ -4,10 +4,10 @@ import {
   Filter, ChevronDown, Server, Activity, Network, Box, Search
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
-import { CardControls, SortDirection } from '../../ui/CardControls'
-import { usePagination, Pagination } from '../../ui/Pagination'
-import { useClusters } from '../../../hooks/useMCP'
-import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
+import { CardControls } from '../../ui/CardControls'
+import { Pagination } from '../../ui/Pagination'
+import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
 import { LLMD_CLUSTERS } from './shared'
@@ -40,29 +40,15 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
   // Debug logging
   console.log('[LLMInference] render:', { serversCount: servers.length, isLoading, isRefreshing, isFailed, error })
-  const { deduplicatedClusters: allClusters } = useClusters()
-  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<LLMdSortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  // Card-specific component filter (not handled by useCardData)
   const [componentFilter, setComponentFilter] = useState<LLMdComponentType | 'all' | 'autoscale'>('all')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('kubestellar-card-filter:llm-inference')
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
   const [showComponentFilter, setShowComponentFilter] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
   const componentFilterRef = useRef<HTMLDivElement>(null)
 
+  // Close component filter dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
       if (componentFilterRef.current && !componentFilterRef.current.contains(event.target as Node)) {
         setShowComponentFilter(false)
       }
@@ -71,77 +57,39 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem('kubestellar-card-filter:llm-inference', JSON.stringify(localClusterFilter))
-  }, [localClusterFilter])
+  // Pre-filter by component type before passing to useCardData
+  const componentFiltered = useMemo(() => {
+    if (componentFilter === 'all') return servers
+    if (componentFilter === 'autoscale') return servers.filter(s => s.hasAutoscaler)
+    return servers.filter(s => s.componentType === componentFilter)
+  }, [servers, componentFilter])
 
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => prev.includes(clusterName) ? prev.filter(c => c !== clusterName) : [...prev, clusterName])
-  }
-  const clearClusterFilter = () => setLocalClusterFilter([])
+  const statusOrder: Record<string, number> = { running: 0, scaling: 1, stopped: 2, error: 3 }
+  const componentOrder: Record<string, number> = { model: 0, epp: 1, gateway: 2, prometheus: 3, autoscaler: 4, other: 5 }
 
-  const availableClustersForFilter = useMemo(() => {
-    const reachable = allClusters.filter(c => c.reachable !== false)
-    if (isAllClustersSelected) return reachable
-    return reachable.filter(c => globalSelectedClusters.includes(c.name))
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected])
-
-  const filteredServers = useMemo(() => {
-    let result = localClusterFilter.length === 0 ? servers : servers.filter(s => localClusterFilter.includes(s.cluster))
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(s =>
-        s.name.toLowerCase().includes(q) ||
-        s.namespace.toLowerCase().includes(q) ||
-        s.cluster.toLowerCase().includes(q) ||
-        s.status.toLowerCase().includes(q) ||
-        s.componentType.toLowerCase().includes(q) ||
-        s.type.toLowerCase().includes(q) ||
-        (s.model && s.model.toLowerCase().includes(q))
-      )
-    }
-
-    // Apply component filter
-    if (componentFilter !== 'all') {
-      if (componentFilter === 'autoscale') {
-        result = result.filter(s => s.hasAutoscaler)
-      } else {
-        result = result.filter(s => s.componentType === componentFilter)
-      }
-    }
-
-    // Sort by selected field
-    const statusOrder: Record<string, number> = { running: 0, scaling: 1, stopped: 2, error: 3 }
-    const componentOrder: Record<string, number> = { model: 0, epp: 1, gateway: 2, prometheus: 3, autoscaler: 4, other: 5 }
-    result = [...result].sort((a, b) => {
-      let cmp = 0
-      switch (sortBy) {
-        case 'status':
-          cmp = (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
-          break
-        case 'name':
-          cmp = a.name.localeCompare(b.name)
-          break
-        case 'namespace':
-          cmp = a.namespace.localeCompare(b.namespace)
-          break
-        case 'component':
-          cmp = (componentOrder[a.componentType] ?? 99) - (componentOrder[b.componentType] ?? 99)
-          break
-        case 'type':
-          cmp = a.type.localeCompare(b.type)
-          break
-      }
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-
-    return result
-  }, [servers, localClusterFilter, searchQuery, componentFilter, sortBy, sortDirection])
-
-  const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(filteredServers, effectivePerPage)
+  const {
+    items, totalItems, currentPage, totalPages, goToPage, needsPagination,
+    itemsPerPage, setItemsPerPage, filters, sorting,
+  } = useCardData<LLMdServer, LLMdSortByOption>(componentFiltered, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster', 'status', 'componentType', 'type'] as (keyof LLMdServer)[],
+      clusterField: 'cluster' as keyof LLMdServer,
+      customPredicate: (s, q) => !!(s.model && s.model.toLowerCase().includes(q)),
+      storageKey: 'llm-inference',
+    },
+    sort: {
+      defaultField: 'status' as LLMdSortByOption,
+      defaultDirection: 'asc' as SortDirection,
+      comparators: {
+        status: commonComparators.statusOrder<LLMdServer>('status', statusOrder),
+        name: commonComparators.string<LLMdServer>('name'),
+        namespace: commonComparators.string<LLMdServer>('namespace'),
+        component: commonComparators.statusOrder<LLMdServer>('componentType', componentOrder),
+        type: commonComparators.string<LLMdServer>('type'),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -205,10 +153,10 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          {localClusterFilter.length > 0 && (
+          {filters.localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClustersForFilter.length}
+              {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
           {componentFilter !== 'all' && (
@@ -218,7 +166,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
             </span>
           )}
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-            {filteredServers.filter(s => s.status === 'running').length} running
+            {items.filter(s => s.status === 'running').length} running
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -260,12 +208,12 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
             )}
           </div>
           {/* Cluster filter */}
-          {availableClustersForFilter.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
+          {filters.availableClusters.length >= 1 && (
+            <div ref={filters.clusterFilterRef} className="relative">
               <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
+                  filters.localClusterFilter.length > 0
                     ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                     : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
                 }`}
@@ -274,12 +222,12 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                 <Filter className="w-3 h-3" />
                 <ChevronDown className="w-3 h-3" />
               </button>
-              {showClusterFilter && (
+              {filters.showClusterFilter && (
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
-                    <button onClick={clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
-                    {availableClustersForFilter.map(cluster => (
-                      <button key={cluster.name} onClick={() => toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
+                    <button onClick={filters.clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
+                    {filters.availableClusters.map(cluster => (
+                      <button key={cluster.name} onClick={() => filters.toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
                     ))}
                   </div>
                 </div>
@@ -287,13 +235,13 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
             </div>
           )}
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
             sortOptions={LLMD_SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+            onSortChange={sorting.setSortBy}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>
@@ -303,8 +251,8 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={filters.search}
+          onChange={(e) => filters.setSearch(e.target.value)}
           placeholder="Search servers..."
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
@@ -326,7 +274,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
 
       {/* Server list */}
       <div className="flex-1 overflow-y-auto space-y-2">
-        {paginatedItems.length === 0 ? (
+        {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <Cpu className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-sm">{error ? `Error: ${error}` : 'No inference servers found'}</p>
@@ -339,7 +287,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
               </button>
             )}
           </div>
-        ) : paginatedItems.map((server) => {
+        ) : items.map((server) => {
           const compBadge = getComponentBadge(server.componentType)
           return (
             <div key={server.id} className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
@@ -414,13 +362,13 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={effectivePerPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 100}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

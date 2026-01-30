@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, ChevronRight, ChevronDown, Server } from 'lucide-react'
 import { useCachedDeployments } from '../../hooks/useCachedData'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { usePagination, Pagination } from '../ui/Pagination'
-import { CardControls, SortDirection } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import type { SortDirection } from '../../lib/cards/cardHooks'
+import type { Deployment } from '../../hooks/useMCP'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -62,75 +63,27 @@ function extractVersion(image?: string): string {
   return 'latest'
 }
 
+const SORT_COMPARATORS: Record<SortByOption, (a: Deployment, b: Deployment) => number> = {
+  status: commonComparators.statusOrder<Deployment>('status', statusOrder),
+  name: commonComparators.string<Deployment>('name'),
+  cluster: commonComparators.string<Deployment>('cluster'),
+}
+
 export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const cluster = config?.cluster
   const namespace = config?.namespace
   const { deployments, isLoading, error } = useCachedDeployments(cluster, namespace)
   const { drillToDeployment } = useDrillDownActions()
-  const {
-    selectedClusters,
-    isAllClustersSelected,
-    filterByStatus: globalFilterByStatus,
-    customFilter: globalCustomFilter
-  } = useGlobalFilters()
 
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'deployment-progress',
-  })
-
-  // Filter and sort state
-  const [searchQuery, setSearchQuery] = useState('')
+  // Card-specific status filter (kept as separate state)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  // Apply global filters first, then filter to progressing deployments
-  const progressingDeployments = useMemo(() => {
-    let result = deployments
+  // Pre-filter to progressing deployments only, then apply card-specific status filter
+  const progressingDeployments = useMemo(() =>
+    deployments.filter((d) => d.readyReplicas < d.replicas),
+  [deployments])
 
-    // Filter by global cluster selection (if card doesn't have specific cluster configured)
-    if (!cluster && !isAllClustersSelected) {
-      result = result.filter(d => d.cluster && selectedClusters.some(sc =>
-        d.cluster?.includes(sc) || sc.includes(d.cluster?.split('/').pop() || '')
-      ))
-    }
-
-    // Apply global status filter
-    result = globalFilterByStatus(result)
-
-    // Apply global custom text filter
-    if (globalCustomFilter.trim()) {
-      const query = globalCustomFilter.toLowerCase()
-      result = result.filter(d =>
-        d.name.toLowerCase().includes(query) ||
-        d.namespace.toLowerCase().includes(query) ||
-        (d.cluster?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(d => {
-        const clusterName = d.cluster?.split('/').pop() || d.cluster || ''
-        return localClusterFilter.includes(clusterName) || localClusterFilter.includes(d.cluster || '')
-      })
-    }
-
-    // Filter to progressing deployments
-    return result.filter((d) => d.readyReplicas < d.replicas)
-  }, [deployments, cluster, selectedClusters, isAllClustersSelected, globalFilterByStatus, globalCustomFilter, localClusterFilter])
-
-  // Status counts (for progressing deployments only)
+  // Status counts (computed from all progressing deployments before status filter)
   const statusCounts = useMemo(() => ({
     all: progressingDeployments.length,
     running: progressingDeployments.filter((d) => d.status === 'running').length,
@@ -138,48 +91,37 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
     failed: progressingDeployments.filter((d) => d.status === 'failed').length,
   }), [progressingDeployments])
 
-  // Filtered and sorted deployments (from progressing only)
-  const filteredDeployments = useMemo(() => {
-    let result = progressingDeployments
+  // Apply card-specific status filter before passing to useCardData
+  const statusFilteredDeployments = useMemo(() => {
+    if (statusFilter === 'all') return progressingDeployments
+    return progressingDeployments.filter((d) => d.status === statusFilter)
+  }, [progressingDeployments, statusFilter])
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      result = result.filter((d) => d.status === statusFilter)
-    }
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter((d) =>
-        d.name.toLowerCase().includes(query) ||
-        d.namespace.toLowerCase().includes(query) ||
-        (d.cluster && d.cluster.toLowerCase().includes(query))
-      )
-    }
-
-    // Sort
-    const sorted = [...result].sort((a, b) => {
-      let cmp = 0
-      if (sortBy === 'status') cmp = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3)
-      else if (sortBy === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortBy === 'cluster') cmp = (a.cluster || '').localeCompare(b.cluster || '')
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-
-    return sorted
-  }, [progressingDeployments, statusFilter, searchQuery, sortBy, sortDirection])
-
-  // Use shared pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // useCardData handles: global filters, local cluster filter, search, sort, pagination
   const {
-    paginatedItems: paginatedDeployments,
+    items: paginatedDeployments,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredDeployments, effectivePerPage)
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<Deployment, SortByOption>(statusFilteredDeployments, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
+      clusterField: 'cluster' as keyof Deployment,
+      storageKey: 'deployment-progress',
+    },
+    sort: {
+      defaultField: 'status' as SortByOption,
+      defaultDirection: 'asc' as SortDirection,
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   // Handle filter changes (reset page)
   const handleFilterChange = (newFilter: StatusFilter) => {
@@ -188,8 +130,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
   }
 
   const handleSearchChange = (query: string) => {
-    setSearchQuery(query)
-    goToPage(1)
+    filters.setSearch(query)
   }
 
   const handleDeploymentClick = (deployment: typeof deployments[0]) => {
@@ -244,21 +185,21 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
           <span className="text-sm font-medium text-muted-foreground">
             {statusCounts.all} progressing
           </span>
-          {localClusterFilter.length > 0 && (
+          {filters.localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
+              {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
+          {filters.availableClusters.length >= 1 && (
+            <div ref={filters.clusterFilterRef} className="relative">
               <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
+                  filters.localClusterFilter.length > 0
                     ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                     : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
                 }`}
@@ -268,26 +209,26 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
+              {filters.showClusterFilter && (
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
                     <button
-                      onClick={clearClusterFilter}
+                      onClick={filters.clearClusterFilter}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
                     >
                       All clusters
                     </button>
-                    {availableClusters.map(cluster => (
+                    {filters.availableClusters.map(c => (
                       <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
+                        key={c.name}
+                        onClick={() => filters.toggleClusterFilter(c.name)}
                         className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                          filters.localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                         }`}
                       >
-                        {cluster.name}
+                        {c.name}
                       </button>
                     ))}
                   </div>
@@ -296,13 +237,13 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
             </div>
           )}
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
             sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+            onSortChange={sorting.setSortBy}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>
@@ -313,7 +254,7 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
             type="text"
-            value={searchQuery}
+            value={filters.search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search deployments..."
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
@@ -410,13 +351,13 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2 flex-shrink-0">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 1000}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

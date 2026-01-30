@@ -4,8 +4,10 @@ import {
   Play, Search
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
-import { CardControls, SortDirection } from '../../ui/CardControls'
-import { usePagination, Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
+import { Pagination } from '../../ui/Pagination'
+import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import type { ProwJob } from '../../../hooks/useProw'
 
@@ -27,57 +29,48 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   // Debug logging
   console.log('[ProwJobs] render:', { jobsCount: jobs.length, isLoading, isRefreshing, isFailed, error })
 
-  const [sortBy, setSortBy] = useState<'name' | 'state' | 'started'>('started')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
   const [typeFilter, setTypeFilter] = useState<ProwJob['type'] | 'all'>('all')
   const [stateFilter, setStateFilter] = useState<ProwJob['state'] | 'all'>('all')
-  const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter and sort jobs
-  const sortedJobs = useMemo(() => {
-    let filtered = [...jobs]
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.name.toLowerCase().includes(q) ||
-        j.state.toLowerCase().includes(q) ||
-        j.type.toLowerCase().includes(q) ||
-        (j.pr && String(j.pr).includes(q))
-      )
-    }
-
-    // Apply type filter
+  // Pre-filter by type and state before passing to useCardData
+  const preFilteredJobs = useMemo(() => {
+    let filtered = jobs
     if (typeFilter !== 'all') {
       filtered = filtered.filter(j => j.type === typeFilter)
     }
-
-    // Apply state filter
     if (stateFilter !== 'all') {
       filtered = filtered.filter(j => j.state === stateFilter)
     }
+    return filtered
+  }, [jobs, typeFilter, stateFilter])
 
-    return filtered.sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'state':
-          compare = a.state.localeCompare(b.state)
-          break
-        case 'started':
-          compare = new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-  }, [jobs, sortBy, sortDirection, typeFilter, stateFilter, searchQuery])
-
-  const effectivePerPage = limit === 'unlimited' ? 100 : limit
-  const { paginatedItems, currentPage, totalPages, totalItems, goToPage, needsPagination } = usePagination(sortedJobs, effectivePerPage)
+  const {
+    items,
+    totalItems,
+    currentPage,
+    totalPages,
+    goToPage,
+    needsPagination,
+    itemsPerPage,
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<ProwJob, 'name' | 'state' | 'started'>(preFilteredJobs, {
+    filter: {
+      searchFields: ['name', 'state', 'type'] as (keyof ProwJob)[],
+      customPredicate: (j, q) => !!(j.pr && String(j.pr).includes(q)),
+    },
+    sort: {
+      defaultField: 'started',
+      defaultDirection: 'desc' as SortDirection,
+      comparators: {
+        name: commonComparators.string<ProwJob>('name'),
+        state: commonComparators.string<ProwJob>('state'),
+        started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const getStateIcon = (state: string) => {
     switch (state) {
@@ -113,13 +106,15 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     )
   }
 
+  const effectivePerPage = itemsPerPage === 'unlimited' ? 100 : itemsPerPage
+
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-            {sortedJobs.length} jobs
+            {totalItems} jobs
           </span>
           {jobs.filter(j => j.state === 'running').length > 0 && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 flex items-center gap-1">
@@ -153,17 +148,17 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
             <option value="pending">Pending</option>
           </select>
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
             sortOptions={[
               { value: 'name', label: 'Name' },
               { value: 'state', label: 'State' },
               { value: 'started', label: 'Started' },
             ]}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+            onSortChange={sorting.setSortBy}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>
@@ -173,8 +168,8 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={filters.search}
+          onChange={(e) => filters.setSearch(e.target.value)}
           placeholder="Search jobs..."
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
@@ -182,7 +177,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
 
       {/* Jobs list */}
       <div className="flex-1 overflow-y-auto space-y-2">
-        {paginatedItems.map((job) => (
+        {items.map((job) => (
           <div key={job.id} className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -208,7 +203,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}

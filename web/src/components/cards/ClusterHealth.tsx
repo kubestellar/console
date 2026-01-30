@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, Search, AlertTriangle, Filter, ChevronDown, Server } from 'lucide-react'
+import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable } from '../clusters/utils'
@@ -62,6 +61,16 @@ const SORT_OPTIONS = [
   { value: 'pods' as const, label: 'Pods' },
 ]
 
+const CLUSTER_SORT_COMPARATORS = {
+  status: (a: ClusterInfo, b: ClusterInfo) => {
+    if (a.healthy !== b.healthy) return a.healthy ? 1 : -1
+    return a.name.localeCompare(b.name)
+  },
+  name: commonComparators.string<ClusterInfo>('name'),
+  nodes: (a: ClusterInfo, b: ClusterInfo) => (b.nodeCount || 0) - (a.nodeCount || 0),
+  pods: (a: ClusterInfo, b: ClusterInfo) => (b.podCount || 0) - (a.podCount || 0),
+}
+
 
 export function ClusterHealth() {
   const {
@@ -71,23 +80,47 @@ export function ClusterHealth() {
   } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>('unlimited')
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
-  const [localSearch, setLocalSearch] = useState('')
 
-  // Local cluster filter
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'cluster-health',
+    items: clusters,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<ClusterInfo, SortByOption>(rawClusters, {
+    filter: {
+      searchFields: ['name', 'context', 'server'],
+      clusterField: 'name',
+      storageKey: 'cluster-health',
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc',
+      comparators: CLUSTER_SORT_COMPARATORS,
+    },
+    defaultLimit: 'unlimited',
   })
 
   // Only show skeleton when no cached data exists - prevents flickering on refresh
@@ -103,54 +136,7 @@ export function ClusterHealth() {
     return map
   }, [gpuNodes])
 
-  // Filter by global cluster selection and local search, then sort
-  const filteredAndSorted = useMemo(() => {
-    // Apply global cluster filter
-    let filtered = isAllClustersSelected
-      ? rawClusters
-      : rawClusters.filter(c => selectedClusters.includes(c.name))
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      filtered = filtered.filter(c => localClusterFilter.includes(c.name))
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query) ||
-        c.server?.toLowerCase().includes(query)
-      )
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      let result = 0
-      if (sortBy === 'status') {
-        if (a.healthy !== b.healthy) result = a.healthy ? 1 : -1 // unhealthy first
-        else result = a.name.localeCompare(b.name)
-      } else if (sortBy === 'name') result = a.name.localeCompare(b.name)
-      else if (sortBy === 'nodes') result = (b.nodeCount || 0) - (a.nodeCount || 0)
-      else if (sortBy === 'pods') result = (b.podCount || 0) - (a.podCount || 0)
-      return sortDirection === 'asc' ? result : -result
-    })
-    return sorted
-  }, [rawClusters, sortBy, sortDirection, selectedClusters, isAllClustersSelected, localSearch, localClusterFilter])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
-  const {
-    paginatedItems: clusters,
-    currentPage,
-    totalPages,
-    totalItems,
-    itemsPerPage: perPage,
-    goToPage,
-    needsPagination,
-  } = usePagination(filteredAndSorted, effectivePerPage)
-
-  // Stats based on filtered clusters
+  // Stats based on globally filtered clusters (not affected by local search/cluster filter)
   const filteredForStats = isAllClustersSelected
     ? rawClusters
     : rawClusters.filter(c => selectedClusters.includes(c.name))
@@ -218,89 +204,49 @@ export function ClusterHealth() {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
-      {/* Header with refresh */}
+      {/* Header with controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400" title={`${rawClusters.length} total clusters configured`}>
             {rawClusters.length} clusters
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
+        <CardControlsRow
+          clusterIndicator={
+            localClusterFilter.length > 0
+              ? { selectedCount: localClusterFilter.length, totalCount: availableClusters.length }
+              : undefined
+          }
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1,
+          }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection,
+          }}
+          className="mb-0"
+        />
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search clusters..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search clusters..."
+        className="mb-4"
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-4">
@@ -406,18 +352,14 @@ export function ClusterHealth() {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
 
       {/* Footer totals */}
       <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">

@@ -1,13 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { CheckCircle, Clock, XCircle, ChevronRight, Search, Filter, ChevronDown, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCachedDeployments } from '../../hooks/useCachedData'
-import { usePagination, Pagination } from '../ui/Pagination'
-import { CardControls, SortDirection } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
 import { Skeleton } from '../ui/Skeleton'
-import { useStatusFilter, useChartFilters } from '../../lib/cards'
+import type { Deployment } from '../../hooks/useMCP'
+import {
+  useCardData,
+  useCardFilters,
+  useStatusFilter,
+  commonComparators,
+  type SortDirection,
+} from '../../lib/cards'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -56,6 +62,14 @@ function extractVersion(image?: string): string {
   return 'latest'
 }
 
+// Shared filter config for counting and display
+const FILTER_CONFIG = {
+  searchFields: ['name', 'namespace', 'cluster', 'image'] as (keyof Deployment)[],
+  clusterField: 'cluster' as keyof Deployment,
+  statusField: 'status' as keyof Deployment,
+  storageKey: 'deployment-status',
+}
+
 export function DeploymentStatus() {
   const { drillToDeployment } = useDrillDownActions()
   const {
@@ -65,70 +79,18 @@ export function DeploymentStatus() {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && allDeployments.length === 0
-  const { selectedClusters, isAllClustersSelected, filterByStatus: globalFilterByStatus, customFilter: globalCustomFilter } = useGlobalFilters()
 
-  // Filter and sort state
-  const [searchQuery, setSearchQuery] = useState('')
+  // Card-specific status filter (kept as separate hook)
   const { statusFilter, setStatusFilter } = useStatusFilter({
     statuses: ['all', 'running', 'deploying', 'failed'] as const,
     defaultStatus: 'all',
     storageKey: 'deployment-status',
   })
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'deployment-status',
-  })
+  // Use useCardFilters for status counts (globally filtered, before status chip/search)
+  const { filtered: globalFilteredDeployments } = useCardFilters(allDeployments, FILTER_CONFIG)
 
-  // Apply global filters first
-  const globalFilteredDeployments = useMemo(() => {
-    let result = allDeployments
-
-    // Filter by cluster selection
-    if (!isAllClustersSelected) {
-      result = result.filter(d => {
-        const clusterName = d.cluster?.split('/').pop() || d.cluster || ''
-        return selectedClusters.some(sc => sc.includes(clusterName) || clusterName.includes(sc.split('/').pop() || sc))
-      })
-    }
-
-    // Apply global status filter
-    result = globalFilterByStatus(result)
-
-    // Apply global custom text filter
-    if (globalCustomFilter.trim()) {
-      const query = globalCustomFilter.toLowerCase()
-      result = result.filter(d =>
-        d.name.toLowerCase().includes(query) ||
-        (d.cluster?.toLowerCase() || '').includes(query) ||
-        (d.namespace?.toLowerCase() || '').includes(query) ||
-        (d.image?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(d => {
-        const clusterName = d.cluster?.split('/').pop() || d.cluster || ''
-        return localClusterFilter.includes(clusterName)
-      })
-    }
-
-    return result
-  }, [allDeployments, selectedClusters, isAllClustersSelected, globalFilterByStatus, globalCustomFilter, localClusterFilter])
-
-  // Status counts (for all deployments)
+  // Status counts (from globally filtered data, before status chip)
   const statusCounts = useMemo(() => ({
     all: globalFilteredDeployments.length,
     running: globalFilteredDeployments.filter((d) => d.status === 'running').length,
@@ -136,48 +98,57 @@ export function DeploymentStatus() {
     failed: globalFilteredDeployments.filter((d) => d.status === 'failed').length,
   }), [globalFilteredDeployments])
 
-  // Filtered and sorted deployments
-  const filteredDeployments = useMemo(() => {
-    let result = globalFilteredDeployments
+  // Pre-filter by status chip before passing to useCardData
+  const statusPreFiltered = useMemo(() => {
+    if (statusFilter === 'all') return allDeployments
+    return allDeployments.filter((d) => d.status === statusFilter)
+  }, [allDeployments, statusFilter])
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      result = result.filter((d) => d.status === statusFilter)
-    }
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter((d) =>
-        d.name.toLowerCase().includes(query) ||
-        d.namespace.toLowerCase().includes(query) ||
-        (d.cluster && d.cluster.toLowerCase().includes(query))
-      )
-    }
-
-    // Sort
-    const sorted = [...result].sort((a, b) => {
-      let cmp = 0
-      if (sortBy === 'status') cmp = (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3)
-      else if (sortBy === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortBy === 'cluster') cmp = (a.cluster || '').localeCompare(b.cluster || '')
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-
-    return sorted
-  }, [globalFilteredDeployments, statusFilter, searchQuery, sortBy, sortDirection])
-
-  // Use shared pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: paginatedDeployments,
+    items: paginatedDeployments,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredDeployments, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: searchQuery,
+      setSearch: setSearchQuery,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<Deployment, SortByOption>(statusPreFiltered, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster'] as (keyof Deployment)[],
+      clusterField: 'cluster',
+      statusField: 'status',
+      storageKey: 'deployment-status',
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc' as SortDirection,
+      comparators: {
+        status: commonComparators.statusOrder<Deployment>('status', statusOrder),
+        name: commonComparators.string<Deployment>('name'),
+        cluster: commonComparators.string<Deployment>('cluster'),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   // Handle filter changes (reset page)
   const handleFilterChange = (newFilter: StatusFilter) => {
@@ -187,10 +158,9 @@ export function DeploymentStatus() {
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
-    goToPage(1)
   }
 
-  const handleDeploymentClick = (deployment: typeof allDeployments[0]) => {
+  const handleDeploymentClick = (deployment: Deployment) => {
     const clusterName = deployment.cluster?.split('/').pop() || deployment.cluster || 'unknown'
     drillToDeployment(clusterName, deployment.namespace, deployment.name, {
       status: deployment.status,
@@ -288,8 +258,8 @@ export function DeploymentStatus() {
           )}
 
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
             sortBy={sortBy}
             sortOptions={SORT_OPTIONS}
             onSortChange={setSortBy}
@@ -398,13 +368,13 @@ export function DeploymentStatus() {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2 flex-shrink-0">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

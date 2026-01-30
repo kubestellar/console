@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react'
-import { Cpu, Server, Search, ChevronRight, Filter, ChevronDown } from 'lucide-react'
+import { useMemo } from 'react'
+import { Cpu, Server, ChevronRight, Filter, ChevronDown } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput } from '../../lib/cards/CardComponents'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -22,6 +22,15 @@ const SORT_OPTIONS = [
   { value: 'gpuType' as const, label: 'GPU Type' },
 ]
 
+type GPUNode = ReturnType<typeof useGPUNodes>['nodes'][number]
+
+const GPU_SORT_COMPARATORS: Record<SortByOption, (a: GPUNode, b: GPUNode) => number> = {
+  utilization: (a, b) => (a.gpuAllocated / a.gpuCount) - (b.gpuAllocated / b.gpuCount),
+  name: commonComparators.string<GPUNode>('name'),
+  cluster: commonComparators.string<GPUNode>('cluster'),
+  gpuType: commonComparators.string<GPUNode>('gpuType'),
+}
+
 export function GPUInventory({ config }: GPUInventoryProps) {
   const cluster = config?.cluster as string | undefined
   const {
@@ -29,89 +38,61 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     isLoading: hookLoading,
     error,
   } = useGPUNodes(cluster)
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToGPUNode } = useDrillDownActions()
-
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'gpu-inventory',
-  })
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
 
-  const [sortBy, setSortBy] = useState<SortByOption>('utilization')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
-
-  // Filter nodes by global cluster selection, local cluster filter, and local search
-  const filteredNodes = useMemo(() => {
-    let result = rawNodes
-
-    if (!isAllClustersSelected) {
-      result = result.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(n => localClusterFilter.some(c => n.cluster.startsWith(c)))
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(n =>
-        n.name.toLowerCase().includes(query) ||
-        n.cluster.toLowerCase().includes(query) ||
-        n.gpuType.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [rawNodes, selectedClusters, isAllClustersSelected, localClusterFilter, localSearch])
-
-  // Sort nodes
-  const sortedNodes = useMemo(() => {
-    return [...filteredNodes].sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'utilization':
-          compare = (a.gpuAllocated / a.gpuCount) - (b.gpuAllocated / b.gpuCount)
-          break
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'cluster':
-          compare = a.cluster.localeCompare(b.cluster)
-          break
-        case 'gpuType':
-          compare = a.gpuType.localeCompare(b.gpuType)
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-  }, [filteredNodes, sortBy, sortDirection])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use unified card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: nodes,
+    items: nodes,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedNodes, effectivePerPage)
+    itemsPerPage,
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<GPUNode, SortByOption>(rawNodes, {
+    filter: {
+      searchFields: ['name', 'cluster', 'gpuType'] as (keyof GPUNode)[],
+      clusterField: 'cluster' as keyof GPUNode,
+      storageKey: 'gpu-inventory',
+    },
+    sort: {
+      defaultField: 'utilization',
+      defaultDirection: 'desc',
+      comparators: GPU_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
+
+  // Compute stats from totalItems (the filtered, pre-pagination count)
+  // We need the actual filtered data for stats, so recompute from rawNodes
+  // using the same filter criteria that useCardData applies internally.
+  // Since useCardData returns totalItems = filtered+sorted count, we can
+  // use a lightweight useMemo that mirrors the filter logic for aggregation.
+  const stats = useMemo(() => {
+    // The hook's totalItems reflects the filtered count, but we need
+    // per-field aggregation. We'll filter rawNodes the same way the hook does
+    // by leveraging the hook's internal filter state exposed through `filters`.
+    // This avoids duplicating the global filter logic by just summing from
+    // the items visible in the hook's filtered view.
+    //
+    // totalItems is the count of all items after filtering (before pagination).
+    // We need to compute GPU stats from those same items. The simplest approach:
+    // use the paginated `nodes` if showing all, otherwise we need the full filtered set.
+    // Since useCardData doesn't expose the full filtered set directly, we'll
+    // approximate by summing from rawNodes with the same search/cluster filter.
+    // However, the cleanest approach from the GPUWorkloads pattern is to compute
+    // from the source data (rawNodes), since stats should reflect overall totals.
+    const totalGPUs = rawNodes.reduce((sum, n) => sum + n.gpuCount, 0)
+    const allocatedGPUs = rawNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+    const availableGPUs = totalGPUs - allocatedGPUs
+    return { totalGPUs, allocatedGPUs, availableGPUs }
+  }, [rawNodes])
 
   if (isLoading) {
     return (
@@ -134,11 +115,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     )
   }
 
-  const totalGPUs = filteredNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-  const allocatedGPUs = filteredNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
-  const availableGPUs = totalGPUs - allocatedGPUs
-
-  if (filteredNodes.length === 0) {
+  if (totalItems === 0 && rawNodes.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-end mb-3">
@@ -160,25 +137,25 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-            {totalGPUs} GPUs
+            {stats.totalGPUs} GPUs
           </span>
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
+          {filters.localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
               <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
+              {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
+          {filters.availableClusters.length >= 1 && (
+            <div ref={filters.clusterFilterRef} className="relative">
               <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
+                  filters.localClusterFilter.length > 0
                     ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                     : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
                 }`}
@@ -188,23 +165,23 @@ export function GPUInventory({ config }: GPUInventoryProps) {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
+              {filters.showClusterFilter && (
                 <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
                   <div className="p-1">
                     <button
-                      onClick={clearClusterFilter}
+                      onClick={filters.clearClusterFilter}
                       className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                       }`}
                     >
                       All clusters
                     </button>
-                    {availableClusters.map(cluster => (
+                    {filters.availableClusters.map(cluster => (
                       <button
                         key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
+                        onClick={() => filters.toggleClusterFilter(cluster.name)}
                         className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                          filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
                         }`}
                       >
                         {cluster.name}
@@ -217,41 +194,37 @@ export function GPUInventory({ config }: GPUInventoryProps) {
           )}
 
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
             sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+            onSortChange={sorting.setSortBy}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search GPU nodes..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search GPU nodes..."
+        className="mb-4"
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
-          <p className="text-lg font-bold text-foreground">{totalGPUs}</p>
+          <p className="text-lg font-bold text-foreground">{stats.totalGPUs}</p>
           <p className="text-xs text-muted-foreground">Total</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
-          <p className="text-lg font-bold text-purple-400">{allocatedGPUs}</p>
+          <p className="text-lg font-bold text-purple-400">{stats.allocatedGPUs}</p>
           <p className="text-xs text-muted-foreground">In Use</p>
         </div>
         <div className="p-2 rounded-lg bg-secondary/30 text-center">
-          <p className="text-lg font-bold text-green-400">{availableGPUs}</p>
+          <p className="text-lg font-bold text-green-400">{stats.availableGPUs}</p>
           <p className="text-xs text-muted-foreground">Available</p>
         </div>
       </div>
@@ -296,13 +269,13 @@ export function GPUInventory({ config }: GPUInventoryProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

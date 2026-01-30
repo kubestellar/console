@@ -1,11 +1,12 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useMemo } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
-import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType, useClusters } from '../../hooks/useMCP'
+import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { CardControls } from '../ui/CardControls'
+import { Pagination } from '../ui/Pagination'
+import { useCardData } from '../../lib/cards'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 
@@ -15,6 +16,8 @@ const SORT_OPTIONS = [
   { value: 'resource' as const, label: 'Resource' },
   { value: 'cluster' as const, label: 'Cluster' },
 ]
+
+const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
 
 interface GitOpsDriftProps {
   config?: {
@@ -55,56 +58,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const namespace = config?.namespace
 
   const { drifts, isLoading: isLoadingHook, error } = useGitOpsDrifts(cluster, namespace)
-  const { deduplicatedClusters: allClusters } = useClusters()
-  const { selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
-  const [localSearch, setLocalSearch] = useState('')
-  const [sortBy, setSortBy] = useState<SortByOption>('severity')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('kubestellar-card-filter:gitops-drift')
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Save cluster filter to localStorage
-  useEffect(() => {
-    localStorage.setItem('kubestellar-card-filter:gitops-drift', JSON.stringify(localClusterFilter))
-  }, [localClusterFilter])
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
-
-  const clearClusterFilter = () => {
-    setLocalClusterFilter([])
-  }
-
-  // Get available clusters for local filter (respects global filter)
-  const availableClustersForFilter = useMemo(() => {
-    const reachable = allClusters.filter(c => c.reachable !== false)
-    if (isAllClustersSelected) return reachable
-    return reachable.filter(c => selectedClusters.includes(c.name))
-  }, [allClusters, selectedClusters, isAllClustersSelected])
+  const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
   // Only show skeleton when no cached data exists - prevents flickering
   const isLoading = isLoadingHook && drifts.length === 0
@@ -119,14 +73,9 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     }
   }
 
-  // Filter drifts by global filters
-  const filteredDrifts = useMemo(() => {
+  // Pre-filter by severity and global custom filter (outside useCardData)
+  const severityFilteredDrifts = useMemo(() => {
     let result = drifts
-
-    // Apply global cluster filter (only if no config cluster specified)
-    if (!cluster && !isAllClustersSelected) {
-      result = result.filter(d => selectedClusters.includes(d.cluster))
-    }
 
     // Apply global severity filter
     if (!isAllSeveritiesSelected) {
@@ -147,57 +96,57 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       )
     }
 
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(d => localClusterFilter.includes(d.cluster))
-    }
+    return result
+  }, [drifts, selectedSeverities, isAllSeveritiesSelected, customFilter])
 
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(d =>
-        d.resource.toLowerCase().includes(query) ||
-        d.kind.toLowerCase().includes(query) ||
-        d.cluster.toLowerCase().includes(query) ||
-        d.namespace.toLowerCase().includes(query)
-      )
-    }
-
-    // Sort by selected field
-    const severityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 }
-    const sorted = [...result].sort((a, b) => {
-      let cmp = 0
-      switch (sortBy) {
-        case 'severity':
-          cmp = severityOrder[a.severity] - severityOrder[b.severity]
-          break
-        case 'type':
-          cmp = a.driftType.localeCompare(b.driftType)
-          break
-        case 'resource':
-          cmp = a.resource.localeCompare(b.resource)
-          break
-        case 'cluster':
-          cmp = a.cluster.localeCompare(b.cluster)
-          break
-      }
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-
-    return sorted
-  }, [drifts, cluster, selectedClusters, isAllClustersSelected, selectedSeverities, isAllSeveritiesSelected, customFilter, localSearch, localClusterFilter, sortBy, sortDirection])
-
-  // Apply pagination using usePagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems: displayDrifts,
+    items: displayDrifts,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredDrifts, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<GitOpsDriftType, SortByOption>(severityFilteredDrifts, {
+    filter: {
+      searchFields: ['resource', 'kind', 'cluster', 'namespace'],
+      clusterField: 'cluster',
+      storageKey: 'gitops-drift',
+    },
+    sort: {
+      defaultField: 'severity',
+      defaultDirection: 'asc',
+      comparators: {
+        severity: (a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+        type: (a, b) => a.driftType.localeCompare(b.driftType),
+        resource: (a, b) => a.resource.localeCompare(b.resource),
+        cluster: (a, b) => a.cluster.localeCompare(b.cluster),
+      },
+    },
+    defaultLimit: 5,
+  })
+
+  // Compute stats from the hook's sorted+filtered data (before pagination)
+  const filteredDrifts = severityFilteredDrifts
 
   if (isLoading && drifts.length === 0) {
     return (
@@ -286,8 +235,8 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
             </div>
           )}
           <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
             sortBy={sortBy}
             sortOptions={SORT_OPTIONS}
             onSortChange={setSortBy}
@@ -310,7 +259,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       </div>
 
       {/* Drifts list */}
-      {filteredDrifts.length === 0 ? (
+      {totalItems === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
             <GitBranch className="w-6 h-6 text-green-400" />
@@ -329,13 +278,13 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       )}
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
+      {needsPagination && itemsPerPage !== 'unlimited' && (
         <div className="pt-2 border-t border-border/50 mt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}
-            itemsPerPage={perPage}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 1000}
             onPageChange={goToPage}
             showItemsPerPage={false}
           />

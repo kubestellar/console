@@ -1,12 +1,12 @@
-import { useState, useMemo, useEffect } from 'react'
-import { AlertTriangle, Info, AlertCircle, Clock, Search, ChevronRight, Server, Filter, ChevronDown } from 'lucide-react'
-import { useClusters, useWarningEvents, useNamespaces } from '../../hooks/useMCP'
+import { useMemo, useEffect } from 'react'
+import { AlertTriangle, Info, AlertCircle, Clock, ChevronRight } from 'lucide-react'
+import { useClusters, useWarningEvents, useNamespaces, type ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useCascadingSelection, useChartFilters } from '../../lib/cards'
+import {
+  useCardData, useCascadingSelection, commonComparators,
+  CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
+} from '../../lib/cards'
 
 interface NamespaceEventsProps {
   config?: {
@@ -24,6 +24,17 @@ const SORT_OPTIONS = [
   { value: 'count' as const, label: 'Count' },
 ]
 
+const EVENT_SORT_COMPARATORS: Record<SortByOption, (a: ClusterEvent, b: ClusterEvent) => number> = {
+  time: (a, b) => {
+    const timeA = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
+    const timeB = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
+    return timeA - timeB
+  },
+  type: commonComparators.string('type'),
+  object: commonComparators.string('object'),
+  count: (a, b) => a.count - b.count,
+}
+
 export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { isLoading: clustersLoading } = useClusters()
   const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
@@ -40,12 +51,6 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     storageKey: 'namespace-events',
   })
 
-  // Local cluster filter
-  const {
-    localClusterFilter, toggleClusterFilter, clearClusterFilter,
-    availableClusters, showClusterFilter, setShowClusterFilter, clusterFilterRef,
-  } = useChartFilters({ storageKey: 'namespace-events' })
-
   // Apply config overrides (e.g., from drill-down navigation)
   useEffect(() => {
     if (config?.cluster && config.cluster !== selectedCluster) {
@@ -58,16 +63,11 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const [sortBy, setSortBy] = useState<SortByOption>('time')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
-
   // Fetch namespaces for the selected cluster
   const { namespaces } = useNamespaces(selectedCluster || undefined)
 
-  // Filter and sort events by cluster and namespace
-  const sortedEvents = useMemo(() => {
+  // Pre-filter by selected cluster/namespace (card-specific cascading selection)
+  const preFilteredEvents = useMemo(() => {
     let events = allEvents
     if (selectedCluster) {
       events = events.filter(e => e.cluster === selectedCluster)
@@ -75,54 +75,49 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     if (selectedNamespace) {
       events = events.filter(e => e.namespace === selectedNamespace)
     }
+    return events
+  }, [allEvents, selectedCluster, selectedNamespace])
 
-    // Apply local search
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      events = events.filter(e =>
-        e.message.toLowerCase().includes(query) ||
-        e.object.toLowerCase().includes(query) ||
-        e.namespace.toLowerCase().includes(query) ||
-        e.type.toLowerCase().includes(query) ||
-        (e.reason?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    // Sort events
-    const sorted = [...events].sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'time':
-          const timeA = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
-          const timeB = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
-          compare = timeA - timeB
-          break
-        case 'type':
-          compare = a.type.localeCompare(b.type)
-          break
-        case 'object':
-          compare = a.object.localeCompare(b.object)
-          break
-        case 'count':
-          compare = a.count - b.count
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-    return sorted
-  }, [allEvents, selectedCluster, selectedNamespace, sortBy, sortDirection, localSearch])
-
-  // Use pagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
+  // useCardData for search/cluster filter/sort/pagination
   const {
-    paginatedItems: filteredEvents,
+    items: filteredEvents,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedEvents, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<ClusterEvent, SortByOption>(preFilteredEvents, {
+    filter: {
+      searchFields: ['message', 'object', 'namespace', 'type', 'reason'],
+      clusterField: 'cluster',
+      storageKey: 'namespace-events',
+    },
+    sort: {
+      defaultField: 'time',
+      defaultDirection: 'desc',
+      comparators: EVENT_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   const isLoading = clustersLoading || eventsLoading
   const showSkeleton = isLoading && allEvents.length === 0
@@ -151,20 +146,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   }
 
   if (showSkeleton) {
-    return (
-      <div className="h-full flex flex-col min-h-card">
-        <div className="flex items-center justify-between mb-4">
-          <Skeleton variant="text" width={140} height={20} />
-          <Skeleton variant="rounded" width={80} height={28} />
-        </div>
-        <Skeleton variant="rounded" height={32} className="mb-4" />
-        <div className="space-y-2">
-          <Skeleton variant="rounded" height={60} />
-          <Skeleton variant="rounded" height={60} />
-          <Skeleton variant="rounded" height={60} />
-        </div>
-      </div>
-    )
+    return <CardSkeleton type="list" rows={3} showHeader showSearch rowHeight={60} />
   }
 
   return (
@@ -178,69 +160,31 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(c => (
-                      <button
-                        key={c.name}
-                        onClick={() => toggleClusterFilter(c.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
+        <CardControlsRow
+          clusterIndicator={{
+            selectedCount: localClusterFilter.length,
+            totalCount: availableClustersForFilter.length,
+          }}
+          clusterFilter={{
+            availableClusters: availableClustersForFilter,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1,
+          }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection,
+          }}
+        />
       </div>
 
       {/* Selectors */}
@@ -281,16 +225,12 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       )}
 
       {/* Local Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search events..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={localSearch}
+        onChange={setLocalSearch}
+        placeholder="Search events..."
+        className="mb-4"
+      />
 
       {/* Events list */}
       <div className="flex-1 space-y-2 overflow-y-auto">
@@ -344,18 +284,14 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
+        onPageChange={goToPage}
+        needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+      />
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">

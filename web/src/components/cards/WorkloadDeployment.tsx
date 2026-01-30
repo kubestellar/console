@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import {
@@ -7,7 +7,6 @@ import {
   Clock,
   XCircle,
   AlertTriangle,
-  Search,
   Layers,
   Server,
   Database,
@@ -15,15 +14,12 @@ import {
   Plus,
   ArrowUpRight,
   GripVertical,
-  Filter,
-  ChevronDown,
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards'
 import { cn } from '../../lib/cn'
 import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
+import { useClusters } from '../../hooks/useMCP'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -350,31 +346,63 @@ const workloadStatusOrder: Record<string, number> = { Failed: 0, Degraded: 1, Pe
 const worseStatus = (a: WorkloadStatus, b: WorkloadStatus): WorkloadStatus =>
   (workloadStatusOrder[a] ?? 4) < (workloadStatusOrder[b] ?? 4) ? a : b
 
+const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:workload-deployment-clusters'
+
 interface WorkloadDeploymentProps {
   config?: Record<string, unknown>
 }
 
 export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
-  const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<WorkloadType | 'All'>('All')
   const [statusFilter, setStatusFilter] = useState<WorkloadStatus | 'All'>('All')
   const [selectedWorkload, setSelectedWorkload] = useState<Workload | null>(null)
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortByOption>('status')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'workload-deployment',
+  // Manual cluster filter -- Workload has targetClusters[] not a single cluster field,
+  // so we can't use useCardData's built-in clusterField filtering.
+  const { deduplicatedClusters } = useClusters()
+  const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(CLUSTER_FILTER_KEY)
+      return stored ? JSON.parse(stored) : []
+    } catch { return [] }
   })
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  const persistClusterFilter = useCallback((clusters: string[]) => {
+    setLocalClusterFilterState(clusters)
+    if (clusters.length === 0) {
+      localStorage.removeItem(CLUSTER_FILTER_KEY)
+    } else {
+      localStorage.setItem(CLUSTER_FILTER_KEY, JSON.stringify(clusters))
+    }
+  }, [])
+
+  const toggleClusterFilter = useCallback((name: string) => {
+    persistClusterFilter(
+      localClusterFilter.includes(name)
+        ? localClusterFilter.filter(c => c !== name)
+        : [...localClusterFilter, name],
+    )
+  }, [localClusterFilter, persistClusterFilter])
+
+  const clearClusterFilter = useCallback(() => persistClusterFilter([]), [persistClusterFilter])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(e.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  const availableClusters = useMemo(
+    () => deduplicatedClusters.filter(c => c.reachable !== false),
+    [deduplicatedClusters],
+  )
 
   // Fetch real workloads from API
   const { data: realWorkloads } = useWorkloads()
@@ -448,45 +476,61 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     }
   }, [workloads, realWorkloads, isDemo])
 
-  const filteredSorted = useMemo(() => {
-    let result = workloads.filter((w) => {
-      const q = search.toLowerCase()
-      const matchesSearch =
-        search === '' ||
-        (w.name || '').toLowerCase().includes(q) ||
-        (w.namespace || '').toLowerCase().includes(q) ||
-        (w.image || '').toLowerCase().includes(q)
-      const matchesType = typeFilter === 'All' || w.type === typeFilter
-      const matchesStatus = statusFilter === 'All' || w.status === statusFilter
-      // Apply local cluster filter
-      const matchesCluster = localClusterFilter.length === 0 ||
-        w.targetClusters.some(c => localClusterFilter.includes(c))
-      return matchesSearch && matchesType && matchesStatus && matchesCluster
-    })
+  // Pre-filter by type, status, and cluster before passing to useCardData
+  const preFiltered = useMemo(() => {
+    let result = workloads
+    if (typeFilter !== 'All') {
+      result = result.filter(w => w.type === typeFilter)
+    }
+    if (statusFilter !== 'All') {
+      result = result.filter(w => w.status === statusFilter)
+    }
+    if (localClusterFilter.length > 0) {
+      result = result.filter(w =>
+        w.targetClusters.some(c => localClusterFilter.includes(c)),
+      )
+    }
+    return result
+  }, [workloads, typeFilter, statusFilter, localClusterFilter])
 
-    // Sort
-    const sorted = [...result].sort((a, b) => {
-      let cmp = 0
-      if (sortBy === 'status') cmp = (workloadStatusOrder[a.status] || 4) - (workloadStatusOrder[b.status] || 4)
-      else if (sortBy === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortBy === 'type') cmp = a.type.localeCompare(b.type)
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-
-    return sorted
-  }, [workloads, search, typeFilter, statusFilter, localClusterFilter, sortBy, sortDirection])
-
-  // Paginate using shared hook
-  const effectivePerPage = limit === 'unlimited' ? 10000 : limit
+  // useCardData handles search, sort, and pagination
   const {
-    paginatedItems: filteredWorkloads,
+    items: filteredWorkloads,
+    totalItems: _totalFiltered,
     currentPage,
     totalPages,
-    totalItems: totalFiltered,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredSorted, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<Workload, SortByOption>(preFiltered, {
+    filter: {
+      searchFields: ['name', 'namespace', 'image'] as (keyof Workload)[],
+      customPredicate: (w, query) =>
+        w.targetClusters.some(c => c.toLowerCase().includes(query)),
+      storageKey: 'workload-deployment',
+    },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc',
+      comparators: {
+        status: commonComparators.statusOrder<Workload>('status', workloadStatusOrder),
+        name: commonComparators.string<Workload>('name'),
+        type: commonComparators.string<Workload>('type'),
+      },
+    },
+    defaultLimit: 5,
+  })
 
   const workloadTypes: (WorkloadType | 'All')[] = ['All', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob']
   const workloadStatuses: (WorkloadStatus | 'All')[] = ['All', 'Running', 'Degraded', 'Pending', 'Failed']
@@ -499,82 +543,41 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           <span className="text-sm font-medium text-muted-foreground">
             {stats.totalWorkloads} total &middot; {stats.uniqueWorkloads} unique
           </span>
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-        </div>
+        <CardControlsRow
+          clusterIndicator={{
+            selectedCount: localClusterFilter.length,
+            totalCount: availableClusters.length,
+          }}
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1,
+          }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection,
+          }}
+        />
       </div>
 
       {/* Search */}
       <div className="px-3 mb-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search workloads..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-          />
-        </div>
+        <CardSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search workloads..."
+        />
       </div>
 
       {/* Stats bar */}
@@ -660,18 +663,14 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalFiltered}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={preFiltered.length}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : preFiltered.length}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
     </div>
   )
 }

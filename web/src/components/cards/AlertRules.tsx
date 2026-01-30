@@ -1,99 +1,78 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import {
   Plus,
   Bell,
   BellOff,
   Trash2,
   Pencil,
-  Search,
-  Filter,
-  ChevronDown,
-  Server,
 } from 'lucide-react'
 import { useAlertRules } from '../../hooks/useAlerts'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { formatCondition } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
-import { useChartFilters } from '../../lib/cards'
+import {
+  useCardData,
+  commonComparators,
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards'
 
 type SortField = 'name' | 'severity' | 'enabled'
 
+const SORT_OPTIONS = [
+  { value: 'name' as const, label: 'Name' },
+  { value: 'severity' as const, label: 'Severity' },
+  { value: 'enabled' as const, label: 'Status' },
+]
+
+const SEVERITY_ORDER: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
+
+const ALERT_SORT_COMPARATORS = {
+  name: commonComparators.string<AlertRule>('name'),
+  severity: (a: AlertRule, b: AlertRule) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+  enabled: (a: AlertRule, b: AlertRule) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0),
+}
+
 export function AlertRulesCard() {
   const { rules, createRule, updateRule, toggleRule, deleteRule } = useAlertRules()
-  const { customFilter } = useGlobalFilters()
   const [showEditor, setShowEditor] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortField>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [localSearch, setLocalSearch] = useState('')
 
-  // Local cluster filter
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'alert-rules',
-  })
-
-  // Filter and sort rules
-  const sortedRules = useMemo(() => {
-    let filtered = [...rules]
-
-    // Apply global custom text filter
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      filtered = filtered.filter(rule =>
-        rule.name.toLowerCase().includes(query) ||
-        formatCondition(rule.condition).toLowerCase().includes(query)
-      )
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = filtered.filter(rule =>
-        rule.name.toLowerCase().includes(query) ||
-        formatCondition(rule.condition).toLowerCase().includes(query) ||
-        rule.severity.toLowerCase().includes(query)
-      )
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      let cmp = 0
-      if (sortBy === 'name') {
-        cmp = a.name.localeCompare(b.name)
-      } else if (sortBy === 'severity') {
-        const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-        cmp = severityOrder[a.severity] - severityOrder[b.severity]
-      } else {
-        // Sort by enabled (enabled first)
-        cmp = (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0)
-      }
-      return sortDirection === 'asc' ? cmp : -cmp
-    })
-    return sorted
-  }, [rules, sortBy, sortDirection, customFilter, localSearch])
-
-  // Apply pagination using usePagination hook
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
-  const {
-    paginatedItems: displayedRules,
+    items: displayedRules,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
-    itemsPerPage: perPage,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(sortedRules, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+    },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection,
+    },
+  } = useCardData<AlertRule, SortField>(rules, {
+    filter: {
+      searchFields: ['name', 'severity'],
+      customPredicate: (rule, query) =>
+        formatCondition(rule.condition).toLowerCase().includes(query),
+      storageKey: 'alert-rules',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: ALERT_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   // Count enabled rules
   const enabledCount = rules.filter(r => r.enabled).length
@@ -160,16 +139,10 @@ export function AlertRulesCard() {
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {enabledCount} active
           </span>
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 1. Plus button */}
+          {/* Plus button */}
           <button
             onClick={handleCreateNew}
             className="p-1 rounded hover:bg-secondary/50 text-purple-400 transition-colors"
@@ -177,81 +150,29 @@ export function AlertRulesCard() {
           >
             <Plus className="w-4 h-4" />
           </button>
-          {/* 2. Cluster Filter */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0
-                          ? 'bg-purple-500/20 text-purple-400'
-                          : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name)
-                            ? 'bg-purple-500/20 text-purple-400'
-                            : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          {/* 3. CardControls */}
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-            sortOptions={[
-              { value: 'name', label: 'Name' },
-              { value: 'severity', label: 'Severity' },
-              { value: 'enabled', label: 'Status' },
-            ]}
+          {/* CardControls */}
+          <CardControlsRow
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => setSortBy(v as SortField),
+              sortDirection,
+              onSortDirectionChange: setSortDirection,
+            }}
+            className="!mb-0"
           />
-          {/* 4. RefreshButton */}
         </div>
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search rules..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={localSearch}
+        onChange={setLocalSearch}
+        placeholder="Search rules..."
+        className="mb-3"
+      />
 
       {/* Rules List */}
       <div className="flex-1 overflow-y-auto space-y-2">
@@ -354,18 +275,14 @@ export function AlertRulesCard() {
       </div>
 
       {/* Pagination */}
-      {needsPagination && limit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 10}
+        onPageChange={goToPage}
+        needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+      />
 
       {/* Alert Rule Editor Modal */}
       {showEditor && (
