@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Check, Loader2, Settings } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { AgentIcon } from './AgentIcon'
 import { APIKeySettings } from './APIKeySettings'
 import type { AgentInfo } from '../../types/agent'
@@ -14,6 +15,7 @@ interface AgentSelectorProps {
 
 export function AgentSelector({ compact = false, className = '', showSettings = true }: AgentSelectorProps) {
   const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent } = useMissions()
+  const { isDemoMode } = useDemoMode()
   const [isOpen, setIsOpen] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -56,6 +58,9 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
       return () => document.removeEventListener('keydown', handleEscape)
     }
   }, [isOpen])
+
+  // In demo mode, agent selection is not applicable — render nothing
+  if (isDemoMode) return null
 
   if (agentsLoading) {
     return (

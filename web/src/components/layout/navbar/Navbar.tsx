@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Sun, Moon, Monitor, Users, Cast } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useTheme } from '../../../hooks/useTheme'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useActiveUsers } from '../../../hooks/useActiveUsers'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 import { usePresentationMode } from '../../../hooks/usePresentationMode'
 import { TourTrigger } from '../../onboarding/Tour'
 import { UserProfileDropdown } from '../UserProfileDropdown'
@@ -23,8 +21,6 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
-  const { isConnected } = useLocalAgent()
-  const { isDemoMode } = useDemoMode()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
   const { activeUsers, showBadge: showActiveUsersBadge } = useActiveUsers()
   const [showFeedback, setShowFeedback] = useState(false)
@@ -52,13 +48,9 @@ export function Navbar() {
         {/* Update Indicator */}
         <UpdateIndicator />
 
-        {/* Agent Status Indicator */}
+        {/* Agent Selector first — when it hides in demo mode, only space to the left shifts */}
+        <AgentSelector compact showSettings={true} />
         <AgentStatusIndicator />
-
-        {/* AI Agent Selector - shown when agent is connected */}
-        {isConnected && !isDemoMode && (
-          <AgentSelector compact showSettings={true} />
-        )}
 
         {/* Language Selector */}
         <LanguageSelector />

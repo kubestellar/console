@@ -48,9 +48,9 @@ export function AgentStatusIndicator() {
         ) : (
           <WifiOff className="w-4 h-4" />
         )}
-        {isDemoMode && (
-          <span className="text-xs font-medium hidden sm:inline">Demo</span>
-        )}
+        <span className="text-xs font-medium hidden sm:inline">
+          {isDemoMode ? 'Demo' : isDegraded ? 'Degraded' : isConnected ? 'AI' : agentStatus === 'connecting' ? 'AI' : 'Offline'}
+        </span>
         <span className={cn(
           'w-2 h-2 rounded-full',
           isDemoMode ? 'bg-purple-400' : isDegraded ? 'bg-yellow-400 animate-pulse' : isConnected ? 'bg-green-400' : agentStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-red-400'
