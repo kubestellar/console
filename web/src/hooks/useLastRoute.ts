@@ -75,7 +75,16 @@ export function useLastRoute() {
       const container = getScrollContainer()
       if (!container) return
       const scrollTop = container.scrollTop
-      if (scrollTop <= 0) return
+
+      const positions = getScrollPositions()
+
+      // At the top — clear saved position so next visit starts at top.
+      // This ensures scrolling to top is "sticky" when Pin is on.
+      if (scrollTop <= 0) {
+        delete positions[path]
+        localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
+        return
+      }
 
       // Find the first card visible at the viewport top.
       // Cards are in a grid so multiple cards can share the same row.
@@ -111,7 +120,6 @@ export function useLastRoute() {
         }
       }
 
-      const positions = getScrollPositions()
       positions[path] = { position: snapped, cardTitle }
       localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
     } catch {
@@ -236,8 +244,7 @@ export function useLastRoute() {
   // Continuously save scroll position on scroll (debounced).
   // This ensures the latest position is in localStorage even if the component
   // unmounts abruptly (e.g. sign-out clears auth before cleanup runs).
-  // The scrollTop <= 0 guard in saveScrollPositionNow prevents overwriting
-  // with 0 when navigation resets the scroll.
+  // The isRestoringRef guard prevents overwriting when navigation resets scroll.
   useEffect(() => {
     const container = getScrollContainer()
     if (!container) return
@@ -279,7 +286,16 @@ export function useLastRoute() {
       }, 50)
       return () => clearTimeout(timeoutId)
     } else {
+      // Scroll to top. Set isRestoringRef to prevent the scroll listener
+      // from treating this programmatic scroll as a user-initiated scroll
+      // (which would clear the saved position for this path).
+      isRestoringRef.current = true
       container.scrollTo({ top: 0, behavior: 'instant' })
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          isRestoringRef.current = false
+        }, 100)
+      })
     }
   }, [location.pathname, restoreScrollPosition])
 
@@ -316,7 +332,8 @@ export function clearLastRoute(): void {
 
 /**
  * Get the "remember scroll position" preference for a dashboard path.
- * Defaults to true (on) if no preference is stored.
+ * Defaults to false (off) — pages scroll to top on navigation.
+ * Users can toggle "Pin" on per-dashboard to preserve position.
  */
 export function getRememberPosition(path: string): boolean {
   try {
@@ -328,7 +345,7 @@ export function getRememberPosition(path: string): boolean {
   } catch {
     // Ignore
   }
-  return true // Default: on
+  return false // Default: off — scroll to top on navigation
 }
 
 /**
