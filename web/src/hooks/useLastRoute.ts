@@ -76,30 +76,35 @@ export function useLastRoute() {
       const scrollTop = container.scrollTop
       if (scrollTop <= 0) return
 
-      // Snap to the top of the first card visible in the viewport.
-      // Cards use data-tour="card". We use getBoundingClientRect to get
-      // the absolute position within the scroll container (offsetTop is
-      // relative to offsetParent, which may not be the scroll container).
+      // Find the first card visible at the viewport top.
+      // Cards are in a grid so multiple cards can share the same row.
+      // We want the first card (left-most in DOM) on the row nearest
+      // the viewport top, using a 20px tolerance for breathing room.
       let snapped = scrollTop
       let cardTitle: string | undefined
       const cards = container.querySelectorAll('[data-tour="card"]')
       if (cards.length > 0) {
         const containerRect = container.getBoundingClientRect()
+        // Find the last row whose top is at or above the viewport top + tolerance.
+        // Then pick the FIRST card on that row (first in DOM order).
+        let bestRowTop = -1
         let bestCard: Element | null = null
-        let best = scrollTop
         for (let i = 0; i < cards.length; i++) {
           const cardRect = cards[i].getBoundingClientRect()
           const cardAbsTop = cardRect.top - containerRect.top + scrollTop
-          if (cardAbsTop <= scrollTop + 8) {
-            best = cardAbsTop
-            bestCard = cards[i]
+          if (cardAbsTop <= scrollTop + 20) {
+            // New row detected (position differs by more than 2px from last row)
+            if (Math.abs(cardAbsTop - bestRowTop) > 2) {
+              bestRowTop = cardAbsTop
+              bestCard = cards[i] // first card on this new row
+            }
+            // Same row — keep the first card (don't update bestCard)
           } else {
             break
           }
         }
-        snapped = Math.max(0, best - 12) // 12px breathing room above card
-        // Save the card title for identity-based restore
-        if (bestCard) {
+        if (bestCard && bestRowTop >= 0) {
+          snapped = Math.max(0, bestRowTop - 12) // 12px breathing room above card
           const titleEl = bestCard.querySelector('h3')
           if (titleEl) cardTitle = titleEl.textContent?.trim()
         }
