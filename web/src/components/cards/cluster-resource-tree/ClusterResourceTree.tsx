@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, RefreshCw, Folder, Filter, ChevronDown } from 'lucide-react'
 import { useClusters, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs, useReplicaSets, useStatefulSets, useDaemonSets, useCronJobs, useIngresses, useNetworkPolicies } from '../../../hooks/useMCP'
 import { useCachedPodIssues } from '../../../hooks/useCachedData'
@@ -38,6 +39,10 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
+
+    clusterFilterBtnRef,
+
+    dropdownStyle,
   } = useChartFilters({
     storageKey: 'cluster-resource-tree',
   })
@@ -273,6 +278,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
           {availableClusters.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
+                ref={clusterFilterBtnRef}
                 onClick={() => setShowClusterFilter(!showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                   localClusterFilter.length > 0
@@ -285,8 +291,10 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              {showClusterFilter && dropdownStyle && createPortal(
+                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button
                       onClick={clearClusterFilter}
@@ -308,7 +316,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>,
+              document.body
               )}
             </div>
           )}

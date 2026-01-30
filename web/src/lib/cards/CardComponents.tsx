@@ -1,4 +1,5 @@
 import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server } from 'lucide-react'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
@@ -275,11 +276,27 @@ export function CardClusterFilter({
   containerRef,
   minClusters = 2,
 }: CardClusterFilterProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 192),
+      })
+    } else {
+      setDropdownPos(null)
+    }
+  }, [isOpen])
+
   if (availableClusters.length < minClusters) return null
 
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
           selectedClusters.length > 0
@@ -292,8 +309,12 @@ export function CardClusterFilter({
         <ChevronDown className="w-3 h-3" />
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+      {isOpen && dropdownPos && createPortal(
+        <div
+          className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+          style={{ top: dropdownPos.top, left: dropdownPos.left }}
+          onMouseDown={e => e.stopPropagation()}
+        >
           <div className="p-1">
             <button
               onClick={onClear}
@@ -319,10 +340,42 @@ export function CardClusterFilter({
               </button>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
+}
+
+// ============================================================================
+// useDropdownPortal - Shared hook for portaling dropdowns out of overflow
+// ============================================================================
+
+const DROPDOWN_WIDTH = 192 // w-48 = 12rem = 192px
+const DROPDOWN_GAP = 4
+
+/**
+ * Hook that computes fixed positioning for a dropdown rendered via createPortal.
+ * Attach `triggerRef` to the button that opens the dropdown.
+ * When `isOpen` is true, `style` will contain { top, left } for the portal div.
+ */
+export function useDropdownPortal(isOpen: boolean) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [style, setStyle] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setStyle({
+        top: rect.bottom + DROPDOWN_GAP,
+        left: Math.max(8, rect.right - DROPDOWN_WIDTH),
+      })
+    } else {
+      setStyle(null)
+    }
+  }, [isOpen])
+
+  return { triggerRef, style }
 }
 
 // ============================================================================

@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { TrendingUp, Clock, Filter, ChevronDown, Server } from 'lucide-react'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import {
@@ -47,6 +48,8 @@ export function GPUUtilization() {
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
+  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -58,6 +61,18 @@ export function GPUUtilization() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (showClusterFilter && clusterFilterBtnRef.current) {
+      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 192),
+      })
+    } else {
+      setDropdownStyle(null)
+    }
+  }, [showClusterFilter])
 
   // Get reachable clusters
   const reachableClusters = useMemo(() => {
@@ -232,6 +247,7 @@ export function GPUUtilization() {
             {availableClustersForFilter.length >= 1 && (
               <div ref={clusterFilterRef} className="relative">
                 <button
+                  ref={clusterFilterBtnRef}
                   onClick={() => setShowClusterFilter(!showClusterFilter)}
                   className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                     localClusterFilter.length > 0
@@ -244,8 +260,10 @@ export function GPUUtilization() {
                   <ChevronDown className="w-3 h-3" />
                 </button>
 
-                {showClusterFilter && (
-                  <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+                {showClusterFilter && dropdownStyle && createPortal(
+                  <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                     <div className="p-1">
                       <button
                         onClick={() => setLocalClusterFilter([])}
@@ -267,7 +285,8 @@ export function GPUUtilization() {
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </div>,
+                document.body
                 )}
               </div>
             )}
@@ -315,6 +334,7 @@ export function GPUUtilization() {
           {availableClustersForFilter.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
+                ref={clusterFilterBtnRef}
                 onClick={() => setShowClusterFilter(!showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                   localClusterFilter.length > 0
@@ -327,8 +347,10 @@ export function GPUUtilization() {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              {showClusterFilter && dropdownStyle && createPortal(
+                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button
                       onClick={() => setLocalClusterFilter([])}
@@ -350,7 +372,8 @@ export function GPUUtilization() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>,
+              document.body
               )}
             </div>
           )}

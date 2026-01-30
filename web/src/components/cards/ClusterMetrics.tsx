@@ -62,23 +62,9 @@ export function ClusterMetrics() {
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
+    clusterFilterBtnRef,
+    dropdownStyle,
   } = useChartFilters({ storageKey: 'cluster-metrics' })
-
-  const filterButtonRef = useRef<HTMLButtonElement>(null)
-  const [filterDropdownPos, setFilterDropdownPos] = useState<{ top: number; left: number } | null>(null)
-
-  // Compute dropdown position when filter opens
-  useEffect(() => {
-    if (showClusterFilter && filterButtonRef.current) {
-      const rect = filterButtonRef.current.getBoundingClientRect()
-      setFilterDropdownPos({
-        top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192), // 192px = w-48; keep on screen
-      })
-    } else {
-      setFilterDropdownPos(null)
-    }
-  }, [showClusterFilter])
 
   // Load history from localStorage
   const loadSavedHistory = useCallback((): MetricPoint[] => {
@@ -298,7 +284,7 @@ export function ClusterMetrics() {
         {availableClustersForFilter.length >= 1 && (
           <div ref={clusterFilterRef} className="relative">
             <button
-              ref={filterButtonRef}
+              ref={clusterFilterBtnRef}
               onClick={() => setShowClusterFilter(!showClusterFilter)}
               className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                 localClusterFilter.length > 0
@@ -311,10 +297,11 @@ export function ClusterMetrics() {
               <ChevronDown className="w-3 h-3" />
             </button>
 
-            {showClusterFilter && filterDropdownPos && createPortal(
+            {showClusterFilter && dropdownStyle && createPortal(
               <div
                 className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                style={{ top: filterDropdownPos.top, left: filterDropdownPos.left }}
+                style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                onMouseDown={e => e.stopPropagation()}
               >
                 <div className="p-1">
                   <button

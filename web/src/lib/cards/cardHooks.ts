@@ -67,6 +67,10 @@ export interface UseCardFiltersResult<T> {
   setShowClusterFilter: (show: boolean) => void
   /** Ref for cluster filter dropdown (for click outside handling) */
   clusterFilterRef: React.RefObject<HTMLDivElement>
+  /** Ref for cluster filter button (portal positioning) */
+  clusterFilterBtnRef: React.RefObject<HTMLButtonElement>
+  /** Computed fixed position for portaled cluster dropdown */
+  dropdownStyle: { top: number; left: number } | null
 }
 
 const LOCAL_FILTER_STORAGE_PREFIX = 'kubestellar-card-filter:'
@@ -98,6 +102,22 @@ export function useCardFilters<T>(
   })
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
+  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
+  const clusterDropdownRef = useRef<HTMLDivElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
+
+  // Compute fixed position for portaled cluster dropdown
+  useEffect(() => {
+    if (showClusterFilter && clusterFilterBtnRef.current) {
+      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 192),
+      })
+    } else {
+      setDropdownStyle(null)
+    }
+  }, [showClusterFilter])
 
   // Wrapper to persist to localStorage
   const setLocalClusterFilter = useCallback((clusters: string[]) => {
@@ -111,10 +131,14 @@ export function useCardFilters<T>(
     }
   }, [storageKey])
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (check both container and portaled dropdown)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        clusterFilterRef.current && !clusterFilterRef.current.contains(target) &&
+        (!clusterDropdownRef.current || !clusterDropdownRef.current.contains(target))
+      ) {
         setShowClusterFilter(false)
       }
     }
@@ -226,6 +250,8 @@ export function useCardFilters<T>(
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
+    clusterFilterBtnRef,
+    dropdownStyle,
   }
 }
 
@@ -832,6 +858,10 @@ export interface UseChartFiltersResult {
   setShowClusterFilter: (show: boolean) => void
   /** Ref for cluster filter dropdown (for click outside handling) */
   clusterFilterRef: React.RefObject<HTMLDivElement>
+  /** Ref for cluster filter button (portal positioning) */
+  clusterFilterBtnRef: React.RefObject<HTMLButtonElement>
+  /** Computed fixed position for portaled cluster dropdown */
+  dropdownStyle: { top: number; left: number } | null
 }
 
 /**
@@ -858,6 +888,22 @@ export function useChartFilters(
   })
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
+  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
+  const clusterDropdownRef = useRef<HTMLDivElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
+
+  // Compute fixed position for portaled cluster dropdown
+  useEffect(() => {
+    if (showClusterFilter && clusterFilterBtnRef.current) {
+      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 192),
+      })
+    } else {
+      setDropdownStyle(null)
+    }
+  }, [showClusterFilter])
 
   // Persist to localStorage
   const setLocalClusterFilter = useCallback((clusters: string[]) => {
@@ -871,10 +917,14 @@ export function useChartFilters(
     }
   }, [storageKey])
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside (check both container and portaled dropdown)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        clusterFilterRef.current && !clusterFilterRef.current.contains(target) &&
+        (!clusterDropdownRef.current || !clusterDropdownRef.current.contains(target))
+      ) {
         setShowClusterFilter(false)
       }
     }
@@ -926,6 +976,8 @@ export function useChartFilters(
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
+    clusterFilterBtnRef,
+    dropdownStyle,
   }
 }
 

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -22,6 +23,10 @@ export function StorageOverview() {
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
+
+    clusterFilterBtnRef,
+
+    dropdownStyle,
   } = useChartFilters({
     storageKey: 'storage-overview',
   })
@@ -106,6 +111,7 @@ export function StorageOverview() {
           {availableClusters.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
+                ref={clusterFilterBtnRef}
                 onClick={() => setShowClusterFilter(!showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                   localClusterFilter.length > 0
@@ -118,8 +124,10 @@ export function StorageOverview() {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              {showClusterFilter && dropdownStyle && createPortal(
+                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button
                       onClick={clearClusterFilter}
@@ -141,7 +149,8 @@ export function StorageOverview() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>,
+              document.body
               )}
             </div>
           )}

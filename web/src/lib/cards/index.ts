@@ -77,6 +77,7 @@ export {
   type CardFilterChipsProps,
   type CardControlsRowProps,
   type CardPaginationFooterProps,
+  useDropdownPortal,
 } from './CardComponents'
 
 // Status Color System

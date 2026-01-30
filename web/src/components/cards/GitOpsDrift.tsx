@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, Search, ChevronRight, Filter, ChevronDown, Server } from 'lucide-react'
 import { useGitOpsDrifts, GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
@@ -119,6 +120,10 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       showClusterFilter,
       setShowClusterFilter,
       clusterFilterRef,
+
+      clusterFilterBtnRef,
+
+      dropdownStyle,
     },
     sorting: {
       sortBy,
@@ -195,6 +200,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
           {availableClustersForFilter.length >= 1 && (
             <div ref={clusterFilterRef} className="relative">
               <button
+                ref={clusterFilterBtnRef}
                 onClick={() => setShowClusterFilter(!showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                   localClusterFilter.length > 0
@@ -207,8 +213,10 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              {showClusterFilter && dropdownStyle && createPortal(
+                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button
                       onClick={clearClusterFilter}
@@ -230,7 +238,8 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>,
+              document.body
               )}
             </div>
           )}

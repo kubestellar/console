@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Search, Filter, ChevronDown, Server } from 'lucide-react'
 import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -227,6 +228,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
           {filters.availableClusters.length >= 1 && (
             <div ref={filters.clusterFilterRef} className="relative">
               <button
+                ref={filters.clusterFilterBtnRef}
                 onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                   filters.localClusterFilter.length > 0
@@ -239,8 +241,10 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {filters.showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              {filters.showClusterFilter && filters.dropdownStyle && createPortal(
+                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: filters.dropdownStyle.top, left: filters.dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button
                       onClick={filters.clearClusterFilter}
@@ -262,7 +266,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>,
+              document.body
               )}
             </div>
           )}

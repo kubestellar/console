@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ExternalLink, Cpu, Layers, AlertCircle, Play, Pause, RefreshCw,
   Filter, ChevronDown, Server, Activity, Network, Box, Search
@@ -211,6 +212,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
           {filters.availableClusters.length >= 1 && (
             <div ref={filters.clusterFilterRef} className="relative">
               <button
+                ref={filters.clusterFilterBtnRef}
                 onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
                   filters.localClusterFilter.length > 0
@@ -222,15 +224,18 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                 <Filter className="w-3 h-3" />
                 <ChevronDown className="w-3 h-3" />
               </button>
-              {filters.showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
+              {filters.showClusterFilter && filters.dropdownStyle && createPortal(
+                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                  style={{ top: filters.dropdownStyle.top, left: filters.dropdownStyle.left }}
+                  onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button onClick={filters.clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
                     {filters.availableClusters.map(cluster => (
                       <button key={cluster.name} onClick={() => filters.toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
                     ))}
                   </div>
-                </div>
+                </div>,
+              document.body
               )}
             </div>
           )}
