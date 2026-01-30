@@ -74,26 +74,39 @@ let mountIndex = 0
 const MOUNT_DELAY_BASE = 16 // ~1 frame at 60fps
 const MOUNT_DELAY_INCREMENT = 8 // stagger by half frame increments
 
-// Eager mounting: progressively mount off-screen cards after visible ones settle
+// Eager mounting: progressively mount off-screen cards after visible ones settle.
+// Uses debounce so late-arriving cards are included, and per-callback IDs for
+// proper cancellation when a card unmounts or IntersectionObserver fires first.
 const EAGER_MOUNT_INITIAL_DELAY_MS = 2000 // wait for visible cards to render first
 const EAGER_MOUNT_STAGGER_MS = 100 // stagger off-screen card mounts by 100ms each
-const eagerMountQueue = new Set<() => void>()
-let eagerMountStarted = false
 
-function scheduleEagerMount(mount: () => void) {
-  eagerMountQueue.add(mount)
-  if (!eagerMountStarted) {
-    eagerMountStarted = true
-    setTimeout(() => {
-      const batch = [...eagerMountQueue]
-      eagerMountQueue.clear()
-      // Reset so navigating to another dashboard page re-triggers eager mounting
-      eagerMountStarted = false
-      batch.forEach((fn, i) => {
-        setTimeout(fn, i * EAGER_MOUNT_STAGGER_MS)
-      })
-    }, EAGER_MOUNT_INITIAL_DELAY_MS)
+let eagerMountTimer: ReturnType<typeof setTimeout> | null = null
+let eagerMountCallbacks: Array<{ fn: () => void; id: number }> = []
+let nextEagerId = 0
+
+function scheduleEagerMount(mount: () => void): number {
+  const id = nextEagerId++
+  eagerMountCallbacks.push({ fn: mount, id })
+
+  // Debounce: restart drain timer on each new registration.
+  // This ensures we wait for ALL cards on the current page to register.
+  if (eagerMountTimer !== null) {
+    clearTimeout(eagerMountTimer)
   }
+  eagerMountTimer = setTimeout(() => {
+    const callbacks = [...eagerMountCallbacks]
+    eagerMountCallbacks = []
+    eagerMountTimer = null
+    callbacks.forEach(({ fn }, i) => {
+      setTimeout(fn, i * EAGER_MOUNT_STAGGER_MS)
+    })
+  }, EAGER_MOUNT_INITIAL_DELAY_MS)
+
+  return id
+}
+
+function cancelEagerMount(id: number) {
+  eagerMountCallbacks = eagerMountCallbacks.filter(cb => cb.id !== id)
 }
 
 /**
@@ -109,6 +122,7 @@ function useLazyMount(rootMargin = '100px') {
   const ref = useRef<HTMLDivElement>(null)
   // Track which mount batch this card is in
   const mountOrderRef = useRef<number>(-1)
+  const eagerIdRef = useRef<number>(-1)
 
   useEffect(() => {
     const element = ref.current
@@ -132,6 +146,11 @@ function useLazyMount(rootMargin = '100px') {
           }, delay)
           // Stop observing immediately - we don't unmount on scroll away
           observer.disconnect()
+          // Cancel eager mount — IntersectionObserver handled it
+          if (eagerIdRef.current !== -1) {
+            cancelEagerMount(eagerIdRef.current)
+            eagerIdRef.current = -1
+          }
         }
       },
       { rootMargin }
@@ -140,19 +159,17 @@ function useLazyMount(rootMargin = '100px') {
     observer.observe(element)
 
     // Schedule eager mount for off-screen cards so their data prefetches
-    const eagerMount = () => {
-      setIsVisible(prev => {
-        // Only set if not already visible (IntersectionObserver may have fired first)
-        if (!prev) return true
-        return prev
-      })
+    eagerIdRef.current = scheduleEagerMount(() => {
+      setIsVisible(prev => prev ? prev : true)
       observer.disconnect()
-    }
-    scheduleEagerMount(eagerMount)
+    })
 
     return () => {
       observer.disconnect()
-      eagerMountQueue.delete(eagerMount)
+      if (eagerIdRef.current !== -1) {
+        cancelEagerMount(eagerIdRef.current)
+        eagerIdRef.current = -1
+      }
     }
   }, [isVisible, rootMargin])
 
