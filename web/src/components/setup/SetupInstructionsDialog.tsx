@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Rocket, Copy, Check, Terminal, Globe, Download, ExternalLink, ChevronDown, ChevronRight, KeyRound } from 'lucide-react'
+import { Rocket, Copy, Check, Terminal, Globe, ExternalLink, ChevronDown, ChevronRight, KeyRound } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 
 interface SetupInstructionsDialogProps {
@@ -12,40 +12,22 @@ interface SetupInstructionsDialogProps {
 const REPO_URL = 'https://github.com/kubestellar/console'
 const DOCS_URL = 'https://console-docs.kubestellar.io'
 
+const CURL_BASE = 'https://raw.githubusercontent.com/kubestellar/console/main'
+
 const STEPS = [
   {
     number: 1,
-    title: 'Clone the repository',
-    description: 'Get the KubeStellar Console source code',
-    command: 'git clone https://github.com/kubestellar/console.git',
-    icon: Download,
-  },
-  {
-    number: 2,
-    title: 'Navigate to the project',
-    description: 'Change into the project directory',
-    command: 'cd console',
-    icon: Terminal,
-  },
-  {
-    number: 3,
     title: 'Start the console',
-    description: 'Run the startup script in the background',
-    command: './startup-demo.sh &',
-    altCommand: './startup-oauth.sh &',
+    description: 'Clones the repo, installs dependencies, and starts all services',
+    command: `curl -sSL ${CURL_BASE}/start-dev.sh | bash`,
+    altCommand: `curl -sSL ${CURL_BASE}/startup-oauth.sh | bash`,
     altLabel: 'With GitHub OAuth login',
     icon: Rocket,
     hasOAuthGuide: true,
+    hasManualGuide: true,
   },
   {
-    number: 4,
-    title: 'Install the local agent',
-    description: 'Connect your kubeconfig clusters',
-    command: 'brew install kubestellar/tap/kc-agent && kc-agent',
-    icon: Download,
-  },
-  {
-    number: 5,
+    number: 2,
     title: 'Open the console',
     description: 'Access your local KubeStellar Console',
     command: 'open http://localhost:5174',
@@ -66,6 +48,7 @@ const OAUTH_STEPS = [
 export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDialogProps) {
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
+  const [showManualGuide, setShowManualGuide] = useState(false)
 
   const copyToClipboard = async (text: string, stepKey: number) => {
     await navigator.clipboard.writeText(text)
@@ -77,7 +60,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
       <BaseModal.Header
         title="Run KubeStellar Console Locally"
-        description="Connect your own clusters in 5 steps"
+        description="Connect your own clusters in 2 steps"
         icon={Rocket}
         onClose={onClose}
         showBack={false}
@@ -139,6 +122,45 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                             )}
                           </button>
                         </div>
+                      </div>
+                    )}
+                    {'hasManualGuide' in step && step.hasManualGuide && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() => setShowManualGuide(!showManualGuide)}
+                          className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          {showManualGuide ? (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          )}
+                          <Terminal className="w-3.5 h-3.5" />
+                          Or clone manually
+                        </button>
+                        {showManualGuide && (
+                          <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
+                                git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh
+                              </code>
+                              <button
+                                onClick={() => copyToClipboard('git clone https://github.com/kubestellar/console.git && cd console && ./start-dev.sh', 300)}
+                                className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                title="Copy command"
+                              >
+                                {copiedStep === 300 ? (
+                                  <Check className="w-3.5 h-3.5 text-green-400" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              The script automatically installs the local agent via Homebrew.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {'hasOAuthGuide' in step && step.hasOAuthGuide && (
@@ -241,7 +263,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
 
       <BaseModal.Footer showKeyboardHints={false}>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          Prerequisites: Go 1.21+, Node.js 18+, Homebrew
+          Prerequisites: Go 1.22+, Node.js 18+, Homebrew, curl
         </div>
         <div className="flex-1" />
         <button
