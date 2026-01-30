@@ -6,58 +6,17 @@ import {
   Loader2,
   AlertTriangle,
   FileText,
-  KeyRound,
-  User,
-  Network,
-  Globe,
-  HardDrive,
-  Shield,
-  Gauge,
-  ShieldCheck,
-  Server,
   Search,
-  Blocks,
-  ShieldAlert,
 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useNamespaces } from '../../hooks/useMCP'
 import { useWorkloads } from '../../hooks/useWorkloads'
 import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
-
-// Category grouping for dependency kinds
-const DEP_CATEGORIES: { label: string; kinds: string[]; icon: typeof Shield }[] = [
-  { label: 'RBAC & Identity', kinds: ['ServiceAccount', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding'], icon: Shield },
-  { label: 'Configuration', kinds: ['ConfigMap', 'Secret'], icon: FileText },
-  { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy'], icon: Network },
-  { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget'], icon: Gauge },
-  { label: 'Storage', kinds: ['PersistentVolumeClaim'], icon: HardDrive },
-  { label: 'Custom Resources', kinds: ['CustomResourceDefinition'], icon: Blocks },
-  { label: 'Admission Control', kinds: ['ValidatingWebhookConfiguration', 'MutatingWebhookConfiguration'], icon: ShieldAlert },
-]
-
-// Icon per dependency kind
-const KIND_ICONS: Record<string, typeof Shield> = {
-  ServiceAccount: User,
-  Role: Shield,
-  RoleBinding: ShieldCheck,
-  ClusterRole: Shield,
-  ClusterRoleBinding: ShieldCheck,
-  ConfigMap: FileText,
-  Secret: KeyRound,
-  Service: Server,
-  Ingress: Globe,
-  NetworkPolicy: Network,
-  HorizontalPodAutoscaler: Gauge,
-  PodDisruptionBudget: Shield,
-  PersistentVolumeClaim: HardDrive,
-  CustomResourceDefinition: Blocks,
-  ValidatingWebhookConfiguration: ShieldAlert,
-  MutatingWebhookConfiguration: ShieldAlert,
-}
+import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
 
 function groupDependencies(deps: ResolvedDependency[]) {
-  const groups: { label: string; icon: typeof Shield; deps: ResolvedDependency[] }[] = []
+  const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
 
   for (const cat of DEP_CATEGORIES) {
     const matching = deps.filter(d => cat.kinds.includes(d.kind))
@@ -67,8 +26,7 @@ function groupDependencies(deps: ResolvedDependency[]) {
   }
 
   // Catch-all for any kinds not in categories
-  const knownKinds = new Set(DEP_CATEGORIES.flatMap(c => c.kinds))
-  const uncategorized = deps.filter(d => !knownKinds.has(d.kind))
+  const uncategorized = deps.filter(d => !KNOWN_DEPENDENCY_KINDS.has(d.kind))
   if (uncategorized.length > 0) {
     groups.push({ label: 'Other', icon: FileText, deps: uncategorized })
   }
