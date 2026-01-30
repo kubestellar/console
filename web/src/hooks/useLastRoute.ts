@@ -265,16 +265,15 @@ export function useLastRoute() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [saveScrollPositionNow])
 
-  // Restore scroll when navigating to a previously visited page
+  // Scroll to top when navigating between dashboards (not on initial app load)
   useEffect(() => {
     if (!hasRestoredRef.current) return
 
-    const timeoutId = setTimeout(() => {
-      restoreScrollPosition(location.pathname)
-    }, 50)
-
-    return () => clearTimeout(timeoutId)
-  }, [location.pathname, restoreScrollPosition])
+    const container = getScrollContainer()
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'instant' })
+    }
+  }, [location.pathname])
 
   return {
     lastRoute: localStorage.getItem(LAST_ROUTE_KEY),
