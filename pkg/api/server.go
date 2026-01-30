@@ -373,6 +373,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/workloads/deploy-status/:cluster/:namespace/:name", workloadHandlers.GetDeployStatus)
 	api.Get("/workloads/deploy-logs/:cluster/:namespace/:name", workloadHandlers.GetDeployLogs)
 	api.Get("/workloads/resolve-deps/:cluster/:namespace/:name", workloadHandlers.ResolveDependencies)
+	api.Get("/workloads/monitor/:cluster/:namespace/:name", workloadHandlers.MonitorWorkload)
 	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
 	api.Post("/workloads/deploy", workloadHandlers.DeployWorkload)
 	api.Post("/workloads/scale", workloadHandlers.ScaleWorkload)
