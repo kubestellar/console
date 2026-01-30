@@ -425,7 +425,12 @@ export function CustomDashboard() {
   }, [])
 
   // Current card types for recommendations
-  const currentCardTypes = useMemo(() => cards.map(c => c.card_type), [cards])
+  const currentCardTypes = useMemo(() => cards.map(c => {
+    if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {
+      return `dynamic_card::${c.config.dynamicCardId as string}`
+    }
+    return c.card_type
+  }), [cards])
 
   // Loading skeleton
   if (isLoading && cards.length === 0) {

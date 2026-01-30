@@ -3,6 +3,7 @@ import { Sparkles, Plus, Loader2, LayoutGrid, Search, Wand2, Activity } from 'lu
 import { BaseModal } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
 import { StatBlockFactoryModal } from './StatBlockFactoryModal'
+import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
 
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
@@ -795,9 +796,16 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const [isGenerating, setIsGenerating] = useState(false)
   const [browseSearch, setBrowseSearch] = useState('')
   const [selectedBrowseCards, setSelectedBrowseCards] = useState<Set<string>>(new Set())
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(Object.keys(CARD_CATALOG)))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set([...Object.keys(CARD_CATALOG), 'Custom Cards']))
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Dynamic cards from registry (reactive — updates when cards are created/deleted)
+  const [dynamicCards, setDynamicCards] = useState(() => getAllDynamicCards())
+  useEffect(() => {
+    const unsub = onRegistryChange(() => setDynamicCards(getAllDynamicCards()))
+    return unsub
+  }, [])
 
   useEffect(() => {
     if (isOpen && activeTab === 'browse') {
@@ -854,8 +862,25 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
     setExpandedCategories(newExpanded)
   }
 
+  // Merge dynamic cards into catalog as "Custom Cards" category
+  const dynamicCatalogEntries = dynamicCards.map(dc => ({
+    type: `dynamic_card::${dc.id}`,
+    title: dc.title,
+    description: dc.description || 'Custom dynamic card',
+    visualization: dc.tier === 'tier1' ? 'table' : 'status',
+  }))
+
+  const staticCatalog = Object.fromEntries(
+    Object.entries(CARD_CATALOG).map(([k, v]) => [k, [...v]]),
+  ) as Record<string, Array<{ type: string; title: string; description: string; visualization: string }>>
+
+  const mergedCatalog: Record<string, Array<{ type: string; title: string; description: string; visualization: string }>> = {
+    ...(dynamicCatalogEntries.length > 0 ? { 'Custom Cards': dynamicCatalogEntries } : {}),
+    ...staticCatalog,
+  }
+
   // Filter catalog by search
-  const filteredCatalog = Object.entries(CARD_CATALOG).reduce((acc, [category, cards]) => {
+  const filteredCatalog = Object.entries(mergedCatalog).reduce((acc, [category, cards]) => {
     if (!browseSearch.trim()) {
       acc[category] = [...cards]
     } else {
@@ -884,6 +909,23 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
   const handleAddBrowseCards = () => {
     const cardsToAdd: CardSuggestion[] = []
     const addedTypes = new Set<string>() // Track added types to prevent duplicates
+
+    // Handle dynamic cards (keyed as "dynamic_card::cardId")
+    for (const dc of dynamicCards) {
+      const key = `dynamic_card::${dc.id}`
+      if (selectedBrowseCards.has(key) && !addedTypes.has(key)) {
+        addedTypes.add(key)
+        cardsToAdd.push({
+          type: 'dynamic_card',
+          title: dc.title,
+          description: dc.description || 'Custom dynamic card',
+          visualization: (dc.tier === 'tier1' ? 'table' : 'status') as CardSuggestion['visualization'],
+          config: { dynamicCardId: dc.id },
+        })
+      }
+    }
+
+    // Handle static catalog cards
     for (const cards of Object.values(CARD_CATALOG)) {
       for (const card of cards) {
         // Only add if selected AND not already added (prevents duplicates from multiple categories)

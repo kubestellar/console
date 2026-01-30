@@ -769,7 +769,12 @@ export function Dashboard() {
     showToast(`Applied "${template.name}" template with ${newCards.length} cards`, 'success')
   }, [dashboard, recordCardAdded, showToast])
 
-  const currentCardTypes = localCards.map(c => c.card_type)
+  const currentCardTypes = localCards.map(c => {
+    if (c.card_type === 'dynamic_card' && c.config?.dynamicCardId) {
+      return `dynamic_card::${c.config.dynamicCardId as string}`
+    }
+    return c.card_type
+  })
 
   // Check if any cards are using demo data
   const hasDemoDataCards = localCards.some(c => DEMO_DATA_CARDS.has(c.card_type))
