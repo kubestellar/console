@@ -126,6 +126,7 @@ const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor'
 const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
 const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
 const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
+const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -309,6 +310,8 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   prow_ci_monitor: ProwCIMonitor,
   github_ci_monitor: GitHubCIMonitor,
   cluster_health_monitor: ClusterHealthMonitor,
+  // Provider Health card (AI + Cloud provider status)
+  provider_health: ProviderHealth,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -366,6 +369,8 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
+  // Provider health card - shows demo providers in demo mode
+  'provider_health',
 ])
 
 /**
@@ -454,6 +459,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   prow_ci_monitor: 6,
   github_ci_monitor: 8,
   cluster_health_monitor: 6,
+  // Provider Health card
+  provider_health: 6,
 
   // Event dashboard cards
   event_summary: 6,

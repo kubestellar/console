@@ -23,6 +23,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     icon: '🌐',
     category: 'cluster',
     cards: [
+      { card_type: 'provider_health', position: { w: 4, h: 3 } },
       { card_type: 'cluster_health', position: { w: 4, h: 2 } },
       { card_type: 'compute_overview', position: { w: 4, h: 3 } },
       { card_type: 'storage_overview', position: { w: 4, h: 3 } },
@@ -67,6 +68,20 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
       { card_type: 'event_stream', position: { w: 4, h: 2 } },
       { card_type: 'deployment_status', position: { w: 4, h: 2 } },
       { card_type: 'upgrade_status', position: { w: 4, h: 2 } },
+    ],
+  },
+
+  {
+    id: 'provider-status',
+    name: 'Provider Status',
+    description: 'Health and connectivity status of AI and cloud infrastructure providers',
+    icon: '🏥',
+    category: 'cluster',
+    cards: [
+      { card_type: 'provider_health', position: { w: 6, h: 3 } },
+      { card_type: 'cluster_health', position: { w: 6, h: 3 } },
+      { card_type: 'active_alerts', position: { w: 6, h: 2 } },
+      { card_type: 'event_stream', position: { w: 6, h: 2 } },
     ],
   },
 
@@ -276,6 +291,7 @@ export const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
     icon: '🤖',
     category: 'ai',
     cards: [
+      { card_type: 'provider_health', position: { w: 4, h: 3 } },
       { card_type: 'console_ai_issues', title: 'AI Issues', position: { w: 4, h: 3 } },
       { card_type: 'console_ai_kubeconfig_audit', title: 'Kubeconfig Audit', position: { w: 4, h: 3 } },
       { card_type: 'console_ai_health_check', title: 'Health Check', position: { w: 4, h: 3 } },

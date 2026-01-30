@@ -69,6 +69,7 @@ const DEFAULT_DASHBOARD_CARDS: Card[] = [
   { id: 'default-5', card_type: 'event_stream', config: {}, position: { x: 6, y: 3, w: 6, h: 4 } },
   { id: 'default-6', card_type: 'deployment_status', config: {}, position: { x: 0, y: 6, w: 6, h: 3 } },
   { id: 'default-7', card_type: 'pod_issues', config: {}, position: { x: 6, y: 7, w: 6, h: 3 } },
+  { id: 'default-8', card_type: 'provider_health', config: {}, position: { x: 0, y: 10, w: 6, h: 3 } },
 ]
 
 

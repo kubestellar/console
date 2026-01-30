@@ -392,6 +392,9 @@ const CARD_TITLES: Record<string, string> = {
   kube_doom: 'Kube Doom',
   kube_craft: 'Kube Craft',
   kube_chess: 'Kube Chess',
+
+  // Provider health
+  provider_health: 'Provider Health',
 }
 
 // Short descriptions shown via info icon tooltip in the card header
@@ -500,6 +503,7 @@ const CARD_DESCRIPTIONS: Record<string, string> = {
   llm_models: 'LLM models deployed via llm-d with version info.',
   ml_jobs: 'Machine learning training and batch job status.',
   ml_notebooks: 'Jupyter notebook server status and resource usage.',
+  provider_health: 'Health and status of AI and cloud infrastructure providers.',
 }
 
 // Card icons with their colors - displayed in the card header next to the title
@@ -640,6 +644,9 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   prow_ci_monitor: { icon: Activity, color: 'text-blue-400' },
   github_ci_monitor: { icon: GitBranch, color: 'text-purple-400' },
   cluster_health_monitor: { icon: Server, color: 'text-green-400' },
+
+  // Provider health
+  provider_health: { icon: Activity, color: 'text-emerald-400' },
 
   // Games
   sudoku_game: { icon: Puzzle, color: 'text-purple-400' },
