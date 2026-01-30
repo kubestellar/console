@@ -48,9 +48,9 @@ export function Navbar() {
         {/* Update Indicator */}
         <UpdateIndicator />
 
-        {/* Agent Selector + Status — grayed out in demo mode */}
-        <AgentSelector compact />
+        {/* Agent Status + Selector — status (Demo/AI pill) on left, selector on right */}
         <AgentStatusIndicator />
+        <AgentSelector compact />
 
         {/* Language Selector */}
         <LanguageSelector />

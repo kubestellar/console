@@ -1,17 +1,77 @@
 import { useState, useRef, useEffect } from 'react'
 import { Server, Box, Wifi, WifiOff } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDemoMode, isDemoModeForced } from '../../../hooks/useDemoMode'
+import { useDemoMode, isDemoModeForced, getDemoMode } from '../../../hooks/useDemoMode'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { cn } from '../../../lib/cn'
 
 export function AgentStatusIndicator() {
-  const { status: agentStatus, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
-  const { isDemoMode, toggleDemoMode } = useDemoMode()
+  const { status: agentStatus, health: agentHealth, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
+  const { isDemoMode: isDemoModeHook, toggleDemoMode } = useDemoMode()
+  // Synchronous fallback prevents flash of WifiOff icon during React transitions
+  const isDemoMode = isDemoModeHook || getDemoMode()
   const [showAgentStatus, setShowAgentStatus] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const agentRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // ── Stabilize pill status ──────────────────────────────────────────────
+  // Two separate problems solved here:
+  //
+  // 1. Navigation flicker: React route transitions cause the agent hook to
+  //    briefly report 'connecting' for 1-2 frames → visible yellow flash.
+  //    Fix: debounce 'connecting' status for 300ms before showing it.
+  //
+  // 2. Demo toggle flash: toggling demo off causes disconnected→connecting→
+  //    connected sequence → visible red/yellow flash before green.
+  //    Fix: sticky demo styling that persists until agent actually connects.
+
+  // --- Status debounce (fixes navigation flicker) ---
+  const connectingTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const [stableStatus, setStableStatus] = useState(agentStatus)
+
+  useEffect(() => {
+    if (agentStatus === 'connecting') {
+      // Don't immediately show "connecting" — wait 300ms to confirm it's real
+      connectingTimerRef.current = setTimeout(() => {
+        setStableStatus('connecting')
+      }, 300)
+    } else {
+      // Any non-connecting status applies immediately
+      if (connectingTimerRef.current) clearTimeout(connectingTimerRef.current)
+      setStableStatus(agentStatus)
+    }
+    return () => { if (connectingTimerRef.current) clearTimeout(connectingTimerRef.current) }
+  }, [agentStatus])
+
+  const stableConnected = stableStatus === 'connected' || stableStatus === 'degraded'
+  const stableDegraded = stableStatus === 'degraded'
+
+  // --- Sticky demo styling (fixes demo toggle flash) ---
+  // When demo mode is on, showDemoStyle=true. When demo mode is toggled off,
+  // showDemoStyle stays true (sticky) until the agent connects or 3s elapses.
+  const [showDemoStyle, setShowDemoStyle] = useState(isDemoMode)
+  const demoExitTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // Set sticky flag when entering demo mode
+  useEffect(() => {
+    if (isDemoMode) setShowDemoStyle(true)
+  }, [isDemoMode])
+
+  // Clear sticky flag once agent connects after leaving demo mode
+  useEffect(() => {
+    if (!isDemoMode && showDemoStyle && stableConnected) {
+      setShowDemoStyle(false)
+    }
+  }, [isDemoMode, showDemoStyle, stableConnected])
+
+  // Safety timeout: clear sticky flag after 3s even if agent never connects
+  useEffect(() => {
+    if (!isDemoMode && showDemoStyle) {
+      demoExitTimerRef.current = setTimeout(() => setShowDemoStyle(false), 3000)
+      return () => { if (demoExitTimerRef.current) clearTimeout(demoExitTimerRef.current) }
+    }
+  }, [isDemoMode, showDemoStyle])
 
   // Close dropdown when clicking outside or moving mouse 20px+ away from
   // the combined trigger-button + dropdown area.
@@ -50,38 +110,33 @@ export function AgentStatusIndicator() {
     }
   }, [showAgentStatus])
 
+  // ── Compute pill appearance ────────────────────────────────────────────
+  // Uses stabilized status values to prevent color flashes during navigation.
+  // showDemoStyle is sticky: stays true after demo toggle until agent connects.
+  const showAsDemoMode = isDemoMode || showDemoStyle
+
+  const pillStyle = showAsDemoMode
+    ? { bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20', dot: 'bg-purple-400', label: 'Demo', Icon: Box, title: 'Demo Mode - showing sample data' }
+    : stableDegraded
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'Degraded', Icon: Wifi, title: `Local Agent degraded (${dataErrorCount} errors)` }
+    : stableConnected
+    ? { bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20', dot: 'bg-green-400', label: 'AI', Icon: Wifi, title: 'Local Agent connected' }
+    : stableStatus === 'connecting'
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'AI', Icon: Wifi, title: 'Connecting to agent...' }
+    : { bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20', dot: 'bg-red-400', label: 'Offline', Icon: WifiOff, title: 'Local Agent disconnected' }
+
   return (
     <div className="relative" ref={agentRef}>
       <button
         onClick={() => setShowAgentStatus(!showAgentStatus)}
-        className={cn(
-          'flex items-center justify-center gap-2 w-[5.5rem] py-1.5 rounded-lg transition-colors',
-          isDemoMode
-            ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
-            : isDegraded
-            ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
-            : isConnected
-            ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
-            : agentStatus === 'connecting'
-            ? 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
-            : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-        )}
-        title={isDemoMode ? 'Demo Mode - showing sample data' : isDegraded ? `Local Agent degraded (${dataErrorCount} errors)` : isConnected ? 'Local Agent connected' : agentStatus === 'connecting' ? 'Connecting to agent...' : 'Local Agent disconnected'}
+        className={cn('flex items-center justify-center gap-2 w-[5.5rem] py-1.5 rounded-lg', pillStyle.bg)}
+        title={pillStyle.title}
       >
-        {isDemoMode ? (
-          <Box className="w-4 h-4" />
-        ) : isConnected ? (
-          <Wifi className="w-4 h-4" />
-        ) : (
-          <WifiOff className="w-4 h-4" />
-        )}
-        <span className="text-xs font-medium hidden sm:inline">
-          {isDemoMode ? 'Demo' : isDegraded ? 'Degraded' : isConnected ? 'AI' : agentStatus === 'connecting' ? 'AI' : 'Offline'}
+        <pillStyle.Icon className="w-4 h-4" />
+        <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+          {pillStyle.label}
         </span>
-        <span className={cn(
-          'w-2 h-2 rounded-full',
-          isDemoMode ? 'bg-purple-400' : isDegraded ? 'bg-yellow-400 animate-pulse' : isConnected ? 'bg-green-400' : agentStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 'bg-red-400'
-        )} />
+        <span className={cn('w-2 h-2 rounded-full flex-shrink-0', pillStyle.dot)} />
       </button>
 
       {/* Agent status dropdown */}
@@ -134,6 +189,11 @@ export function AgentStatusIndicator() {
               <span className={cn('text-sm font-medium', isDemoMode ? 'text-muted-foreground' : 'text-foreground')}>
                 Local Agent: {isDemoMode ? 'Bypassed' : isDegraded ? 'Degraded' : isConnected ? 'Connected' : agentStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
               </span>
+              {isConnected && agentHealth?.version && agentHealth.version !== 'demo' && (
+                <span className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                  v{agentHealth.version}
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {isDemoMode

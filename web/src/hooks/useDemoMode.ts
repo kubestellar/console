@@ -5,6 +5,7 @@ const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
 
 // Global state for demo mode to ensure consistency across components
 let globalDemoMode = false
+let userExplicitlyEnabled = false // Tracks if user manually toggled demo mode ON
 const listeners = new Set<(value: boolean) => void>()
 
 // Auto-enable demo mode on Netlify builds (VITE_DEMO_MODE=true in netlify.toml)
@@ -83,6 +84,8 @@ export function useDemoMode() {
     // Never allow disabling demo mode on Netlify deployments
     if (isNetlifyPreview && globalDemoMode) return
     globalDemoMode = !globalDemoMode
+    // Track explicit user intent so auto-disable doesn't override
+    userExplicitlyEnabled = globalDemoMode
     localStorage.setItem(DEMO_MODE_KEY, String(globalDemoMode))
     notifyListeners()
   }, [])
@@ -91,6 +94,8 @@ export function useDemoMode() {
     // Never allow disabling demo mode on Netlify deployments
     if (isNetlifyPreview && !value) return
     globalDemoMode = value
+    // Track explicit user intent
+    userExplicitlyEnabled = value
     localStorage.setItem(DEMO_MODE_KEY, String(value))
     notifyListeners()
   }, [])
@@ -109,3 +114,20 @@ export function useDemoMode() {
 export function getDemoMode(): boolean {
   return globalDemoMode
 }
+
+/**
+ * Set global demo mode from non-React code (e.g., when agent provides real data).
+ * Notifies all subscribed components so they re-render.
+ * Will NOT auto-disable demo mode if the user explicitly toggled it ON.
+ */
+export function setGlobalDemoMode(value: boolean) {
+  // Never allow disabling demo mode on Netlify deployments
+  if (isNetlifyPreview && !value) return
+  // Don't auto-disable if user explicitly enabled demo mode
+  if (!value && userExplicitlyEnabled) return
+  if (globalDemoMode === value) return // no-op
+  globalDemoMode = value
+  localStorage.setItem(DEMO_MODE_KEY, String(value))
+  notifyListeners()
+}
+
