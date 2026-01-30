@@ -36,6 +36,12 @@ const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
 // Default cards for the deploy dashboard - deployment monitoring focused
 const DEFAULT_DEPLOY_CARDS = [
+  // Top row: Workloads, Cluster Groups, Missions (1/3 each)
+  { type: 'workload_deployment', title: 'Workloads', position: { w: 4, h: 4 } },
+  { type: 'cluster_groups', title: 'Cluster Groups', position: { w: 4, h: 4 } },
+  { type: 'deployment_missions', title: 'Deployment Missions', position: { w: 4, h: 4 } },
+  // Resource Marshall
+  { type: 'resource_marshall', title: 'Resource Marshall', position: { w: 6, h: 4 } },
   // Deployment Status
   { type: 'deployment_status', title: 'Deployment Status', position: { w: 6, h: 4 } },
   { type: 'deployment_progress', title: 'Deployment Progress', position: { w: 5, h: 4 } },
@@ -52,13 +58,6 @@ const DEFAULT_DEPLOY_CARDS = [
   // Kustomize
   { type: 'kustomization_status', title: 'Kustomizations', position: { w: 6, h: 4 } },
   { type: 'overlay_comparison', title: 'Overlay Comparison', position: { w: 8, h: 4 } },
-  // Workload Deployment
-  { type: 'workload_deployment', title: 'Workloads', position: { w: 6, h: 4 } },
-  // Cross-card deploy
-  { type: 'cluster_groups', title: 'Cluster Groups', position: { w: 4, h: 4 } },
-  { type: 'deployment_missions', title: 'Deployment Missions', position: { w: 5, h: 4 } },
-  // Dependency explorer
-  { type: 'resource_marshall', title: 'Resource Marshall', position: { w: 6, h: 4 } },
   // Upgrade tracking
   { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 4 } },
 ]
