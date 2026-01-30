@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { ChatMessage } from './CardChat'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
@@ -784,7 +785,9 @@ export function CardWrapper({
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
   const { snoozeSwap } = useSnoozedCards()
-  const { isDemoMode } = useDemoMode()
+  const { isDemoMode: globalDemoMode } = useDemoMode()
+  const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
+  const isDemoMode = globalDemoMode && !isDemoExempt
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 

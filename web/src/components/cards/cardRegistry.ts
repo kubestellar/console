@@ -379,6 +379,21 @@ export const DEMO_DATA_CARDS = new Set([
 ])
 
 /**
+ * Cards that should never show demo indicators (badge/yellow border).
+ * Arcade/game cards don't have "demo data" — they're always just games.
+ */
+export const DEMO_EXEMPT_CARDS = new Set([
+  'sudoku_game',
+  'checkers',
+  'container_tetris',
+  'kube_kong',
+  'pod_crosser',
+  'kube_kart',
+  'kube_snake',
+  'kube_chess',
+])
+
+/**
  * Cards that display live/real-time data streams.
  * These show a "Live" badge in the title when showing real data (not demo).
  * Primarily time-series, trend, and event streaming cards.
