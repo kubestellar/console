@@ -36,3 +36,25 @@ export { compileCardCode, createCardComponent } from './compiler'
 
 // Scope (Tier 2 sandbox)
 export { getDynamicScope } from './scope'
+
+// Dynamic Stats Registry
+export {
+  registerDynamicStats,
+  unregisterDynamicStats,
+  getDynamicStats,
+  getAllDynamicStats,
+  getAllDynamicStatsTypes,
+  isDynamicStats,
+  onDynamicStatsChange,
+} from './dynamicStatsRegistry'
+export type { DynamicStatsRecord } from './dynamicStatsRegistry'
+
+// Dynamic Stats Store (localStorage persistence)
+export {
+  loadDynamicStats,
+  saveDynamicStats,
+  saveDynamicStatsDefinition,
+  deleteDynamicStatsDefinition,
+  exportDynamicStats,
+  importDynamicStats,
+} from './dynamicStatsStore'

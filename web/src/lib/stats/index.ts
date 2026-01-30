@@ -4,6 +4,8 @@ export {
   registerStats,
   getStatsDefinition,
   getAllStatsDefinitions,
+  unregisterStats,
+  getAllStatsTypes,
   registerStatValueGetter,
   parseStatsYAML,
   createStatBlock,

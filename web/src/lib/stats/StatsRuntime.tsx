@@ -65,6 +65,18 @@ export function getAllStatsDefinitions(): StatsDefinition[] {
   return Array.from(statsRegistry.values())
 }
 
+/** Unregister a stats definition */
+export function unregisterStats(type: string): boolean {
+  const result = statsRegistry.delete(type)
+  if (result) valueGetterRegistry.delete(type)
+  return result
+}
+
+/** Get all registered stats type identifiers */
+export function getAllStatsTypes(): string[] {
+  return Array.from(statsRegistry.keys())
+}
+
 // ============================================================================
 // Value Getter Registry
 // ============================================================================
