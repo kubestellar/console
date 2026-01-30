@@ -1,4 +1,4 @@
-import { useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Gamepad2, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, Trophy, Zap } from 'lucide-react'
 import {
@@ -21,6 +21,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
 
 const ARCADE_CARDS_KEY = 'kubestellar-arcade-cards'
 
@@ -145,6 +146,17 @@ export function Arcade() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
 
+  // Pin: default ON for arcade — set on first visit if not already stored
+  const [pinned, setPinned] = useState<boolean>(() => {
+    const stored = getRememberPosition(location.pathname)
+    if (!stored) {
+      // First visit: enable pin by default
+      setRememberPosition(location.pathname, true)
+      return true
+    }
+    return stored
+  })
+
   // Use the shared dashboard hook for cards, DnD, modals
   const {
     cards,
@@ -241,6 +253,23 @@ export function Arcade() {
               <p className="text-muted-foreground">Take a break with Kubernetes-themed games</p>
             </div>
           </div>
+          <label
+            htmlFor="arcade-pin"
+            className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
+            title="Remember scroll position when navigating away"
+          >
+            <input
+              type="checkbox"
+              id="arcade-pin"
+              checked={pinned}
+              onChange={(e) => {
+                setPinned(e.target.checked)
+                setRememberPosition(location.pathname, e.target.checked)
+              }}
+              className="rounded border-border w-3.5 h-3.5"
+            />
+            Pin
+          </label>
         </div>
       </div>
 

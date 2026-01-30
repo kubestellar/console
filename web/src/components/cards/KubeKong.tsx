@@ -48,17 +48,20 @@ interface Player {
 }
 
 // Classic DK-style sloped platforms
+// Staggered widths ensure barrels transition between levels:
+// - Right-rolling levels (4, 2) end at x=260; the level below extends to x=270 to catch
+// - Left-rolling levels (3, 1) end at x=20; the level below extends to x=10 to catch
 const PLATFORMS: Platform[] = [
-  // Ground - flat
+  // Ground - full width flat
   { x1: 0, y1: 300, x2: 280, y2: 300 },
-  // Level 1 - slopes down-right
-  { x1: 10, y1: 258, x2: 250, y2: 250 },
-  // Level 2 - slopes down-left
-  { x1: 30, y1: 200, x2: 270, y2: 208 },
-  // Level 3 - slopes down-right
-  { x1: 10, y1: 158, x2: 250, y2: 150 },
-  // Level 4 - slopes down-left
-  { x1: 30, y1: 100, x2: 270, y2: 108 },
+  // Level 1 - slopes down-left (slope < 0 → rolls LEFT, exits at x≈20)
+  { x1: 20, y1: 258, x2: 270, y2: 250 },
+  // Level 2 - slopes down-right (slope > 0 → rolls RIGHT, exits at x≈260)
+  { x1: 10, y1: 200, x2: 260, y2: 208 },
+  // Level 3 - slopes down-left (slope < 0 → rolls LEFT, exits at x≈20)
+  { x1: 20, y1: 158, x2: 270, y2: 150 },
+  // Level 4 - slopes down-right (slope > 0 → rolls RIGHT, exits at x≈260)
+  { x1: 30, y1: 100, x2: 260, y2: 108 },
   // Top platform for princess
   { x1: 90, y1: 55, x2: 190, y2: 55 },
 ]
@@ -392,15 +395,21 @@ export function KubeKong(_props: CardComponentProps) {
 
         const ladder = getOnLadder(p.x, p.y)
 
+        // Detect directional input
+        const pressingUp = keys.has('ArrowUp') || keys.has('w') || keys.has('W')
+        const pressingDown = keys.has('ArrowDown') || keys.has('s') || keys.has('S')
+        const pressingLeft = keys.has('ArrowLeft') || keys.has('a') || keys.has('A')
+        const pressingRight = keys.has('ArrowRight') || keys.has('d') || keys.has('D')
+
         // Climbing logic
         if (ladder) {
-          if (keys.has('ArrowUp') || keys.has('w') || keys.has('W')) {
+          if (pressingUp) {
             climbing = true
             newY -= 2
             if (newY < ladder.yTop - PLAYER_HEIGHT + 5) {
               newY = ladder.yTop - PLAYER_HEIGHT + 5
             }
-          } else if (keys.has('ArrowDown') || keys.has('s') || keys.has('S')) {
+          } else if (pressingDown) {
             climbing = true
             newY += 2
             if (newY + PLAYER_HEIGHT > ladder.yBottom) {
@@ -409,12 +418,17 @@ export function KubeKong(_props: CardComponentProps) {
           }
         }
 
+        // Stop climbing when: left ladder area, OR released up/down keys
+        if (climbing && (!ladder || (!pressingUp && !pressingDown))) {
+          climbing = false
+        }
+
         // Horizontal movement (only when not climbing)
         if (!climbing) {
-          if (keys.has('ArrowLeft') || keys.has('a') || keys.has('A')) {
+          if (pressingLeft) {
             newX -= MOVE_SPEED
             facingRight = false
-          } else if (keys.has('ArrowRight') || keys.has('d') || keys.has('D')) {
+          } else if (pressingRight) {
             newX += MOVE_SPEED
             facingRight = true
           }
@@ -424,11 +438,6 @@ export function KubeKong(_props: CardComponentProps) {
         if ((keys.has(' ')) && onGround && !climbing) {
           newVy = JUMP_FORCE
           onGround = false
-        }
-
-        // Stop climbing when leaving ladder
-        if (climbing && !ladder) {
-          climbing = false
         }
 
         // Apply gravity if not climbing

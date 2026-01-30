@@ -14,6 +14,7 @@ const DECELERATION = 0.08
 const TURN_SPEED = 0.06
 const FRICTION = 0.98
 const AI_COUNT = 3
+const FORWARD_ANGLE = -Math.PI / 2 // Pointing "up" on screen
 
 // Track segments (y position, curve direction: -1 left, 0 straight, 1 right)
 // TrackSegment interface reserved for future level variety
@@ -157,45 +158,40 @@ export function KubeKart() {
     return x >= trackLeft + 20 && x <= trackRight - 20
   }, [])
 
-  // Update AI karts
+  // Update AI karts - simple forward movement + horizontal steering
   const updateAI = useCallback((kart: Kart, index: number) => {
-    // Compute AI's effective screen Y for curve tracking
-    const aiDistance = aiDistancesRef.current[index]
-    const aiScreenY = (CANVAS_HEIGHT - 80) - (aiDistance - trackScrollRef.current)
-
-    // Simple AI: follow track center with some variation
-    const trackCenter = CANVAS_WIDTH / 2 + getTrackCurve(aiScreenY) * 100
-    const targetX = trackCenter + (index - 1) * 30
-
-    // Steer towards target
-    const diff = targetX - kart.x
-    if (Math.abs(diff) > 5) {
-      kart.angle += diff > 0 ? TURN_SPEED * 0.7 : -TURN_SPEED * 0.7
-    }
-
-    // Accelerate (AI is slightly slower)
+    // Accelerate to target speed (AI is slightly slower, varies by index)
     const maxAiSpeed = MAX_SPEED * (0.85 + index * 0.03)
     if (kart.speed < maxAiSpeed) {
       kart.speed += ACCELERATION * 0.8
     }
 
-    // Apply horizontal movement
-    kart.x += Math.cos(kart.angle) * kart.speed * 0.3
+    // Always move forward (distance-based, no angle dependency)
+    aiDistancesRef.current[index] += kart.speed
 
-    // Track forward distance (equivalent to trackScrollRef for player)
-    const forwardMovement = -Math.sin(kart.angle) * kart.speed
-    aiDistancesRef.current[index] += forwardMovement
+    // Compute AI's screen Y to find the track center at their position
+    const aiDistance = aiDistancesRef.current[index]
+    const playerDistance = trackScrollRef.current
+    const aiScreenY = (CANVAS_HEIGHT - 80) - (aiDistance - playerDistance)
 
-    // Keep on track
-    const trackLeft = (CANVAS_WIDTH - TRACK_WIDTH) / 2 + 30
-    const trackRight = trackLeft + TRACK_WIDTH - 60
+    // Track center at AI's screen position (matching render's curve calculation)
+    const worldY = aiScreenY - trackScrollRef.current
+    const curve = getTrackCurve(worldY)
+    const offset = curve * (CANVAS_HEIGHT - aiScreenY) * 0.5
+    const targetX = CANVAS_WIDTH / 2 + offset + (index - 1) * 30
+
+    // Steer toward track center (smooth horizontal interpolation)
+    const diff = targetX - kart.x
+    kart.x += diff * 0.1
+
+    // Keep on track bounds
+    const trackLeft = (CANVAS_WIDTH - TRACK_WIDTH) / 2 + 20
+    const trackRight = trackLeft + TRACK_WIDTH - 40
     kart.x = Math.max(trackLeft, Math.min(trackRight, kart.x))
 
-    // Slow down if off ideal line
-    if (!isOnTrack(kart.x)) {
-      kart.speed *= 0.95
-    }
-  }, [getTrackCurve, isOnTrack])
+    // Visual angle: slight tilt in steering direction (cosmetic only)
+    kart.angle = FORWARD_ANGLE + Math.max(-0.3, Math.min(0.3, diff * 0.005))
+  }, [getTrackCurve])
 
   // Game update
   const update = useCallback(() => {
