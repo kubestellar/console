@@ -204,6 +204,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/settings/keys", s.handleSettingsKeys)
 	mux.HandleFunc("/settings/keys/", s.handleSettingsKeyByProvider)
 
+	// Provider health check (proxies status page checks server-side to avoid CORS)
+	mux.HandleFunc("/providers/health", s.handleProvidersHealth)
+
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
@@ -2034,4 +2037,106 @@ func validateGeminiKey(ctx context.Context, apiKey string) (bool, error) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	return false, fmt.Errorf("API error: %s", string(body))
+}
+
+// ============================================================================
+// Provider Health Check (proxies status page checks to avoid browser CORS)
+// ============================================================================
+
+// providerStatusPageAPI maps provider IDs to their Statuspage.io JSON API URLs
+var providerStatusPageAPI = map[string]string{
+	"anthropic": "https://status.claude.com/api/v2/status.json",
+	"openai":    "https://status.openai.com/api/v2/status.json",
+}
+
+// ProviderHealthStatus represents the health of a single provider service
+type ProviderHealthStatus struct {
+	ID     string `json:"id"`
+	Status string `json:"status"` // "operational", "degraded", "down", "unknown"
+}
+
+// ProvidersHealthResponse is returned by GET /providers/health
+type ProvidersHealthResponse struct {
+	Providers []ProviderHealthStatus `json:"providers"`
+	CheckedAt string                 `json:"checkedAt"`
+}
+
+func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check all providers in parallel
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	results := make([]ProviderHealthStatus, 0, len(providerStatusPageAPI))
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	for id, apiURL := range providerStatusPageAPI {
+		wg.Add(1)
+		go func(providerID, url string) {
+			defer wg.Done()
+			status := checkStatuspageHealth(client, url)
+			mu.Lock()
+			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
+			mu.Unlock()
+		}(id, apiURL)
+	}
+
+	wg.Wait()
+
+	resp := ProvidersHealthResponse{
+		Providers: results,
+		CheckedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+// checkStatuspageHealth fetches a Statuspage.io JSON API and returns a health status string
+func checkStatuspageHealth(client *http.Client, apiURL string) string {
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return "unknown"
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "unknown"
+	}
+
+	var data struct {
+		Status struct {
+			Indicator string `json:"indicator"`
+		} `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "unknown"
+	}
+
+	switch data.Status.Indicator {
+	case "none":
+		return "operational"
+	case "minor", "major":
+		return "degraded"
+	case "critical":
+		return "down"
+	default:
+		return "unknown"
+	}
 }

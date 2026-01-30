@@ -8,29 +8,29 @@ const KC_AGENT_URL = 'http://127.0.0.1:8585'
 const REFRESH_INTERVAL = 60_000 // 60 seconds
 const STATUS_CHECK_TIMEOUT = 5_000
 
-/** Statuspage.io JSON API endpoints for known providers */
-const STATUSPAGE_API: Record<string, string> = {
-  anthropic: 'https://status.anthropic.com/api/v2/status.json',
-  openai: 'https://status.openai.com/api/v2/status.json',
+type HealthStatus = 'operational' | 'degraded' | 'down' | 'unknown'
+
+interface BackendHealthResponse {
+  providers: Array<{ id: string; status: string }>
 }
 
-/** Check service health via Statuspage.io API (works without API keys) */
-async function checkServiceHealth(providerId: string): Promise<'operational' | 'degraded' | 'down' | 'unknown'> {
-  const apiUrl = STATUSPAGE_API[providerId]
-  if (!apiUrl) return 'unknown'
-
+/** Check service health via backend proxy (avoids CORS issues with status pages) */
+async function checkServiceHealthViaBackend(): Promise<Map<string, HealthStatus>> {
+  const result = new Map<string, HealthStatus>()
   try {
-    const response = await fetch(apiUrl, { signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT) })
-    if (!response.ok) return 'unknown'
-    const data = await response.json()
-    const indicator = data?.status?.indicator
-    if (indicator === 'none') return 'operational'
-    if (indicator === 'minor' || indicator === 'major') return 'degraded'
-    if (indicator === 'critical') return 'down'
-    return 'unknown'
+    const response = await fetch(`${KC_AGENT_URL}/providers/health`, {
+      signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT),
+    })
+    if (!response.ok) return result
+    const data: BackendHealthResponse = await response.json()
+    for (const p of data.providers) {
+      const status = (['operational', 'degraded', 'down'].includes(p.status) ? p.status : 'unknown') as HealthStatus
+      result.set(p.id, status)
+    }
   } catch {
-    return 'unknown'
+    // Backend unavailable — no health data
   }
+  return result
 }
 
 /** Health status of a single provider */
@@ -47,7 +47,7 @@ export interface ProviderHealthInfo {
 /** Status page URLs for known providers — extensible */
 const STATUS_PAGES: Record<string, string> = {
   // AI providers
-  anthropic: 'https://status.anthropic.com',
+  anthropic: 'https://status.claude.com',
   openai: 'https://status.openai.com',
   google: 'https://status.cloud.google.com',
   // Cloud providers
@@ -180,15 +180,13 @@ export function useProviderHealth() {
       // Agent unreachable — no AI providers to show
     }
 
-    // Check actual service health for unconfigured providers (in parallel)
+    // Check actual service health for unconfigured providers via backend proxy
     if (unconfiguredProviders.length > 0) {
-      const healthChecks = await Promise.all(
-        unconfiguredProviders.map(async (id) => ({ id, health: await checkServiceHealth(id) }))
-      )
-      for (const { id, health } of healthChecks) {
+      const healthMap = await checkServiceHealthViaBackend()
+      for (const id of unconfiguredProviders) {
         const provider = result.find(p => p.id === id)
-        if (provider) {
-          provider.status = health
+        if (provider && healthMap.has(id)) {
+          provider.status = healthMap.get(id)!
         }
       }
     }
