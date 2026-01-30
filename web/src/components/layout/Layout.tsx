@@ -1,4 +1,4 @@
-import { ReactNode, useState, Suspense } from 'react'
+import { ReactNode, Suspense, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket } from 'lucide-react'
 import { Navbar } from './navbar/index'
@@ -16,41 +16,6 @@ import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { DemoInstallBanner } from '../onboarding/DemoInstallGuide'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
-
-// Content-area loading skeleton shown during lazy route transitions.
-// Keeps the Layout shell (navbar + sidebar) visible while the page chunk loads.
-function ContentFallback() {
-  return (
-    <div className="pt-16 animate-pulse">
-      {/* Header skeleton */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="h-7 w-44 bg-secondary/60 rounded mb-2" />
-          <div className="h-4 w-64 bg-secondary/40 rounded" />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-24 bg-secondary/40 rounded" />
-        </div>
-      </div>
-      {/* Card grid skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <div key={i} className="rounded-xl border border-border/30 bg-secondary/10 p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-4 w-4 bg-secondary/50 rounded" />
-              <div className="h-4 w-28 bg-secondary/50 rounded" />
-            </div>
-            <div className="space-y-3">
-              <div className="h-3 w-full bg-secondary/30 rounded" />
-              <div className="h-3 w-3/4 bg-secondary/30 rounded" />
-              <div className="h-20 w-full bg-secondary/20 rounded" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 interface LayoutProps {
   children: ReactNode
@@ -221,7 +186,7 @@ export function Layout({ children }: LayoutProps) {
           isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
           isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
-          <Suspense fallback={<ContentFallback />}>
+          <Suspense fallback={null}>
             {children}
           </Suspense>
         </main>

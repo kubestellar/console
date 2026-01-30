@@ -137,11 +137,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    )
+    // Return null instead of a spinner to avoid flashing a bare loading screen.
+    // Auth resolves almost instantly from localStorage cache; the top-level
+    // Suspense/LoadingFallback handles the rare uncached case after 200ms.
+    return null
   }
 
   if (!isAuthenticated) {

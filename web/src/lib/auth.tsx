@@ -24,17 +24,40 @@ interface AuthContextType {
   refreshUser: (overrideToken?: string) => Promise<void>
 }
 
+const AUTH_USER_CACHE_KEY = 'kc-user-cache'
+
+function getCachedUser(): User | null {
+  try {
+    const cached = localStorage.getItem(AUTH_USER_CACHE_KEY)
+    return cached ? JSON.parse(cached) : null
+  } catch {
+    return null
+  }
+}
+
+function cacheUser(userData: User | null) {
+  if (userData) {
+    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(userData))
+  } else {
+    localStorage.removeItem(AUTH_USER_CACHE_KEY)
+  }
+}
+
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(getCachedUser)
   const [token, setTokenState] = useState<string | null>(() =>
     localStorage.getItem('token')
   )
-  const [isLoading, setIsLoading] = useState(true)
+  // Skip loading if we have both a token and a cached user (stale-while-revalidate)
+  const [isLoading, setIsLoading] = useState(() => {
+    return !!localStorage.getItem('token') && !getCachedUser()
+  })
 
   const logout = useCallback(() => {
     localStorage.removeItem('token')
+    cacheUser(null)
     setTokenState(null)
     setUser(null)
     // Clear dashboard sync cache
@@ -48,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const demoOnboarded = isNetlifyPreview || localStorage.getItem('demo-user-onboarded') === 'true'
     localStorage.setItem('token', 'demo-token')
     setTokenState('demo-token')
-    setUser({
+    const demoUser: User = {
       id: 'demo-user',
       github_id: '12345',
       github_login: 'demo-user',
@@ -56,7 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       avatar_url: 'https://api.dicebear.com/7.x/pixel-art-neutral/svg?seed=kubestellar&backgroundColor=b6e3f4',
       role: 'viewer',
       onboarded: demoOnboarded,
-    })
+    }
+    setUser(demoUser)
+    cacheUser(demoUser)
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
@@ -73,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const backendUp = await checkBackendAvailability(true)
       if (backendUp) {
         localStorage.removeItem('token')
+        cacheUser(null)
         setTokenState(null)
         setUser(null)
         return
@@ -86,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${effectiveToken}` }
       })
       setUser(response.data)
+      cacheUser(response.data)
     } catch (error) {
       console.error('Failed to fetch user, falling back to demo mode:', error)
       setDemoMode()
@@ -116,7 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('token', newToken)
     setTokenState(newToken)
     // Set temporary user until we fetch full user data
-    setUser({ id: '', github_id: '', github_login: '', onboarded })
+    const tempUser: User = { id: '', github_id: '', github_login: '', onboarded }
+    setUser(tempUser)
+    cacheUser(tempUser)
   }, [])
 
   useEffect(() => {
