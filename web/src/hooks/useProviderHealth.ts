@@ -89,7 +89,7 @@ const STATUS_PAGES: Record<string, string> = {
   // AI providers
   anthropic: 'https://status.claude.com',
   openai: 'https://status.openai.com',
-  google: 'https://status.cloud.google.com',
+  google: 'https://aistudio.google.com/status',
   // Cloud providers
   eks: 'https://health.aws.amazon.com/health/status',
   gke: 'https://status.cloud.google.com',

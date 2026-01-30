@@ -2049,6 +2049,12 @@ var providerStatusPageAPI = map[string]string{
 	"openai":    "https://status.openai.com/api/v2/status.json",
 }
 
+// providerPingEndpoints maps provider IDs to API endpoints for reachability checks.
+// Any HTTP response (even 400/401) means the service is up.
+var providerPingEndpoints = map[string]string{
+	"google": "https://generativelanguage.googleapis.com/v1beta/models?key=healthcheck",
+}
+
 // ProviderHealthStatus represents the health of a single provider service
 type ProviderHealthStatus struct {
 	ID     string `json:"id"`
@@ -2084,10 +2090,12 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 	// Check all providers in parallel
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	results := make([]ProviderHealthStatus, 0, len(providerStatusPageAPI))
+	totalProviders := len(providerStatusPageAPI) + len(providerPingEndpoints)
+	results := make([]ProviderHealthStatus, 0, totalProviders)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 
+	// Statuspage.io providers (Anthropic, OpenAI)
 	for id, apiURL := range providerStatusPageAPI {
 		wg.Add(1)
 		go func(providerID, url string) {
@@ -2097,6 +2105,18 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
 			mu.Unlock()
 		}(id, apiURL)
+	}
+
+	// Ping-based providers (Google) — any HTTP response = operational
+	for id, pingURL := range providerPingEndpoints {
+		wg.Add(1)
+		go func(providerID, url string) {
+			defer wg.Done()
+			status := checkPingHealth(client, url)
+			mu.Lock()
+			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
+			mu.Unlock()
+		}(id, pingURL)
 	}
 
 	wg.Wait()
@@ -2139,4 +2159,16 @@ func checkStatuspageHealth(client *http.Client, apiURL string) string {
 	default:
 		return "unknown"
 	}
+}
+
+// checkPingHealth tests reachability of a provider API endpoint.
+// Any HTTP response (even 400/401/403) means the service is operational.
+// Only a connection failure indicates the service is down.
+func checkPingHealth(client *http.Client, pingURL string) string {
+	resp, err := client.Get(pingURL)
+	if err != nil {
+		return "down"
+	}
+	defer resp.Body.Close()
+	return "operational"
 }
