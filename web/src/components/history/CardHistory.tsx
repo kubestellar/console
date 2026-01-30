@@ -2,29 +2,10 @@ import { useState } from 'react'
 import { History, Trash2, Plus, RefreshCw, ArrowRight, Settings2, RotateCcw } from 'lucide-react'
 import { useCardHistory, CardHistoryEntry } from '../../hooks/useCardHistory'
 import { cn } from '../../lib/cn'
-
-const CARD_TYPE_LABELS: Record<string, string> = {
-  cluster_health: 'Cluster Health',
-  event_stream: 'Event Stream',
-  pod_issues: 'Pod Issues',
-  top_pods: 'Top Pods',
-  app_status: 'Workload Status',
-  resource_usage: 'Resource Usage',
-  cluster_metrics: 'Cluster Metrics',
-  deployment_status: 'Deployment Status',
-  deployment_progress: 'Deployment Progress',
-  deployment_issues: 'Deployment Issues',
-  gitops_drift: 'GitOps Drift',
-  upgrade_status: 'Upgrade Status',
-  resource_capacity: 'Resource Capacity',
-  gpu_inventory: 'GPU Inventory',
-  gpu_status: 'GPU Status',
-  gpu_overview: 'GPU Overview',
-  security_issues: 'Security Issues',
-}
+import { formatCardTitle } from '../../lib/formatCardTitle'
 
 function formatCardType(type: string): string {
-  return CARD_TYPE_LABELS[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return formatCardTitle(type)
 }
 
 function formatTimestamp(timestamp: number): string {

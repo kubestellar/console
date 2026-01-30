@@ -16,6 +16,7 @@ const ACRONYMS = new Set([
   'pvc',
   'pv',
   'crd',
+  'ai',
   'api',
   'cpu',
   'ram',

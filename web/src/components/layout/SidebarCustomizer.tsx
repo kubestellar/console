@@ -38,29 +38,10 @@ import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
 import { cn } from '../../lib/cn'
+import { formatCardTitle } from '../../lib/formatCardTitle'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal } from '../../lib/modals'
 import * as Icons from 'lucide-react'
-
-const CARD_TYPE_LABELS: Record<string, string> = {
-  cluster_health: 'Cluster Health',
-  event_stream: 'Event Stream',
-  pod_issues: 'Pod Issues',
-  top_pods: 'Top Pods',
-  app_status: 'Workload Status',
-  resource_usage: 'Resource Usage',
-  cluster_metrics: 'Cluster Metrics',
-  deployment_status: 'Deployment Status',
-  deployment_progress: 'Deployment Progress',
-  deployment_issues: 'Deployment Issues',
-  gitops_drift: 'GitOps Drift',
-  upgrade_status: 'Upgrade Status',
-  resource_capacity: 'Resource Capacity',
-  gpu_inventory: 'GPU Inventory',
-  gpu_status: 'GPU Status',
-  gpu_overview: 'GPU Overview',
-  security_issues: 'Security Issues',
-}
 
 // Sortable sidebar item component
 interface SortableItemProps {
@@ -166,7 +147,7 @@ const KNOWN_ROUTES: KnownRoute[] = [
 const ROUTE_CATEGORIES = [...new Set(KNOWN_ROUTES.map(r => r.category))]
 
 function formatCardType(type: string): string {
-  return CARD_TYPE_LABELS[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return formatCardTitle(type)
 }
 
 interface SidebarCustomizerProps {
