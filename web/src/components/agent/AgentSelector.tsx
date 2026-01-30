@@ -107,6 +107,15 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
   return (
     <>
     <div ref={dropdownRef} className={cn('relative flex items-center gap-1', className)}>
+      {showSettings && (
+        <button
+          onClick={() => setShowSettingsModal(true)}
+          className="p-1.5 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+          title="API Key Settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+      )}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
@@ -126,15 +135,6 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
           isOpen && 'rotate-180'
         )} />
       </button>
-      {showSettings && (
-        <button
-          onClick={() => setShowSettingsModal(true)}
-          className="p-1.5 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-          title="API Key Settings"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-      )}
 
       {isOpen && (
         <div className="absolute z-50 top-full mt-1 right-0 w-64 rounded-lg bg-card border border-border shadow-lg py-1 overflow-hidden">
