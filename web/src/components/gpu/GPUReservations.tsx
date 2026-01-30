@@ -304,7 +304,7 @@ export function GPUReservations() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.totalGPUs}</div>
-                  <div className="text-xs text-muted-foreground" title="Graphics Processing Units">Total GPUs</div>
+                  <div className="text-xs text-muted-foreground" title="Graphics Processing Unit">Total GPUs</div>
                 </div>
               </div>
             </div>
@@ -382,7 +382,7 @@ export function GPUReservations() {
                   </div>
                 </div>
               </div>
-              <div className="text-center mt-4 text-sm text-muted-foreground" title="Graphics Processing Units">
+              <div className="text-center mt-4 text-sm text-muted-foreground" title="Graphics Processing Unit">
                 {stats.allocatedGPUs} of {stats.totalGPUs} GPUs allocated
               </div>
             </div>
@@ -650,7 +650,7 @@ export function GPUReservations() {
                     {/* CPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground" title="Central Processing Unit (cores)">CPU (cores)</span>
+                        <span className="text-muted-foreground" title="Central Processing Unit">CPU (cores)</span>
                         <span className="text-foreground">{quota.cpuUsed}/{quota.cpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -767,7 +767,7 @@ export function GPUReservations() {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span title="Graphics Processing Units">{res.gpuCount} GPUs</span>
+                    <span title="Graphics Processing Unit">{res.gpuCount} GPUs</span>
                     <span>{res.team}</span>
                     <span>{res.startDate.toLocaleDateString()}</span>
                   </div>
