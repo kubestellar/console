@@ -22,6 +22,17 @@ export function getEffectiveInterval(baseInterval: number): number {
 // Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)
 export const MIN_REFRESH_INDICATOR_MS = 500
 
+// Timeout constants for API requests
+export const API_TIMEOUT_SHORT_MS = 3000        // 3 seconds - for quick health checks
+export const API_TIMEOUT_MEDIUM_MS = 5000       // 5 seconds - for standard API calls
+export const API_TIMEOUT_DEFAULT_MS = 10000     // 10 seconds - default timeout
+export const API_TIMEOUT_LONG_MS = 15000        // 15 seconds - for slower operations
+export const API_TIMEOUT_EXTENDED_MS = 30000    // 30 seconds - for large cluster operations
+
+// Retry and delay constants
+export const RETRY_DELAY_SHORT_MS = 100         // 100ms - for rapid polling checks
+export const RETRY_DELAY_BRIEF_MS = 500         // 500ms - brief UI animation delay
+
 // Local agent URL for direct cluster access
 export const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
@@ -671,7 +682,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_SHORT_MS)
     const response = await fetch(`${LOCAL_AGENT_URL}/clusters`, {
       signal: controller.signal,
     })
@@ -739,7 +750,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
       const response = await fetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' },
@@ -769,7 +780,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
       {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(API_TIMEOUT_DEFAULT_MS),
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       }
     )
@@ -849,7 +860,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   try {
     const response = await fetch(
       `/api/mcp/pods?cluster=${encodeURIComponent(clusterName)}&limit=500`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { signal: AbortSignal.timeout(API_TIMEOUT_MEDIUM_MS), headers }
     )
     if (response.ok) {
       distributionDetectionFailures = 0 // Reset on success
@@ -870,7 +881,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   try {
     const response = await fetch(
       `/api/mcp/events?cluster=${encodeURIComponent(clusterName)}&limit=200`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { signal: AbortSignal.timeout(API_TIMEOUT_MEDIUM_MS), headers }
     )
     if (response.ok) {
       distributionDetectionFailures = 0
@@ -891,7 +902,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
   try {
     const response = await fetch(
       `/api/mcp/deployments?cluster=${encodeURIComponent(clusterName)}`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { signal: AbortSignal.timeout(API_TIMEOUT_MEDIUM_MS), headers }
     )
     if (response.ok) {
       distributionDetectionFailures = 0
@@ -1060,7 +1071,7 @@ async function checkHealthProgressively(clusterList: ClusterInfo[]) {
 
   // Wait for all to complete (non-blocking check)
   while (completed < clusterList.length) {
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_SHORT_MS))
   }
 }
 

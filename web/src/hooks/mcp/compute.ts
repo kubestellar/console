@@ -2,8 +2,23 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { getDemoMode } from '../useDemoMode'
-import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { 
+  GPU_POLL_INTERVAL_MS, 
+  getEffectiveInterval, 
+  LOCAL_AGENT_URL, 
+  clusterCacheRef,
+  API_TIMEOUT_EXTENDED_MS,
+  API_TIMEOUT_LONG_MS
+} from './shared'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
+
+// GPU data staleness threshold
+const GPU_DATA_STALE_THRESHOLD_MS = 30000 // 30 seconds
+
+// Retry configuration for GPU node fetching
+const GPU_RETRY_DELAY_FIRST_MS = 2000   // 2 seconds for first retry
+const GPU_RETRY_DELAY_SECOND_MS = 5000  // 5 seconds for second retry
+const GPU_MAX_RETRIES = 2
 
 // Module-level cache for GPU nodes (persists across navigation)
 interface GPUNodeCache {
@@ -141,7 +156,7 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
     if (!isAgentUnavailable()) {
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout for large clusters
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_EXTENDED_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/gpu-nodes?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -264,11 +279,10 @@ async function fetchGPUNodes(cluster?: string, source?: string) {
       }
 
       // Retry logic: schedule a retry if we haven't exceeded max retries
-      const MAX_RETRIES = 2
-      const RETRY_DELAYS = [2000, 5000] // 2s, then 5s
-      if (newFailures <= MAX_RETRIES && !getDemoMode()) {
-        const delay = RETRY_DELAYS[newFailures - 1] || 5000
-        console.log(`[GPU] Scheduling retry ${newFailures}/${MAX_RETRIES} in ${delay}ms`)
+      const RETRY_DELAYS = [GPU_RETRY_DELAY_FIRST_MS, GPU_RETRY_DELAY_SECOND_MS]
+      if (newFailures <= GPU_MAX_RETRIES && !getDemoMode()) {
+        const delay = RETRY_DELAYS[newFailures - 1] || GPU_RETRY_DELAY_SECOND_MS
+        console.log(`[GPU] Scheduling retry ${newFailures}/${GPU_MAX_RETRIES} in ${delay}ms`)
         setTimeout(() => {
           fetchGPUNodes(cluster, `retry-${newFailures}`)
         }, delay)
@@ -290,7 +304,7 @@ export function useGPUNodes(cluster?: string) {
 
     // Fetch if cache is empty or stale (older than 30 seconds)
     const isStale = !gpuNodeCache.lastUpdated ||
-      (Date.now() - gpuNodeCache.lastUpdated.getTime()) > 30000
+      (Date.now() - gpuNodeCache.lastUpdated.getTime()) > GPU_DATA_STALE_THRESHOLD_MS
     if (gpuNodeCache.nodes.length === 0 || isStale) {
       fetchGPUNodes(cluster)
     }
@@ -398,7 +412,7 @@ export function useNodes(cluster?: string) {
       try {
         console.log(`[useNodes] Fetching from local agent for ${cluster}`)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },

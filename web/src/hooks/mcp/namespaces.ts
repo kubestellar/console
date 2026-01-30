@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { LOCAL_AGENT_URL, clusterCacheRef, API_TIMEOUT_LONG_MS } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
 
 export function useNamespaces(cluster?: string) {
@@ -31,7 +31,7 @@ export function useNamespaces(cluster?: string) {
       try {
         console.log(`[useNamespaces] Fetching from local agent for ${cluster}`)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -68,7 +68,7 @@ export function useNamespaces(cluster?: string) {
         // Add timeout to prevent hanging
         const nsPromise = kubectlProxy.getNamespaces(kubectlContext)
         const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 15000)
+          setTimeout(() => resolve(null), API_TIMEOUT_LONG_MS)
         )
         const nsData = await Promise.race([nsPromise, timeoutPromise])
 

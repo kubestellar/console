@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, API_TIMEOUT_LONG_MS, API_TIMEOUT_DEFAULT_MS } from './shared'
 import type { ClusterEvent } from './types'
 
 // Module-level cache for events data (persists across navigation)
@@ -71,7 +71,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         console.log(`[useEvents] Fetching from local agent for ${cluster}`)
 
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/events?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -115,7 +115,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       // Use direct fetch with timeout to prevent hanging
       const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_DEFAULT_MS) // 10 second timeout
 
       const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
       clearTimeout(timeoutId)

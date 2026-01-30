@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { getDemoMode } from '../useDemoMode'
-import { LOCAL_AGENT_URL } from './shared'
+import { LOCAL_AGENT_URL, API_TIMEOUT_LONG_MS } from './shared'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
 export function useConfigMaps(cluster?: string, namespace?: string) {
@@ -28,7 +28,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/configmaps?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -93,7 +93,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/secrets?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -158,7 +158,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/serviceaccounts?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },

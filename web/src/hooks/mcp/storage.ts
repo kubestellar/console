@@ -3,7 +3,7 @@ import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { getDemoMode } from '../useDemoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, API_TIMEOUT_LONG_MS } from './shared'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
 // Module-level cache for PVCs data (persists across navigation)
@@ -101,7 +101,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_LONG_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/pvcs?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },

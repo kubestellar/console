@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
+import { MIN_REFRESH_INDICATOR_MS, RETRY_DELAY_SHORT_MS, RETRY_DELAY_BRIEF_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
 // Helm releases cache with localStorage persistence
@@ -217,7 +217,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
     if (!release) {
       setHistory([])
       // Match MIN_SPIN_DURATION (500ms) so animation shows properly
-      setTimeout(() => setIsRefreshing(false), 500)
+      setTimeout(() => setIsRefreshing(false), RETRY_DELAY_BRIEF_MS)
       return
     }
     // Also set loading if no cached data (use functional update to check)
@@ -344,7 +344,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
     if (!release) {
       setValues(null)
       // Brief delay before clearing isRefreshing so animation shows
-      setTimeout(() => setIsRefreshing(false), 100)
+      setTimeout(() => setIsRefreshing(false), RETRY_DELAY_SHORT_MS)
       return
     }
 

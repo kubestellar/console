@@ -3,6 +3,9 @@ import { api } from '../../lib/api'
 import { getDemoMode } from '../useDemoMode'
 import type { K8sRole, K8sRoleBinding, K8sServiceAccountInfo } from './types'
 
+// Timeout for RBAC API calls (can be slow for large clusters)
+const RBAC_API_TIMEOUT_MS = 60000 // 60 seconds
+
 // Demo RBAC data for when demo mode is enabled
 function getDemoK8sRoles(cluster?: string): K8sRole[] {
   const roles: K8sRole[] = [
@@ -119,7 +122,7 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
       if (namespace) params.append('namespace', namespace)
       if (includeSystem) params.append('includeSystem', 'true')
 
-      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: RBAC_API_TIMEOUT_MS })
       setRoles(data || [])
       setError(null)
     } catch (err) {
@@ -166,7 +169,7 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
       if (namespace) params.append('namespace', namespace)
       if (includeSystem) params.append('includeSystem', 'true')
 
-      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: RBAC_API_TIMEOUT_MS })
       setBindings(data || [])
       setError(null)
     } catch (err) {
@@ -206,7 +209,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
 
-      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`, { timeout: RBAC_API_TIMEOUT_MS })
       setServiceAccounts(data || [])
       setError(null)
     } catch (err) {
