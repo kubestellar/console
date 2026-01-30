@@ -133,7 +133,11 @@ const getDemoEvents = (): ClusterEvent[] => [
 ]
 
 const getDemoPodIssues = (): PodIssue[] => [
-  { name: 'failing-pod', namespace: 'default', status: 'CrashLoopBackOff', issues: ['Container crashing'], restarts: 5 },
+  { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', status: 'CrashLoopBackOff', issues: ['Container restarting', 'OOMKilled'], restarts: 15 },
+  { name: 'worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-d', status: 'ImagePullBackOff', issues: ['Failed to pull image'], restarts: 0 },
+  { name: 'cache-redis-0', namespace: 'data', cluster: 'staging', status: 'Pending', issues: ['Insufficient memory'], restarts: 0 },
+  { name: 'metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'prod-west', status: 'CrashLoopBackOff', issues: ['Exit code 137'], restarts: 8 },
+  { name: 'gpu-scheduler-0', namespace: 'ml-ops', cluster: 'vllm-d', status: 'Pending', issues: ['Insufficient nvidia.com/gpu'], restarts: 0 },
 ]
 
 const getDemoDeploymentIssues = (): DeploymentIssue[] => [
