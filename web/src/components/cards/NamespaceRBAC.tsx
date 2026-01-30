@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Users, Key, Lock, ChevronRight } from 'lucide-react'
+import { Users, Key, Lock, ChevronRight, AlertCircle } from 'lucide-react'
 import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -31,7 +31,7 @@ const SORT_OPTIONS = [
 ]
 
 export function NamespaceRBAC({ config }: NamespaceRBACProps) {
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -226,6 +226,17 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
           ))}
         </select>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs font-medium text-red-400">Error loading data</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
 
       {!selectedCluster || !selectedNamespace ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
