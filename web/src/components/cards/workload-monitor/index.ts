@@ -1,1 +1,5 @@
 export { WorkloadMonitor } from './WorkloadMonitor'
+export { LLMdStackMonitor } from './LLMdStackMonitor'
+export { ProwCIMonitor } from './ProwCIMonitor'
+export { GitHubCIMonitor } from './GitHubCIMonitor'
+export { ClusterHealthMonitor } from './ClusterHealthMonitor'

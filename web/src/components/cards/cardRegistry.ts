@@ -122,6 +122,10 @@ const ClusterGroups = lazy(() => import('./ClusterGroups').then(m => ({ default:
 const Missions = lazy(() => import('./Missions').then(m => ({ default: m.Missions })))
 const ResourceMarshall = lazy(() => import('./ResourceMarshall').then(m => ({ default: m.ResourceMarshall })))
 const WorkloadMonitor = lazy(() => import('./workload-monitor/WorkloadMonitor').then(m => ({ default: m.WorkloadMonitor })))
+const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor').then(m => ({ default: m.LLMdStackMonitor })))
+const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
+const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
+const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -300,6 +304,11 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   resource_marshall: ResourceMarshall,
   // Workload Monitor card (health monitoring with tree/list views)
   workload_monitor: WorkloadMonitor,
+  // Specialized monitoring cards
+  llmd_stack_monitor: LLMdStackMonitor,
+  prow_ci_monitor: ProwCIMonitor,
+  github_ci_monitor: GitHubCIMonitor,
+  cluster_health_monitor: ClusterHealthMonitor,
 
   // Aliases - map catalog types to existing components with similar functionality
   gpu_list: GPUInventory,
@@ -395,6 +404,11 @@ export const LIVE_DATA_CARDS = new Set([
   'deployment_missions',
   // Workload Monitor - live health monitoring
   'workload_monitor',
+  // Specialized monitoring cards
+  'llmd_stack_monitor',
+  'prow_ci_monitor',
+  'github_ci_monitor',
+  'cluster_health_monitor',
 ])
 
 /**
@@ -435,6 +449,11 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   resource_marshall: 6,
   // Workload Monitor card
   workload_monitor: 8,
+  // Specialized monitoring cards
+  llmd_stack_monitor: 6,
+  prow_ci_monitor: 6,
+  github_ci_monitor: 8,
+  cluster_health_monitor: 6,
 
   // Event dashboard cards
   event_summary: 6,

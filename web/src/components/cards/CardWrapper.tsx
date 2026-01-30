@@ -244,6 +244,11 @@ const CARD_TITLES: Record<string, string> = {
   deployment_issues: 'Deployment Issues',
   cluster_groups: 'Cluster Groups',
   resource_marshall: 'Resource Marshall',
+  workload_monitor: 'Workload Monitor',
+  llmd_stack_monitor: 'llm-d Stack Monitor',
+  prow_ci_monitor: 'Prow CI Monitor',
+  github_ci_monitor: 'GitHub CI Monitor',
+  cluster_health_monitor: 'Cluster Health Monitor',
 
   // Pod and resource cards
   pod_issues: 'Pod Issues',
@@ -407,6 +412,11 @@ const CARD_DESCRIPTIONS: Record<string, string> = {
   deployment_issues: 'Active deployment problems such as failed rollouts or image pull errors.',
   cluster_groups: 'Organize clusters into logical groups for targeted deployments.',
   resource_marshall: 'Explore resource dependency trees and ownership chains.',
+  workload_monitor: 'Monitor all resources for a workload with health status, alerts, and AI diagnose/repair.',
+  llmd_stack_monitor: 'Monitor the llm-d inference stack: model serving, EPP, gateways, and autoscalers.',
+  prow_ci_monitor: 'Monitor Prow CI jobs with success rates, failure analysis, and AI repair.',
+  github_ci_monitor: 'Monitor GitHub Actions workflows across repos with pass rates and alerts.',
+  cluster_health_monitor: 'Monitor cluster health across all connected clusters with pod and deployment issues.',
   pod_issues: 'Pods with errors, restarts, or scheduling problems.',
   top_pods: 'Top resource-consuming pods ranked by CPU or memory usage.',
   resource_capacity: 'Cluster resource capacity vs. current allocation.',
@@ -623,6 +633,13 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
 
   // Workload deployment
   workload_deployment: { icon: Box, color: 'text-blue-400' },
+
+  // Workload Monitor cards
+  workload_monitor: { icon: Package, color: 'text-purple-400' },
+  llmd_stack_monitor: { icon: Cpu, color: 'text-purple-400' },
+  prow_ci_monitor: { icon: Activity, color: 'text-blue-400' },
+  github_ci_monitor: { icon: GitBranch, color: 'text-purple-400' },
+  cluster_health_monitor: { icon: Server, color: 'text-green-400' },
 
   // Games
   sudoku_game: { icon: Puzzle, color: 'text-purple-400' },
