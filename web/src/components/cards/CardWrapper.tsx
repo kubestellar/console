@@ -179,6 +179,7 @@ const CARD_TITLES: Record<string, string> = {
   // Workload and deployment cards
   app_status: 'Workload Status',
   workload_deployment: 'Workloads',
+  deployment_missions: 'Deployment Missions',
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
   deployment_issues: 'Deployment Issues',
@@ -284,6 +285,7 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
 
   // Workload and deployment cards
   app_status: { icon: Box, color: 'text-purple-400' },
+  deployment_missions: { icon: Rocket, color: 'text-blue-400' },
   deployment_progress: { icon: Clock, color: 'text-blue-400' },
   deployment_status: { icon: Box, color: 'text-purple-400' },
   deployment_issues: { icon: AlertTriangle, color: 'text-orange-400' },

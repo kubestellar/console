@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -370,6 +371,8 @@ func (m *MultiClusterClient) ResolveWorkloadDependencies(
 
 	var sourceObj *unstructured.Unstructured
 	var workloadKind string
+	var lastErr error
+	allNotFound := true
 	for _, g := range gvrs {
 		obj, getErr := sourceClient.Resource(g.gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if getErr == nil {
@@ -377,9 +380,16 @@ func (m *MultiClusterClient) ResolveWorkloadDependencies(
 			workloadKind = g.kind
 			break
 		}
+		lastErr = getErr
+		if !apierrors.IsNotFound(getErr) {
+			allNotFound = false
+		}
 	}
 
 	if sourceObj == nil {
+		if !allNotFound && lastErr != nil {
+			return "", nil, fmt.Errorf("cluster %s: %w", cluster, lastErr)
+		}
 		return "", nil, fmt.Errorf("workload %s/%s not found in cluster %s", namespace, name, cluster)
 	}
 

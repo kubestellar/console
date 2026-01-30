@@ -15,6 +15,8 @@ import {
   Gauge,
   ShieldCheck,
   Server,
+  Blocks,
+  ShieldAlert,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -39,6 +41,8 @@ const DEP_CATEGORIES: { label: string; kinds: string[]; icon: typeof Shield }[] 
   { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy'], icon: Network },
   { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget'], icon: Gauge },
   { label: 'Storage', kinds: ['PersistentVolumeClaim'], icon: HardDrive },
+  { label: 'Custom Resources', kinds: ['CustomResourceDefinition'], icon: Blocks },
+  { label: 'Admission Control', kinds: ['ValidatingWebhookConfiguration', 'MutatingWebhookConfiguration'], icon: ShieldAlert },
 ]
 
 // Icon per dependency kind
@@ -56,6 +60,9 @@ const KIND_ICONS: Record<string, typeof Shield> = {
   HorizontalPodAutoscaler: Gauge,
   PodDisruptionBudget: Shield,
   PersistentVolumeClaim: HardDrive,
+  CustomResourceDefinition: Blocks,
+  ValidatingWebhookConfiguration: ShieldAlert,
+  MutatingWebhookConfiguration: ShieldAlert,
 }
 
 function groupDependencies(deps: ResolvedDependency[]) {

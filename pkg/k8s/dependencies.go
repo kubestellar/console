@@ -27,8 +27,11 @@ const (
 	DepService            DependencyKind = "Service"
 	DepIngress            DependencyKind = "Ingress"
 	DepNetworkPolicy      DependencyKind = "NetworkPolicy"
-	DepHPA                DependencyKind = "HorizontalPodAutoscaler"
-	DepPDB                DependencyKind = "PodDisruptionBudget"
+	DepHPA                      DependencyKind = "HorizontalPodAutoscaler"
+	DepPDB                      DependencyKind = "PodDisruptionBudget"
+	DepCRD                      DependencyKind = "CustomResourceDefinition"
+	DepValidatingWebhook        DependencyKind = "ValidatingWebhookConfiguration"
+	DepMutatingWebhook          DependencyKind = "MutatingWebhookConfiguration"
 )
 
 // Apply order: lower = applied first
@@ -45,8 +48,11 @@ var depApplyOrder = map[DependencyKind]int{
 	DepService:            9,
 	DepIngress:            10,
 	DepNetworkPolicy:      11,
-	DepHPA:                12,
-	DepPDB:                13,
+	DepHPA:                      12,
+	DepPDB:                      13,
+	DepCRD:                      14,
+	DepValidatingWebhook:        15,
+	DepMutatingWebhook:          16,
 }
 
 // GVRs for dependency resource types
@@ -114,6 +120,21 @@ var (
 		Group:    "policy",
 		Version:  "v1",
 		Resource: "poddisruptionbudgets",
+	}
+	gvrCRDs = schema.GroupVersionResource{
+		Group:    "apiextensions.k8s.io",
+		Version:  "v1",
+		Resource: "customresourcedefinitions",
+	}
+	gvrValidatingWebhooks = schema.GroupVersionResource{
+		Group:    "admissionregistration.k8s.io",
+		Version:  "v1",
+		Resource: "validatingwebhookconfigurations",
+	}
+	gvrMutatingWebhooks = schema.GroupVersionResource{
+		Group:    "admissionregistration.k8s.io",
+		Version:  "v1",
+		Resource: "mutatingwebhookconfigurations",
 	}
 )
 
@@ -292,7 +313,56 @@ func (m *MultiClusterClient) ResolveDependencies(
 		}
 	}
 
-	// 11. Fetch each dependency from the source cluster
+	// 11. Find CRDs whose conversion webhook references matched services
+	matchedServiceNames := collectServiceNames(bundle.Dependencies)
+	if len(matchedServiceNames) > 0 {
+		crdDeps := m.findRelatedCRDs(ctx, sourceCluster, namespace, matchedServiceNames)
+		for _, d := range crdDeps {
+			key := fmt.Sprintf("%s/%s", d.Kind, d.Name)
+			if !seen[key] {
+				seen[key] = true
+				bundle.Dependencies = append(bundle.Dependencies, d)
+			}
+		}
+	}
+
+	// 12. Find CRDs via RBAC: check what non-builtin API groups the controller's
+	//     ClusterRoles reference, and match those against actual CRDs
+	clusterRoleNames := collectClusterRoleNames(bundle.Dependencies)
+	if len(clusterRoleNames) > 0 {
+		rbacCRDs := m.findCRDsFromRBAC(ctx, sourceCluster, clusterRoleNames)
+		for _, d := range rbacCRDs {
+			key := fmt.Sprintf("%s/%s", d.Kind, d.Name)
+			if !seen[key] {
+				seen[key] = true
+				bundle.Dependencies = append(bundle.Dependencies, d)
+			}
+		}
+	}
+
+	// 13. Find ValidatingWebhookConfigurations that reference matched services
+	if len(matchedServiceNames) > 0 {
+		vwhDeps := m.findMatchingWebhookConfigs(ctx, sourceCluster, namespace, matchedServiceNames, false)
+		for _, d := range vwhDeps {
+			key := fmt.Sprintf("%s/%s", d.Kind, d.Name)
+			if !seen[key] {
+				seen[key] = true
+				bundle.Dependencies = append(bundle.Dependencies, d)
+			}
+		}
+
+		// 14. Find MutatingWebhookConfigurations that reference matched services
+		mwhDeps := m.findMatchingWebhookConfigs(ctx, sourceCluster, namespace, matchedServiceNames, true)
+		for _, d := range mwhDeps {
+			key := fmt.Sprintf("%s/%s", d.Kind, d.Name)
+			if !seen[key] {
+				seen[key] = true
+				bundle.Dependencies = append(bundle.Dependencies, d)
+			}
+		}
+	}
+
+	// 15. Fetch each dependency from the source cluster
 	var fetchedDeps []Dependency
 	for _, dep := range bundle.Dependencies {
 		var obj *unstructured.Unstructured
@@ -862,6 +932,235 @@ func isSystemClusterRole(name string) bool {
 		}
 	}
 	return false
+}
+
+// collectServiceNames extracts Service dependency names from a bundle
+func collectServiceNames(deps []Dependency) []string {
+	var names []string
+	for _, d := range deps {
+		if d.Kind == DepService {
+			names = append(names, d.Name)
+		}
+	}
+	return names
+}
+
+// collectClusterRoleNames extracts ClusterRole dependency names from a list
+func collectClusterRoleNames(deps []Dependency) []string {
+	var names []string
+	for _, d := range deps {
+		if d.Kind == DepClusterRole {
+			names = append(names, d.Name)
+		}
+	}
+	return names
+}
+
+// builtinAPIGroups are standard Kubernetes API groups that don't correspond to CRDs
+var builtinAPIGroups = map[string]bool{
+	"":                          true, // core
+	"apps":                      true,
+	"batch":                     true,
+	"autoscaling":               true,
+	"policy":                    true,
+	"networking.k8s.io":         true,
+	"storage.k8s.io":            true,
+	"rbac.authorization.k8s.io": true,
+	"admissionregistration.k8s.io": true,
+	"apiextensions.k8s.io":      true,
+	"certificates.k8s.io":       true,
+	"coordination.k8s.io":       true,
+	"discovery.k8s.io":          true,
+	"events.k8s.io":             true,
+	"flowcontrol.apiserver.k8s.io": true,
+	"node.k8s.io":               true,
+	"scheduling.k8s.io":         true,
+}
+
+// findCRDsFromRBAC discovers CRDs by examining ClusterRole rules for non-builtin
+// API groups, then matching those groups against actual CRDs on the cluster.
+// This catches operator-managed CRDs that the controller's ServiceAccount has access to.
+func (m *MultiClusterClient) findCRDsFromRBAC(
+	ctx context.Context, cluster string, clusterRoleNames []string,
+) []Dependency {
+	var deps []Dependency
+
+	dynClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return deps
+	}
+
+	// Collect non-builtin apiGroup/resource pairs from ClusterRole rules
+	type apiRef struct {
+		group    string
+		resource string
+	}
+	var customRefs []apiRef
+
+	for _, crName := range clusterRoleNames {
+		cr, err := dynClient.Resource(gvrClusterRoles).Get(ctx, crName, metav1.GetOptions{})
+		if err != nil {
+			continue
+		}
+		rules := getSlice(cr.Object, "rules")
+		for _, r := range rules {
+			rule, ok := r.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			groups := getSlice(rule, "apiGroups")
+			resources := getSlice(rule, "resources")
+			for _, g := range groups {
+				groupStr, ok := g.(string)
+				if !ok || builtinAPIGroups[groupStr] {
+					continue
+				}
+				for _, res := range resources {
+					resStr, ok := res.(string)
+					if !ok {
+						continue
+					}
+					// Skip sub-resources (e.g., "pods/status")
+					if strings.Contains(resStr, "/") {
+						continue
+					}
+					customRefs = append(customRefs, apiRef{group: groupStr, resource: resStr})
+				}
+			}
+		}
+	}
+
+	if len(customRefs) == 0 {
+		return deps
+	}
+
+	// Build expected CRD names: "{resource}.{group}" (e.g. "variantautoscalings.llmd.ai")
+	crdNameSet := make(map[string]bool)
+	for _, ref := range customRefs {
+		crdName := ref.resource + "." + ref.group
+		crdNameSet[crdName] = true
+	}
+
+	// Fetch matching CRDs
+	crdList, err := dynClient.Resource(gvrCRDs).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return deps
+	}
+
+	for _, crd := range crdList.Items {
+		if crdNameSet[crd.GetName()] {
+			deps = append(deps, Dependency{
+				Kind:  DepCRD,
+				Name:  crd.GetName(),
+				GVR:   gvrCRDs,
+				Order: depApplyOrder[DepCRD],
+			})
+		}
+	}
+	return deps
+}
+
+// findRelatedCRDs finds CRDs whose conversion webhook references a service
+// in the given namespace with one of the given names
+func (m *MultiClusterClient) findRelatedCRDs(
+	ctx context.Context, cluster, namespace string, serviceNames []string,
+) []Dependency {
+	var deps []Dependency
+
+	dynClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return deps
+	}
+
+	svcSet := make(map[string]bool, len(serviceNames))
+	for _, n := range serviceNames {
+		svcSet[n] = true
+	}
+
+	crdList, err := dynClient.Resource(gvrCRDs).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return deps
+	}
+
+	for _, crd := range crdList.Items {
+		// Check spec.conversion.webhook.clientConfig.service
+		svcName, _, _ := unstructured.NestedString(crd.Object,
+			"spec", "conversion", "webhook", "clientConfig", "service", "name")
+		svcNS, _, _ := unstructured.NestedString(crd.Object,
+			"spec", "conversion", "webhook", "clientConfig", "service", "namespace")
+
+		if svcName != "" && svcSet[svcName] && svcNS == namespace {
+			deps = append(deps, Dependency{
+				Kind:  DepCRD,
+				Name:  crd.GetName(),
+				GVR:   gvrCRDs,
+				Order: depApplyOrder[DepCRD],
+			})
+		}
+	}
+	return deps
+}
+
+// findMatchingWebhookConfigs finds ValidatingWebhookConfiguration or
+// MutatingWebhookConfiguration resources whose webhook clientConfig.service
+// references one of the given service names in the given namespace.
+func (m *MultiClusterClient) findMatchingWebhookConfigs(
+	ctx context.Context, cluster, namespace string, serviceNames []string, mutating bool,
+) []Dependency {
+	var deps []Dependency
+
+	dynClient, err := m.GetDynamicClient(cluster)
+	if err != nil {
+		return deps
+	}
+
+	svcSet := make(map[string]bool, len(serviceNames))
+	for _, n := range serviceNames {
+		svcSet[n] = true
+	}
+
+	gvr := gvrValidatingWebhooks
+	kind := DepValidatingWebhook
+	if mutating {
+		gvr = gvrMutatingWebhooks
+		kind = DepMutatingWebhook
+	}
+
+	whList, err := dynClient.Resource(gvr).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return deps
+	}
+
+	for _, wh := range whList.Items {
+		webhooks := getSlice(wh.Object, "webhooks")
+		for _, w := range webhooks {
+			webhook, ok := w.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			clientConfig, ok := webhook["clientConfig"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			svc, ok := clientConfig["service"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			svcName, _ := svc["name"].(string)
+			svcNS, _ := svc["namespace"].(string)
+
+			if svcName != "" && svcSet[svcName] && svcNS == namespace {
+				deps = append(deps, Dependency{
+					Kind:  kind,
+					Name:  wh.GetName(),
+					GVR:   gvr,
+					Order: depApplyOrder[kind],
+				})
+				break // one match is enough per webhook config
+			}
+		}
+	}
+	return deps
 }
 
 // getSlice safely extracts a []interface{} from a map

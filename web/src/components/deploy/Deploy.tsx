@@ -57,6 +57,8 @@ const DEFAULT_DEPLOY_CARDS = [
   // Cross-card deploy
   { type: 'cluster_groups', title: 'Cluster Groups', position: { w: 4, h: 4 } },
   { type: 'deployment_missions', title: 'Deployment Missions', position: { w: 5, h: 4 } },
+  // Dependency explorer
+  { type: 'resource_marshall', title: 'Resource Marshall', position: { w: 6, h: 4 } },
   // Upgrade tracking
   { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 4 } },
 ]

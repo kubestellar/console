@@ -2,6 +2,7 @@
 const CUSTOM_TITLES: Record<string, string> = {
   app_status: 'Workload Status',
   chart_versions: 'Helm Chart Versions',
+  deployment_missions: 'Deployment Missions',
   helm_release_status: 'Helm Release Status',
   helm_history: 'Helm History',
   helm_values_diff: 'Helm Values Diff',

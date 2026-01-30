@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Server,
   Search,
+  Blocks,
+  ShieldAlert,
 } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useNamespaces } from '../../hooks/useMCP'
@@ -30,6 +32,8 @@ const DEP_CATEGORIES: { label: string; kinds: string[]; icon: typeof Shield }[] 
   { label: 'Networking', kinds: ['Service', 'Ingress', 'NetworkPolicy'], icon: Network },
   { label: 'Scaling & Availability', kinds: ['HorizontalPodAutoscaler', 'PodDisruptionBudget'], icon: Gauge },
   { label: 'Storage', kinds: ['PersistentVolumeClaim'], icon: HardDrive },
+  { label: 'Custom Resources', kinds: ['CustomResourceDefinition'], icon: Blocks },
+  { label: 'Admission Control', kinds: ['ValidatingWebhookConfiguration', 'MutatingWebhookConfiguration'], icon: ShieldAlert },
 ]
 
 // Icon per dependency kind
@@ -47,6 +51,9 @@ const KIND_ICONS: Record<string, typeof Shield> = {
   HorizontalPodAutoscaler: Gauge,
   PodDisruptionBudget: Shield,
   PersistentVolumeClaim: HardDrive,
+  CustomResourceDefinition: Blocks,
+  ValidatingWebhookConfiguration: ShieldAlert,
+  MutatingWebhookConfiguration: ShieldAlert,
 }
 
 function groupDependencies(deps: ResolvedDependency[]) {
@@ -80,12 +87,14 @@ export function ResourceMarshall() {
   // Fetch namespaces for selected cluster
   const { namespaces, isLoading: nsLoading } = useNamespaces(selectedCluster || undefined)
 
-  // Fetch workloads for selected cluster + namespace
+  // Fetch workloads only when both cluster and namespace are selected.
+  // Passing enabled=false prevents fetching all workloads across clusters.
+  const hasSelection = !!selectedCluster && !!selectedNamespace
   const workloadOpts = useMemo(() => {
     if (!selectedCluster || !selectedNamespace) return undefined
     return { cluster: selectedCluster, namespace: selectedNamespace }
   }, [selectedCluster, selectedNamespace])
-  const { data: workloads, isLoading: wlLoading } = useWorkloads(workloadOpts)
+  const { data: workloads, isLoading: wlLoading } = useWorkloads(workloadOpts, hasSelection)
 
   // Dependency resolution
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()

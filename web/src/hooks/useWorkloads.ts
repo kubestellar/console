@@ -53,17 +53,25 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
-// Fetch all workloads across clusters
+// Fetch all workloads across clusters.
+// Pass enabled=false to skip fetching (returns undefined data with isLoading=false).
 export function useWorkloads(options?: {
   cluster?: string
   namespace?: string
   type?: string
-}) {
+}, enabled = true) {
   const [data, setData] = useState<Workload[] | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
 
+  // Clear stale data immediately when options change so the dropdown
+  // doesn't briefly show workloads from a previous cluster/namespace.
+  useEffect(() => {
+    setData(undefined)
+  }, [options?.cluster, options?.namespace, options?.type])
+
   const fetchData = useCallback(async () => {
+    if (!enabled) return
     setIsLoading(true)
     setError(null)
 
@@ -88,13 +96,18 @@ export function useWorkloads(options?: {
     } finally {
       setIsLoading(false)
     }
-  }, [options?.cluster, options?.namespace, options?.type])
+  }, [options?.cluster, options?.namespace, options?.type, enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      setData(undefined)
+      setIsLoading(false)
+      return
+    }
     fetchData()
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
-  }, [fetchData])
+  }, [fetchData, enabled])
 
   return { data, isLoading, error, refetch: fetchData }
 }
