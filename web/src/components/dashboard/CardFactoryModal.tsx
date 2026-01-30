@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import {
-  X, Plus, Code, Layers, Wand2, Eye, Save,
+  X, Plus, Code, Layers, Wand2, Eye, Save, Sparkles,
   AlertTriangle, CheckCircle, Loader2, Trash2,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
@@ -13,6 +13,8 @@ import type {
   DynamicCardColumn,
 } from '../../lib/dynamic-cards/types'
 import { registerDynamicCardType } from '../cards/cardRegistry'
+import { AiGenerationPanel } from './AiGenerationPanel'
+import { CARD_T1_SYSTEM_PROMPT, CARD_T2_SYSTEM_PROMPT } from '../../lib/ai/prompts'
 
 interface CardFactoryModalProps {
   isOpen: boolean
@@ -20,7 +22,7 @@ interface CardFactoryModalProps {
   onCardCreated?: (cardId: string) => void
 }
 
-type Tab = 'declarative' | 'code' | 'manage'
+type Tab = 'declarative' | 'code' | 'ai' | 'manage'
 
 const EXAMPLE_TSX = `// Example: Simple counter card
 export default function MyCard({ config }) {
@@ -213,6 +215,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
           {[
             { id: 'declarative' as Tab, label: 'Declarative', icon: Layers },
             { id: 'code' as Tab, label: 'Custom Code', icon: Code },
+            { id: 'ai' as Tab, label: 'AI Create', icon: Sparkles },
             { id: 'manage' as Tab, label: 'Manage', icon: Wand2 },
           ].map(t => (
             <button
@@ -488,6 +491,17 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
             </div>
           )}
 
+          {/* AI Create */}
+          {tab === 'ai' && (
+            <AiCardTab
+              onCardCreated={(id) => {
+                setSaveMessage('Card created with AI!')
+                onCardCreated?.(id)
+                setTimeout(() => setSaveMessage(null), 3000)
+              }}
+            />
+          )}
+
           {/* Manage */}
           {tab === 'manage' && (
             <div className="space-y-3">
@@ -535,5 +549,231 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
       </div>
       </BaseModal.Content>
     </BaseModal>
+  )
+}
+
+// ============================================================================
+// AI Create Tab
+// ============================================================================
+
+interface AiCardT1Result {
+  title: string
+  description: string
+  layout: 'list' | 'stats' | 'stats-and-list'
+  defaultWidth: number
+  defaultLimit: number
+  columns: DynamicCardColumn[]
+  searchFields: string[]
+  staticData: Record<string, unknown>[]
+}
+
+interface AiCardT2Result {
+  title: string
+  description: string
+  defaultWidth: number
+  sourceCode: string
+}
+
+type AiMode = 'tier1' | 'tier2'
+
+function validateT1Result(data: unknown): { valid: true; result: AiCardT1Result } | { valid: false; error: string } {
+  const obj = data as Record<string, unknown>
+  if (!obj.title || typeof obj.title !== 'string') return { valid: false, error: 'Missing or invalid "title"' }
+  if (!obj.columns || !Array.isArray(obj.columns)) return { valid: false, error: 'Missing or invalid "columns" array' }
+  if (!['list', 'stats', 'stats-and-list'].includes(obj.layout as string)) {
+    (obj as Record<string, unknown>).layout = 'list' // default
+  }
+  return { valid: true, result: obj as unknown as AiCardT1Result }
+}
+
+function validateT2Result(data: unknown): { valid: true; result: AiCardT2Result } | { valid: false; error: string } {
+  const obj = data as Record<string, unknown>
+  if (!obj.title || typeof obj.title !== 'string') return { valid: false, error: 'Missing or invalid "title"' }
+  if (!obj.sourceCode || typeof obj.sourceCode !== 'string') return { valid: false, error: 'Missing or invalid "sourceCode"' }
+  return { valid: true, result: obj as unknown as AiCardT2Result }
+}
+
+function T1Preview({ result }: { result: AiCardT1Result }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Layers className="w-4 h-4 text-purple-400" />
+        <span className="text-sm font-medium text-foreground">{result.title}</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+          {result.layout}
+        </span>
+      </div>
+      {result.description && (
+        <p className="text-xs text-muted-foreground mb-3">{result.description}</p>
+      )}
+      {result.columns && result.columns.length > 0 && (
+        <div className="text-xs">
+          <div className="flex gap-2 border-b border-border pb-1 mb-1">
+            {result.columns.map(col => (
+              <span key={col.field} className="flex-1 text-muted-foreground font-medium truncate">
+                {col.label}
+              </span>
+            ))}
+          </div>
+          {(result.staticData || []).slice(0, 3).map((row, i) => (
+            <div key={i} className="flex gap-2 py-0.5">
+              {result.columns.map(col => {
+                const val = String(row[col.field] ?? '')
+                if (col.format === 'badge' && col.badgeColors) {
+                  const badgeClass = col.badgeColors[val] || 'bg-gray-500/20 text-gray-400'
+                  return (
+                    <span key={col.field} className={cn('flex-1 truncate text-[10px] px-1 py-0.5 rounded', badgeClass)}>
+                      {val}
+                    </span>
+                  )
+                }
+                return (
+                  <span key={col.field} className="flex-1 text-foreground truncate">
+                    {val}
+                  </span>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function T2Preview({ result }: { result: AiCardT2Result }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Code className="w-4 h-4 text-purple-400" />
+        <span className="text-sm font-medium text-foreground">{result.title}</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+          Custom Code
+        </span>
+      </div>
+      {result.description && (
+        <p className="text-xs text-muted-foreground mb-2">{result.description}</p>
+      )}
+      <pre className="text-[10px] px-3 py-2 rounded-md bg-secondary/50 border border-border text-foreground font-mono max-h-48 overflow-y-auto whitespace-pre-wrap">
+        {result.sourceCode}
+      </pre>
+    </div>
+  )
+}
+
+function AiCardTab({ onCardCreated }: { onCardCreated: (id: string) => void }) {
+  const [aiMode, setAiMode] = useState<AiMode>('tier1')
+
+  const handleSaveT1 = useCallback((result: AiCardT1Result) => {
+    const id = `dynamic_${Date.now()}`
+    const now = new Date().toISOString()
+
+    const cardDef: DynamicCardDefinition_T1 = {
+      dataSource: 'static',
+      staticData: result.staticData || [],
+      columns: result.columns,
+      layout: result.layout || 'list',
+      searchFields: result.searchFields || result.columns.map(c => c.field),
+      defaultLimit: result.defaultLimit || 5,
+    }
+
+    const def: DynamicCardDefinition = {
+      id,
+      title: result.title,
+      tier: 'tier1',
+      description: result.description || undefined,
+      defaultWidth: result.defaultWidth || 6,
+      createdAt: now,
+      updatedAt: now,
+      cardDefinition: cardDef,
+    }
+
+    saveDynamicCard(def)
+    registerDynamicCardType(id, result.defaultWidth || 6)
+    onCardCreated(id)
+  }, [onCardCreated])
+
+  const handleSaveT2 = useCallback(async (result: AiCardT2Result) => {
+    const compileResult = await compileCardCode(result.sourceCode)
+    if (compileResult.error) {
+      throw new Error(`Compile error: ${compileResult.error}`)
+    }
+
+    const id = `dynamic_${Date.now()}`
+    const now = new Date().toISOString()
+
+    const def: DynamicCardDefinition = {
+      id,
+      title: result.title,
+      tier: 'tier2',
+      description: result.description || undefined,
+      defaultWidth: result.defaultWidth || 6,
+      createdAt: now,
+      updatedAt: now,
+      sourceCode: result.sourceCode,
+      compiledCode: compileResult.code!,
+    }
+
+    saveDynamicCard(def)
+    registerDynamicCardType(id, result.defaultWidth || 6)
+    onCardCreated(id)
+  }, [onCardCreated])
+
+  return (
+    <div className="space-y-4">
+      {/* Mode toggle */}
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">Card Type</label>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setAiMode('tier1')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+              aiMode === 'tier1'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'bg-secondary text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Layers className="w-3 h-3" />
+            Declarative (table/list)
+          </button>
+          <button
+            onClick={() => setAiMode('tier2')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+              aiMode === 'tier2'
+                ? 'bg-purple-500/20 text-purple-400'
+                : 'bg-secondary text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Code className="w-3 h-3" />
+            Custom Code (React)
+          </button>
+        </div>
+      </div>
+
+      {/* AI Generation Panel */}
+      {aiMode === 'tier1' ? (
+        <AiGenerationPanel<AiCardT1Result>
+          systemPrompt={CARD_T1_SYSTEM_PROMPT}
+          placeholder="Describe the card you want, e.g., 'A card showing deployment status across clusters with name, namespace, replicas, and status columns'"
+          missionTitle="AI Card Generation (Declarative)"
+          validateResult={validateT1Result}
+          renderPreview={(result) => <T1Preview result={result} />}
+          onSave={handleSaveT1}
+          saveLabel="Create Declarative Card"
+        />
+      ) : (
+        <AiGenerationPanel<AiCardT2Result>
+          systemPrompt={CARD_T2_SYSTEM_PROMPT}
+          placeholder="Describe the card you want, e.g., 'A card with animated donut chart showing cluster health percentages with color-coded segments'"
+          missionTitle="AI Card Generation (Custom Code)"
+          validateResult={validateT2Result}
+          renderPreview={(result) => <T2Preview result={result} />}
+          onSave={handleSaveT2}
+          saveLabel="Create Custom Code Card"
+        />
+      )}
+    </div>
   )
 }

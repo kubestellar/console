@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import {
-  Plus, X, Save, Trash2, Activity,
+  Plus, X, Save, Trash2, Activity, Sparkles,
   CheckCircle, Eye, GripVertical,
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
@@ -14,6 +14,8 @@ import {
 } from '../../lib/dynamic-cards'
 import type { StatsDefinition, StatBlockDefinition, StatBlockColor, StatBlockValueSource } from '../../lib/stats/types'
 import { COLOR_CLASSES } from '../../lib/stats/types'
+import { AiGenerationPanel } from './AiGenerationPanel'
+import { STAT_BLOCK_SYSTEM_PROMPT } from '../../lib/ai/prompts'
 
 interface StatBlockFactoryModalProps {
   isOpen: boolean
@@ -21,7 +23,7 @@ interface StatBlockFactoryModalProps {
   onStatsCreated?: (type: string) => void
 }
 
-type Tab = 'builder' | 'manage'
+type Tab = 'builder' | 'ai' | 'manage'
 
 const AVAILABLE_COLORS: StatBlockColor[] = [
   'purple', 'blue', 'green', 'yellow', 'orange', 'red', 'cyan', 'gray', 'indigo',
@@ -113,6 +115,44 @@ function StatsPreview({ title, blocks }: { title: string; blocks: BlockEditorIte
       </div>
     </div>
   )
+}
+
+// AI generation result schema
+interface AiStatBlockResult {
+  title: string
+  type: string
+  blocks: {
+    id: string
+    label: string
+    icon: string
+    color: string
+    field: string
+    format: string
+    tooltip: string
+  }[]
+}
+
+const VALID_COLORS = new Set(AVAILABLE_COLORS)
+
+function validateStatBlockResult(
+  data: unknown,
+): { valid: true; result: AiStatBlockResult } | { valid: false; error: string } {
+  const obj = data as Record<string, unknown>
+  if (!obj.title || typeof obj.title !== 'string') {
+    return { valid: false, error: 'Missing or invalid "title"' }
+  }
+  if (!obj.blocks || !Array.isArray(obj.blocks) || obj.blocks.length === 0) {
+    return { valid: false, error: 'Missing or empty "blocks" array' }
+  }
+
+  // Auto-correct invalid colors to 'purple'
+  for (const block of obj.blocks as Record<string, unknown>[]) {
+    if (!block.color || !VALID_COLORS.has(block.color as StatBlockColor)) {
+      block.color = 'purple'
+    }
+  }
+
+  return { valid: true, result: obj as unknown as AiStatBlockResult }
 }
 
 export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatBlockFactoryModalProps) {
@@ -219,6 +259,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
 
   const tabs = [
     { id: 'builder' as Tab, label: 'Build', icon: Activity },
+    { id: 'ai' as Tab, label: 'AI Generate', icon: Sparkles },
     { id: 'manage' as Tab, label: 'Manage', icon: Activity },
   ]
 
@@ -453,6 +494,59 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               Create Stat Block
             </button>
           </div>
+        )}
+
+        {/* AI Generate tab */}
+        {tab === 'ai' && (
+          <AiGenerationPanel<AiStatBlockResult>
+            systemPrompt={STAT_BLOCK_SYSTEM_PROMPT}
+            placeholder="Describe the stat blocks you want, e.g., 'Stats for monitoring a Redis cluster: total instances, healthy, memory usage, connections, latency'"
+            missionTitle="AI Stat Block Generation"
+            validateResult={validateStatBlockResult}
+            renderPreview={(result) => (
+              <StatsPreview
+                title={result.title}
+                blocks={result.blocks.map(b => ({
+                  id: b.id,
+                  label: b.label,
+                  icon: b.icon,
+                  color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
+                  field: b.field,
+                  format: b.format || '',
+                  tooltip: b.tooltip || '',
+                }))}
+              />
+            )}
+            onSave={(result) => {
+              const type = result.type || `custom_${Date.now()}`
+              const statBlocks: StatBlockDefinition[] = result.blocks.map((b, idx) => ({
+                id: b.id || `block_${idx}`,
+                label: b.label,
+                icon: b.icon,
+                color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
+                visible: true,
+                order: idx,
+                valueSource: b.field ? {
+                  field: b.field,
+                  format: (b.format || undefined) as StatBlockValueSource['format'],
+                } : undefined,
+                tooltip: b.tooltip || undefined,
+              }))
+
+              const definition: StatsDefinition = {
+                type,
+                title: result.title || 'AI-Generated Stats',
+                blocks: statBlocks,
+                defaultCollapsed: false,
+              }
+
+              saveDynamicStatsDefinition(definition)
+              setSaveMessage(`Stats "${definition.title}" created with AI!`)
+              onStatsCreated?.(type)
+              setTimeout(() => setSaveMessage(null), 3000)
+            }}
+            saveLabel="Create Stat Block"
+          />
         )}
 
         {/* Manage tab */}
