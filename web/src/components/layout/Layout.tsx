@@ -13,7 +13,6 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { cn } from '../../lib/cn'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
-import { DemoInstallBanner } from '../onboarding/DemoInstallGuide'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 
@@ -130,9 +129,6 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
       )}
-
-      {/* Demo Install Guide Banner - positioned under demo banner */}
-      {isDemoMode && <DemoInstallBanner collapsed={config.collapsed} />}
 
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
