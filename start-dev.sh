@@ -3,6 +3,20 @@
 #
 # Starts backend (port 8080), frontend (port 5174), and kc-agent (port 8585).
 #
+# Can be used two ways:
+#   1. Run locally from a cloned repo:  ./start-dev.sh
+#   2. Bootstrap from scratch via curl:
+#        curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start-dev.sh | bash
+#        curl -sSL .../start-dev.sh | bash -s -- --branch feature-x
+#        curl -sSL .../start-dev.sh | bash -s -- --tag v1.0.0
+#        curl -sSL .../start-dev.sh | bash -s -- --release latest
+#
+# Options (bootstrap mode):
+#   --branch, -b <name>    Branch to clone (default: main)
+#   --tag, -t <name>       Tag to checkout after cloning
+#   --release, -r <name>   Release tag to checkout ("latest" resolves automatically)
+#   --dir, -d <path>       Install directory (default: ./kubestellar-console)
+#
 # Create a .env file with your credentials:
 #   GITHUB_CLIENT_ID=your-client-id
 #   GITHUB_CLIENT_SECRET=your-client-secret
@@ -11,7 +25,63 @@
 # Without .env or credentials, uses dev mode login (no GitHub OAuth).
 
 set -e
-cd "$(dirname "$0")"
+
+# --- Bootstrap: clone repo if not already inside one ---
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+if [ ! -f "$SCRIPT_DIR/web/package.json" ] || [ ! -d "$SCRIPT_DIR/cmd" ]; then
+    REPO_URL="https://github.com/kubestellar/console.git"
+    BRANCH="main"
+    TAG=""
+    INSTALL_DIR="./kubestellar-console"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --branch|-b) BRANCH="$2"; shift 2 ;;
+            --tag|-t) TAG="$2"; shift 2 ;;
+            --release|-r)
+                if [ "$2" = "latest" ]; then
+                    TAG=$(git ls-remote --tags --sort=-v:refname "$REPO_URL" 'v*' 2>/dev/null | head -1 | sed 's/.*refs\/tags\///' | sed 's/\^{}//')
+                    echo "Latest release: ${TAG:-unknown}"
+                else
+                    TAG="$2"
+                fi
+                shift 2 ;;
+            --dir|-d) INSTALL_DIR="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+
+    echo "=== KubeStellar Console Bootstrap ==="
+    echo ""
+
+    # Check prerequisites
+    for cmd in git go node npm; do
+        if ! command -v "$cmd" &>/dev/null; then
+            echo "Error: $cmd is required but not found."
+            exit 1
+        fi
+    done
+
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        echo "Updating existing clone at $INSTALL_DIR..."
+        cd "$INSTALL_DIR"
+        git fetch --all --tags --prune
+        if [ -n "$TAG" ]; then git checkout "$TAG"
+        else git checkout "$BRANCH" && git pull origin "$BRANCH"; fi
+    else
+        echo "Cloning repository..."
+        git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
+        cd "$INSTALL_DIR"
+        [ -n "$TAG" ] && git checkout "$TAG"
+    fi
+
+    echo "Installing frontend dependencies..."
+    (cd web && npm install)
+    echo ""
+    exec ./start-dev.sh
+fi
+
+cd "$SCRIPT_DIR"
 
 # Load .env file if it exists (overrides any existing env vars)
 if [ -f .env ]; then

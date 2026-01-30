@@ -2,6 +2,20 @@
 # KubeStellar Console - OAuth Mode Startup
 # Requires GitHub OAuth credentials in .env or environment
 #
+# Can be used two ways:
+#   1. Run locally from a cloned repo:  ./startup-oauth.sh
+#   2. Bootstrap from scratch via curl:
+#        curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/startup-oauth.sh | bash
+#        curl -sSL .../startup-oauth.sh | bash -s -- --branch feature-x
+#        curl -sSL .../startup-oauth.sh | bash -s -- --tag v1.0.0
+#        curl -sSL .../startup-oauth.sh | bash -s -- --release latest
+#
+# Options (bootstrap mode):
+#   --branch, -b <name>    Branch to clone (default: main)
+#   --tag, -t <name>       Tag to checkout after cloning
+#   --release, -r <name>   Release tag to checkout ("latest" resolves automatically)
+#   --dir, -d <path>       Install directory (default: ./kubestellar-console)
+#
 # Setup:
 #   1. Create a GitHub OAuth App at https://github.com/settings/developers
 #      - Homepage URL: http://localhost:5174
@@ -12,7 +26,63 @@
 #   3. Run: ./startup-oauth.sh
 
 set -e
-cd "$(dirname "$0")"
+
+# --- Bootstrap: clone repo if not already inside one ---
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+if [ ! -f "$SCRIPT_DIR/web/package.json" ] || [ ! -d "$SCRIPT_DIR/cmd" ]; then
+    REPO_URL="https://github.com/kubestellar/console.git"
+    BRANCH="main"
+    TAG=""
+    INSTALL_DIR="./kubestellar-console"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --branch|-b) BRANCH="$2"; shift 2 ;;
+            --tag|-t) TAG="$2"; shift 2 ;;
+            --release|-r)
+                if [ "$2" = "latest" ]; then
+                    TAG=$(git ls-remote --tags --sort=-v:refname "$REPO_URL" 'v*' 2>/dev/null | head -1 | sed 's/.*refs\/tags\///' | sed 's/\^{}//')
+                    echo "Latest release: ${TAG:-unknown}"
+                else
+                    TAG="$2"
+                fi
+                shift 2 ;;
+            --dir|-d) INSTALL_DIR="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+
+    echo "=== KubeStellar Console Bootstrap (OAuth) ==="
+    echo ""
+
+    # Check prerequisites
+    for cmd in git go node npm; do
+        if ! command -v "$cmd" &>/dev/null; then
+            echo "Error: $cmd is required but not found."
+            exit 1
+        fi
+    done
+
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        echo "Updating existing clone at $INSTALL_DIR..."
+        cd "$INSTALL_DIR"
+        git fetch --all --tags --prune
+        if [ -n "$TAG" ]; then git checkout "$TAG"
+        else git checkout "$BRANCH" && git pull origin "$BRANCH"; fi
+    else
+        echo "Cloning repository..."
+        git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
+        cd "$INSTALL_DIR"
+        [ -n "$TAG" ] && git checkout "$TAG"
+    fi
+
+    echo "Installing frontend dependencies..."
+    (cd web && npm install)
+    echo ""
+    exec ./startup-oauth.sh
+fi
+
+cd "$SCRIPT_DIR"
 
 # Colors
 RED='\033[0;31m'
