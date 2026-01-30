@@ -72,7 +72,7 @@ if [ ! -f "$SCRIPT_DIR/web/package.json" ] || [ ! -d "$SCRIPT_DIR/cmd" ]; then
         echo "Cloning repository..."
         git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
         cd "$INSTALL_DIR"
-        [ -n "$TAG" ] && git checkout "$TAG"
+        if [ -n "$TAG" ]; then git checkout "$TAG"; fi
     fi
 
     echo "Installing frontend dependencies..."
@@ -111,7 +111,7 @@ export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 
 # Kill any existing instances on required ports
 for p in 8080 5174 8585; do
-    EXISTING_PID=$(lsof -ti :$p 2>/dev/null)
+    EXISTING_PID=$(lsof -ti :$p 2>/dev/null || true)
     if [ -n "$EXISTING_PID" ]; then
         echo "Killing existing process on port $p (PID: $EXISTING_PID)..."
         kill -9 $EXISTING_PID 2>/dev/null || true

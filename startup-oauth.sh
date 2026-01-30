@@ -73,7 +73,7 @@ if [ ! -f "$SCRIPT_DIR/web/package.json" ] || [ ! -d "$SCRIPT_DIR/cmd" ]; then
         echo "Cloning repository..."
         git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
         cd "$INSTALL_DIR"
-        [ -n "$TAG" ] && git checkout "$TAG"
+        if [ -n "$TAG" ]; then git checkout "$TAG"; fi
     fi
 
     echo "Installing frontend dependencies..."
