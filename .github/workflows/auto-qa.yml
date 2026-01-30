@@ -1063,7 +1063,7 @@ jobs:
                      'Remove any hardcoded tokens or passwords',
                      'Use `.env` files for environment-specific values',
                      'Ensure no real credentials are committed (check git history)'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', focusLabel],
+                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
               if (process.env.FOCUS_DEP_AGE === 'true') {
@@ -1196,7 +1196,7 @@ jobs:
                      'Show user-facing error messages instead of just logging',
                      'Use error boundaries for React component errors',
                      'At minimum, log errors with `console.error` for debugging'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', focusLabel],
+                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
               if (process.env.FOCUS_LOADING_STATES === 'true') {
@@ -1222,7 +1222,7 @@ jobs:
                     ['Remove stale entries from INVENTORY.md for deleted components',
                      'Add missing component files if they should exist',
                      'Run the consistency check locally to verify: `grep -oE "web/src/[^ ]+.tsx" INVENTORY.md`'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', focusLabel],
+                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
               if (process.env.FOCUS_CARD_REGISTRY === 'true') {
@@ -1233,7 +1233,7 @@ jobs:
                     ['Register missing card types in the card registry',
                      'Remove obsolete card types from INVENTORY.md',
                      'Ensure card type strings match between inventory and source'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', focusLabel],
+                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
               if (process.env.FOCUS_ROUTES === 'true') {
@@ -1244,7 +1244,7 @@ jobs:
                     ['Add missing routes to the router configuration',
                      'Remove obsolete routes from INVENTORY.md',
                      'Verify route paths match between inventory and App.tsx'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', focusLabel],
+                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
               if (process.env.FOCUS_MODAL_CONSISTENCY === 'true') {
@@ -1287,13 +1287,7 @@ jobs:
 
               const duplicate = existingIssues.find(i => i.title === check.title);
               if (duplicate) {
-                core.info(`Duplicate: "${check.title}" (#${duplicate.number}). Adding re-detection comment.`);
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: duplicate.number,
-                  body: `**Re-detected** at ${now} on commit \`${sha}\` (focus: ${focusArea}).\n\n[Workflow run](${runUrl})`,
-                });
+                core.info(`Skipping duplicate: "${check.title}" (#${duplicate.number}) — still open.`);
                 continue;
               }
 
@@ -1306,6 +1300,19 @@ jobs:
               });
 
               core.info(`Created issue #${issue.number}: ${check.title}`);
+
+              // Auto-assign Copilot so no human triage is needed
+              try {
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  assignees: ['Copilot'],
+                });
+                core.info(`Assigned Copilot to #${issue.number}`);
+              } catch (e) {
+                core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+              }
               created++;
 
               // Auto-triage is handled by including triage/accepted in the issue labels at creation
