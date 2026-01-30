@@ -12,6 +12,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { cn } from '../../lib/cn'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
+import { DemoInstallGuide } from '../onboarding/DemoInstallGuide'
 import { TourProvider } from '../../hooks/useTour'
 
 interface LayoutProps {
@@ -140,6 +141,9 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Demo install guide floater */}
+      {isDemoMode && <DemoInstallGuide />}
 
       {/* AI Mission sidebar */}
       <MissionSidebar />
