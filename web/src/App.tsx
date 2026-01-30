@@ -137,9 +137,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
-    // Return null instead of a spinner to avoid flashing a bare loading screen.
-    // Auth resolves almost instantly from localStorage cache; the top-level
-    // Suspense/LoadingFallback handles the rare uncached case after 200ms.
+    // If we have a token (likely authenticated), render children optimistically
+    // to avoid a blank flash. Auth resolves almost instantly from localStorage
+    // cache. The stale-while-revalidate pattern in AuthProvider means isLoading
+    // is only true when there's no cached user, so this is safe.
+    if (localStorage.getItem('token')) {
+      return <>{children}</>
+    }
     return null
   }
 
