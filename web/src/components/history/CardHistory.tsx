@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { History, Trash2, Plus, RefreshCw, ArrowRight, Settings2, RotateCcw } from 'lucide-react'
+import { History, Trash2, Plus, RefreshCw, ArrowRight, Settings2, RotateCcw, AlertCircle } from 'lucide-react'
 import { useCardHistory, CardHistoryEntry } from '../../hooks/useCardHistory'
 import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -77,7 +77,7 @@ interface CardHistoryProps {
 }
 
 export function CardHistory({ onRestoreCard }: CardHistoryProps) {
-  const { history, clearHistory, removeEntry } = useCardHistory()
+  const { history, error, clearHistory, removeEntry } = useCardHistory()
   const [filter, setFilter] = useState<CardHistoryEntry['action'] | 'all'>('all')
 
   const filteredHistory = filter === 'all' ? history : history.filter((entry) => entry.action === filter)
@@ -105,6 +105,17 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
           </button>
         )}
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-medium text-red-400 mb-1">Error</h4>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-6">

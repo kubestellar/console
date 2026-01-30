@@ -25,11 +25,19 @@ export function useCardHistory() {
       return []
     }
   })
+  const [error, setError] = useState<string | null>(null)
 
   // Persist to localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
-  }, [history])
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+      // Clear error on successful save
+      if (error) setError(null)
+    } catch (err) {
+      setError('Failed to save card history to localStorage')
+      console.error('Failed to save card history:', err)
+    }
+  }, [history, error])
 
   const addEntry = useCallback((entry: Omit<CardHistoryEntry, 'id' | 'timestamp'>) => {
     setHistory((prev) => {
@@ -134,6 +142,7 @@ export function useCardHistory() {
 
   return {
     history,
+    error,
     addEntry,
     recordCardRemoved,
     recordCardAdded,
