@@ -36,6 +36,7 @@ export function Layout({ children }: LayoutProps) {
 
   // Banner stacking: each banner's top offset depends on how many banners above it are visible.
   // Navbar is 64px (top-16). Each banner is ~36px tall.
+  // Z-index hierarchy: Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > Offline banner (z-20)
   const NAVBAR_HEIGHT = 64
   const BANNER_HEIGHT = 36
   // Stack order: Network (top) → Demo → Agent Offline (bottom)
@@ -82,7 +83,7 @@ export function Layout({ children }: LayoutProps) {
         <div
           style={{ top: networkBannerTop }}
           className={cn(
-            "fixed right-0 z-50 border-b transition-[left] duration-300",
+            "fixed right-0 z-40 border-b transition-[left] duration-300",
             config.collapsed ? "left-20" : "left-64",
             isOnline
               ? "bg-green-500/10 border-green-500/20"
@@ -116,7 +117,7 @@ export function Layout({ children }: LayoutProps) {
         <div
           style={{ top: demoBannerTop }}
           className={cn(
-            "fixed right-0 z-40 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
+            "fixed right-0 z-30 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
             config.collapsed ? "left-20" : "left-64",
           )}>
           <div className="flex items-center justify-center gap-3 py-1.5 px-4">
@@ -150,7 +151,7 @@ export function Layout({ children }: LayoutProps) {
         <div
           style={{ top: offlineBannerTop }}
           className={cn(
-            "fixed z-30 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
+            "fixed z-20 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
             config.collapsed ? "left-20" : "left-64",
           // Adjust right edge when mission sidebar is open
           isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[500px]" : "right-0",
