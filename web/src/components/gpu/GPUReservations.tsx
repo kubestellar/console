@@ -239,7 +239,7 @@ export function GPUReservations() {
     <div className="pt-16">
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">GPU Reservations</h1>
+          <h1 className="text-2xl font-bold text-foreground" title="Graphics Processing Unit Reservations">GPU Reservations</h1>
           {showDemoIndicator && (
             <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
               <FlaskConical className="w-3 h-3" />
@@ -247,7 +247,7 @@ export function GPUReservations() {
             </span>
           )}
         </div>
-        <p className="text-muted-foreground">Schedule and manage GPU resources across your clusters</p>
+        <p className="text-muted-foreground">Schedule and manage <abbr title="Graphics Processing Unit">GPU</abbr> resources across your clusters</p>
       </div>
 
       {/* Tabs */}
@@ -304,7 +304,7 @@ export function GPUReservations() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-foreground">{stats.totalGPUs}</div>
-                  <div className="text-xs text-muted-foreground">Total GPUs</div>
+                  <div className="text-xs text-muted-foreground" title="Graphics Processing Units">Total GPUs</div>
                 </div>
               </div>
             </div>
@@ -347,7 +347,7 @@ export function GPUReservations() {
           <div className="grid grid-cols-3 gap-4">
             {/* Utilization */}
             <div className="glass p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Utilization</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4" title="Graphics Processing Unit Utilization">GPU Utilization</h3>
               <div className="flex items-center justify-center">
                 <div className="relative w-32 h-32">
                   <svg className="w-32 h-32 transform -rotate-90">
@@ -382,14 +382,14 @@ export function GPUReservations() {
                   </div>
                 </div>
               </div>
-              <div className="text-center mt-4 text-sm text-muted-foreground">
+              <div className="text-center mt-4 text-sm text-muted-foreground" title="Graphics Processing Units">
                 {stats.allocatedGPUs} of {stats.totalGPUs} GPUs allocated
               </div>
             </div>
 
             {/* GPU Types */}
             <div className="glass p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Types</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-4" title="Graphics Processing Unit Types">GPU Types</h3>
               {stats.typeChartData.length > 0 ? (
                 <DonutChart
                   data={stats.typeChartData}
@@ -424,7 +424,7 @@ export function GPUReservations() {
 
           {/* Weekly Trend */}
           <div className="glass p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-muted-foreground mb-4">Weekly GPU Usage</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-4" title="Graphics Processing Unit Usage">Weekly GPU Usage</h3>
             <BarChart
               data={stats.weeklyUsage}
               height={200}
@@ -578,7 +578,7 @@ export function GPUReservations() {
                   <div className="text-foreground">{selectedReservation.team}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">GPU Resources</div>
+                  <div className="text-sm text-muted-foreground" title="Graphics Processing Unit Resources">GPU Resources</div>
                   <div className="text-foreground">{selectedReservation.gpuCount} × {selectedReservation.gpuType}</div>
                 </div>
                 <div>
@@ -633,7 +633,7 @@ export function GPUReservations() {
                     {/* GPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">GPU</span>
+                        <span className="text-muted-foreground" title="Graphics Processing Unit">GPU</span>
                         <span className="text-foreground">{quota.gpuUsed}/{quota.gpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -650,7 +650,7 @@ export function GPUReservations() {
                     {/* CPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">CPU (cores)</span>
+                        <span className="text-muted-foreground" title="Central Processing Unit (cores)">CPU (cores)</span>
                         <span className="text-foreground">{quota.cpuUsed}/{quota.cpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -767,7 +767,7 @@ export function GPUReservations() {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{res.gpuCount} GPUs</span>
+                    <span title="Graphics Processing Units">{res.gpuCount} GPUs</span>
                     <span>{res.team}</span>
                     <span>{res.startDate.toLocaleDateString()}</span>
                   </div>
@@ -802,7 +802,7 @@ export function GPUReservations() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1" title="Graphics Processing Unit Type">
                   GPU Type
                 </label>
                 <select className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground">
@@ -813,7 +813,7 @@ export function GPUReservations() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1" title="Graphics Processing Unit Count">
                   GPU Count
                 </label>
                 <input
