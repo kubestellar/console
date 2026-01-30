@@ -320,6 +320,81 @@ type PV struct {
 	Labels          map[string]string `json:"labels,omitempty"`
 }
 
+// ReplicaSet represents a Kubernetes ReplicaSet
+type ReplicaSet struct {
+	Name          string            `json:"name"`
+	Namespace     string            `json:"namespace"`
+	Cluster       string            `json:"cluster,omitempty"`
+	Replicas      int32             `json:"replicas"`
+	ReadyReplicas int32             `json:"readyReplicas"`
+	OwnerName     string            `json:"ownerName,omitempty"`
+	OwnerKind     string            `json:"ownerKind,omitempty"`
+	Age           string            `json:"age,omitempty"`
+	Labels        map[string]string `json:"labels,omitempty"`
+}
+
+// StatefulSet represents a Kubernetes StatefulSet
+type StatefulSet struct {
+	Name          string            `json:"name"`
+	Namespace     string            `json:"namespace"`
+	Cluster       string            `json:"cluster,omitempty"`
+	Replicas      int32             `json:"replicas"`
+	ReadyReplicas int32             `json:"readyReplicas"`
+	Status        string            `json:"status"`
+	Image         string            `json:"image,omitempty"`
+	Age           string            `json:"age,omitempty"`
+	Labels        map[string]string `json:"labels,omitempty"`
+}
+
+// DaemonSet represents a Kubernetes DaemonSet
+type DaemonSet struct {
+	Name             string            `json:"name"`
+	Namespace        string            `json:"namespace"`
+	Cluster          string            `json:"cluster,omitempty"`
+	DesiredScheduled int32             `json:"desiredScheduled"`
+	CurrentScheduled int32             `json:"currentScheduled"`
+	Ready            int32             `json:"ready"`
+	Status           string            `json:"status"`
+	Age              string            `json:"age,omitempty"`
+	Labels           map[string]string `json:"labels,omitempty"`
+}
+
+// CronJob represents a Kubernetes CronJob
+type CronJob struct {
+	Name         string            `json:"name"`
+	Namespace    string            `json:"namespace"`
+	Cluster      string            `json:"cluster,omitempty"`
+	Schedule     string            `json:"schedule"`
+	Suspend      bool              `json:"suspend"`
+	Active       int               `json:"active"`
+	LastSchedule string            `json:"lastSchedule,omitempty"`
+	Age          string            `json:"age,omitempty"`
+	Labels       map[string]string `json:"labels,omitempty"`
+}
+
+// Ingress represents a Kubernetes Ingress
+type Ingress struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	Cluster   string            `json:"cluster,omitempty"`
+	Class     string            `json:"class,omitempty"`
+	Hosts     []string          `json:"hosts"`
+	Address   string            `json:"address,omitempty"`
+	Age       string            `json:"age,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+}
+
+// NetworkPolicy represents a Kubernetes NetworkPolicy
+type NetworkPolicy struct {
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Cluster     string            `json:"cluster,omitempty"`
+	PolicyTypes []string          `json:"policyTypes"`
+	PodSelector string            `json:"podSelector"`
+	Age         string            `json:"age,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+}
+
 // SecurityIssue represents a security misconfiguration
 type SecurityIssue struct {
 	Name      string `json:"name"`
@@ -1980,6 +2055,255 @@ func (m *MultiClusterClient) GetPVs(ctx context.Context, contextName string) ([]
 			VolumeMode:    volumeMode,
 			Age:           age,
 			Labels:        pv.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetReplicaSets returns all ReplicaSets in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetReplicaSets(ctx context.Context, contextName, namespace string) ([]ReplicaSet, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	rsList, err := client.AppsV1().ReplicaSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []ReplicaSet
+	for _, rs := range rsList.Items {
+		replicas := int32(0)
+		if rs.Spec.Replicas != nil {
+			replicas = *rs.Spec.Replicas
+		}
+		ownerName, ownerKind := "", ""
+		if len(rs.OwnerReferences) > 0 {
+			ownerName = rs.OwnerReferences[0].Name
+			ownerKind = rs.OwnerReferences[0].Kind
+		}
+		result = append(result, ReplicaSet{
+			Name:          rs.Name,
+			Namespace:     rs.Namespace,
+			Cluster:       contextName,
+			Replicas:      replicas,
+			ReadyReplicas: rs.Status.ReadyReplicas,
+			OwnerName:     ownerName,
+			OwnerKind:     ownerKind,
+			Age:           formatAge(rs.CreationTimestamp.Time),
+			Labels:        rs.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetStatefulSets returns all StatefulSets in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetStatefulSets(ctx context.Context, contextName, namespace string) ([]StatefulSet, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	ssList, err := client.AppsV1().StatefulSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []StatefulSet
+	for _, ss := range ssList.Items {
+		replicas := int32(0)
+		if ss.Spec.Replicas != nil {
+			replicas = *ss.Spec.Replicas
+		}
+		status := "running"
+		if ss.Status.ReadyReplicas < replicas {
+			status = "deploying"
+		}
+		if replicas > 0 && ss.Status.ReadyReplicas == 0 {
+			status = "failed"
+		}
+		image := ""
+		if len(ss.Spec.Template.Spec.Containers) > 0 {
+			image = ss.Spec.Template.Spec.Containers[0].Image
+		}
+		result = append(result, StatefulSet{
+			Name:          ss.Name,
+			Namespace:     ss.Namespace,
+			Cluster:       contextName,
+			Replicas:      replicas,
+			ReadyReplicas: ss.Status.ReadyReplicas,
+			Status:        status,
+			Image:         image,
+			Age:           formatAge(ss.CreationTimestamp.Time),
+			Labels:        ss.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetDaemonSets returns all DaemonSets in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetDaemonSets(ctx context.Context, contextName, namespace string) ([]DaemonSet, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	dsList, err := client.AppsV1().DaemonSets(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []DaemonSet
+	for _, ds := range dsList.Items {
+		status := "running"
+		if ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
+			status = "degraded"
+		}
+		if ds.Status.DesiredNumberScheduled > 0 && ds.Status.NumberReady == 0 {
+			status = "failed"
+		}
+		result = append(result, DaemonSet{
+			Name:             ds.Name,
+			Namespace:        ds.Namespace,
+			Cluster:          contextName,
+			DesiredScheduled: ds.Status.DesiredNumberScheduled,
+			CurrentScheduled: ds.Status.CurrentNumberScheduled,
+			Ready:            ds.Status.NumberReady,
+			Status:           status,
+			Age:              formatAge(ds.CreationTimestamp.Time),
+			Labels:           ds.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetCronJobs returns all CronJobs in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetCronJobs(ctx context.Context, contextName, namespace string) ([]CronJob, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	cronList, err := client.BatchV1().CronJobs(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []CronJob
+	for _, cj := range cronList.Items {
+		lastSchedule := ""
+		if cj.Status.LastScheduleTime != nil {
+			lastSchedule = formatAge(cj.Status.LastScheduleTime.Time) + " ago"
+		}
+		suspend := false
+		if cj.Spec.Suspend != nil {
+			suspend = *cj.Spec.Suspend
+		}
+		result = append(result, CronJob{
+			Name:         cj.Name,
+			Namespace:    cj.Namespace,
+			Cluster:      contextName,
+			Schedule:     cj.Spec.Schedule,
+			Suspend:      suspend,
+			Active:       len(cj.Status.Active),
+			LastSchedule: lastSchedule,
+			Age:          formatAge(cj.CreationTimestamp.Time),
+			Labels:       cj.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetIngresses returns all Ingresses in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetIngresses(ctx context.Context, contextName, namespace string) ([]Ingress, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	ingList, err := client.NetworkingV1().Ingresses(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []Ingress
+	for _, ing := range ingList.Items {
+		var hosts []string
+		for _, rule := range ing.Spec.Rules {
+			if rule.Host != "" {
+				hosts = append(hosts, rule.Host)
+			}
+		}
+		var address string
+		if len(ing.Status.LoadBalancer.Ingress) > 0 {
+			lb := ing.Status.LoadBalancer.Ingress[0]
+			if lb.Hostname != "" {
+				address = lb.Hostname
+			} else if lb.IP != "" {
+				address = lb.IP
+			}
+		}
+		ingressClass := ""
+		if ing.Spec.IngressClassName != nil {
+			ingressClass = *ing.Spec.IngressClassName
+		}
+		result = append(result, Ingress{
+			Name:      ing.Name,
+			Namespace: ing.Namespace,
+			Cluster:   contextName,
+			Class:     ingressClass,
+			Hosts:     hosts,
+			Address:   address,
+			Age:       formatAge(ing.CreationTimestamp.Time),
+			Labels:    ing.Labels,
+		})
+	}
+
+	return result, nil
+}
+
+// GetNetworkPolicies returns all NetworkPolicies in a namespace or all namespaces if namespace is empty
+func (m *MultiClusterClient) GetNetworkPolicies(ctx context.Context, contextName, namespace string) ([]NetworkPolicy, error) {
+	client, err := m.GetClient(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	npList, err := client.NetworkingV1().NetworkPolicies(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result []NetworkPolicy
+	for _, np := range npList.Items {
+		var policyTypes []string
+		for _, pt := range np.Spec.PolicyTypes {
+			policyTypes = append(policyTypes, string(pt))
+		}
+		podSelector := ""
+		if len(np.Spec.PodSelector.MatchLabels) > 0 {
+			var parts []string
+			for k, v := range np.Spec.PodSelector.MatchLabels {
+				parts = append(parts, k+"="+v)
+			}
+			podSelector = strings.Join(parts, ",")
+		} else {
+			podSelector = "(all pods)"
+		}
+		result = append(result, NetworkPolicy{
+			Name:        np.Name,
+			Namespace:   np.Namespace,
+			Cluster:     contextName,
+			PolicyTypes: policyTypes,
+			PodSelector: podSelector,
+			Age:         formatAge(np.CreationTimestamp.Time),
+			Labels:      np.Labels,
 		})
 	}
 

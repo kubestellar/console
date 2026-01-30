@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
-import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, RefreshCw, Folder, FileKey, FileText, Gauge, User, Clock, Container, Filter } from 'lucide-react'
-import { useClusters, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs } from '../../hooks/useMCP'
+import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, RefreshCw, Folder, FileKey, FileText, Gauge, User, Clock, Container, Filter, Copy, Shield, Globe } from 'lucide-react'
+import { useClusters, useNodes, useNamespaces, useDeployments, useServices, usePVCs, usePods, useConfigMaps, useSecrets, useServiceAccounts, useJobs, useHPAs, useReplicaSets, useStatefulSets, useDaemonSets, useCronJobs, useIngresses, useNetworkPolicies } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -39,6 +39,9 @@ const ResourceIcon = {
   pvc: HardDrive,
   serviceaccount: User,
   hpa: Gauge,
+  replicaset: Copy,
+  ingress: Globe,
+  networkpolicy: Shield,
 } as const
 
 // Namespace resource structure
@@ -52,6 +55,12 @@ interface NamespaceResources {
   serviceaccounts: Array<{ name: string; namespace: string }>
   jobs: Array<{ name: string; namespace: string; status: string; completions: string; duration?: string }>
   hpas: Array<{ name: string; namespace: string; reference: string; minReplicas: number; maxReplicas: number; currentReplicas: number }>
+  replicasets: Array<{ name: string; namespace: string; replicas: number; readyReplicas: number; ownerName?: string }>
+  statefulsets: Array<{ name: string; namespace: string; replicas: number; readyReplicas: number; status: string }>
+  daemonsets: Array<{ name: string; namespace: string; desiredScheduled: number; ready: number; status: string }>
+  cronjobs: Array<{ name: string; namespace: string; schedule: string; suspend: boolean; active: number; lastSchedule?: string }>
+  ingresses: Array<{ name: string; namespace: string; class?: string; hosts: string[]; address?: string }>
+  networkpolicies: Array<{ name: string; namespace: string; policyTypes: string[]; podSelector: string }>
 }
 
 // Cache structure for per-cluster data
@@ -67,6 +76,12 @@ interface ClusterDataCache {
   serviceaccounts: Array<{ name: string; namespace: string }>
   jobs: Array<{ name: string; namespace: string; status: string; completions: string; duration?: string }>
   hpas: Array<{ name: string; namespace: string; reference: string; minReplicas: number; maxReplicas: number; currentReplicas: number }>
+  replicasets: Array<{ name: string; namespace: string; replicas: number; readyReplicas: number; ownerName?: string }>
+  statefulsets: Array<{ name: string; namespace: string; replicas: number; readyReplicas: number; status: string }>
+  daemonsets: Array<{ name: string; namespace: string; desiredScheduled: number; ready: number; status: string }>
+  cronjobs: Array<{ name: string; namespace: string; schedule: string; suspend: boolean; active: number; lastSchedule?: string }>
+  ingresses: Array<{ name: string; namespace: string; class?: string; hosts: string[]; address?: string }>
+  networkpolicies: Array<{ name: string; namespace: string; policyTypes: string[]; podSelector: string }>
   podIssues: Array<{ name: string; namespace: string; status: string; reason?: string }>
 }
 
@@ -124,8 +139,8 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
 
   // Fetch data for the selected cluster (only when a cluster is expanded)
   const { issues: podIssues } = useCachedPodIssues(selectedCluster || undefined)
-  const { nodes: allNodes } = useNodes(selectedCluster || undefined)
-  const { namespaces: allNamespaces } = useNamespaces(selectedCluster || undefined)
+  const { nodes: allNodes, isLoading: nodesLoading } = useNodes(selectedCluster || undefined)
+  const { namespaces: allNamespaces, isLoading: namespacesLoading } = useNamespaces(selectedCluster || undefined)
   const { deployments: allDeployments } = useDeployments(selectedCluster || undefined)
   const { services: allServices } = useServices(selectedCluster || undefined)
   const { pvcs: allPVCs } = usePVCs(selectedCluster || undefined)
@@ -135,12 +150,24 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   const { serviceAccounts: allServiceAccounts } = useServiceAccounts(selectedCluster || undefined)
   const { jobs: allJobs } = useJobs(selectedCluster || undefined)
   const { hpas: allHPAs } = useHPAs(selectedCluster || undefined)
+  const { replicasets: allReplicaSets } = useReplicaSets(selectedCluster || undefined)
+  const { statefulsets: allStatefulSets } = useStatefulSets(selectedCluster || undefined)
+  const { daemonsets: allDaemonSets } = useDaemonSets(selectedCluster || undefined)
+  const { cronjobs: allCronJobs } = useCronJobs(selectedCluster || undefined)
+  const { ingresses: allIngresses } = useIngresses(selectedCluster || undefined)
+  const { networkpolicies: allNetworkPolicies } = useNetworkPolicies(selectedCluster || undefined)
 
   // Cache data for the selected cluster when it changes
   useEffect(() => {
     if (!selectedCluster) return
-    // Only cache if we have data (allow for empty namespaces but require nodes)
-    if (allNodes && allNodes.length > 0) {
+    // Cache once at least one hook has finished loading and has meaningful data
+    const anyHookFinished = !nodesLoading || !namespacesLoading
+    if (!anyHookFinished) return
+    const hasAnyData = (allNodes && allNodes.length > 0) ||
+                       (allNamespaces && allNamespaces.length > 0) ||
+                       (allDeployments && allDeployments.length > 0) ||
+                       (allPods && allPods.length > 0)
+    if (hasAnyData) {
       setClusterDataCache(prev => {
         const next = new Map(prev)
         next.set(selectedCluster, {
@@ -200,6 +227,48 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
             maxReplicas: h.maxReplicas,
             currentReplicas: h.currentReplicas,
           })),
+          replicasets: (allReplicaSets || []).map(rs => ({
+            name: rs.name,
+            namespace: rs.namespace,
+            replicas: rs.replicas,
+            readyReplicas: rs.readyReplicas,
+            ownerName: rs.ownerName,
+          })),
+          statefulsets: (allStatefulSets || []).map(ss => ({
+            name: ss.name,
+            namespace: ss.namespace,
+            replicas: ss.replicas,
+            readyReplicas: ss.readyReplicas,
+            status: ss.status,
+          })),
+          daemonsets: (allDaemonSets || []).map(ds => ({
+            name: ds.name,
+            namespace: ds.namespace,
+            desiredScheduled: ds.desiredScheduled,
+            ready: ds.ready,
+            status: ds.status,
+          })),
+          cronjobs: (allCronJobs || []).map(cj => ({
+            name: cj.name,
+            namespace: cj.namespace,
+            schedule: cj.schedule,
+            suspend: cj.suspend,
+            active: cj.active,
+            lastSchedule: cj.lastSchedule,
+          })),
+          ingresses: (allIngresses || []).map(ing => ({
+            name: ing.name,
+            namespace: ing.namespace,
+            class: ing.class,
+            hosts: ing.hosts || [],
+            address: ing.address,
+          })),
+          networkpolicies: (allNetworkPolicies || []).map(np => ({
+            name: np.name,
+            namespace: np.namespace,
+            policyTypes: np.policyTypes || [],
+            podSelector: np.podSelector,
+          })),
           podIssues: (podIssues || []).map(p => ({
             name: p.name,
             namespace: p.namespace,
@@ -216,7 +285,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         return next
       })
     }
-  }, [selectedCluster, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, allJobs, allHPAs, podIssues])
+  }, [selectedCluster, nodesLoading, namespacesLoading, allNodes, allNamespaces, allDeployments, allServices, allPVCs, allPods, allConfigMaps, allSecrets, allServiceAccounts, allJobs, allHPAs, allReplicaSets, allStatefulSets, allDaemonSets, allCronJobs, allIngresses, allNetworkPolicies, podIssues])
 
   // Helper to get cached data for a cluster
   const getClusterData = useCallback((clusterName: string): ClusterDataCache | null => {
@@ -269,6 +338,12 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
         serviceaccounts: [],
         jobs: [],
         hpas: [],
+        replicasets: [],
+        statefulsets: [],
+        daemonsets: [],
+        cronjobs: [],
+        ingresses: [],
+        networkpolicies: [],
       })
     })
 
@@ -370,6 +445,54 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
           maxReplicas: h.maxReplicas,
           currentReplicas: h.currentReplicas,
         })
+      }
+    }
+
+    // Group ReplicaSets
+    for (const rs of clusterData.replicasets) {
+      const nsData = map.get(rs.namespace)
+      if (nsData) {
+        nsData.replicasets.push(rs)
+      }
+    }
+
+    // Group StatefulSets
+    for (const ss of clusterData.statefulsets) {
+      const nsData = map.get(ss.namespace)
+      if (nsData) {
+        nsData.statefulsets.push(ss)
+      }
+    }
+
+    // Group DaemonSets
+    for (const ds of clusterData.daemonsets) {
+      const nsData = map.get(ds.namespace)
+      if (nsData) {
+        nsData.daemonsets.push(ds)
+      }
+    }
+
+    // Group CronJobs
+    for (const cj of clusterData.cronjobs) {
+      const nsData = map.get(cj.namespace)
+      if (nsData) {
+        nsData.cronjobs.push(cj)
+      }
+    }
+
+    // Group Ingresses
+    for (const ing of clusterData.ingresses) {
+      const nsData = map.get(ing.namespace)
+      if (nsData) {
+        nsData.ingresses.push(ing)
+      }
+    }
+
+    // Group NetworkPolicies
+    for (const np of clusterData.networkpolicies) {
+      const nsData = map.get(np.namespace)
+      if (nsData) {
+        nsData.networkpolicies.push(np)
       }
     }
 
@@ -755,6 +878,12 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                         const showServiceAccounts = (activeLens === 'all' || activeLens === 'workloads') && nsData.serviceaccounts.length > 0
                         const showJobs = (activeLens === 'all' || activeLens === 'workloads') && nsData.jobs.length > 0
                         const showHPAs = (activeLens === 'all' || activeLens === 'workloads') && nsData.hpas.length > 0
+                        const showReplicaSets = (activeLens === 'all' || activeLens === 'workloads') && nsData.replicasets.length > 0
+                        const showStatefulSets = (activeLens === 'all' || activeLens === 'workloads') && nsData.statefulsets.length > 0
+                        const showDaemonSets = (activeLens === 'all' || activeLens === 'workloads') && nsData.daemonsets.length > 0
+                        const showCronJobs = (activeLens === 'all' || activeLens === 'workloads') && nsData.cronjobs.length > 0
+                        const showIngresses = (activeLens === 'all' || activeLens === 'network') && nsData.ingresses.length > 0
+                        const showNetworkPolicies = (activeLens === 'all' || activeLens === 'network') && nsData.networkpolicies.length > 0
 
                         return (
                           <TreeNode
@@ -1018,6 +1147,165 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
                                     iconColor="text-violet-400"
                                     badge={`${hpa.currentReplicas} (${hpa.minReplicas}-${hpa.maxReplicas})`}
                                     badgeColor="bg-violet-500/20 text-violet-400"
+                                    indent={5}
+                                  />
+                                ))}
+                              </TreeNode>
+                            )}
+
+                            {/* ReplicaSets */}
+                            {showReplicaSets && (
+                              <TreeNode
+                                id={`${nsId}:replicasets`}
+                                label="ReplicaSets"
+                                icon={ResourceIcon.replicaset}
+                                iconColor="text-indigo-400"
+                                count={nsData.replicasets.length}
+                                indent={4}
+                              >
+                                {nsData.replicasets.map(rs => {
+                                  const isHealthy = rs.readyReplicas === rs.replicas
+                                  return (
+                                    <TreeNode
+                                      key={rs.name}
+                                      id={`${nsId}:rs:${rs.name}`}
+                                      label={rs.name}
+                                      icon={ResourceIcon.replicaset}
+                                      iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'}
+                                      badge={`${rs.readyReplicas}/${rs.replicas}`}
+                                      badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}
+                                      indent={5}
+                                    />
+                                  )
+                                })}
+                              </TreeNode>
+                            )}
+
+                            {/* StatefulSets */}
+                            {showStatefulSets && (
+                              <TreeNode
+                                id={`${nsId}:statefulsets`}
+                                label="StatefulSets"
+                                icon={ResourceIcon.statefulset}
+                                iconColor="text-blue-400"
+                                count={nsData.statefulsets.length}
+                                indent={4}
+                              >
+                                {nsData.statefulsets.map(ss => {
+                                  const isHealthy = ss.readyReplicas === ss.replicas
+                                  return (
+                                    <TreeNode
+                                      key={ss.name}
+                                      id={`${nsId}:ss:${ss.name}`}
+                                      label={ss.name}
+                                      icon={ResourceIcon.statefulset}
+                                      iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'}
+                                      badge={`${ss.readyReplicas}/${ss.replicas}`}
+                                      badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}
+                                      indent={5}
+                                    />
+                                  )
+                                })}
+                              </TreeNode>
+                            )}
+
+                            {/* DaemonSets */}
+                            {showDaemonSets && (
+                              <TreeNode
+                                id={`${nsId}:daemonsets`}
+                                label="DaemonSets"
+                                icon={ResourceIcon.daemonset}
+                                iconColor="text-teal-400"
+                                count={nsData.daemonsets.length}
+                                indent={4}
+                              >
+                                {nsData.daemonsets.map(ds => {
+                                  const isHealthy = ds.ready === ds.desiredScheduled
+                                  return (
+                                    <TreeNode
+                                      key={ds.name}
+                                      id={`${nsId}:ds:${ds.name}`}
+                                      label={ds.name}
+                                      icon={ResourceIcon.daemonset}
+                                      iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'}
+                                      badge={`${ds.ready}/${ds.desiredScheduled}`}
+                                      badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}
+                                      indent={5}
+                                    />
+                                  )
+                                })}
+                              </TreeNode>
+                            )}
+
+                            {/* CronJobs */}
+                            {showCronJobs && (
+                              <TreeNode
+                                id={`${nsId}:cronjobs`}
+                                label="CronJobs"
+                                icon={ResourceIcon.cronjob}
+                                iconColor="text-amber-400"
+                                count={nsData.cronjobs.length}
+                                indent={4}
+                              >
+                                {nsData.cronjobs.map(cj => (
+                                  <TreeNode
+                                    key={cj.name}
+                                    id={`${nsId}:cj:${cj.name}`}
+                                    label={cj.name}
+                                    icon={ResourceIcon.cronjob}
+                                    iconColor={cj.suspend ? 'text-gray-400' : 'text-amber-400'}
+                                    badge={cj.suspend ? 'Suspended' : cj.schedule}
+                                    badgeColor={cj.suspend ? 'bg-gray-500/20 text-gray-400' : 'bg-amber-500/20 text-amber-400'}
+                                    indent={5}
+                                  />
+                                ))}
+                              </TreeNode>
+                            )}
+
+                            {/* Ingresses */}
+                            {showIngresses && (
+                              <TreeNode
+                                id={`${nsId}:ingresses`}
+                                label="Ingresses"
+                                icon={ResourceIcon.ingress}
+                                iconColor="text-sky-400"
+                                count={nsData.ingresses.length}
+                                indent={4}
+                              >
+                                {nsData.ingresses.map(ing => (
+                                  <TreeNode
+                                    key={ing.name}
+                                    id={`${nsId}:ing:${ing.name}`}
+                                    label={ing.name}
+                                    icon={ResourceIcon.ingress}
+                                    iconColor="text-sky-400"
+                                    badge={ing.hosts.length > 0 ? ing.hosts.join(', ') : ing.class || 'No host'}
+                                    badgeColor="bg-sky-500/20 text-sky-400"
+                                    indent={5}
+                                  />
+                                ))}
+                              </TreeNode>
+                            )}
+
+                            {/* NetworkPolicies */}
+                            {showNetworkPolicies && (
+                              <TreeNode
+                                id={`${nsId}:networkpolicies`}
+                                label="NetworkPolicies"
+                                icon={ResourceIcon.networkpolicy}
+                                iconColor="text-rose-400"
+                                count={nsData.networkpolicies.length}
+                                indent={4}
+                              >
+                                {nsData.networkpolicies.map(np => (
+                                  <TreeNode
+                                    key={np.name}
+                                    id={`${nsId}:np:${np.name}`}
+                                    label={np.name}
+                                    icon={ResourceIcon.networkpolicy}
+                                    iconColor="text-rose-400"
+                                    badge={np.policyTypes.join(', ') || 'No types'}
+                                    badgeColor="bg-rose-500/20 text-rose-400"
                                     indent={5}
                                   />
                                 ))}
