@@ -6,13 +6,40 @@ import type { CloudProvider } from '../components/ui/CloudProviderIcon'
 
 const KC_AGENT_URL = 'http://127.0.0.1:8585'
 const REFRESH_INTERVAL = 60_000 // 60 seconds
+const STATUS_CHECK_TIMEOUT = 5_000
+
+/** Statuspage.io JSON API endpoints for known providers */
+const STATUSPAGE_API: Record<string, string> = {
+  anthropic: 'https://status.anthropic.com/api/v2/status.json',
+  openai: 'https://status.openai.com/api/v2/status.json',
+}
+
+/** Check service health via Statuspage.io API (works without API keys) */
+async function checkServiceHealth(providerId: string): Promise<'operational' | 'degraded' | 'down' | 'unknown'> {
+  const apiUrl = STATUSPAGE_API[providerId]
+  if (!apiUrl) return 'unknown'
+
+  try {
+    const response = await fetch(apiUrl, { signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT) })
+    if (!response.ok) return 'unknown'
+    const data = await response.json()
+    const indicator = data?.status?.indicator
+    if (indicator === 'none') return 'operational'
+    if (indicator === 'minor' || indicator === 'major') return 'degraded'
+    if (indicator === 'critical') return 'down'
+    return 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
 
 /** Health status of a single provider */
 export interface ProviderHealthInfo {
   id: string
   name: string
   category: 'ai' | 'cloud'
-  status: 'operational' | 'degraded' | 'down' | 'unknown' | 'not_configured'
+  status: 'operational' | 'degraded' | 'down' | 'unknown'
+  configured: boolean
   statusUrl?: string
   detail?: string
 }
@@ -70,14 +97,14 @@ interface KeysStatusResponse {
 /** Demo data — shows a realistic set of providers all operational */
 function getDemoProviders(): ProviderHealthInfo[] {
   return [
-    { id: 'anthropic', name: 'Anthropic (Claude)', category: 'ai', status: 'operational', statusUrl: STATUS_PAGES.anthropic, detail: 'API key configured' },
-    { id: 'openai', name: 'OpenAI', category: 'ai', status: 'operational', statusUrl: STATUS_PAGES.openai, detail: 'API key configured' },
-    { id: 'google', name: 'Google (Gemini)', category: 'ai', status: 'operational', statusUrl: STATUS_PAGES.google, detail: 'API key configured' },
-    { id: 'eks', name: 'AWS EKS', category: 'cloud', status: 'operational', statusUrl: STATUS_PAGES.eks, detail: '3 clusters' },
-    { id: 'gke', name: 'Google GKE', category: 'cloud', status: 'operational', statusUrl: STATUS_PAGES.gke, detail: '2 clusters' },
-    { id: 'aks', name: 'Azure AKS', category: 'cloud', status: 'operational', statusUrl: STATUS_PAGES.aks, detail: '1 cluster' },
-    { id: 'openshift', name: 'OpenShift', category: 'cloud', status: 'operational', statusUrl: STATUS_PAGES.openshift, detail: '1 cluster' },
-    { id: 'oci', name: 'Oracle OKE', category: 'cloud', status: 'operational', statusUrl: STATUS_PAGES.oci, detail: '1 cluster' },
+    { id: 'anthropic', name: 'Anthropic (Claude)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.anthropic, detail: 'API key configured' },
+    { id: 'openai', name: 'OpenAI', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openai, detail: 'API key configured' },
+    { id: 'google', name: 'Google (Gemini)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.google, detail: 'API key configured' },
+    { id: 'eks', name: 'AWS EKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.eks, detail: '3 clusters' },
+    { id: 'gke', name: 'Google GKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.gke, detail: '2 clusters' },
+    { id: 'aks', name: 'Azure AKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.aks, detail: '1 cluster' },
+    { id: 'openshift', name: 'OpenShift', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openshift, detail: '1 cluster' },
+    { id: 'oci', name: 'Oracle OKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.oci, detail: '1 cluster' },
   ]
 }
 
@@ -103,6 +130,7 @@ export function useProviderHealth() {
     const result: ProviderHealthInfo[] = []
 
     // --- AI Providers from /settings/keys ---
+    const unconfiguredProviders: string[] = []
     try {
       const response = await fetch(`${KC_AGENT_URL}/settings/keys`)
       if (response.ok) {
@@ -116,8 +144,10 @@ export function useProviderHealth() {
           const name = AI_PROVIDER_NAMES[key.provider] || key.displayName || key.provider
           let status: ProviderHealthInfo['status'] = 'unknown'
           let detail: string | undefined
+          let configured = false
 
           if (key.configured) {
+            configured = true
             if (key.valid === true) {
               status = 'operational'
               detail = 'API key configured and valid'
@@ -129,8 +159,10 @@ export function useProviderHealth() {
               detail = 'API key configured'
             }
           } else {
-            status = 'not_configured'
+            configured = false
+            status = 'unknown'
             detail = 'API key not configured'
+            unconfiguredProviders.push(normalized)
           }
 
           result.push({
@@ -138,6 +170,7 @@ export function useProviderHealth() {
             name,
             category: 'ai',
             status,
+            configured,
             statusUrl: STATUS_PAGES[normalized],
             detail,
           })
@@ -145,6 +178,19 @@ export function useProviderHealth() {
       }
     } catch {
       // Agent unreachable — no AI providers to show
+    }
+
+    // Check actual service health for unconfigured providers (in parallel)
+    if (unconfiguredProviders.length > 0) {
+      const healthChecks = await Promise.all(
+        unconfiguredProviders.map(async (id) => ({ id, health: await checkServiceHealth(id) }))
+      )
+      for (const { id, health } of healthChecks) {
+        const provider = result.find(p => p.id === id)
+        if (provider) {
+          provider.status = health
+        }
+      }
     }
 
     // --- Cloud Providers from cluster distributions ---
@@ -170,6 +216,7 @@ export function useProviderHealth() {
           name: getProviderLabel(provider),
           category: 'cloud',
           status: 'operational',
+          configured: true,
           statusUrl: STATUS_PAGES[provider],
           detail: `${count} cluster${count !== 1 ? 's' : ''} detected`,
         })

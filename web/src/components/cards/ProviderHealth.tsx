@@ -12,7 +12,6 @@ const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   degraded: 'bg-yellow-500',
   down: 'bg-red-500',
   unknown: 'bg-gray-400',
-  not_configured: 'bg-gray-400',
 }
 
 const STATUS_LABELS: Record<ProviderHealthInfo['status'], string> = {
@@ -20,7 +19,6 @@ const STATUS_LABELS: Record<ProviderHealthInfo['status'], string> = {
   degraded: 'Degraded',
   down: 'Down',
   unknown: 'Unknown',
-  not_configured: 'Not Configured',
 }
 
 function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; onConfigure?: () => void }) {
@@ -47,10 +45,15 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
       <div className="flex items-center gap-1.5 shrink-0">
         <div className={cn('w-2 h-2 rounded-full', STATUS_COLORS[provider.status])} />
         <span className="text-xs text-muted-foreground">{STATUS_LABELS[provider.status]}</span>
+        {!provider.configured && (
+          <span className="text-[10px] text-yellow-500 bg-yellow-500/10 px-1.5 py-0.5 rounded-full font-medium">
+            No Key
+          </span>
+        )}
       </div>
 
       {/* Configure link for unconfigured providers */}
-      {provider.status === 'not_configured' && onConfigure && (
+      {!provider.configured && onConfigure && (
         <button
           onClick={(e) => { e.stopPropagation(); onConfigure() }}
           className="shrink-0 p-1 hover:bg-purple-500/20 rounded transition-colors text-muted-foreground hover:text-purple-400"
