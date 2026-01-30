@@ -348,7 +348,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
   const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
 
-  if (isLoading) {
+  if (isLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

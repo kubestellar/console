@@ -75,7 +75,7 @@ export function ClusterComparison({ config }: ClusterComparisonProps) {
     })
   }
 
-  if (isLoading) {
+  if (isLoading && rawClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

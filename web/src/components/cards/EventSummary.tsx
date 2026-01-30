@@ -64,7 +64,7 @@ export function EventSummary() {
     return { warnings, normal, topReasons, topClusters }
   }, [filteredEvents])
 
-  if (isLoading) {
+  if (isLoading && events.length === 0) {
     return (
       <div className="space-y-3 p-1">
         <Skeleton className="h-16 w-full" />

@@ -3,6 +3,7 @@ import { api, isBackendUnavailable } from '../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from './useLocalAgent'
 import { getDemoMode, useDemoMode } from './useDemoMode'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { getPresentationMode } from './usePresentationMode'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
 const REFRESH_INTERVAL_MS = 120000
@@ -10,6 +11,13 @@ const REFRESH_INTERVAL_MS = 120000
 // Polling intervals for cluster and GPU data freshness
 const CLUSTER_POLL_INTERVAL_MS = 60000  // 60 seconds
 const GPU_POLL_INTERVAL_MS = 30000      // 30 seconds
+
+// Presentation mode multiplier for polling intervals (10 minutes minimum)
+const PRESENTATION_MODE_INTERVAL_MS = 600000
+
+function getEffectiveInterval(baseInterval: number): number {
+  return getPresentationMode() ? Math.max(baseInterval * 5, PRESENTATION_MODE_INTERVAL_MS) : baseInterval
+}
 
 // Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)
 const MIN_REFRESH_INDICATOR_MS = 500
@@ -484,7 +492,7 @@ export function useMCPStatus() {
 
     fetchStatus()
     // Poll every 2 minutes
-    const interval = setInterval(fetchStatus, REFRESH_INTERVAL_MS)
+    const interval = setInterval(fetchStatus, getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [])
 
@@ -1830,7 +1838,7 @@ export function useClusters() {
   useEffect(() => {
     const pollInterval = setInterval(() => {
       fullFetchClusters()
-    }, CLUSTER_POLL_INTERVAL_MS)
+    }, getEffectiveInterval(CLUSTER_POLL_INTERVAL_MS))
 
     return () => {
       clearInterval(pollInterval)
@@ -2189,7 +2197,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     const hasCachedData = podsCache && podsCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll for pod updates
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -2279,7 +2287,7 @@ export function useAllPods(cluster?: string, namespace?: string) {
     const hasCachedData = podsCache && podsCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll for pod updates
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -2422,7 +2430,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     const hasCachedData = podIssuesCache && podIssuesCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for pod issue updates
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -2603,7 +2611,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     const hasCachedData = eventsCache && eventsCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for events
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -2719,7 +2727,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
     const hasCachedData = deploymentIssuesCache && deploymentIssuesCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for deployment issues
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -2919,7 +2927,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
     const hasCachedData = deploymentsCache && deploymentsCache.key === cacheKey
     refetch(hasCachedData ? true : false)
     // Poll every 30 seconds for deployment updates
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -3189,7 +3197,7 @@ export function useServices(cluster?: string, namespace?: string) {
     refetch(!!hasCachedData) // silent=true if we have cached data
 
     // Poll every 30 seconds for service updates
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -4011,7 +4019,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
     const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll for PVC updates
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -4052,7 +4060,7 @@ export function usePVs(cluster?: string) {
 
   useEffect(() => {
     refetch()
-    const interval = setInterval(refetch, REFRESH_INTERVAL_MS)
+    const interval = setInterval(refetch, getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch])
 
@@ -4095,7 +4103,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-    const interval = setInterval(refetch, REFRESH_INTERVAL_MS)
+    const interval = setInterval(refetch, getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch])
 
@@ -4138,7 +4146,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-    const interval = setInterval(refetch, REFRESH_INTERVAL_MS)
+    const interval = setInterval(refetch, getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch])
 
@@ -4322,7 +4330,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     const hasCachedData = warningEventsCache && warningEventsCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for events
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
@@ -4622,7 +4630,7 @@ export function useGPUNodes(cluster?: string) {
     // Poll GPU node data periodically
     const pollInterval = setInterval(() => {
       fetchGPUNodes(cluster, 'poll')
-    }, GPU_POLL_INTERVAL_MS)
+    }, getEffectiveInterval(GPU_POLL_INTERVAL_MS))
 
     return () => {
       gpuNodeSubscribers.delete(handleUpdate)
@@ -5071,7 +5079,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   useEffect(() => {
     refetch(false)
     // Poll every 30 seconds
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch])
 
@@ -6568,7 +6576,7 @@ export function useHelmReleases(cluster?: string) {
       refetch()
     }
 
-    const interval = setInterval(() => refetch(true), HELM_REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), getEffectiveInterval(HELM_REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cluster])
 

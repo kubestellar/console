@@ -375,7 +375,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
   }, [])
 
-  if (isLoading) {
+  if (isLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

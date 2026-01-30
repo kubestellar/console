@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, Monitor, Users } from 'lucide-react'
+import { Sun, Moon, Monitor, Users, Cast } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useTheme } from '../../../hooks/useTheme'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useActiveUsers } from '../../../hooks/useActiveUsers'
 import { useDemoMode } from '../../../hooks/useDemoMode'
+import { usePresentationMode } from '../../../hooks/usePresentationMode'
 import { TourTrigger } from '../../onboarding/Tour'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
@@ -24,6 +25,7 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { isConnected } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
+  const { isPresentationMode, togglePresentationMode } = usePresentationMode()
   const { activeUsers, showBadge: showActiveUsersBadge } = useActiveUsers()
   const [showFeedback, setShowFeedback] = useState(false)
 
@@ -63,6 +65,18 @@ export function Navbar() {
 
         {/* Token Usage */}
         <TokenUsageWidget />
+
+        {/* Presentation Mode toggle */}
+        <button
+          onClick={togglePresentationMode}
+          className={isPresentationMode
+            ? 'p-2 rounded-lg transition-colors bg-blue-500/20 text-blue-400'
+            : 'p-2 rounded-lg transition-colors hover:bg-secondary text-muted-foreground'
+          }
+          title={isPresentationMode ? 'Presentation Mode ON (click to disable)' : 'Enable Presentation Mode (reduces animations for screen sharing)'}
+        >
+          <Cast className="w-5 h-5" />
+        </button>
 
         {/* Theme toggle */}
         <button

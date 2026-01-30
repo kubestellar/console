@@ -60,7 +60,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const clusterPodIssues = podIssues.length
   const clusterDeploymentIssues = deploymentIssues.length
 
-  if (clustersLoading) {
+  if (clustersLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

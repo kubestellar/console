@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
+import { getPresentationMode } from './usePresentationMode'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 
 function authHeaders(): Record<string, string> {
@@ -256,7 +257,8 @@ export function useDeployMissions() {
     // Poll on interval (first poll after 1s delay, then every POLL_INTERVAL_MS)
     const initialTimeout = setTimeout(() => {
       poll()
-      pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
+      const effectiveInterval = getPresentationMode() ? 300000 : POLL_INTERVAL_MS
+      pollRef.current = setInterval(poll, effectiveInterval)
     }, 1000)
 
     return () => {

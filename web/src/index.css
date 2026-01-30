@@ -524,6 +524,42 @@
   transition-duration: 0.01ms !important;
 }
 
+/* Presentation mode - reduces visual noise for screen sharing */
+.presentation-mode .star-field {
+  display: none !important;
+}
+
+.presentation-mode [class*="weather-"] {
+  animation: none !important;
+  transition: none !important;
+}
+
+.presentation-mode .animate-shimmer {
+  animation: none !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  background-size: initial !important;
+}
+
+.presentation-mode.light .animate-shimmer {
+  background: rgba(0, 0, 0, 0.07) !important;
+}
+
+.presentation-mode .animate-spin,
+.presentation-mode .animate-spin-min,
+.presentation-mode .animate-pulse,
+.presentation-mode .animate-ping,
+.presentation-mode .animate-bounce {
+  animation: none !important;
+}
+
+.presentation-mode .card-hover:hover {
+  transform: none !important;
+}
+
+.presentation-mode .animate-value-flash {
+  animation: none !important;
+}
+
 /* High contrast mode */
 .high-contrast {
   --border: 0 0% 100%;
@@ -1584,5 +1620,25 @@
   border-radius: 4px;
   padding: 0 4px;
   margin: 0 -4px;
+}
+
+/* Respect OS-level reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .star-field {
+    display: none !important;
+  }
+
+  .animate-shimmer {
+    animation: none !important;
+    background-size: initial !important;
+  }
 }
 

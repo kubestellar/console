@@ -63,7 +63,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   const cluster = clusters.find(c => c.name === selectedCluster)
 
-  if (clustersLoading) {
+  if (clustersLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

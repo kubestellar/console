@@ -84,7 +84,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   const addedCount = diffs.filter(d => d.type === 'added').length
   const removedCount = diffs.filter(d => d.type === 'removed').length
 
-  if (isLoading) {
+  if (isLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

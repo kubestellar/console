@@ -195,7 +195,7 @@ export function CertManager({ config: _config }: CardConfig) {
   }
 
   // Loading state
-  if (isLoading) {
+  if (isLoading && issuers.length === 0) {
     return (
       <div className="space-y-3">
         <div className="animate-pulse grid grid-cols-4 gap-1.5">

@@ -598,7 +598,7 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
     }
   }, [prs, issues, contributors, repoInfo, openPRCount, openIssueCount])
 
-  if (isLoading) {
+  if (isLoading && !repoInfo) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-3">

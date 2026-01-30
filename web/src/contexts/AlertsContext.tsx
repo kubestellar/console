@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { useGPUNodes, usePodIssues, useClusters } from '../hooks/useMCP'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
+import { getPresentationMode } from '../hooks/usePresentationMode'
 import type {
   Alert,
   AlertRule,
@@ -555,9 +556,10 @@ Please provide:
       evaluateConditions()
     }, 1000)
 
+    const alertInterval = getPresentationMode() ? 300000 : 30000
     const interval = setInterval(() => {
       evaluateConditions()
-    }, 30000)
+    }, alertInterval)
 
     return () => {
       clearTimeout(timer)
