@@ -28,7 +28,7 @@ export function AgentStatusIndicator() {
       <button
         onClick={() => setShowAgentStatus(!showAgentStatus)}
         className={cn(
-          'flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors',
+          'flex items-center justify-center gap-2 w-[5.5rem] py-1.5 rounded-lg transition-colors',
           isDemoMode
             ? 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20'
             : isDegraded
