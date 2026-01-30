@@ -74,10 +74,35 @@ let mountIndex = 0
 const MOUNT_DELAY_BASE = 16 // ~1 frame at 60fps
 const MOUNT_DELAY_INCREMENT = 8 // stagger by half frame increments
 
+// Eager mounting: progressively mount off-screen cards after visible ones settle
+const EAGER_MOUNT_INITIAL_DELAY_MS = 2000 // wait for visible cards to render first
+const EAGER_MOUNT_STAGGER_MS = 100 // stagger off-screen card mounts by 100ms each
+const eagerMountQueue = new Set<() => void>()
+let eagerMountStarted = false
+
+function scheduleEagerMount(mount: () => void) {
+  eagerMountQueue.add(mount)
+  if (!eagerMountStarted) {
+    eagerMountStarted = true
+    setTimeout(() => {
+      const batch = [...eagerMountQueue]
+      eagerMountQueue.clear()
+      // Reset so navigating to another dashboard page re-triggers eager mounting
+      eagerMountStarted = false
+      batch.forEach((fn, i) => {
+        setTimeout(fn, i * EAGER_MOUNT_STAGGER_MS)
+      })
+    }, EAGER_MOUNT_INITIAL_DELAY_MS)
+  }
+}
+
 /**
  * Hook for lazy mounting - only renders content when visible in viewport.
  * This prevents mounting 100+ cards at once when adding many cards.
  * Also staggers the rendering of visible cards to spread work across frames.
+ *
+ * Eager mounting: after visible cards settle (~2s), off-screen cards
+ * progressively mount in the background so data is ready when scrolled to.
  */
 function useLazyMount(rootMargin = '100px') {
   const [isVisible, setIsVisible] = useState(false)
@@ -113,7 +138,22 @@ function useLazyMount(rootMargin = '100px') {
     )
 
     observer.observe(element)
-    return () => observer.disconnect()
+
+    // Schedule eager mount for off-screen cards so their data prefetches
+    const eagerMount = () => {
+      setIsVisible(prev => {
+        // Only set if not already visible (IntersectionObserver may have fired first)
+        if (!prev) return true
+        return prev
+      })
+      observer.disconnect()
+    }
+    scheduleEagerMount(eagerMount)
+
+    return () => {
+      observer.disconnect()
+      eagerMountQueue.delete(eagerMount)
+    }
   }, [isVisible, rootMargin])
 
   return { ref, isVisible }
