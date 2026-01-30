@@ -14,22 +14,62 @@ interface BackendHealthResponse {
   providers: Array<{ id: string; status: string }>
 }
 
-/** Check service health via backend proxy (avoids CORS issues with status pages) */
-async function checkServiceHealthViaBackend(): Promise<Map<string, HealthStatus>> {
+/** Statuspage.io JSON API endpoints (CORS-safe, no redirects) */
+const STATUSPAGE_API: Record<string, string> = {
+  anthropic: 'https://status.claude.com/api/v2/status.json',
+  openai: 'https://status.openai.com/api/v2/status.json',
+}
+
+/** Check a single provider via Statuspage.io directly from browser */
+async function checkStatuspageDirect(apiUrl: string): Promise<HealthStatus> {
+  try {
+    const response = await fetch(apiUrl, { signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT) })
+    if (!response.ok) return 'unknown'
+    const data = await response.json()
+    const indicator = data?.status?.indicator
+    if (indicator === 'none') return 'operational'
+    if (indicator === 'minor' || indicator === 'major') return 'degraded'
+    if (indicator === 'critical') return 'down'
+    return 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+/**
+ * Check service health: try backend proxy first (covers all providers),
+ * fall back to direct Statuspage.io checks (CORS-safe subset).
+ */
+async function checkServiceHealth(providerIds: string[]): Promise<Map<string, HealthStatus>> {
   const result = new Map<string, HealthStatus>()
+
+  // Try backend proxy first (handles CORS redirects, all providers)
   try {
     const response = await fetch(`${KC_AGENT_URL}/providers/health`, {
       signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT),
     })
-    if (!response.ok) return result
-    const data: BackendHealthResponse = await response.json()
-    for (const p of data.providers) {
-      const status = (['operational', 'degraded', 'down'].includes(p.status) ? p.status : 'unknown') as HealthStatus
-      result.set(p.id, status)
+    if (response.ok) {
+      const data: BackendHealthResponse = await response.json()
+      for (const p of data.providers) {
+        const status = (['operational', 'degraded', 'down'].includes(p.status) ? p.status : 'unknown') as HealthStatus
+        result.set(p.id, status)
+      }
     }
   } catch {
-    // Backend unavailable — no health data
+    // Backend proxy unavailable — fall through to direct checks
   }
+
+  // Direct Statuspage.io fallback for providers not covered by backend
+  const uncovered = providerIds.filter(id => !result.has(id) && STATUSPAGE_API[id])
+  if (uncovered.length > 0) {
+    const checks = await Promise.all(
+      uncovered.map(async id => ({ id, status: await checkStatuspageDirect(STATUSPAGE_API[id]) }))
+    )
+    for (const { id, status } of checks) {
+      result.set(id, status)
+    }
+  }
+
   return result
 }
 
@@ -180,9 +220,9 @@ export function useProviderHealth() {
       // Agent unreachable — no AI providers to show
     }
 
-    // Check actual service health for unconfigured providers via backend proxy
+    // Check actual service health for unconfigured providers
     if (unconfiguredProviders.length > 0) {
-      const healthMap = await checkServiceHealthViaBackend()
+      const healthMap = await checkServiceHealth(unconfiguredProviders)
       for (const id of unconfiguredProviders) {
         const provider = result.find(p => p.id === id)
         if (provider && healthMap.has(id)) {
