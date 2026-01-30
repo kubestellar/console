@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 const LAST_ROUTE_KEY = 'kubestellar-last-route'
 const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
+const REMEMBER_POSITION_KEY = 'kubestellar-remember-position'
 const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
 
 /**
@@ -265,15 +266,22 @@ export function useLastRoute() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [saveScrollPositionNow])
 
-  // Scroll to top when navigating between dashboards (not on initial app load)
+  // On navigation: restore scroll if "remember position" is on, otherwise scroll to top
   useEffect(() => {
     if (!hasRestoredRef.current) return
 
     const container = getScrollContainer()
-    if (container) {
+    if (!container) return
+
+    if (getRememberPosition(location.pathname)) {
+      const timeoutId = setTimeout(() => {
+        restoreScrollPosition(location.pathname)
+      }, 50)
+      return () => clearTimeout(timeoutId)
+    } else {
       container.scrollTo({ top: 0, behavior: 'instant' })
     }
-  }, [location.pathname])
+  }, [location.pathname, restoreScrollPosition])
 
   return {
     lastRoute: localStorage.getItem(LAST_ROUTE_KEY),
@@ -301,6 +309,37 @@ export function clearLastRoute(): void {
   try {
     localStorage.removeItem(LAST_ROUTE_KEY)
     localStorage.removeItem(SCROLL_POSITIONS_KEY)
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+/**
+ * Get the "remember scroll position" preference for a dashboard path.
+ * Defaults to true (on) if no preference is stored.
+ */
+export function getRememberPosition(path: string): boolean {
+  try {
+    const stored = localStorage.getItem(REMEMBER_POSITION_KEY)
+    if (stored) {
+      const prefs = JSON.parse(stored)
+      if (path in prefs) return prefs[path]
+    }
+  } catch {
+    // Ignore
+  }
+  return true // Default: on
+}
+
+/**
+ * Set the "remember scroll position" preference for a dashboard path.
+ */
+export function setRememberPosition(path: string, enabled: boolean): void {
+  try {
+    const stored = localStorage.getItem(REMEMBER_POSITION_KEY)
+    const prefs = stored ? JSON.parse(stored) : {}
+    prefs[path] = enabled
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify(prefs))
   } catch {
     // Ignore localStorage errors
   }

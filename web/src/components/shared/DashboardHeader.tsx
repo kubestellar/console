@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { RefreshCw, Hourglass } from 'lucide-react'
+import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
 
 interface DashboardHeaderProps {
   /** Dashboard title text or ReactNode */
@@ -51,6 +53,9 @@ export function DashboardHeader({
   afterTitle,
   rightExtra,
 }: DashboardHeaderProps) {
+  const location = useLocation()
+  const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
+
   // Self-managed timestamp: updates when isFetching goes true → false
   const [internalLastUpdated, setInternalLastUpdated] = useState<Date>(() => new Date())
   const wasFetchingRef = useRef(isFetching)
@@ -92,6 +97,23 @@ export function DashboardHeader({
       <div className="flex flex-col items-end gap-0.5">
         <div className="flex items-center gap-3">
           {rightExtra}
+          <label
+            htmlFor={`remember-position-${autoRefreshId || 'default'}`}
+            className="flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground"
+            title="Remember scroll position when navigating away"
+          >
+            <input
+              type="checkbox"
+              id={`remember-position-${autoRefreshId || 'default'}`}
+              checked={rememberPosition}
+              onChange={(e) => {
+                setRememberPositionState(e.target.checked)
+                setRememberPosition(location.pathname, e.target.checked)
+              }}
+              className="rounded border-border w-3.5 h-3.5"
+            />
+            Pin
+          </label>
           {onAutoRefreshChange && (
             <label
               htmlFor={autoRefreshId || 'auto-refresh'}
