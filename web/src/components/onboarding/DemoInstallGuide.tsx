@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { X, Copy, Check, ExternalLink, Settings, Rocket, Terminal, Key, Download, ChevronRight } from 'lucide-react'
+import { X, Copy, Check, ExternalLink, Settings, Rocket, Terminal, Key, Download, ChevronRight, Github } from 'lucide-react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
 
 const DISMISSED_KEY = 'kc-demo-install-dismissed'
 
-function CopyCommand({ command, label }: { command: string; label?: string }) {
+function CopyCommand({ command }: { command: string }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(async () => {
@@ -22,18 +22,15 @@ function CopyCommand({ command, label }: { command: string; label?: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-2 w-full text-left font-mono text-sm bg-black/40 border border-gray-700/50 rounded-lg px-3 py-2 hover:border-purple-500/40 hover:bg-black/60 transition-colors group/copy"
+      className="flex items-center gap-2 w-full text-left font-mono text-[13px] bg-black/40 border border-gray-700/50 rounded-lg px-3 py-2 hover:border-purple-500/40 hover:bg-black/60 transition-colors group/copy"
       title={copied ? 'Copied!' : 'Click to copy'}
     >
-      <span className="text-gray-400 select-none">$</span>
-      <span className="flex-1 text-gray-200">{command}</span>
+      <span className="text-gray-500 select-none">$</span>
+      <span className="flex-1 text-gray-200 truncate">{command}</span>
       {copied ? (
-        <span className="flex items-center gap-1 text-green-400 text-xs shrink-0">
-          <Check className="w-3.5 h-3.5" />
-          {label || 'Copied'}
-        </span>
+        <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
       ) : (
-        <Copy className="w-4 h-4 text-gray-600 group-hover/copy:text-gray-300 shrink-0 transition-colors" />
+        <Copy className="w-3.5 h-3.5 text-gray-600 group-hover/copy:text-gray-300 shrink-0 transition-colors" />
       )}
     </button>
   )
@@ -47,7 +44,6 @@ function StepNumber({ n }: { n: number }) {
   )
 }
 
-// The modal with full install instructions
 function InstallModal({ onClose }: { onClose: () => void }) {
   const { toggleDemoMode } = useDemoMode()
 
@@ -61,75 +57,124 @@ function InstallModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       >
         <div
-          className="glass w-full max-w-lg rounded-2xl overflow-hidden animate-fade-in-up"
+          className="glass w-full max-w-xl rounded-2xl overflow-hidden animate-fade-in-up"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="relative px-6 pt-6 pb-4">
+          <div className="relative px-6 pt-6 pb-3">
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/10 transition-colors"
             >
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 shadow-lg shadow-purple-500/20">
                 <Rocket className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground">Set Up Your Console</h2>
-                <p className="text-sm text-muted-foreground">Easy as 1-2-3</p>
+                <h2 className="text-lg font-bold text-foreground">Install KubeStellar Console</h2>
+                <p className="text-sm text-muted-foreground">Run the full console on your machine</p>
               </div>
             </div>
           </div>
 
           {/* Steps */}
           <div className="px-6 space-y-5 pb-2">
-            {/* Step 1 */}
+
+            {/* Step 1: Clone & install */}
             <div className="flex gap-3">
               <StepNumber n={1} />
               <div className="flex-1 min-w-0 pt-0.5">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1.5">
                   <Download className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Install</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Clone & Install</h3>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Installs the console backend, frontend, and local agent:
+                <div className="space-y-1.5">
+                  <CopyCommand command="git clone https://github.com/kubestellar/console.git && cd console" />
+                  <CopyCommand command="cd web && npm install && cd .." />
+                </div>
+                <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+                  Requires Go 1.23+, Node.js 20+, and npm
                 </p>
-                <CopyCommand command="brew install kubestellar/tap/kc" />
               </div>
             </div>
 
-            {/* Step 2 */}
+            {/* Step 2: GitHub OAuth App */}
             <div className="flex gap-3">
               <StepNumber n={2} />
               <div className="flex-1 min-w-0 pt-0.5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Terminal className="w-4 h-4 text-blue-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Run</h3>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Github className="w-4 h-4 text-blue-400" />
+                  <h3 className="text-sm font-semibold text-foreground">Create a GitHub OAuth App</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Starts the backend, frontend, and connects your clusters:
+                  Go to{' '}
+                  <a
+                    href="https://github.com/settings/developers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                  >
+                    GitHub Developer Settings
+                  </a>
+                  {' '}&rarr; New OAuth App:
                 </p>
-                <CopyCommand command="kc" />
+                <div className="text-xs space-y-1 bg-black/30 rounded-lg px-3 py-2 border border-gray-700/30">
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground/70 shrink-0 w-28">Homepage URL</span>
+                    <span className="text-gray-300 font-mono">http://localhost:5174</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground/70 shrink-0 w-28">Callback URL</span>
+                    <span className="text-gray-300 font-mono">http://localhost:8080/auth/github/callback</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+                  Then set your Client ID &amp; Secret as environment variables
+                </p>
               </div>
             </div>
 
-            {/* Step 3 */}
+            {/* Step 3: Run */}
             <div className="flex gap-3">
               <StepNumber n={3} />
               <div className="flex-1 min-w-0 pt-0.5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Key className="w-4 h-4 text-emerald-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Configure AI Keys</h3>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Terminal className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-sm font-semibold text-foreground">Run the Console</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Add your OpenAI, Anthropic, or other LLM API keys in Settings to enable AI features.
+                  Export your GitHub OAuth credentials, then start:
+                </p>
+                <div className="space-y-1.5">
+                  <CopyCommand command="export GITHUB_CLIENT_ID=<your-client-id>" />
+                  <CopyCommand command="export GITHUB_CLIENT_SECRET=<your-client-secret>" />
+                  <CopyCommand command="./scripts/dev.sh" />
+                </div>
+                <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+                  Starts the backend on :8080 and frontend on :5174
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4: Optional - AI keys */}
+            <div className="flex gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-dashed border-gray-600 text-gray-500 text-sm font-bold shrink-0">
+                4
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Key className="w-4 h-4 text-yellow-400" />
+                  <h3 className="text-sm font-semibold text-muted-foreground">Optional: AI Keys</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Add API keys for OpenAI, Anthropic, or Google to enable AI-powered features.
                 </p>
                 <Link
                   to="/settings"
                   onClick={onClose}
-                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-secondary/50 border border-border/50 hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Settings className="w-3.5 h-3.5" />
                   Open Settings
@@ -147,7 +192,7 @@ function InstallModal({ onClose }: { onClose: () => void }) {
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              Read the full docs
+              Full documentation
               <ExternalLink className="w-3 h-3" />
             </a>
             <div className="flex items-center gap-2">
@@ -171,7 +216,7 @@ function InstallModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// Banner that sits under the demo mode banner
+// Banner under the demo mode banner
 export function DemoInstallBanner({ collapsed }: { collapsed: boolean }) {
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem(DISMISSED_KEY) === 'true'
@@ -219,7 +264,7 @@ export function DemoInstallBanner({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-// Keep the old export name for backward compat, but it's now unused in Layout
+// Legacy export — no longer used in Layout
 export function DemoInstallGuide() {
   return null
 }
