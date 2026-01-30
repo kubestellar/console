@@ -374,8 +374,8 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
-  // Provider health card - shows demo providers in demo mode
-  'provider_health',
+  // Provider health card uses real data from /settings/keys + useClusters()
+  // Only shows demo data when getDemoMode() is true (handled inside the hook)
 ])
 
 /**

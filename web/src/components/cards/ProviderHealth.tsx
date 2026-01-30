@@ -1,4 +1,5 @@
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Settings } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useProviderHealth, ProviderHealthInfo } from '../../hooks/useProviderHealth'
 import { SkeletonList } from '../ui/Skeleton'
 import { AgentIcon } from '../agent/AgentIcon'
@@ -22,7 +23,7 @@ const STATUS_LABELS: Record<ProviderHealthInfo['status'], string> = {
   not_configured: 'Not Configured',
 }
 
-function ProviderRow({ provider }: { provider: ProviderHealthInfo }) {
+function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; onConfigure?: () => void }) {
   return (
     <div className="flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-secondary/30 transition-colors">
       {/* Icon */}
@@ -48,6 +49,17 @@ function ProviderRow({ provider }: { provider: ProviderHealthInfo }) {
         <span className="text-xs text-muted-foreground">{STATUS_LABELS[provider.status]}</span>
       </div>
 
+      {/* Configure link for unconfigured providers */}
+      {provider.status === 'not_configured' && onConfigure && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onConfigure() }}
+          className="shrink-0 p-1 hover:bg-purple-500/20 rounded transition-colors text-muted-foreground hover:text-purple-400"
+          title="Configure in Settings"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+      )}
+
       {/* Status page link */}
       {provider.statusUrl && (
         <a
@@ -67,6 +79,9 @@ function ProviderRow({ provider }: { provider: ProviderHealthInfo }) {
 
 export function ProviderHealth() {
   const { aiProviders, cloudProviders, isLoading } = useProviderHealth()
+  const navigate = useNavigate()
+
+  const goToSettings = () => navigate('/settings')
 
   if (isLoading) {
     return <SkeletonList items={5} />
@@ -78,7 +93,12 @@ export function ProviderHealth() {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <p className="text-sm">No providers detected</p>
-        <p className="text-xs mt-1">Configure AI keys or connect clusters to see provider health</p>
+        <p className="text-xs mt-1">
+          <button onClick={goToSettings} className="text-purple-400 hover:underline">
+            Configure AI keys
+          </button>
+          {' '}or connect clusters to see provider health
+        </p>
       </div>
     )
   }
@@ -93,7 +113,7 @@ export function ProviderHealth() {
           </h4>
           <div className="space-y-0.5">
             {aiProviders.map(p => (
-              <ProviderRow key={p.id} provider={p} />
+              <ProviderRow key={p.id} provider={p} onConfigure={goToSettings} />
             ))}
           </div>
         </div>
