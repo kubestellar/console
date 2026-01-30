@@ -1,13 +1,13 @@
 name: Auto-QA Agent
 # Hourly quality checks with rotating focus areas.
 # Layer 1 (always): Build, lint, Go build, bundle size, npm audit
-# Layer 2 (8-day rotation via day-of-year % 8):
+# Layer 2 (always): Resilience/error handling, Inventory consistency
+# Layer 3 (8-day rotation via day-of-year % 8):
 #   0=Performance, 1=Security, 2=Navigation/A11y,
 #   3=Operator Usefulness, 4=SRE/Multi-Cluster,
-#   5=Feature Recommendations, 6=Resilience/Error Handling,
-#   7=Inventory Consistency (cross-refs INVENTORY.md + consistency.md)
+#   5=Feature Recommendations, 6=(reserved), 7=(reserved)
 #
-# Issues feed into the Copilot automation pipeline.
+# Issues auto-assign Copilot and feed into the automation pipeline.
 
 on:
   schedule:
@@ -520,10 +520,9 @@ jobs:
             echo "No overly complex components detected"
           fi
 
-      # === RESILIENCE & ERROR HANDLING (Sunday) ===
-      - name: "Focus: Swallowed errors"
+      # === RESILIENCE & ERROR HANDLING (every run) ===
+      - name: "Check: Swallowed errors"
         id: focus_swallowed
-        if: steps.focus.outputs.area == 'resilience'
         working-directory: web
         continue-on-error: true
         run: |
@@ -551,9 +550,8 @@ jobs:
             echo "No swallowed errors detected"
           fi
 
-      - name: "Focus: Missing loading and error states"
+      - name: "Check: Missing loading and error states"
         id: focus_loading_states
-        if: steps.focus.outputs.area == 'resilience'
         working-directory: web
         continue-on-error: true
         run: |
@@ -584,10 +582,9 @@ jobs:
             echo "No missing loading/error states detected"
           fi
 
-      # === INVENTORY CONSISTENCY (8th rotation) ===
-      - name: "Focus: Missing component files"
+      # === INVENTORY CONSISTENCY (every run) ===
+      - name: "Check: Missing component files"
         id: focus_missing_files
-        if: steps.focus.outputs.area == 'consistency'
         working-directory: web
         continue-on-error: true
         run: |
@@ -642,9 +639,8 @@ jobs:
             echo "All INVENTORY.md references verified"
           fi
 
-      - name: "Focus: Card type registry consistency"
+      - name: "Check: Card type registry consistency"
         id: focus_card_registry
-        if: steps.focus.outputs.area == 'consistency'
         working-directory: web
         continue-on-error: true
         run: |
@@ -683,9 +679,8 @@ jobs:
             echo "All card types verified in source"
           fi
 
-      - name: "Focus: Route consistency"
+      - name: "Check: Route consistency"
         id: focus_routes
-        if: steps.focus.outputs.area == 'consistency'
         working-directory: web
         continue-on-error: true
         run: |
@@ -729,9 +724,8 @@ jobs:
             echo "All routes verified"
           fi
 
-      - name: "Focus: Modal and drill-down consistency"
+      - name: "Check: Modal and drill-down consistency"
         id: focus_modal_consistency
-        if: steps.focus.outputs.area == 'consistency'
         working-directory: web
         continue-on-error: true
         run: |
@@ -1185,79 +1179,75 @@ jobs:
               }
             }
 
-            // Resilience (Sunday)
-            if (focusArea === 'resilience') {
-              if (process.env.FOCUS_SWALLOWED === 'true') {
-                checks.push({
-                  title: `${prefix} Swallowed errors and empty catch blocks`,
-                  body: buildFocusBody('Resilience', 'Swallowed Errors',
-                    readOutput('/tmp/focus-swallowed.txt'),
-                    ['Add proper error handling in empty catch blocks',
-                     'Show user-facing error messages instead of just logging',
-                     'Use error boundaries for React component errors',
-                     'At minimum, log errors with `console.error` for debugging'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
-                });
-              }
-              if (process.env.FOCUS_LOADING_STATES === 'true') {
-                checks.push({
-                  title: `${prefix} Components fetching data without loading/error states`,
-                  body: buildFocusBody('Resilience', 'Missing Loading/Error States',
-                    readOutput('/tmp/focus-loading-states.txt'),
-                    ['Add loading indicators (skeleton screens or spinners) while data loads',
-                     'Add error states with retry buttons for failed fetches',
-                     'Consider using a shared data-fetching wrapper or custom hook'], true),
-                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
-                });
-              }
+            // Resilience (every run)
+            if (process.env.FOCUS_SWALLOWED === 'true') {
+              checks.push({
+                title: `${prefix} Swallowed errors and empty catch blocks`,
+                body: buildFocusBody('Resilience', 'Swallowed Errors',
+                  readOutput('/tmp/focus-swallowed.txt'),
+                  ['Add proper error handling in empty catch blocks',
+                   'Show user-facing error messages instead of just logging',
+                   'Use error boundaries for React component errors',
+                   'At minimum, log errors with `console.error` for debugging'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:resilience'],
+              });
+            }
+            if (process.env.FOCUS_LOADING_STATES === 'true') {
+              checks.push({
+                title: `${prefix} Components fetching data without loading/error states`,
+                body: buildFocusBody('Resilience', 'Missing Loading/Error States',
+                  readOutput('/tmp/focus-loading-states.txt'),
+                  ['Add loading indicators (skeleton screens or spinners) while data loads',
+                   'Add error states with retry buttons for failed fetches',
+                   'Consider using a shared data-fetching wrapper or custom hook'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:resilience'],
+              });
             }
 
-            // Consistency (8th rotation)
-            if (focusArea === 'consistency') {
-              if (process.env.FOCUS_MISSING_FILES === 'true') {
-                checks.push({
-                  title: `${prefix} INVENTORY.md references missing component files`,
-                  body: buildFocusBody('Inventory Consistency', 'Missing Component Files',
-                    readOutput('/tmp/focus-missing-files.txt'),
-                    ['Remove stale entries from INVENTORY.md for deleted components',
-                     'Add missing component files if they should exist',
-                     'Run the consistency check locally to verify: `grep -oE "web/src/[^ ]+.tsx" INVENTORY.md`'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
-                });
-              }
-              if (process.env.FOCUS_CARD_REGISTRY === 'true') {
-                checks.push({
-                  title: `${prefix} Card types in INVENTORY.md not registered in source`,
-                  body: buildFocusBody('Inventory Consistency', 'Unregistered Card Types',
-                    readOutput('/tmp/focus-card-registry.txt'),
-                    ['Register missing card types in the card registry',
-                     'Remove obsolete card types from INVENTORY.md',
-                     'Ensure card type strings match between inventory and source'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
-                });
-              }
-              if (process.env.FOCUS_ROUTES === 'true') {
-                checks.push({
-                  title: `${prefix} Routes in INVENTORY.md not found in router config`,
-                  body: buildFocusBody('Inventory Consistency', 'Missing Routes',
-                    readOutput('/tmp/focus-routes.txt'),
-                    ['Add missing routes to the router configuration',
-                     'Remove obsolete routes from INVENTORY.md',
-                     'Verify route paths match between inventory and App.tsx'], false),
-                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
-                });
-              }
-              if (process.env.FOCUS_MODAL_CONSISTENCY === 'true') {
-                checks.push({
-                  title: `${prefix} Modal/drill-down inventory out of sync with source`,
-                  body: buildFocusBody('Inventory Consistency', 'Modal & Drill-Down Drift',
-                    readOutput('/tmp/focus-modal-consistency.txt'),
-                    ['Update INVENTORY.md to reflect current modals and drill-down views',
-                     'Add new drill-down views to the inventory',
-                     'Remove references to deleted modals/dialogs'], true),
-                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
-                });
-              }
+            // Consistency (every run)
+            if (process.env.FOCUS_MISSING_FILES === 'true') {
+              checks.push({
+                title: `${prefix} INVENTORY.md references missing component files`,
+                body: buildFocusBody('Inventory Consistency', 'Missing Component Files',
+                  readOutput('/tmp/focus-missing-files.txt'),
+                  ['Remove stale entries from INVENTORY.md for deleted components',
+                   'Add missing component files if they should exist',
+                   'Run the consistency check locally to verify: `grep -oE "web/src/[^ ]+.tsx" INVENTORY.md`'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:consistency'],
+              });
+            }
+            if (process.env.FOCUS_CARD_REGISTRY === 'true') {
+              checks.push({
+                title: `${prefix} Card types in INVENTORY.md not registered in source`,
+                body: buildFocusBody('Inventory Consistency', 'Unregistered Card Types',
+                  readOutput('/tmp/focus-card-registry.txt'),
+                  ['Register missing card types in the card registry',
+                   'Remove obsolete card types from INVENTORY.md',
+                   'Ensure card type strings match between inventory and source'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:consistency'],
+              });
+            }
+            if (process.env.FOCUS_ROUTES === 'true') {
+              checks.push({
+                title: `${prefix} Routes in INVENTORY.md not found in router config`,
+                body: buildFocusBody('Inventory Consistency', 'Missing Routes',
+                  readOutput('/tmp/focus-routes.txt'),
+                  ['Add missing routes to the router configuration',
+                   'Remove obsolete routes from INVENTORY.md',
+                   'Verify route paths match between inventory and App.tsx'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:consistency'],
+              });
+            }
+            if (process.env.FOCUS_MODAL_CONSISTENCY === 'true') {
+              checks.push({
+                title: `${prefix} Modal/drill-down inventory out of sync with source`,
+                body: buildFocusBody('Inventory Consistency', 'Modal & Drill-Down Drift',
+                  readOutput('/tmp/focus-modal-consistency.txt'),
+                  ['Update INVENTORY.md to reflect current modals and drill-down views',
+                   'Add new drill-down views to the inventory',
+                   'Remove references to deleted modals/dialogs'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:consistency'],
+              });
             }
 
             // ── Create issues ──
