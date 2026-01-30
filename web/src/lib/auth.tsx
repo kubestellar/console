@@ -92,16 +92,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Demo token — check if the backend has come online since the token was issued.
-    // If so, clear the stale demo token so the login screen appears and the user
-    // can authenticate with a real JWT via GitHub OAuth.
+    // If the user explicitly enabled demo mode (via the toggle), keep it even if
+    // the backend is available. Otherwise, clear the stale demo token so the login
+    // screen appears and the user can authenticate with a real JWT via GitHub OAuth.
     if (effectiveToken === 'demo-token') {
-      const backendUp = await checkBackendAvailability(true)
-      if (backendUp) {
-        localStorage.removeItem('token')
-        cacheUser(null)
-        setTokenState(null)
-        setUser(null)
-        return
+      const userExplicitlyEnabledDemo = localStorage.getItem('kc-demo-mode') === 'true'
+      if (!userExplicitlyEnabledDemo) {
+        const backendUp = await checkBackendAvailability(true)
+        if (backendUp) {
+          localStorage.removeItem('token')
+          cacheUser(null)
+          setTokenState(null)
+          setUser(null)
+          return
+        }
       }
       setDemoMode()
       return

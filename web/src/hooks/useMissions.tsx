@@ -91,6 +91,7 @@ const MissionContext = createContext<MissionContextValue | null>(null)
 const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
 const MISSIONS_STORAGE_KEY = 'kc_missions'
 const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
+const SELECTED_AGENT_KEY = 'kc_selected_agent'
 
 // Load missions from localStorage
 function loadMissions(): Mission[] {
@@ -374,7 +375,19 @@ The AI missions feature requires the local agent to be running.
       const payload = message.payload as AgentsListPayload
       setAgents(payload.agents)
       setDefaultAgent(payload.defaultAgent)
-      setSelectedAgent(payload.selected || payload.defaultAgent)
+      // Prefer persisted selection if the agent is still available
+      const persisted = localStorage.getItem(SELECTED_AGENT_KEY)
+      const persistedAvailable = persisted && payload.agents.some(a => a.name === persisted && a.available)
+      const resolved = persistedAvailable ? persisted : (payload.selected || payload.defaultAgent)
+      setSelectedAgent(resolved)
+      // If we restored a persisted agent that differs from the server's selection, tell the server
+      if (persistedAvailable && persisted !== payload.selected && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          id: `select-agent-${Date.now()}`,
+          type: 'select_agent',
+          payload: { agent: persisted }
+        }))
+      }
       setAgentsLoading(false)
       return
     }
@@ -382,6 +395,7 @@ The AI missions feature requires the local agent to be running.
     if (message.type === 'agent_selected') {
       const payload = message.payload as AgentSelectedPayload
       setSelectedAgent(payload.agent)
+      localStorage.setItem(SELECTED_AGENT_KEY, payload.agent)
       return
     }
 
@@ -749,6 +763,9 @@ The AI missions feature requires the local agent to be running.
 
   // Select an AI agent
   const selectAgent = useCallback((agentName: string) => {
+    // Persist immediately so the choice survives page refresh
+    localStorage.setItem(SELECTED_AGENT_KEY, agentName)
+    setSelectedAgent(agentName)
     ensureConnection().then(() => {
       wsRef.current?.send(JSON.stringify({
         id: `select-agent-${Date.now()}`,
