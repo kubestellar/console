@@ -11,30 +11,39 @@ export function AgentStatusIndicator() {
   const [showAgentStatus, setShowAgentStatus] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const agentRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside or moving mouse 20px away
-  const CLOSE_DISTANCE = 20
+  // Close dropdown when clicking outside or moving mouse 20px+ away from
+  // the combined trigger-button + dropdown area.
   useEffect(() => {
+    if (!showAgentStatus) return
+
+    const CLOSE_DISTANCE = 20
+
     const handleClickOutside = (event: MouseEvent) => {
       if (agentRef.current && !agentRef.current.contains(event.target as Node)) {
         setShowAgentStatus(false)
       }
     }
+
     const handleMouseMove = (event: MouseEvent) => {
-      if (!showAgentStatus || !agentRef.current) return
-      const rect = agentRef.current.getBoundingClientRect()
-      const dx = event.clientX < rect.left - CLOSE_DISTANCE ? rect.left - CLOSE_DISTANCE - event.clientX
-        : event.clientX > rect.right + CLOSE_DISTANCE ? event.clientX - rect.right - CLOSE_DISTANCE : 0
-      const dy = event.clientY < rect.top - CLOSE_DISTANCE ? rect.top - CLOSE_DISTANCE - event.clientY
-        : event.clientY > rect.bottom + CLOSE_DISTANCE ? event.clientY - rect.bottom - CLOSE_DISTANCE : 0
-      if (dx > 0 || dy > 0) {
+      const trigger = agentRef.current?.getBoundingClientRect()
+      const dropdown = dropdownRef.current?.getBoundingClientRect()
+      if (!trigger) return
+
+      // Combined bounding box of trigger button + dropdown panel
+      const top = Math.min(trigger.top, dropdown?.top ?? trigger.top) - CLOSE_DISTANCE
+      const bottom = Math.max(trigger.bottom, dropdown?.bottom ?? trigger.bottom) + CLOSE_DISTANCE
+      const left = Math.min(trigger.left, dropdown?.left ?? trigger.left) - CLOSE_DISTANCE
+      const right = Math.max(trigger.right, dropdown?.right ?? trigger.right) + CLOSE_DISTANCE
+
+      if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) {
         setShowAgentStatus(false)
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside)
-    if (showAgentStatus) {
-      document.addEventListener('mousemove', handleMouseMove)
-    }
+    document.addEventListener('mousemove', handleMouseMove)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('mousemove', handleMouseMove)
@@ -77,7 +86,7 @@ export function AgentStatusIndicator() {
 
       {/* Agent status dropdown */}
       {showAgentStatus && (
-        <div className="absolute top-full right-0 mt-2 w-72 bg-card border border-border rounded-lg shadow-xl z-50">
+        <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-72 bg-card border border-border rounded-lg shadow-xl z-50">
           {/* Demo Mode Toggle */}
           <div className="p-3 border-b border-border">
             <div className="flex items-center justify-between">

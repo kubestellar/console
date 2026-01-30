@@ -48,11 +48,9 @@ export function Navbar() {
         {/* Update Indicator */}
         <UpdateIndicator />
 
-        {/* Agent area — fixed-width wrapper prevents layout shift when selector toggles */}
-        <div className="flex items-center justify-end gap-1 shrink-0" style={{ minWidth: '10rem' }}>
-          <AgentSelector compact showSettings={true} />
-          <AgentStatusIndicator />
-        </div>
+        {/* Agent Selector + Status — selector renders invisible placeholder in demo mode */}
+        <AgentSelector compact showSettings={true} />
+        <AgentStatusIndicator />
 
         {/* Language Selector */}
         <LanguageSelector />

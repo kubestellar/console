@@ -61,8 +61,17 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
     }
   }, [isOpen])
 
-  // In demo mode, agent selection is not applicable — render nothing
-  if (isDemoMode) return null
+  // In demo mode, render an invisible placeholder to reserve layout space
+  // and prevent navbar items from shifting when toggling demo mode.
+  if (isDemoMode) {
+    return (
+      <div className="invisible pointer-events-none" aria-hidden>
+        <div className="flex items-center gap-2 px-3 py-1.5">
+          <div className="w-4 h-4" />
+        </div>
+      </div>
+    )
+  }
 
   if (agentsLoading) {
     return (
