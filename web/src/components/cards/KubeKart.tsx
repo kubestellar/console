@@ -82,6 +82,7 @@ export function KubeKart() {
   })
 
   const aiKartsRef = useRef<Kart[]>([])
+  const aiDistancesRef = useRef<number[]>([])
   const powerUpsRef = useRef<PowerUp[]>([])
   const keysRef = useRef<Set<string>>(new Set())
   const animationRef = useRef<number>(0)
@@ -89,6 +90,8 @@ export function KubeKart() {
   const checkpointsRef = useRef<number[]>([])
   const activeBoostRef = useRef(0)
   const activeShieldRef = useRef(0)
+  const raceTimeRef = useRef(0)
+  const bestTimeRef = useRef(bestTime)
 
   // Generate track checkpoints
   const initTrack = useCallback(() => {
@@ -120,6 +123,8 @@ export function KubeKart() {
       color: aiColors[i],
       name: KART_NAMES[i + 1],
     }))
+    // AI karts start behind the player (negative distance = behind on grid)
+    aiDistancesRef.current = Array.from({ length: AI_COUNT }, (_, i) => -(i + 1) * 30)
 
     // Create power-ups along track
     powerUpsRef.current = []
@@ -154,8 +159,12 @@ export function KubeKart() {
 
   // Update AI karts
   const updateAI = useCallback((kart: Kart, index: number) => {
+    // Compute AI's effective screen Y for curve tracking
+    const aiDistance = aiDistancesRef.current[index]
+    const aiScreenY = (CANVAS_HEIGHT - 80) - (aiDistance - trackScrollRef.current)
+
     // Simple AI: follow track center with some variation
-    const trackCenter = CANVAS_WIDTH / 2 + getTrackCurve(kart.y) * 100
+    const trackCenter = CANVAS_WIDTH / 2 + getTrackCurve(aiScreenY) * 100
     const targetX = trackCenter + (index - 1) * 30
 
     // Steer towards target
@@ -170,9 +179,12 @@ export function KubeKart() {
       kart.speed += ACCELERATION * 0.8
     }
 
-    // Apply movement
+    // Apply horizontal movement
     kart.x += Math.cos(kart.angle) * kart.speed * 0.3
-    kart.y += Math.sin(kart.angle) * kart.speed
+
+    // Track forward distance (equivalent to trackScrollRef for player)
+    const forwardMovement = -Math.sin(kart.angle) * kart.speed
+    aiDistancesRef.current[index] += forwardMovement
 
     // Keep on track
     const trackLeft = (CANVAS_WIDTH - TRACK_WIDTH) / 2 + 30
@@ -262,9 +274,10 @@ export function KubeKart() {
 
       if (currentLap > totalLaps) {
         // Race finished
-        const finalTime = raceTime
-        if (finalTime < bestTime) {
+        const finalTime = raceTimeRef.current
+        if (finalTime < bestTimeRef.current) {
           setBestTime(finalTime)
+          bestTimeRef.current = finalTime
           localStorage.setItem('kubeKartBestTime', finalTime.toString())
         }
         setGameState('finished')
@@ -275,21 +288,29 @@ export function KubeKart() {
     // Update AI karts
     aiKartsRef.current.forEach((kart, i) => {
       updateAI(kart, i)
-      // AI lap progress (simplified)
-      const aiProgress = trackScrollRef.current * (0.9 + i * 0.05)
-      kart.lap = Math.floor(aiProgress / lapLength) + 1
+      // AI lap progress based on actual distance traveled
+      const aiDistance = aiDistancesRef.current[i]
+      kart.lap = Math.floor(aiDistance / lapLength) + 1
     })
 
-    // Calculate position
-    const allKarts = [player, ...aiKartsRef.current]
-    allKarts.sort((a, b) => {
+    // Calculate position based on distance
+    const playerDistance = trackScrollRef.current
+    const positions = [
+      { isPlayer: true, lap: player.lap, distance: playerDistance },
+      ...aiKartsRef.current.map((kart, i) => ({
+        isPlayer: false,
+        lap: kart.lap,
+        distance: aiDistancesRef.current[i],
+      })),
+    ]
+    positions.sort((a, b) => {
       if (a.lap !== b.lap) return b.lap - a.lap
-      return b.isPlayer ? 1 : -1 // Simplified position calc
+      return b.distance - a.distance
     })
-    const playerPos = allKarts.findIndex(k => k.isPlayer) + 1
+    const playerPos = positions.findIndex(k => k.isPlayer) + 1
     setPosition(playerPos)
 
-  }, [isOnTrack, updateAI, raceTime, bestTime, totalLaps])
+  }, [isOnTrack, updateAI, totalLaps])
 
   // Render
   const render = useCallback(() => {
@@ -357,8 +378,8 @@ export function KubeKart() {
     })
 
     // Draw AI karts
-    aiKartsRef.current.forEach(kart => {
-      drawKart(ctx, kart)
+    aiKartsRef.current.forEach((kart, i) => {
+      drawKart(ctx, kart, false, false, i)
     })
 
     // Draw player kart
@@ -392,9 +413,16 @@ export function KubeKart() {
   }, [getTrackCurve])
 
   // Draw kart helper
-  const drawKart = (ctx: CanvasRenderingContext2D, kart: Kart, hasBoost = false, _hasShield = false) => {
-    const screenY = kart.isPlayer ? CANVAS_HEIGHT - 80 :
-      CANVAS_HEIGHT - 80 - (kart.y - playerRef.current.y) + (trackScrollRef.current - kart.checkpoint)
+  const drawKart = (ctx: CanvasRenderingContext2D, kart: Kart, hasBoost = false, _hasShield = false, aiIndex = -1) => {
+    let screenY: number
+    if (kart.isPlayer) {
+      screenY = CANVAS_HEIGHT - 80
+    } else {
+      // AI screen position: relative to player based on distance traveled
+      const aiDistance = aiIndex >= 0 ? aiDistancesRef.current[aiIndex] : 0
+      const playerDistance = trackScrollRef.current
+      screenY = (CANVAS_HEIGHT - 80) - (aiDistance - playerDistance)
+    }
 
     ctx.save()
     ctx.translate(kart.x, kart.isPlayer ? CANVAS_HEIGHT - 80 : screenY)
@@ -428,6 +456,12 @@ export function KubeKart() {
     ctx.restore()
   }
 
+  // Stable refs for game loop callbacks to avoid effect restarts
+  const updateRef = useRef(update)
+  const renderRef = useRef(render)
+  useEffect(() => { updateRef.current = update }, [update])
+  useEffect(() => { renderRef.current = render }, [render])
+
   // Game loop
   useEffect(() => {
     if (gameState !== 'playing') return
@@ -439,15 +473,16 @@ export function KubeKart() {
       const delta = (now - lastTime) / 1000
       lastTime = now
 
-      setRaceTime(t => t + delta)
-      update()
-      render()
+      raceTimeRef.current += delta
+      setRaceTime(raceTimeRef.current)
+      updateRef.current()
+      renderRef.current()
       animationRef.current = requestAnimationFrame(gameLoop)
     }
 
     animationRef.current = requestAnimationFrame(gameLoop)
     return () => cancelAnimationFrame(animationRef.current)
-  }, [gameState, update, render])
+  }, [gameState])
 
   // Countdown
   useEffect(() => {
@@ -492,6 +527,7 @@ export function KubeKart() {
 
   const startGame = () => {
     initTrack()
+    raceTimeRef.current = 0
     setRaceTime(0)
     setPlayerLap(1)
     setPosition(4)

@@ -350,6 +350,13 @@ export function KubeKong(_props: CardComponentProps) {
     ctx.restore()
   }, [player, barrels, bossFrame, helpText, isExpanded])
 
+  // Stable ref for draw to avoid restarting the game loop when draw changes
+  const drawRef = useRef(draw)
+  useEffect(() => { drawRef.current = draw }, [draw])
+
+  // Ref for barrel jump scoring dedup
+  const scoredBarrelsRef = useRef<Set<number>>(new Set())
+
   // Game loop
   useEffect(() => {
     if (!isPlaying || gameOver) {
@@ -362,6 +369,7 @@ export function KubeKong(_props: CardComponentProps) {
 
     let tick = 0
     let barrelSpawnCounter = 0
+    scoredBarrelsRef.current.clear()
 
     gameLoopRef.current = setInterval(() => {
       tick++
@@ -493,8 +501,9 @@ export function KubeKong(_props: CardComponentProps) {
       setBarrels(bs => {
         const newBarrels: Barrel[] = []
 
-        for (const b of bs) {
-          let newX = b.x + b.vx
+        for (let bi = 0; bi < bs.length; bi++) {
+          const b = bs[bi]
+          const newX = b.x + b.vx
           let newY = b.y + b.vy
           let newVx = b.vx
           let newVy = b.vy
@@ -566,12 +575,18 @@ export function KubeKong(_props: CardComponentProps) {
             continue
           }
 
-          // Check if player jumped over barrel
+          // Check if player jumped over barrel (score once per barrel)
           if (state.player.vy < 0 &&  // Player going up (jumping)
               py < newY &&  // Player above barrel
               py > newY - 30 &&  // Not too far above
-              Math.abs(px - newX) < 20) {  // Horizontally close
+              Math.abs(px - newX) < 20 &&  // Horizontally close
+              !scoredBarrelsRef.current.has(bi)) {  // Haven't scored this barrel yet
+            scoredBarrelsRef.current.add(bi)
             setScore(s => s + 100)
+          }
+          // Clear scored status when player lands (no longer jumping)
+          if (state.player.onGround) {
+            scoredBarrelsRef.current.delete(bi)
           }
 
           newBarrels.push({ ...b, x: newX, y: newY, vx: newVx, vy: newVy })
@@ -580,7 +595,7 @@ export function KubeKong(_props: CardComponentProps) {
         return newBarrels
       })
 
-      draw()
+      drawRef.current()
     }, 33)
 
     return () => {
@@ -588,7 +603,7 @@ export function KubeKong(_props: CardComponentProps) {
         clearInterval(gameLoopRef.current)
       }
     }
-  }, [isPlaying, gameOver, draw, getOnLadder, checkPlatformCollision, level])
+  }, [isPlaying, gameOver, getOnLadder, checkPlatformCollision, level, lives])
 
   // Keyboard controls
   useEffect(() => {
