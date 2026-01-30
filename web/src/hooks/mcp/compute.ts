@@ -1,0 +1,661 @@
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { api } from '../../lib/api'
+import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
+import { getDemoMode } from '../useDemoMode'
+import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
+import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
+
+// Module-level cache for GPU nodes (persists across navigation)
+interface GPUNodeCache {
+  nodes: GPUNode[]
+  lastUpdated: Date | null
+  isLoading: boolean
+  isRefreshing: boolean
+  error: string | null
+  consecutiveFailures: number
+  lastRefresh: Date | null
+}
+
+// Try to restore GPU cache from localStorage for instant display on page load
+const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
+function loadGPUCacheFromStorage(): GPUNodeCache {
+  try {
+    const stored = localStorage.getItem(GPU_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (parsed.nodes && parsed.nodes.length > 0) {
+        return {
+          nodes: parsed.nodes,
+          lastUpdated: parsed.lastUpdated ? new Date(parsed.lastUpdated) : null,
+          isLoading: false,
+          isRefreshing: false,
+          error: null,
+          consecutiveFailures: 0,
+          lastRefresh: parsed.lastUpdated ? new Date(parsed.lastUpdated) : null,
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return { nodes: [], lastUpdated: null, isLoading: false, isRefreshing: false, error: null, consecutiveFailures: 0, lastRefresh: null }
+}
+
+function saveGPUCacheToStorage(cache: GPUNodeCache) {
+  try {
+    // Never save demo data to localStorage - only save real cluster data
+    // Demo data has cluster names like "vllm-gpu-cluster" which don't match real clusters
+    if (cache.nodes.length > 0 && !getDemoMode()) {
+      localStorage.setItem(GPU_CACHE_KEY, JSON.stringify({
+        nodes: cache.nodes,
+        lastUpdated: cache.lastUpdated?.toISOString(),
+      }))
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export let gpuNodeCache: GPUNodeCache = loadGPUCacheFromStorage()
+
+export const gpuNodeSubscribers = new Set<(cache: GPUNodeCache) => void>()
+
+export function notifyGPUNodeSubscribers() {
+  gpuNodeSubscribers.forEach(subscriber => subscriber(gpuNodeCache))
+}
+
+export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
+  const prevCount = gpuNodeCache.nodes.length
+
+  // CRITICAL: Never allow clearing nodes if we have good data
+  // This prevents any code path from accidentally wiping the cache
+  if (updates.nodes !== undefined && updates.nodes.length === 0 && prevCount > 0) {
+    console.warn('[GPU Cache] BLOCKED: Attempt to clear', prevCount, 'nodes - preserving existing data')
+    console.trace('[GPU Cache] Stack trace for blocked clear')
+    // Remove nodes from updates to preserve existing data
+    const { nodes: _ignored, ...safeUpdates } = updates
+    gpuNodeCache = { ...gpuNodeCache, ...safeUpdates }
+  } else {
+    gpuNodeCache = { ...gpuNodeCache, ...updates }
+  }
+
+  const newCount = gpuNodeCache.nodes.length
+  if (updates.nodes !== undefined && updates.nodes.length > 0) {
+    console.log('[GPU Cache] Nodes updated:', prevCount, '->', newCount)
+  }
+
+  // Persist to localStorage when nodes are updated (and we have data)
+  if (updates.nodes !== undefined && gpuNodeCache.nodes.length > 0) {
+    saveGPUCacheToStorage(gpuNodeCache)
+  }
+  notifyGPUNodeSubscribers()
+}
+
+// Fetch GPU nodes (shared across all consumers)
+let gpuFetchInProgress = false
+async function fetchGPUNodes(cluster?: string, source?: string) {
+  const token = localStorage.getItem('token')
+  console.log('[GPU] fetchGPUNodes:', { source, cluster, demoMode: getDemoMode(), hasToken: !!token, inProgress: gpuFetchInProgress })
+
+  // If demo mode is enabled, use demo data instead of fetching
+  if (getDemoMode()) {
+    console.log('[GPU] Using demo data (demo mode enabled)')
+    updateGPUNodeCache({
+      nodes: getDemoGPUNodes(),
+      lastUpdated: new Date(),
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      consecutiveFailures: 0,
+      lastRefresh: new Date(),
+    })
+    return
+  }
+
+  // Note: We don't skip for demo token because local agent works without auth
+
+  if (gpuFetchInProgress) {
+    console.log('[GPU] Fetch already in progress, skipping')
+    return
+  }
+  gpuFetchInProgress = true
+
+  // NOTE: We no longer clear localStorage cache before fetch.
+  // This prevents losing GPU data if the fetch fails.
+  // The cache is only updated when we successfully get new data.
+
+  // Show loading only if no cached data, otherwise show refreshing
+  if (gpuNodeCache.nodes.length === 0) {
+    updateGPUNodeCache({ isLoading: true, isRefreshing: false })
+  } else {
+    updateGPUNodeCache({ isLoading: false, isRefreshing: true })
+  }
+
+  try {
+    const params = new URLSearchParams()
+    if (cluster) params.append('cluster', cluster)
+
+    let newNodes: GPUNode[] = []
+
+    // Try local agent first (works without backend running)
+    if (!isAgentUnavailable()) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout for large clusters
+        const response = await fetch(`${LOCAL_AGENT_URL}/gpu-nodes?${params}`, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' },
+        })
+        clearTimeout(timeoutId)
+        if (response.ok) {
+          const data = await response.json()
+          newNodes = data.nodes || []
+          reportAgentDataSuccess()
+        } else {
+          throw new Error('Local agent returned error')
+        }
+      } catch {
+        // Agent failed, will try backend below
+      }
+    }
+
+    // If agent didn't return data, try backend API as fallback (only if authenticated)
+    if (newNodes.length === 0 && token && token !== 'demo-token') {
+      try {
+        const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
+        newNodes = data.nodes || []
+      } catch {
+        // Both failed, will fall through to error handling
+        if (gpuNodeCache.nodes.length === 0) {
+          throw new Error('Both local agent and backend failed')
+        }
+        // If we have cached data, just keep it
+      }
+    }
+
+    // Update with new data, but protect against replacing good data with empty results
+    // This prevents a failed refresh from wiping out valid cached GPU info
+    const currentCacheHasData = gpuNodeCache.nodes.length > 0
+    const newDataHasContent = newNodes.length > 0
+
+    // Only update cache if:
+    // 1. We got new data (newNodes.length > 0), OR
+    // 2. Cache was already empty (nothing to preserve)
+    // Never replace good cached data with empty results
+    const shouldUpdateCache = newDataHasContent || !currentCacheHasData
+
+    console.log('[GPU] Update decision:', {
+      newNodesCount: newNodes.length,
+      cacheCount: gpuNodeCache.nodes.length,
+      shouldUpdateCache,
+      reason: !shouldUpdateCache ? 'preserving cache' : (newDataHasContent ? 'got new data' : 'cache was empty')
+    })
+
+    if (shouldUpdateCache && newDataHasContent) {
+      console.log('[GPU] Updating cache with', newNodes.length, 'nodes')
+      updateGPUNodeCache({
+        nodes: newNodes,
+        lastUpdated: new Date(),
+        isLoading: false,
+        isRefreshing: false,
+        error: null,
+        consecutiveFailures: 0,
+        lastRefresh: new Date(),
+      })
+    } else {
+      console.log('[GPU] Preserving cache - empty fetch result or no change needed')
+      updateGPUNodeCache({
+        isLoading: false,
+        isRefreshing: false,
+        lastRefresh: new Date(),
+        // Only set error if we had no cache and got no data
+        error: !currentCacheHasData && !newDataHasContent ? 'No GPU nodes found' : null,
+      })
+    }
+  } catch (err) {
+    console.log('[GPU] Fetch error:', err)
+    const newFailures = gpuNodeCache.consecutiveFailures + 1
+
+    // On error, preserve existing cached data
+    // Only use demo data if demo mode is explicitly enabled
+    if (gpuNodeCache.nodes.length === 0 && getDemoMode()) {
+      console.log('[GPU] No cache, using demo data (demo mode enabled)')
+      updateGPUNodeCache({
+        nodes: getDemoGPUNodes(),
+        isLoading: false,
+        isRefreshing: false,
+        error: 'Failed to fetch GPU nodes',
+        consecutiveFailures: newFailures,
+        lastRefresh: new Date(),
+      })
+    } else {
+      console.log('[GPU] Preserving cache on error (or no demo data fallback)')
+
+      // Try to restore from localStorage if memory cache is empty
+      if (gpuNodeCache.nodes.length === 0) {
+        const storedCache = loadGPUCacheFromStorage()
+        if (storedCache.nodes.length > 0) {
+          console.log('[GPU] Restored', storedCache.nodes.length, 'nodes from localStorage')
+          updateGPUNodeCache({
+            ...storedCache,
+            error: 'Using cached data - fetch failed',
+            consecutiveFailures: newFailures,
+            lastRefresh: new Date(),
+          })
+        } else {
+          // No cache to restore, update state with error
+          updateGPUNodeCache({
+            isLoading: false,
+            isRefreshing: false,
+            error: 'Failed to fetch GPU nodes',
+            consecutiveFailures: newFailures,
+            lastRefresh: new Date(),
+          })
+        }
+      } else {
+        // Preserve existing memory cache on error
+        updateGPUNodeCache({
+          isLoading: false,
+          isRefreshing: false,
+          error: 'Failed to refresh GPU nodes',
+          consecutiveFailures: newFailures,
+          lastRefresh: new Date(),
+        })
+      }
+
+      // Retry logic: schedule a retry if we haven't exceeded max retries
+      const MAX_RETRIES = 2
+      const RETRY_DELAYS = [2000, 5000] // 2s, then 5s
+      if (newFailures <= MAX_RETRIES && !getDemoMode()) {
+        const delay = RETRY_DELAYS[newFailures - 1] || 5000
+        console.log(`[GPU] Scheduling retry ${newFailures}/${MAX_RETRIES} in ${delay}ms`)
+        setTimeout(() => {
+          fetchGPUNodes(cluster, `retry-${newFailures}`)
+        }, delay)
+      }
+    }
+  } finally {
+    gpuFetchInProgress = false
+  }
+}
+
+// Hook to get GPU nodes with shared caching
+export function useGPUNodes(cluster?: string) {
+  const [state, setState] = useState<GPUNodeCache>(gpuNodeCache)
+
+  useEffect(() => {
+    // Subscribe to cache updates
+    const handleUpdate = (cache: GPUNodeCache) => setState(cache)
+    gpuNodeSubscribers.add(handleUpdate)
+
+    // Fetch if cache is empty or stale (older than 30 seconds)
+    const isStale = !gpuNodeCache.lastUpdated ||
+      (Date.now() - gpuNodeCache.lastUpdated.getTime()) > 30000
+    if (gpuNodeCache.nodes.length === 0 || isStale) {
+      fetchGPUNodes(cluster)
+    }
+
+    // Poll GPU node data periodically
+    const pollInterval = setInterval(() => {
+      fetchGPUNodes(cluster, 'poll')
+    }, getEffectiveInterval(GPU_POLL_INTERVAL_MS))
+
+    return () => {
+      gpuNodeSubscribers.delete(handleUpdate)
+      clearInterval(pollInterval)
+    }
+  }, [cluster])
+
+  const refetch = useCallback(() => {
+    fetchGPUNodes(cluster)
+  }, [cluster])
+
+  // Deduplicate GPU nodes by name to avoid counting same physical node twice
+  // This handles cases where the same node appears under different cluster contexts
+  const deduplicatedNodes = useMemo(() => {
+    const seenNodes = new Map<string, GPUNode>()
+    state.nodes.forEach(node => {
+      const nodeKey = node.name
+      const existing = seenNodes.get(nodeKey)
+
+      // Prefer short cluster names (without '/') over long context paths
+      // Short names like 'vllm-d' match filtering better than 'default/api-fmaas-vllm-d-...'
+      const isShortName = !node.cluster.includes('/')
+      const existingIsShortName = existing ? !existing.cluster.includes('/') : false
+
+      if (!existing) {
+        // First time seeing this node - ensure gpuAllocated doesn't exceed gpuCount
+        seenNodes.set(nodeKey, {
+          ...node,
+          gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+        })
+      } else if (isShortName && !existingIsShortName) {
+        // New entry has short cluster name, existing has long - prefer short
+        seenNodes.set(nodeKey, {
+          ...node,
+          gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+        })
+      } else if (!isShortName && existingIsShortName) {
+        // Existing has short name, keep it - don't replace
+      } else {
+        // Both have same type of name - keep the one with more reasonable data
+        const existingValid = existing.gpuAllocated <= existing.gpuCount
+        const newValid = node.gpuAllocated <= node.gpuCount
+        if (newValid && !existingValid) {
+          seenNodes.set(nodeKey, {
+            ...node,
+            gpuAllocated: Math.min(node.gpuAllocated, node.gpuCount)
+          })
+        }
+      }
+    })
+    return Array.from(seenNodes.values())
+  }, [state.nodes])
+
+  // Filter by cluster if specified
+  const filteredNodes = cluster
+    ? deduplicatedNodes.filter(n => n.cluster === cluster || n.cluster.startsWith(cluster))
+    : deduplicatedNodes
+
+  return {
+    nodes: filteredNodes,
+    isLoading: state.isLoading,
+    isRefreshing: state.isRefreshing,
+    error: state.error,
+    refetch,
+    consecutiveFailures: state.consecutiveFailures,
+    isFailed: state.consecutiveFailures >= 3,
+    lastRefresh: state.lastRefresh,
+  }
+}
+
+// Hook to get detailed node information
+export function useNodes(cluster?: string) {
+  const [nodes, setNodes] = useState<NodeInfo[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Reset state when cluster changes
+  useEffect(() => {
+    setNodes([])
+    setIsLoading(true)
+    setError(null)
+  }, [cluster])
+
+  const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoNodes = getDemoNodes().filter(n => !cluster || n.cluster === cluster)
+      setNodes(demoNodes)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
+    setIsLoading(true)
+
+    // Try local agent HTTP endpoint first (works without backend)
+    if (cluster && !isAgentUnavailable()) {
+      try {
+        console.log(`[useNodes] Fetching from local agent for ${cluster}`)
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const response = await fetch(`${LOCAL_AGENT_URL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' },
+        })
+        clearTimeout(timeoutId)
+
+        if (response.ok) {
+          const data = await response.json()
+          const nodeData = data.nodes || []
+          if (nodeData.length > 0) {
+            // Map to NodeInfo format
+            const mappedNodes: NodeInfo[] = nodeData.map((n: Record<string, unknown>) => ({
+              name: n.name as string,
+              cluster: cluster,
+              status: n.status as string || 'Unknown',
+              roles: n.roles as string[] || [],
+              kubeletVersion: n.kubeletVersion as string || '',
+              cpuCapacity: n.cpuCapacity as string || '0',
+              memoryCapacity: n.memoryCapacity as string || '0',
+              podCapacity: n.podCapacity as string || '110',
+              conditions: n.conditions as Array<{type: string; status: string; reason: string; message: string}> || [],
+              unschedulable: n.unschedulable as boolean || false,
+            }))
+            console.log(`[useNodes] Got ${mappedNodes.length} nodes for ${cluster} from local agent`)
+            setNodes(mappedNodes)
+            setError(null)
+            setIsLoading(false)
+            reportAgentDataSuccess()
+            return
+          }
+        }
+        console.log(`[useNodes] Local agent returned ${response.status}, trying REST API`)
+      } catch (err) {
+        console.log(`[useNodes] Local agent failed for ${cluster}:`, err)
+      }
+    }
+
+    // Fall back to REST API
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      const url = `/api/mcp/nodes?${params}`
+
+      // Skip API calls when using demo token
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        // Try to construct basic node info from cluster cache (from health checks)
+        const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
+        if (cachedCluster && cachedCluster.nodeCount && cachedCluster.nodeCount > 0) {
+          console.log(`[useNodes] Using cluster cache data for ${cluster}: ${cachedCluster.nodeCount} nodes`)
+          // Create placeholder nodes from health data
+          const placeholderNodes: NodeInfo[] = [{
+            name: `${cluster}-nodes`,
+            cluster: cluster || '',
+            status: 'Ready',
+            roles: ['worker'],
+            kubeletVersion: '',
+            cpuCapacity: cachedCluster.cpuCores ? `${cachedCluster.cpuCores}` : '0',
+            memoryCapacity: cachedCluster.memoryGB ? `${cachedCluster.memoryGB}Gi` : '0',
+            podCapacity: '110',
+            conditions: [],
+            unschedulable: false,
+          }]
+          setNodes(placeholderNodes)
+        } else {
+          setNodes([])
+        }
+        setIsLoading(false)
+        return
+      }
+
+      // Use direct fetch to bypass the global circuit breaker
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      headers['Authorization'] = `Bearer ${token}`
+      const response = await fetch(url, { method: 'GET', headers })
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+      const data = await response.json() as { nodes: NodeInfo[] }
+      setNodes(data.nodes || [])
+      setError(null)
+    } catch (err) {
+      // On any error, try to use cluster cache data as last resort
+      const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
+      if (cachedCluster && cachedCluster.nodeCount && cachedCluster.nodeCount > 0) {
+        console.log(`[useNodes] Using cluster cache fallback for ${cluster}: ${cachedCluster.nodeCount} nodes`)
+        const placeholderNodes: NodeInfo[] = [{
+          name: `${cluster}-nodes`,
+          cluster: cluster || '',
+          status: 'Ready',
+          roles: ['worker'],
+          kubeletVersion: '',
+          cpuCapacity: cachedCluster.cpuCores ? `${cachedCluster.cpuCores}` : '0',
+          memoryCapacity: cachedCluster.memoryGB ? `${cachedCluster.memoryGB}Gi` : '0',
+          podCapacity: '110',
+          conditions: [],
+          unschedulable: false,
+        }]
+        setNodes(placeholderNodes)
+        setError(null)
+      } else {
+        setError('Failed to fetch nodes')
+        setNodes([])
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { nodes, isLoading, error, refetch }
+}
+
+// Hook to get NVIDIA operator status
+export function useNVIDIAOperators(cluster?: string) {
+  const [operators, setOperators] = useState<NVIDIAOperatorStatus[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const refetch = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      const { data } = await api.get<{ operators?: NVIDIAOperatorStatus[], operator?: NVIDIAOperatorStatus }>(`/api/mcp/nvidia-operators?${params}`)
+      if (data.operators) {
+        setOperators(data.operators)
+      } else if (data.operator) {
+        setOperators([data.operator])
+      } else {
+        setOperators([])
+      }
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch NVIDIA operator status')
+      setOperators([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [cluster])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { operators, isLoading, error, refetch }
+}
+
+// Demo data functions (not exported)
+
+function getDemoGPUNodes(): GPUNode[] {
+  return [
+    // vllm-gpu-cluster - Large GPU cluster for AI/ML workloads
+    { name: 'gpu-node-1', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 6 },
+    { name: 'gpu-node-2', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 8 },
+    { name: 'gpu-node-3', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA A100', gpuCount: 8, gpuAllocated: 4 },
+    { name: 'gpu-node-4', cluster: 'vllm-gpu-cluster', gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 7 },
+    // EKS - Production ML inference
+    { name: 'eks-gpu-1', cluster: 'eks-prod-us-east-1', gpuType: 'NVIDIA A10G', gpuCount: 4, gpuAllocated: 3 },
+    { name: 'eks-gpu-2', cluster: 'eks-prod-us-east-1', gpuType: 'NVIDIA A10G', gpuCount: 4, gpuAllocated: 4 },
+    // GKE - Training workloads
+    { name: 'gke-gpu-pool-1', cluster: 'gke-staging', gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 1 },
+    { name: 'gke-gpu-pool-2', cluster: 'gke-staging', gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 2 },
+    // AKS - Dev/test GPUs
+    { name: 'aks-gpu-node', cluster: 'aks-dev-westeu', gpuType: 'NVIDIA V100', gpuCount: 2, gpuAllocated: 1 },
+    // OpenShift - Enterprise ML
+    { name: 'ocp-gpu-worker-1', cluster: 'openshift-prod', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 4 },
+    { name: 'ocp-gpu-worker-2', cluster: 'openshift-prod', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 2 },
+    // OCI - Oracle GPU shapes
+    { name: 'oke-gpu-node', cluster: 'oci-oke-phoenix', gpuType: 'NVIDIA A10', gpuCount: 4, gpuAllocated: 3 },
+    // Alibaba - China region ML
+    { name: 'ack-gpu-worker', cluster: 'alibaba-ack-shanghai', gpuType: 'NVIDIA V100', gpuCount: 8, gpuAllocated: 6 },
+    // Rancher - Managed GPU pool
+    { name: 'rancher-gpu-1', cluster: 'rancher-mgmt', gpuType: 'NVIDIA T4', gpuCount: 2, gpuAllocated: 1 },
+  ]
+}
+
+function getDemoNodes(): NodeInfo[] {
+  return [
+    {
+      name: 'node-1',
+      cluster: 'prod-east',
+      status: 'Ready',
+      roles: ['control-plane', 'master'],
+      internalIP: '10.0.1.10',
+      kubeletVersion: 'v1.28.4',
+      containerRuntime: 'containerd://1.6.24',
+      os: 'Ubuntu 22.04.3 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '8',
+      memoryCapacity: '32Gi',
+      storageCapacity: '200Gi',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      labels: { 'node-role.kubernetes.io/control-plane': '' },
+      taints: ['node-role.kubernetes.io/control-plane:NoSchedule'],
+      age: '45d',
+      unschedulable: false,
+    },
+    {
+      name: 'node-2',
+      cluster: 'prod-east',
+      status: 'Ready',
+      roles: ['worker'],
+      internalIP: '10.0.1.11',
+      kubeletVersion: 'v1.28.4',
+      containerRuntime: 'containerd://1.6.24',
+      os: 'Ubuntu 22.04.3 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '16',
+      memoryCapacity: '64Gi',
+      storageCapacity: '500Gi',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      labels: { 'node.kubernetes.io/instance-type': 'm5.4xlarge' },
+      age: '45d',
+      unschedulable: false,
+    },
+    {
+      name: 'gpu-node-1',
+      cluster: 'vllm-d',
+      status: 'Ready',
+      roles: ['worker'],
+      internalIP: '10.0.2.20',
+      kubeletVersion: 'v1.28.4',
+      containerRuntime: 'containerd://1.6.24',
+      os: 'Ubuntu 22.04.3 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '32',
+      memoryCapacity: '128Gi',
+      storageCapacity: '1Ti',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      labels: { 'nvidia.com/gpu': 'true', 'node.kubernetes.io/instance-type': 'p3.8xlarge' },
+      age: '30d',
+      unschedulable: false,
+    },
+    {
+      name: 'kind-control-plane',
+      cluster: 'kind-local',
+      status: 'Ready',
+      roles: ['control-plane'],
+      internalIP: '172.18.0.2',
+      kubeletVersion: 'v1.27.3',
+      containerRuntime: 'containerd://1.7.1',
+      os: 'Ubuntu 22.04.2 LTS',
+      architecture: 'amd64',
+      cpuCapacity: '4',
+      memoryCapacity: '8Gi',
+      storageCapacity: '50Gi',
+      podCapacity: '110',
+      conditions: [{ type: 'Ready', status: 'True', reason: 'KubeletReady', message: 'kubelet is posting ready status' }],
+      age: '7d',
+      unschedulable: false,
+    },
+  ]
+}

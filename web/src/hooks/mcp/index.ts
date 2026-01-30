@@ -1,0 +1,17 @@
+// Barrel re-export - all public API from the MCP hooks
+// Consumer files import from '../hooks/useMCP' which re-exports from here
+
+export * from './types'
+export * from './shared'
+export * from './clusters'
+export * from './workloads'
+export * from './events'
+export * from './networking'
+export * from './config'
+export * from './storage'
+export * from './compute'
+export * from './namespaces'
+export * from './operators'
+export * from './security'
+export * from './rbac'
+export * from './helm'
