@@ -133,7 +133,7 @@ function HelmDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function HelmReleases() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch , error } = useClusters()
+    const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator

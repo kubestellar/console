@@ -146,7 +146,7 @@ const DEFAULT_COST_CARDS = [
 
 export function Cost() {
   const location = useLocation()
-  const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing , error } = useClusters()
+    const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
