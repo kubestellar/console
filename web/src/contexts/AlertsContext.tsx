@@ -15,8 +15,8 @@ function generateId(): string {
 }
 
 // Local storage keys
-const ALERT_RULES_KEY = 'ksc_alert_rules'
-const ALERTS_KEY = 'ksc_alerts'
+const ALERT_RULES_KEY = 'kc_alert_rules'
+const ALERTS_KEY = 'kc_alerts'
 
 // Load from localStorage
 function loadFromStorage<T>(key: string, defaultValue: T): T {

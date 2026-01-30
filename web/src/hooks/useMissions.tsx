@@ -88,8 +88,8 @@ interface StartMissionParams {
 const MissionContext = createContext<MissionContextValue | null>(null)
 
 const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
-const MISSIONS_STORAGE_KEY = 'ksc_missions'
-const UNREAD_MISSIONS_KEY = 'ksc_unread_missions'
+const MISSIONS_STORAGE_KEY = 'kc_missions'
+const UNREAD_MISSIONS_KEY = 'kc_unread_missions'
 
 // Load missions from localStorage
 function loadMissions(): Mission[] {

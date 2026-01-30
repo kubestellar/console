@@ -67,8 +67,8 @@ export function UpdateSettings() {
   }
 
   const helmCommand = latestRelease
-    ? `helm upgrade ksc kubestellar-console/kubestellar-console --version ${latestRelease.tag.replace(/^v/, '')} -n ksc`
-    : 'helm upgrade ksc kubestellar-console/kubestellar-console -n ksc'
+    ? `helm upgrade kc kubestellar-console/kubestellar-console --version ${latestRelease.tag.replace(/^v/, '')} -n kc`
+    : 'helm upgrade kc kubestellar-console/kubestellar-console -n kc'
 
   const brewCommand = 'brew upgrade kubestellar/tap/kc-agent'
 

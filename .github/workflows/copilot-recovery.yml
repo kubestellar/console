@@ -4,7 +4,7 @@ on:
   check_run:
     types: [completed]
   workflow_run:
-    workflows: ["Build and Deploy KSC"]
+    workflows: ["Build and Deploy KC"]
     types: [completed]
   pull_request_review:
     types: [submitted]

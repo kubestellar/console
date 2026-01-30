@@ -281,7 +281,7 @@ Row 3: [Search input]
 ## Test Environment
 - Frontend: http://localhost:5174 (Vite dev server)
 - Backend: http://localhost:8080 (Go backend)
-- Agent: http://127.0.0.1:8585 (KSC Agent)
+- Agent: http://127.0.0.1:8585 (KC Agent)
 - Chrome DevTools: ws://127.0.0.1:9222
 - Branch: consistency-testing
 - Testing method: Chrome DevTools Protocol via websocat

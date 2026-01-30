@@ -31,7 +31,7 @@ test.describe('Login Page', () => {
     await page.waitForTimeout(1000) // Give Firefox extra time
 
     // Check for logo, title, or any branding text
-    const title = page.locator('text=/kubestellar|console|ksc/i, img[alt*="logo"], svg').first()
+    const title = page.locator('text=/kubestellar|console|kc/i, img[alt*="logo"], svg').first()
     const hasTitle = await title.isVisible().catch(() => false)
 
     // Page should have some content (branding may vary)

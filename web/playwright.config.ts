@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Playwright configuration for KubeStellar Console (ksc)
+ * Playwright configuration for KubeStellar Console (kc)
  *
  * Comprehensive E2E testing with focus on:
  * - AI interactivity features

@@ -78,7 +78,7 @@ test.describe('Dashboard Page', () => {
       const hasNavbar = await navbar.isVisible().catch(() => false)
 
       // Should have logo or title text
-      const logoText = page.locator('text=/kubestellar|console|ksc/i').first()
+      const logoText = page.locator('text=/kubestellar|console|kc/i').first()
       const hasLogo = await logoText.isVisible().catch(() => false)
 
       // Firefox may have timing issues with auth - use permissive check

@@ -31,7 +31,7 @@ body:
       placeholder: |
         - Browser: (e.g., Chrome 120, Firefox 121)
         - OS: (e.g., macOS 14.0, Windows 11)
-        - KSC Version: (e.g., 0.1.0)
+        - KC Version: (e.g., 0.1.0)
         - Kubernetes cluster type: (e.g., OpenShift 4.14, kind, EKS)
     validations:
       required: true
@@ -63,7 +63,7 @@ body:
       description: |
         If applicable, paste any relevant errors from:
         - Browser developer console (F12)
-        - Backend logs (`kubectl logs -n ksc deployment/ksc`)
+        - Backend logs (`kubectl logs -n kc deployment/kc`)
       render: shell
 
   - type: checkboxes

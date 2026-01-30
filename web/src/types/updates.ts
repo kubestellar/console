@@ -68,8 +68,8 @@ export interface UpdateState {
  * Storage keys for localStorage persistence.
  */
 export const UPDATE_STORAGE_KEYS = {
-  CHANNEL: 'ksc-update-channel',
-  RELEASES_CACHE: 'ksc-releases-cache',
-  SKIPPED_VERSIONS: 'ksc-skipped-versions',
-  LAST_CHECK: 'ksc-version-last-check',
+  CHANNEL: 'kc-update-channel',
+  RELEASES_CACHE: 'kc-releases-cache',
+  SKIPPED_VERSIONS: 'kc-skipped-versions',
+  LAST_CHECK: 'kc-version-last-check',
 } as const

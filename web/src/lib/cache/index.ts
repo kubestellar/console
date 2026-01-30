@@ -32,12 +32,12 @@ import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 const CACHE_VERSION = 3
 
 /** IndexedDB configuration */
-const DB_NAME = 'ksc_cache'
+const DB_NAME = 'kc_cache'
 const DB_VERSION = 1
 const STORE_NAME = 'cache'
 
 /** Storage key prefixes (for localStorage metadata only) */
-const META_PREFIX = 'ksc_meta:'
+const META_PREFIX = 'kc_meta:'
 
 /** Maximum consecutive failures before marking as failed */
 const MAX_FAILURES = 3
@@ -728,7 +728,26 @@ export async function prefetchCache<T>(
 
 /** Migrate old localStorage cache to IndexedDB (run once on app startup) */
 export async function migrateFromLocalStorage(): Promise<void> {
-  const OLD_PREFIX = 'ksc_cache:'
+  // Migrate old ksc_ prefixed keys to kc_ prefix
+  const kscKeys: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('ksc_') || key?.startsWith('ksc-')) {
+      kscKeys.push(key)
+    }
+  }
+  for (const oldKey of kscKeys) {
+    try {
+      const value = localStorage.getItem(oldKey)
+      const newKey = oldKey.replace(/^ksc[_-]/, (m) => m === 'ksc_' ? 'kc_' : 'kc-')
+      if (value !== null && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, value)
+      }
+      localStorage.removeItem(oldKey)
+    } catch { /* ignore */ }
+  }
+
+  const OLD_PREFIX = 'kc_cache:'
   const keysToMigrate: string[] = []
 
   for (let i = 0; i < localStorage.length; i++) {

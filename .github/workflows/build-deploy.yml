@@ -1,4 +1,4 @@
-name: Build and Deploy KSC
+name: Build and Deploy KC
 
 on:
   push:
@@ -90,7 +90,7 @@ jobs:
   deploy-vllm-d:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: [self-hosted, ksc]
+    runs-on: [self-hosted, kc]
     environment: vllm-d
 
     steps:
@@ -107,12 +107,12 @@ jobs:
 
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace ksc --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace kc --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create or update secrets
         run: |
-          kubectl create secret generic ksc-secrets \
-            --namespace ksc \
+          kubectl create secret generic kc-secrets \
+            --namespace kc \
             --from-literal=github-client-id=${{ secrets.KSC_OAUTH_CLIENT_ID }} \
             --from-literal=github-client-secret=${{ secrets.KSC_OAUTH_CLIENT_SECRET }} \
             --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
@@ -120,20 +120,20 @@ jobs:
 
       - name: Deploy with Helm
         run: |
-          helm upgrade --install ksc ./deploy/helm/kubestellar-console \
-            --namespace ksc \
+          helm upgrade --install kc ./deploy/helm/kubestellar-console \
+            --namespace kc \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
-            --set github.existingSecret=ksc-secrets \
-            --set claude.existingSecret=ksc-secrets \
-            --set jwt.existingSecret=ksc-secrets \
+            --set github.existingSecret=kc-secrets \
+            --set claude.existingSecret=kc-secrets \
+            --set jwt.existingSecret=kc-secrets \
             --set route.enabled=true \
-            --set route.host=ksc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
+            --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
             --wait \
             --timeout 5m
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/ksc-kubestellar-console -n ksc --timeout=3m
+          kubectl rollout status deployment/kc-kubestellar-console -n kc --timeout=3m
           echo "Deployment successful!"
-          echo "Access KSC at: https://ksc.apps.fmaas-vllm-d.fmaas.res.ibm.com"
+          echo "Access KC at: https://kc.apps.fmaas-vllm-d.fmaas.res.ibm.com"

@@ -16,7 +16,7 @@ function generateId(): string {
 }
 
 // Local storage key for webhooks (still managed separately)
-const SLACK_WEBHOOKS_KEY = 'ksc_slack_webhooks'
+const SLACK_WEBHOOKS_KEY = 'kc_slack_webhooks'
 
 // Load from localStorage
 function loadFromStorage<T>(key: string, defaultValue: T): T {

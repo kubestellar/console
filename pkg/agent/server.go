@@ -35,7 +35,7 @@ var defaultAllowedOrigins = []string{
 	"https://127.0.0.1",
 	// Known deployment URLs
 	"https://kubestellarconsole.netlify.app",
-	"https://ksc.apps.fmaas-vllm-d.fmaas.res.ibm.com",
+	"https://kc.apps.fmaas-vllm-d.fmaas.res.ibm.com",
 }
 
 // Server is the local agent WebSocket server
@@ -208,7 +208,7 @@ func (s *Server) Start() error {
 	})
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
-	log.Printf("KSC Agent v%s starting on %s", Version, addr)
+	log.Printf("KC Agent v%s starting on %s", Version, addr)
 	log.Printf("Health: http://%s/health", addr)
 	log.Printf("WebSocket: ws://%s/ws", addr)
 

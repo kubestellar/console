@@ -1,4 +1,4 @@
-# KSC Local Agent - Implementation Plan
+# KC Local Agent - Implementation Plan
 
 ## Overview
 

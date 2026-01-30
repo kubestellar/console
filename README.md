@@ -1,4 +1,4 @@
-# KubeStellar Console (ksc)
+# KubeStellar Console (kc)
 
 A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how you work.
 
@@ -6,7 +6,7 @@ A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how yo
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      KubeStellar Console (ksc)                              │
+│                      KubeStellar Console (kc)                              │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
 │  │ Cluster     │ │ App Status  │ │ Event       │ │ Deployment  │  ← Cards  │
 │  │ Health      │ │ (3 clusters)│ │ Stream      │ │ Progress    │    auto-  │
@@ -17,7 +17,7 @@ A proactive, AI-powered multi-cluster Kubernetes dashboard that adapts to how yo
 
 ## What is KubeStellar Console?
 
-KubeStellar Console (ksc) is a web-based dashboard for managing multiple Kubernetes clusters. Unlike traditional dashboards that show static views, ksc uses AI to observe how you work and automatically restructures itself to surface the most relevant information.
+KubeStellar Console (kc) is a web-based dashboard for managing multiple Kubernetes clusters. Unlike traditional dashboards that show static views, kc uses AI to observe how you work and automatically restructures itself to surface the most relevant information.
 
 ### Key Features
 
@@ -96,7 +96,7 @@ Console uses the `kubestellar-ops` and `kubestellar-deploy` MCP servers to fetch
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## KSC Agent (Local Agent)
+## KC Agent (Local Agent)
 
 The **kc-agent** is a local agent that runs on your machine and bridges the browser-based console to your local kubeconfig and Claude Code CLI. This allows the hosted console to access your clusters without exposing your kubeconfig over the internet.
 
