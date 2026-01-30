@@ -227,7 +227,7 @@ export function GPUReservations() {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
-  if (isLoading) {
+  if (isLoading && nodes.length === 0) {
     return (
       <div className="pt-16 flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

@@ -169,7 +169,7 @@ const DEMO_POSTURE = {
 
 export function DataCompliance() {
   const location = useLocation()
-  const { isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
@@ -325,7 +325,7 @@ export function DataCompliance() {
         dashboardType="data-compliance"
         getStatValue={getStatValue}
         hasData={true}
-        isLoading={isLoading}
+        isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-data-compliance-stats-collapsed"
         isDemoData={true}

@@ -343,7 +343,7 @@ export function Operators() {
         dashboardType="operators"
         getStatValue={getStatValue}
         hasData={totalOperators > 0 || reachableClusters.length > 0}
-        isLoading={isLoading}
+        isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-operators-stats-collapsed"
       />

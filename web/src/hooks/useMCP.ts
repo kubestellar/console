@@ -2773,12 +2773,16 @@ export function useDeployments(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
-  // Reset state when cluster changes
+  // Reset state when cluster/namespace actually changes (not on initial mount)
+  const prevDeploymentsKeyRef = useRef(cacheKey)
   useEffect(() => {
-    setDeployments([])
-    setIsLoading(true)
-    setError(null)
-  }, [cluster, namespace])
+    if (prevDeploymentsKeyRef.current !== cacheKey) {
+      prevDeploymentsKeyRef.current = cacheKey
+      setDeployments([])
+      setIsLoading(true)
+      setError(null)
+    }
+  }, [cacheKey])
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -3007,12 +3011,16 @@ export function useServices(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
-  // Reset state when cluster changes
+  // Reset state when cluster/namespace actually changes (not on initial mount)
+  const prevServicesKeyRef = useRef(cacheKey)
   useEffect(() => {
-    setServices([])
-    setIsLoading(true)
-    setError(null)
-  }, [cluster, namespace])
+    if (prevServicesKeyRef.current !== cacheKey) {
+      prevServicesKeyRef.current = cacheKey
+      setServices([])
+      setIsLoading(true)
+      setError(null)
+    }
+  }, [cacheKey])
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing

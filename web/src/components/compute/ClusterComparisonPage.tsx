@@ -62,7 +62,7 @@ export function ClusterComparisonPage() {
     navigate('/compute')
   }
 
-  if (isLoading) {
+  if (isLoading && clusters.length === 0) {
     return (
       <div className="pt-16">
         <div className="mb-6">

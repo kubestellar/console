@@ -325,7 +325,7 @@ export function Logs() {
         dashboardType="events"
         getStatValue={getStatValue}
         hasData={reachableClusters.length > 0}
-        isLoading={isLoading}
+        isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-logs-stats-collapsed"
       />

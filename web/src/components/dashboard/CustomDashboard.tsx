@@ -474,7 +474,7 @@ export function CustomDashboard() {
         dashboardType="dashboard"
         getStatValue={getStatValue}
         hasData={deduplicatedClusters.length > 0}
-        isLoading={isClustersLoading}
+        isLoading={isClustersLoading && deduplicatedClusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey={`kubestellar-custom-${id}-stats-collapsed`}
       />

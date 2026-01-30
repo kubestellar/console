@@ -774,7 +774,7 @@ export function Dashboard() {
   const hasDemoDataCards = localCards.some(c => DEMO_DATA_CARDS.has(c.card_type))
   const demoDataCardCount = localCards.filter(c => DEMO_DATA_CARDS.has(c.card_type)).length
 
-  if (isLoading) {
+  if (isLoading && localCards.length === 0) {
     return (
       <div className="pt-16">
         {/* Header skeleton */}
@@ -830,7 +830,7 @@ export function Dashboard() {
         dashboardType="dashboard"
         getStatValue={getStatValue}
         hasData={clusters.length > 0}
-        isLoading={isClustersLoading}
+        isLoading={isClustersLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-dashboard-stats-collapsed"
       />

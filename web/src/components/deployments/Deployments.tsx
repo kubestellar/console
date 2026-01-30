@@ -307,8 +307,8 @@ export function Deployments() {
       <StatsOverview
         dashboardType="workloads"
         getStatValue={getStatValue}
-        hasData={!isLoading}
-        isLoading={isLoading}
+        hasData={deployments.length > 0}
+        isLoading={isLoading && deployments.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-deployments-stats-collapsed"
       />

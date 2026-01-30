@@ -314,7 +314,7 @@ export function Nodes() {
         dashboardType="compute"
         getStatValue={getStatValue}
         hasData={totalNodes > 0}
-        isLoading={isLoading}
+        isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-nodes-stats-collapsed"
       />

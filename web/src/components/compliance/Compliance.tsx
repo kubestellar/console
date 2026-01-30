@@ -342,7 +342,7 @@ export function Compliance() {
         dashboardType="compliance"
         getStatValue={getStatValue}
         hasData={posture.totalChecks > 0}
-        isLoading={isLoading}
+        isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-compliance-stats-collapsed"
       />

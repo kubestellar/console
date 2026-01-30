@@ -265,7 +265,7 @@ export function HelmReleases() {
         dashboardType="gitops"
         getStatValue={getStatValue}
         hasData={reachableClusters.length > 0}
-        isLoading={isLoading}
+        isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-helm-stats-collapsed"
       />

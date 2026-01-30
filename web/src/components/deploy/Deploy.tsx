@@ -412,8 +412,8 @@ export function Deploy() {
       <StatsOverview
         dashboardType="deploy"
         getStatValue={getStatValue}
-        hasData={!deploymentsLoading}
-        isLoading={deploymentsLoading}
+        hasData={cachedDeployments.length > 0}
+        isLoading={deploymentsLoading && cachedDeployments.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-deploy-stats-collapsed"
       />
