@@ -179,7 +179,104 @@ jobs:
               }
             }
 
-            // 4. Mark ready for review if draft AND checks have passed
+            // 4. Ensure "Fixes #N" closing keyword in PR body (auto-closes issue on merge)
+            const body = pr.body || '';
+            const hasClosingKeyword = /(?:fix|fixes|fixed|close|closes|closed|resolve|resolves|resolved)\s+#\d+/i.test(body);
+
+            if (!hasClosingKeyword) {
+              core.info('PR body missing closing keyword, searching for linked issue...');
+              let linkedIssue = null;
+
+              // Method 1: Check GitHub's linked issues via GraphQL
+              try {
+                const result = await github.graphql(`
+                  query($owner: String!, $repo: String!, $pr: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      pullRequest(number: $pr) {
+                        closingIssuesReferences(first: 5) {
+                          nodes { number state }
+                        }
+                      }
+                    }
+                  }
+                `, { owner: context.repo.owner, repo: context.repo.repo, pr: prNumber });
+                const refs = result.repository.pullRequest.closingIssuesReferences.nodes;
+                const openRef = refs.find(r => r.state === 'OPEN');
+                if (openRef) linkedIssue = openRef.number;
+              } catch (e) {
+                core.info(`GraphQL closingIssuesReferences: ${e.message}`);
+              }
+
+              // Method 2: Find open issue assigned to Copilot with ai-awaiting-fix label
+              if (!linkedIssue) {
+                try {
+                  const { data: issues } = await github.rest.issues.listForRepo({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    assignee: 'copilot-swe-agent[bot]',
+                    labels: 'ai-awaiting-fix',
+                    state: 'open',
+                    per_page: 20
+                  });
+
+                  if (issues.length === 1) {
+                    linkedIssue = issues[0].number;
+                  } else if (issues.length > 1) {
+                    // Match by PR title/branch keywords against issue titles
+                    const prWords = (pr.title + ' ' + (pr.head.ref || '')).toLowerCase();
+                    const match = issues.find(i => {
+                      const issueWords = i.title.toLowerCase().split(/\s+/);
+                      return issueWords.filter(w => w.length > 4).some(w => prWords.includes(w));
+                    });
+                    if (match) linkedIssue = match.number;
+                  }
+                } catch (e) {
+                  core.info(`Issue search: ${e.message}`);
+                }
+              }
+
+              // Method 3: Extract #N from PR body (Copilot often mentions the issue)
+              if (!linkedIssue) {
+                const refs = body.match(/#(\d+)/g);
+                if (refs) {
+                  for (const ref of refs) {
+                    const num = parseInt(ref.replace('#', ''), 10);
+                    try {
+                      const { data: issue } = await github.rest.issues.get({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: num
+                      });
+                      if (issue.state === 'open' && !issue.pull_request) {
+                        linkedIssue = num;
+                        break;
+                      }
+                    } catch (e) { /* not a valid issue */ }
+                  }
+                }
+              }
+
+              if (linkedIssue) {
+                const newBody = body + `\n\nFixes #${linkedIssue}`;
+                try {
+                  await github.rest.pulls.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: prNumber,
+                    body: newBody
+                  });
+                  core.info(`Added "Fixes #${linkedIssue}" to PR #${prNumber} body`);
+                } catch (e) {
+                  core.warning(`Failed to update PR body: ${e.message}`);
+                }
+              } else {
+                core.warning(`Could not find linked issue for Copilot PR #${prNumber}`);
+              }
+            } else {
+              core.info('PR body already contains closing keyword');
+            }
+
+            // 5. Mark ready for review if draft AND checks have passed
             if (pr.draft) {
               // Only auto-mark ready on check_run or status events (not on PR open)
               const shouldCheckReady = context.eventName === 'check_run' ||
@@ -221,7 +318,7 @@ jobs:
               }
             }
 
-            // 5. Handle build failures - notify Copilot
+            // 6. Handle build failures - notify Copilot
             if (isCheckRunFailure) {
               core.info('Netlify build failed, checking for recent notifications...');
 
