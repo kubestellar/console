@@ -71,3 +71,76 @@ After completing implementation tasks, create test tasks that use:
 - `mcp__chrome-devtools__click` / `mcp__chrome-devtools__fill` - Interact with UI
 - `mcp__chrome-devtools__take_screenshot` - Capture visual state
 - `mcp__chrome-devtools__list_network_requests` - Verify API calls
+
+---
+
+## GitHub Agentic Workflows (gh-aw)
+
+This repo uses [gh-aw](https://github.com/githubnext/gh-aw) for AI-powered automation. Source files are `.md`, compiled to `.lock.yml` via `gh aw compile`.
+
+### Workflow Files
+
+| Source (`.md`) | Lock (`.lock.yml`) | Purpose |
+|---|---|---|
+| `implement-fix.md` | `implement-fix.lock.yml` | Assigns Copilot to triaged issues |
+| `handle-complications.md` | `handle-complications.lock.yml` | Handles DCO, build failures, merge conflicts, review feedback |
+| `auto-triage.md` | `auto-triage.lock.yml` | Auto-triages incoming issues |
+| `stuck-detection.md` | `stuck-detection.lock.yml` | Detects stuck AI processing |
+| `verify-preview.md` | `verify-preview.lock.yml` | Verifies Netlify deploy previews |
+
+### After Running `gh aw compile`
+
+**CRITICAL:** Always run the post-compile patch after compiling:
+
+```bash
+gh aw compile
+.github/aw/patch-lock-files.sh
+```
+
+**Why:** The gh-aw framework has a bug — its `assign-to-agent` safe output generates GraphQL mutations (`replaceActorsForAssignable`) without the required `GraphQL-Features: issues_copilot_assignment_api_support` header. Without the patch, Copilot agent assignment fails with "Bot does not have access to the repository." The patch:
+
+1. Adds the `GraphQL-Features: issues_copilot_assignment_api_support` header to all GraphQL mutations (findAgent, primary assign, fallback assign)
+2. Expands the fallback trigger to catch "Bot does not have access" errors (not just "Resource not accessible")
+3. The fallback uses `addAssigneesToAssignable` instead of `replaceActorsForAssignable`, which works correctly with the header
+
+**Reference:** [GitHub Changelog - Assign issues to Copilot using the API](https://github.blog/changelog/2025-12-03-assign-issues-to-copilot-using-the-api/)
+
+### Non-gh-aw Workflows
+
+These are standard GitHub Actions workflows (not managed by gh-aw):
+
+| Workflow | Purpose | Key Notes |
+|---|---|---|
+| `auto-qa.yml` | Hourly QA checks, creates issues for Copilot | Applies `triage/accepted` label directly (not via Prow command) |
+| `copilot-automation.yml` | DCO override, WIP title fix, mark-ready for Copilot PRs | Triggers on `pull_request_target` and `check_run` (NOT `status`) |
+| `copilot-recovery.yml` | Error recovery for Copilot PRs | Has gate job to prevent "no jobs were run" failures |
+
+### Automation Trigger Rules
+
+**NEVER add `status: {}` as a workflow trigger.** It fires on every commit status update with no filtering capability and causes self-amplifying feedback loops (e.g., DCO override creates a status → re-triggers the workflow → 60+ runs in 7 minutes).
+
+Use `check_run: completed` instead, which supports filtering by check name.
+
+### Secrets Required
+
+| Secret | Purpose | Scope |
+|---|---|---|
+| `CONSOLE_AUTO` | PAT for workflow automation (DCO override, PR management) | Repo |
+| `GH_AW_AGENT_TOKEN` | PAT for gh-aw Copilot agent assignment | Repo |
+| `COPILOT_GITHUB_TOKEN` | Copilot CLI authentication | Org |
+
+### Automation Pipeline Flow
+
+```
+Auto-QA (hourly) → Creates issue with labels
+       ↓
+implement-fix.lock.yml → Assigns Copilot to issue
+       ↓
+Copilot coding agent → Creates PR
+       ↓
+copilot-automation.yml → DCO override + mark ready
+       ↓
+handle-complications.lock.yml → Handles build failures, review feedback
+       ↓
+Human review → Merge
+```
