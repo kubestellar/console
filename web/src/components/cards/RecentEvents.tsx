@@ -7,7 +7,7 @@ import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import type { ClusterEvent } from '../../lib/kubectlProxy'
+import type { ClusterEvent } from '../../hooks/useMCP'
 
 const ONE_HOUR_MS = 60 * 60 * 1000
 

@@ -1,11 +1,10 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
-import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, Search, ChevronRight, Filter } from 'lucide-react'
+import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { useChartFilters } from '../../lib/cards'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
@@ -159,14 +158,30 @@ function detectClusterProvider(name: string, context?: string): CloudProvider {
   return 'estimate'
 }
 
+/** Computed cost data for a single cluster */
+interface ClusterCostItem {
+  cluster: string   // matches name; used by global filterByCluster
+  name: string
+  healthy: boolean
+  cpus: number
+  memory: number
+  gpus: number
+  hourly: number
+  daily: number
+  monthly: number
+  provider: CloudProvider
+  context?: string
+}
+
+const SORT_COMPARATORS = {
+  cost: commonComparators.number<ClusterCostItem>('monthly'),
+  name: commonComparators.string<ClusterCostItem>('name'),
+  cpus: commonComparators.number<ClusterCostItem>('cpus'),
+}
+
 export function ClusterCosts({ config }: ClusterCostsProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
-  const {
-    selectedClusters: globalSelectedClusters,
-    isAllClustersSelected,
-    customFilter,
-  } = useGlobalFilters()
   const { drillToCost } = useDrillDownActions()
 
   // Cloud provider selection
@@ -179,23 +194,6 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const [clusterProviderOverrides, setClusterProviderOverrides] = useState<Record<string, CloudProvider>>(
     () => loadPersistedOverrides(config?.clusterProviders)
   )
-  const [localSearch, setLocalSearch] = useState('')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [sortBy, setSortBy] = useState<SortByOption>('cost')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-
-  // Local cluster filter via shared hook
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters: availableClustersForFilter,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'cluster-costs',
-  })
 
   // Persist provider overrides to localStorage
   useEffect(() => {
@@ -237,39 +235,6 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     }
   }, [detectedProvider, config?.provider])
 
-  // Apply global filters, local cluster filter, and local search
-  const clusters = useMemo(() => {
-    let result = allClusters
-
-    if (!isAllClustersSelected) {
-      result = result.filter(c => globalSelectedClusters.includes(c.name))
-    }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query)
-      )
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(c => localClusterFilter.includes(c.name))
-    }
-
-    // Apply local search filter
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(c =>
-        c.name.toLowerCase().includes(query) ||
-        c.context?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, localClusterFilter, localSearch])
-
   // Get pricing from selected provider or custom config
   const pricing = CLOUD_PRICING[selectedProvider]
   const cpuCost = config?.cpuCostPerHour ?? pricing.cpu
@@ -299,23 +264,15 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
     return detectClusterProvider(clusterName, context)
   }, [clusterProviderOverrides, pricingMode, selectedProvider])
 
-  // Get per-cluster detected providers for the UI
-  const clusterProviders = useMemo(() => {
-    const map: Record<string, CloudProvider> = {}
-    clusters.forEach(cluster => {
-      map[cluster.name] = getClusterProvider(cluster.name, cluster.context)
-    })
-    return map
-  }, [clusters, getClusterProvider])
-
-  const clusterCosts = useMemo(() => {
-    return clusters.map(cluster => {
+  // Compute cost data for ALL clusters (no filtering/sorting -- useCardData handles that)
+  const allClusterCosts = useMemo(() => {
+    return allClusters.map(cluster => {
       const cpus = cluster.cpuCores || 0
       const memory = 32 * (cluster.nodeCount || 0) // Estimate 32GB per node
       const gpus = gpuByCluster[cluster.name] || 0
 
       // Get per-cluster pricing
-      const provider = clusterProviders[cluster.name] || 'estimate'
+      const provider = getClusterProvider(cluster.name, cluster.context)
       const clusterPricing = CLOUD_PRICING[provider]
       const clusterCpuCost = config?.cpuCostPerHour ?? clusterPricing.cpu
       const clusterMemoryCost = config?.memoryCostPerGBHour ?? clusterPricing.memory
@@ -326,6 +283,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       const monthly = daily * 30
 
       return {
+        cluster: cluster.name,
         name: cluster.name,
         healthy: cluster.healthy,
         cpus,
@@ -335,15 +293,46 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         daily,
         monthly,
         provider,
-      }
-    }).sort((a, b) => {
-      let cmp = 0
-      if (sortBy === 'cost') cmp = a.monthly - b.monthly
-      else if (sortBy === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortBy === 'cpus') cmp = a.cpus - b.cpus
-      return sortDirection === 'asc' ? cmp : -cmp
+        context: cluster.context,
+      } as ClusterCostItem
     })
-  }, [clusters, gpuByCluster, clusterProviders, config, sortBy, sortDirection])
+  }, [allClusters, gpuByCluster, getClusterProvider, config])
+
+  // Use shared card data hook for filtering, sorting, and pagination
+  const {
+    items: clusterCosts,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters: availableClustersForFilter,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting,
+  } = useCardData<ClusterCostItem, SortByOption>(allClusterCosts, {
+    filter: {
+      searchFields: ['name', 'context'] as (keyof ClusterCostItem)[],
+      clusterField: 'cluster' as keyof ClusterCostItem,
+      storageKey: 'cluster-costs',
+    },
+    sort: {
+      defaultField: 'cost',
+      defaultDirection: 'desc',
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
   const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
   const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
@@ -371,7 +360,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
-            {clusters.length} clusters
+            {totalItems} clusters
           </span>
           {localClusterFilter.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -381,57 +370,26 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Cluster Filter */}
-          {availableClustersForFilter.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClustersForFilter.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+          <CardControlsRow
+            clusterFilter={{
+              availableClusters: availableClustersForFilter,
+              selectedClusters: localClusterFilter,
+              onToggle: toggleClusterFilter,
+              onClear: clearClusterFilter,
+              isOpen: showClusterFilter,
+              setIsOpen: setShowClusterFilter,
+              containerRef: clusterFilterRef,
+              minClusters: 1,
+            }}
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy: sorting.sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+              sortDirection: sorting.sortDirection,
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
           />
           {/* Info button */}
           <button
@@ -656,16 +614,12 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       )}
 
       {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search clusters..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search clusters..."
+        className="mb-3"
+      />
 
       {/* Total costs */}
       <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 mb-4">
@@ -787,6 +741,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
         })}
       </div>
 
+      {/* Pagination */}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
+
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-border/50 space-y-2 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
@@ -828,7 +792,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
           </div>
           <span className="flex items-center gap-1">
             <TrendingUp className="w-3 h-3" />
-            {clusters.length} clusters
+            {totalItems} clusters
           </span>
         </div>
         {/* Estimation methodology links */}

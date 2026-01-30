@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, Zap, Search, Server, Filter, ChevronDown } from 'lucide-react'
+import { Gauge, Cpu, HardDrive, Box, Loader2, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
   useClusters,
@@ -13,12 +13,16 @@ import {
   COMMON_RESOURCE_TYPES,
   GPU_RESOURCE_TYPES,
 } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
-import { useChartFilters } from '../../lib/cards'
+import {
+  useCardData,
+  commonComparators,
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+  type SortDirection,
+} from '../../lib/cards'
 
 interface NamespaceQuotasProps {
   config?: {
@@ -38,6 +42,14 @@ interface QuotaUsage {
   quotaName?: string // The name of the ResourceQuota this came from
 }
 
+interface LimitRangeItem {
+  name: string
+  type: string
+  limits: LimitRange['limits'][0]
+  cluster?: string
+  namespace?: string
+}
+
 type TabKey = 'quotas' | 'limits'
 type SortByOption = 'name' | 'percent'
 
@@ -45,6 +57,17 @@ const SORT_OPTIONS = [
   { value: 'name' as const, label: 'Name' },
   { value: 'percent' as const, label: 'Usage' },
 ]
+
+const QUOTA_SORT_COMPARATORS: Record<SortByOption, (a: QuotaUsage, b: QuotaUsage) => number> = {
+  name: commonComparators.string<QuotaUsage>('resource'),
+  percent: commonComparators.number<QuotaUsage>('percent'),
+}
+
+const LIMIT_SORT_COMPARATORS: Record<SortByOption, (a: LimitRangeItem, b: LimitRangeItem) => number> = {
+  name: commonComparators.string<LimitRangeItem>('name'),
+  // For limits, sort by name for both options (no percent on limits)
+  percent: commonComparators.string<LimitRangeItem>('name'),
+}
 
 // Parse quantity string to numeric value (handles Kubernetes resource quantities)
 function parseQuantity(value: string): number {
@@ -310,20 +333,9 @@ function QuotaModal({
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
-  const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || 'all')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || 'all')
   const [activeTab, setActiveTab] = useState<TabKey>('quotas')
-  const [sortBy, setSortBy] = useState<SortByOption>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(5)
-  const [localSearch, setLocalSearch] = useState('')
-
-  // Local cluster filter
-  const {
-    localClusterFilter, toggleClusterFilter, clearClusterFilter,
-    availableClusters, showClusterFilter, setShowClusterFilter, clusterFilterRef,
-  } = useChartFilters({ storageKey: 'namespace-quotas' })
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -334,11 +346,8 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   // Fetch namespaces for the selected cluster (only when specific cluster selected)
   const { namespaces } = useNamespaces(selectedCluster !== 'all' ? selectedCluster : undefined)
 
-  // Filter clusters based on global filter
-  const clusters = useMemo(() => {
-    if (isAllClustersSelected) return allClusters
-    return allClusters.filter(c => globalSelectedClusters.includes(c.name))
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected])
+  // Filter clusters based on global filter (useCardData handles global filtering internally)
+  const clusters = allClusters
 
   // Fetch ResourceQuotas and LimitRanges using real hooks
   // Pass undefined for "all" selections to get all data
@@ -385,7 +394,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     setIsModalOpen(true)
   }
 
-  // Transform ResourceQuotas to QuotaUsage format for display
+  // Transform ResourceQuotas to QuotaUsage format for display (pre-filter by selectors only)
   const quotaUsages = useMemo(() => {
     const usages: QuotaUsage[] = []
 
@@ -418,35 +427,8 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         })
       })
 
-    // Apply local search filter
-    let filtered = usages
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = usages.filter(u =>
-        u.resource.toLowerCase().includes(query) ||
-        u.rawResource.toLowerCase().includes(query) ||
-        (u.cluster || '').toLowerCase().includes(query) ||
-        (u.namespace || '').toLowerCase().includes(query) ||
-        (u.quotaName || '').toLowerCase().includes(query)
-      )
-    }
-
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'name':
-          compare = a.resource.localeCompare(b.resource)
-          break
-        case 'percent':
-          compare = a.percent - b.percent
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-
-    return sorted
-  }, [resourceQuotas, selectedCluster, selectedNamespace, sortBy, sortDirection, localSearch])
+    return usages
+  }, [resourceQuotas, selectedCluster, selectedNamespace])
 
   // Get unique quotas for edit/delete actions
   const uniqueQuotas = useMemo(() => {
@@ -458,9 +440,9 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     return Array.from(quotaMap.values())
   }, [resourceQuotas])
 
-  // Transform LimitRanges for display
+  // Transform LimitRanges for display (pre-filter by selectors only)
   const limitRangeItems = useMemo(() => {
-    const items: Array<{ name: string; type: string; limits: LimitRange['limits'][0]; cluster?: string; namespace?: string }> = []
+    const items: LimitRangeItem[] = []
 
     // Filter limit ranges based on selection
     const filteredRanges = limitRanges.filter(lr => {
@@ -481,36 +463,66 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         })
       })
 
-    // Apply local search filter
-    let filtered = items
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      filtered = items.filter(item =>
-        item.name.toLowerCase().includes(query) ||
-        item.type.toLowerCase().includes(query) ||
-        (item.cluster || '').toLowerCase().includes(query) ||
-        (item.namespace || '').toLowerCase().includes(query)
-      )
-    }
+    return items
+  }, [limitRanges, selectedCluster, selectedNamespace])
 
-    // Sort by name
-    const sorted = [...filtered].sort((a, b) => {
-      const compare = a.name.localeCompare(b.name)
-      return sortDirection === 'asc' ? compare : -compare
-    })
+  // useCardData for Quotas tab
+  const {
+    items: paginatedQuotas,
+    totalItems: totalQuotas,
+    currentPage: quotaCurrentPage,
+    totalPages: quotaTotalPages,
+    itemsPerPage: quotaItemsPerPage,
+    goToPage: quotaGoToPage,
+    needsPagination: quotaNeedsPagination,
+    setItemsPerPage: quotaSetItemsPerPage,
+    filters: quotaFilters,
+    sorting: quotaSorting,
+  } = useCardData<QuotaUsage, SortByOption>(quotaUsages, {
+    filter: {
+      searchFields: ['resource', 'rawResource', 'cluster', 'namespace', 'quotaName'] as (keyof QuotaUsage)[],
+      clusterField: 'cluster' as keyof QuotaUsage,
+      storageKey: 'namespace-quotas',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc' as SortDirection,
+      comparators: QUOTA_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
-    return sorted
-  }, [limitRanges, selectedCluster, selectedNamespace, sortDirection, localSearch])
+  // useCardData for Limits tab
+  const {
+    items: paginatedLimits,
+    totalItems: totalLimits,
+    currentPage: limitCurrentPage,
+    totalPages: limitTotalPages,
+    itemsPerPage: limitItemsPerPage,
+    goToPage: limitGoToPage,
+    needsPagination: limitNeedsPagination,
+  } = useCardData<LimitRangeItem, SortByOption>(limitRangeItems, {
+    filter: {
+      searchFields: ['name', 'type', 'cluster', 'namespace'] as (keyof LimitRangeItem)[],
+      clusterField: 'cluster' as keyof LimitRangeItem,
+      storageKey: 'namespace-quotas-limits',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc' as SortDirection,
+      comparators: LIMIT_SORT_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
 
-  // Pagination
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
-  const quotaPagination = usePagination(quotaUsages, effectivePerPage)
-  const limitPagination = usePagination(limitRangeItems, effectivePerPage)
-  const pagination = activeTab === 'quotas' ? quotaPagination : limitPagination
+  // Derive active tab state
+  const activePagination = activeTab === 'quotas'
+    ? { items: paginatedQuotas, currentPage: quotaCurrentPage, totalPages: quotaTotalPages, totalItems: totalQuotas, itemsPerPage: quotaItemsPerPage, goToPage: quotaGoToPage, needsPagination: quotaNeedsPagination }
+    : { items: paginatedLimits, currentPage: limitCurrentPage, totalPages: limitTotalPages, totalItems: totalLimits, itemsPerPage: limitItemsPerPage, goToPage: limitGoToPage, needsPagination: limitNeedsPagination }
 
   const tabs = [
-    { key: 'quotas' as const, label: 'Quotas', count: quotaUsages.length },
-    { key: 'limits' as const, label: 'Limits', count: limitRangeItems.length },
+    { key: 'quotas' as const, label: 'Quotas', count: totalQuotas },
+    { key: 'limits' as const, label: 'Limits', count: totalLimits },
   ]
 
   const getColor = (percent: number) => {
@@ -550,81 +562,47 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-            {activeTab === 'quotas' ? `${quotaUsages.length} quotas` : `${limitRangeItems.length} limits`}
+            {activeTab === 'quotas' ? `${totalQuotas} quotas` : `${totalLimits} limits`}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(c => (
-                      <button
-                        key={c.name}
-                        onClick={() => toggleClusterFilter(c.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <CardControls
-            limit={limit}
-            onLimitChange={setLimit}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-          <button
-            onClick={() => {
-              setEditingQuota(null)
-              setIsModalOpen(true)
+          <CardControlsRow
+            clusterIndicator={{
+              selectedCount: quotaFilters.localClusterFilter.length,
+              totalCount: quotaFilters.availableClusters.length,
             }}
-            className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-          >
-            <Plus className="w-3 h-3" />
-            Add Quota
-          </button>
+            clusterFilter={{
+              availableClusters: quotaFilters.availableClusters,
+              selectedClusters: quotaFilters.localClusterFilter,
+              onToggle: quotaFilters.toggleClusterFilter,
+              onClear: quotaFilters.clearClusterFilter,
+              isOpen: quotaFilters.showClusterFilter,
+              setIsOpen: quotaFilters.setShowClusterFilter,
+              containerRef: quotaFilters.clusterFilterRef,
+              minClusters: 1,
+            }}
+            cardControls={{
+              limit: quotaItemsPerPage,
+              onLimitChange: quotaSetItemsPerPage,
+              sortBy: quotaSorting.sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => quotaSorting.setSortBy(v as SortByOption),
+              sortDirection: quotaSorting.sortDirection,
+              onSortDirectionChange: quotaSorting.setSortDirection,
+            }}
+            extra={
+              <button
+                onClick={() => {
+                  setEditingQuota(null)
+                  setIsModalOpen(true)
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+              >
+                <Plus className="w-3 h-3" />
+                Add Quota
+              </button>
+            }
+          />
         </div>
       </div>
 
@@ -662,16 +640,12 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
       <>
         {/* Local Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder="Search quotas..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-          />
-        </div>
+        <CardSearchInput
+          value={quotaFilters.search}
+          onChange={quotaFilters.setSearch}
+          placeholder="Search quotas..."
+          className="mb-4"
+        />
 
         {/* Scope badge */}
         <div className="flex items-center gap-2 mb-4 min-w-0 overflow-hidden">
@@ -708,13 +682,13 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
           {/* Content */}
           <div className="flex-1 space-y-3 overflow-y-auto">
-            {isFetchingData && pagination.paginatedItems.length === 0 ? (
+            {isFetchingData && activePagination.items.length === 0 ? (
               <>
                 <Skeleton variant="rounded" height={70} />
                 <Skeleton variant="rounded" height={70} />
                 <Skeleton variant="rounded" height={70} />
               </>
-            ) : pagination.paginatedItems.length === 0 ? (
+            ) : activePagination.items.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm py-8">
                 <p>No {activeTab === 'quotas' ? 'resource quotas' : 'limit ranges'} found</p>
                 {activeTab === 'quotas' && (
@@ -731,7 +705,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                 )}
               </div>
             ) : activeTab === 'quotas' ? (
-              (pagination.paginatedItems as QuotaUsage[]).map((quota, idx) => {
+              (paginatedQuotas as QuotaUsage[]).map((quota, idx) => {
                 const color = getColor(quota.percent)
                 const Icon = getIcon(quota.resource)
                 const showScope = selectedCluster === 'all' || selectedNamespace === 'all'
@@ -803,7 +777,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                 )
               })
             ) : (
-              (pagination.paginatedItems as typeof limitRangeItems).map((item, idx) => {
+              (paginatedLimits as LimitRangeItem[]).map((item, idx) => {
                 const showScope = selectedCluster === 'all' || selectedNamespace === 'all'
                 return (
                   <div
@@ -852,18 +826,14 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
           </div>
 
           {/* Pagination */}
-          {pagination.needsPagination && limit !== 'unlimited' && (
-            <div className="pt-2 border-t border-border/50 mt-2">
-              <Pagination
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.totalItems}
-                itemsPerPage={pagination.itemsPerPage}
-                onPageChange={pagination.goToPage}
-                showItemsPerPage={false}
-              />
-            </div>
-          )}
+          <CardPaginationFooter
+            currentPage={activePagination.currentPage}
+            totalPages={activePagination.totalPages}
+            totalItems={activePagination.totalItems}
+            itemsPerPage={typeof activePagination.itemsPerPage === 'number' ? activePagination.itemsPerPage : activePagination.totalItems}
+            onPageChange={activePagination.goToPage}
+            needsPagination={activePagination.needsPagination}
+          />
 
           {/* Footer legend */}
           <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">

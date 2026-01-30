@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Search, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
-import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
-import { CardControls } from '../ui/CardControls'
-import { Pagination } from '../ui/Pagination'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useChartFilters, type SortDirection } from '../../lib/cards'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 
@@ -54,6 +51,13 @@ interface GatekeeperStatus {
   error?: string
   policies?: Policy[]
   violations?: Violation[]
+}
+
+// Item type for useCardData - enriched cluster with a 'cluster' field for filtering
+interface OPAClusterItem {
+  name: string
+  cluster: string // same as name, required for useCardData cluster filtering
+  healthy?: boolean
 }
 
 // Common OPA Gatekeeper policy templates
@@ -1032,9 +1036,19 @@ Please proceed with applying this policy.`,
   )
 }
 
+// Sort comparators that use statuses lookup via closure
+function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
+  return {
+    name: commonComparators.string<OPAClusterItem>('name'),
+    violations: (a: OPAClusterItem, b: OPAClusterItem) =>
+      (statuses[a.name]?.violationCount || 0) - (statuses[b.name]?.violationCount || 0),
+    policies: (a: OPAClusterItem, b: OPAClusterItem) =>
+      (statuses[a.name]?.policyCount || 0) - (statuses[b.name]?.policyCount || 0),
+  }
+}
+
 export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   const { deduplicatedClusters: clusters } = useClusters()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { startMission } = useMissions()
 
   // Fetch clusters directly from agent as fallback
@@ -1055,18 +1069,6 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   const effectiveClusters = useMemo(() => {
     return clusters.length > 0 ? clusters : agentClusters
   }, [clusters, agentClusters])
-
-  // Local cluster filter
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({
-    storageKey: 'opa-policies',
-  })
 
   // Initialize statuses from localStorage cache for instant display
   const [statuses, setStatuses] = useState<Record<string, GatekeeperStatus>>(() => {
@@ -1108,13 +1110,59 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   const [selectedClusterForViolations, setSelectedClusterForViolations] = useState<string>('')
   const [showPolicyModal, setShowPolicyModal] = useState(false)
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null)
-  const [localSearch, setLocalSearch] = useState('')
 
-  // Sort and pagination state
-  const [sortBy, setSortBy] = useState<SortByOption>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
-  const [currentPage, setCurrentPage] = useState(1)
+  // Enrich cluster data with 'cluster' field for useCardData compatibility
+  // IMPORTANT: Don't filter by healthy status - the agent can reach clusters that browser health checks can't
+  // The OPA card uses kubectl via the agent, not browser-based API calls
+  const clusterItems = useMemo<OPAClusterItem[]>(() => {
+    return effectiveClusters.map(c => ({
+      name: c.name,
+      cluster: c.name, // useCardData needs this for global + local cluster filtering
+      healthy: c.healthy,
+    }))
+  }, [effectiveClusters])
+
+  // Build sort comparators using current statuses
+  const sortComparators = useMemo(
+    () => createSortComparators(statuses),
+    [statuses]
+  )
+
+  // Use shared card data hook for filtering, sorting, and pagination
+  const {
+    items: paginatedClusters,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search,
+      setSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef,
+    },
+    sorting,
+  } = useCardData<OPAClusterItem, SortByOption>(clusterItems, {
+    filter: {
+      searchFields: ['name'] as (keyof OPAClusterItem)[],
+      clusterField: 'cluster' as keyof OPAClusterItem,
+      storageKey: 'opa-policies',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: sortComparators,
+    },
+    defaultLimit: 5,
+  })
 
   // Use ref to avoid recreating checkAllClusters on every status change
   const statusesRef = useRef(statuses)
@@ -1126,71 +1174,9 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   // Track if initial check has been triggered (using state for reliable persistence)
   const [hasTriggeredInitialCheck, setHasTriggeredInitialCheck] = useState(false)
 
-  // Filter clusters
-  // IMPORTANT: Don't filter by healthy status - the agent can reach clusters that browser health checks can't
-  // The OPA card uses kubectl via the agent, not browser-based API calls
-  const filteredClusters = useMemo(() => {
-    let result = effectiveClusters
-
-    // Apply global cluster filter (but NOT health filter - agent can reach unreachable clusters)
-    if (!isAllClustersSelected) {
-      result = result.filter(c => selectedClusters.includes(c.name))
-    }
-
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      result = result.filter(c => localClusterFilter.includes(c.name))
-    }
-
-    // Apply local search
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(c => c.name.toLowerCase().includes(query))
-    }
-
-    return result
-  }, [effectiveClusters, isAllClustersSelected, selectedClusters, localClusterFilter, localSearch])
-
-  // Sort clusters based on current sort settings
-  const sortedClusters = useMemo(() => {
-    const sorted = [...filteredClusters].sort((a, b) => {
-      const statusA = statuses[a.name]
-      const statusB = statuses[b.name]
-
-      let comparison = 0
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name)
-          break
-        case 'violations':
-          comparison = (statusA?.violationCount || 0) - (statusB?.violationCount || 0)
-          break
-        case 'policies':
-          comparison = (statusA?.policyCount || 0) - (statusB?.policyCount || 0)
-          break
-      }
-
-      return sortDirection === 'asc' ? comparison : -comparison
-    })
-    return sorted
-  }, [filteredClusters, statuses, sortBy, sortDirection])
-
-  // Pagination
-  const totalPages = itemsPerPage === 'unlimited' ? 1 : Math.ceil(sortedClusters.length / itemsPerPage)
-  const paginatedClusters = useMemo(() => {
-    if (itemsPerPage === 'unlimited') return sortedClusters
-    const start = (currentPage - 1) * itemsPerPage
-    return sortedClusters.slice(start, start + itemsPerPage)
-  }, [sortedClusters, currentPage, itemsPerPage])
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [localClusterFilter, localSearch, sortBy])
-
-  // Ref for filteredClusters to avoid recreating checkAllClusters
-  const filteredClustersRef = useRef(filteredClusters)
-  filteredClustersRef.current = filteredClusters
+  // Ref for effectiveClusters to avoid recreating checkAllClusters
+  const effectiveClustersRef = useRef(effectiveClusters)
+  effectiveClustersRef.current = effectiveClusters
 
   // Check Gatekeeper on specified clusters
   const checkClusters = useCallback(async (clusters: { name: string }[], forceCheck = false) => {
@@ -1256,9 +1242,9 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
     }
   }, [])
 
-  // Wrapper for manual refresh - uses current filtered clusters, force check to override guards
+  // Wrapper for manual refresh - uses current effective clusters, force check to override guards
   const handleRefresh = useCallback(() => {
-    checkClusters(filteredClustersRef.current, true)
+    checkClusters(effectiveClustersRef.current, true)
   }, [checkClusters])
 
   // Initial check - only check clusters without cached data
@@ -1369,48 +1355,46 @@ Let's start by discussing what kind of policy I need.`,
             {installedCount} cluster{installedCount !== 1 ? 's' : ''}
           </span>
         ) : <div />}
-        <div className="flex items-center gap-1">
-          <ClusterFilterDropdown
-            localClusterFilter={localClusterFilter}
-            availableClusters={effectiveClusters}
-            showClusterFilter={showClusterFilter}
-            setShowClusterFilter={setShowClusterFilter}
-            toggleClusterFilter={toggleClusterFilter}
-            clearClusterFilter={clearClusterFilter}
-            clusterFilterRef={clusterFilterRef}
-          />
-          <CardControls
-            limit={itemsPerPage}
-            onLimitChange={setItemsPerPage}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
-          />
-          <a
-            href="https://open-policy-agent.github.io/gatekeeper/website/docs/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
-            title="OPA Gatekeeper Documentation"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
+        <CardControlsRow
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+          }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+          extra={
+            <a
+              href="https://open-policy-agent.github.io/gatekeeper/website/docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
+              title="OPA Gatekeeper Documentation"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          }
+        />
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search clusters..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search clusters..."
+        className="mb-3"
+      />
 
       {/* Summary stats */}
       {installedCount > 0 && (
@@ -1516,15 +1500,14 @@ Let's start by discussing what kind of policy I need.`,
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={sortedClusters.length}
-          itemsPerPage={itemsPerPage === 'unlimited' ? sortedClusters.length : itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage === 'unlimited' ? totalItems : itemsPerPage}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
 
       {/* Active policies preview - show real policies from first cluster with policies */}
       {installedCount > 0 && (() => {

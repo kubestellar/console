@@ -1,11 +1,15 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { 
-  TrendingUp, TrendingDown, Clock, BarChart3, 
+import {
+  TrendingUp, TrendingDown, Clock, BarChart3,
   ChevronDown, ChevronRight, Search as SearchIcon,
   Star, X, Loader2
 } from 'lucide-react'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import {
+  useCardData,
+  commonComparators,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards'
 
 // Stock search result interface
 interface StockSearchResult {
@@ -64,6 +68,14 @@ const SORT_OPTIONS = [
   { value: 'marketCap' as const, label: 'Market Cap' },
 ]
 
+const SORT_COMPARATORS: Record<SortByOption, (a: StockData, b: StockData) => number> = {
+  symbol: commonComparators.string<StockData>('symbol'),
+  price: commonComparators.number<StockData>('price'),
+  change: commonComparators.number<StockData>('changePercent'),
+  volume: commonComparators.number<StockData>('volume'),
+  marketCap: commonComparators.number<StockData>('marketCap'),
+}
+
 // Default stock symbols to track
 const DEFAULT_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA']
 
@@ -78,20 +90,20 @@ async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
     const response = await fetch(
       `${CORS_PROXY}${encodeURIComponent(yahooUrl)}`
     )
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch stock data')
     }
-    
+
     const data = await response.json()
     const quotes = data.quoteResponse?.result || []
-    
+
     return quotes.map((quote: any) => {
       // Generate sparkline from recent price changes (mock for now, would need historical API)
       const currentPrice = quote.regularMarketPrice || 0
       const change = quote.regularMarketChange || 0
       const openPrice = quote.regularMarketOpen || currentPrice
-      
+
       // Simple sparkline generation - in production would fetch intraday data
       const sparklineData: number[] = []
       const priceRange = Math.abs(change) * 2
@@ -101,7 +113,7 @@ async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
         const noise = (Math.random() - 0.5) * (priceRange * 0.1)
         sparklineData.push(Math.max(trendValue + noise, openPrice * 0.95))
       }
-      
+
       return {
         symbol: quote.symbol || '',
         name: quote.longName || quote.shortName || quote.symbol || 'Unknown',
@@ -172,14 +184,14 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
     const response = await fetch(
       `${CORS_PROXY}${encodeURIComponent(yahooSearchUrl)}`
     )
-    
+
     if (!response.ok) {
       throw new Error('Failed to search stocks')
     }
-    
+
     const data = await response.json()
     const quotes = data.quotes || []
-    
+
     return quotes
       .filter((q: any) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
       .map((q: any) => ({
@@ -194,8 +206,8 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
     console.error('Error searching stocks, using fallback:', error)
     // Fallback to local search when API fails (e.g., CORS issues)
     const queryLower = query.toLowerCase()
-    return COMMON_STOCKS.filter(stock => 
-      stock.symbol.toLowerCase().includes(queryLower) || 
+    return COMMON_STOCKS.filter(stock =>
+      stock.symbol.toLowerCase().includes(queryLower) ||
       stock.name.toLowerCase().includes(queryLower)
     ).slice(0, 10)
   }
@@ -209,12 +221,12 @@ function getMarketStatus(): { isOpen: boolean; statusText: string } {
   const hour = now.getHours()
   const minutes = now.getMinutes()
   const day = now.getDay()
-  
+
   // Weekend
   if (day === 0 || day === 6) {
     return { isOpen: false, statusText: 'Market Closed - Weekend' }
   }
-  
+
   // Weekday hours (9:30 AM - 4:00 PM EST)
   // Simple approximation without timezone handling
   const isMarketHours = (hour === 9 && minutes >= 30) || (hour > 9 && hour < 16)
@@ -342,9 +354,9 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
   }).join(' ')
 
   return (
-    <svg 
-      className="w-20 h-8" 
-      viewBox="0 0 100 100" 
+    <svg
+      className="w-20 h-8"
+      viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
       <polyline
@@ -359,15 +371,15 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
 }
 
 // Stock row component
-function StockRow({ 
-  stock, 
-  expanded, 
+function StockRow({
+  stock,
+  expanded,
   onToggle,
   onToggleFavorite,
   onRemove,
   isFavorite,
   canRemove
-}: { 
+}: {
   stock: StockData
   expanded: boolean
   onToggle: () => void
@@ -390,7 +402,7 @@ function StockRow({
           className="p-1 rounded hover:bg-accent transition-colors"
           title={isFavorite ? 'Unfavorite' : 'Favorite'}
         >
-          <Star 
+          <Star
             className={`w-3 h-3 ${isFavorite ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
           />
         </button>
@@ -409,7 +421,7 @@ function StockRow({
       </div>
 
       {/* Main row */}
-      <div 
+      <div
         className="flex items-center gap-3 p-3 pl-16 pr-4 hover:bg-accent/50 cursor-pointer transition-colors"
         onClick={onToggle}
       >
@@ -477,15 +489,12 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const refreshInterval = config?.refreshInterval || 60
   const dataSource = config?.dataSource || 'Yahoo Finance'
 
-  const [sortBy, setSortBy] = useState<SortByOption>('change')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [limit, setLimit] = useState<number | 'unlimited'>(10)
   const [expandedStocks, setExpandedStocks] = useState<Set<string>>(new Set())
   const [, setLastRefresh] = useState<Date>(new Date())
   const [, setIsRefreshing] = useState(false)
   // Default to demo mode - live data uses CORS proxy which may have rate limits
   const [useLiveData, setUseLiveData] = useState(false)
-  
+
   // Search and saved stocks state
   const [stockSearchInput, setStockSearchInput] = useState('')
   const [stockSearchResults, setStockSearchResults] = useState<StockSearchResult[]>([])
@@ -496,7 +505,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     return saved ? JSON.parse(saved) : []
   })
   const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
-  
+
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Save stocks to localStorage whenever they change
@@ -508,17 +517,41 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const [stockData, setStockData] = useState<StockData[]>([])
   const [isLoadingData, setIsLoadingData] = useState(true)
 
+  // --- useCardData hook replaces manual sort/pagination state ---
+  const {
+    items: stocks,
+    totalItems,
+    currentPage,
+    totalPages,
+    goToPage,
+    needsPagination,
+    itemsPerPage,
+    setItemsPerPage,
+    sorting,
+  } = useCardData<StockData, SortByOption>(stockData, {
+    filter: {
+      searchFields: ['symbol', 'name'] as (keyof StockData)[],
+      storageKey: 'stock-ticker',
+    },
+    sort: {
+      defaultField: 'change',
+      defaultDirection: 'desc',
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 10,
+  })
+
   // Handle refresh with useCallback to avoid stale closures
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
     setIsLoadingData(true)
     try {
-      const data = useLiveData 
+      const data = useLiveData
         ? await fetchRealStockData(activeSymbols)
         : generateMockStockData(activeSymbols)
       setStockData(data)
       setLastRefresh(new Date())
-      
+
       // Update saved stocks with latest prices
       setSavedStocks(prev => prev.map(saved => {
         const stock = data.find(s => s.symbol === saved.symbol)
@@ -627,9 +660,9 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const toggleFavorite = useCallback((symbol: string) => {
     const existingStock = savedStocks.find(s => s.symbol === symbol)
     const currentStock = stockData.find(s => s.symbol === symbol)
-    
+
     if (existingStock) {
-      setSavedStocks(prev => prev.map(s => 
+      setSavedStocks(prev => prev.map(s =>
         s.symbol === symbol ? { ...s, favorite: !s.favorite } : s
       ))
     } else if (currentStock) {
@@ -669,38 +702,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     }
     prevSymbolsRef.current = activeSymbols
   }, [activeSymbols, handleRefresh])
-
-  // Sort stock data
-  const sortedStocks = useMemo(() => {
-    const sorted = [...stockData].sort((a, b) => {
-      let result = 0
-      if (sortBy === 'symbol') {
-        result = a.symbol.localeCompare(b.symbol)
-      } else if (sortBy === 'price') {
-        result = a.price - b.price
-      } else if (sortBy === 'change') {
-        result = a.changePercent - b.changePercent
-      } else if (sortBy === 'volume') {
-        result = a.volume - b.volume
-      } else if (sortBy === 'marketCap') {
-        result = a.marketCap - b.marketCap
-      }
-      return sortDirection === 'asc' ? result : -result
-    })
-    return sorted
-  }, [stockData, sortBy, sortDirection])
-
-  // Pagination
-  const effectivePerPage = limit === 'unlimited' ? 1000 : limit
-  const {
-    paginatedItems: stocks,
-    currentPage,
-    totalPages,
-    totalItems,
-    itemsPerPage: perPage,
-    goToPage,
-    needsPagination,
-  } = usePagination(sortedStocks, effectivePerPage)
 
   const toggleExpanded = (symbol: string) => {
     setExpandedStocks(prev => {
@@ -749,17 +750,17 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <CardControls
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            limit={limit}
-            onSortChange={setSortBy}
-            onSortDirectionChange={setSortDirection}
-            onLimitChange={setLimit}
-            sortOptions={SORT_OPTIONS}
-          />
-        </div>
+        <CardControlsRow
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+        />
       </div>
 
       {/* Search and add stock */}
@@ -868,15 +869,14 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
           {!useLiveData && <span className="text-muted-foreground">(Demo)</span>}
         </div>
 
-        {needsPagination && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={perPage}
-            onPageChange={goToPage}
-          />
-        )}
+        <CardPaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+          onPageChange={goToPage}
+          needsPagination={needsPagination}
+        />
       </div>
     </div>
   )

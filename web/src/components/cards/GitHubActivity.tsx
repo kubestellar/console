@@ -1,9 +1,14 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, ChevronDown, Plus, Trash2, Search } from 'lucide-react'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
+import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { cn } from '../../lib/cn'
+import {
+  useCardData,
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards'
+import type { SortDirection } from '../../lib/cards'
 
 // Types for GitHub activity data
 interface GitHubPR {
@@ -76,6 +81,9 @@ interface GitHubActivityConfig {
 
 type ViewMode = 'prs' | 'issues' | 'stars' | 'contributors' | 'releases'
 type SortByOption = 'date' | 'activity' | 'status'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GitHubItem = any
 
 const SORT_OPTIONS = [
   { value: 'date' as const, label: 'Date' },
@@ -394,11 +402,42 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   }
 }
 
+// Sort comparators for GitHub items - keyed by viewMode-aware logic
+const SORT_COMPARATORS: Record<SortByOption, (a: GitHubItem, b: GitHubItem) => number> = {
+  date: (a, b) => {
+    const aDate = new Date(a.updated_at || a.published_at || 0).getTime()
+    const bDate = new Date(b.updated_at || b.published_at || 0).getTime()
+    return aDate - bDate
+  },
+  activity: (a, b) => {
+    // For issues: sort by comment count; for contributors: sort by contributions
+    const aActivity = a.comments ?? a.contributions ?? 0
+    const bActivity = b.comments ?? b.contributions ?? 0
+    return aActivity - bActivity
+  },
+  status: (a, b) => {
+    const statusOrder: Record<string, number> = { open: 0, merged: 1, closed: 2 }
+    const aStatus = a.merged ? 'merged' : (a.state || '')
+    const bStatus = b.merged ? 'merged' : (b.state || '')
+    return (statusOrder[aStatus] ?? 999) - (statusOrder[bStatus] ?? 999)
+  },
+}
+
+// Custom search predicate for GitHub items (handles heterogeneous item types)
+function githubSearchPredicate(item: GitHubItem, query: string): boolean {
+  return (
+    item.title?.toLowerCase().includes(query) ||
+    item.name?.toLowerCase().includes(query) ||
+    item.tag_name?.toLowerCase().includes(query) ||
+    item.login?.toLowerCase().includes(query) ||
+    item.user?.login?.toLowerCase().includes(query) ||
+    item.author?.login?.toLowerCase().includes(query) ||
+    false
+  )
+}
+
 export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
   const [viewMode, setViewMode] = useState<ViewMode>('prs')
-  const [sortBy, setSortBy] = useState<SortByOption>('date')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(10)
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>(config?.timeRange || '30d')
 
   // Multi-repo state
@@ -409,7 +448,6 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
   const [repoInput, setRepoInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [showRepoDropdown, setShowRepoDropdown] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
 
   // Use current repo for data fetching
   const effectiveConfig = useMemo(() => {
@@ -488,8 +526,8 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
     setShowSettings(false)
   }, [savedRepos])
 
-  // Filter and sort data based on view mode
-  const filteredAndSorted = useMemo(() => {
+  // Pre-filter data by viewMode and timeRange before passing to useCardData
+  const preFilteredData = useMemo(() => {
     const now = Date.now()
     const rangeMs = {
       '7d': 7 * 24 * 60 * 60 * 1000,
@@ -498,82 +536,46 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       '1y': 365 * 24 * 60 * 60 * 1000,
     }[timeRange]
 
-    let data: any[] = []
-
     if (viewMode === 'prs') {
-      data = prs.filter(pr => now - new Date(pr.updated_at).getTime() <= rangeMs)
-      data.sort((a, b) => {
-        if (sortBy === 'date') {
-          return sortDirection === 'desc'
-            ? new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-            : new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-        }
-        if (sortBy === 'status') {
-          const statusOrder = { open: 0, merged: 1, closed: 2 }
-          const aStatus = a.merged ? 'merged' : a.state
-          const bStatus = b.merged ? 'merged' : b.state
-          return sortDirection === 'desc'
-            ? statusOrder[bStatus as keyof typeof statusOrder] - statusOrder[aStatus as keyof typeof statusOrder]
-            : statusOrder[aStatus as keyof typeof statusOrder] - statusOrder[bStatus as keyof typeof statusOrder]
-        }
-        return 0
-      })
+      return prs.filter(pr => now - new Date(pr.updated_at).getTime() <= rangeMs)
     } else if (viewMode === 'issues') {
-      data = issues.filter(issue => now - new Date(issue.updated_at).getTime() <= rangeMs)
-      data.sort((a, b) => {
-        if (sortBy === 'date') {
-          return sortDirection === 'desc'
-            ? new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-            : new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-        }
-        if (sortBy === 'activity') {
-          return sortDirection === 'desc' ? b.comments - a.comments : a.comments - b.comments
-        }
-        return 0
-      })
+      return issues.filter(issue => now - new Date(issue.updated_at).getTime() <= rangeMs)
     } else if (viewMode === 'releases') {
-      data = releases.filter(release => now - new Date(release.published_at).getTime() <= rangeMs)
-      data.sort((a, b) => {
-        return sortDirection === 'desc'
-          ? new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
-          : new Date(a.published_at).getTime() - new Date(b.published_at).getTime()
-      })
+      return releases.filter(release => now - new Date(release.published_at).getTime() <= rangeMs)
     } else if (viewMode === 'contributors') {
-      data = contributors
-      data.sort((a, b) => {
-        return sortDirection === 'desc'
-          ? b.contributions - a.contributions
-          : a.contributions - b.contributions
-      })
+      return contributors
     }
+    return []
+  }, [viewMode, prs, issues, releases, contributors, timeRange])
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      data = data.filter((item: any) => {
-        return (
-          item.title?.toLowerCase().includes(query) ||
-          item.name?.toLowerCase().includes(query) ||
-          item.tag_name?.toLowerCase().includes(query) ||
-          item.login?.toLowerCase().includes(query) ||
-          item.user?.login?.toLowerCase().includes(query) ||
-          item.author?.login?.toLowerCase().includes(query)
-        )
-      })
-    }
-
-    return data
-  }, [viewMode, prs, issues, releases, contributors, sortBy, sortDirection, timeRange, searchQuery])
-
-  const effectivePerPage = itemsPerPage === 'unlimited' ? 1000 : itemsPerPage
+  // Use shared card data hook for filtering, sorting, and pagination
   const {
-    paginatedItems,
+    items: paginatedItems,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredAndSorted, effectivePerPage)
+    setItemsPerPage,
+    filters: {
+      search: searchQuery,
+      setSearch: setSearchQuery,
+    },
+    sorting,
+  } = useCardData<GitHubItem, SortByOption>(preFilteredData, {
+    filter: {
+      searchFields: [] as (keyof GitHubItem)[],
+      customPredicate: githubSearchPredicate,
+      storageKey: 'github-activity',
+    },
+    sort: {
+      defaultField: 'date',
+      defaultDirection: 'desc' as SortDirection,
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 10,
+  })
 
   // Calculate stats - use accurate counts from API when available
   const stats = useMemo(() => {
@@ -776,13 +778,15 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
     )
   }
 
+  const effectivePerPage = itemsPerPage === 'unlimited' ? 1000 : itemsPerPage
+
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Row 1: Header with count badge, repo picker, and controls */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2 relative">
           <span className="text-sm font-medium text-muted-foreground">
-            {filteredAndSorted.length} items
+            {totalItems} items
           </span>
           <button
             onClick={() => setShowRepoDropdown(!showRepoDropdown)}
@@ -834,14 +838,16 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <CardControls
-            limit={itemsPerPage}
-            onLimitChange={setItemsPerPage}
-            sortBy={sortBy}
-            sortOptions={SORT_OPTIONS}
-            onSortChange={setSortBy}
-            sortDirection={sortDirection}
-            onSortDirectionChange={setSortDirection}
+          <CardControlsRow
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy: sorting.sortBy,
+              sortOptions: SORT_OPTIONS,
+              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+              sortDirection: sorting.sortDirection,
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
           />
           <button
             onClick={() => setShowSettings(!showSettings)}
@@ -857,16 +863,12 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       </div>
 
       {/* Row 2: Search input */}
-      <div className="relative mb-2 flex-shrink-0">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={`Search ${viewMode}...`}
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder={`Search ${viewMode}...`}
+        className="mb-2 flex-shrink-0"
+      />
 
       {/* Row 3: View Mode Tabs (act as filter pills) */}
       <div className="flex items-center gap-1 mb-3 overflow-x-auto flex-shrink-0">
@@ -1087,17 +1089,14 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && (
-        <div className="mt-3 pt-3 border-t border-border/50">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={effectivePerPage}
-            onPageChange={goToPage}
-          />
-        </div>
-      )}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={effectivePerPage}
+        onPageChange={goToPage}
+        needsPagination={needsPagination}
+      />
     </div>
   )
 }

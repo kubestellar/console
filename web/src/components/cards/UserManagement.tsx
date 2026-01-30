@@ -5,10 +5,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Search,
   ChevronRight,
-  Filter,
-  Server,
 } from 'lucide-react'
 import { useConsoleUsers, useAllK8sServiceAccounts, useAllOpenShiftUsers } from '../../hooks/useUsers'
 import { useClusters } from '../../hooks/useMCP'
@@ -16,11 +13,15 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useAuth } from '../../lib/auth'
 import { cn } from '../../lib/cn'
-import { useChartFilters } from '../../lib/cards'
+import {
+  useCardData,
+  commonComparators,
+  CardSearchInput,
+  CardControlsRow,
+  CardPaginationFooter,
+} from '../../lib/cards'
 import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
-import { CardControls, SortDirection } from '../ui/CardControls'
-import { Pagination, usePagination } from '../ui/Pagination'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -47,27 +48,22 @@ const SA_SORT_OPTIONS = [
   { value: 'namespace' as const, label: 'Namespace' },
 ]
 
+// Sort comparators for each tab
+const OPENSHIFT_USER_COMPARATORS: Record<OpenShiftUserSortBy, (a: OpenShiftUser, b: OpenShiftUser) => number> = {
+  name: commonComparators.string<OpenShiftUser>('name'),
+  kind: (a, b) => (a.fullName || '').localeCompare(b.fullName || ''),
+}
+
+const SA_COMPARATORS: Record<SASortBy, (a: { name: string; namespace: string; cluster: string; roles?: string[] }, b: { name: string; namespace: string; cluster: string; roles?: string[] }) => number> = {
+  name: (a, b) => a.name.localeCompare(b.name),
+  namespace: (a, b) => a.namespace.localeCompare(b.namespace),
+}
+
 export function UserManagement({ config: _config }: UserManagementProps) {
   const [activeTab, setActiveTab] = useState<TabType>('clusterUsers')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
-  const [localSearch, setLocalSearch] = useState('')
-
-  // Sorting and pagination for Cluster Users (OpenShift)
-  const [openshiftUserSortBy, setOpenShiftUserSortBy] = useState<OpenShiftUserSortBy>('name')
-  const [openshiftUserSortDirection, setOpenShiftUserSortDirection] = useState<SortDirection>('asc')
-  const [openshiftUserLimit, setOpenShiftUserLimit] = useState<number | 'unlimited'>(5)
-
-  // Sorting and pagination for Service Accounts
-  const [saSortBy, setSaSortBy] = useState<SASortBy>('name')
-  const [saSortDirection, setSaSortDirection] = useState<SortDirection>('asc')
-  const [saLimit, setSaLimit] = useState<number | 'unlimited'>(5)
-
-  // Sorting and pagination for Console Users
-  const [consoleUserSortBy, setConsoleUserSortBy] = useState<ConsoleUserSortBy>('name')
-  const [consoleUserSortDirection, setConsoleUserSortDirection] = useState<SortDirection>('asc')
-  const [consoleUserLimit, setConsoleUserLimit] = useState<number | 'unlimited'>(5)
 
   const { drillToRBAC } = useDrillDownActions()
   const { user: currentUser } = useAuth()
@@ -82,18 +78,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const sasLoading = sasInitialLoading && allServiceAccounts.length === 0
   const openshiftUsersLoading = openshiftInitialLoading && allOpenshiftUsers.length === 0
 
-  const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
-
-  // Local cluster filter (gold standard pattern)
-  const {
-    localClusterFilter,
-    toggleClusterFilter,
-    clearClusterFilter,
-    availableClusters,
-    showClusterFilter,
-    setShowClusterFilter,
-    clusterFilterRef,
-  } = useChartFilters({ storageKey: 'user-management' })
+  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters by global filter (already deduplicated from hook)
   const clusters = useMemo(() => {
@@ -101,12 +86,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     return allClusters.filter(c => selectedClusters.includes(c.name))
   }, [allClusters, selectedClusters, isAllClustersSelected])
 
-  // Filter users by global customFilter and local search
-  // Also ensure current user is always included from auth context
-  const users = useMemo(() => {
+  // Ensure current user is always included from auth context
+  const usersWithCurrent = useMemo(() => {
     let result = [...allUsers]
-
-    // If API returned empty or current user not in list, add them from auth context
     if (currentUser && !result.some(u => u.github_id === currentUser.github_id)) {
       const authUser: ConsoleUser = {
         id: currentUser.id,
@@ -120,25 +102,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       }
       result = [authUser, ...result]
     }
-
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(u =>
-        u.github_login.toLowerCase().includes(query) ||
-        (u.email?.toLowerCase() || '').includes(query)
-      )
-    }
-    // Apply local search
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(u =>
-        u.github_login.toLowerCase().includes(query) ||
-        (u.email?.toLowerCase() || '').includes(query) ||
-        u.role.toLowerCase().includes(query)
-      )
-    }
     return result
-  }, [allUsers, currentUser, customFilter, localSearch])
+  }, [allUsers, currentUser])
 
   // Extract unique namespaces from service accounts (filtered by cluster if selected)
   const namespaces = useMemo(() => {
@@ -149,44 +114,158 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     return Array.from(nsSet).sort()
   }, [allServiceAccounts, selectedCluster])
 
-  // Filter service accounts by cluster, namespace, global filter and local search (all local filtering)
-  const serviceAccounts = useMemo(() => {
-    let result = allServiceAccounts
+  // Pre-filter OpenShift users by in-tab cluster dropdown (before passing to useCardData)
+  const openshiftUsersPreFiltered = useMemo(() => {
+    if (!selectedCluster) return allOpenshiftUsers
+    return allOpenshiftUsers.filter(u => u.cluster === selectedCluster)
+  }, [allOpenshiftUsers, selectedCluster])
 
-    // Filter by selected cluster (local filter from dropdown)
+  // Pre-filter service accounts by in-tab cluster and namespace dropdowns
+  const serviceAccountsPreFiltered = useMemo(() => {
+    let result = allServiceAccounts
     if (selectedCluster) {
       result = result.filter(sa => sa.cluster === selectedCluster)
     }
-
-    // Filter by selected namespace (local filter from dropdown)
     if (selectedNamespace) {
       result = result.filter(sa => sa.namespace === selectedNamespace)
     }
-
-    // Filter by global cluster selection
-    if (!isAllClustersSelected) {
-      result = result.filter(sa => selectedClusters.includes(sa.cluster))
-    }
-    if (customFilter.trim()) {
-      const query = customFilter.toLowerCase()
-      result = result.filter(sa =>
-        sa.name.toLowerCase().includes(query) ||
-        sa.namespace.toLowerCase().includes(query)
-      )
-    }
-    // Apply local search
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(sa =>
-        sa.name.toLowerCase().includes(query) ||
-        sa.namespace.toLowerCase().includes(query) ||
-        sa.cluster.toLowerCase().includes(query)
-      )
-    }
     return result
-  }, [allServiceAccounts, selectedCluster, selectedNamespace, selectedClusters, isAllClustersSelected, customFilter, localSearch])
+  }, [allServiceAccounts, selectedCluster, selectedNamespace])
+
+  // Console user comparators (pins current user to top)
+  const consoleUserComparators = useMemo((): Record<ConsoleUserSortBy, (a: ConsoleUser, b: ConsoleUser) => number> => ({
+    name: (a, b) => {
+      if (a.github_id === currentUser?.github_id) return -1
+      if (b.github_id === currentUser?.github_id) return 1
+      return a.github_login.localeCompare(b.github_login)
+    },
+    role: (a, b) => {
+      if (a.github_id === currentUser?.github_id) return -1
+      if (b.github_id === currentUser?.github_id) return 1
+      return a.role.localeCompare(b.role)
+    },
+    email: (a, b) => {
+      if (a.github_id === currentUser?.github_id) return -1
+      if (b.github_id === currentUser?.github_id) return 1
+      return (a.email || '').localeCompare(b.email || '')
+    },
+  }), [currentUser?.github_id])
+
+  // ---------- useCardData for OpenShift users tab ----------
+  const {
+    items: openshiftUserItems,
+    totalItems: openshiftUserTotalItems,
+    currentPage: openshiftUserCurrentPage,
+    totalPages: openshiftUserTotalPages,
+    itemsPerPage: openshiftUserItemsPerPage,
+    goToPage: openshiftUserGoToPage,
+    needsPagination: openshiftUserNeedsPagination,
+    setItemsPerPage: setOpenShiftUserItemsPerPage,
+    filters: openshiftUserFilters,
+    sorting: openshiftUserSorting,
+  } = useCardData<OpenShiftUser, OpenShiftUserSortBy>(openshiftUsersPreFiltered, {
+    filter: {
+      searchFields: ['name', 'cluster'] as (keyof OpenShiftUser)[],
+      clusterField: 'cluster' as keyof OpenShiftUser,
+      customPredicate: (u, query) =>
+        (u.fullName?.toLowerCase() || '').includes(query) ||
+        (u.groups?.some(g => g.toLowerCase().includes(query)) || false),
+      storageKey: 'user-management-cluster-users',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: OPENSHIFT_USER_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
+
+  // ---------- useCardData for Service Accounts tab ----------
+  const {
+    items: saItems,
+    totalItems: saTotalItems,
+    currentPage: saCurrentPage,
+    totalPages: saTotalPages,
+    itemsPerPage: saItemsPerPage,
+    goToPage: saGoToPage,
+    needsPagination: saNeedsPagination,
+    setItemsPerPage: setSaItemsPerPage,
+    filters: saFilters,
+    sorting: saSorting,
+  } = useCardData<typeof allServiceAccounts[number], SASortBy>(serviceAccountsPreFiltered, {
+    filter: {
+      searchFields: ['name', 'namespace', 'cluster'] as (keyof typeof allServiceAccounts[number])[],
+      clusterField: 'cluster' as keyof typeof allServiceAccounts[number],
+      storageKey: 'user-management-service-accounts',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: SA_COMPARATORS,
+    },
+    defaultLimit: 5,
+  })
+
+  // ---------- useCardData for Console Users tab ----------
+  const {
+    items: consoleUserItems,
+    totalItems: consoleUserTotalItems,
+    currentPage: consoleUserCurrentPage,
+    totalPages: consoleUserTotalPages,
+    itemsPerPage: consoleUserItemsPerPage,
+    goToPage: consoleUserGoToPage,
+    needsPagination: consoleUserNeedsPagination,
+    setItemsPerPage: setConsoleUserItemsPerPage,
+    filters: consoleUserFilters,
+    sorting: consoleUserSorting,
+  } = useCardData<ConsoleUser, ConsoleUserSortBy>(usersWithCurrent, {
+    filter: {
+      searchFields: ['github_login', 'email', 'role'] as (keyof ConsoleUser)[],
+      storageKey: 'user-management-console-users',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: consoleUserComparators,
+    },
+    defaultLimit: 5,
+  })
+
+  // Active tab's filter/sorting references for the controls row
+  const activeFilters = activeTab === 'clusterUsers' ? openshiftUserFilters
+    : activeTab === 'serviceAccounts' ? saFilters
+    : consoleUserFilters
+
+  const activeSorting = activeTab === 'clusterUsers' ? openshiftUserSorting
+    : activeTab === 'serviceAccounts' ? saSorting
+    : consoleUserSorting
+
+  const activeItemsPerPage = activeTab === 'clusterUsers' ? openshiftUserItemsPerPage
+    : activeTab === 'serviceAccounts' ? saItemsPerPage
+    : consoleUserItemsPerPage
+
+  const activeSetItemsPerPage = activeTab === 'clusterUsers' ? setOpenShiftUserItemsPerPage
+    : activeTab === 'serviceAccounts' ? setSaItemsPerPage
+    : setConsoleUserItemsPerPage
+
+  const activeSortOptions = activeTab === 'clusterUsers' ? OPENSHIFT_USER_SORT_OPTIONS
+    : activeTab === 'serviceAccounts' ? SA_SORT_OPTIONS
+    : CONSOLE_USER_SORT_OPTIONS
 
   const isAdmin = currentUser?.role === 'admin'
+
+  // Count for current tab (shown in Row 1 LEFT)
+  const currentTabCount = useMemo(() => {
+    if (activeTab === 'clusterUsers') return openshiftUserTotalItems
+    if (activeTab === 'serviceAccounts') return saTotalItems
+    return consoleUserTotalItems
+  }, [activeTab, openshiftUserTotalItems, saTotalItems, consoleUserTotalItems])
+
+  const currentTabLabel = useMemo(() => {
+    if (activeTab === 'clusterUsers') return 'cluster users'
+    if (activeTab === 'serviceAccounts') return 'service accounts'
+    return 'console users'
+  }, [activeTab])
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
@@ -215,115 +294,6 @@ export function UserManagement({ config: _config }: UserManagementProps) {
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
-
-  // Filter and sort OpenShift users (all local filtering)
-  const filteredOpenShiftUsers = useMemo(() => {
-    let result = [...allOpenshiftUsers]
-
-    // Filter by selected cluster (local filter from dropdown)
-    if (selectedCluster) {
-      result = result.filter(u => u.cluster === selectedCluster)
-    }
-
-    // Filter by global cluster selection
-    if (!isAllClustersSelected) {
-      result = result.filter(u => selectedClusters.includes(u.cluster))
-    }
-
-    if (localSearch.trim()) {
-      const query = localSearch.toLowerCase()
-      result = result.filter(u =>
-        u.name.toLowerCase().includes(query) ||
-        (u.fullName?.toLowerCase() || '').includes(query) ||
-        (u.groups?.some(g => g.toLowerCase().includes(query)) || false) ||
-        u.cluster.toLowerCase().includes(query)
-      )
-    }
-    return result
-  }, [allOpenshiftUsers, selectedCluster, selectedClusters, isAllClustersSelected, localSearch])
-
-  const sortedOpenShiftUsers = useMemo(() => {
-    const sorted = [...filteredOpenShiftUsers].sort((a, b) => {
-      let compare = 0
-      switch (openshiftUserSortBy) {
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'kind':
-          // Sort by fullName for OpenShift users
-          compare = (a.fullName || '').localeCompare(b.fullName || '')
-          break
-      }
-      return openshiftUserSortDirection === 'asc' ? compare : -compare
-    })
-    return sorted
-  }, [filteredOpenShiftUsers, openshiftUserSortBy, openshiftUserSortDirection])
-
-  // Sort console users
-  const sortedConsoleUsers = useMemo(() => {
-    const sorted = [...users].sort((a, b) => {
-      // Current user always first
-      if (a.github_id === currentUser?.github_id) return -1
-      if (b.github_id === currentUser?.github_id) return 1
-
-      let compare = 0
-      switch (consoleUserSortBy) {
-        case 'name':
-          compare = a.github_login.localeCompare(b.github_login)
-          break
-        case 'role':
-          compare = a.role.localeCompare(b.role)
-          break
-        case 'email':
-          compare = (a.email || '').localeCompare(b.email || '')
-          break
-      }
-      return consoleUserSortDirection === 'asc' ? compare : -compare
-    })
-    return sorted
-  }, [users, consoleUserSortBy, consoleUserSortDirection, currentUser?.github_id])
-
-  // Sort service accounts
-  const sortedServiceAccounts = useMemo(() => {
-    const sorted = [...serviceAccounts].sort((a, b) => {
-      let compare = 0
-      switch (saSortBy) {
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'namespace':
-          compare = a.namespace.localeCompare(b.namespace)
-          break
-      }
-      return saSortDirection === 'asc' ? compare : -compare
-    })
-    return sorted
-  }, [serviceAccounts, saSortBy, saSortDirection])
-
-  // Pagination for OpenShift users
-  const openshiftUserPerPage = openshiftUserLimit === 'unlimited' ? 1000 : openshiftUserLimit
-  const openshiftUserPagination = usePagination(sortedOpenShiftUsers, openshiftUserPerPage)
-
-  // Pagination for console users
-  const consoleUserPerPage = consoleUserLimit === 'unlimited' ? 1000 : consoleUserLimit
-  const consoleUserPagination = usePagination(sortedConsoleUsers, consoleUserPerPage)
-
-  // Pagination for service accounts
-  const saPerPage = saLimit === 'unlimited' ? 1000 : saLimit
-  const saPagination = usePagination(sortedServiceAccounts, saPerPage)
-
-  // Count for current tab (shown in Row 1 LEFT)
-  const currentTabCount = useMemo(() => {
-    if (activeTab === 'clusterUsers') return filteredOpenShiftUsers.length
-    if (activeTab === 'serviceAccounts') return serviceAccounts.length
-    return users.length
-  }, [activeTab, filteredOpenShiftUsers.length, serviceAccounts.length, users.length])
-
-  const currentTabLabel = useMemo(() => {
-    if (activeTab === 'clusterUsers') return 'cluster users'
-    if (activeTab === 'serviceAccounts') return 'service accounts'
-    return 'console users'
-  }, [activeTab])
 
   // Only show skeleton during initial loading
   const hasData = allUsers.length > 0 || currentUser !== null
@@ -362,110 +332,57 @@ export function UserManagement({ config: _config }: UserManagementProps) {
             {currentTabCount} {currentTabLabel}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{availableClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && (
-                <div className="absolute top-full right-0 mt-1 w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50">
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'clusterUsers' && (
-            <CardControls
-              limit={openshiftUserLimit}
-              onLimitChange={setOpenShiftUserLimit}
-              sortBy={openshiftUserSortBy}
-              sortOptions={OPENSHIFT_USER_SORT_OPTIONS}
-              onSortChange={setOpenShiftUserSortBy}
-              sortDirection={openshiftUserSortDirection}
-              onSortDirectionChange={setOpenShiftUserSortDirection}
-            />
-          )}
-          {activeTab === 'serviceAccounts' && (
-            <CardControls
-              limit={saLimit}
-              onLimitChange={setSaLimit}
-              sortBy={saSortBy}
-              sortOptions={SA_SORT_OPTIONS}
-              onSortChange={setSaSortBy}
-              sortDirection={saSortDirection}
-              onSortDirectionChange={setSaSortDirection}
-            />
-          )}
-          {activeTab === 'console' && (
-            <CardControls
-              limit={consoleUserLimit}
-              onLimitChange={setConsoleUserLimit}
-              sortBy={consoleUserSortBy}
-              sortOptions={CONSOLE_USER_SORT_OPTIONS}
-              onSortChange={setConsoleUserSortBy}
-              sortDirection={consoleUserSortDirection}
-              onSortDirectionChange={setConsoleUserSortDirection}
-            />
-          )}
-        </div>
+        <CardControlsRow
+          clusterIndicator={
+            activeFilters.localClusterFilter.length > 0
+              ? {
+                  selectedCount: activeFilters.localClusterFilter.length,
+                  totalCount: activeFilters.availableClusters.length,
+                }
+              : undefined
+          }
+          clusterFilter={
+            activeFilters.availableClusters.length >= 1
+              ? {
+                  availableClusters: activeFilters.availableClusters,
+                  selectedClusters: activeFilters.localClusterFilter,
+                  onToggle: activeFilters.toggleClusterFilter,
+                  onClear: activeFilters.clearClusterFilter,
+                  isOpen: activeFilters.showClusterFilter,
+                  setIsOpen: activeFilters.setShowClusterFilter,
+                  containerRef: activeFilters.clusterFilterRef,
+                  minClusters: 1,
+                }
+              : undefined
+          }
+          cardControls={{
+            limit: activeItemsPerPage,
+            onLimitChange: activeSetItemsPerPage,
+            sortBy: activeSorting.sortBy,
+            sortOptions: activeSortOptions,
+            onSortChange: (v) => {
+              if (activeTab === 'clusterUsers') openshiftUserSorting.setSortBy(v as OpenShiftUserSortBy)
+              else if (activeTab === 'serviceAccounts') saSorting.setSortBy(v as SASortBy)
+              else consoleUserSorting.setSortBy(v as ConsoleUserSortBy)
+            },
+            sortDirection: activeSorting.sortDirection,
+            onSortDirectionChange: activeSorting.setSortDirection,
+          }}
+          className="mb-0"
+        />
       </div>
 
       {/* Row 2: Search input */}
-      <div className="relative mb-2 flex-shrink-0">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder={
-            activeTab === 'clusterUsers' ? 'Search cluster users...' :
-            activeTab === 'serviceAccounts' ? 'Search service accounts...' :
-            'Search console users...'
-          }
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={activeFilters.search}
+        onChange={activeFilters.setSearch}
+        placeholder={
+          activeTab === 'clusterUsers' ? 'Search cluster users...' :
+          activeTab === 'serviceAccounts' ? 'Search service accounts...' :
+          'Search console users...'
+        }
+        className="mb-2 flex-shrink-0"
+      />
 
       {/* Row 3: Tab filter pills */}
       <div className="flex items-center gap-1 mb-3 flex-shrink-0">
@@ -511,7 +428,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
             clusters={clusters}
             selectedCluster={selectedCluster}
             setSelectedCluster={setSelectedCluster}
-            users={openshiftUserPagination.paginatedItems}
+            users={openshiftUserItems}
             isLoading={openshiftUsersLoading}
             showClusterBadge={true}
             onDrillToUser={(cluster, name) =>
@@ -528,7 +445,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
             selectedNamespace={selectedNamespace}
             setSelectedNamespace={setSelectedNamespace}
             namespaces={namespaces}
-            serviceAccounts={saPagination.paginatedItems}
+            serviceAccounts={saItems}
             isLoading={sasLoading}
             showClusterBadge={true}
             onDrillToServiceAccount={(cluster, namespace, name, roles) =>
@@ -542,7 +459,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
 
         {activeTab === 'console' && (
           <ConsoleUsersTab
-            users={consoleUserPagination.paginatedItems}
+            users={consoleUserItems}
             isLoading={usersLoading}
             isAdmin={isAdmin}
             currentUserGithubId={currentUser?.github_id}
@@ -556,41 +473,35 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       </div>
 
       {/* Pagination */}
-      {activeTab === 'clusterUsers' && openshiftUserPagination.needsPagination && openshiftUserLimit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={openshiftUserPagination.currentPage}
-            totalPages={openshiftUserPagination.totalPages}
-            totalItems={openshiftUserPagination.totalItems}
-            itemsPerPage={openshiftUserPagination.itemsPerPage}
-            onPageChange={openshiftUserPagination.goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
+      {activeTab === 'clusterUsers' && (
+        <CardPaginationFooter
+          currentPage={openshiftUserCurrentPage}
+          totalPages={openshiftUserTotalPages}
+          totalItems={openshiftUserTotalItems}
+          itemsPerPage={typeof openshiftUserItemsPerPage === 'number' ? openshiftUserItemsPerPage : openshiftUserTotalItems}
+          onPageChange={openshiftUserGoToPage}
+          needsPagination={openshiftUserNeedsPagination && openshiftUserItemsPerPage !== 'unlimited'}
+        />
       )}
-      {activeTab === 'serviceAccounts' && saPagination.needsPagination && saLimit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={saPagination.currentPage}
-            totalPages={saPagination.totalPages}
-            totalItems={saPagination.totalItems}
-            itemsPerPage={saPagination.itemsPerPage}
-            onPageChange={saPagination.goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
+      {activeTab === 'serviceAccounts' && (
+        <CardPaginationFooter
+          currentPage={saCurrentPage}
+          totalPages={saTotalPages}
+          totalItems={saTotalItems}
+          itemsPerPage={typeof saItemsPerPage === 'number' ? saItemsPerPage : saTotalItems}
+          onPageChange={saGoToPage}
+          needsPagination={saNeedsPagination && saItemsPerPage !== 'unlimited'}
+        />
       )}
-      {activeTab === 'console' && consoleUserPagination.needsPagination && consoleUserLimit !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2">
-          <Pagination
-            currentPage={consoleUserPagination.currentPage}
-            totalPages={consoleUserPagination.totalPages}
-            totalItems={consoleUserPagination.totalItems}
-            itemsPerPage={consoleUserPagination.itemsPerPage}
-            onPageChange={consoleUserPagination.goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
+      {activeTab === 'console' && (
+        <CardPaginationFooter
+          currentPage={consoleUserCurrentPage}
+          totalPages={consoleUserTotalPages}
+          totalItems={consoleUserTotalItems}
+          itemsPerPage={typeof consoleUserItemsPerPage === 'number' ? consoleUserItemsPerPage : consoleUserTotalItems}
+          onPageChange={consoleUserGoToPage}
+          needsPagination={consoleUserNeedsPagination && consoleUserItemsPerPage !== 'unlimited'}
+        />
       )}
     </div>
   )

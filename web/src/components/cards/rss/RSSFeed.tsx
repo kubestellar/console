@@ -1,17 +1,29 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Rss, RefreshCw, ExternalLink, Settings, X, Plus,
-  Clock, ArrowUp, ChevronDown, Star, Filter, Pencil, Search
+  Clock, ArrowUp, ChevronDown, Star, Filter, Pencil
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { Pagination, usePagination } from '../../ui/Pagination'
-import type { FeedItem, FeedConfig, FeedFilter, SortOption, RSSFeedProps } from './types'
+import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
+import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps } from './types'
 import { PRESET_FEEDS, CORS_PROXIES } from './constants'
 import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
   isValidThumbnail, normalizeRedditLink, formatTimeAgo,
 } from './RSSParser'
+
+type SortByOption = 'date' | 'title'
+
+const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => number> = {
+  date: (a, b) => {
+    const aTime = a.pubDate?.getTime() || 0
+    const bTime = b.pubDate?.getTime() || 0
+    return aTime - bTime
+  },
+  title: commonComparators.string<FeedItem>('title'),
+}
 
 export function RSSFeed({ config }: RSSFeedProps) {
   const [feeds, setFeeds] = useState<FeedConfig[]>(() => {
@@ -73,10 +85,7 @@ export function RSSFeed({ config }: RSSFeedProps) {
   const [newFeedUrl, setNewFeedUrl] = useState('')
   const [newFeedName, setNewFeedName] = useState('')
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
   const [fetchSuccess, setFetchSuccess] = useState<string | null>(null) // Success message
-  const [sortBy, setSortBy] = useState<SortOption>('date-desc')
-  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [showFilterEditor, setShowFilterEditor] = useState(false)
   const [tempIncludeTerms, setTempIncludeTerms] = useState('')
   const [tempExcludeTerms, setTempExcludeTerms] = useState('')
@@ -118,8 +127,9 @@ export function RSSFeed({ config }: RSSFeedProps) {
     return Array.from(sources.values()).sort((a, b) => a.name.localeCompare(b.name))
   }, [items, activeFeed?.isAggregate])
 
-  // Apply filters, search, and sort
-  const filteredAndSortedItems = useMemo(() => {
+  // Pre-filter: apply RSS-specific source filter and include/exclude filters
+  // before handing off to useCardData for search, sort, and pagination
+  const preFilteredItems = useMemo(() => {
     let result = [...items]
 
     // Apply source filter (for aggregate feeds)
@@ -146,46 +156,38 @@ export function RSSFeed({ config }: RSSFeedProps) {
       }
     }
 
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        (item.description && item.description.toLowerCase().includes(query)) ||
-        (item.author && item.author.toLowerCase().includes(query)) ||
-        (item.subreddit && item.subreddit.toLowerCase().includes(query)) ||
-        (item.sourceName && item.sourceName.toLowerCase().includes(query))
-      )
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'date-desc':
-          return (b.pubDate?.getTime() || 0) - (a.pubDate?.getTime() || 0)
-        case 'date-asc':
-          return (a.pubDate?.getTime() || 0) - (b.pubDate?.getTime() || 0)
-        case 'title-asc':
-          return a.title.localeCompare(b.title)
-        case 'title-desc':
-          return b.title.localeCompare(a.title)
-        default:
-          return 0
-      }
-    })
-
     return result
-  }, [items, activeFeed?.filter, activeFeed?.isAggregate, searchQuery, sortBy, sourceFilter])
+  }, [items, activeFeed?.filter, activeFeed?.isAggregate, sourceFilter])
 
-  // Pagination
+  // useCardData: handles search, sort, and pagination
   const {
-    paginatedItems,
+    items: paginatedItems,
+    totalItems,
     currentPage,
     totalPages,
-    totalItems,
+    itemsPerPage,
     goToPage,
     needsPagination,
-  } = usePagination(filteredAndSortedItems, itemsPerPage)
+    setItemsPerPage,
+    filters,
+    sorting,
+  } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
+    filter: {
+      searchFields: ['title', 'description', 'author'] as (keyof FeedItem)[],
+      customPredicate: (item, query) => {
+        if (item.subreddit && item.subreddit.toLowerCase().includes(query)) return true
+        if (item.sourceName && item.sourceName.toLowerCase().includes(query)) return true
+        return false
+      },
+      storageKey: 'rss-feed',
+    },
+    sort: {
+      defaultField: 'date',
+      defaultDirection: 'desc',
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 10,
+  })
 
   // Fetch with timeout helper
   const fetchWithTimeout = async (url: string, timeoutMs: number): Promise<Response> => {
@@ -660,7 +662,7 @@ export function RSSFeed({ config }: RSSFeedProps) {
 
           {/* Count badge */}
           <span className="text-sm font-medium text-muted-foreground">
-            {filteredAndSortedItems.length} items
+            {totalItems} items
           </span>
         </div>
 
@@ -690,16 +692,11 @@ export function RSSFeed({ config }: RSSFeedProps) {
 
       {/* Row 2: Search */}
       <div className="flex flex-col gap-2 mb-2 flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search items..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-          />
-        </div>
+        <CardSearchInput
+          value={filters.search}
+          onChange={filters.setSearch}
+          placeholder="Search items..."
+        />
       </div>
 
       {/* Row 3: Feed Pills - Quick Navigation */}
@@ -733,17 +730,21 @@ export function RSSFeed({ config }: RSSFeedProps) {
       {/* Sort & Filter Controls */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
-          {/* Sort dropdown */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="px-2 py-0.5 text-[10px] bg-secondary/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="date-desc">Newest</option>
-            <option value="date-asc">Oldest</option>
-            <option value="title-asc">A-Z</option>
-            <option value="title-desc">Z-A</option>
-          </select>
+          {/* CardControlsRow for sort & limit */}
+          <CardControlsRow
+            cardControls={{
+              limit: itemsPerPage,
+              onLimitChange: setItemsPerPage,
+              sortBy: sorting.sortBy,
+              sortOptions: [
+                { value: 'date', label: 'Date' },
+                { value: 'title', label: 'Title' },
+              ],
+              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+              sortDirection: sorting.sortDirection,
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
+          />
 
           {/* Filter button */}
           <button
@@ -815,18 +816,6 @@ export function RSSFeed({ config }: RSSFeedProps) {
             </div>
           )}
         </div>
-
-        {/* Items per page */}
-        <select
-          value={itemsPerPage}
-          onChange={(e) => setItemsPerPage(Number(e.target.value))}
-          className="px-2 py-0.5 text-[10px] bg-secondary/50 border border-border rounded focus:outline-none"
-        >
-          <option value={5}>5/page</option>
-          <option value={10}>10/page</option>
-          <option value={20}>20/page</option>
-          <option value={50}>50/page</option>
-        </select>
       </div>
 
       {/* Filter Editor Modal */}
@@ -1221,10 +1210,10 @@ export function RSSFeed({ config }: RSSFeedProps) {
           </div>
         ) : fetchSuccess ? (
           <span className="text-[10px] text-muted-foreground/60">✓ {fetchSuccess}</span>
-        ) : (searchQuery || activeFeed?.filter) ? (
+        ) : (filters.search || activeFeed?.filter) ? (
           <span className="text-[10px] text-muted-foreground">
-            {filteredAndSortedItems.length} of {items.length} items
-            {searchQuery && ` matching "${searchQuery}"`}
+            {totalItems} of {items.length} items
+            {filters.search && ` matching "${filters.search}"`}
             {activeFeed?.filter && ' (filtered)'}
           </span>
         ) : null}
@@ -1242,14 +1231,14 @@ export function RSSFeed({ config }: RSSFeedProps) {
               </div>
             ))}
           </div>
-        ) : filteredAndSortedItems.length === 0 ? (
+        ) : totalItems === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <Rss className="w-8 h-8 mb-2 opacity-50" />
-            <span className="text-sm">{searchQuery || activeFeed?.filter ? 'No matching items' : 'No items in feed'}</span>
-            {(searchQuery || activeFeed?.filter) && (
+            <span className="text-sm">{filters.search || activeFeed?.filter ? 'No matching items' : 'No items in feed'}</span>
+            {(filters.search || activeFeed?.filter) && (
               <button
                 onClick={() => {
-                  setSearchQuery('')
+                  filters.setSearch('')
                   if (activeFeed?.filter) {
                     updateFeedFilter(activeFeedIndex, undefined)
                   }
@@ -1340,18 +1329,16 @@ export function RSSFeed({ config }: RSSFeedProps) {
       </div>
 
       {/* Pagination */}
-      {needsPagination && (
-        <div className="mt-2 pt-2 border-t border-border/50 flex-shrink-0">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={goToPage}
-            showItemsPerPage={false}
-          />
-        </div>
-      )}
+      <div className="flex-shrink-0">
+        <CardPaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+          onPageChange={goToPage}
+          needsPagination={needsPagination}
+        />
+      </div>
 
     </div>
   )
