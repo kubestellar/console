@@ -32,12 +32,12 @@ export function useCardHistory() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
       // Clear error on successful save
-      if (error) setError(null)
+      setError(null)
     } catch (err) {
       setError('Failed to save card history to localStorage')
       console.error('Failed to save card history:', err)
     }
-  }, [history, error])
+  }, [history])
 
   const addEntry = useCallback((entry: Omit<CardHistoryEntry, 'id' | 'timestamp'>) => {
     setHistory((prev) => {
