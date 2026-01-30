@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, createContext, useContext, ComponentType } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info,
@@ -11,6 +11,7 @@ import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
+import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
@@ -791,6 +792,17 @@ export function CardWrapper({
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
+  // Child-reported data state (from card components via CardDataContext)
+  const [childDataState, setChildDataState] = useState<CardDataState | null>(null)
+  const reportCallback = useCallback((state: CardDataState) => {
+    setChildDataState(state)
+  }, [])
+  const reportCtx = useMemo(() => ({ report: reportCallback }), [reportCallback])
+
+  // Merge child-reported state with props — child reports take priority when present
+  const effectiveIsFailed = isFailed || childDataState?.isFailed || false
+  const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
+
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
 
@@ -902,6 +914,7 @@ export function CardWrapper({
 
   return (
     <CardExpandedContext.Provider value={{ isExpanded }}>
+    <CardDataReportContext.Provider value={reportCtx}>
       <>
         {/* Main card */}
         <div
@@ -952,20 +965,20 @@ export function CardWrapper({
               </span>
             )}
             {/* Failure indicator */}
-            {isFailed && (
+            {effectiveIsFailed && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1"
-                title={`${consecutiveFailures} consecutive refresh failures`}
+                title={`${effectiveConsecutiveFailures} consecutive refresh failures`}
               >
                 Refresh failed
               </span>
             )}
             {/* Refresh indicator */}
-            {isVisuallySpinning && !isFailed && (
+            {isVisuallySpinning && !effectiveIsFailed && (
               <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
             )}
             {/* Last updated indicator */}
-            {!isVisuallySpinning && !isFailed && lastUpdated && (
+            {!isVisuallySpinning && !effectiveIsFailed && lastUpdated && (
               <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
                 {formatTimeAgo(lastUpdated)}
               </span>
@@ -989,11 +1002,11 @@ export function CardWrapper({
                   'p-1.5 rounded-lg transition-colors',
                   isVisuallySpinning
                     ? 'text-blue-400 cursor-not-allowed'
-                    : isFailed
+                    : effectiveIsFailed
                     ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
                     : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 )}
-                title={isFailed ? `Refresh failed ${consecutiveFailures} times - click to retry` : 'Refresh data'}
+                title={effectiveIsFailed ? `Refresh failed ${effectiveConsecutiveFailures} times - click to retry` : 'Refresh data'}
               >
                 <RefreshCw className={cn('w-4 h-4', isVisuallySpinning && 'animate-spin')} />
               </button>
@@ -1192,6 +1205,7 @@ export function CardWrapper({
         </BaseModal.Content>
       </BaseModal>
       </>
+    </CardDataReportContext.Provider>
     </CardExpandedContext.Provider>
   )
 }

@@ -4,6 +4,7 @@ import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { useReportCardDataState } from './CardDataContext'
 import {
   useCardData, commonComparators, getStatusColors,
   CardSkeleton, CardEmptyState, CardSearchInput,
@@ -30,8 +31,13 @@ export function PodIssues() {
   const {
     issues: rawIssues,
     isLoading: hookLoading,
+    isFailed,
+    consecutiveFailures,
     error
   } = useCachedPodIssues()
+
+  // Report data state to CardWrapper for failure badge rendering
+  useReportCardDataState({ isFailed, consecutiveFailures })
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawIssues.length === 0

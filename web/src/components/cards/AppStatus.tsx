@@ -4,6 +4,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useReportCardDataState } from './CardDataContext'
 import {
   useCardData,
   commonComparators,
@@ -43,7 +44,11 @@ interface AppData {
 
 export function AppStatus(_props: AppStatusProps) {
   const { drillToDeployment } = useDrillDownActions()
-  const { deployments, isLoading } = useCachedDeployments()
+  const { deployments, isLoading, isFailed, consecutiveFailures } = useCachedDeployments()
+
+  // Report data state to CardWrapper for failure badge rendering
+  useReportCardDataState({ isFailed, consecutiveFailures })
+
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
