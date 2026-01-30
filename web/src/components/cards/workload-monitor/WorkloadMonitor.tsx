@@ -19,6 +19,7 @@ import { WorkloadMonitorToolbar } from './WorkloadMonitorToolbar'
 import { WorkloadMonitorTree } from './WorkloadMonitorTree'
 import { WorkloadMonitorList } from './WorkloadMonitorList'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
+import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 
 interface WorkloadMonitorProps {
   config?: Record<string, unknown>
@@ -302,6 +303,22 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
 
           {/* Alerts */}
           <WorkloadMonitorAlerts issues={issues} />
+
+          {/* AI Diagnose & Repair */}
+          <WorkloadMonitorDiagnose
+            resources={items}
+            issues={issues}
+            monitorType={monitorConfig?.monitorType || 'workload'}
+            diagnosable={monitorConfig?.diagnosable !== false}
+            repairable={monitorConfig?.repairable !== false}
+            workloadContext={{
+              cluster: activeCluster,
+              namespace: activeNamespace,
+              workload: activeWorkload,
+              workloadKind,
+              overallStatus,
+            }}
+          />
         </>
       )}
     </div>
