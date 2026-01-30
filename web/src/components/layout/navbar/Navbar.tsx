@@ -48,8 +48,8 @@ export function Navbar() {
         {/* Update Indicator */}
         <UpdateIndicator />
 
-        {/* Agent Selector + Status — selector renders invisible placeholder in demo mode */}
-        <AgentSelector compact showSettings={true} />
+        {/* Agent Selector + Status — grayed out in demo mode */}
+        <AgentSelector compact />
         <AgentStatusIndicator />
 
         {/* Language Selector */}

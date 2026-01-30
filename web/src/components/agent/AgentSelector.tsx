@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { ChevronDown, Check, Loader2, Settings } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -10,10 +10,9 @@ import { cn } from '../../lib/cn'
 interface AgentSelectorProps {
   compact?: boolean
   className?: string
-  showSettings?: boolean
 }
 
-export function AgentSelector({ compact = false, className = '', showSettings = true }: AgentSelectorProps) {
+export function AgentSelector({ compact = false, className = '' }: AgentSelectorProps) {
   const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent } = useMissions()
   const { isDemoMode } = useDemoMode()
   const [isOpen, setIsOpen] = useState(false)
@@ -26,6 +25,20 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
   const visibleAgents = agents.filter(a =>
     a.available || !CLI_BASED_PROVIDERS.includes(a.provider)
   )
+
+  // Sort: selected agent first, then available agents, then unavailable
+  const sortedAgents = useMemo(() => {
+    return [...visibleAgents].sort((a, b) => {
+      // Selected agent first
+      if (a.name === selectedAgent && b.name !== selectedAgent) return -1
+      if (b.name === selectedAgent && a.name !== selectedAgent) return 1
+      // Available before unavailable
+      if (a.available && !b.available) return -1
+      if (!a.available && b.available) return 1
+      // Alphabetical within same group
+      return a.displayName.localeCompare(b.displayName)
+    })
+  }, [visibleAgents, selectedAgent])
 
   const currentAgent = visibleAgents.find(a => a.name === selectedAgent) || visibleAgents[0]
   const hasAvailableAgents = visibleAgents.some(a => a.available)
@@ -61,19 +74,14 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
     }
   }, [isOpen])
 
-  // In demo mode, render an invisible placeholder to reserve layout space
-  // and prevent navbar items from shifting when toggling demo mode.
-  if (isDemoMode) {
-    return (
-      <div className="invisible pointer-events-none" aria-hidden>
-        <div className="flex items-center gap-2 px-3 py-1.5">
-          <div className="w-4 h-4" />
-        </div>
-      </div>
-    )
-  }
+  // Close dropdown when entering demo mode
+  useEffect(() => {
+    if (isDemoMode) {
+      setIsOpen(false)
+    }
+  }, [isDemoMode])
 
-  if (agentsLoading) {
+  if (agentsLoading && !isDemoMode) {
     return (
       <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -82,9 +90,10 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
     )
   }
 
+  // No visible agents — show a settings-only button (grayed out in demo mode)
   if (visibleAgents.length === 0 || !hasAvailableAgents) {
     return (
-      <>
+      <div className={cn(isDemoMode && 'opacity-40 pointer-events-none')}>
         <button
           onClick={() => setShowSettingsModal(true)}
           className={cn(
@@ -96,8 +105,8 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
           <Settings className="w-4 h-4" />
           {!compact && 'Configure AI'}
         </button>
-        <APIKeySettings isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
-      </>
+        {!isDemoMode && <APIKeySettings isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />}
+      </div>
     )
   }
 
@@ -122,29 +131,31 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
 
   return (
     <>
-    <div ref={dropdownRef} className={cn('relative flex items-center gap-1', className)}>
-      {showSettings && (
-        <button
-          onClick={() => setShowSettingsModal(true)}
-          className="p-1.5 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-          title="API Key Settings"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-      )}
+    <div ref={dropdownRef} className={cn('relative flex items-center gap-1', className, isDemoMode && 'opacity-40 pointer-events-none')}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !isDemoMode && setIsOpen(!isOpen)}
         className={cn(
           'flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors',
-          'bg-secondary/50 border-border hover:bg-secondary',
+          hasAvailableAgents
+            ? 'bg-secondary/50 border-border hover:bg-secondary'
+            : 'bg-primary/10 border-primary/30 hover:bg-primary/20 text-primary',
           isOpen && 'ring-1 ring-primary'
         )}
       >
-        <AgentIcon provider={currentAgent?.provider} className="w-4 h-4" />
-        {!compact && (
-          <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
-            {currentAgent?.displayName || 'Select Agent'}
-          </span>
+        {hasAvailableAgents && currentAgent ? (
+          <>
+            <AgentIcon provider={currentAgent.provider} className="w-4 h-4" />
+            {!compact && (
+              <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                {currentAgent.displayName}
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            <Settings className="w-4 h-4" />
+            {!compact && <span className="text-sm font-medium">Configure AI</span>}
+          </>
         )}
         <ChevronDown className={cn(
           'w-4 h-4 text-muted-foreground transition-transform',
@@ -153,44 +164,58 @@ export function AgentSelector({ compact = false, className = '', showSettings = 
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 top-full mt-1 right-0 w-64 rounded-lg bg-card border border-border shadow-lg py-1 overflow-hidden">
-          {visibleAgents.map((agent: AgentInfo) => (
-            <button
-              key={agent.name}
-              onClick={() => agent.available && handleSelect(agent.name)}
-              disabled={!agent.available}
-              className={cn(
-                'w-full flex items-start gap-3 px-3 py-2 text-left transition-colors',
-                agent.available
-                  ? 'hover:bg-secondary cursor-pointer'
-                  : 'opacity-50 cursor-not-allowed',
-                agent.name === selectedAgent && 'bg-primary/10'
-              )}
-            >
-              <AgentIcon provider={agent.provider} className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    'text-sm font-medium',
-                    agent.name === selectedAgent ? 'text-primary' : 'text-foreground'
-                  )}>
-                    {agent.displayName}
-                  </span>
-                  {agent.name === selectedAgent && (
-                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
+        <div className="absolute z-50 top-full mt-1 right-0 w-72 rounded-lg bg-card border border-border shadow-lg overflow-hidden">
+          <div className="py-1">
+            {sortedAgents.map((agent: AgentInfo) => (
+              <div
+                key={agent.name}
+                className={cn(
+                  'w-full flex items-start gap-3 px-3 py-2 text-left transition-colors',
+                  agent.available
+                    ? 'hover:bg-secondary cursor-pointer'
+                    : 'cursor-default',
+                  agent.name === selectedAgent && 'bg-primary/10'
+                )}
+                onClick={() => agent.available && handleSelect(agent.name)}
+              >
+                <AgentIcon provider={agent.provider} className={cn('w-5 h-5 mt-0.5 flex-shrink-0', !agent.available && 'opacity-40')} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      'text-sm font-medium',
+                      agent.name === selectedAgent ? 'text-primary' : agent.available ? 'text-foreground' : 'text-muted-foreground'
+                    )}>
+                      {agent.displayName}
+                    </span>
+                    {agent.name === selectedAgent && (
+                      <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    )}
+                  </div>
+                  <p className={cn('text-xs truncate', agent.available ? 'text-muted-foreground' : 'text-muted-foreground/60')}>{agent.description}</p>
+                  {!agent.available && (
+                    <p className="text-xs text-destructive/70 mt-0.5">API key not configured</p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{agent.description}</p>
-                {!agent.available && (
-                  <p className="text-xs text-destructive mt-0.5">API key not configured</p>
-                )}
               </div>
+            ))}
+          </div>
+          {/* Settings footer inside dropdown */}
+          <div className="border-t border-border">
+            <button
+              onClick={() => {
+                setShowSettingsModal(true)
+                setIsOpen(false)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              API Key Settings
             </button>
-          ))}
+          </div>
         </div>
       )}
     </div>
-    <APIKeySettings isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
+    {!isDemoMode && <APIKeySettings isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} />}
     </>
   )
 }
