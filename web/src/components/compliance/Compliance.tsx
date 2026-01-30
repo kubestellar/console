@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Shield, GripVertical } from 'lucide-react'
+import { Shield, GripVertical, AlertCircle } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
@@ -176,7 +176,7 @@ function getCompliancePosture(clusterCount: number) {
 
 export function Compliance() {
   const location = useLocation()
-  const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing } = useClusters()
+    const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
@@ -336,6 +336,17 @@ export function Compliance() {
         autoRefreshId="compliance-auto-refresh"
         lastUpdated={lastUpdated}
       />
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-400">Error loading data</p>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Configurable Stats Overview */}
       <StatsOverview
