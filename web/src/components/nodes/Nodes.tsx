@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Server, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
+import { Server, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid, AlertCircle } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -134,11 +134,12 @@ function NodesDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Nodes() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
+  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes, error: nodesError } = useGPUNodes()
+  const error = clustersError || nodesError
   const { drillToNode: _drillToNode, drillToAllNodes, drillToAllGPU, drillToAllPods, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -307,6 +308,17 @@ export function Nodes() {
         autoRefreshId="nodes-auto-refresh"
         lastUpdated={lastUpdated}
       />
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-400">Error loading data</p>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Overview */}
       <StatsOverview
