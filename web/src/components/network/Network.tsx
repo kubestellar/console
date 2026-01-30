@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Globe, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
+import { Globe, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, AlertCircle } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
@@ -134,7 +134,7 @@ function NetworkDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Network() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch } = useServices()
+  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = servicesRefreshing || showIndicator
 
@@ -297,6 +297,17 @@ export function Network() {
         autoRefreshId="network-auto-refresh"
         lastUpdated={lastUpdated}
       />
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-400">Error loading data</p>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Overview - configurable */}
       <StatsOverview

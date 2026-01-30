@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef, memo, useState } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
-import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitCompare, CheckSquare, Square } from 'lucide-react'
+import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitCompare, CheckSquare, Square, AlertCircle } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
@@ -136,10 +136,11 @@ export function Compute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes, error: gpuError } = useGPUNodes()
+  const error = clustersError || gpuError
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -377,6 +378,17 @@ export function Compute() {
         autoRefreshId="compute-auto-refresh"
         lastUpdated={lastUpdated}
       />
+
+      {/* Error Display */}
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-400">Error loading data</p>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Overview - configurable */}
       <StatsOverview
