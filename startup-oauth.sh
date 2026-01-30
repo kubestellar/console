@@ -80,7 +80,7 @@ echo "  Frontend URL: $FRONTEND_URL"
 echo ""
 
 # Port cleanup
-for p in 8080 5174; do
+for p in 8080 5174 8585; do
     if lsof -Pi :$p -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${YELLOW}Port $p is in use, killing existing process...${NC}"
         lsof -ti:$p | xargs kill -9 2>/dev/null || true
@@ -93,9 +93,32 @@ cleanup() {
     echo -e "\n${YELLOW}Shutting down...${NC}"
     kill $BACKEND_PID 2>/dev/null || true
     kill $FRONTEND_PID 2>/dev/null || true
+    kill $AGENT_PID 2>/dev/null || true
     exit 0
 }
 trap cleanup SIGINT SIGTERM
+
+# Install/upgrade kc-agent via brew
+if command -v brew &>/dev/null; then
+    if brew list kc-agent &>/dev/null; then
+        echo -e "${GREEN}Upgrading kc-agent...${NC}"
+        brew update --quiet && brew upgrade kc-agent 2>/dev/null || true
+    else
+        echo -e "${GREEN}Installing kc-agent...${NC}"
+        brew update --quiet && brew install kubestellar/tap/kc-agent
+    fi
+fi
+
+# Start kc-agent
+if command -v kc-agent &>/dev/null; then
+    echo -e "${GREEN}Starting kc-agent...${NC}"
+    kc-agent &
+    AGENT_PID=$!
+    sleep 2
+else
+    echo -e "${YELLOW}Warning: kc-agent not found and brew not available.${NC}"
+    AGENT_PID=""
+fi
 
 # Start backend (NO --dev flag, uses real OAuth)
 echo -e "${GREEN}Starting backend (OAuth mode)...${NC}"
@@ -113,6 +136,7 @@ echo -e "${GREEN}=== Console is running in OAUTH mode ===${NC}"
 echo ""
 echo -e "  Frontend: ${CYAN}http://localhost:5174${NC}"
 echo -e "  Backend:  ${CYAN}http://localhost:8080${NC}"
+echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
 echo -e "  Auth:     GitHub OAuth (real login)"
 echo ""
 echo "Press Ctrl+C to stop"
