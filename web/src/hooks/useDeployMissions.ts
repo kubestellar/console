@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
 import { getPresentationMode } from './usePresentationMode'
+import { clusterCacheRef } from './mcp/shared'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
+
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
 export type DeployMissionStatus = 'launching' | 'deploying' | 'orbit' | 'abort' | 'partial'
 
@@ -164,14 +167,54 @@ export function useDeployMissions() {
           const pollCount = (mission.pollCount ?? 0) + 1
 
           const statuses = await Promise.all(
-            mission.targetClusters.map(async (cluster) => {
+            mission.targetClusters.map(async (cluster): Promise<DeployClusterStatus> => {
+              // Try agent first (works when backend is down)
+              try {
+                const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
+                if (clusterInfo) {
+                  const params = new URLSearchParams()
+                  params.append('cluster', clusterInfo.context || cluster)
+                  params.append('namespace', mission.namespace)
+                  const ctrl = new AbortController()
+                  const tid = setTimeout(() => ctrl.abort(), 10000)
+                  const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+                    signal: ctrl.signal,
+                    headers: { Accept: 'application/json' },
+                  })
+                  clearTimeout(tid)
+                  if (res.ok) {
+                    const data = await res.json()
+                    const deployments = (data.deployments || []) as Array<Record<string, unknown>>
+                    const match = deployments.find(
+                      (d) => String(d.name) === mission.workload
+                    )
+                    if (match) {
+                      const replicas = Number(match.replicas || 0)
+                      const readyReplicas = Number(match.readyReplicas || 0)
+                      let status: DeployClusterStatus['status'] = 'applying'
+                      if (readyReplicas > 0 && readyReplicas >= replicas) {
+                        status = 'running'
+                      } else if (String(match.status) === 'failed') {
+                        status = 'failed'
+                      }
+                      return { cluster, status, replicas, readyReplicas }
+                    }
+                    // Workload not found on this cluster yet — still pending
+                    return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
+                  }
+                }
+              } catch {
+                // Agent failed, try REST below
+              }
+
+              // Fall back to REST API
               try {
                 const res = await fetch(
                   `/api/workloads/deploy-status/${encodeURIComponent(cluster)}/${encodeURIComponent(mission.namespace)}/${encodeURIComponent(mission.workload)}`,
                   { headers: authHeaders() }
                 )
                 if (!res.ok) {
-                  return { cluster, status: 'pending' as const, replicas: 0, readyReplicas: 0 }
+                  return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
                 }
                 const data = await res.json()
                 let status: DeployClusterStatus['status'] = 'applying'
@@ -182,7 +225,7 @@ export function useDeployMissions() {
                 } else if (data.readyReplicas > 0) {
                   status = 'applying'
                 }
-                // Always fetch deploy events/logs (k8s events are useful at any stage)
+                // Fetch deploy events/logs
                 let logs: string[] | undefined
                 try {
                   const logRes = await fetch(
@@ -198,7 +241,6 @@ export function useDeployMissions() {
                 } catch {
                   // Non-critical: skip logs on error
                 }
-
                 return {
                   cluster,
                   status,
@@ -207,7 +249,7 @@ export function useDeployMissions() {
                   logs,
                 }
               } catch {
-                return { cluster, status: 'pending' as const, replicas: 0, readyReplicas: 0 }
+                return { cluster, status: 'pending', replicas: 0, readyReplicas: 0 }
               }
             })
           )

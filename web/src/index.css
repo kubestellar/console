@@ -595,6 +595,26 @@
   animation: spin-min 1s linear infinite;
 }
 
+/* Rocket launch / blast-off animation */
+@keyframes rocket-launch {
+  0%, 100% {
+    transform: translateY(0) rotate(-45deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(-45deg) scale(1.1);
+  }
+  50% {
+    transform: translateY(-1px) rotate(-45deg);
+  }
+  75% {
+    transform: translateY(-4px) rotate(-45deg) scale(1.05);
+  }
+}
+
+.animate-rocket-launch {
+  animation: rocket-launch 1.2s ease-in-out infinite;
+}
+
 /* Enhanced Weather Animations - High Contrast, Premium Effects */
 
 /* ========== REALISTIC WEATHER ANIMATIONS ========== */

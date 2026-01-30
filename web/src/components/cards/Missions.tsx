@@ -36,21 +36,21 @@ const STATUS_CONFIG: Record<DeployMissionStatus, {
   color: string
   bg: string
   label: string
-  animate?: boolean
+  animateClass?: string
 }> = {
   launching: {
     icon: Rocket,
     color: 'text-blue-400',
     bg: 'bg-blue-500/20',
     label: 'Launching',
-    animate: true,
+    animateClass: 'animate-rocket-launch',
   },
   deploying: {
     icon: Loader2,
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/20',
     label: 'Deploying',
-    animate: true,
+    animateClass: 'animate-spin',
   },
   orbit: {
     icon: Orbit,
@@ -385,7 +385,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
         <StatusIcon className={cn(
           'w-4 h-4 shrink-0',
           config.color,
-          config.animate && 'animate-spin',
+          config.animateClass,
         )} />
 
         {/* Workload name */}
