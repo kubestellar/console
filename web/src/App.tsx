@@ -48,6 +48,47 @@ const NamespaceManager = lazy(() => import('./components/namespaces/NamespaceMan
 const Arcade = lazy(() => import('./components/arcade/Arcade').then(m => ({ default: m.Arcade })))
 const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ default: m.Deploy })))
 
+// Prefetch all lazy route chunks after initial page load.
+// This runs during idle time so by the time the user navigates,
+// the target chunk is already cached and loads instantly.
+if (typeof window !== 'undefined') {
+  const prefetchRoutes = () => {
+    const chunks = [
+      () => import('./components/dashboard/Dashboard'),
+      () => import('./components/clusters/Clusters'),
+      () => import('./components/workloads/Workloads'),
+      () => import('./components/compute/Compute'),
+      () => import('./components/events/Events'),
+      () => import('./components/nodes/Nodes'),
+      () => import('./components/deployments/Deployments'),
+      () => import('./components/pods/Pods'),
+      () => import('./components/services/Services'),
+      () => import('./components/storage/Storage'),
+      () => import('./components/network/Network'),
+      () => import('./components/security/Security'),
+      () => import('./components/gitops/GitOps'),
+      () => import('./components/alerts/Alerts'),
+      () => import('./components/cost/Cost'),
+      () => import('./components/compliance/Compliance'),
+      () => import('./components/operators/Operators'),
+      () => import('./components/helm/HelmReleases'),
+      () => import('./components/settings/Settings'),
+      () => import('./components/gpu/GPUReservations'),
+    ]
+    // Stagger imports to avoid blocking the main thread
+    chunks.forEach((load, i) => {
+      setTimeout(() => load().catch(() => {}), i * 100)
+    })
+  }
+
+  // Use requestIdleCallback if available, otherwise setTimeout
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(prefetchRoutes, { timeout: 5000 })
+  } else {
+    setTimeout(prefetchRoutes, 2000)
+  }
+}
+
 // Loading fallback component with delay to prevent flash on fast navigation
 function LoadingFallback() {
   const [showLoading, setShowLoading] = useState(false)
