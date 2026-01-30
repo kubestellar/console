@@ -232,6 +232,8 @@ const CARD_TITLES: Record<string, string> = {
   cluster_comparison: 'Cluster Comparison',
   cluster_costs: 'Cluster Costs',
   cluster_metrics: 'Cluster Metrics',
+  cluster_locations: 'Cluster Locations',
+  cluster_resource_tree: 'Cluster Resource Tree',
 
   // Workload and deployment cards
   app_status: 'Workload Status',
@@ -240,15 +242,32 @@ const CARD_TITLES: Record<string, string> = {
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
   deployment_issues: 'Deployment Issues',
+  cluster_groups: 'Cluster Groups',
+  resource_marshall: 'Resource Marshall',
 
   // Pod and resource cards
   pod_issues: 'Pod Issues',
   top_pods: 'Top Pods',
   resource_capacity: 'Resource Capacity',
   resource_usage: 'Resource Allocation',
+  compute_overview: 'Compute Overview',
 
   // Events
   event_stream: 'Event Stream',
+  event_summary: 'Event Summary',
+  warning_events: 'Warning Events',
+  recent_events: 'Recent Events',
+  events_timeline: 'Events Timeline',
+
+  // Trend cards
+  pod_health_trend: 'Pod Health Trend',
+  resource_trend: 'Resource Trend',
+
+  // Storage and network
+  storage_overview: 'Storage Overview',
+  pvc_status: 'PVC Status',
+  network_overview: 'Network Overview',
+  service_status: 'Service Status',
 
   // Namespace cards
   namespace_overview: 'Namespace Overview',
@@ -282,23 +301,55 @@ const CARD_TITLES: Record<string, string> = {
   gpu_overview: 'GPU Overview',
   gpu_status: 'GPU Status',
   gpu_inventory: 'GPU Inventory',
+  gpu_workloads: 'GPU Workloads',
+  gpu_utilization: 'GPU Utilization',
+  gpu_usage_trend: 'GPU Usage Trend',
 
-  // Security and RBAC
+  // Security, RBAC, and compliance
   security_issues: 'Security Issues',
   rbac_overview: 'RBAC Overview',
   policy_violations: 'Policy Violations',
+  opa_policies: 'OPA Policies',
+  kyverno_policies: 'Kyverno Policies',
+  falco_alerts: 'Falco Alerts',
+  trivy_scan: 'Trivy Scan',
+  kubescape_scan: 'Kubescape Scan',
+  compliance_score: 'Compliance Score',
+  vault_secrets: 'Vault Secrets',
+  external_secrets: 'External Secrets',
+  cert_manager: 'Cert Manager',
+
+  // Alerting cards
+  active_alerts: 'Active Alerts',
+  alert_rules: 'Alert Rules',
+
+  // Cost management
+  opencost_overview: 'OpenCost Overview',
+  kubecost_overview: 'Kubecost Overview',
+
+  // MCS (Multi-Cluster Service) cards
+  service_exports: 'Service Exports',
+  service_imports: 'Service Imports',
+  gateway_status: 'Gateway Status',
+  service_topology: 'Service Topology',
 
   // Other
   upgrade_status: 'Cluster Upgrade Status',
   user_management: 'User Management',
   github_activity: 'GitHub Activity',
   kubectl: 'Kubectl Terminal',
+  weather: 'Weather',
+  rss_feed: 'RSS Feed',
+  iframe_embed: 'Iframe Embed',
+  network_utils: 'Network Utils',
+  mobile_browser: 'Mobile Browser',
 
   // AI cards
   console_ai_issues: 'AI Issues',
   console_ai_kubeconfig_audit: 'AI Kubeconfig Audit',
   console_ai_health_check: 'AI Health Check',
-  
+  console_ai_offline_detection: 'AI Offline Detection',
+
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
 
@@ -308,8 +359,8 @@ const CARD_TITLES: Record<string, string> = {
   prow_history: 'Prow History',
 
   // ML/AI workload cards
-  llm_inference: 'llm-d inference',
-  llm_models: 'llm-d models',
+  llm_inference: 'llm-d Inference',
+  llm_models: 'llm-d Models',
   ml_jobs: 'ML Jobs',
   ml_notebooks: 'ML Notebooks',
 
@@ -327,6 +378,15 @@ const CARD_TITLES: Record<string, string> = {
   kube_kong: 'Kube Kong',
   pod_pitfall: 'Pod Pitfall',
   node_invaders: 'Node Invaders',
+  pod_crosser: 'Pod Crosser',
+  pod_brothers: 'Pod Brothers',
+  kube_kart: 'Kube Kart',
+  kube_pong: 'Kube Pong',
+  kube_snake: 'Kube Snake',
+  kube_galaga: 'Kube Galaga',
+  kube_doom: 'Kube Doom',
+  kube_craft: 'Kube Craft',
+  kube_chess: 'Kube Chess',
 }
 
 // Card icons with their colors - displayed in the card header next to the title
