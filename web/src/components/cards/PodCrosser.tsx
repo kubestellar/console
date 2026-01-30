@@ -525,7 +525,9 @@ export function PodCrosser(_props: CardComponentProps) {
       }
 
       e.preventDefault()
-      setPlayer(p => ({ ...p, targetX: newTargetX, targetY: newTargetY + 4, onLog: null }))
+      // Only add the 4px lane offset when vertical position changed
+      const yOffset = newTargetY !== targetY ? 4 : 0
+      setPlayer(p => ({ ...p, targetX: newTargetX, targetY: newTargetY + yOffset, onLog: null }))
     }
 
     window.addEventListener('keydown', handleKeyDown)

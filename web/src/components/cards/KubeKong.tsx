@@ -512,13 +512,17 @@ export function KubeKong(_props: CardComponentProps) {
 
         for (let bi = 0; bi < bs.length; bi++) {
           const b = bs[bi]
-          const newX = b.x + b.vx
-          let newY = b.y + b.vy
+          let newX = b.x
+          let newY = b.y
           let newVx = b.vx
           let newVy = b.vy
 
           // Apply gravity
-          newVy += GRAVITY * 0.8
+          newVy += GRAVITY * 1.5
+
+          // Apply velocity (once — previous code double-applied vy)
+          newX += newVx
+          newY += newVy
 
           // Check barrel on platforms
           let onPlatform = false
@@ -543,16 +547,20 @@ export function KubeKong(_props: CardComponentProps) {
             }
           }
 
-          // Apply movement
-          newY += newVy
+          // When airborne, decay horizontal velocity so barrel falls to next level
+          if (!onPlatform) {
+            newVx *= 0.3
+          }
 
-          // Check if barrel can fall down ladder
+          // Random chance to fall through a nearby ladder
           if (onPlatform && Math.random() < 0.03) {
             for (const ladder of LADDERS) {
               if (Math.abs(newX + BARREL_SIZE / 2 - ladder.x - 10) < 15 &&
                   newY + BARREL_SIZE > ladder.yTop - 5) {
+                newY += 20
                 newVy = 2
                 newVx = 0
+                onPlatform = false
                 break
               }
             }

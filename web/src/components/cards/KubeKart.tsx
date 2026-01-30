@@ -158,40 +158,29 @@ export function KubeKart() {
     return x >= trackLeft + 20 && x <= trackRight - 20
   }, [])
 
-  // Update AI karts - simple forward movement + horizontal steering
+  // Update AI karts - drive straight at moderate speed in fixed lanes
   const updateAI = useCallback((kart: Kart, index: number) => {
-    // Accelerate to target speed (AI is slightly slower, varies by index)
-    const maxAiSpeed = MAX_SPEED * (0.85 + index * 0.03)
+    const maxAiSpeed = MAX_SPEED * (0.65 + index * 0.05)
     if (kart.speed < maxAiSpeed) {
-      kart.speed += ACCELERATION * 0.8
+      kart.speed += ACCELERATION * 0.6
     }
 
-    // Always move forward (distance-based, no angle dependency)
+    // Always move forward (distance-based)
     aiDistancesRef.current[index] += kart.speed
 
-    // Compute AI's screen Y to find the track center at their position
-    const aiDistance = aiDistancesRef.current[index]
-    const playerDistance = trackScrollRef.current
-    const aiScreenY = (CANVAS_HEIGHT - 80) - (aiDistance - playerDistance)
-
-    // Track center at AI's screen position (matching render's curve calculation)
-    const worldY = aiScreenY - trackScrollRef.current
-    const curve = getTrackCurve(worldY)
-    const offset = curve * (CANVAS_HEIGHT - aiScreenY) * 0.5
-    const targetX = CANVAS_WIDTH / 2 + offset + (index - 1) * 30
-
-    // Steer toward track center (smooth horizontal interpolation)
-    const diff = targetX - kart.x
-    kart.x += diff * 0.1
+    // Stay in fixed lane — drive straight, no swerving
+    const laneX = CANVAS_WIDTH / 2 + (index - 1) * 35
+    const diff = laneX - kart.x
+    kart.x += diff * 0.05
 
     // Keep on track bounds
     const trackLeft = (CANVAS_WIDTH - TRACK_WIDTH) / 2 + 20
     const trackRight = trackLeft + TRACK_WIDTH - 40
     kart.x = Math.max(trackLeft, Math.min(trackRight, kart.x))
 
-    // Visual angle: slight tilt in steering direction (cosmetic only)
-    kart.angle = FORWARD_ANGLE + Math.max(-0.3, Math.min(0.3, diff * 0.005))
-  }, [getTrackCurve])
+    // Face forward
+    kart.angle = FORWARD_ANGLE
+  }, [])
 
   // Game update
   const update = useCallback(() => {
