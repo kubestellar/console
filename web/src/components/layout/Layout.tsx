@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Box, WifiOff, X, Settings, Rocket } from 'lucide-react'
+import { Box, Wifi, WifiOff, X, Settings, Rocket } from 'lucide-react'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
@@ -10,6 +10,7 @@ import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { cn } from '../../lib/cn'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { DemoInstallBanner } from '../onboarding/DemoInstallGuide'
@@ -25,9 +26,12 @@ export function Layout({ children }: LayoutProps) {
   const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
+  const { isOnline, wasOffline } = useNetworkStatus()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
 
+  // Show network banner when browser detects no network, or briefly after reconnecting
+  const showNetworkBanner = !isOnline || wasOffline
   // Show offline banner when agent is disconnected (not demo mode, not connecting)
   const showOfflineBanner = !isDemoMode && agentStatus === 'disconnected' && !offlineBannerDismissed
 
@@ -62,6 +66,38 @@ export function Layout({ children }: LayoutProps) {
       </div>
 
       <Navbar />
+
+      {/* Network Disconnected Banner */}
+      {showNetworkBanner && (
+        <div className={cn(
+          "fixed top-16 right-0 z-50 border-b transition-[left] duration-300",
+          config.collapsed ? "left-20" : "left-64",
+          isOnline
+            ? "bg-green-500/10 border-green-500/20"
+            : "bg-red-500/10 border-red-500/20",
+        )}>
+          <div className="flex items-center justify-center gap-3 py-1.5 px-4">
+            {isOnline ? (
+              <>
+                <Wifi className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-green-400 font-medium">
+                  Network Reconnected
+                </span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4 text-red-400" />
+                <span className="text-sm text-red-400 font-medium">
+                  Network Disconnected
+                </span>
+                <span className="text-xs text-red-400/70">
+                  Check your internet connection
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Demo Mode Banner */}
       {isDemoMode && (
@@ -141,7 +177,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      <div className={cn("flex flex-1 overflow-hidden", (isDemoMode || showOfflineBanner) ? "pt-[88px]" : "pt-16")}>
+      <div className={cn("flex flex-1 overflow-hidden", (showNetworkBanner || isDemoMode || showOfflineBanner) ? "pt-[88px]" : "pt-16")}>
         <Sidebar />
         <main className={cn(
           'flex-1 p-6 transition-all duration-300 overflow-y-auto',

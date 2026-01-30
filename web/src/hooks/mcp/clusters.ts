@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { api } from '../../lib/api'
 import { useDemoMode, getDemoMode } from '../useDemoMode'
+import { triggerAggressiveDetection } from '../useLocalAgent'
 import type { ClusterHealth, MCPStatus } from './types'
 import {
   REFRESH_INTERVAL_MS,
@@ -86,7 +87,17 @@ export function useClusters() {
     // Reset fetch flag and failure tracking to allow re-fetching
     setInitialFetchStarted(false)
     setHealthCheckFailures(0)
-    fullFetchClusters()
+
+    if (!isDemoMode) {
+      // Switching FROM demo to live: aggressively detect the agent first
+      // so isAgentUnavailable() returns false before data fetches run
+      triggerAggressiveDetection().then(() => {
+        fullFetchClusters()
+      })
+    } else {
+      // Switching TO demo mode: fetch demo data directly
+      fullFetchClusters()
+    }
   }, [isDemoMode])
 
   // Trigger initial fetch only once (shared across all hook instances)

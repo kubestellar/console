@@ -30,6 +30,8 @@ const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 10000 // Check every 10 seconds when connected
 const DISCONNECTED_POLL_INTERVAL = 60000 // Check every 60 seconds when disconnected
 const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecting
+const AGGRESSIVE_POLL_INTERVAL = 1000 // 1 second during aggressive detection burst
+const AGGRESSIVE_DETECT_DURATION = 10000 // 10 seconds of aggressive polling
 
 // Demo data for when agent is not connected
 const DEMO_DATA: AgentHealth = {
@@ -87,6 +89,7 @@ class AgentManager {
   private maxEvents = 50
   private dataErrorWindow = 60000 // 1 minute window for data errors
   private dataErrorThreshold = 3 // Errors within window to trigger degraded
+  private aggressiveDetectTimeout: ReturnType<typeof setTimeout> | null = null
 
   private currentPollInterval = POLL_INTERVAL
 
@@ -114,6 +117,10 @@ class AgentManager {
     if (this.pollInterval) {
       clearInterval(this.pollInterval)
       this.pollInterval = null
+    }
+    if (this.aggressiveDetectTimeout) {
+      clearTimeout(this.aggressiveDetectTimeout)
+      this.aggressiveDetectTimeout = null
     }
     this.isStarted = false
     this.isChecking = false // Reset so next start can check immediately
@@ -287,6 +294,36 @@ class AgentManager {
       }
     }
   }
+
+  // Aggressively attempt to detect the agent.
+  // Resets state to 'connecting' so isAgentUnavailable() returns false,
+  // fires an immediate health check, and enters rapid 1s polling for 10s.
+  aggressiveDetect() {
+    if (this.aggressiveDetectTimeout) {
+      clearTimeout(this.aggressiveDetectTimeout)
+      this.aggressiveDetectTimeout = null
+    }
+
+    this.failureCount = 0
+
+    this.addEvent('connecting', 'Aggressive detection: searching for local agent...')
+    this.setState({
+      status: 'connecting',
+      error: null,
+    })
+
+    this.adjustPollInterval(AGGRESSIVE_POLL_INTERVAL)
+    this.checkAgent()
+
+    this.aggressiveDetectTimeout = setTimeout(() => {
+      this.aggressiveDetectTimeout = null
+      if (this.state.status !== 'connected' && this.state.status !== 'degraded') {
+        this.adjustPollInterval(DISCONNECTED_POLL_INTERVAL)
+      } else {
+        this.adjustPollInterval(POLL_INTERVAL)
+      }
+    }, AGGRESSIVE_DETECT_DURATION)
+  }
 }
 
 // Global singleton instance
@@ -332,6 +369,21 @@ export function isAgentUnavailable(): boolean {
   // Only skip agent if we've confirmed it's disconnected
   // During 'connecting' or 'connected' or 'degraded', allow agent attempts
   return state.status === 'disconnected'
+}
+
+/**
+ * Trigger aggressive agent detection from non-hook code.
+ * Call this when the user toggles demo mode OFF to immediately
+ * attempt to find the kc-agent without waiting for the next poll cycle.
+ *
+ * Resets agent status to 'connecting' (isAgentUnavailable() returns false),
+ * fires an immediate health check, and polls every 1s for 10s.
+ */
+export async function triggerAggressiveDetection(): Promise<boolean> {
+  agentManager.aggressiveDetect()
+  // Wait briefly for the immediate health check to resolve
+  await new Promise(resolve => setTimeout(resolve, 200))
+  return agentManager.getState().status === 'connected'
 }
 
 // ============================================================================
