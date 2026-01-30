@@ -30,6 +30,7 @@ type AuthConfig struct {
 	DevUserAvatar    string
 	GitHubToken      string // Personal access token for dev mode profile lookup
 	DevMode          bool   // Force dev mode bypass even if OAuth credentials present
+	SkipOnboarding   bool   // Skip onboarding questionnaire for new users
 }
 
 // AuthHandler handles authentication
@@ -41,8 +42,9 @@ type AuthHandler struct {
 	devUserLogin  string
 	devUserEmail  string
 	devUserAvatar string
-	githubToken   string
-	devMode       bool
+	githubToken      string
+	devMode          bool
+	skipOnboarding   bool
 }
 
 // NewAuthHandler creates a new auth handler
@@ -67,8 +69,9 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		devUserLogin:  cfg.DevUserLogin,
 		devUserEmail:  cfg.DevUserEmail,
 		devUserAvatar: cfg.DevUserAvatar,
-		githubToken:   cfg.GitHubToken,
-		devMode:       cfg.DevMode,
+		githubToken:      cfg.GitHubToken,
+		devMode:          cfg.DevMode,
+		skipOnboarding:   cfg.SkipOnboarding,
 	}
 }
 
@@ -240,6 +243,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 			GitHubLogin: ghUser.Login,
 			Email:       ghUser.Email,
 			AvatarURL:   ghUser.AvatarURL,
+			Onboarded:   h.skipOnboarding, // Skip questionnaire if SKIP_ONBOARDING=true
 		}
 		if err := h.store.CreateUser(user); err != nil {
 			return c.Redirect(h.frontendURL+"/login?error=create_user_failed", fiber.StatusTemporaryRedirect)

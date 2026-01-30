@@ -25,6 +25,7 @@ import (
 type Config struct {
 	Port             int
 	DevMode          bool
+	SkipOnboarding   bool
 	DatabasePath     string
 	GitHubClientID   string
 	GitHubSecret     string
@@ -206,6 +207,7 @@ func (s *Server) setupRoutes() {
 		DevUserAvatar:    s.config.DevUserAvatar,
 		GitHubToken:      s.config.GitHubToken,
 		DevMode:          s.config.DevMode,
+		SkipOnboarding:   s.config.SkipOnboarding,
 	})
 	s.app.Get("/auth/github", auth.GitHubLogin)
 	s.app.Get("/auth/github/callback", auth.GitHubCallback)
@@ -526,6 +528,8 @@ func LoadConfigFromEnv() Config {
 		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
 		FeedbackRepoOwner:   getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
 		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
+		// Skip onboarding questionnaire for new users
+		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
 	}
 }
 
