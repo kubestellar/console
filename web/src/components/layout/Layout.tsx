@@ -12,7 +12,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { cn } from '../../lib/cn'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
-import { DemoInstallGuide } from '../onboarding/DemoInstallGuide'
+import { DemoInstallBanner } from '../onboarding/DemoInstallGuide'
 import { TourProvider } from '../../hooks/useTour'
 
 interface LayoutProps {
@@ -86,6 +86,9 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
 
+      {/* Demo Install Guide Banner - positioned under demo banner */}
+      {isDemoMode && <DemoInstallBanner collapsed={config.collapsed} />}
+
       {/* Offline Mode Banner - positioned in main content area only */}
       {showOfflineBanner && (
         <div className={cn(
@@ -141,9 +144,6 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
-
-      {/* Demo install guide floater */}
-      {isDemoMode && <DemoInstallGuide />}
 
       {/* AI Mission sidebar */}
       <MissionSidebar />
