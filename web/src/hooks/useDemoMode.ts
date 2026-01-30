@@ -20,10 +20,12 @@ const isNetlifyPreview = typeof window !== 'undefined' && (
  */
 export const isDemoModeForced = isNetlifyPreview
 
-// Initialize from localStorage, or auto-enable on Netlify previews
+// Initialize from localStorage, auto-enable on Netlify previews, or when auth
+// has set a demo-token (backend unavailable / no real JWT)
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
-  globalDemoMode = isNetlifyPreview || stored === 'true'
+  const hasDemoToken = localStorage.getItem('token') === 'demo-token'
+  globalDemoMode = isNetlifyPreview || stored === 'true' || hasDemoToken
 
   // Clear any stale demo GPU data if demo mode is off
   // This handles the case where demo data was incorrectly cached
