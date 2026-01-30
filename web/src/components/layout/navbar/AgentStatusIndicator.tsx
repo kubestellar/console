@@ -6,7 +6,7 @@ import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { cn } from '../../../lib/cn'
 
 export function AgentStatusIndicator() {
-  const { status: agentStatus, health: agentHealth, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
+  const { status: agentStatus, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const [showAgentStatus, setShowAgentStatus] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
@@ -134,11 +134,6 @@ export function AgentStatusIndicator() {
               <span className={cn('text-sm font-medium', isDemoMode ? 'text-muted-foreground' : 'text-foreground')}>
                 Local Agent: {isDemoMode ? 'Bypassed' : isDegraded ? 'Degraded' : isConnected ? 'Connected' : agentStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
               </span>
-              {!isDemoMode && isConnected && agentHealth?.version && agentHealth.version !== 'demo' && (
-                <span className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-                  v{agentHealth.version}
-                </span>
-              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {isDemoMode
