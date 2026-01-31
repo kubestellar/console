@@ -22,7 +22,7 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
-  const { activeUsers } = useActiveUsers()
+  const { totalConnections } = useActiveUsers()
   const [showFeedback, setShowFeedback] = useState(false)
 
   return (
@@ -89,12 +89,9 @@ export function Navbar() {
         <TourTrigger />
 
         {/* Active Viewers */}
-        <div
-          className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground"
-          title={`${activeUsers} user${activeUsers !== 1 ? 's' : ''} viewing this console`}
-        >
+        <div className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground">
           <User className="w-4 h-4" />
-          <span className="text-xs tabular-nums">{activeUsers}</span>
+          <span className="text-xs tabular-nums">{totalConnections}</span>
         </div>
 
         {/* Feature Request (includes notifications) */}
