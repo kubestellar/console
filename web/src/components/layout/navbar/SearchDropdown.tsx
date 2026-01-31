@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
+import { useDashboardContext } from '../../../hooks/useDashboardContext'
+import { CARD_TITLES } from '../../cards/CardWrapper'
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
   page: { label: 'Pages', icon: LayoutDashboard },
@@ -38,6 +40,7 @@ const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Serv
 export function SearchDropdown() {
   const navigate = useNavigate()
   const { openSidebar, setActiveMission } = useMissions()
+  const { setPendingRestoreCard } = useDashboardContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -63,12 +66,21 @@ export function SearchDropdown() {
       const missionId = item.href.replace('#mission:', '')
       setActiveMission(missionId)
       openSidebar()
+    } else if (item.href?.startsWith('#addCard:')) {
+      // Card items: add the card to the dashboard and navigate there
+      const cardType = item.href.replace('#addCard:', '')
+      setPendingRestoreCard({
+        cardType,
+        cardTitle: CARD_TITLES[cardType] || item.name,
+        config: {},
+      })
+      navigate('/')
     } else if (item.href) {
       navigate(item.href)
     }
     setSearchQuery('')
     setIsSearchOpen(false)
-  }, [navigate, setActiveMission, openSidebar])
+  }, [navigate, setActiveMission, openSidebar, setPendingRestoreCard])
 
   // Close dropdown when clicking outside
   useEffect(() => {

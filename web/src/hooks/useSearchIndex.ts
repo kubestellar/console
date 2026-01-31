@@ -87,12 +87,14 @@ const PAGE_ITEMS: SearchItem[] = [
 ]
 
 // Build card items from CARD_TITLES
+// href uses #addCard:<type> so SearchDropdown can detect card actions
+// and add the card to the dashboard instead of just navigating
 const CARD_ITEMS: SearchItem[] = Object.entries(CARD_TITLES).map(([id, title]) => ({
   id: `card-${id}`,
   name: title,
   description: CARD_DESCRIPTIONS[id],
   category: 'card' as const,
-  href: '/',
+  href: `#addCard:${id}`,
   keywords: [id, id.replace(/_/g, ' ')],
 }))
 
