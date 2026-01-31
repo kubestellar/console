@@ -12,6 +12,12 @@
   VITE_DEMO_MODE = "true"
   NODE_VERSION = "20"
 
+# Presence tracking API — proxy to Netlify Function
+[[redirects]]
+  from = "/api/active-users"
+  to = "/.netlify/functions/presence"
+  status = 200
+
 # SPA routing - redirect all routes to index.html
 [[redirects]]
   from = "/*"

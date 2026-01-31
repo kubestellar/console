@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getDemoMode } from './useDemoMode'
+import { getDemoMode, isDemoModeForced } from './useDemoMode'
 
 export interface ActiveUsersInfo {
   activeUsers: number
@@ -7,6 +7,7 @@ export interface ActiveUsersInfo {
 }
 
 const POLL_INTERVAL = 10000 // Poll every 10 seconds
+const HEARTBEAT_INTERVAL = 30000 // Heartbeat every 30 seconds
 const WS_RECONNECT_DELAY = 5000
 
 // Singleton state to share across all hook instances
@@ -20,11 +21,52 @@ let consecutiveFailures = 0
 const MAX_FAILURES = 3
 let subscribers = new Set<(info: ActiveUsersInfo) => void>()
 
-// Singleton presence WebSocket connection
+// Singleton presence WebSocket connection (backend mode)
 let presenceWs: WebSocket | null = null
 let presenceStarted = false
 let presencePingInterval: ReturnType<typeof setInterval> | null = null
 
+// Netlify heartbeat state (serverless mode)
+let heartbeatStarted = false
+
+// Generate a unique session ID per browser tab (survives page navigation, not tab close)
+function getSessionId(): string {
+  let id = sessionStorage.getItem('kc-session-id')
+  if (!id) {
+    id = crypto.randomUUID()
+    sessionStorage.setItem('kc-session-id', id)
+  }
+  return id
+}
+
+// Send heartbeat POST to Netlify Function
+async function sendHeartbeat() {
+  try {
+    await fetch('/api/active-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: getSessionId() }),
+      signal: AbortSignal.timeout(5000),
+    })
+  } catch {
+    // Best-effort — don't block on failure
+  }
+}
+
+// Start heartbeat for Netlify (replaces WebSocket presence)
+function startHeartbeat() {
+  if (heartbeatStarted) return
+  heartbeatStarted = true
+
+  // Send initial heartbeat immediately, then poll for count
+  sendHeartbeat().then(() => fetchActiveUsers())
+
+  setInterval(() => {
+    sendHeartbeat()
+  }, HEARTBEAT_INTERVAL)
+}
+
+// Start WebSocket presence connection (backend mode)
 function startPresenceConnection() {
   if (presenceStarted) return
 
@@ -140,8 +182,13 @@ export function useActiveUsers() {
   const [, setDemoTick] = useState(0)
 
   useEffect(() => {
-    // Start presence WebSocket + polling (singletons, only happen once)
-    startPresenceConnection()
+    // On Netlify (no backend): use HTTP heartbeat for presence tracking
+    // With backend: use WebSocket presence connection
+    if (isDemoModeForced) {
+      startHeartbeat()
+    } else {
+      startPresenceConnection()
+    }
     startPolling()
 
     // Subscribe to updates

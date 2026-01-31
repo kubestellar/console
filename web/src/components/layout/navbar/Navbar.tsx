@@ -4,7 +4,6 @@ import { Sun, Moon, Monitor, User, Cast } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useTheme } from '../../../hooks/useTheme'
 import { useActiveUsers } from '../../../hooks/useActiveUsers'
-import { isDemoModeForced } from '../../../hooks/useDemoMode'
 import { usePresentationMode } from '../../../hooks/usePresentationMode'
 import { TourTrigger } from '../../onboarding/Tour'
 import { UserProfileDropdown } from '../UserProfileDropdown'
@@ -95,13 +94,11 @@ export function Navbar() {
         {/* Tour trigger */}
         <TourTrigger />
 
-        {/* Active Viewers — hidden on Netlify (no backend to track presence) */}
-        {!isDemoModeForced && (
-          <div className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground">
-            <User className="w-4 h-4" />
-            <span className="text-xs tabular-nums">{viewerCount}</span>
-          </div>
-        )}
+        {/* Active Viewers */}
+        <div className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground">
+          <User className="w-4 h-4" />
+          <span className="text-xs tabular-nums">{viewerCount}</span>
+        </div>
 
         {/* Feature Request (includes notifications) */}
         <FeatureRequestButton />
