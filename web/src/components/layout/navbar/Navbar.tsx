@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, Monitor, Users, Cast } from 'lucide-react'
+import { Sun, Moon, Monitor, User, Cast } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useTheme } from '../../../hooks/useTheme'
 import { useActiveUsers } from '../../../hooks/useActiveUsers'
@@ -22,7 +22,7 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
-  const { activeUsers, showBadge: showActiveUsersBadge } = useActiveUsers()
+  const { activeUsers } = useActiveUsers()
   const [showFeedback, setShowFeedback] = useState(false)
 
   return (
@@ -88,16 +88,14 @@ export function Navbar() {
         {/* Tour trigger */}
         <TourTrigger />
 
-        {/* Active Users Badge */}
-        {showActiveUsersBadge && (
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20"
-            title={`${activeUsers} user${activeUsers !== 1 ? 's' : ''} online`}
-          >
-            <Users className="w-4 h-4" />
-            <span className="text-xs font-medium">{activeUsers} online</span>
-          </div>
-        )}
+        {/* Active Viewers */}
+        <div
+          className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground"
+          title={`${activeUsers} user${activeUsers !== 1 ? 's' : ''} viewing this console`}
+        >
+          <User className="w-4 h-4" />
+          <span className="text-xs tabular-nums">{activeUsers}</span>
+        </div>
 
         {/* Feature Request (includes notifications) */}
         <FeatureRequestButton />
