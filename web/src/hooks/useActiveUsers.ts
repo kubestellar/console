@@ -7,7 +7,8 @@ export interface ActiveUsersInfo {
   totalConnections: number
 }
 
-const POLL_INTERVAL = 30000 // Poll every 30 seconds
+const POLL_INTERVAL = 10000 // Poll every 10 seconds
+const WS_RECONNECT_DELAY = 5000
 
 // Singleton state to share across all hook instances
 let sharedInfo: ActiveUsersInfo = {
@@ -19,6 +20,56 @@ let pollInterval: ReturnType<typeof setInterval> | null = null
 let consecutiveFailures = 0
 const MAX_FAILURES = 3
 let subscribers = new Set<(info: ActiveUsersInfo) => void>()
+
+// Singleton presence WebSocket connection
+let presenceWs: WebSocket | null = null
+let presenceStarted = false
+let presencePingInterval: ReturnType<typeof setInterval> | null = null
+
+function startPresenceConnection() {
+  if (presenceStarted) return
+  presenceStarted = true
+
+  const token = localStorage.getItem('token')
+  if (!token) return
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || (protocol === 'wss:' ? '443' : '80')}/ws`
+
+  function connect() {
+    try {
+      presenceWs = new WebSocket(wsUrl)
+    } catch {
+      presenceStarted = false
+      return
+    }
+
+    presenceWs.onopen = () => {
+      // Authenticate with the hub
+      presenceWs?.send(JSON.stringify({ type: 'auth', token }))
+      // Keep-alive ping every 30 seconds
+      presencePingInterval = setInterval(() => {
+        if (presenceWs?.readyState === WebSocket.OPEN) {
+          presenceWs.send(JSON.stringify({ type: 'ping' }))
+        }
+      }, 30000)
+    }
+
+    presenceWs.onclose = () => {
+      if (presencePingInterval) clearInterval(presencePingInterval)
+      // Reconnect after delay
+      setTimeout(() => {
+        if (presenceStarted && localStorage.getItem('token')) connect()
+      }, WS_RECONNECT_DELAY)
+    }
+
+    presenceWs.onerror = () => {
+      presenceWs?.close()
+    }
+  }
+
+  connect()
+}
 
 // Notify all subscribers
 function notifySubscribers() {
@@ -71,7 +122,8 @@ export function useActiveUsers() {
   const [info, setInfo] = useState<ActiveUsersInfo>(sharedInfo)
 
   useEffect(() => {
-    // Start polling (only happens once across all instances)
+    // Start presence WebSocket + polling (singletons, only happen once)
+    startPresenceConnection()
     startPolling()
 
     // Subscribe to updates
