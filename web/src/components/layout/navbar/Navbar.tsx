@@ -22,7 +22,7 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
-  const { totalConnections } = useActiveUsers()
+  const { viewerCount } = useActiveUsers()
   const [showFeedback, setShowFeedback] = useState(false)
 
   return (
@@ -91,7 +91,7 @@ export function Navbar() {
         {/* Active Viewers */}
         <div className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground">
           <User className="w-4 h-4" />
-          <span className="text-xs tabular-nums">{totalConnections}</span>
+          <span className="text-xs tabular-nums">{viewerCount}</span>
         </div>
 
         {/* Feature Request (includes notifications) */}

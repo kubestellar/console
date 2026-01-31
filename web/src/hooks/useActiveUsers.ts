@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
+import { getDemoMode } from './useDemoMode'
 
 export interface ActiveUsersInfo {
   activeUsers: number
@@ -91,11 +92,13 @@ export function useActiveUsers() {
     fetchActiveUsers()
   }, [])
 
+  // Demo mode: show total connections (sessions). OAuth mode: show unique users.
+  const viewerCount = getDemoMode() ? info.totalConnections : info.activeUsers
+
   return {
     activeUsers: info.activeUsers,
     totalConnections: info.totalConnections,
-    // Show badge if any users are connected (including yourself)
-    showBadge: info.activeUsers >= 1 || info.totalConnections >= 1,
+    viewerCount,
     refetch,
   }
 }
