@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
+import { useMobile } from '../../hooks/useMobile'
 import { ClusterDrillDown } from './views/ClusterDrillDown'
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
 import { DeploymentDrillDown } from './views/DeploymentDrillDown'
@@ -81,6 +82,7 @@ const getViewIcon = (type: string) => {
 
 export function DrillDownModal() {
   const { state, pop, goTo, close } = useDrillDown()
+  const { isMobile } = useMobile()
 
   // Disable body scroll when modal is open
   useEffect(() => {
@@ -202,13 +204,13 @@ export function DrillDownModal() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={close}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4" onClick={close}>
       <div
-        className="glass w-[90vw] max-w-[1200px] h-[80vh] rounded-xl flex flex-col overflow-hidden"
+        className="glass w-full md:w-[90vw] max-w-[1200px] h-[95vh] md:h-[80vh] rounded-xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header with breadcrumbs */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {/* Back button */}
             {state.stack.length > 1 && (
@@ -272,24 +274,26 @@ export function DrillDownModal() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6">
           {renderView()}
         </div>
 
-        {/* Footer with keyboard hints */}
-        <div className="px-4 py-2 border-t border-border flex items-center justify-end text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <kbd className="px-2 py-0.5 rounded bg-card border border-border">Esc</kbd>
-            <span>close</span>
-            {state.stack.length > 1 && (
-              <>
-                <span className="mx-1">•</span>
-                <kbd className="px-2 py-0.5 rounded bg-card border border-border">Space</kbd>
-                <span>back</span>
-              </>
-            )}
+        {/* Footer with keyboard hints - hidden on mobile */}
+        {!isMobile && (
+          <div className="px-4 py-2 border-t border-border flex items-center justify-end text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <kbd className="px-2 py-0.5 rounded bg-card border border-border">Esc</kbd>
+              <span>close</span>
+              {state.stack.length > 1 && (
+                <>
+                  <span className="mx-1">•</span>
+                  <kbd className="px-2 py-0.5 rounded bg-card border border-border">Space</kbd>
+                  <span>back</span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
