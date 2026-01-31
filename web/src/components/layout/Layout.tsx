@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, useState, useEffect } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket } from 'lucide-react'
 import { Navbar } from './navbar/index'
@@ -16,45 +16,6 @@ import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 
-// Skeleton that only appears after 200ms delay — avoids flashing on fast/cached chunk loads.
-// If the lazy chunk resolves quickly (normal SPA navigation), nothing is shown.
-// If it takes longer (first load, slow network), a card grid skeleton fades in.
-function DelayedSkeleton() {
-  const [show, setShow] = useState(false)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShow(true), 200)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (!show) return null
-
-  return (
-    <div className="pt-16">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="h-8 w-48 bg-secondary rounded animate-pulse mb-2" />
-          <div className="h-4 w-64 bg-secondary/50 rounded animate-pulse" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <div key={i} className="glass rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-5 w-32 bg-secondary rounded animate-pulse" />
-              <div className="h-5 w-8 bg-secondary rounded animate-pulse" />
-            </div>
-            <div className="space-y-3">
-              <div className="h-4 w-full bg-secondary/50 rounded animate-pulse" />
-              <div className="h-4 w-3/4 bg-secondary/50 rounded animate-pulse" />
-              <div className="h-20 w-full bg-secondary/30 rounded animate-pulse" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 interface LayoutProps {
   children: ReactNode
@@ -240,9 +201,7 @@ export function Layout({ children }: LayoutProps) {
           isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
           isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
-          <Suspense fallback={<DelayedSkeleton />}>
-            {children}
-          </Suspense>
+          {children}
         </main>
       </div>
 

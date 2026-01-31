@@ -1,4 +1,4 @@
-import { lazy, ComponentType } from 'react'
+import { lazy, Suspense, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 
 // Lazy load all card components for better code splitting
@@ -137,10 +137,24 @@ export type CardComponentProps = { config?: Record<string, unknown> }
 export type CardComponent = ComponentType<CardComponentProps>
 
 /**
- * Central registry of all card components.
- * Add new cards here and they will automatically be available in all dashboards.
+ * Wrap a lazy card component with its own Suspense boundary.
+ * This prevents one slow-loading card from blanking out the entire page —
+ * only the individual card shows nothing while its chunk loads.
  */
-export const CARD_COMPONENTS: Record<string, CardComponent> = {
+function withSuspense(LazyComponent: ComponentType<CardComponentProps>): CardComponent {
+  function SuspenseWrapped(props: CardComponentProps) {
+    return createElement(Suspense, { fallback: null }, createElement(LazyComponent, props))
+  }
+  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as any).displayName || 'Card'})`
+  return SuspenseWrapped
+}
+
+/**
+ * Central registry of all card components.
+ * Each component is wrapped with its own Suspense boundary so that
+ * lazy-loaded chunks don't cause the entire page to flash.
+ */
+const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Core cards
   cluster_health: ClusterHealth,
   event_stream: EventStream,
@@ -330,6 +344,11 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = {
   pod_list: TopPods,
   error_count: PodIssues,
 }
+
+// Wrap every card with its own Suspense boundary
+export const CARD_COMPONENTS: Record<string, CardComponent> = Object.fromEntries(
+  Object.entries(RAW_CARD_COMPONENTS).map(([key, Component]) => [key, withSuspense(Component)])
+)
 
 /**
  * Cards that use demo/mock data instead of real data.
