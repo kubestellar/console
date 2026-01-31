@@ -343,6 +343,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   pod_status: AppStatus,
   pod_list: TopPods,
   error_count: PodIssues,
+  security_overview: SecurityIssues,
+  rbac_summary: NamespaceRBAC,
 }
 
 // Wrap every card with its own Suspense boundary

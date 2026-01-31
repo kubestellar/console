@@ -339,7 +339,6 @@ async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperSta
       violations
     }
   } catch (err) {
-    console.error('[OPA] Error checking gatekeeper on', clusterName, err)
     return { cluster: clusterName, installed: false, loading: false, error: 'Connection failed' }
   }
 }
@@ -1182,21 +1181,22 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   // Check Gatekeeper on specified clusters
   const checkClusters = useCallback(async (clusters: { name: string }[], forceCheck = false) => {
     if (clusters.length === 0) return
-    if (isCheckingRef.current && !forceCheck) return // Prevent duplicate runs
-    if (globalCheckInProgress && !forceCheck) {
-      console.log('[OPA] Global check already in progress, skipping')
+
+    // In demo mode, kubectlProxy is unavailable — skip real checks
+    if (getDemoMode()) {
+      setIsRefreshing(false)
       return
     }
+
+    if (isCheckingRef.current && !forceCheck) return // Prevent duplicate runs
+    if (globalCheckInProgress && !forceCheck) return
 
     // Filter out clusters already being checked globally (for StrictMode double-mount)
     const clustersToCheck = forceCheck
       ? clusters
       : clusters.filter(c => !globalCheckedClusters.has(c.name))
 
-    if (clustersToCheck.length === 0) {
-      console.log('[OPA] All clusters already being checked, skipping')
-      return
-    }
+    if (clustersToCheck.length === 0) return
 
     isCheckingRef.current = true
     globalCheckInProgress = true
@@ -1227,7 +1227,6 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
           // Update status immediately after each cluster check
           setStatuses(prev => ({ ...prev, [cluster.name]: status }))
         } catch (err) {
-          console.error('[OPA] Error checking', cluster.name, err)
           setStatuses(prev => ({
             ...prev,
             [cluster.name]: { cluster: cluster.name, installed: false, loading: false, error: String(err) }
@@ -1265,19 +1264,12 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
     const uncachedClusters = effectiveClusters.filter(c => !statuses[c.name])
 
     if (uncachedClusters.length === 0) {
-      // All clusters have cached data, no need to check
-      console.log('[OPA] All clusters have cached data, skipping initial check')
       return
     }
 
     if (alreadyCheckedThisSession && uncachedClusters.length < effectiveClusters.length) {
-      // We've checked before this session and have some cached data
-      // Only check uncached clusters in background
-      console.log('[OPA] Checking', uncachedClusters.length, 'uncached clusters (', effectiveClusters.length - uncachedClusters.length, 'cached)')
       checkClusters(uncachedClusters)
     } else {
-      // First check this session or no cached data - check all clusters
-      console.log('[OPA] Initial check for', effectiveClusters.length, 'clusters')
       sessionStorage.setItem(sessionKey, 'true')
       checkClusters(effectiveClusters)
     }

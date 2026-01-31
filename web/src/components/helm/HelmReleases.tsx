@@ -79,7 +79,6 @@ const SortableHelmCard = memo(function SortableHelmCard({
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
   if (!CardComponent) {
-    console.warn(`Unknown card type: ${card.card_type}`)
     return null
   }
 

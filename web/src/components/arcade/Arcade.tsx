@@ -53,7 +53,7 @@ const DEFAULT_ARCADE_CARDS = [
   { type: 'solitaire', title: 'Kube Solitaire', position: { w: 6, h: 4 } },
   // Sandbox games
   { type: 'kube_craft', title: 'KubeCraft', position: { w: 5, h: 4 } },
-  { type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 6, h: 4 } },
+  // { type: 'kube_craft_3d', title: 'KubeCraft 3D', position: { w: 6, h: 4 } }, // Disabled — component removed to reduce bundle size
   // Classic (last)
   { type: 'flappy_pod', title: 'Flappy Pod', position: { w: 6, h: 4 } },
 ]
@@ -92,7 +92,6 @@ const SortableArcadeCard = memo(function SortableArcadeCard({
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
   if (!CardComponent) {
-    console.warn(`Unknown card type: ${card.card_type}`)
     return null
   }
 

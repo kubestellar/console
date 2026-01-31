@@ -1578,7 +1578,6 @@ export function Clusters() {
   // Get GPU count per cluster
   const gpuByCluster = useMemo(() => {
     const map: Record<string, { total: number; allocated: number }> = {}
-    console.log('[GPU Clusters] Building gpuByCluster from', gpuNodes.length, 'nodes')
     gpuNodes.forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       if (!map[clusterKey]) {
@@ -1587,7 +1586,6 @@ export function Clusters() {
       map[clusterKey].total += node.gpuCount
       map[clusterKey].allocated += node.gpuAllocated
     })
-    console.log('[GPU Clusters] gpuByCluster:', Object.keys(map).map(k => `${k}: ${map[k].total}`).join(', '))
     return map
   }, [gpuNodes])
 

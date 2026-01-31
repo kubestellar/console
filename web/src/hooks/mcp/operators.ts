@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
+import { getDemoMode } from '../useDemoMode'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
 
@@ -26,13 +27,25 @@ export function useOperators(cluster?: string) {
     let cancelled = false
 
     const doFetch = async () => {
+      // If demo mode is enabled, use demo data directly
+      if (getDemoMode()) {
+        if (!cancelled) {
+          const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
+          const allOperators = clusters.flatMap(c => getDemoOperators(c))
+          setOperators(allOperators)
+          setError(null)
+          setIsLoading(false)
+          setIsRefreshing(false)
+        }
+        return
+      }
+
       setIsRefreshing(true)
 
       // If no cluster specified, fetch from all clusters
       if (!cluster) {
         const allClusters = clusterCacheRef.clusters
         if (allClusters.length === 0) {
-          // No clusters available yet, use empty array
           if (!cancelled) {
             setOperators([])
             setIsLoading(false)
@@ -41,15 +54,13 @@ export function useOperators(cluster?: string) {
           return
         }
 
-        // Aggregate operators from all clusters
         const allOperators: Operator[] = []
         for (const c of allClusters) {
           try {
             const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(c.name)}`)
             allOperators.push(...(data.operators || []).map(op => ({ ...op, cluster: c.name })))
           } catch {
-            // Use demo data for this cluster
-            allOperators.push(...getDemoOperators(c.name))
+            // Skip clusters where operator API is unavailable
           }
         }
         if (!cancelled) {
@@ -62,18 +73,15 @@ export function useOperators(cluster?: string) {
       }
 
       try {
-        // Try to fetch from API - will fall back to demo data if not available
         const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(cluster)}`)
         if (!cancelled) {
-          // Ensure each operator has the cluster property set
           setOperators((data.operators || []).map(op => ({ ...op, cluster })))
           setError(null)
         }
       } catch (err) {
         if (!cancelled) {
           setError('Failed to fetch operators')
-          // Use demo data with cluster-specific variation
-          setOperators(getDemoOperators(cluster))
+          setOperators([])
         }
       } finally {
         if (!cancelled) {
@@ -120,13 +128,25 @@ export function useOperatorSubscriptions(cluster?: string) {
     let cancelled = false
 
     const doFetch = async () => {
+      // If demo mode is enabled, use demo data directly
+      if (getDemoMode()) {
+        if (!cancelled) {
+          const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
+          const allSubscriptions = clusters.flatMap(c => getDemoOperatorSubscriptions(c))
+          setSubscriptions(allSubscriptions)
+          setError(null)
+          setIsLoading(false)
+          setIsRefreshing(false)
+        }
+        return
+      }
+
       setIsRefreshing(true)
 
       // If no cluster specified, fetch from all clusters
       if (!cluster) {
         const allClusters = clusterCacheRef.clusters
         if (allClusters.length === 0) {
-          // No clusters available yet, use empty array
           if (!cancelled) {
             setSubscriptions([])
             setIsLoading(false)
@@ -135,15 +155,13 @@ export function useOperatorSubscriptions(cluster?: string) {
           return
         }
 
-        // Aggregate subscriptions from all clusters
         const allSubscriptions: OperatorSubscription[] = []
         for (const c of allClusters) {
           try {
             const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(`/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(c.name)}`)
             allSubscriptions.push(...(data.subscriptions || []).map(sub => ({ ...sub, cluster: c.name })))
           } catch {
-            // Use demo data for this cluster
-            allSubscriptions.push(...getDemoOperatorSubscriptions(c.name))
+            // Skip clusters where operator subscription API is unavailable
           }
         }
         if (!cancelled) {
@@ -158,14 +176,13 @@ export function useOperatorSubscriptions(cluster?: string) {
       try {
         const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(`/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`)
         if (!cancelled) {
-          // Ensure each subscription has the cluster property set
           setSubscriptions((data.subscriptions || []).map(sub => ({ ...sub, cluster })))
           setError(null)
         }
       } catch (err) {
         if (!cancelled) {
           setError('Failed to fetch subscriptions')
-          setSubscriptions(getDemoOperatorSubscriptions(cluster))
+          setSubscriptions([])
         }
       } finally {
         if (!cancelled) {

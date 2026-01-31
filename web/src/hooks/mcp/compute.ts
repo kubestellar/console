@@ -70,18 +70,12 @@ export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
   // CRITICAL: Never allow clearing nodes if we have good data
   // This prevents any code path from accidentally wiping the cache
   if (updates.nodes !== undefined && updates.nodes.length === 0 && prevCount > 0) {
-    console.warn('[GPU Cache] BLOCKED: Attempt to clear', prevCount, 'nodes - preserving existing data')
-    console.trace('[GPU Cache] Stack trace for blocked clear')
+    // Blocked: attempt to clear existing GPU node data — preserve it
     // Remove nodes from updates to preserve existing data
     const { nodes: _ignored, ...safeUpdates } = updates
     gpuNodeCache = { ...gpuNodeCache, ...safeUpdates }
   } else {
     gpuNodeCache = { ...gpuNodeCache, ...updates }
-  }
-
-  const newCount = gpuNodeCache.nodes.length
-  if (updates.nodes !== undefined && updates.nodes.length > 0) {
-    console.log('[GPU Cache] Nodes updated:', prevCount, '->', newCount)
   }
 
   // Persist to localStorage when nodes are updated (and we have data)
