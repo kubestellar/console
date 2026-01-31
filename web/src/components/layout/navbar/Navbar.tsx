@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, Monitor, User, Cast } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useTheme } from '../../../hooks/useTheme'
@@ -22,8 +22,14 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
-  const { viewerCount } = useActiveUsers()
+  const { viewerCount, refetch } = useActiveUsers()
+  const location = useLocation()
   const [showFeedback, setShowFeedback] = useState(false)
+
+  // Refetch viewer count on page navigation
+  useEffect(() => {
+    refetch()
+  }, [location.pathname, refetch])
 
   return (
     <nav data-tour="navbar" className="fixed top-0 left-0 right-0 h-16 glass z-50 px-6 flex items-center justify-between">

@@ -213,6 +213,14 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/auth/github/callback", auth.GitHubCallback)
 	s.app.Post("/auth/refresh", auth.RefreshToken)
 
+	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
+	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"activeUsers":      s.hub.GetActiveUsersCount(),
+			"totalConnections": s.hub.GetTotalConnectionsCount(),
+		})
+	})
+
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
 	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
@@ -226,14 +234,6 @@ func (s *Server) setupRoutes() {
 	user := handlers.NewUserHandler(s.store)
 	api.Get("/me", user.GetCurrentUser)
 	api.Put("/me", user.UpdateCurrentUser)
-
-	// Active users endpoint (WebSocket connection count)
-	api.Get("/active-users", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"activeUsers":      s.hub.GetActiveUsersCount(),
-			"totalConnections": s.hub.GetTotalConnectionsCount(),
-		})
-	})
 
 	// Onboarding routes
 	onboarding := handlers.NewOnboardingHandler(s.store)

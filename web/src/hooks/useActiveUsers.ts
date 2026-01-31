@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api } from '../lib/api'
 import { getDemoMode } from './useDemoMode'
 
 export interface ActiveUsersInfo {
@@ -28,10 +27,12 @@ let presencePingInterval: ReturnType<typeof setInterval> | null = null
 
 function startPresenceConnection() {
   if (presenceStarted) return
-  presenceStarted = true
 
   const token = localStorage.getItem('token')
   if (!token) return
+
+  // Set flag AFTER token check so a missing token doesn't permanently block
+  presenceStarted = true
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || (protocol === 'wss:' ? '443' : '80')}/ws`
@@ -53,6 +54,18 @@ function startPresenceConnection() {
           presenceWs.send(JSON.stringify({ type: 'ping' }))
         }
       }, 30000)
+    }
+
+    presenceWs.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        if (msg.type === 'authenticated') {
+          // Connection registered with hub — refetch so our own connection is counted
+          fetchActiveUsers()
+        }
+      } catch {
+        // Ignore parse errors
+      }
     }
 
     presenceWs.onclose = () => {
@@ -89,7 +102,9 @@ async function fetchActiveUsers() {
   }
 
   try {
-    const { data } = await api.get<ActiveUsersInfo>('/api/active-users')
+    const resp = await fetch('/api/active-users', { signal: AbortSignal.timeout(5000) })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const data: ActiveUsersInfo = await resp.json()
     consecutiveFailures = 0 // Reset on success
     if (data.activeUsers !== sharedInfo.activeUsers ||
         data.totalConnections !== sharedInfo.totalConnections) {
@@ -116,10 +131,13 @@ function startPolling() {
 }
 
 /**
- * Hook for tracking active users connected via WebSocket
+ * Hook for tracking active users connected via WebSocket.
+ * Returns viewerCount: totalConnections in demo mode, activeUsers in OAuth mode.
  */
 export function useActiveUsers() {
   const [info, setInfo] = useState<ActiveUsersInfo>(sharedInfo)
+  // Tick counter to force re-render when demo mode changes (so viewerCount recalculates)
+  const [, setDemoTick] = useState(0)
 
   useEffect(() => {
     // Start presence WebSocket + polling (singletons, only happen once)
@@ -135,8 +153,16 @@ export function useActiveUsers() {
     // Set initial state
     setInfo(sharedInfo)
 
+    // Re-render + refetch when demo mode toggles (viewerCount switches metric)
+    const handleDemoChange = () => {
+      setDemoTick(t => t + 1)
+      fetchActiveUsers()
+    }
+    window.addEventListener('kc-demo-mode-change', handleDemoChange)
+
     return () => {
       subscribers.delete(handleUpdate)
+      window.removeEventListener('kc-demo-mode-change', handleDemoChange)
     }
   }, [])
 

@@ -5,7 +5,6 @@ const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
 
 // Global state for demo mode to ensure consistency across components
 let globalDemoMode = false
-let userExplicitlyEnabled = false // Tracks if user manually toggled demo mode ON
 const listeners = new Set<(value: boolean) => void>()
 
 // Auto-enable demo mode on Netlify builds (VITE_DEMO_MODE=true in netlify.toml)
@@ -32,13 +31,11 @@ if (typeof window !== 'undefined') {
   globalDemoMode = isNetlifyPreview || stored === 'true' || (hasDemoToken && !userExplicitlyDisabled)
 
   // Clear any stale demo GPU data if demo mode is off
-  // This handles the case where demo data was incorrectly cached
   if (!globalDemoMode) {
     try {
       const gpuCache = localStorage.getItem(GPU_CACHE_KEY)
       if (gpuCache) {
         const parsed = JSON.parse(gpuCache)
-        // Check if cached data looks like demo data (has demo cluster names)
         const demoClusterNames = ['vllm-gpu-cluster', 'eks-prod-us-east-1', 'gke-staging', 'aks-dev-westeu', 'openshift-prod', 'oci-oke-phoenix', 'alibaba-ack-shanghai', 'rancher-mgmt']
         const hasDemoData = parsed.nodes?.some((node: { cluster: string }) =>
           demoClusterNames.includes(node.cluster)
@@ -51,10 +48,23 @@ if (typeof window !== 'undefined') {
       // Ignore parse errors
     }
   }
+
+  // Cross-tab sync: when another tab changes demo mode, update this tab
+  window.addEventListener('storage', (e) => {
+    if (e.key === DEMO_MODE_KEY) {
+      const newValue = e.newValue === 'true'
+      if (globalDemoMode !== newValue) {
+        globalDemoMode = newValue
+        notifyListeners()
+      }
+    }
+  })
 }
 
 function notifyListeners() {
   listeners.forEach(listener => listener(globalDemoMode))
+  // Dispatch custom event so non-React subscribers (e.g. useActiveUsers) can react
+  window.dispatchEvent(new CustomEvent('kc-demo-mode-change', { detail: globalDemoMode }))
 }
 
 /**
@@ -66,13 +76,10 @@ export function useDemoMode() {
   const [isDemoMode, setIsDemoMode] = useState(globalDemoMode)
 
   useEffect(() => {
-    // Subscribe to changes
     const handleChange = (value: boolean) => {
       setIsDemoMode(value)
     }
     listeners.add(handleChange)
-
-    // Sync with current global state
     setIsDemoMode(globalDemoMode)
 
     return () => {
@@ -84,8 +91,6 @@ export function useDemoMode() {
     // Never allow disabling demo mode on Netlify deployments
     if (isNetlifyPreview && globalDemoMode) return
     globalDemoMode = !globalDemoMode
-    // Track explicit user intent so auto-disable doesn't override
-    userExplicitlyEnabled = globalDemoMode
     localStorage.setItem(DEMO_MODE_KEY, String(globalDemoMode))
     notifyListeners()
   }, [])
@@ -94,8 +99,6 @@ export function useDemoMode() {
     // Never allow disabling demo mode on Netlify deployments
     if (isNetlifyPreview && !value) return
     globalDemoMode = value
-    // Track explicit user intent
-    userExplicitlyEnabled = value
     localStorage.setItem(DEMO_MODE_KEY, String(value))
     notifyListeners()
   }, [])
@@ -123,11 +126,11 @@ export function getDemoMode(): boolean {
 export function setGlobalDemoMode(value: boolean) {
   // Never allow disabling demo mode on Netlify deployments
   if (isNetlifyPreview && !value) return
-  // Don't auto-disable if user explicitly enabled demo mode
-  if (!value && userExplicitlyEnabled) return
+  // Don't auto-disable if user explicitly enabled demo mode.
+  // Read localStorage directly — survives module reloads, no stale variable.
+  if (!value && localStorage.getItem(DEMO_MODE_KEY) === 'true') return
   if (globalDemoMode === value) return // no-op
   globalDemoMode = value
   localStorage.setItem(DEMO_MODE_KEY, String(value))
   notifyListeners()
 }
-

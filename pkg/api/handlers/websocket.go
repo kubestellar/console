@@ -189,8 +189,13 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		return
 	}
 
-	// Validate JWT token
-	if h.jwtSecret != "" {
+	// Validate token
+	if authMsg.Token == "demo-token" {
+		// Demo mode: accept connection for presence tracking (count only, no user data)
+		userID = uuid.Nil
+		authenticated = true
+		log.Printf("Demo-mode WebSocket connection for presence tracking")
+	} else if h.jwtSecret != "" {
 		claims, err := middleware.ValidateJWT(authMsg.Token, h.jwtSecret)
 		if err != nil {
 			log.Printf("SECURITY: Rejected WebSocket - invalid token: %v", err)
