@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import * as Icons from 'lucide-react'
 import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical } from 'lucide-react'
@@ -6,6 +6,7 @@ import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
 import { SidebarCustomizer } from './SidebarCustomizer'
 import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
+import { useMobile } from '../../hooks/useMobile'
 import { useClusters } from '../../hooks/useMCP'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
@@ -13,12 +14,23 @@ import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendation
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 
 export function Sidebar() {
-  const { config, toggleCollapsed, reorderItems, updateItem } = useSidebarConfig()
+  const { config, toggleCollapsed, reorderItems, updateItem, closeMobileSidebar } = useSidebarConfig()
+  const { isMobile } = useMobile()
   const { deduplicatedClusters } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (isMobile) {
+      closeMobileSidebar()
+    }
+  }, [location.pathname, isMobile, closeMobileSidebar])
+
+  // On mobile, always show expanded view; on desktop, respect collapsed state
+  const isCollapsed = !isMobile && config.collapsed
 
   // Inline rename state for custom sidebar items
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -181,7 +193,7 @@ export function Sidebar() {
     return (
       <div
         key={item.id}
-        draggable={!config.collapsed && !isEditing}
+        draggable={!isCollapsed && !isEditing}
         onDragStart={(e) => handleDragStart(e, item.id, section)}
         onDragEnd={handleDragEnd}
         onDragEnter={(e) => handleDragEnter(e, item.id)}
@@ -199,11 +211,11 @@ export function Sidebar() {
           <div className={cn(
             'flex items-center gap-3 rounded-lg text-sm font-medium',
             'bg-purple-500/20 text-purple-400',
-            config.collapsed ? 'justify-center p-3' : 'px-3 py-2 pl-2'
+            isCollapsed ? 'justify-center p-3' : 'px-3 py-2 pl-2'
           )}>
-            {!config.collapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
-            {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
-            {!config.collapsed && (
+            {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
+            {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
+            {!isCollapsed && (
               <input
                 type="text"
                 value={editingName}
@@ -228,19 +240,19 @@ export function Sidebar() {
               isActive
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
-              config.collapsed ? 'justify-center p-3' : 'px-3 py-2',
-              !config.collapsed && 'pl-2'
+              isCollapsed ? 'justify-center p-3' : 'px-3 py-2',
+              !isCollapsed && 'pl-2'
             )}
-            title={config.collapsed ? item.name : (item.isCustom && item.href.startsWith('/custom-dashboard/') ? 'Double-click to rename' : undefined)}
+            title={isCollapsed ? item.name : (item.isCustom && item.href.startsWith('/custom-dashboard/') ? 'Double-click to rename' : undefined)}
           >
-            {!config.collapsed && (
+            {!isCollapsed && (
               <GripVertical
                 className="w-3.5 h-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
                 onMouseDown={(e) => e.stopPropagation()}
               />
             )}
-            {renderIcon(item.icon, config.collapsed ? 'w-6 h-6' : 'w-5 h-5')}
-            {!config.collapsed && item.name}
+            {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
+            {!isCollapsed && item.name}
           </NavLink>
         )}
       </div>
@@ -249,14 +261,27 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Mobile backdrop */}
+      {isMobile && config.isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
       <aside data-tour="sidebar" className={cn(
-        'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto transition-all duration-300',
-        config.collapsed ? 'w-20 p-3' : 'w-64 p-4'
+        'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto transition-all duration-300 z-40',
+        // Desktop: respect collapsed state
+        !isMobile && (config.collapsed ? 'w-20 p-3' : 'w-64 p-4'),
+        // Mobile: always w-64 when open, slide off-screen when closed
+        isMobile && 'w-64 p-4',
+        isMobile && !config.isMobileOpen && '-translate-x-full',
+        isMobile && config.isMobileOpen && 'translate-x-0'
       )}>
-        {/* Collapse toggle */}
+        {/* Collapse toggle - hidden on mobile */}
         <button
           onClick={toggleCollapsed}
-          className="absolute -right-3 top-6 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground z-10"
+          className="absolute -right-3 top-6 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground z-10 hidden md:block"
         >
           {config.collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -275,7 +300,7 @@ export function Sidebar() {
         </nav>
 
         {/* Snoozed card swaps */}
-        {!config.collapsed && (
+        {!isCollapsed && (
           <div data-tour="snoozed">
             <SnoozedCards
               onApplySwap={handleApplySwap}
@@ -286,7 +311,7 @@ export function Sidebar() {
         )}
 
         {/* Add card button */}
-        {!config.collapsed && (
+        {!isCollapsed && (
           <div className="mt-6">
             <button
               onClick={handleAddCardClick}
@@ -299,7 +324,7 @@ export function Sidebar() {
         )}
 
         {/* Cluster status summary */}
-        {config.showClusterStatus && !config.collapsed && (
+        {config.showClusterStatus && !isCollapsed && (
           <div className="mt-6 p-4 rounded-lg bg-secondary/30">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
               Cluster Status
@@ -345,12 +370,12 @@ export function Sidebar() {
             onClick={() => setIsCustomizerOpen(true)}
             className={cn(
               'flex items-center gap-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',
-              config.collapsed ? 'justify-center w-full p-3' : 'px-3 py-2 text-xs'
+              isCollapsed ? 'justify-center w-full p-3' : 'px-3 py-2 text-xs'
             )}
-            title={config.collapsed ? 'Customize sidebar' : undefined}
+            title={isCollapsed ? 'Customize sidebar' : undefined}
           >
-            <Pencil className={config.collapsed ? 'w-5 h-5' : 'w-3 h-3'} />
-            {!config.collapsed && 'Customize'}
+            <Pencil className={isCollapsed ? 'w-5 h-5' : 'w-3 h-3'} />
+            {!isCollapsed && 'Customize'}
           </button>
         </div>
       </aside>
