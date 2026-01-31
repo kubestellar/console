@@ -921,6 +921,8 @@ export function CardWrapper({
           ref={lazyRef}
           key={flashKey}
           data-tour="card"
+          data-card-type={cardType}
+          data-card-id={cardId}
           className={cn(
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',

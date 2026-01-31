@@ -32,6 +32,7 @@ export interface SearchItem {
   href?: string
   keywords?: string[]
   meta?: string
+  scrollTarget?: string // data-card-type value to scroll into view after navigation
 }
 
 // Category display order (priority in results)
@@ -53,6 +54,103 @@ export const CATEGORY_ORDER: SearchCategory[] = [
 
 const MAX_PER_CATEGORY = 5
 const MAX_TOTAL = 40
+
+// --- Dashboard storage keys → routes (for scanning placed cards) ---
+
+const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
+  { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Dashboard' },
+  { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'Clusters' },
+  { key: 'kubestellar-workloads-cards', route: '/workloads', name: 'Workloads' },
+  { key: 'kubestellar-deployments-cards', route: '/deployments', name: 'Deployments' },
+  { key: 'kubestellar-pods-cards', route: '/pods', name: 'Pods' },
+  { key: 'kubestellar-services-cards', route: '/services', name: 'Services' },
+  { key: 'kubestellar-compute-cards', route: '/compute', name: 'Compute' },
+  { key: 'kubestellar-nodes-cards', route: '/nodes', name: 'Nodes' },
+  { key: 'kubestellar-storage-cards', route: '/storage', name: 'Storage' },
+  { key: 'kubestellar-network-cards', route: '/network', name: 'Network' },
+  { key: 'kubestellar-events-cards', route: '/events', name: 'Events' },
+  { key: 'kubestellar-security-cards', route: '/security', name: 'Security' },
+  { key: 'compliance-dashboard-cards', route: '/security-posture', name: 'Compliance' },
+  { key: 'data-compliance-dashboard-cards', route: '/data-compliance', name: 'Data Compliance' },
+  { key: 'kubestellar-gitops-dashboard-cards', route: '/gitops', name: 'GitOps' },
+  { key: 'kubestellar-alerts-dashboard-cards', route: '/alerts', name: 'Alerts' },
+  { key: 'kubestellar-deploy-cards', route: '/deploy', name: 'Deploy' },
+  { key: 'kubestellar-cost-cards', route: '/cost', name: 'Cost' },
+  { key: 'kubestellar-operators-cards', route: '/operators', name: 'Operators' },
+  { key: 'kubestellar-helm-cards', route: '/helm', name: 'Helm' },
+  { key: 'kubestellar-logs-cards', route: '/logs', name: 'Logs' },
+  { key: 'kubestellar-arcade-cards', route: '/arcade', name: 'Arcade' },
+]
+
+interface StoredCard {
+  card_type: string
+  title?: string
+}
+
+/**
+ * Scan all dashboard localStorage keys for placed cards.
+ * Returns SearchItem[] with one entry per card-placement (a card on 2 dashboards = 2 items).
+ */
+function scanPlacedCards(customDashboards: { id: string; name: string }[]): SearchItem[] {
+  const items: SearchItem[] = []
+
+  // Built-in dashboards
+  for (const { key, route, name: dashName } of DASHBOARD_STORAGE) {
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      const cards: StoredCard[] = JSON.parse(raw)
+      if (!Array.isArray(cards)) continue
+      for (const card of cards) {
+        const cardType = card.card_type
+        if (!cardType) continue
+        const title = card.title || CARD_TITLES[cardType] || cardType.replace(/_/g, ' ')
+        items.push({
+          id: `card-${cardType}-on-${key}`,
+          name: title,
+          description: `On ${dashName} dashboard`,
+          category: 'card',
+          href: route,
+          scrollTarget: cardType,
+          keywords: [cardType, cardType.replace(/_/g, ' ')],
+          meta: CARD_DESCRIPTIONS[cardType],
+        })
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Custom dashboards
+  for (const { id, name: dashName } of customDashboards) {
+    const key = `kubestellar-custom-dashboard-${id}-cards`
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      const cards: StoredCard[] = JSON.parse(raw)
+      if (!Array.isArray(cards)) continue
+      for (const card of cards) {
+        const cardType = card.card_type
+        if (!cardType) continue
+        const title = card.title || CARD_TITLES[cardType] || cardType.replace(/_/g, ' ')
+        items.push({
+          id: `card-${cardType}-on-custom-${id}`,
+          name: title,
+          description: `On ${dashName} dashboard`,
+          category: 'card',
+          href: `/custom-dashboard/${id}`,
+          scrollTarget: cardType,
+          keywords: [cardType, cardType.replace(/_/g, ' ')],
+          meta: CARD_DESCRIPTIONS[cardType],
+        })
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  return items
+}
 
 // --- Static items (computed once at module level) ---
 
@@ -85,18 +183,6 @@ const PAGE_ITEMS: SearchItem[] = [
   { id: 'page-gpu-reservations', name: 'GPU Reservations', description: 'GPU resource reservations', category: 'page', href: '/gpu-reservations', keywords: ['nvidia', 'cuda', 'gpu'] },
   { id: 'page-cluster-compare', name: 'Cluster Comparison', description: 'Compare clusters side by side', category: 'page', href: '/compute/compare', keywords: ['diff', 'compare'] },
 ]
-
-// Build card items from CARD_TITLES
-// href uses #addCard:<type> so SearchDropdown can detect card actions
-// and add the card to the dashboard instead of just navigating
-const CARD_ITEMS: SearchItem[] = Object.entries(CARD_TITLES).map(([id, title]) => ({
-  id: `card-${id}`,
-  name: title,
-  description: CARD_DESCRIPTIONS[id],
-  category: 'card' as const,
-  href: `#addCard:${id}`,
-  keywords: [id, id.replace(/_/g, ' ')],
-}))
 
 // Build stat items from ALL_STAT_BLOCKS (deduplicate by name)
 const STAT_DASHBOARD_MAP: Record<string, DashboardStatsType> = {}
@@ -152,10 +238,9 @@ const SETTING_ITEMS: SearchItem[] = [
   { id: 'setting-permissions', name: 'Permissions', description: 'Permission validation and access control', category: 'setting', href: '/settings', keywords: ['permission', 'access', 'rbac'] },
 ]
 
-// All static items combined
+// Static items that don't need localStorage scanning
 const STATIC_ITEMS: SearchItem[] = [
   ...PAGE_ITEMS,
-  ...CARD_ITEMS,
   ...STAT_ITEMS,
   ...SETTING_ITEMS,
 ]
@@ -183,7 +268,7 @@ export function useSearchIndex(query: string) {
   const { missions } = useMissions()
   const { dashboards } = useDashboards()
 
-  // Build dynamic items
+  // Build dynamic items from hook data
   const dynamicItems = useMemo(() => {
     const items: SearchItem[] = []
 
@@ -304,13 +389,19 @@ export function useSearchIndex(query: string) {
     return items
   }, [clusters, deployments, pods, services, nodes, releases, missions, dashboards])
 
-  // Filter and group results
+  // Filter and group results — also scans localStorage for placed cards
   const { results, totalCount } = useMemo(() => {
     if (!query.trim()) {
       return { results: new Map<SearchCategory, SearchItem[]>(), totalCount: 0 }
     }
 
-    const allItems = [...STATIC_ITEMS, ...dynamicItems]
+    // Scan placed cards from localStorage (fast synchronous read)
+    const customDashboardList = dashboards
+      .filter(d => !d.is_default)
+      .map(d => ({ id: d.id, name: d.name }))
+    const placedCards = scanPlacedCards(customDashboardList)
+
+    const allItems = [...STATIC_ITEMS, ...dynamicItems, ...placedCards]
     const matched = allItems.filter(item => matchesQuery(item, query))
 
     // Group by category
@@ -338,7 +429,7 @@ export function useSearchIndex(query: string) {
     }
 
     return { results: ordered, totalCount: matched.length }
-  }, [query, dynamicItems])
+  }, [query, dynamicItems, dashboards])
 
   return { results, totalCount }
 }

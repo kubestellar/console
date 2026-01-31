@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
   Command,
@@ -18,8 +18,6 @@ import {
 } from 'lucide-react'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
-import { useDashboardContext } from '../../../hooks/useDashboardContext'
-import { CARD_TITLES } from '../../cards/CardWrapper'
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
   page: { label: 'Pages', icon: LayoutDashboard },
@@ -37,10 +35,40 @@ const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Serv
   node: { label: 'Nodes', icon: HardDrive },
 }
 
+const SCROLL_HIGHLIGHT_MS = 2000
+const SCROLL_POLL_INTERVAL_MS = 100
+const SCROLL_POLL_MAX_MS = 3000
+
+/**
+ * After navigation, poll for a card element by data-card-type and scroll it into view
+ * with a brief highlight ring.
+ */
+function scrollToCard(cardType: string) {
+  const startTime = Date.now()
+
+  function poll() {
+    const el = document.querySelector(`[data-card-type="${cardType}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-background')
+      setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-background')
+      }, SCROLL_HIGHLIGHT_MS)
+      return
+    }
+    if (Date.now() - startTime < SCROLL_POLL_MAX_MS) {
+      setTimeout(poll, SCROLL_POLL_INTERVAL_MS)
+    }
+  }
+
+  // Start polling after a frame so React can render the new route
+  requestAnimationFrame(() => setTimeout(poll, SCROLL_POLL_INTERVAL_MS))
+}
+
 export function SearchDropdown() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { openSidebar, setActiveMission } = useMissions()
-  const { setPendingRestoreCard } = useDashboardContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -66,21 +94,22 @@ export function SearchDropdown() {
       const missionId = item.href.replace('#mission:', '')
       setActiveMission(missionId)
       openSidebar()
-    } else if (item.href?.startsWith('#addCard:')) {
-      // Card items: add the card to the dashboard and navigate there
-      const cardType = item.href.replace('#addCard:', '')
-      setPendingRestoreCard({
-        cardType,
-        cardTitle: CARD_TITLES[cardType] || item.name,
-        config: {},
-      })
-      navigate('/')
     } else if (item.href) {
-      navigate(item.href)
+      // If we're already on the target route and there's a scroll target,
+      // just scroll directly without navigating
+      if (item.scrollTarget && location.pathname === item.href) {
+        scrollToCard(item.scrollTarget)
+      } else {
+        navigate(item.href)
+        // After navigation, scroll to the card if there's a scroll target
+        if (item.scrollTarget) {
+          scrollToCard(item.scrollTarget)
+        }
+      }
     }
     setSearchQuery('')
     setIsSearchOpen(false)
-  }, [navigate, setActiveMission, openSidebar, setPendingRestoreCard])
+  }, [navigate, location.pathname, setActiveMission, openSidebar])
 
   // Close dropdown when clicking outside
   useEffect(() => {
