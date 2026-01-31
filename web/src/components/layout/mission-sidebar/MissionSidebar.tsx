@@ -13,6 +13,7 @@ import {
   Type,
 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
+import { useMobile } from '../../../hooks/useMobile'
 import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { AgentIcon } from '../../agent/AgentIcon'
@@ -22,6 +23,7 @@ import { MissionChat } from './MissionChat'
 
 export function MissionSidebar() {
   const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent } = useMissions()
+  const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
 
@@ -73,8 +75,8 @@ export function MissionSidebar() {
     }
   }
 
-  // Minimized sidebar view (thin strip)
-  if (isSidebarMinimized) {
+  // Minimized sidebar view (thin strip) - desktop only
+  if (isSidebarMinimized && !isMobile) {
     return (
       <div className={cn(
         "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-40 flex flex-col items-center py-4",
@@ -108,22 +110,42 @@ export function MissionSidebar() {
   }
 
   return (
-    <div
-      data-tour="ai-missions"
-      className={cn(
-        "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col overflow-hidden",
-        "transition-[width,top,border,transform] duration-300 ease-in-out",
-        isFullScreen
-          ? "inset-0 top-16 border-l-0 rounded-none"
-          : "top-16 right-0 bottom-0 w-[500px] border-l shadow-xl",
-        !isSidebarOpen && "translate-x-full pointer-events-none"
+    <>
+      {/* Mobile backdrop */}
+      {isMobile && isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={closeSidebar}
+        />
       )}
-    >
+
+      <div
+        data-tour="ai-missions"
+        className={cn(
+          "fixed bg-card/95 backdrop-blur-sm border-border z-40 flex flex-col overflow-hidden",
+          "transition-[width,top,border,transform] duration-300 ease-in-out",
+          // Mobile: bottom sheet
+          isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh]",
+          isMobile && !isSidebarOpen && "translate-y-full pointer-events-none",
+          isMobile && isSidebarOpen && "translate-y-0",
+          // Desktop: right sidebar
+          !isMobile && isFullScreen && "inset-0 top-16 border-l-0 rounded-none",
+          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 w-[500px] border-l shadow-xl",
+          !isMobile && !isSidebarOpen && "translate-x-full pointer-events-none"
+        )}
+      >
+      {/* Mobile drag handle */}
+      {isMobile && (
+        <div className="flex justify-center py-2 md:hidden">
+          <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
-          <h2 className="font-semibold text-foreground">AI Missions</h2>
+          <h2 className="font-semibold text-foreground text-sm md:text-base">AI Missions</h2>
           {needsAttention > 0 && (
             <span className="px-1.5 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded-full">
               {needsAttention}
@@ -153,7 +175,8 @@ export function MissionSidebar() {
               <Plus className="w-3 h-3 text-muted-foreground" />
             </button>
           </div>
-          {isFullScreen ? (
+          {/* Fullscreen and minimize - desktop only */}
+          {!isMobile && (isFullScreen ? (
             <button
               onClick={() => setFullScreen(false)}
               className="p-1 hover:bg-secondary rounded transition-colors"
@@ -178,7 +201,7 @@ export function MissionSidebar() {
                 <PanelRightClose className="w-5 h-5 text-muted-foreground" />
               </button>
             </>
-          )}
+          ))}
           <button
             onClick={closeSidebar}
             className="p-1 hover:bg-secondary rounded transition-colors"
@@ -234,12 +257,14 @@ export function MissionSidebar() {
         </div>
       )}
     </div>
+    </>
   )
 }
 
 // Toggle button for the sidebar (shown when sidebar is closed)
 export function MissionSidebarToggle() {
   const { missions, isSidebarOpen, openSidebar, selectedAgent } = useMissions()
+  const { isMobile } = useMobile()
 
   const needsAttention = missions.filter(m =>
     m.status === 'waiting_input' || m.status === 'failed'
@@ -269,7 +294,11 @@ export function MissionSidebarToggle() {
       onClick={openSidebar}
       data-tour="ai-missions"
       className={cn(
-        'fixed right-4 bottom-4 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all z-50',
+        'fixed flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all z-50',
+        // Mobile: centered at bottom
+        isMobile && 'left-1/2 -translate-x-1/2 bottom-4',
+        // Desktop: bottom right
+        !isMobile && 'right-4 bottom-4',
         needsAttention > 0
           ? 'bg-purple-500 text-white animate-pulse'
           : 'bg-card border border-border text-foreground hover:bg-secondary'
@@ -285,9 +314,9 @@ export function MissionSidebarToggle() {
       ) : missions.length > 0 ? (
         <span className="text-sm">{missions.length} mission{missions.length !== 1 ? 's' : ''}</span>
       ) : (
-        <span className="text-sm">AI Missions</span>
+        <span className="text-sm hidden sm:inline">AI Missions</span>
       )}
-      <ChevronRight className="w-4 h-4" />
+      <ChevronRight className={cn("w-4 h-4", isMobile && "rotate-[-90deg]")} />
     </button>
   )
 }
