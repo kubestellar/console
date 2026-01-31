@@ -12,24 +12,27 @@ import (
 	"time"
 )
 
-// bobResponse represents the JSON output from bob CLI
+// bobResponse represents the JSON stats output from bob CLI
 type bobResponse struct {
-	Type    string `json:"type"`
-	Result  string `json:"result"`
-	IsError bool   `json:"is_error"`
-	Usage   struct {
-		InputTokens              int `json:"input_tokens"`
-		OutputTokens             int `json:"output_tokens"`
-		CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
-		CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-	} `json:"usage"`
+	Response string `json:"response"`
+	Stats    struct {
+		Models struct {
+			Premium struct {
+				Tokens struct {
+					Prompt     int `json:"prompt"`
+					Candidates int `json:"candidates"`
+					Total      int `json:"total"`
+					Cached     int `json:"cached"`
+				} `json:"tokens"`
+			} `json:"premium"`
+		} `json:"models"`
+	} `json:"stats"`
 }
 
 // cleanBobOutput removes debug lines and markers from Bob CLI output
 func cleanBobOutput(content string) string {
 	lines := strings.Split(content, "\n")
 	var cleanLines []string
-	skipNext := false
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -40,15 +43,6 @@ func cleanBobOutput(content string) string {
 			trimmed == "---output---" ||
 			strings.HasPrefix(trimmed, "{\"type\":") ||
 			strings.HasPrefix(trimmed, "{\"error\":") {
-			continue
-		}
-
-		// Skip JSON stats block at the end
-		if strings.HasPrefix(trimmed, "{") && strings.Contains(trimmed, "\"usage\"") {
-			skipNext = true
-			continue
-		}
-		if skipNext {
 			continue
 		}
 
@@ -191,10 +185,12 @@ func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse
 	// Build prompt with history for context
 	fullPrompt := b.buildPromptWithHistory(req)
 
-	// Build command: bob "prompt" -o json
-	// Note: Using positional prompt (recommended) instead of -p flag (deprecated)
+	// Build command: bob "prompt" --chat-mode ask -o json
+	// --chat-mode ask: forces analysis mode (no tool execution), so Bob provides
+	// detailed diagnostic responses instead of lazy summaries like "Listed 17 item(s)."
 	args := []string{
 		fullPrompt,
+		"--chat-mode", "ask",
 		"-o", "json",
 	}
 
@@ -253,19 +249,34 @@ func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse
 		}
 	}
 
-	// Try to find JSON stats at the end for token usage
-	jsonStart := strings.LastIndex(output, "\n{")
-	if jsonStart < 0 {
-		jsonStart = strings.LastIndex(output, "{")
+	// Try to find JSON stats block after the second ---output--- marker for token usage
+	// Bob CLI output format: ...---output---\n<content>\n---output---\n{json stats}
+	secondMarkerIdx := -1
+	if startIdx >= 0 {
+		afterFirst := output[startIdx+len(outputMarker):]
+		secondInAfter := strings.Index(afterFirst, outputMarker)
+		if secondInAfter >= 0 {
+			secondMarkerIdx = startIdx + len(outputMarker) + secondInAfter + len(outputMarker)
+		}
 	}
-	if jsonStart >= 0 {
-		jsonOutput := output[jsonStart:]
-		if err := json.Unmarshal([]byte(strings.TrimSpace(jsonOutput)), &cliResp); err == nil {
-			inputTokens = cliResp.Usage.InputTokens + cliResp.Usage.CacheCreationInputTokens + cliResp.Usage.CacheReadInputTokens
-			outputTokens = cliResp.Usage.OutputTokens
-			// If we didn't get content from markers, try from JSON
-			if content == "" && cliResp.Result != "" {
-				content = cliResp.Result
+	statsJSON := ""
+	if secondMarkerIdx >= 0 && secondMarkerIdx < len(output) {
+		statsJSON = strings.TrimSpace(output[secondMarkerIdx:])
+	} else {
+		// Fallback: find the last top-level JSON object
+		jsonStart := strings.LastIndex(output, "\n{")
+		if jsonStart >= 0 {
+			statsJSON = strings.TrimSpace(output[jsonStart:])
+		}
+	}
+	if statsJSON != "" {
+		if err := json.Unmarshal([]byte(statsJSON), &cliResp); err == nil {
+			tokens := cliResp.Stats.Models.Premium.Tokens
+			inputTokens = tokens.Prompt
+			outputTokens = tokens.Candidates
+			// If we didn't get content from markers, try from JSON response field
+			if content == "" && cliResp.Response != "" {
+				content = cliResp.Response
 			}
 		}
 	}
