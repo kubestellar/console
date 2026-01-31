@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { CARD_TITLES, CARD_DESCRIPTIONS } from '../components/cards/CardWrapper'
-import { ALL_STAT_BLOCKS, type DashboardStatsType } from '../components/ui/StatsBlockDefinitions'
+import { getDefaultStatBlocks, type DashboardStatsType, type StatBlockConfig } from '../components/ui/StatsBlockDefinitions'
 import { useClusters } from './mcp/clusters'
 import { useDeployments, usePods } from './mcp/workloads'
 import { useServices } from './mcp/networking'
@@ -55,10 +55,56 @@ export const CATEGORY_ORDER: SearchCategory[] = [
 const MAX_PER_CATEGORY = 5
 const MAX_TOTAL = 40
 
+// --- Dashboard metadata (shared by cards, stats, and data items) ---
+
+const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
+  dashboard: 'Main',
+  clusters: 'Clusters',
+  workloads: 'Workloads',
+  pods: 'Pods',
+  gitops: 'GitOps',
+  storage: 'Storage',
+  network: 'Network',
+  security: 'Security',
+  compliance: 'Compliance',
+  'data-compliance': 'Data Compliance',
+  compute: 'Compute',
+  events: 'Events',
+  cost: 'Cost',
+  alerts: 'Alerts',
+  operators: 'Operators',
+  deploy: 'Deploy',
+}
+
+const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
+  dashboard: '/',
+  clusters: '/clusters',
+  workloads: '/workloads',
+  pods: '/pods',
+  gitops: '/gitops',
+  storage: '/storage',
+  network: '/network',
+  security: '/security',
+  compliance: '/security-posture',
+  'data-compliance': '/data-compliance',
+  compute: '/compute',
+  events: '/events',
+  cost: '/cost',
+  alerts: '/alerts',
+  operators: '/operators',
+  deploy: '/deploy',
+}
+
+const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
+  'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
+  'network', 'security', 'compliance', 'data-compliance', 'compute',
+  'events', 'cost', 'alerts', 'operators', 'deploy',
+]
+
 // --- Dashboard storage keys → routes (for scanning placed cards) ---
 
 const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
-  { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Dashboard' },
+  { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Main' },
   { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'Clusters' },
   { key: 'kubestellar-workloads-cards', route: '/workloads', name: 'Workloads' },
   { key: 'kubestellar-deployments-cards', route: '/deployments', name: 'Deployments' },
@@ -152,6 +198,44 @@ function scanPlacedCards(customDashboards: { id: string; name: string }[]): Sear
   return items
 }
 
+/**
+ * Scan all dashboard stat configs from localStorage (falling back to defaults).
+ * Returns SearchItem[] with one entry per stat-per-dashboard.
+ * Same stat on multiple dashboards = multiple results.
+ */
+function scanPlacedStats(): SearchItem[] {
+  const items: SearchItem[] = []
+
+  for (const dashType of ALL_STATS_DASHBOARD_TYPES) {
+    const dashName = DASHBOARD_NAMES[dashType]
+    const route = DASHBOARD_ROUTES[dashType]
+    const storageKey = `${dashType}-stats-config`
+
+    let blocks: StatBlockConfig[]
+    try {
+      const raw = localStorage.getItem(storageKey)
+      blocks = raw ? JSON.parse(raw) : getDefaultStatBlocks(dashType)
+      if (!Array.isArray(blocks)) blocks = getDefaultStatBlocks(dashType)
+    } catch {
+      blocks = getDefaultStatBlocks(dashType)
+    }
+
+    for (const block of blocks) {
+      if (!block.visible) continue
+      items.push({
+        id: `stat-${block.id}-on-${dashType}`,
+        name: block.name,
+        description: `On ${dashName} dashboard`,
+        category: 'stat',
+        href: route,
+        keywords: [block.id, block.icon.toLowerCase()],
+      })
+    }
+  }
+
+  return items
+}
+
 // --- Static items (computed once at module level) ---
 
 const PAGE_ITEMS: SearchItem[] = [
@@ -184,64 +268,22 @@ const PAGE_ITEMS: SearchItem[] = [
   { id: 'page-cluster-compare', name: 'Cluster Comparison', description: 'Compare clusters side by side', category: 'page', href: '/compute/compare', keywords: ['diff', 'compare'] },
 ]
 
-// Build stat items from ALL_STAT_BLOCKS (deduplicate by name)
-const STAT_DASHBOARD_MAP: Record<string, DashboardStatsType> = {}
-const seenStatNames = new Set<string>()
-
-// Map dashboard types to their routes
-const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
-  clusters: '/clusters',
-  workloads: '/workloads',
-  pods: '/pods',
-  gitops: '/gitops',
-  storage: '/storage',
-  network: '/network',
-  security: '/security',
-  compliance: '/security-posture',
-  'data-compliance': '/data-compliance',
-  compute: '/compute',
-  events: '/events',
-  cost: '/cost',
-  alerts: '/alerts',
-  dashboard: '/',
-  operators: '/operators',
-  deploy: '/deploy',
-}
-
-const STAT_ITEMS: SearchItem[] = ALL_STAT_BLOCKS.filter(block => {
-  const key = block.name.toLowerCase()
-  if (seenStatNames.has(key)) return false
-  seenStatNames.add(key)
-  return true
-}).map(block => {
-  const dashboard = STAT_DASHBOARD_MAP[block.id] || 'dashboard'
-  return {
-    id: `stat-${block.id}`,
-    name: block.name,
-    description: `Stat block on ${dashboard} dashboard`,
-    category: 'stat' as const,
-    href: DASHBOARD_ROUTES[dashboard] || '/',
-    keywords: [block.id, block.icon.toLowerCase()],
-  }
-})
-
 const SETTING_ITEMS: SearchItem[] = [
-  { id: 'setting-ai', name: 'AI Settings', description: 'Configure AI mode: AI, Local, or Demo', category: 'setting', href: '/settings', keywords: ['mode', 'demo', 'local', 'ai'] },
-  { id: 'setting-profile', name: 'Profile', description: 'Email and Slack ID configuration', category: 'setting', href: '/settings', keywords: ['email', 'slack'] },
-  { id: 'setting-agent', name: 'Local Agent', description: 'Agent connection status and health', category: 'setting', href: '/settings', keywords: ['agent', 'kc-agent', 'connection'] },
-  { id: 'setting-github', name: 'GitHub Integration', description: 'GitHub token and integration settings', category: 'setting', href: '/settings', keywords: ['github', 'token', 'git'] },
-  { id: 'setting-updates', name: 'System Updates', description: 'Check for console updates', category: 'setting', href: '/settings', keywords: ['update', 'version'] },
-  { id: 'setting-apikeys', name: 'API Keys', description: 'Manage Claude, OpenAI, and Gemini API keys', category: 'setting', href: '/settings', keywords: ['claude', 'openai', 'gemini', 'anthropic', 'key'] },
-  { id: 'setting-tokens', name: 'Token Usage', description: 'LLM token usage tracking and limits', category: 'setting', href: '/settings', keywords: ['usage', 'llm', 'token', 'cost'] },
-  { id: 'setting-theme', name: 'Theme', description: 'Light, dark, and system theme selection', category: 'setting', href: '/settings', keywords: ['dark', 'light', 'appearance'] },
-  { id: 'setting-accessibility', name: 'Accessibility', description: 'Color blind mode, reduce motion, high contrast', category: 'setting', href: '/settings', keywords: ['a11y', 'colorblind', 'motion', 'contrast'] },
-  { id: 'setting-permissions', name: 'Permissions', description: 'Permission validation and access control', category: 'setting', href: '/settings', keywords: ['permission', 'access', 'rbac'] },
+  { id: 'setting-ai', name: 'AI Settings', description: 'Settings · Configure AI mode: AI, Local, or Demo', category: 'setting', href: '/settings', keywords: ['mode', 'demo', 'local', 'ai'] },
+  { id: 'setting-profile', name: 'Profile', description: 'Settings · Email and Slack ID configuration', category: 'setting', href: '/settings', keywords: ['email', 'slack'] },
+  { id: 'setting-agent', name: 'Local Agent', description: 'Settings · Agent connection status and health', category: 'setting', href: '/settings', keywords: ['agent', 'kc-agent', 'connection'] },
+  { id: 'setting-github', name: 'GitHub Integration', description: 'Settings · GitHub token and integration settings', category: 'setting', href: '/settings', keywords: ['github', 'token', 'git'] },
+  { id: 'setting-updates', name: 'System Updates', description: 'Settings · Check for console updates', category: 'setting', href: '/settings', keywords: ['update', 'version'] },
+  { id: 'setting-apikeys', name: 'API Keys', description: 'Settings · Manage Claude, OpenAI, and Gemini API keys', category: 'setting', href: '/settings', keywords: ['claude', 'openai', 'gemini', 'anthropic', 'key'] },
+  { id: 'setting-tokens', name: 'Token Usage', description: 'Settings · LLM token usage tracking and limits', category: 'setting', href: '/settings', keywords: ['usage', 'llm', 'token', 'cost'] },
+  { id: 'setting-theme', name: 'Theme', description: 'Settings · Light, dark, and system theme selection', category: 'setting', href: '/settings', keywords: ['dark', 'light', 'appearance'] },
+  { id: 'setting-accessibility', name: 'Accessibility', description: 'Settings · Color blind mode, reduce motion, high contrast', category: 'setting', href: '/settings', keywords: ['a11y', 'colorblind', 'motion', 'contrast'] },
+  { id: 'setting-permissions', name: 'Permissions', description: 'Settings · Permission validation and access control', category: 'setting', href: '/settings', keywords: ['permission', 'access', 'rbac'] },
 ]
 
-// Static items that don't need localStorage scanning
+// Static items that don't need localStorage scanning (stats are scanned dynamically now)
 const STATIC_ITEMS: SearchItem[] = [
   ...PAGE_ITEMS,
-  ...STAT_ITEMS,
   ...SETTING_ITEMS,
 ]
 
@@ -277,7 +319,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `cluster-${c.name}`,
         name: c.name,
-        description: c.context !== c.name ? `Context: ${c.context}` : undefined,
+        description: c.context !== c.name ? `Clusters · Context: ${c.context}` : 'Clusters',
         category: 'cluster',
         href: `/clusters?name=${encodeURIComponent(c.name)}`,
         keywords: [c.context, c.server || ''].filter(Boolean),
@@ -290,7 +332,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `deployment-${d.cluster}-${d.namespace}-${d.name}`,
         name: d.name,
-        description: `${d.namespace} namespace`,
+        description: `Workloads · ${d.namespace} · ${d.cluster}`,
         category: 'deployment',
         href: `/workloads?deployment=${encodeURIComponent(d.name)}`,
         keywords: [d.image || ''].filter(Boolean),
@@ -303,7 +345,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `pod-${p.cluster}-${p.namespace}-${p.name}`,
         name: p.name,
-        description: `${p.namespace} namespace`,
+        description: `Workloads · ${p.namespace} · ${p.cluster}`,
         category: 'pod',
         href: `/workloads?pod=${encodeURIComponent(p.name)}`,
         meta: [p.cluster, p.namespace, p.status].filter(Boolean).join(' '),
@@ -315,7 +357,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `service-${s.cluster}-${s.namespace}-${s.name}`,
         name: s.name,
-        description: `${s.type} in ${s.namespace}`,
+        description: `Network · ${s.type} in ${s.namespace} · ${s.cluster}`,
         category: 'service',
         href: `/network?service=${encodeURIComponent(s.name)}`,
         meta: [s.cluster, s.namespace, s.type].filter(Boolean).join(' '),
@@ -331,6 +373,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `namespace-${ns}`,
         name: ns,
+        description: 'Namespaces',
         category: 'namespace',
         href: `/namespaces?ns=${encodeURIComponent(ns)}`,
       })
@@ -341,7 +384,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `node-${n.cluster}-${n.name}`,
         name: n.name,
-        description: n.roles.join(', ') || 'worker',
+        description: `Compute · ${n.roles.join(', ') || 'worker'} · ${n.cluster}`,
         category: 'node',
         href: `/compute?node=${encodeURIComponent(n.name)}`,
         meta: [n.cluster, n.status, ...n.roles].filter(Boolean).join(' '),
@@ -353,7 +396,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `helm-${h.cluster}-${h.namespace}-${h.name}`,
         name: h.name,
-        description: `Chart: ${h.chart}`,
+        description: `Helm · Chart: ${h.chart} · ${h.namespace} · ${h.cluster}`,
         category: 'helm',
         href: `/helm?release=${encodeURIComponent(h.name)}`,
         keywords: [h.chart, h.app_version].filter(Boolean),
@@ -366,7 +409,7 @@ export function useSearchIndex(query: string) {
       items.push({
         id: `mission-${m.id}`,
         name: m.title,
-        description: m.description,
+        description: `AI Missions · ${m.description || m.type}`,
         category: 'mission',
         href: `#mission:${m.id}`,
         keywords: [m.type, m.status, m.cluster || ''].filter(Boolean),
@@ -389,7 +432,7 @@ export function useSearchIndex(query: string) {
     return items
   }, [clusters, deployments, pods, services, nodes, releases, missions, dashboards])
 
-  // Filter and group results — also scans localStorage for placed cards
+  // Filter and group results — also scans localStorage for placed cards and stats
   const { results, totalCount } = useMemo(() => {
     if (!query.trim()) {
       return { results: new Map<SearchCategory, SearchItem[]>(), totalCount: 0 }
@@ -401,7 +444,10 @@ export function useSearchIndex(query: string) {
       .map(d => ({ id: d.id, name: d.name }))
     const placedCards = scanPlacedCards(customDashboardList)
 
-    const allItems = [...STATIC_ITEMS, ...dynamicItems, ...placedCards]
+    // Scan placed stats from localStorage / defaults
+    const placedStats = scanPlacedStats()
+
+    const allItems = [...STATIC_ITEMS, ...dynamicItems, ...placedCards, ...placedStats]
     const matched = allItems.filter(item => matchesQuery(item, query))
 
     // Group by category
