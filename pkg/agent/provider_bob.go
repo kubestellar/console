@@ -145,31 +145,38 @@ func (b *BobProvider) IsAvailable() bool {
 	return b.cliPath != ""
 }
 
-// buildPromptWithHistory creates a prompt that includes conversation history for context
+// buildPromptWithHistory creates a prompt that includes system instructions and conversation history
 func (b *BobProvider) buildPromptWithHistory(req *ChatRequest) string {
-	if len(req.History) == 0 {
-		return req.Prompt
-	}
-
-	// Build a prompt that includes history for context
 	var sb strings.Builder
-	sb.WriteString("Previous conversation for context:\n\n")
 
-	for _, msg := range req.History {
-		switch msg.Role {
-		case "user":
-			sb.WriteString("User: ")
-		case "assistant":
-			sb.WriteString("Assistant: ")
-		case "system":
-			sb.WriteString("System: ")
+	// Prepend system prompt so Bob's model knows how to behave
+	// Bob CLI has no --system flag, so we embed it in the user prompt
+	systemPrompt := req.SystemPrompt
+	if systemPrompt == "" {
+		systemPrompt = DefaultSystemPrompt
+	}
+	sb.WriteString("[System Instructions]\n")
+	sb.WriteString(systemPrompt)
+	sb.WriteString("\n\nIMPORTANT: After executing commands, you MUST analyze the output and provide a detailed, actionable response. Never just say how many items were listed — explain what they mean, identify issues, and suggest fixes.\n\n")
+
+	if len(req.History) > 0 {
+		sb.WriteString("[Conversation History]\n")
+		for _, msg := range req.History {
+			switch msg.Role {
+			case "user":
+				sb.WriteString("User: ")
+			case "assistant":
+				sb.WriteString("Assistant: ")
+			case "system":
+				sb.WriteString("System: ")
+			}
+			sb.WriteString(msg.Content)
+			sb.WriteString("\n\n")
 		}
-		sb.WriteString(msg.Content)
-		sb.WriteString("\n\n")
+		sb.WriteString("---\n\n")
 	}
 
-	sb.WriteString("---\n\nNow respond to the user's latest message:\n\n")
-	sb.WriteString("User: ")
+	sb.WriteString("[User Request]\n")
 	sb.WriteString(req.Prompt)
 
 	return sb.String()
