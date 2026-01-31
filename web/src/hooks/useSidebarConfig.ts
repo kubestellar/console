@@ -19,6 +19,7 @@ export interface SidebarConfig {
   sections: SidebarItem[]
   showClusterStatus: boolean
   collapsed: boolean
+  isMobileOpen: boolean
 }
 
 // Shared state store for sidebar config
@@ -68,6 +69,7 @@ const DEFAULT_CONFIG: SidebarConfig = {
   sections: [],
   showClusterStatus: true,
   collapsed: false,
+  isMobileOpen: false,
 }
 
 const STORAGE_KEY = 'kubestellar-sidebar-config-v5'
@@ -285,6 +287,18 @@ export function useSidebarConfig() {
     setConfig((prev) => ({ ...prev, collapsed: !prev.collapsed }))
   }, [])
 
+  const openMobileSidebar = useCallback(() => {
+    setConfig((prev) => ({ ...prev, isMobileOpen: true }))
+  }, [])
+
+  const closeMobileSidebar = useCallback(() => {
+    setConfig((prev) => ({ ...prev, isMobileOpen: false }))
+  }, [])
+
+  const toggleMobileSidebar = useCallback(() => {
+    setConfig((prev) => ({ ...prev, isMobileOpen: !prev.isMobileOpen }))
+  }, [])
+
   const resetToDefault = useCallback(() => {
     setConfig(DEFAULT_CONFIG)
   }, [])
@@ -339,6 +353,9 @@ export function useSidebarConfig() {
     reorderItems,
     toggleClusterStatus,
     toggleCollapsed,
+    openMobileSidebar,
+    closeMobileSidebar,
+    toggleMobileSidebar,
     resetToDefault,
     generateFromBehavior,
   }
