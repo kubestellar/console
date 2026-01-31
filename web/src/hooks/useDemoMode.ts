@@ -11,7 +11,8 @@ const listeners = new Set<(value: boolean) => void>()
 const isNetlifyPreview = typeof window !== 'undefined' && (
   import.meta.env.VITE_DEMO_MODE === 'true' ||
   window.location.hostname.includes('netlify.app') ||
-  window.location.hostname.includes('deploy-preview-')
+  window.location.hostname.includes('deploy-preview-') ||
+  window.location.hostname === 'console.kubestellar.io'
 )
 
 /**
