@@ -5,6 +5,7 @@ import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
+import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
@@ -23,6 +24,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { config } = useSidebarConfig()
+  const { isMobile } = useMobile()
   const { isSidebarOpen: isMissionSidebarOpen, isSidebarMinimized: isMissionSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
@@ -85,7 +87,8 @@ export function Layout({ children }: LayoutProps) {
           style={{ top: networkBannerTop }}
           className={cn(
             "fixed right-0 z-40 border-b transition-[left] duration-300",
-            config.collapsed ? "left-20" : "left-64",
+            // Mobile: full width
+            isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
             isOnline
               ? "bg-green-500/10 border-green-500/20"
               : "bg-red-500/10 border-red-500/20",
@@ -119,26 +122,28 @@ export function Layout({ children }: LayoutProps) {
           style={{ top: demoBannerTop }}
           className={cn(
             "fixed right-0 z-30 bg-yellow-500/10 border-b border-yellow-500/20 transition-[left] duration-300",
-            config.collapsed ? "left-20" : "left-64",
+            // Mobile: full width
+            isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
           )}>
-          <div className="flex items-center justify-center gap-3 py-1.5 px-4">
+          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
             <Box className="w-4 h-4 text-yellow-400" />
             <span className="text-sm text-yellow-400 font-medium">
-              Demo Mode Active
+              Demo Mode
             </span>
-            <span className="text-xs text-yellow-400/70">
+            <span className="hidden md:inline text-xs text-yellow-400/70">
               Showing sample data from all cloud providers
             </span>
             <button
               onClick={() => setShowSetupDialog(true)}
-              className="ml-2 flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-full text-xs font-medium transition-colors"
+              className="hidden sm:flex ml-2 items-center gap-1.5 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-full text-xs font-medium transition-colors"
             >
               <Rocket className="w-3.5 h-3.5" />
-              Want your own local KubeStellar Console?
+              <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
+              <span className="lg:hidden">Get Console</span>
             </button>
             <button
               onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
-              className="ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
+              className="ml-1 md:ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
               title={isDemoModeForced ? "Install your own console" : "Exit demo mode"}
             >
               <X className="w-3.5 h-3.5 text-yellow-400" />
@@ -153,32 +158,33 @@ export function Layout({ children }: LayoutProps) {
           style={{ top: offlineBannerTop }}
           className={cn(
             "fixed z-20 bg-orange-500/10 border-b border-orange-500/20 transition-[right] duration-300",
-            config.collapsed ? "left-20" : "left-64",
-          // Adjust right edge when mission sidebar is open
-          isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[500px]" : "right-0",
-          isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
+            // Mobile: full width
+            isMobile ? "left-0" : (config.collapsed ? "left-20" : "left-64"),
+          // Adjust right edge when mission sidebar is open (desktop only)
+          !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen ? "right-[500px]" : "right-0",
+          !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && "right-12"
         )}>
-          <div className="flex items-center justify-between py-1.5 px-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-3 md:px-4">
             <div className="flex items-center gap-2 min-w-0">
               <WifiOff className="w-4 h-4 text-orange-400 shrink-0" />
               <span className="text-sm text-orange-400 font-medium shrink-0">Offline</span>
-              <span className="text-xs text-orange-400/70 truncate">
-                — Install: <code className="bg-orange-500/20 px-1 rounded">brew install kubestellar/tap/kc-agent</code> → run <code className="bg-orange-500/20 px-1 rounded">kc-agent</code> → configure your AI agent API keys in Settings
+              <span className="hidden lg:inline text-xs text-orange-400/70 truncate">
+                — Install: <code className="bg-orange-500/20 px-1 rounded">brew install kubestellar/tap/kc-agent</code> → run <code className="bg-orange-500/20 px-1 rounded">kc-agent</code>
               </span>
             </div>
-            <div className="flex items-center gap-2 shrink-0 ml-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Link
                 to="/settings"
                 className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
                 <Settings className="w-3 h-3" />
-                Settings
+                <span className="hidden sm:inline">Settings</span>
               </Link>
               <button
                 onClick={toggleDemoMode}
                 className="text-xs px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
               >
-                Switch to Demo Mode
+                <span className="hidden sm:inline">Switch to </span>Demo
               </button>
               <button
                 onClick={() => setOfflineBannerDismissed(true)}
@@ -195,11 +201,13 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex flex-1 overflow-hidden" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
         <main className={cn(
-          'flex-1 p-6 transition-[margin] duration-300 overflow-y-auto',
-          config.collapsed ? 'ml-20' : 'ml-64',
-          // Don't apply margin when fullscreen is active - sidebar covers everything
-          isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
-          isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
+          'flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto',
+          // Mobile: no left margin (sidebar overlays)
+          // Desktop: respect collapsed state
+          isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),
+          // Don't apply right margin when fullscreen is active or on mobile
+          !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
+          !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
           {children}
         </main>
