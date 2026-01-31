@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, Monitor, User, Cast, Menu, X, MoreVertical } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
-import { useMobile } from '../../../hooks/useMobile'
 import { useTheme } from '../../../hooks/useTheme'
 import { useActiveUsers } from '../../../hooks/useActiveUsers'
 import { usePresentationMode } from '../../../hooks/usePresentationMode'
@@ -29,7 +28,6 @@ export function Navbar() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const { config, toggleMobileSidebar } = useSidebarConfig()
-  const { isMobile } = useMobile()
 
   // Refetch viewer count on page navigation
   useEffect(() => {
