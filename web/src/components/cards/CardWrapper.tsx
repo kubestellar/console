@@ -226,7 +226,7 @@ interface CardWrapperProps {
   children: ReactNode
 }
 
-const CARD_TITLES: Record<string, string> = {
+export const CARD_TITLES: Record<string, string> = {
   // Core cluster cards
   cluster_health: 'Cluster Health',
   cluster_focus: 'Cluster Focus',
@@ -400,7 +400,7 @@ const CARD_TITLES: Record<string, string> = {
 }
 
 // Short descriptions shown via info icon tooltip in the card header
-const CARD_DESCRIPTIONS: Record<string, string> = {
+export const CARD_DESCRIPTIONS: Record<string, string> = {
   cluster_health: 'Overall health status of all connected Kubernetes clusters.',
   cluster_focus: 'Deep-dive view of a single cluster with key metrics and resources.',
   cluster_network: 'Network connectivity and traffic flow between clusters.',
