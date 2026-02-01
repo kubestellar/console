@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plus, Layout, RotateCcw } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
+import { useMobile } from '../../hooks/useMobile'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { ResetDialog } from './ResetDialog'
 
@@ -27,6 +28,7 @@ export function FloatingDashboardActions({
   isCustomized,
 }: FloatingDashboardActionsProps) {
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
+  const { isMobile } = useMobile()
   const [isOpen, setIsOpen] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -43,14 +45,16 @@ export function FloatingDashboardActions({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
 
-  // Shift button left based on mission sidebar state
-  // w-[500px] = 500px (full sidebar), w-12 = 48px (minimized)
-  const getRightOffset = () => {
-    if (!isSidebarOpen) return 'right-6'
-    if (isSidebarMinimized) return 'right-[72px]' // 48px + 24px margin
-    return 'right-[536px]' // 500px + 36px margin
+  // Desktop: shift button left based on mission sidebar state
+  // Mobile: always bottom left
+  const getPositionClasses = () => {
+    if (isMobile) return 'left-4 bottom-4'
+    // Desktop: right side, shifts when sidebar open
+    if (!isSidebarOpen) return 'right-6 bottom-20'
+    if (isSidebarMinimized) return 'right-[72px] bottom-20' // 48px + 24px margin
+    return 'right-[536px] bottom-20' // 500px + 36px margin
   }
-  const rightOffset = getRightOffset()
+  const positionClasses = getPositionClasses()
 
   const handleReset = (mode: ResetMode) => {
     setShowResetDialog(false)
@@ -65,7 +69,7 @@ export function FloatingDashboardActions({
 
   return (
     <>
-      <div ref={menuRef} className={`fixed bottom-20 ${rightOffset} z-40 flex flex-col items-end gap-1.5 transition-all duration-300`}>
+      <div ref={menuRef} className={`fixed ${positionClasses} z-40 flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {/* Expanded menu items */}
         {isOpen && (
           <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
@@ -100,17 +104,19 @@ export function FloatingDashboardActions({
           </div>
         )}
 
-        {/* FAB toggle */}
+        {/* FAB toggle - smaller on mobile */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center justify-center w-10 h-10 rounded-full shadow-lg transition-all duration-200 ${
+          className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
+            isMobile ? 'w-8 h-8' : 'w-10 h-10'
+          } ${
             isOpen
               ? 'bg-card border border-border rotate-45'
               : 'bg-gradient-ks hover:scale-110 hover:shadow-xl'
           }`}
           title={isOpen ? 'Close menu' : 'Dashboard actions'}
         >
-          <Plus className="w-5 h-5 text-foreground" />
+          <Plus className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-foreground`} />
         </button>
       </div>
 

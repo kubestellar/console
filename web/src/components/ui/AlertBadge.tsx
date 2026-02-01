@@ -4,6 +4,7 @@ import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Bot, Server, 
 import { useAlerts } from '../../hooks/useAlerts'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
+import { useMobile } from '../../hooks/useMobile'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 
@@ -65,6 +66,7 @@ export function AlertBadge() {
   const { activeAlerts, stats, acknowledgeAlert, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
   const { open: openDrillDown } = useDrillDown()
   const { missions, setActiveMission, openSidebar } = useMissions()
+  const { isMobile } = useMobile()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all')
@@ -232,12 +234,30 @@ export function AlertBadge() {
         )}
       </button>
 
-      {/* Dropdown Panel */}
+      {/* Dropdown Panel - bottom sheet on mobile */}
       {isOpen && (
+        <>
+          {/* Mobile backdrop */}
+          {isMobile && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+          )}
           <div
             ref={dropdownRef}
-            className="absolute right-0 top-full mt-2 w-96 bg-background border border-border rounded-lg shadow-xl z-50"
+            className={`${
+              isMobile
+                ? 'fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[70vh]'
+                : 'absolute right-0 top-full mt-2 w-96 rounded-lg'
+            } bg-background border border-border shadow-xl z-50`}
           >
+            {/* Drag handle for mobile */}
+            {isMobile && (
+              <div className="flex justify-center py-2">
+                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+              </div>
+            )}
             {/* Header */}
             <div className="p-3 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -480,6 +500,7 @@ export function AlertBadge() {
               </button>
             </div>
           </div>
+        </>
       )}
     </div>
   )

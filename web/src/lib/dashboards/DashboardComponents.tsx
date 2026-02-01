@@ -168,12 +168,14 @@ export function DashboardHeader({
               <p className="text-muted-foreground">{description}</p>
             )}
           </div>
-          {isRefreshing && (
-            <span className="flex items-center gap-1 text-xs text-amber-400 animate-pulse" title="Updating...">
-              <Hourglass className="w-3 h-3" />
-              <span>Updating</span>
-            </span>
-          )}
+          {/* Reserve fixed width to prevent layout shift */}
+          <span
+            className={`flex items-center gap-1 text-xs w-[72px] ${isRefreshing ? 'text-amber-400 animate-pulse' : 'invisible'}`}
+            title="Updating..."
+          >
+            <Hourglass className="w-3 h-3" />
+            <span>Updating</span>
+          </span>
         </div>
         <div className="flex items-center gap-3">
           {onAutoRefreshChange && (

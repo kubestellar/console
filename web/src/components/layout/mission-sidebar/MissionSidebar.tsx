@@ -294,29 +294,27 @@ export function MissionSidebarToggle() {
       onClick={openSidebar}
       data-tour="ai-missions"
       className={cn(
-        'fixed flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all z-50',
-        // Mobile: centered at bottom
-        isMobile && 'left-1/2 -translate-x-1/2 bottom-4',
-        // Desktop: bottom right
-        !isMobile && 'right-4 bottom-4',
+        'fixed flex items-center gap-2 rounded-full shadow-lg transition-all z-50',
+        // Mobile: smaller padding, bottom right
+        isMobile ? 'px-3 py-2 right-4 bottom-4' : 'px-4 py-3 right-4 bottom-4',
         needsAttention > 0
           ? 'bg-purple-500 text-white animate-pulse'
           : 'bg-card border border-border text-foreground hover:bg-secondary'
       )}
       title="Open AI Missions"
     >
-      <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-5 h-5" />
+      <AgentIcon provider={getAgentProvider(selectedAgent)} className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
       {runningCount > 0 && (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className={isMobile ? 'w-3 h-3 animate-spin' : 'w-4 h-4 animate-spin'} />
       )}
       {needsAttention > 0 ? (
-        <span className="text-sm font-medium">{needsAttention} needs attention</span>
+        <span className={isMobile ? 'text-xs font-medium' : 'text-sm font-medium'}>{needsAttention} needs attention</span>
       ) : missions.length > 0 ? (
-        <span className="text-sm">{missions.length} mission{missions.length !== 1 ? 's' : ''}</span>
+        <span className={isMobile ? 'text-xs' : 'text-sm'}>{missions.length} mission{missions.length !== 1 ? 's' : ''}</span>
       ) : (
-        <span className="text-sm hidden sm:inline">AI Missions</span>
+        <span className={isMobile ? 'text-xs' : 'text-sm'}>AI Missions</span>
       )}
-      <ChevronRight className={cn("w-4 h-4", isMobile && "rotate-[-90deg]")} />
+      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && 'rotate-[-90deg]')} />
     </button>
   )
 }

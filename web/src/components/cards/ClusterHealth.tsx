@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useMobile } from '../../hooks/useMobile'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
@@ -80,6 +81,7 @@ export function ClusterHealth() {
   } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const { isMobile } = useMobile()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
   // Use shared card data hook for filtering, sorting, and pagination
@@ -297,7 +299,7 @@ export function ClusterHealth() {
             <div
               key={cluster.name}
               data-tour={idx === 0 ? 'drilldown' : undefined}
-              className="flex items-center justify-between p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50"
+              className={`${isMobile ? 'flex flex-col gap-1.5' : 'flex items-center justify-between'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50`}
               onClick={() => setSelectedCluster(cluster.name)}
               title={`Click to view details for ${cluster.name}`}
             >
@@ -329,7 +331,7 @@ export function ClusterHealth() {
                   </a>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+              <div className={`flex items-center ${isMobile ? 'gap-2 pl-6 flex-wrap' : 'gap-3 shrink-0'} text-xs text-muted-foreground`}>
                 <span title={clusterLoading ? 'Checking...' : !clusterUnreachable ? `${cluster.nodeCount || 0} worker nodes in cluster` : 'Offline - check network connection'}>
                   {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.nodeCount || 0) : '-'} nodes
                 </span>

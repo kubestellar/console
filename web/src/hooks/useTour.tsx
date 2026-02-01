@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { useMobile } from './useMobile'
 
 export interface TourStep {
   id: string
@@ -146,6 +147,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const [isActive, setIsActive] = useState(false)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [hasCompletedTour, setHasCompletedTour] = useState(true) // Default to true until we check
+  const { isMobile } = useMobile()
 
   // Check localStorage on mount
   useEffect(() => {
@@ -153,12 +155,21 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setHasCompletedTour(completed === 'true')
   }, [])
 
+  // Auto-skip tour on mobile - tour is desktop-only
+  useEffect(() => {
+    if (isMobile && isActive) {
+      setIsActive(false)
+    }
+  }, [isMobile, isActive])
+
   const currentStep = isActive ? TOUR_STEPS[currentStepIndex] : null
 
   const startTour = useCallback(() => {
+    // Don't start tour on mobile devices
+    if (isMobile) return
     setCurrentStepIndex(0)
     setIsActive(true)
-  }, [])
+  }, [isMobile])
 
   const nextStep = useCallback(() => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {

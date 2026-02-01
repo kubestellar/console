@@ -6,6 +6,7 @@ import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
 import { useActiveUsers } from '../../../hooks/useActiveUsers'
 import { usePresentationMode } from '../../../hooks/usePresentationMode'
+import { useMobile } from '../../../hooks/useMobile'
 import { TourTrigger } from '../../onboarding/Tour'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 import { AlertBadge } from '../../ui/AlertBadge'
@@ -28,6 +29,7 @@ export function Navbar() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const { config, toggleMobileSidebar } = useSidebarConfig()
+  const { isMobile } = useMobile()
 
   // Refetch viewer count on page navigation
   useEffect(() => {
@@ -133,7 +135,7 @@ export function Navbar() {
         {/* Alerts - always visible */}
         <AlertBadge />
 
-        {/* Mobile overflow menu */}
+        {/* Mobile overflow menu - simplified for mobile */}
         <div className="relative md:hidden">
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
@@ -144,56 +146,45 @@ export function Navbar() {
           </button>
           {showMobileMore && (
             <>
+              {/* Backdrop */}
               <div
-                className="fixed inset-0 z-40"
+                className="fixed inset-0 bg-black/50 z-40"
                 onClick={() => setShowMobileMore(false)}
               />
-              <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-lg shadow-xl z-50 py-2">
-                {/* Search on mobile */}
-                <div className="px-3 py-2 sm:hidden">
-                  <SearchDropdown />
-                </div>
-                <div className="border-t border-border my-2 sm:hidden" />
-
-                {/* Mobile menu items */}
-                <div className="px-3 py-2">
-                  <ClusterFilterPanel />
-                </div>
-                <div className="px-3 py-2">
-                  <AgentStatusIndicator />
-                </div>
-                <div className="px-3 py-2 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Language</span>
-                  <LanguageSelector />
-                </div>
-                <div className="px-3 py-2">
-                  <TokenUsageWidget />
-                </div>
-                <div className="border-t border-border my-2" />
-                <div className="px-3 py-2 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Presentation Mode</span>
-                  <button
-                    onClick={() => { togglePresentationMode(); setShowMobileMore(false) }}
-                    className={isPresentationMode
-                      ? 'p-2 rounded-lg transition-colors bg-blue-500/20 text-blue-400'
-                      : 'p-2 rounded-lg transition-colors hover:bg-secondary text-muted-foreground'
-                    }
-                  >
-                    <Cast className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="px-3 py-2 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Viewers</span>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <User className="w-4 h-4" />
-                    <span className="text-xs tabular-nums">{viewerCount}</span>
+              {/* Bottom sheet menu on mobile */}
+              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh]' : 'right-4 top-16 w-64 rounded-lg'} bg-card border border-border shadow-xl z-50 overflow-hidden`}>
+                {/* Drag handle for mobile */}
+                {isMobile && (
+                  <div className="flex justify-center py-2">
+                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                   </div>
-                </div>
-                <div className="px-3 py-2">
-                  <FeatureRequestButton />
-                </div>
-                <div className="px-3 py-2">
-                  <TourTrigger />
+                )}
+                <div className={`${isMobile ? 'max-h-[calc(60vh-24px)]' : ''} overflow-y-auto py-2`}>
+                  {/* Search on mobile */}
+                  <div className="px-3 py-2 sm:hidden">
+                    <SearchDropdown />
+                  </div>
+                  <div className="border-t border-border my-2 sm:hidden" />
+
+                  {/* Simplified mobile menu - only essential items */}
+                  <div className="px-3 py-2">
+                    <AgentStatusIndicator />
+                  </div>
+                  <div className="px-3 py-2 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Language</span>
+                    <LanguageSelector />
+                  </div>
+                  <div className="border-t border-border my-2" />
+                  <div className="px-3 py-2 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Viewers</span>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <User className="w-4 h-4" />
+                      <span className="text-xs tabular-nums">{viewerCount}</span>
+                    </div>
+                  </div>
+                  <div className="px-3 py-2">
+                    <FeatureRequestButton />
+                  </div>
                 </div>
               </div>
             </>
