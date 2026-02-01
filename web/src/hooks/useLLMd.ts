@@ -524,7 +524,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
             }
           }
         } catch (err) {
-          console.warn(`Error fetching InferencePools from cluster ${cluster}:`, err)
+          console.error(`Error fetching InferencePools from cluster ${cluster}:`, err)
         }
       }
 

@@ -153,7 +153,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
         setIsRefreshing(false)
         return
       } catch (err) {
-        console.log(`[usePVCs] kubectl proxy failed for ${cluster}, trying API`)
+        console.error(`[usePVCs] kubectl proxy failed for ${cluster}, trying API`)
       }
     }
 

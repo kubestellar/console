@@ -54,7 +54,7 @@ export function useNamespaces(cluster?: string) {
         }
         console.log(`[useNamespaces] Local agent returned ${response.status}, trying kubectl proxy`)
       } catch (err) {
-        console.log(`[useNamespaces] Local agent failed for ${cluster}:`, err)
+        console.error(`[useNamespaces] Local agent failed for ${cluster}:`, err)
       }
     }
 
@@ -81,7 +81,7 @@ export function useNamespaces(cluster?: string) {
         }
         console.log(`[useNamespaces] No namespaces returned for ${cluster}, trying API`)
       } catch (err) {
-        console.log(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
+        console.error(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
       }
     }
 

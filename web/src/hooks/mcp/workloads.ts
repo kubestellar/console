@@ -466,7 +466,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         return
       } catch (err) {
         // kubectl proxy failed, fall through to API
-        console.log(`[usePodIssues] kubectl proxy failed for ${cluster}, trying API`)
+        console.error(`[usePodIssues] kubectl proxy failed for ${cluster}, trying API`)
       }
     }
 

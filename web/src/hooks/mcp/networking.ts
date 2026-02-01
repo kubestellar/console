@@ -165,7 +165,7 @@ export function useServices(cluster?: string, namespace?: string) {
         }
         console.log(`[useServices] No data returned for ${cluster}, trying API`)
       } catch (err) {
-        console.log(`[useServices] kubectl proxy failed for ${cluster}:`, err)
+        console.error(`[useServices] kubectl proxy failed for ${cluster}:`, err)
       }
     }
 

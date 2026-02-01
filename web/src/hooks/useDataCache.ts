@@ -88,7 +88,7 @@ function saveToStorage<T>(key: string, data: T): void {
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry))
   } catch (e) {
     // Storage might be full - try to clear old entries
-    console.warn('Failed to save to cache:', e)
+    console.error('Failed to save to cache:', e)
   }
 }
 

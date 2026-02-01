@@ -100,7 +100,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         }
         console.log(`[useEvents] Local agent returned ${response.status}, trying REST API`)
       } catch (err) {
-        console.log(`[useEvents] Local agent failed for ${cluster}:`, err)
+        console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
       }
     }
 

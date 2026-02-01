@@ -405,7 +405,7 @@ export function useNodes(cluster?: string) {
         }
         console.log(`[useNodes] Local agent returned ${response.status}, trying REST API`)
       } catch (err) {
-        console.log(`[useNodes] Local agent failed for ${cluster}:`, err)
+        console.error(`[useNodes] Local agent failed for ${cluster}:`, err)
       }
     }
 

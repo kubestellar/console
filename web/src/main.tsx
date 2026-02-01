@@ -44,14 +44,14 @@ const enableMocking = async () => {
   } catch (error) {
     // If service worker fails to start (e.g., in some browser contexts),
     // log the error but continue rendering the app without mocking
-    console.warn('MSW service worker failed to start:', error)
+    console.error('MSW service worker failed to start:', error)
   }
 }
 
 // Render app after mocking is set up (or fails gracefully)
 enableMocking()
   .catch((error) => {
-    console.warn('MSW initialization failed:', error)
+    console.error('MSW initialization failed:', error)
   })
   .finally(async () => {
     // Migrate old localStorage cache to IndexedDB (one-time migration)
