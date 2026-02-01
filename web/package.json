@@ -25,7 +25,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@netlify/blobs": "^10.5.0",
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.10",
     "clsx": "^2.1.1",
