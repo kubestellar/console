@@ -8,6 +8,12 @@ name: Auto-QA Agent
 #   5=Feature Recommendations, 6=(reserved), 7=(reserved)
 #
 # Issues auto-assign Copilot and feed into the automation pipeline.
+#
+# IMPORTANT: The CONSOLE_AUTO secret (PAT) must have these permissions:
+#   - repo (full control) - for contents, issues, pull requests
+#   - workflow - for actions access
+#   Or use a Fine-Grained PAT with: Contents (read/write), Issues (read/write),
+#   Pull requests (read/write), Actions (read), Metadata (read)
 
 on:
   schedule:
@@ -33,8 +39,10 @@ env:
   GO_VERSION: "1.23"
 
 permissions:
-  contents: read
+  contents: write      # Copilot needs write access to create branches
   issues: write
+  pull-requests: write # Copilot needs to create PRs
+  actions: read        # Copilot needs to view workflow status
 
 jobs:
   auto-qa:
