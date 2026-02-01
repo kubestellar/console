@@ -1,6 +1,6 @@
 import { useEffect, useCallback, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Database, GripVertical, FlaskConical } from 'lucide-react'
+import { Database, GripVertical, FlaskConical, AlertTriangle } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import {
   DndContext,
@@ -169,7 +169,7 @@ const DEMO_POSTURE = {
 
 export function DataCompliance() {
   const location = useLocation()
-  const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
@@ -319,6 +319,17 @@ export function DataCompliance() {
         autoRefreshId="data-compliance-auto-refresh"
         lastUpdated={lastUpdated}
       />
+
+      {/* Error State */}
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" />
+          <div>
+            <div className="font-medium">Failed to load cluster data</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Overview */}
       <StatsOverview
