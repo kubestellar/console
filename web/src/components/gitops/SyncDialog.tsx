@@ -94,21 +94,6 @@ export function SyncDialog({
     }
   }, [syncLogs])
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setPhase('detection')
-      setDriftedResources([])
-      setSyncPlan([])
-      setSyncLogs([])
-      setTokenCount(0)
-      setError(null)
-      setIsInitializing(true)
-      // Start detection
-      runDetection()
-    }
-  }, [isOpen, runDetection])
-
   // Note: ESC key handling is now handled by BaseModal
 
   const addLog = useCallback((message: string, status: SyncLogEntry['status'] = 'pending') => {
@@ -197,6 +182,21 @@ export function SyncDialog({
       setIsInitializing(false)
     }
   }, [appName, namespace, cluster, repoUrl, path, addLog, updateLastLog])
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setPhase('detection')
+      setDriftedResources([])
+      setSyncPlan([])
+      setSyncLogs([])
+      setTokenCount(0)
+      setError(null)
+      setIsInitializing(true)
+      // Start detection
+      runDetection()
+    }
+  }, [isOpen, runDetection])
 
   // Phase 2: Generate Plan
   useEffect(() => {
