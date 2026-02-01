@@ -173,11 +173,12 @@ export function StatsOverview({
   }
 
   // Dynamic grid columns based on visible blocks
+  // Mobile: max 2 columns, tablet+: responsive based on count
   const gridCols = visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-    visibleBlocks.length <= 5 ? 'grid-cols-5' :
-    visibleBlocks.length <= 6 ? 'grid-cols-3 md:grid-cols-6' :
-    visibleBlocks.length <= 8 ? 'grid-cols-4 lg:grid-cols-8' :
-    'grid-cols-5 lg:grid-cols-10'
+    visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-5' :
+    visibleBlocks.length <= 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' :
+    visibleBlocks.length <= 8 ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8' :
+    'grid-cols-2 md:grid-cols-5 lg:grid-cols-10'
 
   return (
     <div className={`mb-6 ${className}`}>

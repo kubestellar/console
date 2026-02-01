@@ -4,6 +4,7 @@ import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } fro
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useMobile } from '../../hooks/useMobile'
 import {
   DndContext,
   closestCenter,
@@ -84,6 +85,7 @@ const SortableDeployCard = memo(function SortableDeployCard({
   onRefresh,
   lastUpdated,
 }: SortableDeployCardProps) {
+  const { isMobile } = useMobile()
   const {
     attributes,
     listeners,
@@ -96,7 +98,8 @@ const SortableDeployCard = memo(function SortableDeployCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
+    // Only apply multi-column span on desktop; mobile uses single column
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
     opacity: isDragging ? 0.5 : 1,
   }
 
@@ -458,7 +461,7 @@ export function Deploy() {
                 onDragEnd={handleDeployDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {cards.map(card => (
                       <SortableDeployCard
                         key={card.id}

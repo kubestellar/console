@@ -1,6 +1,7 @@
 import { useEffect, useCallback, memo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ScrollText, GripVertical, ChevronDown, ChevronRight, Plus, LayoutGrid } from 'lucide-react'
+import { useMobile } from '../../hooks/useMobile'
 import {
   DndContext,
   closestCenter,
@@ -68,11 +69,13 @@ const SortableLogsCard = memo(function SortableLogsCard({
     transition,
   } = useSortable({ id: card.id })
 
+  const { isMobile } = useMobile()
   const cardWidth = card.position?.w || 6
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
+    // Only apply multi-column span on desktop; mobile uses single column
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
     opacity: isDragging ? 0.5 : 1,
   }
 
@@ -369,7 +372,7 @@ export function Logs() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {cards.map(card => (
                       <SortableLogsCard
                         key={card.id}

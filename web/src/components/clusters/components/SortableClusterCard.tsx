@@ -6,6 +6,7 @@ import { CardWrapper } from '../../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../../cards/cardRegistry'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
+import { useMobile } from '../../../hooks/useMobile'
 
 export interface SortableClusterCardProps {
   card: DashboardCard
@@ -36,11 +37,13 @@ export const SortableClusterCard = memo(function SortableClusterCard({
     transition,
   } = useSortable({ id: card.id })
 
+  const { isMobile } = useMobile()
   const cardWidth = card.position?.w || 4
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
+    // Only apply multi-column span on desktop; mobile uses single column
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
     opacity: isDragging ? 0.5 : 1,
   }
 

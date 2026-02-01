@@ -8,6 +8,7 @@ import { DashboardCard } from './types'
 import { CardWrapper } from '../../components/cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../../components/cards/cardRegistry'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { useMobile } from '../../hooks/useMobile'
 
 // ============================================================================
 // Icon Resolver
@@ -44,14 +45,16 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
     transition,
   } = useSortable({ id: card.id })
 
+  const { isMobile } = useMobile()
   const cardWidth = card.position?.w || 4
   const cardHeight = card.position?.h || 2
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
-    gridRow: `span ${cardHeight}`,
+    // Only apply multi-column span on desktop; mobile uses single column
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
+    gridRow: isMobile ? undefined : `span ${cardHeight}`,
     opacity: isDragging ? 0.5 : 1,
   }
 

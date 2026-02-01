@@ -239,17 +239,18 @@ export function StatsRuntime({
   }, [customGetStatValue, type, data, blocks])
 
   // Dynamic grid columns based on visible blocks
+  // Mobile: max 2 columns, tablet+: responsive based on count
   const gridCols = useMemo(() => {
     if (grid?.columns) {
-      return `grid-cols-${grid.columns}`
+      return `grid-cols-2 md:grid-cols-${grid.columns}`
     }
 
     const count = visibleBlocks.length
     if (count <= 4) return 'grid-cols-2 md:grid-cols-4'
-    if (count <= 5) return 'grid-cols-5'
-    if (count <= 6) return 'grid-cols-3 md:grid-cols-6'
-    if (count <= 8) return 'grid-cols-4 lg:grid-cols-8'
-    return 'grid-cols-5 lg:grid-cols-10'
+    if (count <= 5) return 'grid-cols-2 md:grid-cols-5'
+    if (count <= 6) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
+    if (count <= 8) return 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8'
+    return 'grid-cols-2 md:grid-cols-5 lg:grid-cols-10'
   }, [visibleBlocks.length, grid?.columns])
 
   return (

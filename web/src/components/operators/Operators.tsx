@@ -28,6 +28,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useMobile } from '../../hooks/useMobile'
 
 const OPERATORS_CARDS_KEY = 'kubestellar-operators-cards'
 
@@ -68,12 +69,13 @@ const SortableOperatorsCard = memo(function SortableOperatorsCard({
     transform,
     transition,
   } = useSortable({ id: card.id })
+  const { isMobile } = useMobile()
 
   const cardWidth = card.position?.w || 4
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
     opacity: isDragging ? 0.5 : 1,
   }
 
@@ -387,7 +389,7 @@ export function Operators() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {cards.map(card => (
                       <SortableOperatorsCard
                         key={card.id}

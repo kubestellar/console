@@ -1960,7 +1960,7 @@ export function Clusters() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
                     {cards.map(card => (
                       <SortableClusterCard
                         key={card.id}

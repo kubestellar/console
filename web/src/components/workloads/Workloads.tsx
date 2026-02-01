@@ -31,6 +31,7 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { useMobile } from '../../hooks/useMobile'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -72,13 +73,14 @@ const SortableWorkloadCard = memo(function SortableWorkloadCard({
     transform,
     transition,
   } = useSortable({ id: card.id })
+  const { isMobile } = useMobile()
 
   const cardWidth = card.position?.w || 4
   const cardHeight = card.position?.h || 3
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
     gridRow: `span ${cardHeight}`,
     opacity: isDragging ? 0.5 : 1,
   }
@@ -472,7 +474,7 @@ export function Workloads() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {cards.map(card => (
                       <SortableWorkloadCard
                         key={card.id}

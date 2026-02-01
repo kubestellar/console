@@ -31,6 +31,7 @@ import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
+import { useMobile } from '../../hooks/useMobile'
 import {
   getMockSecurityData,
   getMockRBACData,
@@ -77,13 +78,14 @@ const SortableSecurityCard = memo(function SortableSecurityCard({
     transform,
     transition,
   } = useSortable({ id: card.id })
+  const { isMobile } = useMobile()
 
   const cardWidth = card.position?.w || 4
   const cardHeight = card.position?.h || 3
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${cardWidth}`,
+    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
     gridRow: `span ${cardHeight}`,
     opacity: isDragging ? 0.5 : 1,
   }
@@ -565,7 +567,7 @@ export function Security() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-12 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     {cards.map(card => (
                       <SortableSecurityCard
                         key={card.id}
