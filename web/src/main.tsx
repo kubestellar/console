@@ -58,7 +58,7 @@ enableMocking()
     try {
       await migrateFromLocalStorage()
     } catch (e) {
-      console.warn('[Cache] Migration failed:', e)
+      console.error('[Cache] Migration failed:', e)
     }
 
     // Restore dynamic cards and stat blocks from localStorage
