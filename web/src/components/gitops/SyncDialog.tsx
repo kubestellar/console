@@ -192,11 +192,11 @@ export function SyncDialog({
       setSyncLogs([])
       setTokenCount(0)
       setError(null)
-      setIsInitializing(true)
-      // Start detection
+      // runDetection() will set isInitializing to true
       runDetection()
     }
-  }, [isOpen, runDetection])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   // Phase 2: Generate Plan
   useEffect(() => {
