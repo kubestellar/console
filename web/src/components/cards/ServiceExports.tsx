@@ -114,8 +114,10 @@ interface ServiceExportsProps {
 
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
   // Simulate loading state for demo data
-  const isLoading = false // Set to true if fetching real data
-  const hasError = false // Set to true on fetch errors
+  // Set to true if fetching real data from API
+  const isLoading = false
+  // Set to true on fetch errors when implementing real API calls
+  const hasError = false
 
   const {
     items: filteredExports,
