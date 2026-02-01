@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Check, X, Github, ExternalLink } from 'lucide-react'
+import { Save, RefreshCw, Check, X, Github, ExternalLink, Loader2 } from 'lucide-react'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -22,15 +22,20 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const [githubTokenTesting, setGithubTokenTesting] = useState(false)
   const [githubTokenError, setGithubTokenError] = useState<string | null>(null)
   const [githubRateLimit, setGithubRateLimit] = useState<{ limit: number; remaining: number; reset: Date } | null>(null)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   // Load GitHub token status on mount and test existing token
   useEffect(() => {
-    const encodedToken = localStorage.getItem('github_token')
-    setHasGithubToken(!!encodedToken)
-    if (encodedToken) {
-      const token = decodeToken(encodedToken)
-      testGithubToken(token)
+    const loadToken = async () => {
+      const encodedToken = localStorage.getItem('github_token')
+      setHasGithubToken(!!encodedToken)
+      if (encodedToken) {
+        const token = decodeToken(encodedToken)
+        await testGithubToken(token)
+      }
+      setIsInitializing(false)
     }
+    loadToken()
   }, [])
 
   const testGithubToken = async (token: string) => {
@@ -106,8 +111,15 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         </div>
       </div>
 
-      {/* Status */}
-      <div className={`p-4 rounded-lg mb-4 ${
+      {/* Show loading during initialization */}
+      {isInitializing ? (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          {/* Status */}
+          <div className={`p-4 rounded-lg mb-4 ${
         githubTokenError ? 'bg-red-500/10 border border-red-500/20' :
         hasGithubToken ? 'bg-green-500/10 border border-green-500/20' :
         'bg-yellow-500/10 border border-yellow-500/20'
@@ -153,46 +165,46 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         )}
       </div>
 
-      {/* Token Input */}
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="github-token" className="block text-sm text-muted-foreground mb-2">
-            Personal Access Token
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="github-token"
-              type="password"
-              value={githubToken}
-              onChange={(e) => setGithubToken(e.target.value)}
-              placeholder={hasGithubToken ? '••••••••••••••••' : 'ghp_... or github_pat_...'}
-              className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-            />
-            <button
-              onClick={handleSaveGithubToken}
-              disabled={!githubToken.trim() || githubTokenTesting}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {githubTokenTesting ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {githubTokenTesting ? 'Testing...' : githubTokenSaved ? 'Saved!' : 'Save & Test'}
-            </button>
-            {hasGithubToken && (
-              <button
-                onClick={handleClearGithubToken}
-                className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
+          {/* Token Input */}
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="github-token" className="block text-sm text-muted-foreground mb-2">
+                Personal Access Token
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="github-token"
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder={hasGithubToken ? '••••••••••••••••' : 'ghp_... or github_pat_...'}
+                  className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+                />
+                <button
+                  onClick={handleSaveGithubToken}
+                  disabled={!githubToken.trim() || githubTokenTesting}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {githubTokenTesting ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {githubTokenTesting ? 'Testing...' : githubTokenSaved ? 'Saved!' : 'Save & Test'}
+                </button>
+                {hasGithubToken && (
+                  <button
+                    onClick={handleClearGithubToken}
+                    className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
 
-        {/* Instructions */}
-        <div className="p-4 rounded-lg bg-secondary/30 space-y-3">
+            {/* Instructions */}
+            <div className="p-4 rounded-lg bg-secondary/30 space-y-3">
           <p className="text-sm font-medium text-foreground">How to create a token:</p>
 
           <div className="space-y-2 text-sm">
@@ -233,13 +245,15 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
             </div>
           </div>
 
-          <div className="pt-2 border-t border-border/50">
-            <p className="text-xs text-yellow-400/70">
-              ⚠️ Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.
-            </p>
+            <div className="pt-2 border-t border-border/50">
+              <p className="text-xs text-yellow-400/70">
+                ⚠️ Token is stored in browser localStorage (not encrypted). Use a token with minimal permissions and set an expiration date.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+        </>
+      )}
     </div>
   )
 }

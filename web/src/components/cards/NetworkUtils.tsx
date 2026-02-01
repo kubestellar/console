@@ -49,6 +49,7 @@ const DEFAULT_HOSTS = [
 
 export function NetworkUtils() {
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
+  const [isInitialized, setIsInitialized] = useState(false)
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -77,7 +78,7 @@ export function NetworkUtils() {
   const abortControllerRef = useRef<AbortController | null>(null)
   const isPingingRef = useRef(false) // Ref to track pinging state for stable callback
 
-  // Update network info
+  // Update network info and mark as initialized
   useEffect(() => {
     const updateNetworkInfo = () => {
       const connection = (navigator as any).connection
@@ -87,6 +88,7 @@ export function NetworkUtils() {
         downlink: connection?.downlink,
         rtt: connection?.rtt,
       })
+      setIsInitialized(true)
     }
 
     updateNetworkInfo()
@@ -284,6 +286,15 @@ export function NetworkUtils() {
 
   const pingHosts = savedHosts.filter(h => h.type === 'ping')
   const portHosts = savedHosts.filter(h => h.type === 'port')
+
+  // Show loading state during initialization
+  if (!isInitialized) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col">
