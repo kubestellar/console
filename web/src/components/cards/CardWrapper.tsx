@@ -1125,8 +1125,8 @@ export function CardWrapper({
         {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
         {!isCollapsed && (
           <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col relative">
-            {/* Show offline indicator when agent is unavailable and NOT in demo mode */}
-            {isAgentUnavailable() && !isDemoMode ? (
+            {/* Show offline indicator when agent is unavailable, not in demo mode, and card needs external data */}
+            {isAgentUnavailable() && !globalDemoMode && !isDemoExempt ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <WifiOff className="w-8 h-8 text-orange-400/50" />
@@ -1226,7 +1226,7 @@ export function CardWrapper({
               ? 'h-[calc(95vh-80px)]'
               : 'max-h-[calc(80vh-80px)]'
         )}>
-          {isAgentUnavailable() && !isDemoMode ? (
+          {isAgentUnavailable() && !globalDemoMode && !isDemoExempt ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3 text-muted-foreground">
                 <WifiOff className="w-12 h-12 text-orange-400/50" />

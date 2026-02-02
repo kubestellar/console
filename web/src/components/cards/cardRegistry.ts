@@ -406,13 +406,28 @@ export const DEMO_DATA_CARDS = new Set([
  * Arcade/game cards don't have "demo data" — they're always just games.
  */
 export const DEMO_EXEMPT_CARDS = new Set([
+  // All arcade/game cards - they don't use external data
   'sudoku_game',
+  'match_game',
+  'solitaire',
   'checkers',
+  'game_2048',
+  'kubedle',
+  'pod_sweeper',
   'container_tetris',
+  'flappy_pod',
+  'kube_man',
   'kube_kong',
+  'pod_pitfall',
+  'node_invaders',
   'pod_crosser',
+  'pod_brothers',
   'kube_kart',
+  'kube_pong',
   'kube_snake',
+  'kube_galaga',
+  'kube_doom',
+  'kube_craft',
   'kube_chess',
 ])
 
