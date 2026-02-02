@@ -6,6 +6,7 @@ import {
   commonComparators,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { K8S_DOCS } from '../../config/externalApis'
 
 // Gateway status types
 type GatewayStatusType = 'Programmed' | 'Accepted' | 'Pending' | 'NotAccepted' | 'Unknown'
@@ -244,7 +245,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
             {totalItems} gateways
           </span>
           <a
-            href="https://gateway-api.sigs.k8s.io/"
+            href={K8S_DOCS.gatewayApi}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
@@ -298,7 +299,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
           <p className="text-muted-foreground">
             Next-gen ingress API with role-based resource model.{' '}
             <a
-              href="https://gateway-api.sigs.k8s.io/guides/getting-started/"
+              href={K8S_DOCS.gatewayApiGettingStarted}
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-400 hover:underline"
@@ -389,14 +390,14 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
       <div className="mt-3 pt-3 border-t border-border/50">
         <p className="text-[10px] text-muted-foreground font-medium mb-2">Quick Install (CRDs)</p>
         <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
-          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+          {K8S_DOCS.gatewayApiInstallCommand}
         </code>
       </div>
 
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
         <a
-          href="https://gateway-api.sigs.k8s.io/"
+          href={K8S_DOCS.gatewayApi}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
@@ -405,7 +406,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         </a>
         <span className="text-muted-foreground/30">|</span>
         <a
-          href="https://gateway-api.sigs.k8s.io/implementations/"
+          href={K8S_DOCS.gatewayApiImplementations}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
@@ -414,7 +415,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         </a>
         <span className="text-muted-foreground/30">|</span>
         <a
-          href="https://gateway-api.sigs.k8s.io/concepts/gamma/"
+          href={K8S_DOCS.gammaInitiative}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"

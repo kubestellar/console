@@ -5,6 +5,7 @@ import {
   ExternalLink, ChevronRight, ChevronDown, Loader2
 } from 'lucide-react'
 import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
+import { WEATHER_API } from '../../../config/externalApis'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -165,7 +166,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     setIsSearching(true)
     try {
       const response = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
+        `${WEATHER_API.geocodingUrl}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
       )
 
       if (response.ok) {

@@ -3,6 +3,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { Skeleton } from '../ui/Skeleton'
+import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceImport, ServiceImportType } from '../../types/mcs'
 
 // Demo data for MCS ServiceImports
@@ -179,7 +180,7 @@ export function ServiceImports({ config: _config }: ServiceImportsProps) {
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <a
-            href="https://github.com/kubernetes-sigs/mcs-api"
+            href={K8S_DOCS.mcsApi}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
@@ -226,7 +227,7 @@ export function ServiceImports({ config: _config }: ServiceImportsProps) {
           <p className="text-muted-foreground">
             ServiceImports are auto-created when services are exported from other clusters.{' '}
             <a
-              href="https://github.com/kubernetes-sigs/mcs-api#serviceimport"
+              href={K8S_DOCS.mcsApiServiceImport}
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-400 hover:underline"
@@ -320,7 +321,7 @@ export function ServiceImports({ config: _config }: ServiceImportsProps) {
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
         <a
-          href="https://github.com/kubernetes-sigs/mcs-api"
+          href={K8S_DOCS.mcsApi}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
@@ -329,7 +330,7 @@ export function ServiceImports({ config: _config }: ServiceImportsProps) {
         </a>
         <span className="text-muted-foreground/30">•</span>
         <a
-          href="https://gateway-api.sigs.k8s.io/concepts/gamma/"
+          href={K8S_DOCS.gammaInitiative}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"

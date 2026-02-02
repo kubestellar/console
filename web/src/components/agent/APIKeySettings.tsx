@@ -3,10 +3,11 @@ import { Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Co
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
 import { BaseModal } from '../../lib/modals'
+import { KC_AGENT, AI_PROVIDER_DOCS } from '../../config/externalApis'
 
-const INSTALL_COMMAND = 'brew install kubestellar/tap/kc-agent && kc-agent'
+const INSTALL_COMMAND = KC_AGENT.installCommand
 
-const KC_AGENT_URL = 'http://127.0.0.1:8585'
+const KC_AGENT_URL = KC_AGENT.url
 
 interface KeyStatus {
   provider: string
@@ -29,15 +30,15 @@ interface APIKeySettingsProps {
 
 const PROVIDER_INFO: Record<string, { docsUrl: string; placeholder: string }> = {
   claude: {
-    docsUrl: 'https://console.anthropic.com/settings/keys',
+    docsUrl: AI_PROVIDER_DOCS.claude,
     placeholder: 'sk-ant-api03-...',
   },
   openai: {
-    docsUrl: 'https://platform.openai.com/api-keys',
+    docsUrl: AI_PROVIDER_DOCS.openai,
     placeholder: 'sk-...',
   },
   gemini: {
-    docsUrl: 'https://makersuite.google.com/app/apikey',
+    docsUrl: AI_PROVIDER_DOCS.gemini,
     placeholder: 'AIza...',
   },
 }

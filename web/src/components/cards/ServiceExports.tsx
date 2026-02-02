@@ -6,6 +6,7 @@ import {
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { Skeleton } from '../ui/Skeleton'
+import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'
 
 // Demo data for MCS ServiceExports
@@ -198,7 +199,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <a
-            href="https://github.com/kubernetes-sigs/mcs-api"
+            href={K8S_DOCS.mcsApi}
             target="_blank"
             rel="noopener noreferrer"
             className="p-1 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-purple-400"
@@ -247,7 +248,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
           <p className="text-muted-foreground">
             MCS API enables cross-cluster service discovery using ServiceExport/ServiceImport CRDs.{' '}
             <a
-              href="https://github.com/kubernetes-sigs/mcs-api#installing-the-crds"
+              href={K8S_DOCS.mcsApiInstall}
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-400 hover:underline"
@@ -336,14 +337,14 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
       <div className="mt-3 pt-3 border-t border-border/50">
         <p className="text-[10px] text-muted-foreground font-medium mb-2">Quick Install</p>
         <code className="block p-2 rounded bg-secondary text-[10px] text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
-          kubectl apply -f https://github.com/kubernetes-sigs/mcs-api/releases/latest/download/mcs-api-crds.yaml
+          {K8S_DOCS.mcsApiInstallCommand}
         </code>
       </div>
 
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-[10px]">
         <a
-          href="https://github.com/kubernetes-sigs/mcs-api"
+          href={K8S_DOCS.mcsApi}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
@@ -352,7 +353,7 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
         </a>
         <span className="text-muted-foreground/30">•</span>
         <a
-          href="https://gateway-api.sigs.k8s.io/concepts/gamma/"
+          href={K8S_DOCS.gammaInitiative}
           target="_blank"
           rel="noopener noreferrer"
           className="text-muted-foreground hover:text-purple-400 transition-colors"
