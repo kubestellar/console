@@ -1,8 +1,14 @@
 import { http, HttpResponse, delay } from 'msw'
 
 /**
- * MSW handlers for KubeStellar Console
- * Provides mock data for E2E testing without requiring backend
+ * MSW (Mock Service Worker) handlers for KubeStellar Console
+ * 
+ * SECURITY NOTE: This file contains mock data for E2E testing and UI development.
+ * - All tokens/credentials here are FAKE and used only for testing
+ * - No real credentials or secrets should ever be placed in this file
+ * - This file is excluded from production builds
+ * 
+ * Provides mock API responses without requiring backend connectivity.
  */
 
 // Demo data - one cluster for each provider type to showcase all icons
