@@ -229,7 +229,7 @@ export function RemediationConsole({
       }
     } catch (error) {
       // Simulate output for demo purposes when backend is not available
-      const message = error instanceof Error ? error.message : 'Shell API unavailable'
+      const message = error instanceof Error ? error.message : 'Connection failed'
       setShellError(`Shell API unavailable: ${message}`)
       addLog({
         type: 'output',

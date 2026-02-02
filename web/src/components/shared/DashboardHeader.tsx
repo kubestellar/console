@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { RefreshCw, Hourglass } from 'lucide-react'
+import { RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
 import { getRememberPosition, setRememberPosition } from '../../hooks/useLastRoute'
 
 interface DashboardHeaderProps {
@@ -142,8 +142,9 @@ export function DashboardHeader({
           </button>
         </div>
         {error ? (
-          <span className="text-xs text-red-400 flex items-center gap-1">
-            <span>⚠</span> {error}
+          <span className="text-xs text-red-400 flex items-center gap-1" role="alert" aria-live="polite">
+            <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+            <span>{error}</span>
           </span>
         ) : displayTimestamp ? (
           <span className="text-xs text-muted-foreground">
