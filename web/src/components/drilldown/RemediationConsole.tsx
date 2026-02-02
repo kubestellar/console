@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react'
-import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send } from 'lucide-react'
+import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 
@@ -88,6 +88,7 @@ export function RemediationConsole({
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [shellError, setShellError] = useState<string | null>(null)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const shellInputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef(false)
@@ -185,6 +186,7 @@ export function RemediationConsole({
     })
 
     setIsExecuting(true)
+    setShellError(null)
 
     try {
       // Call backend API to execute the command
@@ -227,6 +229,8 @@ export function RemediationConsole({
       }
     } catch (error) {
       // Simulate output for demo purposes when backend is not available
+      const message = error instanceof Error ? error.message : 'Shell API unavailable'
+      setShellError(`Shell API unavailable: ${message}`)
       addLog({
         type: 'output',
         message: simulateCommandOutput(cmd),
@@ -490,6 +494,12 @@ Labels:       app=${resourceName.split('-')[0]}
         {/* Shell Input (only shown in shell tab) */}
         {activeTab === 'shell' && (
           <div className="p-3 border-t border-border bg-[#0d0d0d]">
+            {shellError && (
+              <div className="mb-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                <span>{shellError}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-green-400">$</span>
               <input

@@ -16,6 +16,8 @@ export interface CardDataState {
   isFailed: boolean
   /** Number of consecutive fetch failures */
   consecutiveFailures: number
+  /** Whether data is currently being fetched */
+  isLoading?: boolean
 }
 
 interface CardDataReportContextValue {
@@ -32,9 +34,9 @@ export const CardDataReportContext = createContext<CardDataReportContextValue>(N
  * your cached data hook (e.g. useCachedPodIssues, useCachedDeployments).
  */
 export function useReportCardDataState(state: CardDataState) {
-  const { isFailed, consecutiveFailures } = state
+  const { isFailed, consecutiveFailures, isLoading } = state
   const ctx = useContext(CardDataReportContext)
   useEffect(() => {
-    ctx.report({ isFailed, consecutiveFailures })
-  }, [ctx, isFailed, consecutiveFailures])
+    ctx.report({ isFailed, consecutiveFailures, isLoading })
+  }, [ctx, isFailed, consecutiveFailures, isLoading])
 }

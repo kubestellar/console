@@ -163,15 +163,24 @@ export function Security() {
   const [selectedIssueType, setSelectedIssueType] = useState<string | null>(null)
   const [dataRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
 
   // Refresh function for security data
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
-    // In a real implementation, this would refetch security data
-    // For now, just simulate a refresh
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setIsRefreshing(false)
-    setLastUpdated(new Date())
+    setRefreshError(null)
+    try {
+      // In a real implementation, this would refetch security data
+      // For now, just simulate a refresh
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setLastUpdated(new Date())
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to refresh security data'
+      setRefreshError(message)
+      console.error('Security data refresh failed:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
   }, [])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
@@ -479,6 +488,23 @@ export function Security() {
         autoRefreshId="security-auto-refresh"
         lastUpdated={lastUpdated}
       />
+
+      {/* Error Banner */}
+      {refreshError && (
+        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">Failed to refresh security data</p>
+            <p className="text-sm text-red-300/80">{refreshError}</p>
+          </div>
+          <button
+            onClick={triggerRefresh}
+            className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-medium transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Configurable Stats Overview */}
       <StatsOverview

@@ -27,6 +27,8 @@ interface DashboardHeaderProps {
   afterTitle?: React.ReactNode
   /** Extra content rendered on the right side before auto-refresh (e.g., delete button) */
   rightExtra?: React.ReactNode
+  /** Error message to display (optional) */
+  error?: string | null
 }
 
 /**
@@ -52,6 +54,7 @@ export function DashboardHeader({
   lastUpdated: externalLastUpdated,
   afterTitle,
   rightExtra,
+  error,
 }: DashboardHeaderProps) {
   const location = useLocation()
   const [rememberPosition, setRememberPositionState] = useState(() => getRememberPosition(location.pathname))
@@ -138,11 +141,15 @@ export function DashboardHeader({
             <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
         </div>
-        {displayTimestamp && (
+        {error ? (
+          <span className="text-xs text-red-400 flex items-center gap-1">
+            <span>⚠</span> {error}
+          </span>
+        ) : displayTimestamp ? (
           <span className="text-xs text-muted-foreground">
             Updated {displayTimestamp.toLocaleTimeString()}
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   )
