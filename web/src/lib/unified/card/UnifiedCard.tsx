@@ -21,8 +21,7 @@ import { useDataSource } from './hooks/useDataSource'
 import { useCardFiltering } from './hooks/useCardFiltering'
 import { ListVisualization } from './visualizations/ListVisualization'
 import { TableVisualization } from './visualizations/TableVisualization'
-// Chart visualization will be added in PR 4
-// import { ChartVisualization } from './visualizations/ChartVisualization'
+import { ChartVisualization } from './visualizations/ChartVisualization'
 
 /**
  * UnifiedCard - Renders any card type from config
@@ -127,11 +126,10 @@ function renderContent(
       )
 
     case 'chart':
-      // TODO: Implement in PR 4
       return (
-        <PlaceholderVisualization
-          type={`chart (${content.chartType})`}
-          itemCount={data.length}
+        <ChartVisualization
+          content={content}
+          data={data}
         />
       )
 

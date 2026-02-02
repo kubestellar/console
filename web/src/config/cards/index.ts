@@ -13,6 +13,9 @@ import { clusterHealthConfig } from './cluster-health'
 import { deploymentStatusConfig } from './deployment-status'
 import { eventStreamConfig } from './event-stream'
 import { resourceUsageConfig } from './resource-usage'
+// Chart cards (PR 4)
+import { clusterMetricsConfig } from './cluster-metrics'
+import { eventsTimelineConfig } from './events-timeline'
 
 /**
  * Registry of all unified card configurations
@@ -25,6 +28,9 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   deployment_status: deploymentStatusConfig,
   event_stream: eventStreamConfig,
   resource_usage: resourceUsageConfig,
+  // Chart cards (PR 4)
+  cluster_metrics: clusterMetricsConfig,
+  events_timeline: eventsTimelineConfig,
 }
 
 /**
@@ -55,4 +61,7 @@ export {
   deploymentStatusConfig,
   eventStreamConfig,
   resourceUsageConfig,
+  // Chart cards (PR 4)
+  clusterMetricsConfig,
+  eventsTimelineConfig,
 }

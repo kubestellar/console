@@ -8,6 +8,8 @@ export type { ListVisualizationProps } from './ListVisualization'
 export { TableVisualization } from './TableVisualization'
 export type { TableVisualizationProps } from './TableVisualization'
 
-// Future exports (PR 4)
-// export { ChartVisualization } from './ChartVisualization'
+export { ChartVisualization } from './ChartVisualization'
+export type { ChartVisualizationProps } from './ChartVisualization'
+
+// Future exports
 // export { StatusGridVisualization } from './StatusGridVisualization'
