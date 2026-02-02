@@ -213,10 +213,21 @@ const getDemoPods = (): PodInfo[] => [
   { name: 'cache-redis-6e5d4c3b2-q8rs1', namespace: 'production', status: 'Running', ready: '1/1', restarts: 0, age: '7d', cpuRequestMillis: 250, memoryRequestBytes: 268435456, cpuUsageMillis: 45, memoryUsageBytes: 134217728, metricsAvailable: true },
 ]
 
-const getDemoEvents = (): ClusterEvent[] => [
-  { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available', object: 'pod/test', namespace: 'default', count: 3 },
-  { type: 'Normal', reason: 'Started', message: 'Container started', object: 'pod/web', namespace: 'production', count: 1 },
-]
+const getDemoEvents = (): ClusterEvent[] => {
+  const now = Date.now()
+  return [
+    { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available to schedule pod', object: 'Pod/worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'eks-prod-us-east-1', count: 3, firstSeen: new Date(now - 5 * 60000).toISOString(), lastSeen: new Date(now - 2 * 60000).toISOString() },
+    { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node-2', object: 'Pod/api-server-7d8f9c6b5-abc12', namespace: 'production', cluster: 'gke-staging', count: 1, firstSeen: new Date(now - 8 * 60000).toISOString(), lastSeen: new Date(now - 8 * 60000).toISOString() },
+    { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'Pod/api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'eks-prod-us-east-1', count: 15, firstSeen: new Date(now - 30 * 60000).toISOString(), lastSeen: new Date(now - 1 * 60000).toISOString() },
+    { type: 'Normal', reason: 'Pulled', message: 'Container image pulled successfully', object: 'Pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'aks-dev-westeu', count: 1, firstSeen: new Date(now - 12 * 60000).toISOString(), lastSeen: new Date(now - 12 * 60000).toISOString() },
+    { type: 'Warning', reason: 'Unhealthy', message: 'Readiness probe failed: connection refused', object: 'Pod/cache-redis-0', namespace: 'data', cluster: 'openshift-prod', count: 8, firstSeen: new Date(now - 20 * 60000).toISOString(), lastSeen: new Date(now - 3 * 60000).toISOString() },
+    { type: 'Normal', reason: 'Created', message: 'Created container nginx', object: 'Pod/nginx-deployment-abc123', namespace: 'default', cluster: 'kind-local', count: 2, firstSeen: new Date(now - 6 * 60000).toISOString(), lastSeen: new Date(now - 4 * 60000).toISOString() },
+    { type: 'Normal', reason: 'Started', message: 'Started container nginx', object: 'Pod/nginx-deployment-abc123', namespace: 'default', cluster: 'kind-local', count: 2, firstSeen: new Date(now - 6 * 60000).toISOString(), lastSeen: new Date(now - 4 * 60000).toISOString() },
+    { type: 'Warning', reason: 'ImagePullBackOff', message: 'Back-off pulling image "invalid-image:latest"', object: 'Pod/broken-pod-xyz789', namespace: 'staging', cluster: 'gke-staging', count: 5, firstSeen: new Date(now - 15 * 60000).toISOString(), lastSeen: new Date(now - 1 * 60000).toISOString() },
+    { type: 'Normal', reason: 'ScalingReplicaSet', message: 'Scaled up replica set to 3', object: 'Deployment/api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', count: 1, firstSeen: new Date(now - 10 * 60000).toISOString(), lastSeen: new Date(now - 10 * 60000).toISOString() },
+    { type: 'Warning', reason: 'NodeNotReady', message: 'Node condition Ready is now: Unknown', object: 'Node/worker-node-3', namespace: '', cluster: 'openshift-prod', count: 2, firstSeen: new Date(now - 25 * 60000).toISOString(), lastSeen: new Date(now - 7 * 60000).toISOString() },
+  ]
+}
 
 const getDemoPodIssues = (): PodIssue[] => [
   { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', status: 'CrashLoopBackOff', issues: ['Container restarting', 'OOMKilled'], restarts: 15 },
