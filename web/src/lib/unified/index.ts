@@ -145,3 +145,6 @@ export {
 } from './dashboard'
 
 export type { DashboardGridProps } from './dashboard'
+
+// Hook registration
+export { registerUnifiedHooks } from './registerHooks'

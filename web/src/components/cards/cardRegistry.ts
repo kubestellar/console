@@ -647,7 +647,7 @@ export function getDefaultCardWidth(cardType: string): number {
  * Set to true to use the new unified card system for cards that have configs.
  * Cards with unified configs will render using UnifiedCard instead of legacy components.
  */
-const USE_UNIFIED_CARDS = false // Set to true to enable unified cards
+const USE_UNIFIED_CARDS = true // Unified cards enabled for cards with configs
 
 /**
  * Create a component that renders a unified card from config

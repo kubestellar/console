@@ -10,6 +10,8 @@ import { migrateFromLocalStorage } from './lib/cache'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { registerDynamicCardType } from './components/cards/cardRegistry'
+// Register unified card hooks at startup
+import './lib/unified/registerHooks'
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn

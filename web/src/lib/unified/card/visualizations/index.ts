@@ -11,5 +11,5 @@ export type { TableVisualizationProps } from './TableVisualization'
 export { ChartVisualization } from './ChartVisualization'
 export type { ChartVisualizationProps } from './ChartVisualization'
 
-// Future exports
-// export { StatusGridVisualization } from './StatusGridVisualization'
+export { StatusGridVisualization } from './StatusGridVisualization'
+export type { StatusGridVisualizationProps } from './StatusGridVisualization'

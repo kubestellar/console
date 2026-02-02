@@ -10,7 +10,7 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { useMemo, ReactNode } from 'react'
+import { useMemo, useCallback, ReactNode } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
 import type {
   UnifiedCardConfig,
@@ -22,6 +22,8 @@ import { useCardFiltering } from './hooks/useCardFiltering'
 import { ListVisualization } from './visualizations/ListVisualization'
 import { TableVisualization } from './visualizations/TableVisualization'
 import { ChartVisualization } from './visualizations/ChartVisualization'
+import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
 
 /**
  * UnifiedCard - Renders any card type from config
@@ -58,6 +60,40 @@ export function UnifiedCard({
     mergedConfig.filters
   )
 
+  // Get drill-down actions
+  const drillDownActions = useDrillDownActions()
+
+  // Create drill-down handler based on config
+  const handleDrillDown = useCallback(
+    (item: Record<string, unknown>) => {
+      const drillDown = mergedConfig.drillDown
+      if (!drillDown) return
+
+      // Get the action function from useDrillDownActions
+      const actionFn = drillDownActions[drillDown.action as keyof typeof drillDownActions]
+      if (typeof actionFn !== 'function') {
+        console.warn(`Drill-down action "${drillDown.action}" not found`)
+        return
+      }
+
+      // Extract params from item using the configured param names
+      const params = drillDown.params.map((param) => item[param])
+
+      // Add context data if configured
+      const contextData: Record<string, unknown> = {}
+      if (drillDown.context) {
+        for (const [key, fieldPath] of Object.entries(drillDown.context)) {
+          contextData[key] = item[fieldPath]
+        }
+      }
+
+      // Call the action with params + context
+      // Action signatures vary, so we spread params and pass context as last arg
+      ;(actionFn as (...args: unknown[]) => void)(...params, contextData)
+    },
+    [mergedConfig.drillDown, drillDownActions]
+  )
+
   // Determine what to render
   const content = useMemo(() => {
     // Error state
@@ -81,8 +117,8 @@ export function UnifiedCard({
     }
 
     // Render the appropriate visualization based on content type
-    return renderContent(mergedConfig.content, filteredData, mergedConfig)
-  }, [error, isLoading, filteredData, mergedConfig, refetch])
+    return renderContent(mergedConfig.content, filteredData, mergedConfig, handleDrillDown)
+  }, [error, isLoading, filteredData, mergedConfig, refetch, handleDrillDown])
 
   return (
     <div className={className}>
@@ -111,7 +147,8 @@ export function UnifiedCard({
 function renderContent(
   content: CardContent,
   data: unknown[],
-  config: UnifiedCardConfig
+  config: UnifiedCardConfig,
+  onDrillDown?: (item: Record<string, unknown>) => void
 ): ReactNode {
   switch (content.type) {
     case 'list':
@@ -120,6 +157,7 @@ function renderContent(
           content={content}
           data={data}
           drillDown={config.drillDown}
+          onDrillDown={onDrillDown}
         />
       )
 
@@ -129,6 +167,7 @@ function renderContent(
           content={content}
           data={data}
           drillDown={config.drillDown}
+          onDrillDown={onDrillDown}
         />
       )
 
@@ -141,11 +180,10 @@ function renderContent(
       )
 
     case 'status-grid':
-      // TODO: Implement in PR 4
       return (
-        <PlaceholderVisualization
-          type="status-grid"
-          itemCount={content.items.length}
+        <StatusGridVisualization
+          content={content}
+          data={data}
         />
       )
 
