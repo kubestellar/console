@@ -75,19 +75,24 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
   // Default cards
   cards: [
     {
+      id: 'default-offline',
+      cardType: 'console_ai_offline_detection',
+      position: { w: 4, h: 3, x: 0, y: 0 },
+    },
+    {
       id: 'default-1',
       cardType: 'cluster_health',
-      position: { w: 4, h: 3, x: 0, y: 0 },
+      position: { w: 4, h: 3, x: 4, y: 0 },
     },
     {
       id: 'default-2',
       cardType: 'resource_usage',
-      position: { w: 4, h: 3, x: 4, y: 0 },
+      position: { w: 4, h: 3, x: 8, y: 0 },
     },
     {
       id: 'default-3',
       cardType: 'pod_issues',
-      position: { w: 4, h: 3, x: 8, y: 0 },
+      position: { w: 4, h: 3, x: 0, y: 3 },
     },
     {
       id: 'default-4',
@@ -113,6 +118,7 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
 
   // Available card types for add menu
   availableCardTypes: [
+    'console_ai_offline_detection',
     'cluster_health',
     'resource_usage',
     'pod_issues',
