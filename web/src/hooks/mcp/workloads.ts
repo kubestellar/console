@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api, isBackendUnavailable } from '../../lib/api'
+import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { getDemoMode } from '../useDemoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
@@ -189,9 +189,9 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip backend fetch in demo mode or when backend is unavailable
+    // Skip backend fetch only when not logged in at all
     const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token' || isBackendUnavailable()) {
+    if (!token) {
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
@@ -414,9 +414,9 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip backend fetch in demo mode
+    // Skip only if not logged in at all
     const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token') {
+    if (!token) {
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
@@ -566,9 +566,9 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip backend fetch in demo mode
+    // Skip only when not logged in at all - allow demo-token to proceed so MSW can handle it
     const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token') {
+    if (!token) {
       if (!deploymentIssuesCache) {
         setIssues(getDemoDeploymentIssues())
       }
@@ -784,7 +784,8 @@ export function useDeployments(cluster?: string, namespace?: string) {
       const url = `/api/mcp/deployments?${params}`
 
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      // Skip only if no token at all (not logged in) - allow demo-token to proceed so MSW can handle it
+      if (!token) {
         setDeployments([])
         const now = new Date()
         setLastUpdated(now)

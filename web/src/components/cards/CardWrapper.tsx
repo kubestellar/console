@@ -976,10 +976,6 @@ export function CardWrapper({
                 Refresh failed
               </span>
             )}
-            {/* Refresh indicator - shows when either isVisuallySpinning or child reports loading */}
-            {(isVisuallySpinning || effectiveIsLoading) && !effectiveIsFailed && (
-              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
-            )}
             {/* Last updated indicator */}
             {!isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && lastUpdated && (
               <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
