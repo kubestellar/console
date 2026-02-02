@@ -10,7 +10,7 @@ Last Updated: 2026-01-23
 | Card Types | 110 |
 | Cards with Drill-Down | 40 |
 | Drill-Down Views | 23 |
-| Modal Dialogs | 22 |
+| Modal Dialogs | 28 |
 | Stats Block Types | 93 (across 14 dashboard types) |
 
 ---
@@ -460,7 +460,7 @@ Based on feature requests:
 
 ---
 
-## 7. Modal Dialogs (22 Total)
+## 7. Modal Dialogs (28 Total)
 
 ### Dashboard-Related Modals (9)
 | # | Name | File | Trigger | Description |
@@ -475,50 +475,64 @@ Based on feature requests:
 | 8 | StatBlockFactoryModal | `dashboard/StatBlockFactoryModal.tsx` | Developer tools | Create custom stat blocks with builder or AI assistance |
 | 9 | CardConfigModal | `clusters/components/CardConfigModal.tsx` | Legacy card settings | Simple card configuration for cluster filtering |
 
-### Cluster Management Modals (3)
+### Cluster Management Modals (7)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 10 | ClusterDetailModal | `clusters/ClusterDetailModal.tsx` | Click cluster in list | Comprehensive cluster details: health, metrics, nodes, workloads, GPU inventory |
 | 11 | RenameModal | `clusters/components/RenameModal.tsx` | Pencil icon on cluster | Rename kubeconfig context display name |
 | 12 | GPUDetailModal | `clusters/components/GPUDetailModal.tsx` | GPU card in cluster detail | GPU resource details: inventory, specs, utilization, per-cluster breakdown |
+| 13 | CPUDetailModal | `clusters/ResourceDetailModals.tsx` | CPU stat click | CPU resource details per node with allocation and utilization |
+| 14 | MemoryDetailModal | `clusters/ResourceDetailModals.tsx` | Memory stat click | Memory resource details per node with allocation and utilization |
+| 15 | StorageDetailModal | `clusters/ResourceDetailModals.tsx` | Storage stat click | Storage resource details per node with capacity and usage |
+| 16 | GPUDetailModal (alt) | `clusters/ResourceDetailModals.tsx` | GPU stat in cluster modal | Single-cluster GPU details (simpler version) |
 
 ### Navigation/Exploration Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 13 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
+| 17 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
 
 ### Feature/Feedback Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 14 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feature requests and track updates with GitHub integration |
-| 15 | FeedbackModal | `feedback/FeedbackModal.tsx` | Feedback button | Submit bugs or feature requests via GitHub Issues |
+| 18 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feature requests and track updates with GitHub integration |
+| 19 | FeedbackModal | `feedback/FeedbackModal.tsx` | Feedback button | Submit bugs or feature requests via GitHub Issues |
 
 ### Setup/Onboarding Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 16 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
-| 17 | SetupInstructionsDialog | `setup/SetupInstructionsDialog.tsx` | Help/Setup menu | Full setup instructions with copy-paste commands and OAuth configuration |
+| 20 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
+| 21 | SetupInstructionsDialog | `setup/SetupInstructionsDialog.tsx` | Help/Setup menu | Full setup instructions with copy-paste commands and OAuth configuration |
 
 ### Deployment Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 18 | DeployConfirmDialog | `deploy/DeployConfirmDialog.tsx` | Deploy workload action | Confirm deployment with dependency resolution and target cluster selection |
+| 22 | DeployConfirmDialog | `deploy/DeployConfirmDialog.tsx` | Deploy workload action | Confirm deployment with dependency resolution and target cluster selection |
 
 ### GitOps Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 19 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
+| 23 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
 
 ### Mission/Resolution Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 20 | SaveResolutionDialog | `missions/SaveResolutionDialog.tsx` | Save resolution action | Save successful mission resolution for future reference |
+| 24 | SaveResolutionDialog | `missions/SaveResolutionDialog.tsx` | Save resolution action | Save successful mission resolution for future reference |
+
+### Alerts Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 25 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Create or edit alert rules with conditions, severity, and notification channels |
+
+### Stats Configuration Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 26 | StatsConfigModal | `clusters/components/StatsConfig.tsx`, `ui/StatsConfig.tsx` | Stats settings icon | Configure visible stats and drag-drop reordering for stat blocks |
 
 ### Utility Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 21 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
-| 22 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
+| 27 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
+| 28 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
 
 ### Modal Features
 - All modals support ESC key to close
