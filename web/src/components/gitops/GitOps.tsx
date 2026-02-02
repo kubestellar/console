@@ -29,7 +29,8 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import type { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, GITOPS_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useState } from 'react'
 
@@ -543,7 +544,7 @@ export function GitOps() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="GitOps"
@@ -558,13 +559,12 @@ export function GitOps() {
       />
 
       {/* Configurable Stats Overview */}
-      <StatsOverview
-        dashboardType="gitops"
+      <UnifiedStatsSection
+        config={GITOPS_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={stats.total > 0}
         isLoading={false}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-gitops-stats-collapsed"
       />
 
       {/* Filters */}

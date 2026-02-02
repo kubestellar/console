@@ -18,7 +18,8 @@ import { DashboardHeader } from '../shared/DashboardHeader'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, WORKLOADS_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -291,7 +292,7 @@ export function Deployments() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Deployments"
@@ -317,13 +318,12 @@ export function Deployments() {
       )}
 
       {/* Stats Overview */}
-      <StatsOverview
-        dashboardType="workloads"
+      <UnifiedStatsSection
+        config={WORKLOADS_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={deployments.length > 0}
         isLoading={isLoading && deployments.length === 0}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-deployments-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

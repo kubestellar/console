@@ -117,6 +117,71 @@ function getDemoAllPods(): PodInfo[] {
   ]
 }
 
+function getDemoJobs(): Job[] {
+  return [
+    { name: 'data-migration-job', namespace: 'data', cluster: 'prod-east', status: 'Complete', completions: '1/1', duration: '2m30s', age: '1d' },
+    { name: 'backup-job-daily', namespace: 'data', cluster: 'prod-east', status: 'Complete', completions: '1/1', duration: '15m', age: '6h' },
+    { name: 'ml-training-batch', namespace: 'ml', cluster: 'vllm-d', status: 'Running', completions: '2/5', duration: '45m', age: '1h' },
+    { name: 'report-generator', namespace: 'batch', cluster: 'staging', status: 'Complete', completions: '1/1', duration: '5m', age: '2h' },
+    { name: 'index-rebuild', namespace: 'data', cluster: 'prod-east', status: 'Failed', completions: '0/1', duration: '10m', age: '30m' },
+    { name: 'cleanup-job', namespace: 'system', cluster: 'staging', status: 'Complete', completions: '1/1', duration: '1m', age: '4h' },
+  ]
+}
+
+function getDemoHPAs(): HPA[] {
+  return [
+    { name: 'api-gateway-hpa', namespace: 'production', cluster: 'prod-east', reference: 'Deployment/api-gateway', minReplicas: 2, maxReplicas: 10, currentReplicas: 4, targetCPU: '70%', currentCPU: '65%' },
+    { name: 'frontend-hpa', namespace: 'web', cluster: 'prod-east', reference: 'Deployment/frontend', minReplicas: 3, maxReplicas: 20, currentReplicas: 8, targetCPU: '70%', currentCPU: '78%' },
+    { name: 'worker-hpa', namespace: 'batch', cluster: 'vllm-d', reference: 'Deployment/worker', minReplicas: 1, maxReplicas: 5, currentReplicas: 3, targetCPU: '60%', currentCPU: '55%' },
+    { name: 'inference-hpa', namespace: 'ml', cluster: 'vllm-d', reference: 'Deployment/ml-inference', minReplicas: 2, maxReplicas: 8, currentReplicas: 4, targetCPU: '80%', currentCPU: '65%' },
+    { name: 'cache-hpa', namespace: 'data', cluster: 'staging', reference: 'Deployment/redis-cache', minReplicas: 1, maxReplicas: 3, currentReplicas: 1, targetCPU: '70%', currentCPU: '45%' },
+  ]
+}
+
+function getDemoReplicaSets(): ReplicaSet[] {
+  return [
+    { name: 'api-gateway-7d8f9c6b5', namespace: 'production', cluster: 'prod-east', replicas: 3, readyReplicas: 3, ownerName: 'api-gateway', ownerKind: 'Deployment', age: '5d' },
+    { name: 'api-gateway-6c7e8d9a4', namespace: 'production', cluster: 'prod-east', replicas: 0, readyReplicas: 0, ownerName: 'api-gateway', ownerKind: 'Deployment', age: '10d' },
+    { name: 'frontend-8e9f0a1b2', namespace: 'web', cluster: 'prod-east', replicas: 5, readyReplicas: 5, ownerName: 'frontend', ownerKind: 'Deployment', age: '2d' },
+    { name: 'worker-5c6d7e8f9', namespace: 'batch', cluster: 'vllm-d', replicas: 3, readyReplicas: 3, ownerName: 'worker', ownerKind: 'Deployment', age: '1d' },
+    { name: 'ml-inference-4b5c6d7e8', namespace: 'ml', cluster: 'vllm-d', replicas: 4, readyReplicas: 4, ownerName: 'ml-inference', ownerKind: 'Deployment', age: '3d' },
+    { name: 'monitoring-agent-3a4b5c6d7', namespace: 'monitoring', cluster: 'staging', replicas: 2, readyReplicas: 2, ownerName: 'monitoring-agent', ownerKind: 'Deployment', age: '7d' },
+  ]
+}
+
+function getDemoStatefulSets(): StatefulSet[] {
+  return [
+    { name: 'postgres', namespace: 'data', cluster: 'prod-east', replicas: 3, readyReplicas: 3, status: 'Running', image: 'postgres:15', age: '30d' },
+    { name: 'redis-cluster', namespace: 'data', cluster: 'prod-east', replicas: 6, readyReplicas: 6, status: 'Running', image: 'redis:7', age: '25d' },
+    { name: 'kafka', namespace: 'streaming', cluster: 'prod-east', replicas: 3, readyReplicas: 3, status: 'Running', image: 'confluentinc/cp-kafka:7.5', age: '20d' },
+    { name: 'elasticsearch', namespace: 'logging', cluster: 'prod-east', replicas: 3, readyReplicas: 2, status: 'Degraded', image: 'elasticsearch:8.12', age: '15d' },
+    { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', replicas: 2, readyReplicas: 2, status: 'Running', image: 'prom/prometheus:v2.50', age: '10d' },
+    { name: 'zookeeper', namespace: 'streaming', cluster: 'prod-east', replicas: 3, readyReplicas: 3, status: 'Running', image: 'confluentinc/cp-zookeeper:7.5', age: '20d' },
+  ]
+}
+
+function getDemoDaemonSets(): DaemonSet[] {
+  return [
+    { name: 'node-exporter', namespace: 'monitoring', cluster: 'prod-east', desiredScheduled: 5, currentScheduled: 5, ready: 5, status: 'Running', age: '30d' },
+    { name: 'fluentd', namespace: 'logging', cluster: 'prod-east', desiredScheduled: 5, currentScheduled: 5, ready: 5, status: 'Running', age: '30d' },
+    { name: 'nvidia-device-plugin', namespace: 'kube-system', cluster: 'vllm-d', desiredScheduled: 4, currentScheduled: 4, ready: 4, status: 'Running', age: '15d' },
+    { name: 'kube-proxy', namespace: 'kube-system', cluster: 'prod-east', desiredScheduled: 5, currentScheduled: 5, ready: 5, status: 'Running', age: '45d' },
+    { name: 'calico-node', namespace: 'kube-system', cluster: 'prod-east', desiredScheduled: 5, currentScheduled: 5, ready: 4, status: 'Degraded', age: '45d' },
+    { name: 'datadog-agent', namespace: 'monitoring', cluster: 'staging', desiredScheduled: 3, currentScheduled: 3, ready: 3, status: 'Running', age: '20d' },
+  ]
+}
+
+function getDemoCronJobs(): CronJob[] {
+  return [
+    { name: 'daily-backup', namespace: 'data', cluster: 'prod-east', schedule: '0 2 * * *', suspend: false, active: 0, lastSchedule: '6h', age: '30d' },
+    { name: 'hourly-metrics', namespace: 'monitoring', cluster: 'prod-east', schedule: '0 * * * *', suspend: false, active: 1, lastSchedule: '15m', age: '25d' },
+    { name: 'weekly-report', namespace: 'batch', cluster: 'prod-east', schedule: '0 8 * * 1', suspend: false, active: 0, lastSchedule: '5d', age: '60d' },
+    { name: 'cleanup-old-data', namespace: 'data', cluster: 'staging', schedule: '0 3 * * *', suspend: false, active: 0, lastSchedule: '21h', age: '45d' },
+    { name: 'model-retrain', namespace: 'ml', cluster: 'vllm-d', schedule: '0 0 * * 0', suspend: true, active: 0, lastSchedule: '14d', age: '20d' },
+    { name: 'certificate-renewal', namespace: 'system', cluster: 'prod-east', schedule: '0 0 1 * *', suspend: false, active: 0, lastSchedule: '15d', age: '90d' },
+  ]
+}
+
 // ---------------------------------------------------------------------------
 // Module-level cache for pods data (persists across navigation)
 // ---------------------------------------------------------------------------
@@ -858,6 +923,16 @@ export function useJobs(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoJobs = getDemoJobs().filter(j =>
+        (!cluster || j.cluster === cluster) && (!namespace || j.namespace === namespace)
+      )
+      setJobs(demoJobs)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -892,7 +967,10 @@ export function useJobs(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch jobs')
-      setJobs([])
+      // Fall back to demo data on error
+      setJobs(getDemoJobs().filter(j =>
+        (!cluster || j.cluster === cluster) && (!namespace || j.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -915,6 +993,16 @@ export function useHPAs(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoHPAs = getDemoHPAs().filter(h =>
+        (!cluster || h.cluster === cluster) && (!namespace || h.namespace === namespace)
+      )
+      setHPAs(demoHPAs)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -949,7 +1037,10 @@ export function useHPAs(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch HPAs')
-      setHPAs([])
+      // Fall back to demo data on error
+      setHPAs(getDemoHPAs().filter(h =>
+        (!cluster || h.cluster === cluster) && (!namespace || h.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -972,6 +1063,16 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoRS = getDemoReplicaSets().filter(rs =>
+        (!cluster || rs.cluster === cluster) && (!namespace || rs.namespace === namespace)
+      )
+      setReplicaSets(demoRS)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     // Try local agent first
     if (cluster && !isAgentUnavailable()) {
@@ -1007,7 +1108,10 @@ export function useReplicaSets(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch ReplicaSets')
-      setReplicaSets([])
+      // Fall back to demo data on error
+      setReplicaSets(getDemoReplicaSets().filter(rs =>
+        (!cluster || rs.cluster === cluster) && (!namespace || rs.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -1027,6 +1131,16 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoSS = getDemoStatefulSets().filter(ss =>
+        (!cluster || ss.cluster === cluster) && (!namespace || ss.namespace === namespace)
+      )
+      setStatefulSets(demoSS)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1061,7 +1175,10 @@ export function useStatefulSets(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch StatefulSets')
-      setStatefulSets([])
+      // Fall back to demo data on error
+      setStatefulSets(getDemoStatefulSets().filter(ss =>
+        (!cluster || ss.cluster === cluster) && (!namespace || ss.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -1081,6 +1198,16 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoDS = getDemoDaemonSets().filter(ds =>
+        (!cluster || ds.cluster === cluster) && (!namespace || ds.namespace === namespace)
+      )
+      setDaemonSets(demoDS)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1115,7 +1242,10 @@ export function useDaemonSets(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch DaemonSets')
-      setDaemonSets([])
+      // Fall back to demo data on error
+      setDaemonSets(getDemoDaemonSets().filter(ds =>
+        (!cluster || ds.cluster === cluster) && (!namespace || ds.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -1135,6 +1265,16 @@ export function useCronJobs(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoCJ = getDemoCronJobs().filter(cj =>
+        (!cluster || cj.cluster === cluster) && (!namespace || cj.namespace === namespace)
+      )
+      setCronJobs(demoCJ)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -1169,7 +1309,10 @@ export function useCronJobs(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch CronJobs')
-      setCronJobs([])
+      // Fall back to demo data on error
+      setCronJobs(getDemoCronJobs().filter(cj =>
+        (!cluster || cj.cluster === cluster) && (!namespace || cj.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }

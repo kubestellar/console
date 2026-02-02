@@ -282,6 +282,16 @@ export function useIngresses(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoIngresses = getDemoIngresses().filter(i =>
+        (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
+      )
+      setIngresses(demoIngresses)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -316,7 +326,10 @@ export function useIngresses(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch Ingresses')
-      setIngresses([])
+      // Fall back to demo data on error
+      setIngresses(getDemoIngresses().filter(i =>
+        (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -333,6 +346,16 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
+    // If demo mode is enabled, use demo data
+    if (getDemoMode()) {
+      const demoNPs = getDemoNetworkPolicies().filter(np =>
+        (!cluster || np.cluster === cluster) && (!namespace || np.namespace === namespace)
+      )
+      setNetworkPolicies(demoNPs)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     setIsLoading(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -367,7 +390,10 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       setError(null)
     } catch {
       setError('Failed to fetch NetworkPolicies')
-      setNetworkPolicies([])
+      // Fall back to demo data on error
+      setNetworkPolicies(getDemoNetworkPolicies().filter(np =>
+        (!cluster || np.cluster === cluster) && (!namespace || np.namespace === namespace)
+      ))
     } finally {
       setIsLoading(false)
     }
@@ -387,5 +413,26 @@ function getDemoServices(): Service[] {
     { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.40.10', ports: ['9090/TCP'], age: '20d' },
     { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], age: '20d' },
     { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], age: '15d' },
+  ]
+}
+
+function getDemoIngresses(): Ingress[] {
+  return [
+    { name: 'api-ingress', namespace: 'production', cluster: 'prod-east', hosts: ['api.kubestellar.io'], address: '52.14.123.45', class: 'nginx', age: '30d' },
+    { name: 'frontend-ingress', namespace: 'web', cluster: 'prod-east', hosts: ['console.kubestellar.io'], address: '52.14.123.45', class: 'nginx', age: '25d' },
+    { name: 'grafana-ingress', namespace: 'monitoring', cluster: 'staging', hosts: ['grafana.staging.local'], class: 'nginx', age: '20d' },
+    { name: 'ml-api-ingress', namespace: 'ml', cluster: 'vllm-d', hosts: ['ml-api.kubestellar.io'], address: '34.56.78.90', class: 'nginx', age: '15d' },
+    { name: 'prometheus-ingress', namespace: 'monitoring', cluster: 'staging', hosts: ['prometheus.staging.local'], class: 'nginx', age: '20d' },
+  ]
+}
+
+function getDemoNetworkPolicies(): NetworkPolicy[] {
+  return [
+    { name: 'deny-all-ingress', namespace: 'production', cluster: 'prod-east', podSelector: '*', policyTypes: ['Ingress'], age: '30d' },
+    { name: 'allow-api-gateway', namespace: 'production', cluster: 'prod-east', podSelector: 'app=api-gateway', policyTypes: ['Ingress'], age: '30d' },
+    { name: 'allow-db-access', namespace: 'data', cluster: 'prod-east', podSelector: 'app=postgres', policyTypes: ['Ingress'], age: '40d' },
+    { name: 'default-deny', namespace: 'ml', cluster: 'vllm-d', podSelector: '*', policyTypes: ['Ingress', 'Egress'], age: '15d' },
+    { name: 'allow-inference', namespace: 'ml', cluster: 'vllm-d', podSelector: 'app=ml-inference', policyTypes: ['Ingress', 'Egress'], age: '15d' },
+    { name: 'monitoring-access', namespace: 'monitoring', cluster: 'staging', podSelector: 'app=prometheus', policyTypes: ['Ingress'], age: '20d' },
   ]
 }

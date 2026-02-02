@@ -17,7 +17,8 @@ import { useClusters, useEvents, useWarningEvents } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, EVENTS_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -308,7 +309,7 @@ export function Logs() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Logs & Events"
@@ -323,13 +324,12 @@ export function Logs() {
       />
 
       {/* Stats Overview */}
-      <StatsOverview
-        dashboardType="events"
+      <UnifiedStatsSection
+        config={EVENTS_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={reachableClusters.length > 0}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-logs-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

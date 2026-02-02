@@ -16,7 +16,8 @@ import { useClusters, useServices } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, NETWORK_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -274,7 +275,7 @@ export function Services() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Services"
@@ -300,13 +301,12 @@ export function Services() {
       )}
 
       {/* Stats Overview */}
-      <StatsOverview
-        dashboardType="network"
+      <UnifiedStatsSection
+        config={NETWORK_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={reachableClusters.length > 0}
         isLoading={isLoading}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-services-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

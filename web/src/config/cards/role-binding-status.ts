@@ -95,7 +95,7 @@ export const roleBindingStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: false,
+  isDemoData: true,
   isLive: true,
 }
 

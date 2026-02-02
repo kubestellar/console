@@ -101,7 +101,6 @@ import { opaPoliciesConfig } from './opa-policies'
 import { opencostOverviewConfig } from './opencost-overview'
 import { operatorStatusConfig } from './operator-status'
 import { operatorSubscriptionStatusConfig } from './operator-subscription-status'
-import { operatorSubscriptionsConfig } from './operator-subscriptions'
 import { overlayComparisonConfig } from './overlay-comparison'
 import { podBrothersConfig } from './pod-brothers'
 import { podCrosserConfig } from './pod-crosser'
@@ -247,7 +246,6 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   opencost_overview: opencostOverviewConfig,
   operator_status: operatorStatusConfig,
   operator_subscription_status: operatorSubscriptionStatusConfig,
-  operator_subscriptions: operatorSubscriptionsConfig,
   overlay_comparison: overlayComparisonConfig,
   pod_brothers: podBrothersConfig,
   pod_crosser: podCrosserConfig,
@@ -407,7 +405,6 @@ export {
   opencostOverviewConfig,
   operatorStatusConfig,
   operatorSubscriptionStatusConfig,
-  operatorSubscriptionsConfig,
   overlayComparisonConfig,
   podBrothersConfig,
   podCrosserConfig,

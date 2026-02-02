@@ -74,7 +74,7 @@ export function DashboardHeader({
   const displayTimestamp = externalLastUpdated ?? internalLastUpdated
 
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mt-4 mb-6">
       {/* Left side: title + hourglass */}
       <div className="flex items-center gap-3">
         <div>

@@ -236,7 +236,7 @@ export function GPUReservations() {
   }
 
   return (
-    <div className="pt-16">
+    <div className="">
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">GPU Reservations</h1>

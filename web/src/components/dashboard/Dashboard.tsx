@@ -42,7 +42,8 @@ import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, DASHBOARD_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
@@ -782,7 +783,7 @@ export function Dashboard() {
 
   if (isLoading && localCards.length === 0) {
     return (
-      <div className="pt-16">
+      <div className="">
         {/* Header skeleton */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -818,7 +819,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Dashboard"
@@ -832,13 +833,12 @@ export function Dashboard() {
       />
 
       {/* Configurable Stats Overview */}
-      <StatsOverview
-        dashboardType="dashboard"
+      <UnifiedStatsSection
+        config={DASHBOARD_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={clusters.length > 0}
         isLoading={isClustersLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-dashboard-stats-collapsed"
       />
 
       {/* AI Recommendations */}

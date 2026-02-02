@@ -101,7 +101,7 @@ export const cronJobStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: false,
+  isDemoData: true,
   isLive: true,
 }
 

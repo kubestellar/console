@@ -89,7 +89,7 @@ export const limitRangeStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: false,
+  isDemoData: true,
   isLive: true,
 }
 

@@ -1664,7 +1664,7 @@ export function Clusters() {
 
   if (isLoading && clusters.length === 0) {
     return (
-      <div className="pt-16">
+      <div className="">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Server className="w-6 h-6 text-purple-400" />
@@ -1697,7 +1697,7 @@ export function Clusters() {
   // The error variable is kept for potential future use but UI always renders
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Clusters"

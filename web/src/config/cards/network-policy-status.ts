@@ -95,7 +95,7 @@ export const networkPolicyStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: false,
+  isDemoData: true,
   isLive: true,
 }
 

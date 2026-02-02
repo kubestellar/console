@@ -29,7 +29,8 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, SECURITY_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useMobile } from '../../hooks/useMobile'
 import {
@@ -475,7 +476,7 @@ export function Security() {
   )
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Security"
@@ -507,13 +508,12 @@ export function Security() {
       )}
 
       {/* Configurable Stats Overview */}
-      <StatsOverview
-        dashboardType="security"
+      <UnifiedStatsSection
+        config={SECURITY_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={stats.total > 0}
         isLoading={false}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-security-stats-collapsed"
       />
 
       {/* Tabs */}

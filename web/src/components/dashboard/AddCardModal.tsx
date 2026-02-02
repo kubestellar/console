@@ -30,6 +30,12 @@ const CARD_CATALOG = {
     { type: 'deployment_missions', title: 'Deployment Missions', description: 'Track deployment missions with per-cluster rollout progress', visualization: 'status' },
     { type: 'resource_marshall', title: 'Resource Marshall', description: 'Explore workload dependency trees — ConfigMaps, Secrets, RBAC, Services, and more', visualization: 'table' },
     { type: 'workload_monitor', title: 'Workload Monitor', description: 'Monitor all resources for a workload with health status, alerts, and AI diagnose/repair', visualization: 'status' },
+    { type: 'daemonset_status', title: 'DaemonSet Status', description: 'DaemonSets with ready/desired counts per node', visualization: 'table' },
+    { type: 'statefulset_status', title: 'StatefulSet Status', description: 'StatefulSets with replica status and update strategy', visualization: 'table' },
+    { type: 'replicaset_status', title: 'ReplicaSet Status', description: 'ReplicaSets with replica counts and owner references', visualization: 'table' },
+    { type: 'job_status', title: 'Job Status', description: 'Kubernetes Jobs with completion and failure counts', visualization: 'table' },
+    { type: 'cronjob_status', title: 'CronJob Status', description: 'CronJobs with schedules and last run times', visualization: 'table' },
+    { type: 'hpa_status', title: 'HPA Status', description: 'Horizontal Pod Autoscalers with current/target replicas', visualization: 'table' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },
@@ -40,10 +46,12 @@ const CARD_CATALOG = {
     { type: 'gpu_inventory', title: 'GPU Inventory', description: 'Detailed GPU list', visualization: 'table' },
     { type: 'gpu_workloads', title: 'GPU Workloads', description: 'Pods running on GPU nodes or in NVIDIA namespaces', visualization: 'table' },
     { type: 'gpu_usage_trend', title: 'GPU Usage Trend', description: 'GPU used vs available over time with stacked area chart', visualization: 'timeseries' },
+    { type: 'node_status', title: 'Node Status', description: 'Cluster nodes with conditions and resource allocations', visualization: 'table' },
   ],
   'Storage': [
     { type: 'storage_overview', title: 'Storage Overview', description: 'Total storage capacity and PVC summary', visualization: 'status' },
     { type: 'pvc_status', title: 'PVC Status', description: 'Persistent Volume Claims with status breakdown', visualization: 'table' },
+    { type: 'pv_status', title: 'PV Status', description: 'Persistent Volumes with capacity and reclaim policy', visualization: 'table' },
   ],
   'Network': [
     { type: 'network_overview', title: 'Network Overview', description: 'Services breakdown by type and namespace', visualization: 'status' },
@@ -53,6 +61,8 @@ const CARD_CATALOG = {
     { type: 'service_imports', title: 'Service Imports (MCS)', description: 'Multi-cluster service imports receiving cross-cluster traffic', visualization: 'table' },
     { type: 'gateway_status', title: 'Gateway API', description: 'Kubernetes Gateway API resources and HTTPRoutes', visualization: 'status' },
     { type: 'service_topology', title: 'Service Topology', description: 'Animated service mesh visualization with cross-cluster traffic', visualization: 'status' },
+    { type: 'ingress_status', title: 'Ingress Status', description: 'Ingress resources with hosts and backends', visualization: 'table' },
+    { type: 'network_policy_status', title: 'Network Policies', description: 'Network policy rules and affected pods', visualization: 'table' },
   ],
   'GitOps': [
     { type: 'helm_release_status', title: 'Helm Releases', description: 'Helm release status and versions', visualization: 'status' },
@@ -70,7 +80,7 @@ const CARD_CATALOG = {
   ],
   'Operators': [
     { type: 'operator_status', title: 'OLM Operators', description: 'Operator Lifecycle Manager status', visualization: 'status' },
-    { type: 'operator_subscriptions', title: 'Operator Subscriptions', description: 'Subscriptions and pending upgrades', visualization: 'table' },
+    { type: 'operator_subscription_status', title: 'Operator Subscriptions', description: 'Subscriptions and pending upgrades', visualization: 'table' },
     { type: 'crd_health', title: 'CRD Health', description: 'Custom resource definitions status', visualization: 'status' },
   ],
   'Namespaces': [
@@ -79,6 +89,9 @@ const CARD_CATALOG = {
     { type: 'namespace_quotas', title: 'Namespace Quotas', description: 'Resource quota usage', visualization: 'gauge' },
     { type: 'namespace_rbac', title: 'Namespace RBAC', description: 'Roles, bindings, service accounts', visualization: 'table' },
     { type: 'namespace_events', title: 'Namespace Events', description: 'Events in namespace', visualization: 'events' },
+    { type: 'namespace_status', title: 'Namespace Status', description: 'All namespaces with phase and label metadata', visualization: 'table' },
+    { type: 'resource_quota_status', title: 'Resource Quotas', description: 'Resource quotas with hard/used limits', visualization: 'table' },
+    { type: 'limit_range_status', title: 'Limit Ranges', description: 'LimitRanges with min/max/default constraints', visualization: 'table' },
   ],
   'Security & Events': [
     { type: 'security_issues', title: 'Security Issues', description: 'Security findings and vulnerabilities', visualization: 'table' },
@@ -123,6 +136,11 @@ const CARD_CATALOG = {
     { type: 'external_secrets', title: 'External Secrets', description: 'Sync secrets from external providers (AWS, Azure, GCP, Vault)', visualization: 'status' },
     { type: 'cert_manager', title: 'Cert-Manager', description: 'TLS certificate lifecycle management with automatic renewal', visualization: 'status' },
     { type: 'namespace_rbac', title: 'Access Controls', description: 'RBAC policies and permission auditing per namespace', visualization: 'table' },
+    { type: 'secret_status', title: 'Secrets', description: 'Kubernetes Secrets with types and age', visualization: 'table' },
+    { type: 'configmap_status', title: 'ConfigMaps', description: 'ConfigMaps with data keys and sizes', visualization: 'table' },
+    { type: 'service_account_status', title: 'Service Accounts', description: 'Service accounts with mounted secrets', visualization: 'table' },
+    { type: 'role_status', title: 'Roles', description: 'Kubernetes Roles with rule counts', visualization: 'table' },
+    { type: 'role_binding_status', title: 'Role Bindings', description: 'RoleBindings with subjects and role refs', visualization: 'table' },
   ],
   'Workload Detection': [
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },

@@ -96,7 +96,7 @@ export const configMapStatusConfig: UnifiedCardConfig = {
   },
 
   // Metadata
-  isDemoData: false,
+  isDemoData: true,
   isLive: true,
 }
 

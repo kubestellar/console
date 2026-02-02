@@ -83,7 +83,7 @@ export function CardHistory({ onRestoreCard }: CardHistoryProps) {
   const filteredHistory = filter === 'all' ? history : history.filter((entry) => entry.action === filter)
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

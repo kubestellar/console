@@ -52,8 +52,9 @@ import {
   SortableDashboardCard,
   DragPreviewCard,
 } from './DashboardComponents'
-import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
-import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
+import { UnifiedStatsSection, getUnifiedStatsConfig } from '../unified/stats'
+import type { StatBlockValue } from '../../components/ui/StatsOverview'
+import type { StatsConfigType } from '../unified/stats'
 import { AddCardModal } from '../../components/dashboard/AddCardModal'
 import { TemplatesModal } from '../../components/dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'
@@ -315,13 +316,12 @@ export function DashboardRuntime({
 
       {/* Stats Overview */}
       {statsConfig && (
-        <StatsOverview
-          dashboardType={statsConfig.type as DashboardStatsType}
+        <UnifiedStatsSection
+          config={getUnifiedStatsConfig(statsConfig.type as StatsConfigType)}
           getStatValue={getStatValue}
           hasData={hasData}
           isLoading={showSkeletons}
           lastUpdated={lastUpdated}
-          collapsedStorageKey={statsConfig.collapsedKey}
         />
       )}
 
