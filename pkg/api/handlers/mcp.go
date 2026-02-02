@@ -63,6 +63,11 @@ func (h *MCPHandlers) GetDeployTools(c *fiber.Ctx) error {
 
 // ListClusters returns all discovered clusters with health data
 func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately without trying real clusters
+	if isDemoMode(c) {
+		return demoResponse(c, "clusters", getDemoClusters())
+	}
+
 	// Try MCP bridge first if available
 	if h.bridge != nil {
 		clusters, err := h.bridge.ListClusters(c.Context())
@@ -105,6 +110,11 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 	cluster := c.Params("cluster")
 
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return c.JSON(getDemoClusterHealth(cluster))
+	}
+
 	// Try MCP bridge first if available
 	if h.bridge != nil {
 		health, err := h.bridge.GetClusterHealth(c.Context(), cluster)
@@ -128,6 +138,11 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 
 // GetAllClusterHealth returns health for all clusters
 func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "health", getDemoAllClusterHealth())
+	}
+
 	// Use direct k8s client for this as it's more efficient
 	if h.k8sClient != nil {
 		health, err := h.k8sClient.GetAllClusterHealth(c.Context())
@@ -142,6 +157,11 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 
 // GetPods returns pods for a namespace/cluster
 func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "pods", getDemoPods())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	labelSelector := c.Query("labelSelector")
@@ -201,6 +221,11 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 
 // FindPodIssues returns pods with issues
 func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "issues", getDemoPodIssues())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -259,6 +284,11 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 // GetGPUNodes returns nodes with GPU resources
 func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "nodes", getDemoGPUNodes())
+	}
+
 	cluster := c.Query("cluster")
 
 	if h.k8sClient != nil {
@@ -306,6 +336,11 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 
 // GetNVIDIAOperatorStatus returns NVIDIA GPU and Network operator status
 func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "operators", getDemoNVIDIAOperatorStatus())
+	}
+
 	cluster := c.Query("cluster")
 
 	if h.k8sClient != nil {
@@ -353,6 +388,11 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 
 // GetNodes returns detailed node information
 func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "nodes", getDemoNodes())
+	}
+
 	cluster := c.Query("cluster")
 
 	if h.k8sClient != nil {
@@ -400,6 +440,11 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 
 // FindDeploymentIssues returns deployments with issues
 func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "issues", getDemoDeploymentIssues())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -449,6 +494,11 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 
 // GetDeployments returns deployments with rollout status
 func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "deployments", getDemoDeployments())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -497,6 +547,11 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 
 // GetServices returns services from clusters
 func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "services", getDemoServices())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -544,6 +599,11 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 // GetJobs returns jobs from clusters
 func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "jobs", getDemoJobs())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -591,6 +651,11 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 // GetHPAs returns HPAs from clusters
 func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "hpas", getDemoHPAs())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -638,6 +703,11 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 // GetConfigMaps returns ConfigMaps from clusters
 func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "configmaps", getDemoConfigMaps())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -685,6 +755,11 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 
 // GetSecrets returns Secrets from clusters
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "secrets", getDemoSecrets())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -732,6 +807,11 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 
 // GetServiceAccounts returns ServiceAccounts from clusters
 func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "serviceAccounts", getDemoServiceAccounts())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -779,6 +859,11 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 
 // GetPVCs returns PersistentVolumeClaims from clusters
 func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "pvcs", getDemoPVCs())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -826,6 +911,11 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 
 // GetPVs returns PersistentVolumes from clusters
 func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "pvs", getDemoPVs())
+	}
+
 	cluster := c.Query("cluster")
 
 	if h.k8sClient != nil {
@@ -872,6 +962,11 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 
 // GetResourceQuotas returns resource quotas from clusters
 func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "resourceQuotas", getDemoResourceQuotas())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -919,6 +1014,11 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 
 // GetLimitRanges returns limit ranges from clusters
 func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "limitRanges", getDemoLimitRanges())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -1029,6 +1129,11 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 // GetPodLogs returns logs from a pod
 func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "logs", getDemoPodLogs())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	pod := c.Query("pod")
@@ -1052,6 +1157,11 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 
 // GetEvents returns events from clusters
 func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "events", getDemoEvents())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	limit := c.QueryInt("limit", 50)
@@ -1124,6 +1234,11 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 // GetWarningEvents returns warning events from clusters
 func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "events", getDemoWarningEvents())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	limit := c.QueryInt("limit", 50)
@@ -1193,6 +1308,11 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 // CheckSecurityIssues returns security misconfigurations
 func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
+	// Demo mode: return demo data immediately
+	if isDemoMode(c) {
+		return demoResponse(c, "issues", getDemoSecurityIssues())
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 

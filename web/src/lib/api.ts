@@ -145,6 +145,11 @@ class ApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
+    // Send demo mode header so backend can return demo data immediately
+    const demoMode = localStorage.getItem('kc-demo-mode')
+    if (demoMode === 'true') {
+      headers['X-Demo-Mode'] = 'true'
+    }
     return headers
   }
 
