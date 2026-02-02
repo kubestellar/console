@@ -18,6 +18,11 @@ on:
         description: 'Issue title (optional, for display)'
         required: false
         type: string
+      force:
+        description: 'Force re-trigger even if Copilot is already assigned (removes existing assignees first)'
+        required: false
+        type: boolean
+        default: false
 
 run-name: "AI Fix #${{ github.event.inputs.issue_number || github.event.issue.number }}: ${{ github.event.inputs.issue_title || github.event.issue.title || 'Processing...' }}"
 
@@ -42,11 +47,40 @@ jobs:
           ISSUE_NUM="${{ github.event.inputs.issue_number || github.event.issue.number }}"
           echo "number=$ISSUE_NUM" >> $GITHUB_OUTPUT
 
+      - name: Force reset if requested
+        if: github.event.inputs.force == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUM="${{ steps.issue.outputs.number }}"
+          REPO="${{ github.repository }}"
+
+          echo "Force mode enabled - resetting issue #$ISSUE_NUM for re-trigger"
+
+          # Remove blocking labels
+          for label in "ai-processing" "ai-awaiting-fix" "ai-pr-draft" "ai-pr-ready" "ai-needs-human"; do
+            gh issue edit "$ISSUE_NUM" --repo "$REPO" --remove-label "$label" 2>/dev/null || true
+          done
+
+          # Remove Copilot and github-actions[bot] assignees via API
+          gh api repos/$REPO/issues/$ISSUE_NUM/assignees \
+            -X DELETE \
+            -f 'assignees=["Copilot","github-actions[bot]","copilot-swe-agent[bot]"]' 2>/dev/null || true
+
+          echo "Reset complete for issue #$ISSUE_NUM"
+
       - name: Check if already being processed
         id: check_processing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Skip check if force mode was used
+          if [ "${{ github.event.inputs.force }}" == "true" ]; then
+            echo "Force mode - skipping processing check"
+            echo "already_processing=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           ISSUE_NUM="${{ steps.issue.outputs.number }}"
           LABELS=$(gh api repos/${{ github.repository }}/issues/$ISSUE_NUM \
             --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")

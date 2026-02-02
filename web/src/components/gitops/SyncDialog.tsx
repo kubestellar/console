@@ -84,6 +84,7 @@ export function SyncDialog({
   const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([])
   const [tokenCount, setTokenCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [isInitializing, setIsInitializing] = useState(false)
   const logContainerRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll logs
@@ -92,20 +93,6 @@ export function SyncDialog({
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
     }
   }, [syncLogs])
-
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setPhase('detection')
-      setDriftedResources([])
-      setSyncPlan([])
-      setSyncLogs([])
-      setTokenCount(0)
-      setError(null)
-      // Start detection
-      runDetection()
-    }
-  }, [isOpen])
 
   // Note: ESC key handling is now handled by BaseModal
 
@@ -129,6 +116,7 @@ export function SyncDialog({
 
   // Phase 1: Detection
   const runDetection = useCallback(async () => {
+    setIsInitializing(true)
     addLog('Connecting to cluster...', 'running')
 
     try {
@@ -190,8 +178,25 @@ export function SyncDialog({
       const message = err instanceof Error ? err.message : 'Detection failed'
       addLog(`Error: ${message}`, 'error')
       setError(message)
+    } finally {
+      setIsInitializing(false)
     }
   }, [appName, namespace, cluster, repoUrl, path, addLog, updateLastLog])
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setPhase('detection')
+      setDriftedResources([])
+      setSyncPlan([])
+      setSyncLogs([])
+      setTokenCount(0)
+      setError(null)
+      // runDetection() will set isInitializing to true
+      runDetection()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   // Phase 2: Generate Plan
   useEffect(() => {
@@ -321,8 +326,16 @@ export function SyncDialog({
         </div>
 
       <BaseModal.Content className="max-h-[400px]">
+          {/* Initial Loading State */}
+          {isInitializing && phase === 'detection' && syncLogs.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+              <p className="text-sm text-muted-foreground">Initializing drift detection...</p>
+            </div>
+          )}
+
           {/* Detection Phase */}
-          {phase === 'detection' && (
+          {phase === 'detection' && syncLogs.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />

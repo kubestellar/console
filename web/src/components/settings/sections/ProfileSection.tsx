@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Save, User } from 'lucide-react'
+import { Save, User, Loader2, AlertCircle } from 'lucide-react'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -11,8 +11,12 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
   const [email, setEmail] = useState(initialEmail)
   const [slackId, setSlackId] = useState(initialSlackId)
   const [profileSaved, setProfileSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSaveProfile = async () => {
+    setIsSaving(true)
+    setError(null)
     try {
       const token = localStorage.getItem('token')
       const response = await fetch('/api/me', {
@@ -31,7 +35,11 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 2000)
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save profile'
+      setError(message)
       console.error('Failed to save profile:', error)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -67,12 +75,23 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
           />
         </div>
+        {error && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            {error}
+          </div>
+        )}
         <button
           onClick={handleSaveProfile}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+          disabled={isSaving}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Save className="w-4 h-4" />
-          {profileSaved ? 'Saved!' : 'Save Profile'}
+          {isSaving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          {isSaving ? 'Saving...' : profileSaved ? 'Saved!' : 'Save Profile'}
         </button>
       </div>
     </div>
