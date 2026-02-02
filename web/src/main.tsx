@@ -42,6 +42,7 @@ const enableMocking = async () => {
     // to allow external resources (fonts, images) to load normally
     await worker.start({
       onUnhandledRequest: 'bypass',
+      quiet: true, // Suppress verbose request logging in console
       serviceWorker: {
         url: '/mockServiceWorker.js',
       },
