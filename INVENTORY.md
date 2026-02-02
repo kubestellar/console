@@ -161,9 +161,9 @@ Last Updated: 2026-01-23
 ### Category: AI (3 cards)
 | # | Type | Title | Visualization |
 |---|------|-------|---------------|
-| 58 | `ai_issues` | AI Issues | status |
-| 59 | `ai_kubeconfig_audit` | AI Kubeconfig Audit | status |
-| 60 | `ai_health_check` | AI Health Check | gauge |
+| 58 | `console_ai_issues` | AI Issues | status |
+| 59 | `console_ai_kubeconfig_audit` | AI Kubeconfig Audit | status |
+| 60 | `console_ai_health_check` | AI Health Check | gauge |
 
 ### Category: Alerting (2 cards)
 | # | Type | Title | Visualization |
@@ -470,7 +470,7 @@ Based on feature requests:
 | 3 | ReplaceCardModal | `dashboard/ReplaceCardModal.tsx` | Card replace action | Replace card with "Select" and "AI" tabs for choosing new card type |
 | 4 | ResetDialog | `dashboard/ResetDialog.tsx` | Dashboard reset action | Two-option dialog: "Add Missing Cards" or "Replace All Cards" |
 | 5 | TemplatesModal | `dashboard/TemplatesModal.tsx` | Templates selector | Dashboard template browser organized by category |
-| 6 | ResourceDetailModal | `dashboard/ResourceDetailModal.tsx` | Click resource in card | Generic resource detail modal with Details, Actions, and AI tabs |
+| 6 | ResourceDetailModals | `clusters/ResourceDetailModals.tsx` | Click resource in card | Generic resource detail modal with Details, Actions, and AI tabs |
 
 ### Cluster Management Modals (3)
 | # | Name | File | Trigger | Description |
@@ -514,7 +514,7 @@ Based on feature requests:
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 17 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit ResourceQuota with CPU/memory/storage limits |
-| 18 | ApiKeyPromptModal | `cards/AIMissions.tsx` | AI feature without API key | Prompts user to configure Anthropic API key for AI features |
+| 18 | ApiKeyPromptModal | `cards/console-missions/shared.tsx` | AI feature without API key | Prompts user to configure Anthropic API key for AI features |
 | 19 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Form for creating/editing Prometheus-style alert rules |
 
 ### Modal Features
@@ -581,7 +581,6 @@ Cards that have `useDrillDownActions` hook for clickable items:
 | 17 | HelmHistory | drillToHelm | HelmReleaseDrillDown |
 | 18 | HelmReleaseStatus | drillToHelm | HelmReleaseDrillDown |
 | 19 | HelmValuesDiff | drillToHelm | HelmReleaseDrillDown |
-| 20 | AIMissions | drillToMission | MissionDrillDown |
 | 21 | KubecostOverview | drillToCost | CostDrillDown |
 | 22 | KustomizationStatus | drillToKustomization | KustomizationDrillDown |
 | 23 | NamespaceEvents | drillToEvents | EventsDrillDown |
