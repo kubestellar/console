@@ -16,8 +16,9 @@ import {
   useCachedPodIssues,
   useCachedEvents,
   useCachedDeployments,
+  useCachedDeploymentIssues,
 } from '../../hooks/useCachedData'
-import { useClusters, usePVCs, useServices } from '../../hooks/mcp'
+import { useClusters, usePVCs, useServices, useOperators } from '../../hooks/mcp'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -88,6 +89,29 @@ function useUnifiedServices(params?: Record<string, unknown>) {
   const result = useServices(cluster, namespace)
   return {
     data: result.services,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedDeploymentIssues(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useCachedDeploymentIssues(cluster, namespace)
+  return {
+    data: result.issues,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedOperators(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const result = useOperators(cluster)
+  return {
+    data: result.operators,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,
@@ -282,6 +306,8 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useClusters', useUnifiedClusters)
   registerDataHook('usePVCs', useUnifiedPVCs)
   registerDataHook('useServices', useUnifiedServices)
+  registerDataHook('useCachedDeploymentIssues', useUnifiedDeploymentIssues)
+  registerDataHook('useOperators', useUnifiedOperators)
 
   // Filtered event hooks
   registerDataHook('useWarningEvents', useWarningEvents)

@@ -29,6 +29,9 @@ import { recentEventsConfig } from './recent-events'
 // Storage & Networking cards (PR 8)
 import { pvcStatusConfig } from './pvc-status'
 import { serviceStatusConfig } from './service-status'
+// Workload & Operator cards (PR 9)
+import { deploymentIssuesConfig } from './deployment-issues'
+import { operatorStatusConfig } from './operator-status'
 
 /**
  * Registry of all unified card configurations
@@ -57,6 +60,9 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   // Storage & Networking cards (PR 8)
   pvc_status: pvcStatusConfig,
   service_status: serviceStatusConfig,
+  // Workload & Operator cards (PR 9)
+  deployment_issues: deploymentIssuesConfig,
+  operator_status: operatorStatusConfig,
 }
 
 /**
@@ -103,4 +109,7 @@ export {
   // Storage & Networking cards (PR 8)
   pvcStatusConfig,
   serviceStatusConfig,
+  // Workload & Operator cards (PR 9)
+  deploymentIssuesConfig,
+  operatorStatusConfig,
 }
