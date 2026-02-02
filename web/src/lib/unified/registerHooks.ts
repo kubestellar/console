@@ -18,7 +18,17 @@ import {
   useCachedDeployments,
   useCachedDeploymentIssues,
 } from '../../hooks/useCachedData'
-import { useClusters, usePVCs, useServices, useOperators } from '../../hooks/mcp'
+import {
+  useClusters,
+  usePVCs,
+  useServices,
+  useOperators,
+  useHelmReleases,
+  useConfigMaps,
+  useSecrets,
+  useIngresses,
+  useNodes,
+} from '../../hooks/mcp'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -112,6 +122,64 @@ function useUnifiedOperators(params?: Record<string, unknown>) {
   const result = useOperators(cluster)
   return {
     data: result.operators,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedHelmReleases(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const result = useHelmReleases(cluster)
+  return {
+    data: result.releases,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedConfigMaps(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useConfigMaps(cluster, namespace)
+  return {
+    data: result.configmaps,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedSecrets(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useSecrets(cluster, namespace)
+  return {
+    data: result.secrets,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedIngresses(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useIngresses(cluster, namespace)
+  return {
+    data: result.ingresses,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedNodes(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const result = useNodes(cluster)
+  return {
+    data: result.nodes,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,
@@ -308,6 +376,11 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useServices', useUnifiedServices)
   registerDataHook('useCachedDeploymentIssues', useUnifiedDeploymentIssues)
   registerDataHook('useOperators', useUnifiedOperators)
+  registerDataHook('useHelmReleases', useUnifiedHelmReleases)
+  registerDataHook('useConfigMaps', useUnifiedConfigMaps)
+  registerDataHook('useSecrets', useUnifiedSecrets)
+  registerDataHook('useIngresses', useUnifiedIngresses)
+  registerDataHook('useNodes', useUnifiedNodes)
 
   // Filtered event hooks
   registerDataHook('useWarningEvents', useWarningEvents)

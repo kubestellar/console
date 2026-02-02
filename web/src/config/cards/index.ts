@@ -32,6 +32,12 @@ import { serviceStatusConfig } from './service-status'
 // Workload & Operator cards (PR 9)
 import { deploymentIssuesConfig } from './deployment-issues'
 import { operatorStatusConfig } from './operator-status'
+// Additional resource cards (PR 10)
+import { helmReleaseStatusConfig } from './helm-release-status'
+import { configMapStatusConfig } from './configmap-status'
+import { secretStatusConfig } from './secret-status'
+import { ingressStatusConfig } from './ingress-status'
+import { nodeStatusConfig } from './node-status'
 
 /**
  * Registry of all unified card configurations
@@ -63,6 +69,12 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   // Workload & Operator cards (PR 9)
   deployment_issues: deploymentIssuesConfig,
   operator_status: operatorStatusConfig,
+  // Additional resource cards (PR 10)
+  helm_release_status: helmReleaseStatusConfig,
+  configmap_status: configMapStatusConfig,
+  secret_status: secretStatusConfig,
+  ingress_status: ingressStatusConfig,
+  node_status: nodeStatusConfig,
 }
 
 /**
@@ -112,4 +124,10 @@ export {
   // Workload & Operator cards (PR 9)
   deploymentIssuesConfig,
   operatorStatusConfig,
+  // Additional resource cards (PR 10)
+  helmReleaseStatusConfig,
+  configMapStatusConfig,
+  secretStatusConfig,
+  ingressStatusConfig,
+  nodeStatusConfig,
 }
