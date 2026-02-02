@@ -44,6 +44,15 @@ import { cronJobStatusConfig } from './cronjob-status'
 import { statefulSetStatusConfig } from './statefulset-status'
 import { daemonSetStatusConfig } from './daemonset-status'
 import { hpaStatusConfig } from './hpa-status'
+// Additional resource cards (PR 12)
+import { replicaSetStatusConfig } from './replicaset-status'
+import { pvStatusConfig } from './pv-status'
+import { resourceQuotaStatusConfig } from './resource-quota-status'
+import { limitRangeStatusConfig } from './limit-range-status'
+import { networkPolicyStatusConfig } from './network-policy-status'
+import { namespaceStatusConfig } from './namespace-status'
+import { operatorSubscriptionStatusConfig } from './operator-subscription-status'
+import { serviceAccountStatusConfig } from './service-account-status'
 
 /**
  * Registry of all unified card configurations
@@ -87,6 +96,15 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   statefulset_status: statefulSetStatusConfig,
   daemonset_status: daemonSetStatusConfig,
   hpa_status: hpaStatusConfig,
+  // Additional resource cards (PR 12)
+  replicaset_status: replicaSetStatusConfig,
+  pv_status: pvStatusConfig,
+  resource_quota_status: resourceQuotaStatusConfig,
+  limit_range_status: limitRangeStatusConfig,
+  network_policy_status: networkPolicyStatusConfig,
+  namespace_status: namespaceStatusConfig,
+  operator_subscription_status: operatorSubscriptionStatusConfig,
+  service_account_status: serviceAccountStatusConfig,
 }
 
 /**
@@ -148,4 +166,13 @@ export {
   statefulSetStatusConfig,
   daemonSetStatusConfig,
   hpaStatusConfig,
+  // Additional resource cards (PR 12)
+  replicaSetStatusConfig,
+  pvStatusConfig,
+  resourceQuotaStatusConfig,
+  limitRangeStatusConfig,
+  networkPolicyStatusConfig,
+  namespaceStatusConfig,
+  operatorSubscriptionStatusConfig,
+  serviceAccountStatusConfig,
 }

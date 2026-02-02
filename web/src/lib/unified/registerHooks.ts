@@ -33,6 +33,14 @@ import {
   useStatefulSets,
   useDaemonSets,
   useHPAs,
+  useReplicaSets,
+  usePVs,
+  useResourceQuotas,
+  useLimitRanges,
+  useNetworkPolicies,
+  useNamespaces,
+  useOperatorSubscriptions,
+  useServiceAccounts,
 } from '../../hooks/mcp'
 
 // ============================================================================
@@ -251,6 +259,99 @@ function useUnifiedHPAs(params?: Record<string, unknown>) {
   }
 }
 
+function useUnifiedReplicaSets(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useReplicaSets(cluster, namespace)
+  return {
+    data: result.replicasets,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedPVs(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const result = usePVs(cluster)
+  return {
+    data: result.pvs,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedResourceQuotas(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useResourceQuotas(cluster, namespace)
+  return {
+    data: result.resourceQuotas,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedLimitRanges(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useLimitRanges(cluster, namespace)
+  return {
+    data: result.limitRanges,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedNetworkPolicies(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useNetworkPolicies(cluster, namespace)
+  return {
+    data: result.networkpolicies,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedNamespaces(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const result = useNamespaces(cluster)
+  return {
+    data: result.namespaces,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedOperatorSubscriptions(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const result = useOperatorSubscriptions(cluster)
+  return {
+    data: result.subscriptions,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedServiceAccounts(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useServiceAccounts(cluster, namespace)
+  return {
+    data: result.serviceAccounts,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 // ============================================================================
 // Demo data hooks for cards that don't have real data hooks yet
 // These return static demo data for visualization purposes
@@ -451,6 +552,14 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useStatefulSets', useUnifiedStatefulSets)
   registerDataHook('useDaemonSets', useUnifiedDaemonSets)
   registerDataHook('useHPAs', useUnifiedHPAs)
+  registerDataHook('useReplicaSets', useUnifiedReplicaSets)
+  registerDataHook('usePVs', useUnifiedPVs)
+  registerDataHook('useResourceQuotas', useUnifiedResourceQuotas)
+  registerDataHook('useLimitRanges', useUnifiedLimitRanges)
+  registerDataHook('useNetworkPolicies', useUnifiedNetworkPolicies)
+  registerDataHook('useNamespaces', useUnifiedNamespaces)
+  registerDataHook('useOperatorSubscriptions', useUnifiedOperatorSubscriptions)
+  registerDataHook('useServiceAccounts', useUnifiedServiceAccounts)
 
   // Filtered event hooks
   registerDataHook('useWarningEvents', useWarningEvents)
