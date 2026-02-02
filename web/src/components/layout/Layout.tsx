@@ -9,7 +9,7 @@ import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
-import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { cn } from '../../lib/cn'
@@ -140,13 +140,6 @@ export function Layout({ children }: LayoutProps) {
               <Rocket className="w-3.5 h-3.5" />
               <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
               <span className="lg:hidden">Get Console</span>
-            </button>
-            <button
-              onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
-              className="ml-1 md:ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
-              title={isDemoModeForced ? "Install your own console" : "Exit demo mode"}
-            >
-              <X className="w-3.5 h-3.5 text-yellow-400" />
             </button>
           </div>
         </div>

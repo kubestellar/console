@@ -68,7 +68,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         params.append('limit', limit.toString())
-        console.log(`[useEvents] Fetching from local agent for ${cluster}`)
+        // console.log(`[useEvents] Fetching from local agent for ${cluster}`)
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 15000)
@@ -81,7 +81,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         if (response.ok) {
           const data = await response.json()
           const eventData = data.events || []
-          console.log(`[useEvents] Got ${eventData.length} events for ${cluster} from local agent`)
+          // console.log(`[useEvents] Got ${eventData.length} events for ${cluster} from local agent`)
           const now = new Date()
           eventsCache = { data: eventData, timestamp: now, key: cacheKey }
           setEvents(eventData)
@@ -98,9 +98,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
           reportAgentDataSuccess()
           return
         }
-        console.log(`[useEvents] Local agent returned ${response.status}, trying REST API`)
+        // console.log(`[useEvents] Local agent returned ${response.status}, trying REST API`)
       } catch (err) {
-        console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
+        // Don't log abort errors - these are expected when component unmounts
+        const isAbortError = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
+        if (!isAbortError) {
+          console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
+        }
       }
     }
 
@@ -138,6 +142,11 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastRefresh(now)
       // console.log('[useEvents] Data updated successfully')
     } catch (err) {
+      // Don't log abort errors - these are expected when component unmounts
+      const isAbortError = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
+      if (isAbortError) {
+        return
+      }
       console.error('[useEvents] Failed to fetch events:', err)
       // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
@@ -292,6 +301,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
 }
 
 function getDemoEvents(): ClusterEvent[] {
+  const now = Date.now()
   return [
     {
       type: 'Warning',
@@ -301,6 +311,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'batch',
       cluster: 'vllm-d',
       count: 3,
+      firstSeen: new Date(now - 5 * 60000).toISOString(),
+      lastSeen: new Date(now - 2 * 60000).toISOString(),
     },
     {
       type: 'Normal',
@@ -310,6 +322,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'production',
       cluster: 'prod-east',
       count: 1,
+      firstSeen: new Date(now - 8 * 60000).toISOString(),
+      lastSeen: new Date(now - 8 * 60000).toISOString(),
     },
     {
       type: 'Warning',
@@ -319,6 +333,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'production',
       cluster: 'prod-east',
       count: 15,
+      firstSeen: new Date(now - 30 * 60000).toISOString(),
+      lastSeen: new Date(now - 1 * 60000).toISOString(),
     },
     {
       type: 'Normal',
@@ -328,6 +344,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'web',
       cluster: 'staging',
       count: 1,
+      firstSeen: new Date(now - 12 * 60000).toISOString(),
+      lastSeen: new Date(now - 12 * 60000).toISOString(),
     },
     {
       type: 'Warning',
@@ -337,6 +355,63 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'data',
       cluster: 'staging',
       count: 8,
+      firstSeen: new Date(now - 20 * 60000).toISOString(),
+      lastSeen: new Date(now - 3 * 60000).toISOString(),
+    },
+    {
+      type: 'Normal',
+      reason: 'Created',
+      message: 'Created container nginx',
+      object: 'Pod/nginx-deployment-abc123',
+      namespace: 'default',
+      cluster: 'dev-local',
+      count: 2,
+      firstSeen: new Date(now - 6 * 60000).toISOString(),
+      lastSeen: new Date(now - 4 * 60000).toISOString(),
+    },
+    {
+      type: 'Normal',
+      reason: 'Started',
+      message: 'Started container nginx',
+      object: 'Pod/nginx-deployment-abc123',
+      namespace: 'default',
+      cluster: 'dev-local',
+      count: 2,
+      firstSeen: new Date(now - 6 * 60000).toISOString(),
+      lastSeen: new Date(now - 4 * 60000).toISOString(),
+    },
+    {
+      type: 'Warning',
+      reason: 'ImagePullBackOff',
+      message: 'Back-off pulling image "invalid-image:latest"',
+      object: 'Pod/broken-pod-xyz789',
+      namespace: 'staging',
+      cluster: 'staging-us',
+      count: 5,
+      firstSeen: new Date(now - 15 * 60000).toISOString(),
+      lastSeen: new Date(now - 1 * 60000).toISOString(),
+    },
+    {
+      type: 'Normal',
+      reason: 'ScalingReplicaSet',
+      message: 'Scaled up replica set to 3',
+      object: 'Deployment/api-gateway',
+      namespace: 'production',
+      cluster: 'prod-us-east',
+      count: 1,
+      firstSeen: new Date(now - 10 * 60000).toISOString(),
+      lastSeen: new Date(now - 10 * 60000).toISOString(),
+    },
+    {
+      type: 'Warning',
+      reason: 'NodeNotReady',
+      message: 'Node condition Ready is now: Unknown',
+      object: 'Node/worker-node-3',
+      namespace: '',
+      cluster: 'prod-eu-west',
+      count: 2,
+      firstSeen: new Date(now - 25 * 60000).toISOString(),
+      lastSeen: new Date(now - 7 * 60000).toISOString(),
     },
   ]
 }

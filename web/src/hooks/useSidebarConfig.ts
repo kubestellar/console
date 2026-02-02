@@ -42,18 +42,18 @@ function subscribe(listener: () => void): () => void {
 const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
   { id: 'clusters', name: 'Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
-  { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 2 },
-  { id: 'compute', name: 'Compute', icon: 'Cpu', href: '/compute', type: 'link', order: 3 },
-  { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 4 },
-  { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 5 },
-  { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 6 },
-  { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 7 },
-  { id: 'security-posture', name: 'Security Posture', icon: 'ShieldCheck', href: '/security-posture', type: 'link', order: 8 },
-  { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 9 },
-  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 10 },
-  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 11 },
-  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 12 },
-  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 13 },
+  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 2 },
+  { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 3 },
+  { id: 'compute', name: 'Compute', icon: 'Cpu', href: '/compute', type: 'link', order: 4 },
+  { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 5 },
+  { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 6 },
+  { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 7 },
+  { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 8 },
+  { id: 'security-posture', name: 'Security Posture', icon: 'ShieldCheck', href: '/security-posture', type: 'link', order: 9 },
+  { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 10 },
+  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 11 },
+  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 12 },
+  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 13 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
@@ -72,8 +72,8 @@ const DEFAULT_CONFIG: SidebarConfig = {
   isMobileOpen: false,
 }
 
-const STORAGE_KEY = 'kubestellar-sidebar-config-v5'
-const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v4'
+const STORAGE_KEY = 'kubestellar-sidebar-config-v7'
+const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v6'
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']
@@ -81,8 +81,8 @@ const DEPRECATED_ROUTES = ['/apps']
 // Migrate config to ensure all default routes exist
 function migrateConfig(stored: SidebarConfig): SidebarConfig {
   // First, remove deprecated routes
-  let primaryNav = stored.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
-  let secondaryNav = stored.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const primaryNav = stored.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const secondaryNav = stored.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
 
   // Find default routes that are missing from the stored config
   const existingHrefs = new Set([

@@ -10,6 +10,7 @@ export const clustersDashboardConfig: UnifiedDashboardConfig = {
   route: '/clusters',
   statsType: 'clusters',
   cards: [
+    { id: 'offline-detection-1', cardType: 'console_ai_offline_detection', position: { w: 4, h: 3 } },
     { id: 'cluster-health-1', cardType: 'cluster_health', position: { w: 8, h: 4 } },
     { id: 'cluster-groups-1', cardType: 'cluster_groups', position: { w: 4, h: 4 } },
     { id: 'cluster-metrics-1', cardType: 'cluster_metrics', position: { w: 6, h: 3 } },

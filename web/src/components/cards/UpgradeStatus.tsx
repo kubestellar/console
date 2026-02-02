@@ -5,8 +5,27 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+
+// Demo version data for demo mode
+const DEMO_CLUSTER_VERSIONS: Record<string, string> = {
+  'prod-us-east': 'v1.31.2',
+  'prod-us-west': 'v1.31.2',
+  'prod-eu-west': 'v1.30.5',
+  'staging-us': 'v1.32.0',
+  'staging-eu': 'v1.32.0',
+  'dev-local': 'v1.29.3',
+  'kind-testing123': 'v1.28.4',
+  'gpu-pool-1': 'v1.30.0',
+  'gpu-pool-2': 'v1.30.0',
+  'ml-training': 'v1.31.1',
+  'analytics-cluster': 'v1.29.8',
+  'data-warehouse': 'v1.28.9',
+  'edge-iot-1': 'v1.27.5',
+  'edge-iot-2': 'v1.27.5',
+}
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -40,7 +59,7 @@ function setCachedVersion(clusterName: string, version: string) {
 
 // Shared WebSocket for version fetching
 let versionWs: WebSocket | null = null
-let versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
+const versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
 let wsConnecting = false
 
 function ensureVersionWs(): Promise<WebSocket> {
@@ -246,6 +265,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
   const [clusterVersions, setClusterVersions] = useState<Record<string, string>>({})
   const [fetchCompleted, setFetchCompleted] = useState(false)
 
@@ -276,8 +296,19 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     prevAgentConnectedRef.current = agentConnected
   }, [agentConnected])
 
-  // Fetch real versions from clusters via local agent
+  // Fetch real versions from clusters via local agent (or use demo data)
   useEffect(() => {
+    // In demo mode, use demo version data
+    if (isDemoMode && allClusters.length > 0) {
+      const demoVersions: Record<string, string> = {}
+      allClusters.forEach(c => {
+        demoVersions[c.name] = DEMO_CLUSTER_VERSIONS[c.name] || `v1.${28 + (c.name.length % 5)}.${c.name.length % 10}`
+      })
+      setClusterVersions(demoVersions)
+      setFetchCompleted(true)
+      return
+    }
+
     if (!agentConnected || allClusters.length === 0) {
       // If not connected, mark fetch as completed so we show '-' instead of 'loading...'
       // But preserve any cached versions we already have

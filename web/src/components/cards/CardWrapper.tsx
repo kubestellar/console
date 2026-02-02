@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, WifiOff,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2,
 } from 'lucide-react'
@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
@@ -1123,8 +1124,33 @@ export function CardWrapper({
 
         {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
         {!isCollapsed && (
-          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">
-            {(isVisible || isExpanded) ? children : (
+          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col relative">
+            {/* Show offline indicator when agent is unavailable and NOT in demo mode */}
+            {isAgentUnavailable() && !isDemoMode ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <WifiOff className="w-8 h-8 text-orange-400/50" />
+                  <span className="text-sm">Offline</span>
+                </div>
+              </div>
+            ) : (isVisible || isExpanded) ? (
+              <>
+                {/* Show skeleton overlay when loading data */}
+                {effectiveIsLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground">Loading...</span>
+                    </div>
+                  </div>
+                )}
+                {children}
+              </>
+            ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="animate-pulse flex flex-col items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-secondary/50" />
@@ -1200,7 +1226,15 @@ export function CardWrapper({
               ? 'h-[calc(95vh-80px)]'
               : 'max-h-[calc(80vh-80px)]'
         )}>
-          {children}
+          {isAgentUnavailable() && !isDemoMode ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <WifiOff className="w-12 h-12 text-orange-400/50" />
+                <span className="text-lg">Offline</span>
+                <span className="text-sm text-muted-foreground/70">Connect to local agent to view data</span>
+              </div>
+            </div>
+          ) : children}
         </BaseModal.Content>
       </BaseModal>
       </>

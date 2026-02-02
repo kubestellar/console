@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { getDemoMode } from './useDemoMode'
 
 // ============================================================================
 // Types
@@ -40,12 +41,61 @@ export interface AIQueryResult {
 
 const STORAGE_KEY = 'kubestellar-cluster-groups'
 
+// Demo cluster groups for demo mode
+function getDemoClusterGroups(): ClusterGroup[] {
+  return [
+    {
+      name: 'Production',
+      kind: 'static',
+      clusters: ['prod-us-east', 'prod-us-west', 'prod-eu-west'],
+      color: 'green',
+      icon: 'Server',
+    },
+    {
+      name: 'Staging',
+      kind: 'static',
+      clusters: ['staging-us', 'staging-eu'],
+      color: 'yellow',
+      icon: 'Layers',
+    },
+    {
+      name: 'Development',
+      kind: 'static',
+      clusters: ['dev-local', 'kind-testing123'],
+      color: 'blue',
+      icon: 'Code',
+    },
+    {
+      name: 'GPU Clusters',
+      kind: 'dynamic',
+      clusters: ['gpu-pool-1', 'gpu-pool-2', 'ml-training'],
+      color: 'purple',
+      icon: 'Cpu',
+      query: {
+        labelSelector: 'node.kubernetes.io/gpu=true',
+      },
+      lastEvaluated: new Date().toISOString(),
+    },
+    {
+      name: 'High Memory',
+      kind: 'dynamic',
+      clusters: ['analytics-cluster', 'data-warehouse'],
+      color: 'orange',
+      icon: 'HardDrive',
+      query: {
+        filters: [{ field: 'memoryGB', operator: 'gte', value: '64' }],
+      },
+      lastEvaluated: new Date().toISOString(),
+    },
+  ]
+}
+
 function loadGroups(): ClusterGroup[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         // Migrate old groups without kind field
         return parsed.map(g => ({
           ...g,
@@ -55,6 +105,10 @@ function loadGroups(): ClusterGroup[] {
     }
   } catch {
     // ignore
+  }
+  // Return demo groups if in demo mode
+  if (getDemoMode()) {
+    return getDemoClusterGroups()
   }
   return []
 }
