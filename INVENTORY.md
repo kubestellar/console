@@ -1,17 +1,19 @@
 # KubeStellar Console - Complete Inventory
 
-Last Updated: 2026-01-23
+Last Updated: 2026-02-02
 
 ## Summary
 
 | Category | Count |
 |----------|-------|
-| Dashboard Pages | 20 (1 main + 19 dedicated) |
-| Card Types | 110 |
+| Dashboard Pages | 21 (1 main + 20 dedicated) |
+| Card Types | 143 |
 | Cards with Drill-Down | 40 |
 | Drill-Down Views | 22 |
 | Modal Dialogs | 19 |
 | Stats Block Types | 93 (across 14 dashboard types) |
+| Cards with Demo Data | 42 (29%) |
+| Cards with Live Data Hooks | 101 (71%) |
 
 ---
 
@@ -250,6 +252,61 @@ Last Updated: 2026-01-23
 | 108 | `kube_chess` | Kube Chess | interactive |
 | 109 | `kube_craft_3d` | KubeCraft 3D | interactive |
 | 110 | `kube_doom` | Kube Doom | interactive |
+
+### Category: NEW - Kubernetes Resources (17 cards)
+| # | Type | Title | Visualization | Demo Data |
+|---|------|-------|---------------|-----------|
+| 111 | `configmap_status` | ConfigMap Status | table | ❌ Live |
+| 112 | `secret_status` | Secret Status | table | ❌ Live |
+| 113 | `node_status` | Node Status | table | ❌ Live |
+| 114 | `job_status` | Job Status | table | ❌ Live |
+| 115 | `cronjob_status` | CronJob Status | table | ❌ Live |
+| 116 | `daemonset_status` | DaemonSet Status | table | ❌ Live |
+| 117 | `statefulset_status` | StatefulSet Status | table | ❌ Live |
+| 118 | `replicaset_status` | ReplicaSet Status | table | ❌ Live |
+| 119 | `hpa_status` | HPA Status | table | ❌ Live |
+| 120 | `pv_status` | PV Status | table | ❌ Live |
+| 121 | `ingress_status` | Ingress Status | table | ❌ Live |
+| 122 | `namespace_status` | Namespace Status | table | ❌ Live |
+| 123 | `limit_range_status` | LimitRange Status | table | ❌ Live |
+| 124 | `resource_quota_status` | ResourceQuota Status | table | ❌ Live |
+| 125 | `network_policy_status` | NetworkPolicy Status | table | ❌ Live |
+| 126 | `service_account_status` | ServiceAccount Status | table | ❌ Live |
+| 127 | `role_status` | Role Status | table | ❌ Live |
+| 128 | `role_binding_status` | RoleBinding Status | table | ❌ Live |
+
+### Category: NEW - Events & Monitoring (4 cards)
+| # | Type | Title | Visualization | Demo Data |
+|---|------|-------|---------------|-----------|
+| 129 | `warning_events` | Warning Events | events | ❌ Live |
+| 130 | `recent_events` | Recent Events | events | ❌ Live |
+| 131 | `event_summary` | Event Summary | status | ✅ Demo |
+| 132 | `provider_health` | Provider Health | status | ✅ Demo |
+
+### Category: NEW - Deploy & GitOps (5 cards)
+| # | Type | Title | Visualization | Demo Data |
+|---|------|-------|---------------|-----------|
+| 133 | `cluster_groups` | Cluster Groups | status | ✅ Demo |
+| 134 | `deployment_missions` | Deployment Missions | status | ✅ Demo |
+| 135 | `resource_marshall` | Resource Marshall | interactive | ❌ Live |
+| 136 | `workload_deployment` | Workload Deployment | table | ❌ Live |
+| 137 | `workload_monitor` | Workload Monitor | status | ❌ Live |
+
+### Category: NEW - AI & Integrations (5 cards)
+| # | Type | Title | Visualization | Demo Data |
+|---|------|-------|---------------|-----------|
+| 138 | `console_ai_offline_detection` | AI Offline Detection | status | ✅ Demo |
+| 139 | `cluster_health_monitor` | Cluster Health Monitor | status | ❌ Live |
+| 140 | `github_ci_monitor` | GitHub CI Monitor | status | ❌ Live |
+| 141 | `prow_ci_monitor` | Prow CI Monitor | status | ❌ Live |
+| 142 | `llmd_stack_monitor` | LLM-d Stack Monitor | status | ❌ Live |
+
+### Category: NEW - Misc (3 cards)
+| # | Type | Title | Visualization | Demo Data |
+|---|------|-------|---------------|-----------|
+| 143 | `dynamic_card` | Dynamic Card | dynamic | ❌ Live |
+| 144 | `rss_feed` | RSS Feed | events | ✅ Demo |
+| 145 | `pod_crosser` | Pod Crosser | interactive | ❌ Game |
 
 ---
 

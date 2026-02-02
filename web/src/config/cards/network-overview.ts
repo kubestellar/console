@@ -16,6 +16,8 @@ export const networkOverviewConfig: UnifiedCardConfig = {
   defaultWidth: 4,
   defaultHeight: 3,
 
+  isDemoData: true, // Uses demo data hook in registerHooks.ts
+
   dataSource: {
     type: 'hook',
     hook: 'useNetworkOverview',
