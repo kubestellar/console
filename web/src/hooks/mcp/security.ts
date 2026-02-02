@@ -2,18 +2,42 @@ import { useState, useEffect, useCallback } from 'react'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
+// Check if in demo mode
+function isDemoMode(): boolean {
+  const token = localStorage.getItem('token')
+  return !token || token === 'demo-token'
+}
+
 // Hook to get security issues
 export function useSecurityIssues(cluster?: string, namespace?: string) {
-  const [issues, setIssues] = useState<SecurityIssue[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  // Initialize with demo data if in demo mode to prevent loading flash
+  const [issues, setIssues] = useState<SecurityIssue[]>(() => isDemoMode() ? getDemoSecurityIssues() : [])
+  const [isLoading, setIsLoading] = useState(() => !isDemoMode())
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(() => isDemoMode() ? new Date() : null)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-  const [isUsingDemoData, setIsUsingDemoData] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(() => isDemoMode() ? new Date() : null)
+  const [isUsingDemoData, setIsUsingDemoData] = useState(() => isDemoMode())
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip API calls when using demo token
+    if (isDemoMode()) {
+      setIssues(getDemoSecurityIssues())
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
+      setIsLoading(false)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      setIsUsingDemoData(true)
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       setIsRefreshing(true)
@@ -36,27 +60,10 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/security-issues?${params}`
 
-      // Skip API calls when using demo token
-      const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
-        setIssues(getDemoSecurityIssues())
-        const now = new Date()
-        setLastUpdated(now)
-        setLastRefresh(now)
-        setIsLoading(false)
-        if (!silent) {
-          setIsRefreshing(true)
-          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-        } else {
-          setIsRefreshing(false)
-        }
-        setIsUsingDemoData(true)
-        return
-      }
-
       // Use direct fetch to bypass the global circuit breaker
+      const token = localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      headers['Authorization'] = `Bearer ${token}`
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
