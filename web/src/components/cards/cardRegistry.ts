@@ -1,5 +1,7 @@
 import { lazy, Suspense, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
+import { getCardConfig, hasUnifiedConfig, getUnifiedCardTypes } from '../../config/cards'
+import { UnifiedCard } from '../../lib/unified'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -640,8 +642,31 @@ export function getDefaultCardWidth(cardType: string): number {
  * Falls back to the DynamicCard meta-component for dynamically registered types.
  * Returns undefined if the card type is not registered anywhere.
  */
+/**
+ * Feature flag to enable unified card rendering.
+ * Set to true to use the new unified card system for cards that have configs.
+ * Cards with unified configs will render using UnifiedCard instead of legacy components.
+ */
+const USE_UNIFIED_CARDS = false // Set to true to enable unified cards
+
+/**
+ * Create a component that renders a unified card from config
+ */
+function createUnifiedCardComponent(cardType: string): CardComponent {
+  const config = getCardConfig(cardType)
+  if (!config) {
+    return () => createElement('div', { className: 'text-red-400' }, `Config not found: ${cardType}`)
+  }
+  return () => createElement(UnifiedCard, { config })
+}
+
 export function getCardComponent(cardType: string): CardComponent | undefined {
-  // Check static registry first
+  // Check for unified config first (when enabled)
+  if (USE_UNIFIED_CARDS && hasUnifiedConfig(cardType)) {
+    return createUnifiedCardComponent(cardType)
+  }
+
+  // Check static registry
   const staticComponent = CARD_COMPONENTS[cardType]
   if (staticComponent) return staticComponent
 
@@ -654,10 +679,10 @@ export function getCardComponent(cardType: string): CardComponent | undefined {
 }
 
 /**
- * Check if a card type is registered (static or dynamic).
+ * Check if a card type is registered (static, dynamic, or unified).
  */
 export function isCardTypeRegistered(cardType: string): boolean {
-  return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType)
+  return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType) || hasUnifiedConfig(cardType)
 }
 
 /**
@@ -669,8 +694,11 @@ export function registerDynamicCardType(cardType: string, width = 6): void {
 }
 
 /**
- * Get all registered card types.
+ * Get all registered card types (including unified cards).
  */
 export function getRegisteredCardTypes(): string[] {
-  return Object.keys(CARD_COMPONENTS)
+  const staticTypes = Object.keys(CARD_COMPONENTS)
+  const unifiedTypes = getUnifiedCardTypes()
+  // Combine and deduplicate
+  return [...new Set([...staticTypes, ...unifiedTypes])]
 }
