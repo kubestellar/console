@@ -81,7 +81,11 @@ export function BarChart({
             border: '1px solid #333',
             borderRadius: '8px',
             fontSize: '12px',
+            color: '#fff',
           }}
+          labelStyle={{ color: '#fff' }}
+          itemStyle={{ color: '#fff' }}
+          cursor={{ fill: 'rgba(147, 51, 234, 0.2)' }}
           formatter={(value) => [`${value}${unit}`, 'Value']}
         />
         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
@@ -149,7 +153,11 @@ export function StackedBarChart({
               backgroundColor: '#1a1a2e',
               border: '1px solid #333',
               borderRadius: '8px',
+              color: '#fff',
             }}
+            labelStyle={{ color: '#fff' }}
+            itemStyle={{ color: '#fff' }}
+            cursor={{ fill: 'rgba(147, 51, 234, 0.2)' }}
           />
           {categories.map((cat) => (
             <Bar

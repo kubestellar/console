@@ -116,7 +116,7 @@ export function AgentStatusIndicator() {
   const showAsDemoMode = isDemoMode || showDemoStyle
 
   const pillStyle = showAsDemoMode
-    ? { bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20', dot: 'bg-purple-400', label: 'Demo', Icon: Box, title: 'Demo Mode - showing sample data' }
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400', label: 'Demo', Icon: Box, title: 'Demo Mode - showing sample data' }
     : stableDegraded
     ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'Degraded', Icon: Wifi, title: `Local Agent degraded (${dataErrorCount} errors)` }
     : stableConnected

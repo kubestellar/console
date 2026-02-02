@@ -632,3 +632,77 @@ function getDemoNodes(): NodeInfo[] {
     },
   ]
 }
+
+// ============================================================================
+// TPU Nodes (Google Cloud TPU support)
+// ============================================================================
+
+import type { TPUNode } from './types'
+
+// Demo TPU data - Google Cloud TPUs in GKE clusters
+function getDemoTPUNodes(): TPUNode[] {
+  return [
+    // GKE - TPU training pods
+    { name: 'gke-tpu-node-1', cluster: 'gke-staging', tpuType: 'v4-8', tpuCount: 4, tpuAllocated: 3, acceleratorType: 'tpu-v4-podslice' },
+    { name: 'gke-tpu-node-2', cluster: 'gke-staging', tpuType: 'v4-8', tpuCount: 4, tpuAllocated: 4, acceleratorType: 'tpu-v4-podslice' },
+    // Large vLLM cluster with TPU support
+    { name: 'vllm-tpu-1', cluster: 'vllm-gpu-cluster', tpuType: 'v5e-16', tpuCount: 8, tpuAllocated: 6, acceleratorType: 'tpu-v5litepod-16' },
+    { name: 'vllm-tpu-2', cluster: 'vllm-gpu-cluster', tpuType: 'v5e-16', tpuCount: 8, tpuAllocated: 5, acceleratorType: 'tpu-v5litepod-16' },
+  ]
+}
+
+// Module-level cache for TPU nodes
+interface TPUNodeCache {
+  nodes: TPUNode[]
+  lastUpdated: Date | null
+  isLoading: boolean
+}
+
+let tpuNodeCache: TPUNodeCache = { nodes: [], lastUpdated: null, isLoading: false }
+const tpuNodeSubscribers = new Set<(cache: TPUNodeCache) => void>()
+
+function notifyTPUNodeSubscribers() {
+  tpuNodeSubscribers.forEach(subscriber => subscriber(tpuNodeCache))
+}
+
+// Hook to get TPU nodes (demo data only for now)
+export function useTPUNodes(cluster?: string) {
+  const [state, setState] = useState<TPUNodeCache>(tpuNodeCache)
+
+  useEffect(() => {
+    const handleUpdate = (cache: TPUNodeCache) => setState(cache)
+    tpuNodeSubscribers.add(handleUpdate)
+
+    // In demo mode or always for now, use demo TPU data
+    if (tpuNodeCache.nodes.length === 0 || getDemoMode()) {
+      tpuNodeCache = {
+        nodes: getDemoTPUNodes(),
+        lastUpdated: new Date(),
+        isLoading: false,
+      }
+      notifyTPUNodeSubscribers()
+    }
+
+    return () => {
+      tpuNodeSubscribers.delete(handleUpdate)
+    }
+  }, [])
+
+  // Filter by cluster if specified
+  const filteredNodes = cluster
+    ? state.nodes.filter(n => n.cluster === cluster)
+    : state.nodes
+
+  return {
+    nodes: filteredNodes,
+    isLoading: state.isLoading,
+    refetch: () => {
+      tpuNodeCache = {
+        nodes: getDemoTPUNodes(),
+        lastUpdated: new Date(),
+        isLoading: false,
+      }
+      notifyTPUNodeSubscribers()
+    },
+  }
+}

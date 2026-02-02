@@ -1155,18 +1155,17 @@ export async function fullFetchClusters() {
       return
     }
 
-    // Agent unavailable — if demo mode is on and no real token, use demo data
+    // Agent unavailable — if demo mode is explicitly on, always use demo data
+    // This ensures demo clusters (with cpuCores, memoryGB, etc.) are used
+    // regardless of whether user has a real token
     if (getDemoMode()) {
-      const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
-        await finishWithMinDuration({
-          clusters: getDemoClusters(),
-          isLoading: false,
-          isRefreshing: false,
-          error: null,
-        })
-        return
-      }
+      await finishWithMinDuration({
+        clusters: getDemoClusters(),
+        isLoading: false,
+        isRefreshing: false,
+        error: null,
+      })
+      return
     }
 
     // Skip backend if not authenticated

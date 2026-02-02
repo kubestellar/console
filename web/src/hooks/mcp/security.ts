@@ -193,12 +193,13 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   }
 }
 
+// Demo data - cluster names must match getDemoClusters() in shared.ts
 function getDemoGitOpsDrifts(): GitOpsDrift[] {
   return [
     {
       resource: 'api-gateway',
       namespace: 'production',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       kind: 'Deployment',
       driftType: 'modified',
       gitVersion: 'v2.4.0',
@@ -208,7 +209,7 @@ function getDemoGitOpsDrifts(): GitOpsDrift[] {
     {
       resource: 'config-secret',
       namespace: 'production',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       kind: 'Secret',
       driftType: 'modified',
       gitVersion: 'abc123',
@@ -218,7 +219,7 @@ function getDemoGitOpsDrifts(): GitOpsDrift[] {
     {
       resource: 'debug-pod',
       namespace: 'default',
-      cluster: 'staging',
+      cluster: 'gke-staging',
       kind: 'Pod',
       driftType: 'added',
       gitVersion: '-',
@@ -228,12 +229,13 @@ function getDemoGitOpsDrifts(): GitOpsDrift[] {
   ]
 }
 
+// Demo data - cluster names must match getDemoClusters() in shared.ts
 function getDemoSecurityIssues(): SecurityIssue[] {
   return [
     {
       name: 'api-server-7d8f9c6b5-x2k4m',
       namespace: 'production',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       issue: 'Privileged container',
       severity: 'high',
       details: 'Container running in privileged mode',
@@ -241,7 +243,7 @@ function getDemoSecurityIssues(): SecurityIssue[] {
     {
       name: 'worker-deployment',
       namespace: 'batch',
-      cluster: 'vllm-d',
+      cluster: 'vllm-gpu-cluster',
       issue: 'Running as root',
       severity: 'high',
       details: 'Container running as root user',
@@ -249,7 +251,7 @@ function getDemoSecurityIssues(): SecurityIssue[] {
     {
       name: 'nginx-ingress',
       namespace: 'ingress',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       issue: 'Host network enabled',
       severity: 'medium',
       details: 'Pod using host network namespace',
@@ -257,10 +259,26 @@ function getDemoSecurityIssues(): SecurityIssue[] {
     {
       name: 'monitoring-agent',
       namespace: 'monitoring',
-      cluster: 'staging',
+      cluster: 'gke-staging',
       issue: 'Missing security context',
       severity: 'low',
       details: 'No security context defined',
+    },
+    {
+      name: 'redis-cache',
+      namespace: 'data',
+      cluster: 'openshift-prod',
+      issue: 'Capabilities not dropped',
+      severity: 'medium',
+      details: 'Container not dropping all capabilities',
+    },
+    {
+      name: 'etcd-backup',
+      namespace: 'kube-system',
+      cluster: 'aks-dev-westeu',
+      issue: 'Host path mount',
+      severity: 'high',
+      details: 'Container mounting host path /var/lib/etcd',
     },
   ]
 }
