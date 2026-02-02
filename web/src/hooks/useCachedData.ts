@@ -231,7 +231,18 @@ const getDemoDeploymentIssues = (): DeploymentIssue[] => [
 ]
 
 const getDemoDeployments = (): Deployment[] => [
-  { name: 'web-frontend', namespace: 'production', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'web-frontend', namespace: 'production', cluster: 'prod-east', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'api-gateway', namespace: 'production', cluster: 'prod-east', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'auth-service', namespace: 'production', cluster: 'prod-east', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'payment-processor', namespace: 'production', cluster: 'prod-west', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'notification-service', namespace: 'production', cluster: 'prod-west', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'search-engine', namespace: 'data', cluster: 'prod-east', status: 'running', replicas: 4, readyReplicas: 4, updatedReplicas: 4, availableReplicas: 4, progress: 100 },
+  { name: 'cache-layer', namespace: 'data', cluster: 'prod-east', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'ml-inference', namespace: 'ml-workloads', cluster: 'vllm-d', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'model-server', namespace: 'ml-workloads', cluster: 'vllm-d', status: 'deploying', replicas: 3, readyReplicas: 1, updatedReplicas: 3, availableReplicas: 1, progress: 33 },
+  { name: 'staging-api', namespace: 'staging', cluster: 'staging', status: 'running', replicas: 1, readyReplicas: 1, updatedReplicas: 1, availableReplicas: 1, progress: 100 },
+  { name: 'staging-worker', namespace: 'staging', cluster: 'staging', status: 'failed', replicas: 2, readyReplicas: 0, updatedReplicas: 2, availableReplicas: 0, progress: 0 },
+  { name: 'metrics-collector', namespace: 'monitoring', cluster: 'prod-east', status: 'running', replicas: 1, readyReplicas: 1, updatedReplicas: 1, availableReplicas: 1, progress: 100 },
 ]
 
 const getDemoServices = (): Service[] => [
@@ -369,6 +380,11 @@ export function useCachedPodIssues(
     initialData: getDemoPodIssues(),
     enabled: true,
     fetcher: async () => {
+      // If demo mode is explicitly enabled, return demo data immediately
+      if (getDemoMode()) {
+        return getDemoPodIssues()
+      }
+
       let issues: PodIssue[]
 
       // Try agent first (fast, no backend needed)
@@ -432,6 +448,11 @@ export function useCachedDeploymentIssues(
     initialData: getDemoDeploymentIssues(),
     enabled: true,
     fetcher: async () => {
+      // If demo mode is explicitly enabled, return demo data immediately
+      if (getDemoMode()) {
+        return getDemoDeploymentIssues()
+      }
+
       // Try agent first — derive deployment issues from deployment data
       if (clusterCacheRef.clusters.length > 0) {
         const deployments = cluster
@@ -507,6 +528,11 @@ export function useCachedDeployments(
     initialData: getDemoDeployments(),
     enabled: true,
     fetcher: async () => {
+      // If demo mode is explicitly enabled, return demo data immediately
+      if (getDemoMode()) {
+        return getDemoDeployments()
+      }
+
       // Try agent first (fast, no backend needed)
       if (clusterCacheRef.clusters.length > 0) {
         if (cluster) {
@@ -735,7 +761,13 @@ export function useCachedProwJobs(
     category: 'gitops',
     initialData: getDemoProwJobs(),
     enabled: true,
-    fetcher: () => fetchProwJobs(prowCluster, namespace),
+    fetcher: async () => {
+      // If demo mode is explicitly enabled, return demo data immediately
+      if (getDemoMode()) {
+        return getDemoProwJobs()
+      }
+      return fetchProwJobs(prowCluster, namespace)
+    },
   })
 
   const status = computeProwStatus(result.data, result.consecutiveFailures)
@@ -979,7 +1011,13 @@ export function useCachedLLMdServers(
     category: 'gitops',
     initialData: getDemoLLMdServers(),
     enabled: true,
-    fetcher: () => fetchLLMdServers(clusters),
+    fetcher: async () => {
+      // If demo mode is explicitly enabled, return demo data immediately
+      if (getDemoMode()) {
+        return getDemoLLMdServers()
+      }
+      return fetchLLMdServers(clusters)
+    },
   })
 
   const status = computeLLMdStatus(result.data, result.consecutiveFailures)
@@ -1036,7 +1074,13 @@ export function useCachedLLMdModels(
     category: 'gitops',
     initialData: getDemoLLMdModels(),
     enabled: true,
-    fetcher: () => fetchLLMdModels(clusters),
+    fetcher: async () => {
+      // If demo mode is explicitly enabled, return demo data immediately
+      if (getDemoMode()) {
+        return getDemoLLMdModels()
+      }
+      return fetchLLMdModels(clusters)
+    },
   })
 
   return {
