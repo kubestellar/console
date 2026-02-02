@@ -1,31 +1,41 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
-import { ClusterDrillDown } from './views/ClusterDrillDown'
+// Lazy load large components (>350 lines) for better performance
+const ClusterDrillDown = lazy(() => import('./views/ClusterDrillDown').then(m => ({ default: m.ClusterDrillDown })))
+const OperatorDrillDown = lazy(() => import('./views/OperatorDrillDown').then(m => ({ default: m.OperatorDrillDown })))
+const PolicyDrillDown = lazy(() => import('./views/PolicyDrillDown').then(m => ({ default: m.PolicyDrillDown })))
+const PodDrillDown = lazy(() => import('./views/PodDrillDown').then(m => ({ default: m.PodDrillDown })))
+const DeploymentDrillDown = lazy(() => import('./views/DeploymentDrillDown').then(m => ({ default: m.DeploymentDrillDown })))
+const MultiClusterSummaryDrillDown = lazy(() => import('./views/MultiClusterSummaryDrillDown').then(m => ({ default: m.MultiClusterSummaryDrillDown })))
+const ReplicaSetDrillDown = lazy(() => import('./views/ReplicaSetDrillDown').then(m => ({ default: m.ReplicaSetDrillDown })))
+const SecretDrillDown = lazy(() => import('./views/SecretDrillDown').then(m => ({ default: m.SecretDrillDown })))
+const KustomizationDrillDown = lazy(() => import('./views/KustomizationDrillDown').then(m => ({ default: m.KustomizationDrillDown })))
+const AlertDrillDown = lazy(() => import('./views/AlertDrillDown').then(m => ({ default: m.AlertDrillDown })))
+const DriftDrillDown = lazy(() => import('./views/DriftDrillDown').then(m => ({ default: m.DriftDrillDown })))
+const CRDDrillDown = lazy(() => import('./views/CRDDrillDown').then(m => ({ default: m.CRDDrillDown })))
+const ResourcesDrillDown = lazy(() => import('./views/ResourcesDrillDown').then(m => ({ default: m.ResourcesDrillDown })))
+const ServiceAccountDrillDown = lazy(() => import('./views/ServiceAccountDrillDown').then(m => ({ default: m.ServiceAccountDrillDown })))
+const ArgoAppDrillDown = lazy(() => import('./views/ArgoAppDrillDown').then(m => ({ default: m.ArgoAppDrillDown })))
+const HelmReleaseDrillDown = lazy(() => import('./views/HelmReleaseDrillDown').then(m => ({ default: m.HelmReleaseDrillDown })))
+const ConfigMapDrillDown = lazy(() => import('./views/ConfigMapDrillDown').then(m => ({ default: m.ConfigMapDrillDown })))
+// Keep smaller components as direct imports for immediate loading
 import { NamespaceDrillDown } from './views/NamespaceDrillDown'
-import { DeploymentDrillDown } from './views/DeploymentDrillDown'
-import { ReplicaSetDrillDown } from './views/ReplicaSetDrillDown'
-import { PodDrillDown } from './views/PodDrillDown'
 import { LogsDrillDown } from './views/LogsDrillDown'
 import { EventsDrillDown } from './views/EventsDrillDown'
 import { NodeDrillDown } from './views/NodeDrillDown'
 import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
 import { YAMLDrillDown } from './views/YAMLDrillDown'
-import { ResourcesDrillDown } from './views/ResourcesDrillDown'
-import { ConfigMapDrillDown } from './views/ConfigMapDrillDown'
-import { SecretDrillDown } from './views/SecretDrillDown'
-import { ServiceAccountDrillDown } from './views/ServiceAccountDrillDown'
-// Phase 2 views
-import { AlertDrillDown } from './views/AlertDrillDown'
-import { HelmReleaseDrillDown } from './views/HelmReleaseDrillDown'
-import { ArgoAppDrillDown } from './views/ArgoAppDrillDown'
-import { OperatorDrillDown } from './views/OperatorDrillDown'
-import { PolicyDrillDown } from './views/PolicyDrillDown'
-import { KustomizationDrillDown } from './views/KustomizationDrillDown'
-import { CRDDrillDown } from './views/CRDDrillDown'
-import { DriftDrillDown } from './views/DriftDrillDown'
-import { MultiClusterSummaryDrillDown } from './views/MultiClusterSummaryDrillDown'
+
+// Loading fallback for lazy-loaded drilldown views
+function DrillDownLoading() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  )
+}
 
 // Helper to get status badge color for pods
 const getPodStatusColor = (status: string) => {
@@ -275,7 +285,9 @@ export function DrillDownModal() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          {renderView()}
+          <Suspense fallback={<DrillDownLoading />}>
+            {renderView()}
+          </Suspense>
         </div>
 
         {/* Footer with keyboard hints - hidden on mobile */}
