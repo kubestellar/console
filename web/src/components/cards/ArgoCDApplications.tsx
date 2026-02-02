@@ -36,9 +36,11 @@ interface ArgoApplication {
   lastSynced?: string
 }
 
-// Mock ArgoCD applications
-// NOTE: These are example/mock data for UI demonstration only.
-// In production, ArgoCD applications would be fetched from the ArgoCD API.
+/**
+ * Mock ArgoCD applications for UI demonstration
+ * NOTE: These are example URLs only. In production, ArgoCD applications
+ * would be fetched from the ArgoCD API.
+ */
 function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
   const apps: ArgoApplication[] = []
 
@@ -50,7 +52,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'Synced' as const,
         healthStatus: 'Healthy' as const,
         source: {
-          repoURL: 'https://github.com/example-org/frontend-app', // Example URL for demo
+          repoURL: 'https://github.com/example-org/frontend-app',
           path: 'k8s/overlays/production',
           targetRevision: 'main',
         },
@@ -62,7 +64,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'OutOfSync' as const,
         healthStatus: 'Healthy' as const,
         source: {
-          repoURL: 'https://github.com/example-org/api-gateway', // Example URL for demo
+          repoURL: 'https://github.com/example-org/api-gateway',
           path: 'deploy',
           targetRevision: 'v2.3.0',
         },
@@ -74,7 +76,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'Synced' as const,
         healthStatus: 'Progressing' as const,
         source: {
-          repoURL: 'https://github.com/example-org/backend-service', // Example URL for demo
+          repoURL: 'https://github.com/example-org/backend-service',
           path: 'manifests',
           targetRevision: 'develop',
         },
@@ -86,7 +88,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'OutOfSync' as const,
         healthStatus: 'Degraded' as const,
         source: {
-          repoURL: 'https://github.com/example-org/monitoring-stack', // Example URL for demo
+          repoURL: 'https://github.com/example-org/monitoring-stack',
           path: 'helm/prometheus',
           targetRevision: 'HEAD',
         },
