@@ -426,7 +426,7 @@ Last Updated: 2026-01-23
 
 ### Hooks
 - Dashboard Cards: `web/src/hooks/useDashboardCards.ts`
-- Dashboard Context: `web/src/hooks/useDashboardContext.tsx`
+- useDashboardContext: `web/src/hooks/useDashboardContext` (hook with provider)
 - Card Recommendations: `web/src/hooks/useCardRecommendations.ts`
 - Multi-dashboard: `web/src/hooks/useDashboards.ts`
 
