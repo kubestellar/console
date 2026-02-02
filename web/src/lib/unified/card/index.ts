@@ -1,0 +1,17 @@
+/**
+ * Unified Card Module
+ *
+ * Exports the UnifiedCard component and supporting utilities.
+ */
+
+export { UnifiedCard, default as UnifiedCardDefault } from './UnifiedCard'
+
+export {
+  useDataSource,
+  registerDataHook,
+  getDataHook,
+  getRegisteredDataHooks,
+  useCardFiltering,
+} from './hooks'
+
+export type { UseDataSourceResult, UseCardFilteringResult } from './hooks'
