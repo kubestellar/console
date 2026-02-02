@@ -679,6 +679,8 @@ export interface UnifiedCardProps {
   title?: string
   /** Additional className */
   className?: string
+  /** Override data for demo/testing purposes (bypasses data source) */
+  overrideData?: unknown[]
 }
 
 /**

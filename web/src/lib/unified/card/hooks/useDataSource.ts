@@ -61,6 +61,11 @@ export interface UseDataSourceResult {
   refetch: () => void
 }
 
+export interface UseDataSourceOptions {
+  /** Skip fetching data (useful when overrideData is provided) */
+  skip?: boolean
+}
+
 const EMPTY_RESULT: UseDataSourceResult = {
   data: undefined,
   isLoading: false,
@@ -76,28 +81,39 @@ const EMPTY_RESULT: UseDataSourceResult = {
  * rules of hooks. Each data source type has its own component wrapper
  * that should be used instead if dynamic switching is needed.
  */
-export function useDataSource(config: CardDataSource): UseDataSourceResult {
+export function useDataSource(
+  config: CardDataSource,
+  options?: UseDataSourceOptions
+): UseDataSourceResult {
+  const skip = options?.skip ?? false
+
   // Call ALL hooks unconditionally - they check internally if they should be active
   // This satisfies React's rules of hooks
+  // When skip is true, pass null to all hooks to make them return empty results
   const hookResult = useHookDataSourceInternal(
-    config.type === 'hook' ? config.hook : null,
-    config.type === 'hook' ? config.params : undefined
+    !skip && config.type === 'hook' ? config.hook : null,
+    !skip && config.type === 'hook' ? config.params : undefined
   )
 
   const apiResult = useApiDataSourceInternal(
-    config.type === 'api' ? config.endpoint : null,
-    config.type === 'api' ? config.method : 'GET',
-    config.type === 'api' ? config.params : undefined,
-    config.type === 'api' ? config.pollInterval : undefined
+    !skip && config.type === 'api' ? config.endpoint : null,
+    !skip && config.type === 'api' ? config.method : 'GET',
+    !skip && config.type === 'api' ? config.params : undefined,
+    !skip && config.type === 'api' ? config.pollInterval : undefined
   )
 
   const staticResult = useStaticDataSourceInternal(
-    config.type === 'static' ? config.data : null
+    !skip && config.type === 'static' ? config.data : null
   )
 
   const contextResult = useContextDataSourceInternal(
-    config.type === 'context' ? config.contextKey : null
+    !skip && config.type === 'context' ? config.contextKey : null
   )
+
+  // If skip is true, return empty result
+  if (skip) {
+    return EMPTY_RESULT
+  }
 
   // Return the appropriate result based on config type
   switch (config.type) {

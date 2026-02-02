@@ -16,6 +16,13 @@ import { resourceUsageConfig } from './resource-usage'
 // Chart cards (PR 4)
 import { clusterMetricsConfig } from './cluster-metrics'
 import { eventsTimelineConfig } from './events-timeline'
+// Additional cards (PR 7)
+import { securityIssuesConfig } from './security-issues'
+import { activeAlertsConfig } from './active-alerts'
+import { storageOverviewConfig } from './storage-overview'
+import { networkOverviewConfig } from './network-overview'
+import { topPodsConfig } from './top-pods'
+import { gitopsDriftConfig } from './gitops-drift'
 
 /**
  * Registry of all unified card configurations
@@ -31,6 +38,13 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   // Chart cards (PR 4)
   cluster_metrics: clusterMetricsConfig,
   events_timeline: eventsTimelineConfig,
+  // Additional cards (PR 7)
+  security_issues: securityIssuesConfig,
+  active_alerts: activeAlertsConfig,
+  storage_overview: storageOverviewConfig,
+  network_overview: networkOverviewConfig,
+  top_pods: topPodsConfig,
+  gitops_drift: gitopsDriftConfig,
 }
 
 /**
@@ -64,4 +78,11 @@ export {
   // Chart cards (PR 4)
   clusterMetricsConfig,
   eventsTimelineConfig,
+  // Additional cards (PR 7)
+  securityIssuesConfig,
+  activeAlertsConfig,
+  storageOverviewConfig,
+  networkOverviewConfig,
+  topPodsConfig,
+  gitopsDriftConfig,
 }

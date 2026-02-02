@@ -6,12 +6,18 @@
 
 import type { UnifiedDashboardConfig, DashboardConfigRegistry } from '../../lib/unified/types'
 import { mainDashboardConfig } from './main'
+import { computeDashboardConfig } from './compute'
+import { securityDashboardConfig } from './security'
+import { gitopsDashboardConfig } from './gitops'
 
 /**
  * Registry of all unified dashboard configurations
  */
 export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   main: mainDashboardConfig,
+  compute: computeDashboardConfig,
+  security: securityDashboardConfig,
+  gitops: gitopsDashboardConfig,
 }
 
 /**
@@ -36,4 +42,9 @@ export function getUnifiedDashboardIds(): string[] {
 }
 
 // Re-export individual configs
-export { mainDashboardConfig }
+export {
+  mainDashboardConfig,
+  computeDashboardConfig,
+  securityDashboardConfig,
+  gitopsDashboardConfig,
+}

@@ -31,6 +31,7 @@ export function UnifiedCard({
   instanceConfig,
   title: _titleOverride,
   className,
+  overrideData,
 }: UnifiedCardProps) {
   // Merge instance config with base config
   const mergedConfig = useMemo(() => {
@@ -42,8 +43,14 @@ export function UnifiedCard({
     } as UnifiedCardConfig
   }, [config, instanceConfig])
 
-  // Fetch data using the configured data source
-  const { data, isLoading, error, refetch } = useDataSource(mergedConfig.dataSource)
+  // Fetch data using the configured data source (skipped if overrideData provided)
+  const { data: fetchedData, isLoading, error, refetch } = useDataSource(
+    mergedConfig.dataSource,
+    { skip: !!overrideData }
+  )
+
+  // Use override data if provided, otherwise use fetched data
+  const data = overrideData ?? fetchedData
 
   // Apply filtering if configured
   const { filteredData, filterControls } = useCardFiltering(
