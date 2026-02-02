@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { getDemoMode } from './useDemoMode'
 
 // Refresh interval for automatic polling (2 minutes)
 const REFRESH_INTERVAL_MS = 120000
@@ -164,6 +165,28 @@ export function useCertManager() {
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
       setIsLoading(false)
+      return
+    }
+
+    // In demo mode, skip fetching and return demo data
+    if (getDemoMode()) {
+      const demoIssuers: Issuer[] = [
+        { id: 'kind-local/letsencrypt-prod', name: 'letsencrypt-prod', cluster: 'kind-local', kind: 'ClusterIssuer', type: 'ACME', status: 'ready', certificateCount: 3 },
+        { id: 'eks-prod-us-east-1/vault-issuer', name: 'vault-issuer', namespace: 'cert-manager', cluster: 'eks-prod-us-east-1', kind: 'Issuer', type: 'Vault', status: 'ready', certificateCount: 12 },
+        { id: 'gke-staging/selfsigned', name: 'selfsigned', cluster: 'gke-staging', kind: 'ClusterIssuer', type: 'SelfSigned', status: 'ready', certificateCount: 5 },
+      ]
+      const demoCertificates: Certificate[] = [
+        { id: 'kind-local/default/api-cert', name: 'api-cert', namespace: 'default', cluster: 'kind-local', dnsNames: ['api.example.com'], issuerName: 'letsencrypt-prod', issuerKind: 'ClusterIssuer', secretName: 'api-cert-tls', status: 'ready', notAfter: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) },
+        { id: 'kind-local/default/web-cert', name: 'web-cert', namespace: 'default', cluster: 'kind-local', dnsNames: ['www.example.com'], issuerName: 'letsencrypt-prod', issuerKind: 'ClusterIssuer', secretName: 'web-cert-tls', status: 'expiring', notAfter: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) },
+        { id: 'eks-prod-us-east-1/prod/service-cert', name: 'service-cert', namespace: 'prod', cluster: 'eks-prod-us-east-1', dnsNames: ['service.internal'], issuerName: 'vault-issuer', issuerKind: 'Issuer', secretName: 'service-cert-tls', status: 'ready', notAfter: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) },
+      ]
+      setCertificates(demoCertificates)
+      setIssuers(demoIssuers)
+      setInstalled(true)
+      setIsLoading(false)
+      setIsRefreshing(false)
+      setError(null)
+      initialLoadDone.current = true
       return
     }
 

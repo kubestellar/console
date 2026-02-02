@@ -178,7 +178,7 @@ const demoSecurityIssues = [
 ]
 
 // Stored user data
-let currentUser = {
+const currentUser = {
   id: 'test-user',
   name: 'Test User',
   email: 'test@example.com',
@@ -249,11 +249,31 @@ export const handlers = [
   // Permissions
   http.get('/api/permissions/summary', async () => {
     await delay(50)
+    // Return proper PermissionsSummary structure with clusters map
+    const clusterPermissions = {
+      isClusterAdmin: true,
+      canListNodes: true,
+      canListNamespaces: true,
+      canCreateNamespaces: true,
+      canManageRBAC: true,
+      canViewSecrets: true,
+      accessibleNamespaces: ['default', 'kube-system'],
+    }
     return HttpResponse.json({
-      isAdmin: true,
-      canManageUsers: true,
-      canManageClusters: true,
-      canViewAllNamespaces: true,
+      clusters: {
+        'kind-local': clusterPermissions,
+        'minikube': clusterPermissions,
+        'k3s-edge': clusterPermissions,
+        'eks-prod-us-east-1': clusterPermissions,
+        'gke-staging': clusterPermissions,
+        'aks-dev-westeu': clusterPermissions,
+        'openshift-prod': clusterPermissions,
+        'oci-oke-phoenix': clusterPermissions,
+        'alibaba-ack-shanghai': clusterPermissions,
+        'do-nyc1-prod': clusterPermissions,
+        'rancher-mgmt': clusterPermissions,
+        'vllm-gpu-cluster': clusterPermissions,
+      },
     })
   }),
 

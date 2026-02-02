@@ -439,7 +439,6 @@ export function GitOps() {
   }, [driftResults, isDetecting, syncedApps])
 
   const filteredApps = useMemo(() => {
-    console.log('Filtering with:', { selectedCluster, statusFilter, appsCount: apps.length })
     const filtered = apps.map(app => {
       // If app was manually synced, update its status
       if (syncedApps.has(app.name)) {
@@ -460,7 +459,6 @@ export function GitOps() {
       if (statusFilter === 'drifted' && app.syncStatus !== 'out-of-sync') return false
       return true
     })
-    console.log('Filtered apps:', filtered.length)
     return filtered
   }, [apps, selectedCluster, statusFilter, syncedApps])
 
