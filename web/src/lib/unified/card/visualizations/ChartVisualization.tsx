@@ -50,12 +50,21 @@ const DEFAULT_COLORS = [
 export function ChartVisualization({ content, data }: ChartVisualizationProps) {
   const {
     chartType,
-    series,
+    series: rawSeries,
     xAxis,
     yAxis,
     showLegend = true,
     height = 200,
   } = content
+
+  // Derive series from yAxis if not explicitly provided
+  const series: CardChartSeries[] = rawSeries ?? (
+    Array.isArray(yAxis)
+      ? yAxis.map(field => ({ field }))
+      : yAxis && typeof yAxis === 'string'
+        ? [{ field: yAxis }]
+        : []
+  )
 
   // Render the appropriate chart type
   switch (chartType) {
@@ -135,10 +144,24 @@ export function ChartVisualization({ content, data }: ChartVisualizationProps) {
 interface ChartRendererProps {
   data: unknown[]
   series: CardChartSeries[]
-  xAxis?: CardAxisConfig
-  yAxis?: CardAxisConfig
+  xAxis?: CardAxisConfig | string
+  yAxis?: CardAxisConfig | string | string[]
   showLegend?: boolean
   height: number
+}
+
+/**
+ * Normalize axis config to full CardAxisConfig object
+ */
+function normalizeAxisConfig(axis?: CardAxisConfig | string | string[]): CardAxisConfig | undefined {
+  if (!axis) return undefined
+  if (typeof axis === 'string') {
+    return { field: axis }
+  }
+  if (Array.isArray(axis)) {
+    return { field: axis[0] }
+  }
+  return axis
 }
 
 /**
@@ -147,11 +170,13 @@ interface ChartRendererProps {
 function LineChartRenderer({
   data,
   series,
-  xAxis,
-  yAxis,
+  xAxis: xAxisProp,
+  yAxis: yAxisProp,
   showLegend,
   height,
 }: ChartRendererProps) {
+  const xAxis = normalizeAxisConfig(xAxisProp)
+  const yAxis = normalizeAxisConfig(yAxisProp)
   const xField = xAxis?.field ?? 'time'
 
   return (
@@ -215,11 +240,13 @@ function LineChartRenderer({
 function AreaChartRenderer({
   data,
   series,
-  xAxis,
-  yAxis,
+  xAxis: xAxisProp,
+  yAxis: yAxisProp,
   showLegend,
   height,
 }: ChartRendererProps) {
+  const xAxis = normalizeAxisConfig(xAxisProp)
+  const yAxis = normalizeAxisConfig(yAxisProp)
   const xField = xAxis?.field ?? 'time'
 
   return (
@@ -285,11 +312,13 @@ function AreaChartRenderer({
 function BarChartRenderer({
   data,
   series,
-  xAxis,
-  yAxis,
+  xAxis: xAxisProp,
+  yAxis: yAxisProp,
   showLegend,
   height,
 }: ChartRendererProps) {
+  const xAxis = normalizeAxisConfig(xAxisProp)
+  const yAxis = normalizeAxisConfig(yAxisProp)
   const xField = xAxis?.field ?? 'name'
 
   return (

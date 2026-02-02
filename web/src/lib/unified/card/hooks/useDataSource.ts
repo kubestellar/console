@@ -103,7 +103,7 @@ export function useDataSource(
   )
 
   const staticResult = useStaticDataSourceInternal(
-    !skip && config.type === 'static' ? config.data : null
+    !skip && config.type === 'static' ? (config.data ?? null) : null
   )
 
   const contextResult = useContextDataSourceInternal(

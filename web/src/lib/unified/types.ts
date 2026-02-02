@@ -81,7 +81,7 @@ export interface UnifiedCardConfig {
   isLive?: boolean
 }
 
-export type CardWidth = 3 | 4 | 6 | 8 | 12
+export type CardWidth = 3 | 4 | 5 | 6 | 8 | 12
 
 // ============================================================================
 // Data Source Types (discriminated union)
@@ -115,8 +115,8 @@ export interface CardDataSourceApi {
 
 export interface CardDataSourceStatic {
   type: 'static'
-  /** Static data array */
-  data: unknown[]
+  /** Static data array (optional for custom components that don't need data) */
+  data?: unknown[]
 }
 
 export interface CardDataSourceContext {
@@ -141,6 +141,7 @@ export type CardContent =
   | CardContentTable
   | CardContentChart
   | CardContentStatusGrid
+  | CardContentStatsGrid
   | CardContentCustom
 
 export interface CardContentList {
@@ -173,16 +174,24 @@ export interface CardContentChart {
   type: 'chart'
   /** Chart type */
   chartType: 'line' | 'bar' | 'donut' | 'gauge' | 'sparkline' | 'area'
-  /** Data series configuration */
-  series: CardChartSeries[]
-  /** X-axis configuration */
-  xAxis?: CardAxisConfig
-  /** Y-axis configuration */
-  yAxis?: CardAxisConfig
+  /** Data series configuration (optional - can derive from yAxis) */
+  series?: CardChartSeries[]
+  /** X-axis configuration (string field name or full config) */
+  xAxis?: CardAxisConfig | string
+  /** Y-axis configuration (string field name, array of fields, or full config) */
+  yAxis?: CardAxisConfig | string | string[]
   /** Show legend */
   showLegend?: boolean
   /** Chart height in pixels */
   height?: number
+  /** Data key field (for donut/pie charts) */
+  dataKey?: string
+  /** Value key field (alias for dataKey) */
+  valueKey?: string
+  /** Label key field (for donut/pie charts) */
+  labelKey?: string
+  /** Color palette for chart series */
+  colors?: string[]
 }
 
 export interface CardContentStatusGrid {
@@ -198,9 +207,32 @@ export interface CardContentStatusGrid {
 export interface CardContentCustom {
   type: 'custom'
   /** Component name from registry */
-  componentName: string
+  componentName?: string
+  /** Component name (alias for componentName) */
+  component?: string
   /** Props to pass to component */
   props?: Record<string, unknown>
+}
+
+export interface CardContentStatsGrid {
+  type: 'stats-grid'
+  /** Stat items to display */
+  stats: CardStatsGridItem[]
+  /** Grid columns */
+  columns?: number
+}
+
+export interface CardStatsGridItem {
+  /** Field name from data */
+  field: string
+  /** Label to display */
+  label: string
+  /** Color for the stat */
+  color?: string
+  /** Icon name */
+  icon?: string
+  /** Value format */
+  format?: 'number' | 'percentage' | 'bytes' | 'currency'
 }
 
 // ============================================================================
@@ -408,11 +440,13 @@ export interface CardLoadingStateConfig {
   /** Number of skeleton rows */
   rows?: number
   /** Skeleton type */
-  type?: 'table' | 'list' | 'chart' | 'status'
+  type?: 'table' | 'list' | 'chart' | 'status' | 'stats' | 'custom'
   /** Show header skeleton */
   showHeader?: boolean
   /** Show search skeleton */
   showSearch?: boolean
+  /** Number of items for stats type */
+  count?: number
 }
 
 // ============================================================================
