@@ -9,6 +9,11 @@ import { mainDashboardConfig } from './main'
 import { computeDashboardConfig } from './compute'
 import { securityDashboardConfig } from './security'
 import { gitopsDashboardConfig } from './gitops'
+import { storageDashboardConfig } from './storage'
+import { networkDashboardConfig } from './network'
+import { eventsDashboardConfig } from './events'
+import { workloadsDashboardConfig } from './workloads'
+import { operatorsDashboardConfig } from './operators'
 
 /**
  * Registry of all unified dashboard configurations
@@ -18,6 +23,11 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   compute: computeDashboardConfig,
   security: securityDashboardConfig,
   gitops: gitopsDashboardConfig,
+  storage: storageDashboardConfig,
+  network: networkDashboardConfig,
+  events: eventsDashboardConfig,
+  workloads: workloadsDashboardConfig,
+  operators: operatorsDashboardConfig,
 }
 
 /**
@@ -47,4 +57,9 @@ export {
   computeDashboardConfig,
   securityDashboardConfig,
   gitopsDashboardConfig,
+  storageDashboardConfig,
+  networkDashboardConfig,
+  eventsDashboardConfig,
+  workloadsDashboardConfig,
+  operatorsDashboardConfig,
 }
