@@ -23,5 +23,5 @@ export {
   renderCell,
 } from './renderers'
 
-export { ListVisualization, TableVisualization } from './visualizations'
-export type { ListVisualizationProps, TableVisualizationProps } from './visualizations'
+export { ListVisualization, TableVisualization, ChartVisualization } from './visualizations'
+export type { ListVisualizationProps, TableVisualizationProps, ChartVisualizationProps } from './visualizations'

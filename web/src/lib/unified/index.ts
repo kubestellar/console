@@ -119,6 +119,22 @@ export type {
   TableVisualizationProps,
 } from './card'
 
-// Future exports (PR 5 & 6)
-// export { UnifiedStatBlock, UnifiedStatsSection } from './stats'
+// Stats components (PR 5)
+export {
+  UnifiedStatBlock,
+  UnifiedStatsSection,
+  resolveStatValue,
+  resolveFieldPath,
+  resolveComputedExpression,
+  resolveAggregate,
+  formatValue,
+  formatNumber,
+  formatBytes,
+  formatCurrency,
+  formatDuration,
+} from './stats'
+
+export type { ResolvedStatValue } from './stats'
+
+// Future exports (PR 6)
 // export { UnifiedDashboard } from './dashboard'
