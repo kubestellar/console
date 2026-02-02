@@ -213,44 +213,47 @@ const getDemoPods = (): PodInfo[] => [
   { name: 'cache-redis-6e5d4c3b2-q8rs1', namespace: 'production', status: 'Running', ready: '1/1', restarts: 0, age: '7d', cpuRequestMillis: 250, memoryRequestBytes: 268435456, cpuUsageMillis: 45, memoryUsageBytes: 134217728, metricsAvailable: true },
 ]
 
+// Demo events - cluster names must match getDemoClusters() in shared.ts
 const getDemoEvents = (): ClusterEvent[] => [
-  { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available to schedule pod', object: 'pod/api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', count: 3, firstSeen: new Date(Date.now() - 300000).toISOString(), lastSeen: new Date(Date.now() - 60000).toISOString() },
-  { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'pod/worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-d', count: 8, firstSeen: new Date(Date.now() - 1800000).toISOString(), lastSeen: new Date(Date.now() - 120000).toISOString() },
-  { type: 'Warning', reason: 'FailedMount', message: 'Unable to mount volumes for pod', object: 'pod/cache-redis-0', namespace: 'data', cluster: 'staging', count: 2, firstSeen: new Date(Date.now() - 600000).toISOString(), lastSeen: new Date(Date.now() - 300000).toISOString() },
-  { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node-1', object: 'pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'prod-west', count: 1, firstSeen: new Date(Date.now() - 180000).toISOString(), lastSeen: new Date(Date.now() - 180000).toISOString() },
-  { type: 'Normal', reason: 'Pulled', message: 'Container image pulled successfully', object: 'pod/nginx-ingress-abc123', namespace: 'ingress', cluster: 'prod-east', count: 1, firstSeen: new Date(Date.now() - 240000).toISOString(), lastSeen: new Date(Date.now() - 240000).toISOString() },
-  { type: 'Normal', reason: 'Started', message: 'Started container web-server', object: 'pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'prod-west', count: 1, firstSeen: new Date(Date.now() - 150000).toISOString(), lastSeen: new Date(Date.now() - 150000).toISOString() },
-  { type: 'Warning', reason: 'Unhealthy', message: 'Liveness probe failed: connection refused', object: 'pod/metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'prod-west', count: 5, firstSeen: new Date(Date.now() - 900000).toISOString(), lastSeen: new Date(Date.now() - 30000).toISOString() },
-  { type: 'Normal', reason: 'ScalingReplicaSet', message: 'Scaled up replica set web-frontend to 3', object: 'deployment/web-frontend', namespace: 'production', cluster: 'prod-east', count: 1, firstSeen: new Date(Date.now() - 3600000).toISOString(), lastSeen: new Date(Date.now() - 3600000).toISOString() },
-  { type: 'Warning', reason: 'FailedCreate', message: 'Error creating: pods "gpu-scheduler-0" is forbidden: exceeded quota', object: 'statefulset/gpu-scheduler', namespace: 'ml-ops', cluster: 'vllm-d', count: 1, firstSeen: new Date(Date.now() - 7200000).toISOString(), lastSeen: new Date(Date.now() - 7200000).toISOString() },
-  { type: 'Normal', reason: 'SuccessfulCreate', message: 'Created pod: model-server-v2-abc123', object: 'replicaset/model-server-v2', namespace: 'ml-workloads', cluster: 'vllm-d', count: 1, firstSeen: new Date(Date.now() - 1200000).toISOString(), lastSeen: new Date(Date.now() - 1200000).toISOString() },
+  { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available to schedule pod', object: 'pod/api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'eks-prod-us-east-1', count: 3, firstSeen: new Date(Date.now() - 300000).toISOString(), lastSeen: new Date(Date.now() - 60000).toISOString() },
+  { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'pod/worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-gpu-cluster', count: 8, firstSeen: new Date(Date.now() - 1800000).toISOString(), lastSeen: new Date(Date.now() - 120000).toISOString() },
+  { type: 'Warning', reason: 'FailedMount', message: 'Unable to mount volumes for pod', object: 'pod/cache-redis-0', namespace: 'data', cluster: 'gke-staging', count: 2, firstSeen: new Date(Date.now() - 600000).toISOString(), lastSeen: new Date(Date.now() - 300000).toISOString() },
+  { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node-1', object: 'pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'aks-dev-westeu', count: 1, firstSeen: new Date(Date.now() - 180000).toISOString(), lastSeen: new Date(Date.now() - 180000).toISOString() },
+  { type: 'Normal', reason: 'Pulled', message: 'Container image pulled successfully', object: 'pod/nginx-ingress-abc123', namespace: 'ingress', cluster: 'eks-prod-us-east-1', count: 1, firstSeen: new Date(Date.now() - 240000).toISOString(), lastSeen: new Date(Date.now() - 240000).toISOString() },
+  { type: 'Normal', reason: 'Started', message: 'Started container web-server', object: 'pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'openshift-prod', count: 1, firstSeen: new Date(Date.now() - 150000).toISOString(), lastSeen: new Date(Date.now() - 150000).toISOString() },
+  { type: 'Warning', reason: 'Unhealthy', message: 'Liveness probe failed: connection refused', object: 'pod/metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'openshift-prod', count: 5, firstSeen: new Date(Date.now() - 900000).toISOString(), lastSeen: new Date(Date.now() - 30000).toISOString() },
+  { type: 'Normal', reason: 'ScalingReplicaSet', message: 'Scaled up replica set web-frontend to 3', object: 'deployment/web-frontend', namespace: 'production', cluster: 'eks-prod-us-east-1', count: 1, firstSeen: new Date(Date.now() - 3600000).toISOString(), lastSeen: new Date(Date.now() - 3600000).toISOString() },
+  { type: 'Warning', reason: 'FailedCreate', message: 'Error creating: pods "gpu-scheduler-0" is forbidden: exceeded quota', object: 'statefulset/gpu-scheduler', namespace: 'ml-ops', cluster: 'vllm-gpu-cluster', count: 1, firstSeen: new Date(Date.now() - 7200000).toISOString(), lastSeen: new Date(Date.now() - 7200000).toISOString() },
+  { type: 'Normal', reason: 'SuccessfulCreate', message: 'Created pod: model-server-v2-abc123', object: 'replicaset/model-server-v2', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', count: 1, firstSeen: new Date(Date.now() - 1200000).toISOString(), lastSeen: new Date(Date.now() - 1200000).toISOString() },
 ]
 
+// Demo pod issues - cluster names must match getDemoClusters() in shared.ts
 const getDemoPodIssues = (): PodIssue[] => [
-  { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', status: 'CrashLoopBackOff', issues: ['Container restarting', 'OOMKilled'], restarts: 15 },
-  { name: 'worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-d', status: 'ImagePullBackOff', issues: ['Failed to pull image'], restarts: 0 },
-  { name: 'cache-redis-0', namespace: 'data', cluster: 'staging', status: 'Pending', issues: ['Insufficient memory'], restarts: 0 },
-  { name: 'metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'prod-west', status: 'CrashLoopBackOff', issues: ['Exit code 137'], restarts: 8 },
-  { name: 'gpu-scheduler-0', namespace: 'ml-ops', cluster: 'vllm-d', status: 'Pending', issues: ['Insufficient nvidia.com/gpu'], restarts: 0 },
+  { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'CrashLoopBackOff', issues: ['Container restarting', 'OOMKilled'], restarts: 15 },
+  { name: 'worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-gpu-cluster', status: 'ImagePullBackOff', issues: ['Failed to pull image'], restarts: 0 },
+  { name: 'cache-redis-0', namespace: 'data', cluster: 'gke-staging', status: 'Pending', issues: ['Insufficient memory'], restarts: 0 },
+  { name: 'metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'openshift-prod', status: 'CrashLoopBackOff', issues: ['Exit code 137'], restarts: 8 },
+  { name: 'gpu-scheduler-0', namespace: 'ml-ops', cluster: 'vllm-gpu-cluster', status: 'Pending', issues: ['Insufficient nvidia.com/gpu'], restarts: 0 },
 ]
 
 const getDemoDeploymentIssues = (): DeploymentIssue[] => [
   { name: 'web-frontend', namespace: 'production', replicas: 3, readyReplicas: 2, reason: 'ReplicaFailure' },
 ]
 
+// Demo deployments - cluster names must match getDemoClusters() in shared.ts
 const getDemoDeployments = (): Deployment[] => [
-  { name: 'web-frontend', namespace: 'production', cluster: 'prod-east', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
-  { name: 'api-gateway', namespace: 'production', cluster: 'prod-east', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
-  { name: 'auth-service', namespace: 'production', cluster: 'prod-east', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
-  { name: 'payment-processor', namespace: 'production', cluster: 'prod-west', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
-  { name: 'notification-service', namespace: 'production', cluster: 'prod-west', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
-  { name: 'search-engine', namespace: 'data', cluster: 'prod-east', status: 'running', replicas: 4, readyReplicas: 4, updatedReplicas: 4, availableReplicas: 4, progress: 100 },
-  { name: 'cache-layer', namespace: 'data', cluster: 'prod-east', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
-  { name: 'ml-inference', namespace: 'ml-workloads', cluster: 'vllm-d', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
-  { name: 'model-server', namespace: 'ml-workloads', cluster: 'vllm-d', status: 'deploying', replicas: 3, readyReplicas: 1, updatedReplicas: 3, availableReplicas: 1, progress: 33 },
-  { name: 'staging-api', namespace: 'staging', cluster: 'staging', status: 'running', replicas: 1, readyReplicas: 1, updatedReplicas: 1, availableReplicas: 1, progress: 100 },
-  { name: 'staging-worker', namespace: 'staging', cluster: 'staging', status: 'failed', replicas: 2, readyReplicas: 0, updatedReplicas: 2, availableReplicas: 0, progress: 0 },
-  { name: 'metrics-collector', namespace: 'monitoring', cluster: 'prod-east', status: 'running', replicas: 1, readyReplicas: 1, updatedReplicas: 1, availableReplicas: 1, progress: 100 },
+  { name: 'web-frontend', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'auth-service', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'payment-processor', namespace: 'production', cluster: 'openshift-prod', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'notification-service', namespace: 'production', cluster: 'openshift-prod', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'search-engine', namespace: 'data', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 4, readyReplicas: 4, updatedReplicas: 4, availableReplicas: 4, progress: 100 },
+  { name: 'cache-layer', namespace: 'data', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'ml-inference', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'model-server', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', status: 'deploying', replicas: 3, readyReplicas: 1, updatedReplicas: 3, availableReplicas: 1, progress: 33 },
+  { name: 'staging-api', namespace: 'staging', cluster: 'gke-staging', status: 'running', replicas: 1, readyReplicas: 1, updatedReplicas: 1, availableReplicas: 1, progress: 100 },
+  { name: 'staging-worker', namespace: 'staging', cluster: 'gke-staging', status: 'failed', replicas: 2, readyReplicas: 0, updatedReplicas: 2, availableReplicas: 0, progress: 0 },
+  { name: 'metrics-collector', namespace: 'monitoring', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 1, readyReplicas: 1, updatedReplicas: 1, availableReplicas: 1, progress: 100 },
 ]
 
 const getDemoServices = (): Service[] => [
@@ -263,14 +266,16 @@ const getDemoProwJobs = (): ProwJob[] => [
   { id: '3', name: 'ci-kubernetes-e2e-gce', type: 'periodic', state: 'failure', cluster: 'prow', startTime: new Date(Date.now() - 30 * 60000).toISOString(), duration: '1h 23m' },
 ]
 
+// Demo LLM-d servers - cluster names must match getDemoClusters() in shared.ts
 const getDemoLLMdServers = (): LLMdServer[] => [
-  { id: '1', name: 'vllm-llama-3', namespace: 'llm-d', cluster: 'vllm-d', model: 'llama-3-70b', type: 'vllm', componentType: 'model', status: 'running', replicas: 2, readyReplicas: 2, gpu: 'NVIDIA', gpuCount: 4 },
-  { id: '2', name: 'tgi-granite', namespace: 'llm-d', cluster: 'vllm-d', model: 'granite-13b', type: 'tgi', componentType: 'model', status: 'running', replicas: 1, readyReplicas: 1, gpu: 'NVIDIA', gpuCount: 2 },
+  { id: '1', name: 'vllm-llama-3', namespace: 'llm-d', cluster: 'vllm-gpu-cluster', model: 'llama-3-70b', type: 'vllm', componentType: 'model', status: 'running', replicas: 2, readyReplicas: 2, gpu: 'NVIDIA', gpuCount: 4 },
+  { id: '2', name: 'tgi-granite', namespace: 'llm-d', cluster: 'vllm-gpu-cluster', model: 'granite-13b', type: 'tgi', componentType: 'model', status: 'running', replicas: 1, readyReplicas: 1, gpu: 'NVIDIA', gpuCount: 2 },
 ]
 
+// Demo LLM-d models - cluster names must match getDemoClusters() in shared.ts
 const getDemoLLMdModels = (): LLMdModel[] => [
-  { id: '1', name: 'llama-3-70b', namespace: 'llm-d', cluster: 'vllm-d', instances: 2, status: 'loaded' },
-  { id: '2', name: 'granite-13b', namespace: 'llm-d', cluster: 'vllm-d', instances: 1, status: 'loaded' },
+  { id: '1', name: 'llama-3-70b', namespace: 'llm-d', cluster: 'vllm-gpu-cluster', instances: 2, status: 'loaded' },
+  { id: '2', name: 'granite-13b', namespace: 'llm-d', cluster: 'vllm-gpu-cluster', instances: 1, status: 'loaded' },
 ]
 
 // ============================================================================
