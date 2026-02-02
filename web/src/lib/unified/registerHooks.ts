@@ -28,6 +28,11 @@ import {
   useSecrets,
   useIngresses,
   useNodes,
+  useJobs,
+  useCronJobs,
+  useStatefulSets,
+  useDaemonSets,
+  useHPAs,
 } from '../../hooks/mcp'
 
 // ============================================================================
@@ -180,6 +185,66 @@ function useUnifiedNodes(params?: Record<string, unknown>) {
   const result = useNodes(cluster)
   return {
     data: result.nodes,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedJobs(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useJobs(cluster, namespace)
+  return {
+    data: result.jobs,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedCronJobs(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useCronJobs(cluster, namespace)
+  return {
+    data: result.cronjobs,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedStatefulSets(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useStatefulSets(cluster, namespace)
+  return {
+    data: result.statefulsets,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedDaemonSets(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useDaemonSets(cluster, namespace)
+  return {
+    data: result.daemonsets,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedHPAs(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useHPAs(cluster, namespace)
+  return {
+    data: result.hpas,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,
@@ -381,6 +446,11 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useSecrets', useUnifiedSecrets)
   registerDataHook('useIngresses', useUnifiedIngresses)
   registerDataHook('useNodes', useUnifiedNodes)
+  registerDataHook('useJobs', useUnifiedJobs)
+  registerDataHook('useCronJobs', useUnifiedCronJobs)
+  registerDataHook('useStatefulSets', useUnifiedStatefulSets)
+  registerDataHook('useDaemonSets', useUnifiedDaemonSets)
+  registerDataHook('useHPAs', useUnifiedHPAs)
 
   // Filtered event hooks
   registerDataHook('useWarningEvents', useWarningEvents)

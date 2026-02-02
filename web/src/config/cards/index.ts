@@ -38,6 +38,12 @@ import { configMapStatusConfig } from './configmap-status'
 import { secretStatusConfig } from './secret-status'
 import { ingressStatusConfig } from './ingress-status'
 import { nodeStatusConfig } from './node-status'
+// Workload resource cards (PR 11)
+import { jobStatusConfig } from './job-status'
+import { cronJobStatusConfig } from './cronjob-status'
+import { statefulSetStatusConfig } from './statefulset-status'
+import { daemonSetStatusConfig } from './daemonset-status'
+import { hpaStatusConfig } from './hpa-status'
 
 /**
  * Registry of all unified card configurations
@@ -75,6 +81,12 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   secret_status: secretStatusConfig,
   ingress_status: ingressStatusConfig,
   node_status: nodeStatusConfig,
+  // Workload resource cards (PR 11)
+  job_status: jobStatusConfig,
+  cronjob_status: cronJobStatusConfig,
+  statefulset_status: statefulSetStatusConfig,
+  daemonset_status: daemonSetStatusConfig,
+  hpa_status: hpaStatusConfig,
 }
 
 /**
@@ -130,4 +142,10 @@ export {
   secretStatusConfig,
   ingressStatusConfig,
   nodeStatusConfig,
+  // Workload resource cards (PR 11)
+  jobStatusConfig,
+  cronJobStatusConfig,
+  statefulSetStatusConfig,
+  daemonSetStatusConfig,
+  hpaStatusConfig,
 }
