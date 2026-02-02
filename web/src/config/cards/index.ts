@@ -23,6 +23,12 @@ import { storageOverviewConfig } from './storage-overview'
 import { networkOverviewConfig } from './network-overview'
 import { topPodsConfig } from './top-pods'
 import { gitopsDriftConfig } from './gitops-drift'
+// Event cards (PR 8)
+import { warningEventsConfig } from './warning-events'
+import { recentEventsConfig } from './recent-events'
+// Storage & Networking cards (PR 8)
+import { pvcStatusConfig } from './pvc-status'
+import { serviceStatusConfig } from './service-status'
 
 /**
  * Registry of all unified card configurations
@@ -45,6 +51,12 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   network_overview: networkOverviewConfig,
   top_pods: topPodsConfig,
   gitops_drift: gitopsDriftConfig,
+  // Event cards (PR 8)
+  warning_events: warningEventsConfig,
+  recent_events: recentEventsConfig,
+  // Storage & Networking cards (PR 8)
+  pvc_status: pvcStatusConfig,
+  service_status: serviceStatusConfig,
 }
 
 /**
@@ -85,4 +97,10 @@ export {
   networkOverviewConfig,
   topPodsConfig,
   gitopsDriftConfig,
+  // Event cards (PR 8)
+  warningEventsConfig,
+  recentEventsConfig,
+  // Storage & Networking cards (PR 8)
+  pvcStatusConfig,
+  serviceStatusConfig,
 }

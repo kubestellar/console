@@ -10,14 +10,14 @@
  * rules of hooks - they are called consistently on every render.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { registerDataHook } from './card/hooks/useDataSource'
 import {
   useCachedPodIssues,
   useCachedEvents,
   useCachedDeployments,
 } from '../../hooks/useCachedData'
-import { useClusters } from '../../hooks/mcp'
+import { useClusters, usePVCs, useServices } from '../../hooks/mcp'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -64,6 +64,30 @@ function useUnifiedClusters() {
   const result = useClusters()
   return {
     data: result.clusters,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedPVCs(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = usePVCs(cluster, namespace)
+  return {
+    data: result.pvcs,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedServices(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useServices(cluster, namespace)
+  return {
+    data: result.services,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch,
@@ -161,6 +185,53 @@ const DEMO_GITOPS_DRIFT = [
   { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: Date.now() - 120000 },
 ]
 
+// ============================================================================
+// Filtered event hooks
+// These provide pre-filtered event data for specific card types
+// ============================================================================
+
+function useWarningEvents(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useCachedEvents(cluster, namespace)
+
+  // Filter to only warning events
+  const warningEvents = useMemo(() => {
+    if (!result.data) return []
+    return result.data.filter(e => e.type === 'Warning')
+  }, [result.data])
+
+  return {
+    data: warningEvents,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useRecentEvents(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useCachedEvents(cluster, namespace)
+
+  // Filter to events within the last hour
+  const recentEvents = useMemo(() => {
+    if (!result.data) return []
+    const oneHourAgo = Date.now() - 60 * 60 * 1000
+    return result.data.filter(e => {
+      if (!e.lastSeen) return false
+      return new Date(e.lastSeen).getTime() >= oneHourAgo
+    })
+  }, [result.data])
+
+  return {
+    data: recentEvents,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 // Demo hook factories
 function useClusterMetrics() {
   return useDemoDataHook(DEMO_CLUSTER_METRICS)
@@ -209,6 +280,12 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useCachedEvents', useUnifiedEvents)
   registerDataHook('useCachedDeployments', useUnifiedDeployments)
   registerDataHook('useClusters', useUnifiedClusters)
+  registerDataHook('usePVCs', useUnifiedPVCs)
+  registerDataHook('useServices', useUnifiedServices)
+
+  // Filtered event hooks
+  registerDataHook('useWarningEvents', useWarningEvents)
+  registerDataHook('useRecentEvents', useRecentEvents)
 
   // Demo data hooks for cards without real data sources yet
   registerDataHook('useCachedClusterMetrics', useClusterMetrics)
