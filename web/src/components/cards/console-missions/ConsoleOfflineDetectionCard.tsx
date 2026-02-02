@@ -23,8 +23,14 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
 
   // Fetch nodes from local agent (no auth required)
   useEffect(() => {
-    // Skip agent requests in demo mode (no local agent on Netlify)
+    // In demo mode, use demo data (no local agent on Netlify)
     if (getDemoMode()) {
+      // Demo data - cluster names must match getDemoClusters() in shared.ts
+      setAllNodes([
+        { name: 'gpu-node-3', cluster: 'vllm-gpu-cluster', status: 'NotReady', roles: ['worker'], unschedulable: false },
+        { name: 'worker-node-7', cluster: 'eks-prod-us-east-1', status: 'Ready', roles: ['worker'], unschedulable: true },
+        { name: 'edge-node-2', cluster: 'edge-retail-na', status: 'Unknown', roles: ['edge'], unschedulable: false },
+      ])
       setNodesLoading(false)
       return
     }

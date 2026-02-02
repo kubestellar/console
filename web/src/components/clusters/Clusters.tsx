@@ -38,6 +38,7 @@ const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 
 // Default cards for the clusters dashboard
 const DEFAULT_CLUSTERS_CARDS = [
+  { type: 'console_ai_offline_detection', title: 'Offline Detection', position: { w: 4, h: 3 } },
   { type: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
   { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 3 } },
   { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 3 } },
