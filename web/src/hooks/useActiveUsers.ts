@@ -19,7 +19,8 @@ let pollStarted = false
 let pollInterval: ReturnType<typeof setInterval> | null = null
 let consecutiveFailures = 0
 const MAX_FAILURES = 3
-let subscribers = new Set<(info: ActiveUsersInfo) => void>()
+const subscribers = new Set<(info: ActiveUsersInfo) => void>()
+const stateSubscribers = new Set<(state: { loading?: boolean; error?: boolean }) => void>()
 
 // Singleton presence WebSocket connection (backend mode)
 let presenceWs: WebSocket | null = null
@@ -127,8 +128,11 @@ function startPresenceConnection() {
 }
 
 // Notify all subscribers
-function notifySubscribers() {
+function notifySubscribers(state?: { loading?: boolean; error?: boolean }) {
   subscribers.forEach(fn => fn(sharedInfo))
+  if (state) {
+    stateSubscribers.forEach(fn => fn(state))
+  }
 }
 
 // Fetch active users from API
@@ -140,6 +144,7 @@ async function fetchActiveUsers() {
       pollInterval = null
       pollStarted = false
     }
+    notifySubscribers({ error: true })
     return
   }
 
@@ -151,11 +156,12 @@ async function fetchActiveUsers() {
     if (data.activeUsers !== sharedInfo.activeUsers ||
         data.totalConnections !== sharedInfo.totalConnections) {
       sharedInfo = data
-      notifySubscribers()
+      notifySubscribers({ loading: false, error: false })
     }
   } catch {
     consecutiveFailures++
     // API not available, keep current state
+    notifySubscribers({ error: consecutiveFailures >= MAX_FAILURES })
   }
 }
 
@@ -164,6 +170,9 @@ function startPolling() {
   if (pollStarted) return
   pollStarted = true
   consecutiveFailures = 0 // Reset failures on new start
+  
+  // Notify loading state
+  notifySubscribers({ loading: true, error: false })
 
   // Initial fetch
   fetchActiveUsers()
@@ -178,6 +187,8 @@ function startPolling() {
  */
 export function useActiveUsers() {
   const [info, setInfo] = useState<ActiveUsersInfo>(sharedInfo)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
   // Tick counter to force re-render when demo mode changes (so viewerCount recalculates)
   const [, setDemoTick] = useState(0)
 
@@ -195,7 +206,12 @@ export function useActiveUsers() {
     const handleUpdate = (newInfo: ActiveUsersInfo) => {
       setInfo(newInfo)
     }
+    const handleStateUpdate = (state: { loading?: boolean; error?: boolean }) => {
+      if (state.loading !== undefined) setIsLoading(state.loading)
+      if (state.error !== undefined) setHasError(state.error)
+    }
     subscribers.add(handleUpdate)
+    stateSubscribers.add(handleStateUpdate)
 
     // Set initial state
     setInfo(sharedInfo)
@@ -209,6 +225,7 @@ export function useActiveUsers() {
 
     return () => {
       subscribers.delete(handleUpdate)
+      stateSubscribers.delete(handleStateUpdate)
       window.removeEventListener('kc-demo-mode-change', handleDemoChange)
     }
   }, [])
@@ -224,6 +241,8 @@ export function useActiveUsers() {
     activeUsers: info.activeUsers,
     totalConnections: info.totalConnections,
     viewerCount,
+    isLoading,
+    hasError,
     refetch,
   }
 }

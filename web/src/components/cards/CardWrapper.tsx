@@ -802,6 +802,7 @@ export function CardWrapper({
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || false
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
+  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || false
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
@@ -928,7 +929,7 @@ export function CardWrapper({
             'flex flex-col transition-all duration-200',
             isCollapsed ? 'h-auto' : 'h-full',
             (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
-            isVisuallySpinning && 'animate-card-refresh-pulse',
+            (isVisuallySpinning || effectiveIsLoading) && 'animate-card-refresh-pulse',
             getFlashClass()
           )}
           onMouseEnter={() => setShowSummary(true)}
@@ -975,12 +976,12 @@ export function CardWrapper({
                 Refresh failed
               </span>
             )}
-            {/* Refresh indicator */}
-            {isVisuallySpinning && !effectiveIsFailed && (
+            {/* Refresh indicator - shows when either isVisuallySpinning or child reports loading */}
+            {(isVisuallySpinning || effectiveIsLoading) && !effectiveIsFailed && (
               <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
             )}
             {/* Last updated indicator */}
-            {!isVisuallySpinning && !effectiveIsFailed && lastUpdated && (
+            {!isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && lastUpdated && (
               <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
                 {formatTimeAgo(lastUpdated)}
               </span>
@@ -999,10 +1000,10 @@ export function CardWrapper({
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                disabled={isRefreshing || isVisuallySpinning}
+                disabled={isRefreshing || isVisuallySpinning || effectiveIsLoading}
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
-                  isVisuallySpinning
+                  isVisuallySpinning || effectiveIsLoading
                     ? 'text-blue-400 cursor-not-allowed'
                     : effectiveIsFailed
                     ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
@@ -1010,7 +1011,7 @@ export function CardWrapper({
                 )}
                 title={effectiveIsFailed ? `Refresh failed ${effectiveConsecutiveFailures} times - click to retry` : 'Refresh data'}
               >
-                <RefreshCw className={cn('w-4 h-4', isVisuallySpinning && 'animate-spin')} />
+                <RefreshCw className={cn('w-4 h-4', (isVisuallySpinning || effectiveIsLoading) && 'animate-spin')} />
               </button>
             )}
             <button

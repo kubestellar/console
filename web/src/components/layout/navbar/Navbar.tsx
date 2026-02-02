@@ -24,7 +24,7 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
-  const { viewerCount, refetch } = useActiveUsers()
+  const { viewerCount, isLoading: viewersLoading, hasError: viewersError, refetch } = useActiveUsers()
   const location = useLocation()
   const [showFeedback, setShowFeedback] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
@@ -108,9 +108,14 @@ export function Navbar() {
           <TourTrigger />
 
           {/* Active Viewers */}
-          <div className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground">
-            <User className="w-4 h-4" />
-            <span className="text-xs tabular-nums">{viewerCount}</span>
+          <div 
+            className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground"
+            title={viewersError ? 'Failed to load viewer count' : viewersLoading ? 'Loading viewers...' : `${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
+          >
+            <User className={`w-4 h-4 ${viewersError ? 'text-red-400' : ''}`} />
+            <span className={`text-xs tabular-nums ${viewersLoading ? 'animate-pulse' : ''}`}>
+              {viewersError ? '!' : viewerCount}
+            </span>
           </div>
 
           {/* Feature Request (includes notifications) */}
@@ -177,9 +182,14 @@ export function Navbar() {
                   <div className="border-t border-border my-2" />
                   <div className="px-3 py-2 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Viewers</span>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span className="text-xs tabular-nums">{viewerCount}</span>
+                    <div 
+                      className="flex items-center gap-1 text-muted-foreground"
+                      title={viewersError ? 'Failed to load viewer count' : viewersLoading ? 'Loading viewers...' : `${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
+                    >
+                      <User className={`w-4 h-4 ${viewersError ? 'text-red-400' : ''}`} />
+                      <span className={`text-xs tabular-nums ${viewersLoading ? 'animate-pulse' : ''}`}>
+                        {viewersError ? '!' : viewerCount}
+                      </span>
                     </div>
                   </div>
                   <div className="px-3 py-2">
