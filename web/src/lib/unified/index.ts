@@ -106,6 +106,17 @@ export {
   getDataHook,
   getRegisteredDataHooks,
   useCardFiltering,
+  registerRenderer,
+  getRenderer,
+  getRegisteredRenderers,
+  renderCell,
+  ListVisualization,
+  TableVisualization,
+} from './card'
+
+export type {
+  ListVisualizationProps,
+  TableVisualizationProps,
 } from './card'
 
 // Future exports (PR 5 & 6)

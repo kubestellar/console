@@ -19,12 +19,10 @@ import type {
 } from '../types'
 import { useDataSource } from './hooks/useDataSource'
 import { useCardFiltering } from './hooks/useCardFiltering'
-
-// Visualization components (to be implemented in PR 2)
-// import { ListVisualization } from './visualizations/ListVisualization'
-// import { TableVisualization } from './visualizations/TableVisualization'
+import { ListVisualization } from './visualizations/ListVisualization'
+import { TableVisualization } from './visualizations/TableVisualization'
+// Chart visualization will be added in PR 4
 // import { ChartVisualization } from './visualizations/ChartVisualization'
-// import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 
 /**
  * UnifiedCard - Renders any card type from config
@@ -107,26 +105,24 @@ export function UnifiedCard({
 function renderContent(
   content: CardContent,
   data: unknown[],
-  _config: UnifiedCardConfig
+  config: UnifiedCardConfig
 ): ReactNode {
   switch (content.type) {
     case 'list':
-      // TODO: Implement in PR 2
       return (
-        <PlaceholderVisualization
-          type="list"
-          itemCount={data.length}
-          columns={content.columns.length}
+        <ListVisualization
+          content={content}
+          data={data}
+          drillDown={config.drillDown}
         />
       )
 
     case 'table':
-      // TODO: Implement in PR 2
       return (
-        <PlaceholderVisualization
-          type="table"
-          itemCount={data.length}
-          columns={content.columns.length}
+        <TableVisualization
+          content={content}
+          data={data}
+          drillDown={config.drillDown}
         />
       )
 
@@ -140,7 +136,7 @@ function renderContent(
       )
 
     case 'status-grid':
-      // TODO: Implement in PR 2
+      // TODO: Implement in PR 4
       return (
         <PlaceholderVisualization
           type="status-grid"

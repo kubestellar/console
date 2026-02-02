@@ -15,3 +15,13 @@ export {
 } from './hooks'
 
 export type { UseDataSourceResult, UseCardFilteringResult } from './hooks'
+
+export {
+  registerRenderer,
+  getRenderer,
+  getRegisteredRenderers,
+  renderCell,
+} from './renderers'
+
+export { ListVisualization, TableVisualization } from './visualizations'
+export type { ListVisualizationProps, TableVisualizationProps } from './visualizations'
