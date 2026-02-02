@@ -666,11 +666,9 @@ if (import.meta.hot) {
 
 // Fetch basic cluster list from local agent (fast, no health check)
 async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
-  // On Netlify deployments (isDemoModeForced), skip agent entirely — there is
-  // no local agent and the request would fail with CORS errors.
-  // On localhost, always attempt to reach the agent — it may be running even if
-  // AgentManager has not detected it yet.
-  if (isDemoModeForced) return null
+  // Skip agent entirely in demo mode — no local agent, requests would fail with errors.
+  // This includes both Netlify deployments (isDemoModeForced) and user-enabled demo mode.
+  if (isDemoModeForced || getDemoMode()) return null
 
   try {
     const controller = new AbortController()
@@ -738,7 +736,8 @@ export function clearClusterFailure(clusterName: string): void {
 export async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: string): Promise<ClusterHealth | null> {
   // Try local agent's HTTP endpoint first (same pattern as GPU nodes)
   // This is more reliable than WebSocket for simple data fetching
-  if (!isDemoModeForced && !isAgentUnavailable()) {
+  // Skip entirely in demo mode - no local agent available
+  if (!isDemoModeForced && !getDemoMode() && !isAgentUnavailable()) {
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
@@ -810,6 +809,9 @@ const MAX_DISTRIBUTION_FAILURES = 2
 // Detect cluster distribution by checking for system namespaces
 // Uses kubectl via WebSocket when available, falls back to backend API
 async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
+  // Skip in demo mode - no local agent available
+  if (isDemoModeForced || getDemoMode()) return {}
+
   // Try kubectl via WebSocket first (if agent available)
   // Use the kubectl context (full path) if provided, otherwise fall back to name
   if (!isAgentUnavailable()) {

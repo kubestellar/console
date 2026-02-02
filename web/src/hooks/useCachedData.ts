@@ -18,7 +18,7 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { isDemoModeForced } from './useDemoMode'
+import { isDemoModeForced, getDemoMode } from './useDemoMode'
 import { clusterCacheRef } from './mcp/shared'
 import type {
   PodInfo,
@@ -135,8 +135,8 @@ async function fetchFromAllClusters<T>(
 
 /** Get reachable cluster names from the shared cluster cache (deduplicated) */
 function getAgentClusters(): Array<{ name: string; context?: string }> {
-  // No local agent on Netlify — return empty to skip all agent requests
-  if (isDemoModeForced) return []
+  // No local agent in demo mode — return empty to skip all agent requests
+  if (isDemoModeForced || getDemoMode()) return []
   // Skip long context-path names (contain '/') — these are duplicates of short-named aliases
   // e.g. "default/api-fmaas-vllm-d-...:6443/..." duplicates "vllm-d"
   return clusterCacheRef.clusters
