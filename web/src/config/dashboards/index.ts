@@ -14,6 +14,18 @@ import { networkDashboardConfig } from './network'
 import { eventsDashboardConfig } from './events'
 import { workloadsDashboardConfig } from './workloads'
 import { operatorsDashboardConfig } from './operators'
+import { clustersDashboardConfig } from './clusters'
+import { complianceDashboardConfig } from './compliance'
+import { costDashboardConfig } from './cost'
+import { gpuDashboardConfig } from './gpu'
+import { nodesDashboardConfig } from './nodes'
+import { deploymentsDashboardConfig } from './deployments'
+import { podsDashboardConfig } from './pods'
+import { servicesDashboardConfig } from './services'
+import { helmDashboardConfig } from './helm'
+import { alertsDashboardConfig } from './alerts'
+import { aiMlDashboardConfig } from './ai-ml'
+import { ciCdDashboardConfig } from './ci-cd'
 
 /**
  * Registry of all unified dashboard configurations
@@ -28,6 +40,18 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   events: eventsDashboardConfig,
   workloads: workloadsDashboardConfig,
   operators: operatorsDashboardConfig,
+  clusters: clustersDashboardConfig,
+  compliance: complianceDashboardConfig,
+  cost: costDashboardConfig,
+  gpu: gpuDashboardConfig,
+  nodes: nodesDashboardConfig,
+  deployments: deploymentsDashboardConfig,
+  pods: podsDashboardConfig,
+  services: servicesDashboardConfig,
+  helm: helmDashboardConfig,
+  alerts: alertsDashboardConfig,
+  'ai-ml': aiMlDashboardConfig,
+  'ci-cd': ciCdDashboardConfig,
 }
 
 /**
@@ -62,4 +86,16 @@ export {
   eventsDashboardConfig,
   workloadsDashboardConfig,
   operatorsDashboardConfig,
+  clustersDashboardConfig,
+  complianceDashboardConfig,
+  costDashboardConfig,
+  gpuDashboardConfig,
+  nodesDashboardConfig,
+  deploymentsDashboardConfig,
+  podsDashboardConfig,
+  servicesDashboardConfig,
+  helmDashboardConfig,
+  alertsDashboardConfig,
+  aiMlDashboardConfig,
+  ciCdDashboardConfig,
 }
