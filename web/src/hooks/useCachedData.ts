@@ -214,8 +214,16 @@ const getDemoPods = (): PodInfo[] => [
 ]
 
 const getDemoEvents = (): ClusterEvent[] => [
-  { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available', object: 'pod/test', namespace: 'default', count: 3 },
-  { type: 'Normal', reason: 'Started', message: 'Container started', object: 'pod/web', namespace: 'production', count: 1 },
+  { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available to schedule pod', object: 'pod/api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', count: 3, firstSeen: new Date(Date.now() - 300000).toISOString(), lastSeen: new Date(Date.now() - 60000).toISOString() },
+  { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'pod/worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-d', count: 8, firstSeen: new Date(Date.now() - 1800000).toISOString(), lastSeen: new Date(Date.now() - 120000).toISOString() },
+  { type: 'Warning', reason: 'FailedMount', message: 'Unable to mount volumes for pod', object: 'pod/cache-redis-0', namespace: 'data', cluster: 'staging', count: 2, firstSeen: new Date(Date.now() - 600000).toISOString(), lastSeen: new Date(Date.now() - 300000).toISOString() },
+  { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned pod to node-1', object: 'pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'prod-west', count: 1, firstSeen: new Date(Date.now() - 180000).toISOString(), lastSeen: new Date(Date.now() - 180000).toISOString() },
+  { type: 'Normal', reason: 'Pulled', message: 'Container image pulled successfully', object: 'pod/nginx-ingress-abc123', namespace: 'ingress', cluster: 'prod-east', count: 1, firstSeen: new Date(Date.now() - 240000).toISOString(), lastSeen: new Date(Date.now() - 240000).toISOString() },
+  { type: 'Normal', reason: 'Started', message: 'Started container web-server', object: 'pod/frontend-8e9f0a1b2-def34', namespace: 'web', cluster: 'prod-west', count: 1, firstSeen: new Date(Date.now() - 150000).toISOString(), lastSeen: new Date(Date.now() - 150000).toISOString() },
+  { type: 'Warning', reason: 'Unhealthy', message: 'Liveness probe failed: connection refused', object: 'pod/metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'prod-west', count: 5, firstSeen: new Date(Date.now() - 900000).toISOString(), lastSeen: new Date(Date.now() - 30000).toISOString() },
+  { type: 'Normal', reason: 'ScalingReplicaSet', message: 'Scaled up replica set web-frontend to 3', object: 'deployment/web-frontend', namespace: 'production', cluster: 'prod-east', count: 1, firstSeen: new Date(Date.now() - 3600000).toISOString(), lastSeen: new Date(Date.now() - 3600000).toISOString() },
+  { type: 'Warning', reason: 'FailedCreate', message: 'Error creating: pods "gpu-scheduler-0" is forbidden: exceeded quota', object: 'statefulset/gpu-scheduler', namespace: 'ml-ops', cluster: 'vllm-d', count: 1, firstSeen: new Date(Date.now() - 7200000).toISOString(), lastSeen: new Date(Date.now() - 7200000).toISOString() },
+  { type: 'Normal', reason: 'SuccessfulCreate', message: 'Created pod: model-server-v2-abc123', object: 'replicaset/model-server-v2', namespace: 'ml-workloads', cluster: 'vllm-d', count: 1, firstSeen: new Date(Date.now() - 1200000).toISOString(), lastSeen: new Date(Date.now() - 1200000).toISOString() },
 ]
 
 const getDemoPodIssues = (): PodIssue[] => [

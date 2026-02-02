@@ -25,6 +25,7 @@ type AuthConfig struct {
 	GitHubSecret     string
 	JWTSecret        string
 	FrontendURL      string
+	BackendURL       string // Backend URL for OAuth callback (defaults to http://localhost:8080)
 	DevUserLogin     string
 	DevUserEmail     string
 	DevUserAvatar    string
@@ -49,10 +50,15 @@ type AuthHandler struct {
 
 // NewAuthHandler creates a new auth handler
 func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
-	// Build OAuth redirect URL from frontend URL
+	// Build OAuth redirect URL - must point to BACKEND callback endpoint
+	// GitHub redirects here first, then backend redirects to frontend with JWT
 	redirectURL := ""
-	if cfg.FrontendURL != "" {
-		redirectURL = cfg.FrontendURL + "/auth/github/callback"
+	if cfg.BackendURL != "" {
+		redirectURL = cfg.BackendURL + "/auth/github/callback"
+	} else if cfg.FrontendURL != "" {
+		// Fallback: derive backend URL from frontend URL (replace port)
+		// Frontend: http://localhost:5174 -> Backend: http://localhost:8080
+		redirectURL = "http://localhost:8080/auth/github/callback"
 	}
 
 	return &AuthHandler{

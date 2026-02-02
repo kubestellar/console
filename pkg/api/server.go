@@ -202,6 +202,7 @@ func (s *Server) setupRoutes() {
 		GitHubSecret:     s.config.GitHubSecret,
 		JWTSecret:        s.config.JWTSecret,
 		FrontendURL:      s.config.FrontendURL,
+		BackendURL:       fmt.Sprintf("http://localhost:%d", s.config.Port),
 		DevUserLogin:     s.config.DevUserLogin,
 		DevUserEmail:     s.config.DevUserEmail,
 		DevUserAvatar:    s.config.DevUserAvatar,
