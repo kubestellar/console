@@ -112,11 +112,13 @@ export {
   renderCell,
   ListVisualization,
   TableVisualization,
+  ChartVisualization,
 } from './card'
 
 export type {
   ListVisualizationProps,
   TableVisualizationProps,
+  ChartVisualizationProps,
 } from './card'
 
 // Stats components (PR 5)
@@ -136,5 +138,10 @@ export {
 
 export type { ResolvedStatValue } from './stats'
 
-// Future exports (PR 6)
-// export { UnifiedDashboard } from './dashboard'
+// Dashboard components (PR 6)
+export {
+  UnifiedDashboard,
+  DashboardGrid,
+} from './dashboard'
+
+export type { DashboardGridProps } from './dashboard'
