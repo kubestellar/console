@@ -53,6 +53,9 @@ import { networkPolicyStatusConfig } from './network-policy-status'
 import { namespaceStatusConfig } from './namespace-status'
 import { operatorSubscriptionStatusConfig } from './operator-subscription-status'
 import { serviceAccountStatusConfig } from './service-account-status'
+// RBAC cards (PR 13)
+import { roleStatusConfig } from './role-status'
+import { roleBindingStatusConfig } from './role-binding-status'
 
 /**
  * Registry of all unified card configurations
@@ -105,6 +108,9 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   namespace_status: namespaceStatusConfig,
   operator_subscription_status: operatorSubscriptionStatusConfig,
   service_account_status: serviceAccountStatusConfig,
+  // RBAC cards (PR 13)
+  role_status: roleStatusConfig,
+  role_binding_status: roleBindingStatusConfig,
 }
 
 /**
@@ -175,4 +181,7 @@ export {
   namespaceStatusConfig,
   operatorSubscriptionStatusConfig,
   serviceAccountStatusConfig,
+  // RBAC cards (PR 13)
+  roleStatusConfig,
+  roleBindingStatusConfig,
 }

@@ -41,6 +41,8 @@ import {
   useNamespaces,
   useOperatorSubscriptions,
   useServiceAccounts,
+  useK8sRoles,
+  useK8sRoleBindings,
 } from '../../hooks/mcp'
 
 // ============================================================================
@@ -352,6 +354,30 @@ function useUnifiedServiceAccounts(params?: Record<string, unknown>) {
   }
 }
 
+function useUnifiedK8sRoles(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useK8sRoles(cluster, namespace)
+  return {
+    data: result.roles,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedK8sRoleBindings(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useK8sRoleBindings(cluster, namespace)
+  return {
+    data: result.bindings,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 // ============================================================================
 // Demo data hooks for cards that don't have real data hooks yet
 // These return static demo data for visualization purposes
@@ -560,6 +586,8 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useNamespaces', useUnifiedNamespaces)
   registerDataHook('useOperatorSubscriptions', useUnifiedOperatorSubscriptions)
   registerDataHook('useServiceAccounts', useUnifiedServiceAccounts)
+  registerDataHook('useK8sRoles', useUnifiedK8sRoles)
+  registerDataHook('useK8sRoleBindings', useUnifiedK8sRoleBindings)
 
   // Filtered event hooks
   registerDataHook('useWarningEvents', useWarningEvents)
