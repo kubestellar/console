@@ -137,7 +137,8 @@ export function useOperators(cluster?: string) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError('Failed to fetch operators')
+          // Don't show error - operators are optional
+          setError(null)
           // Keep cached data on error instead of clearing
           if (operators.length === 0) {
             setOperators([])
@@ -250,7 +251,8 @@ export function useOperatorSubscriptions(cluster?: string) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError('Failed to fetch subscriptions')
+          // Don't show error - subscriptions are optional
+          setError(null)
           // Keep cached data on error instead of clearing
           if (subscriptions.length === 0) {
             setSubscriptions([])

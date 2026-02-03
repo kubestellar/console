@@ -231,7 +231,8 @@ export function useServices(cluster?: string, namespace?: string) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
-        setError('Failed to fetch services')
+        // Don't show error at dashboard level - services are optional
+        setError(null)
         // Fall back to demo data on error if no cached data
         if (services.length === 0) {
           setServices(getDemoServices().filter(s =>
@@ -315,7 +316,8 @@ export function useIngresses(cluster?: string, namespace?: string) {
       setIngresses(data.ingresses || [])
       setError(null)
     } catch {
-      setError('Failed to fetch Ingresses')
+      // Don't show error - Ingresses are optional
+      setError(null)
       setIngresses([])
     } finally {
       setIsLoading(false)
@@ -366,7 +368,8 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       setNetworkPolicies(data.networkpolicies || [])
       setError(null)
     } catch {
-      setError('Failed to fetch NetworkPolicies')
+      // Don't show error - NetworkPolicies are optional
+      setError(null)
       setNetworkPolicies([])
     } finally {
       setIsLoading(false)

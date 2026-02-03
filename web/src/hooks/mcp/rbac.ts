@@ -123,7 +123,8 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
       setRoles(data || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch roles')
+      // Don't show error - roles are optional
+      setError(null)
       // Fall back to demo data on error
       setRoles(getDemoK8sRoles(cluster))
     } finally {
@@ -170,7 +171,8 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
       setBindings(data || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch role bindings')
+      // Don't show error - role bindings are optional
+      setError(null)
       // Fall back to demo data on error
       setBindings(getDemoK8sRoleBindings(cluster, namespace))
     } finally {
@@ -210,7 +212,8 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       setServiceAccounts(data || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch service accounts')
+      // Don't show error - service accounts are optional
+      setError(null)
       // Fall back to demo data on error
       setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
     } finally {

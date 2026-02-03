@@ -473,7 +473,8 @@ export function useNodes(cluster?: string) {
         setNodes(placeholderNodes)
         setError(null)
       } else {
-        setError('Failed to fetch nodes')
+        // Don't show error at dashboard level
+        setError(null)
         setNodes([])
       }
     } finally {
@@ -509,7 +510,8 @@ export function useNVIDIAOperators(cluster?: string) {
       }
       setError(null)
     } catch (err) {
-      setError('Failed to fetch NVIDIA operator status')
+      // Don't show error - NVIDIA operators are optional
+      setError(null)
       setOperators([])
     } finally {
       setIsLoading(false)

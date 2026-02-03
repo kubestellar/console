@@ -185,7 +185,8 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !pvcsCache) {
-        setError('Failed to fetch PVCs')
+        // Don't show error - PVCs are optional, some clusters may have none
+        setError(null)
         setPVCs([])
       }
     } finally {
@@ -232,7 +233,8 @@ export function usePVs(cluster?: string) {
       setPVs(data.pvs || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch PVs')
+      // Don't show error - PVs are optional
+      setError(null)
       setPVs([])
     } finally {
       setIsLoading(false)
@@ -274,7 +276,8 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
       setResourceQuotas(data.resourceQuotas || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch ResourceQuotas')
+      // Don't show error - ResourceQuotas are optional
+      setError(null)
       // Don't fall back to demo data - show empty instead
       setResourceQuotas([])
     } finally {
@@ -317,7 +320,8 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       setLimitRanges(data.limitRanges || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch LimitRanges')
+      // Don't show error - LimitRanges are optional
+      setError(null)
       // Don't fall back to demo data - show empty instead
       setLimitRanges([])
     } finally {

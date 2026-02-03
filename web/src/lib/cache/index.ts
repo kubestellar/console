@@ -321,7 +321,7 @@ class CacheStore<T> {
       data: initialData,
       isLoading: !persist, // Only show loading if NOT persisting (no cached data possible)
       isRefreshing: persist, // Show refreshing indicator when persisting (cache loading)
-      error: meta.lastError ?? null,
+      error: null, // Don't surface errors at dashboard level
       isFailed: meta.consecutiveFailures >= MAX_FAILURES,
       consecutiveFailures: meta.consecutiveFailures,
       lastRefresh: meta.lastSuccessfulRefresh ?? null,
@@ -463,6 +463,8 @@ class CacheStore<T> {
         lastRefresh: Date.now(),
       })
     } catch (e) {
+      // Don't show error messages at dashboard level - track failures internally
+      // but don't display user-facing error banners for optional data
       const errorMessage = e instanceof Error ? e.message : 'Failed to fetch data'
       const newFailures = this.state.consecutiveFailures + 1
 
@@ -475,7 +477,7 @@ class CacheStore<T> {
       this.setState({
         isLoading: false,
         isRefreshing: false,
-        error: errorMessage,
+        error: null, // Don't show error - it's not useful at dashboard level
         isFailed: newFailures >= MAX_FAILURES,
         consecutiveFailures: newFailures,
       })
