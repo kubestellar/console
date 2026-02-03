@@ -18,7 +18,8 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { useClusters, usePVCs, PVC } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, STORAGE_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, getDefaultCardWidth } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -465,7 +466,7 @@ export function Storage() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Storage"
@@ -491,13 +492,12 @@ export function Storage() {
       )}
 
       {/* Stats Overview - configurable */}
-      <StatsOverview
-        dashboardType="storage"
+      <UnifiedStatsSection
+        config={STORAGE_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={hasDataToShow}
         isLoading={showSkeletons}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-storage-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useClusterCapabilities, ClusterCapability } from '../../hooks/useWorkloads'
 import { useReportCardDataState } from './CardDataContext'
+import { getDemoMode } from '../../hooks/useDemoMode'
 
 // Demo cluster data (fallback when no real clusters)
 const DEMO_CLUSTERS: ClusterCapability[] = [
@@ -73,9 +74,9 @@ export function ClusterDropZone({
 
   if (!isDragging || !draggedWorkload) return null
 
-  // Use real clusters if available, otherwise demo data
-  const clusters = realClusters && realClusters.length > 0 ? realClusters : DEMO_CLUSTERS
-  const isDemo = !realClusters || realClusters.length === 0
+  // Use demo data only in demo mode
+  const isDemo = getDemoMode()
+  const clusters = isDemo ? DEMO_CLUSTERS : (realClusters || [])
 
   // Filter out clusters where workload is already deployed and unavailable clusters
   const availableClusters = clusters.filter(

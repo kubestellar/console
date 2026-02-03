@@ -40,6 +40,19 @@ try {
 }
 
 /**
+ * Reset the backend availability cache (used when enabling demo mode with MSW)
+ * This clears both in-memory state and localStorage to force a fresh check
+ */
+export function resetBackendAvailabilityCache(): void {
+  backendAvailable = null
+  backendLastCheckTime = 0
+  backendCheckPromise = null
+  try {
+    localStorage.removeItem(BACKEND_STATUS_KEY)
+  } catch { /* ignore */ }
+}
+
+/**
  * Check backend availability - only makes ONE request, all others wait
  * Caches result in localStorage to avoid repeated checks across page loads
  * @param forceCheck - If true, ignores cache and always checks (used by login)
@@ -146,6 +159,11 @@ class ApiClient {
     const token = localStorage.getItem('token')
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
+    }
+    // Send demo mode header so backend can return demo data immediately
+    const demoMode = localStorage.getItem('kc-demo-mode')
+    if (demoMode === 'true') {
+      headers['X-Demo-Mode'] = 'true'
     }
     return headers
   }

@@ -25,7 +25,8 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, COMPUTE_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useMobile } from '../../hooks/useMobile'
@@ -368,7 +369,7 @@ export function Compute() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Compute"
@@ -382,8 +383,8 @@ export function Compute() {
         lastUpdated={lastUpdated}
       />
 
-      {/* Error Display */}
-      {error && (
+      {/* Error Display - only show when no data is available */}
+      {error && !hasDataToShow && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -394,13 +395,12 @@ export function Compute() {
       )}
 
       {/* Stats Overview - configurable */}
-      <StatsOverview
-        dashboardType="compute"
+      <UnifiedStatsSection
+        config={COMPUTE_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={hasDataToShow}
         isLoading={showSkeletons}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-compute-stats-collapsed"
       />
 
       {/* Cluster Selection for Comparison */}

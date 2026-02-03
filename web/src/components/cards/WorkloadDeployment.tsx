@@ -14,6 +14,7 @@ import {
   Plus,
   ArrowUpRight,
   GripVertical,
+  Loader2,
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards'
@@ -21,6 +22,7 @@ import { cn } from '../../lib/cn'
 import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
 import { useClusters } from '../../hooks/useMCP'
 import { useReportCardDataState } from './CardDataContext'
+import { getDemoMode } from '../../hooks/useDemoMode'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -417,12 +419,13 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   )
 
   // Fetch real workloads from API
-  const { data: realWorkloads } = useWorkloads()
+  const { data: realWorkloads, isLoading: workloadsLoading } = useWorkloads()
 
-  // Use real data if available, otherwise demo data
-  const isDemo = !realWorkloads || realWorkloads.length === 0
+  // Use demo data only in demo mode, otherwise use real data (or empty if none)
+  const isDemo = getDemoMode()
   const workloads: Workload[] = useMemo(() => {
     if (isDemo) return DEMO_WORKLOADS
+    if (!realWorkloads || realWorkloads.length === 0) return []
     // Transform API workloads to card format
     const mapped = realWorkloads.map((w: ApiWorkload) => {
       const clusters = w.targetClusters || (w.cluster ? [w.cluster] : [])
@@ -653,7 +656,12 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
 
       {/* Workload list */}
       <div className="flex-1 overflow-auto">
-        {filteredWorkloads.length === 0 ? (
+        {workloadsLoading && workloads.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4">
+            <Loader2 className="h-8 w-8 mb-2 animate-spin opacity-50" />
+            <p className="text-sm">Loading workloads...</p>
+          </div>
+        ) : filteredWorkloads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4">
             <Box className="h-8 w-8 mb-2 opacity-50" />
             <p className="text-sm">No workloads found</p>

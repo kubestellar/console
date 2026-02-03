@@ -26,7 +26,8 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, COMPLIANCE_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 // Width class lookup for Tailwind (dynamic classes don't work)
@@ -323,7 +324,7 @@ export function Compliance() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Security Posture"
@@ -349,13 +350,12 @@ export function Compliance() {
       )}
 
       {/* Configurable Stats Overview */}
-      <StatsOverview
-        dashboardType="compliance"
+      <UnifiedStatsSection
+        config={COMPLIANCE_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={posture.totalChecks > 0}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-compliance-stats-collapsed"
       />
 
       {/* Cards Grid */}

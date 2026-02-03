@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
 import { getPresentationMode } from './usePresentationMode'
+import { getDemoMode } from './useDemoMode'
 import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
@@ -87,10 +88,74 @@ const MAX_MISSIONS = 50
 /** Stop polling completed missions after this duration */
 const COMPLETED_POLL_CUTOFF_MS = 5 * 60 * 1000
 
+// Demo deployment missions for demo mode
+function getDemoMissions(): DeployMission[] {
+  const now = Date.now()
+  return [
+    {
+      id: 'demo-mission-1',
+      workload: 'nginx-frontend',
+      namespace: 'production',
+      sourceCluster: 'dev-local',
+      targetClusters: ['prod-us-east', 'prod-us-west', 'prod-eu-west'],
+      groupName: 'Production',
+      deployedBy: 'admin@example.com',
+      status: 'orbit',
+      clusterStatuses: [
+        { cluster: 'prod-us-east', status: 'running', replicas: 3, readyReplicas: 3, logs: ['Scaled up replica set nginx-frontend-7d4f8b9c6 to 3', 'Deployment complete'] },
+        { cluster: 'prod-us-west', status: 'running', replicas: 3, readyReplicas: 3, logs: ['Scaled up replica set nginx-frontend-7d4f8b9c6 to 3', 'Deployment complete'] },
+        { cluster: 'prod-eu-west', status: 'running', replicas: 3, readyReplicas: 3, logs: ['Scaled up replica set nginx-frontend-7d4f8b9c6 to 3', 'Deployment complete'] },
+      ],
+      startedAt: now - 3600000, // 1 hour ago
+      completedAt: now - 3500000,
+      pollCount: 10,
+    },
+    {
+      id: 'demo-mission-2',
+      workload: 'api-gateway',
+      namespace: 'staging',
+      sourceCluster: 'dev-local',
+      targetClusters: ['staging-us', 'staging-eu'],
+      groupName: 'Staging',
+      deployedBy: 'developer@example.com',
+      status: 'deploying',
+      clusterStatuses: [
+        { cluster: 'staging-us', status: 'running', replicas: 2, readyReplicas: 2, logs: ['Deployment complete'] },
+        { cluster: 'staging-eu', status: 'applying', replicas: 2, readyReplicas: 1, logs: ['Scaling up replica set...'] },
+      ],
+      startedAt: now - 60000, // 1 minute ago
+      pollCount: 3,
+    },
+    {
+      id: 'demo-mission-3',
+      workload: 'ml-inference',
+      namespace: 'ml-workloads',
+      sourceCluster: 'dev-local',
+      targetClusters: ['gpu-pool-1', 'gpu-pool-2'],
+      groupName: 'GPU Clusters',
+      deployedBy: 'data-scientist@example.com',
+      status: 'partial',
+      clusterStatuses: [
+        { cluster: 'gpu-pool-1', status: 'running', replicas: 4, readyReplicas: 4, logs: ['GPU resources allocated', 'Model loaded successfully'] },
+        { cluster: 'gpu-pool-2', status: 'failed', replicas: 4, readyReplicas: 0, logs: ['Error: Insufficient GPU memory', 'Deployment failed'] },
+      ],
+      startedAt: now - 1800000, // 30 minutes ago
+      completedAt: now - 1700000,
+      pollCount: 8,
+      warnings: ['GPU pool-2 has insufficient resources for the requested configuration'],
+    },
+  ]
+}
+
 function loadMissions(): DeployMission[] {
   try {
     const stored = localStorage.getItem(MISSIONS_KEY)
-    if (stored) return JSON.parse(stored)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
     // Migrate from old split keys
     const oldActive = localStorage.getItem('kubestellar-missions-active')
     const oldHistory = localStorage.getItem('kubestellar-missions-history')
@@ -107,6 +172,10 @@ function loadMissions(): DeployMission[] {
     }
   } catch {
     // ignore
+  }
+  // Return demo missions if in demo mode
+  if (getDemoMode()) {
+    return getDemoMissions()
   }
   return []
 }

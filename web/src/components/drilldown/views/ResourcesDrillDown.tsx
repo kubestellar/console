@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
+import { useClusters, useGPUNodes, useTPUNodes } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { Gauge } from '../../charts/Gauge'
 import { Cpu, MemoryStick, Server, ChevronRight, GripVertical } from 'lucide-react'
@@ -195,6 +195,7 @@ function SortableClusterRow({
 export function ResourcesDrillDown({ data: _data }: Props) {
   const { deduplicatedClusters: initialClusters, isLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: tpuNodes } = useTPUNodes()
   const { drillToCluster } = useDrillDownActions()
 
   // Local state for cluster order (persists during session)
@@ -259,7 +260,28 @@ export function ResourcesDrillDown({ data: _data }: Props) {
     return map
   }, [gpuNodes, clusterNameMap])
 
-  // Calculate totals (using deduplicated GPU counts from clusterGPUs map)
+  // Calculate per-cluster TPU data (mapping aliases to primary cluster names)
+  const clusterTPUs = useMemo(() => {
+    const map: Record<string, { total: number; allocated: number }> = {}
+    const seenNodes = new Set<string>()
+
+    tpuNodes.forEach(node => {
+      const nodeKey = node.name
+      if (seenNodes.has(nodeKey)) return
+      seenNodes.add(nodeKey)
+
+      const rawCluster = node.cluster || 'unknown'
+      const cluster = clusterNameMap[rawCluster] || rawCluster
+      if (!map[cluster]) {
+        map[cluster] = { total: 0, allocated: 0 }
+      }
+      map[cluster].total += node.tpuCount
+      map[cluster].allocated += node.tpuAllocated
+    })
+    return map
+  }, [tpuNodes, clusterNameMap])
+
+  // Calculate totals (using deduplicated GPU/TPU counts from cluster maps)
   const totals = useMemo(() => {
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalCPURequests = clusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
@@ -274,6 +296,13 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       totalGPUs += gpu.total
       allocatedGPUs += gpu.allocated
     })
+    // Use aggregated TPU counts from clusterTPUs (already deduplicated)
+    let totalTPUs = 0
+    let allocatedTPUs = 0
+    Object.values(clusterTPUs).forEach(tpu => {
+      totalTPUs += tpu.total
+      allocatedTPUs += tpu.allocated
+    })
 
     return {
       cpus: totalCPUs,
@@ -284,8 +313,10 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       memoryRequestsGB: totalMemoryRequestsGB,
       gpus: totalGPUs,
       gpusAllocated: allocatedGPUs,
+      tpus: totalTPUs,
+      tpusAllocated: allocatedTPUs,
     }
-  }, [clusters, clusterGPUs])
+  }, [clusters, clusterGPUs, clusterTPUs])
 
   // DnD sensors
   const sensors = useSensors(
@@ -372,17 +403,18 @@ export function ResourcesDrillDown({ data: _data }: Props) {
           </div>
         )}
 
-        {/* TPU - placeholder for future */}
-        <div className="p-3 rounded-lg bg-card/50 border border-border">
-          <div className="flex items-center gap-2 mb-1">
-            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs text-muted-foreground">TPU Allocated</span>
+        {totals.tpus > 0 && (
+          <div className="p-3 rounded-lg bg-card/50 border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-xs text-muted-foreground">TPU Allocated</span>
+            </div>
+            <div className="text-xl font-bold text-foreground">
+              <span className="text-cyan-400">{totals.tpusAllocated}</span>
+              <span className="text-muted-foreground">/{totals.tpus}</span>
+            </div>
           </div>
-          <div className="text-xl font-bold text-foreground">
-            <span className="text-cyan-400">0</span>
-            <span className="text-muted-foreground">/0</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Cluster List - compact draggable rows */}
@@ -449,8 +481,8 @@ export function ResourcesDrillDown({ data: _data }: Props) {
                 const rawGpuPercent = gpuData.total > 0 ? Math.round((gpuData.allocated / gpuData.total) * 100) : 0
                 const gpuPercent = Math.min(rawGpuPercent, 100)
 
-                // TPU data - placeholder for now
-                const tpuData = { total: 0, allocated: 0 }
+                // TPU data from clusterTPUs map
+                const tpuData = clusterTPUs[cluster.name] || { total: 0, allocated: 0 }
 
                 return (
                   <SortableClusterRow

@@ -16,7 +16,8 @@ import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, COMPUTE_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -298,7 +299,7 @@ export function Nodes() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Nodes"
@@ -324,13 +325,12 @@ export function Nodes() {
       )}
 
       {/* Stats Overview */}
-      <StatsOverview
-        dashboardType="compute"
+      <UnifiedStatsSection
+        config={COMPUTE_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={totalNodes > 0}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-nodes-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

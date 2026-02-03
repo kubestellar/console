@@ -176,6 +176,15 @@ export interface GPUNode {
   manufacturer?: string
 }
 
+export interface TPUNode {
+  name: string
+  cluster: string
+  tpuType: string  // e.g., 'v4-8', 'v5e-16', 'v5p-8'
+  tpuCount: number
+  tpuAllocated: number
+  acceleratorType?: string  // e.g., 'tpu-v4-pod', 'tpu-v5e-slice'
+}
+
 // NVIDIA Operator Status types
 export interface OperatorComponent {
   name: string

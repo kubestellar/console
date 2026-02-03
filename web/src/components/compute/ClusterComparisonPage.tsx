@@ -64,7 +64,7 @@ export function ClusterComparisonPage() {
 
   if (isLoading && clusters.length === 0) {
     return (
-      <div className="pt-16">
+      <div className="">
         <div className="mb-6">
           <Skeleton variant="text" width={200} height={32} />
         </div>
@@ -79,7 +79,7 @@ export function ClusterComparisonPage() {
 
   if (clustersToCompare.length < 2) {
     return (
-      <div className="pt-16">
+      <div className="">
         <div className="mb-6">
           <button
             onClick={handleBack}
@@ -107,7 +107,7 @@ export function ClusterComparisonPage() {
   }
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <div className="mb-6">
         <button

@@ -28,11 +28,17 @@ export type CardCategory =
   | 'security'
   | 'live-trends'
   | 'ai'
+  | 'ai-ml'
   | 'alerting'
+  | 'alerts'
   | 'cost'
   | 'policy'
   | 'external'
   | 'utilities'
+  | 'utility'
+  | 'games'
+  | 'events'
+  | 'ci-cd'
 
 export interface CardDefinition {
   /** Unique card type identifier */

@@ -17,7 +17,8 @@ import { useCachedServices } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
+import { UnifiedStatsSection, NETWORK_STATS_CONFIG } from '../../lib/unified/stats'
+import type { StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -290,7 +291,7 @@ export function Network() {
   } : null
 
   return (
-    <div className="pt-16">
+    <div className="">
       {/* Header */}
       <DashboardHeader
         title="Network"
@@ -316,13 +317,12 @@ export function Network() {
       )}
 
       {/* Stats Overview - configurable */}
-      <StatsOverview
-        dashboardType="network"
+      <UnifiedStatsSection
+        config={NETWORK_STATS_CONFIG}
         getStatValue={getStatValue}
         hasData={services.length > 0 || !showSkeletons}
         isLoading={showSkeletons}
         lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-network-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

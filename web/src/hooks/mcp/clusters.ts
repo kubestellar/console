@@ -341,6 +341,8 @@ function getDemoHealth(cluster?: string): ClusterHealth {
     'vllm-gpu-cluster': { nodeCount: 8, podCount: 124, cpuCores: 256, memoryGB: 2048, storageGB: 8000 },
   }
   const metrics = clusterMetrics[cluster || ''] || { nodeCount: 3, podCount: 45, cpuCores: 24, memoryGB: 96, storageGB: 500 }
+  // Calculate used/requested resources (simulate 40-75% utilization)
+  const utilizationFactor = 0.4 + Math.random() * 0.35
   return {
     cluster: cluster || 'default',
     healthy: cluster !== 'alibaba-ack-shanghai',
@@ -352,6 +354,8 @@ function getDemoHealth(cluster?: string): ClusterHealth {
     memoryBytes: metrics.memoryGB * 1024 * 1024 * 1024,
     storageGB: metrics.storageGB,
     storageBytes: metrics.storageGB * 1024 * 1024 * 1024,
+    cpuRequestsCores: Math.round(metrics.cpuCores * utilizationFactor * 10) / 10,
+    memoryRequestsGB: Math.round(metrics.memoryGB * utilizationFactor * 10) / 10,
     issues: [],
   }
 }

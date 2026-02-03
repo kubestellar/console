@@ -11,6 +11,7 @@ import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import { getDemoMode } from '../../../hooks/useDemoMode'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -129,7 +130,8 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         }))
         allRuns.push(...runs)
       }
-      setWorkflows(allRuns.length > 0 ? allRuns : DEMO_WORKFLOWS)
+      // Only use demo data in demo mode
+      setWorkflows(allRuns.length > 0 ? allRuns : (getDemoMode() ? DEMO_WORKFLOWS : []))
     } catch (err) {
       console.error('[GitHubCIMonitor] fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch workflows')
