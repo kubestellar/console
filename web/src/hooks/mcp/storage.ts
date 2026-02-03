@@ -91,6 +91,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
+    if (!isMountedRef.current) return
     if (!silent) {
       setIsRefreshing(true)
     }
@@ -99,6 +100,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       const demoPVCs = getDemoPVCs().filter(p =>
         (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
       )
+      if (!isMountedRef.current) return
       setPVCs(demoPVCs)
       setIsLoading(false)
       setIsRefreshing(false)
@@ -108,68 +110,122 @@ export function usePVCs(cluster?: string, namespace?: string) {
     }
 
     // Try local agent HTTP endpoint first
-    if (cluster && !isAgentUnavailable()) {
+    if (!isAgentUnavailable()) {
       try {
-        const params = new URLSearchParams()
-        params.append('cluster', cluster)
-        if (namespace) params.append('namespace', namespace)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
-        const response = await fetch(`${LOCAL_AGENT_URL}/pvcs?${params}`, {
-          signal: controller.signal,
-          headers: { 'Accept': 'application/json' },
-        })
-        clearTimeout(timeoutId)
-        if (response.ok) {
-          const agentData = await response.json()
-          const mappedPVCs: PVC[] = (agentData.pvcs || []).map((p: PVC) => ({ ...p, cluster }))
-          const now = new Date()
-          pvcsCache = { data: mappedPVCs, timestamp: now, key: cacheKey }
-          setPVCs(mappedPVCs)
-          setError(null)
-          setLastUpdated(now)
-          setConsecutiveFailures(0)
-          setLastRefresh(now)
-          setIsLoading(false)
-          setIsRefreshing(false)
-          reportAgentDataSuccess()
-          return
+        // If cluster is specified, fetch from that cluster only
+        // If no cluster specified, aggregate from all clusters
+        const clustersToFetch = cluster
+          ? [{ name: cluster, context: cluster }]
+          : clusterCacheRef.clusters.filter(c => c.reachable !== false)
+
+        if (clustersToFetch.length > 0) {
+          const allPVCs: PVC[] = []
+          let anySuccess = false
+
+          // Fetch PVCs from each cluster (in parallel for speed)
+          const fetchPromises = clustersToFetch.map(async (c) => {
+            try {
+              const params = new URLSearchParams()
+              params.append('cluster', c.context || c.name)
+              if (namespace) params.append('namespace', namespace)
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 15000)
+              const response = await fetch(`${LOCAL_AGENT_URL}/pvcs?${params}`, {
+                signal: controller.signal,
+                headers: { 'Accept': 'application/json' },
+              })
+              clearTimeout(timeoutId)
+              if (response.ok) {
+                const agentData = await response.json()
+                const mappedPVCs: PVC[] = (agentData.pvcs || []).map((p: PVC) => ({ ...p, cluster: c.name }))
+                return { success: true, pvcs: mappedPVCs }
+              }
+            } catch {
+              // Individual cluster failure - continue with others
+            }
+            return { success: false, pvcs: [] }
+          })
+
+          const results = await Promise.all(fetchPromises)
+          for (const result of results) {
+            if (result.success) {
+              anySuccess = true
+              allPVCs.push(...result.pvcs)
+            }
+          }
+
+          if (anySuccess) {
+            const now = new Date()
+            pvcsCache = { data: allPVCs, timestamp: now, key: cacheKey }
+            savePVCsCacheToStorage()
+            if (!isMountedRef.current) return
+            setPVCs(allPVCs)
+            setError(null)
+            setLastUpdated(now)
+            setConsecutiveFailures(0)
+            setLastRefresh(now)
+            setIsLoading(false)
+            setIsRefreshing(false)
+            reportAgentDataSuccess()
+            return
+          }
         }
       } catch {
         // Fall through to kubectl proxy
       }
     }
 
-    // Try kubectl proxy when cluster is specified
-    if (cluster && !isAgentUnavailable()) {
+    // Try kubectl proxy as fallback
+    if (!isAgentUnavailable()) {
       try {
-        const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
-        const kubectlContext = clusterInfo?.context || cluster
-        const pvcData = await kubectlProxy.getPVCs(kubectlContext, namespace)
-        const now = new Date()
-        // Map to PVC format
-        const mappedPVCs: PVC[] = pvcData.map(p => ({
-          name: p.name,
-          namespace: p.namespace,
-          cluster: cluster,
-          status: p.status,
-          capacity: p.capacity,
-          storageClass: p.storageClass,
-        }))
-        pvcsCache = { data: mappedPVCs, timestamp: now, key: cacheKey }
-        setPVCs(mappedPVCs)
-        setError(null)
-        setLastUpdated(now)
-        setConsecutiveFailures(0)
-        setLastRefresh(now)
-        setIsLoading(false)
-        setIsRefreshing(false)
-        return
-      } catch (err) {
-        console.error(`[usePVCs] kubectl proxy failed for ${cluster}, trying API`)
+        const clustersToFetch = cluster
+          ? [{ name: cluster, context: clusterCacheRef.clusters.find(c => c.name === cluster)?.context || cluster }]
+          : clusterCacheRef.clusters.filter(c => c.reachable !== false)
+
+        if (clustersToFetch.length > 0) {
+          const allPVCs: PVC[] = []
+          let anySuccess = false
+
+          for (const c of clustersToFetch) {
+            try {
+              const kubectlContext = c.context || c.name
+              const pvcData = await kubectlProxy.getPVCs(kubectlContext, namespace)
+              const mappedPVCs: PVC[] = pvcData.map(p => ({
+                name: p.name,
+                namespace: p.namespace,
+                cluster: c.name,
+                status: p.status,
+                capacity: p.capacity,
+                storageClass: p.storageClass,
+              }))
+              allPVCs.push(...mappedPVCs)
+              anySuccess = true
+            } catch {
+              // Individual cluster failure - continue with others
+            }
+          }
+
+          if (anySuccess) {
+            const now = new Date()
+            pvcsCache = { data: allPVCs, timestamp: now, key: cacheKey }
+            savePVCsCacheToStorage()
+            if (!isMountedRef.current) return
+            setPVCs(allPVCs)
+            setError(null)
+            setLastUpdated(now)
+            setConsecutiveFailures(0)
+            setLastRefresh(now)
+            setIsLoading(false)
+            setIsRefreshing(false)
+            return
+          }
+        }
+      } catch {
+        console.error(`[usePVCs] kubectl proxy failed, trying API`)
       }
     }
 
+    if (!isMountedRef.current) return
     if (!silent) {
       const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
       if (!hasCachedData) {
@@ -188,12 +244,14 @@ export function usePVCs(cluster?: string, namespace?: string) {
       pvcsCache = { data: newData, timestamp: now, key: cacheKey }
       savePVCsCacheToStorage()
 
+      if (!isMountedRef.current) return
       setPVCs(newData)
       setError(null)
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch (err) {
+    } catch {
+      if (!isMountedRef.current) return
       // Keep stale data on error
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
@@ -203,10 +261,12 @@ export function usePVCs(cluster?: string, namespace?: string) {
         setPVCs([])
       }
     } finally {
-      if (!silent) {
-        setIsLoading(false)
+      if (isMountedRef.current) {
+        if (!silent) {
+          setIsLoading(false)
+        }
+        setIsRefreshing(false)
       }
-      setIsRefreshing(false)
     }
   }, [cluster, namespace, cacheKey])
 
@@ -255,24 +315,37 @@ export function usePVs(cluster?: string) {
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
+  // Track mounted state to prevent state updates after unmount (StrictMode)
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
+
   const refetch = useCallback(async () => {
+    if (!isMountedRef.current) return
     setIsLoading(true)
     setIsRefreshing(true)
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       const { data } = await api.get<{ pvs: PV[] }>(`/api/mcp/pvs?${params}`)
+      if (!isMountedRef.current) return
       setPVs(data.pvs || [])
       setError(null)
       setConsecutiveFailures(0)
-    } catch (err) {
-      // Don't show error - PVs are optional
-      setError(null)
-      setConsecutiveFailures(prev => prev + 1)
-      setPVs([])
+    } catch {
+      if (isMountedRef.current) {
+        // Don't show error - PVs are optional
+        setError(null)
+        setConsecutiveFailures(prev => prev + 1)
+        setPVs([])
+      }
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      if (isMountedRef.current) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
     }
   }, [cluster])
 
@@ -310,7 +383,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ resourceQuotas: ResourceQuota[] }>(`/api/mcp/resourcequotas?${params}`)
       setResourceQuotas(data.resourceQuotas || [])
       setError(null)
-    } catch (err) {
+    } catch {
       // Don't show error - ResourceQuotas are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
@@ -354,7 +427,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ limitRanges: LimitRange[] }>(`/api/mcp/limitranges?${params}`)
       setLimitRanges(data.limitRanges || [])
       setError(null)
-    } catch (err) {
+    } catch {
       // Don't show error - LimitRanges are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
