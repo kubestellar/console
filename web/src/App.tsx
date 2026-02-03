@@ -48,6 +48,8 @@ const UserManagementPage = lazy(() => import('./pages/UserManagement').then(m =>
 const NamespaceManager = lazy(() => import('./components/namespaces/NamespaceManager').then(m => ({ default: m.NamespaceManager })))
 const Arcade = lazy(() => import('./components/arcade/Arcade').then(m => ({ default: m.Arcade })))
 const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ default: m.Deploy })))
+const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
+const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
 
 // Prefetch all lazy route chunks after initial page load.
 // This runs during idle time so by the time the user navigates,
@@ -75,6 +77,13 @@ if (typeof window !== 'undefined') {
       () => import('./components/helm/HelmReleases'),
       () => import('./components/settings/Settings'),
       () => import('./components/gpu/GPUReservations'),
+      // Previously missing - these were loading slowly on first navigation
+      () => import('./components/data-compliance/DataCompliance'),
+      () => import('./components/logs/Logs'),
+      () => import('./components/arcade/Arcade'),
+      () => import('./components/deploy/Deploy'),
+      () => import('./components/aiml/AIML'),
+      () => import('./components/cicd/CICD'),
     ]
     // Stagger imports to avoid blocking the main thread
     chunks.forEach((load, i) => {
@@ -547,6 +556,30 @@ function App() {
               <OnboardedRoute>
                 <Layout>
                   <Deploy />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-ml"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <AIML />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ci-cd"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <CICD />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>
