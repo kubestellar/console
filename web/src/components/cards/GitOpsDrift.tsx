@@ -8,6 +8,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 
@@ -58,11 +59,27 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const cluster = config?.cluster
   const namespace = config?.namespace
 
-  const { drifts, isLoading: isLoadingHook, error } = useGitOpsDrifts(cluster, namespace)
+  const {
+    drifts,
+    isLoading: isLoadingHook,
+    isRefreshing,
+    error,
+    isFailed,
+    consecutiveFailures,
+  } = useGitOpsDrifts(cluster, namespace)
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
   // Only show skeleton when no cached data exists - prevents flickering
   const isLoading = isLoadingHook && drifts.length === 0
+
+  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading,
+    isRefreshing,
+    hasData: drifts.length > 0,
+  })
 
   // Map drift severity to global SeverityLevel
   const mapDriftSeverityToGlobal = (severity: 'high' | 'medium' | 'low'): SeverityLevel[] => {

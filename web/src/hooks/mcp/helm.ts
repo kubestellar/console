@@ -3,7 +3,8 @@ import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
 // Helm releases cache with localStorage persistence
-const HELM_RELEASES_CACHE_KEY = 'kubestellar-helm-releases'
+const HELM_RELEASES_CACHE_KEY = 'kc-helm-releases-cache'
+const HELM_HISTORY_CACHE_KEY = 'kc-helm-history-cache'
 const HELM_CACHE_TTL_MS = 30000 // 30 seconds before stale
 const HELM_REFRESH_INTERVAL_MS = 120000 // 2 minutes auto-refresh
 
@@ -192,11 +193,37 @@ export function useHelmReleases(cluster?: string) {
 }
 
 // Module-level cache for Helm history - keyed by cluster:release
-const helmHistoryCache = new Map<string, {
+// Uses localStorage for persistence
+interface HelmHistoryCacheEntry {
   data: HelmHistoryEntry[]
   timestamp: number
   consecutiveFailures: number
-}>()
+}
+
+// Load helm history cache from localStorage
+function loadHelmHistoryFromStorage(): Map<string, HelmHistoryCacheEntry> {
+  try {
+    const stored = localStorage.getItem(HELM_HISTORY_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (typeof parsed === 'object' && parsed !== null) {
+        return new Map(Object.entries(parsed))
+      }
+    }
+  } catch { /* ignore */ }
+  return new Map()
+}
+
+// Save helm history cache to localStorage
+function saveHelmHistoryToStorage(cache: Map<string, HelmHistoryCacheEntry>) {
+  try {
+    const obj = Object.fromEntries(cache.entries())
+    localStorage.setItem(HELM_HISTORY_CACHE_KEY, JSON.stringify(obj))
+  } catch { /* ignore storage errors */ }
+}
+
+// Initialize from localStorage
+const helmHistoryCache = loadHelmHistoryFromStorage()
 
 // Hook to fetch Helm release history
 export function useHelmHistory(cluster?: string, release?: string, namespace?: string) {
@@ -204,7 +231,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
   const cachedEntry = cacheKey ? helmHistoryCache.get(cacheKey) : undefined
 
   const [history, setHistory] = useState<HelmHistoryEntry[]>(cachedEntry?.data || [])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(cachedEntry?.data.length === 0 || !cachedEntry)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(cachedEntry?.consecutiveFailures || 0)
@@ -257,20 +284,21 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setConsecutiveFailures(0)
       setLastRefresh(Date.now())
 
-      // Update cache
+      // Update cache and persist to localStorage
       if (cluster && release) {
         helmHistoryCache.set(`${cluster}:${release}`, {
           data: newHistory,
           timestamp: Date.now(),
           consecutiveFailures: 0
         })
+        saveHelmHistoryToStorage(helmHistoryCache)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch Helm history'
       setError(errorMessage)
       setConsecutiveFailures(prev => prev + 1)
 
-      // Update cache failure count on error
+      // Update cache failure count on error and persist
       if (cluster && release) {
         const currentCached = helmHistoryCache.get(`${cluster}:${release}`)
         if (currentCached) {
@@ -278,6 +306,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
             ...currentCached,
             consecutiveFailures: (currentCached.consecutiveFailures || 0) + 1
           })
+          saveHelmHistoryToStorage(helmHistoryCache)
         }
       }
       // Keep cached data on error

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -9,6 +9,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 interface KustomizationStatusProps {
   config?: {
@@ -27,6 +28,30 @@ interface Kustomization {
   revision: string
 }
 
+// LocalStorage cache keys
+const KUSTOMIZATION_CACHE_KEY = 'kc-kustomization-status-cache'
+
+// Load from localStorage
+function loadKustomizationsFromStorage(): { data: Kustomization[], timestamp: number } {
+  try {
+    const stored = localStorage.getItem(KUSTOMIZATION_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed.data)) {
+        return { data: parsed.data, timestamp: parsed.timestamp || 0 }
+      }
+    }
+  } catch { /* ignore */ }
+  return { data: [], timestamp: 0 }
+}
+
+// Save to localStorage
+function saveKustomizationsToStorage(data: Kustomization[], timestamp: number) {
+  try {
+    localStorage.setItem(KUSTOMIZATION_CACHE_KEY, JSON.stringify({ data, timestamp }))
+  } catch { /* ignore storage errors */ }
+}
+
 type SortByOption = 'status' | 'name' | 'namespace' | 'lastApplied'
 
 const SORT_OPTIONS = [
@@ -35,6 +60,18 @@ const SORT_OPTIONS = [
   { value: 'namespace' as const, label: 'Namespace' },
   { value: 'lastApplied' as const, label: 'Last Applied' },
 ]
+
+// Demo kustomization data
+function getDemoKustomizations(): Kustomization[] {
+  return [
+    { name: 'infrastructure', namespace: 'flux-system', path: './infrastructure', sourceRef: 'flux-system/flux-repo', status: 'Ready', lastApplied: '2024-01-11T10:30:00Z', revision: 'main@sha1:abc123' },
+    { name: 'apps', namespace: 'flux-system', path: './apps', sourceRef: 'flux-system/flux-repo', status: 'Ready', lastApplied: '2024-01-11T10:31:00Z', revision: 'main@sha1:abc123' },
+    { name: 'monitoring', namespace: 'flux-system', path: './monitoring', sourceRef: 'flux-system/flux-repo', status: 'Progressing', lastApplied: '2024-01-11T10:32:00Z', revision: 'main@sha1:def456' },
+    { name: 'tenants-dev', namespace: 'flux-system', path: './tenants/dev', sourceRef: 'flux-system/tenants-repo', status: 'Ready', lastApplied: '2024-01-10T15:00:00Z', revision: 'main@sha1:789ghi' },
+    { name: 'tenants-prod', namespace: 'flux-system', path: './tenants/prod', sourceRef: 'flux-system/tenants-repo', status: 'NotReady', lastApplied: '2024-01-10T15:00:00Z', revision: 'main@sha1:789ghi' },
+    { name: 'secrets', namespace: 'flux-system', path: './secrets', sourceRef: 'flux-system/flux-repo', status: 'Suspended', lastApplied: '2024-01-05T09:00:00Z', revision: 'main@sha1:jkl012' },
+  ]
+}
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
@@ -46,6 +83,31 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     customFilter,
   } = useGlobalFilters()
   const { drillToKustomization } = useDrillDownActions()
+
+  // Initialize from localStorage cache
+  const storedData = loadKustomizationsFromStorage()
+  const [kustomizationData, setKustomizationData] = useState<Kustomization[]>(
+    storedData.data.length > 0 ? storedData.data : getDemoKustomizations()
+  )
+
+  // Save demo data to localStorage on first load
+  useEffect(() => {
+    if (storedData.data.length === 0) {
+      const demoData = getDemoKustomizations()
+      setKustomizationData(demoData)
+      saveKustomizationsToStorage(demoData, Date.now())
+    }
+  }, [storedData.data.length])
+
+  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  // Using demo data so isFailed is always false, isRefreshing is false
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading,
+    isRefreshing: false,
+    hasData: kustomizationData.length > 0,
+  })
 
   // Apply global filters to cluster list for the dropdown
   const clusters = useMemo(() => {
@@ -66,15 +128,8 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Mock kustomization data
-  const allKustomizations: Kustomization[] = selectedCluster ? [
-    { name: 'infrastructure', namespace: 'flux-system', path: './infrastructure', sourceRef: 'flux-system/flux-repo', status: 'Ready', lastApplied: '2024-01-11T10:30:00Z', revision: 'main@sha1:abc123' },
-    { name: 'apps', namespace: 'flux-system', path: './apps', sourceRef: 'flux-system/flux-repo', status: 'Ready', lastApplied: '2024-01-11T10:31:00Z', revision: 'main@sha1:abc123' },
-    { name: 'monitoring', namespace: 'flux-system', path: './monitoring', sourceRef: 'flux-system/flux-repo', status: 'Progressing', lastApplied: '2024-01-11T10:32:00Z', revision: 'main@sha1:def456' },
-    { name: 'tenants-dev', namespace: 'flux-system', path: './tenants/dev', sourceRef: 'flux-system/tenants-repo', status: 'Ready', lastApplied: '2024-01-10T15:00:00Z', revision: 'main@sha1:789ghi' },
-    { name: 'tenants-prod', namespace: 'flux-system', path: './tenants/prod', sourceRef: 'flux-system/tenants-repo', status: 'NotReady', lastApplied: '2024-01-10T15:00:00Z', revision: 'main@sha1:789ghi' },
-    { name: 'secrets', namespace: 'flux-system', path: './secrets', sourceRef: 'flux-system/flux-repo', status: 'Suspended', lastApplied: '2024-01-05T09:00:00Z', revision: 'main@sha1:jkl012' },
-  ] : []
+  // Filter kustomizations based on selected cluster
+  const allKustomizations: Kustomization[] = selectedCluster ? kustomizationData : []
 
   // Get unique namespaces
   const namespaces = useMemo(() => {

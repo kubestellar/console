@@ -9,6 +9,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 interface HelmHistoryProps {
   config?: {
@@ -96,6 +97,8 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     history: rawHistory,
     isLoading: historyLoading,
     isRefreshing: historyRefreshing,
+    isFailed,
+    consecutiveFailures,
   } = useHelmHistory(
     selectedCluster || undefined,
     selectedRelease || undefined,
@@ -104,6 +107,15 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
   // Only show skeleton when no cached data exists
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: historyLoading,
+    isRefreshing: historyRefreshing,
+    hasData: rawHistory.length > 0,
+  })
 
   // Apply global filters to clusters
   const clusters = useMemo(() => {

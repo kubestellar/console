@@ -6,6 +6,7 @@ import {
   useCardData, commonComparators,
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ChartVersionsProps {
   config?: {
@@ -36,10 +37,22 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   const {
     releases: allHelmReleases,
     isLoading: releasesLoading,
+    isRefreshing,
+    isFailed,
+    consecutiveFailures,
   } = useHelmReleases()
 
   // Only show skeleton when no cached data exists
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading,
+    isRefreshing,
+    hasData: allHelmReleases.length > 0,
+  })
 
   // Transform Helm releases to chart info
   const allCharts: ChartInfo[] = useMemo(() => {

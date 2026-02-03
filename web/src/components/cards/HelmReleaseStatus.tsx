@@ -8,6 +8,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 interface HelmReleaseStatusProps {
   config?: {
@@ -48,10 +49,22 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   const {
     releases: allHelmReleases,
     isLoading: releasesLoading,
+    isRefreshing,
+    isFailed,
+    consecutiveFailures,
   } = useHelmReleases()
 
   // Only show loading skeleton when no data exists (not during refresh)
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+
+  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading,
+    isRefreshing,
+    hasData: allHelmReleases.length > 0,
+  })
 
   // Transform API data to display format
   const allReleases = useMemo(() => {
