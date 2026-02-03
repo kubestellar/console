@@ -32,6 +32,7 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useMobile } from '../../hooks/useMobile'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import {
   getMockSecurityData,
   getMockRBACData,
@@ -264,10 +265,14 @@ export function Security() {
     setShowTemplates(false)
   }, [setCards, expandCards, setShowTemplates])
 
-  // In production, fetch from API
-  const securityIssues = useMemo(() => getMockSecurityData(), [])
-  const rbacBindings = useMemo(() => getMockRBACData(), [])
-  const complianceChecks = useMemo(() => getMockComplianceData(), [])
+  // Check demo mode
+  const { isDemoMode } = useDemoMode()
+
+  // Only show mock data in demo mode
+  // TODO: Implement real security API integration when KC agent supports security endpoints
+  const securityIssues = useMemo(() => isDemoMode ? getMockSecurityData() : [], [isDemoMode])
+  const rbacBindings = useMemo(() => isDemoMode ? getMockRBACData() : [], [isDemoMode])
+  const complianceChecks = useMemo(() => isDemoMode ? getMockComplianceData() : [], [isDemoMode])
 
   // Issues after global filter (before local severity filter)
   const globalFilteredIssues = useMemo(() => {

@@ -13,6 +13,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
+import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
@@ -223,6 +224,10 @@ interface CardWrapperProps {
   onWidthChange?: (newWidth: number) => void
   onChatMessage?: (message: string) => Promise<ChatMessage>
   onChatMessagesChange?: (messages: ChatMessage[]) => void
+  /** Skeleton type to show when loading with no cached data */
+  skeletonType?: CardSkeletonProps['type']
+  /** Number of skeleton rows to show */
+  skeletonRows?: number
   children: ReactNode
 }
 
@@ -708,6 +713,8 @@ export function CardWrapper({
   onWidthChange,
   onChatMessage,
   onChatMessagesChange,
+  skeletonType,
+  skeletonRows,
   children,
 }: CardWrapperProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -803,6 +810,11 @@ export function CardWrapper({
   const effectiveIsFailed = isFailed || childDataState?.isFailed || false
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
   const effectiveIsLoading = isRefreshing || childDataState?.isLoading || false
+  const effectiveIsRefreshing = childDataState?.isRefreshing || false
+  const effectiveHasData = childDataState?.hasData ?? true // Default to true if not reported
+
+  // Determine if we should show skeleton: loading with no cached data
+  const shouldShowSkeleton = skeletonType && effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
@@ -1128,7 +1140,14 @@ export function CardWrapper({
         {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
         {!isCollapsed && (
           <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">
-            {(isVisible || isExpanded) ? children : (
+            {(isVisible || isExpanded) ? (
+              // Show skeleton when loading with no cached data
+              shouldShowSkeleton ? (
+                <CardSkeleton type={skeletonType} rows={skeletonRows} showHeader />
+              ) : (
+                children
+              )
+            ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="animate-pulse flex flex-col items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-secondary/50" />
