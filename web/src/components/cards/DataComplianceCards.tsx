@@ -7,6 +7,7 @@
 
 import { Shield, CheckCircle2, AlertTriangle, Clock, AlertCircle } from 'lucide-react'
 import { useCertManager } from '../../hooks/useCertManager'
+import { useReportCardDataState } from './CardDataContext'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -164,7 +165,17 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
 
 // Cert-Manager TLS Certificates Card
 export function CertManager({ config: _config }: CardConfig) {
-  const { status, issuers, isLoading } = useCertManager()
+  const { status, issuers, isLoading, isRefreshing, consecutiveFailures, isFailed } = useCertManager()
+  const hasData = issuers.length > 0 || status.installed
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isRefreshing || (isLoading && hasData),
+    hasData,
+  })
 
   // Show install notice if cert-manager is not detected
   if (!isLoading && !status.installed) {

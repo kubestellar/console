@@ -124,6 +124,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     if (cluster) params.append('cluster', cluster)
 
     let newNodes: GPUNode[] = []
+    let agentSucceeded = false
 
     // Try local agent first (works without backend running)
     if (!isAgentUnavailable()) {
@@ -138,6 +139,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         if (response.ok) {
           const data = await response.json()
           newNodes = data.nodes || []
+          agentSucceeded = true // Agent worked, even if it returned 0 nodes
           reportAgentDataSuccess()
         } else {
           throw new Error('Local agent returned error')
@@ -147,8 +149,8 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       }
     }
 
-    // If agent didn't return data, try backend API as fallback (only if authenticated)
-    if (newNodes.length === 0 && token && token !== 'demo-token') {
+    // If agent didn't work (not just "returned 0 nodes"), try backend API as fallback
+    if (!agentSucceeded && token && token !== 'demo-token') {
       try {
         const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
         newNodes = data.nodes || []

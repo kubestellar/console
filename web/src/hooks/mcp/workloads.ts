@@ -441,12 +441,14 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     }
 
     // Try kubectl proxy first when cluster is specified (for cluster-specific issues)
+    let agentSucceeded = false
     if (cluster && !isAgentUnavailable()) {
       try {
         // Look up the cluster's context for kubectl commands
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
         const podIssuesData = await kubectlProxy.getPodIssues(kubectlContext, namespace)
+        agentSucceeded = true // Agent worked, even if it returned empty array
         const now = new Date()
 
         // Update module-level cache
@@ -464,48 +466,49 @@ export function usePodIssues(cluster?: string, namespace?: string) {
           setIsRefreshing(false)
         }
         return
-      } catch (err) {
-        // kubectl proxy failed, fall through to API
-        console.error(`[usePodIssues] kubectl proxy failed for ${cluster}, trying API`)
+      } catch {
+        // kubectl proxy failed, fall through to API only if agent unavailable
       }
     }
 
-    // Fall back to REST API
-    try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ issues: PodIssue[] }>(`/api/mcp/pod-issues?${params}`)
-      const newData = data.issues || []
-      const now = new Date()
+    // Only fall back to REST API if agent didn't work (not just "returned empty")
+    if (!agentSucceeded) {
+      try {
+        const params = new URLSearchParams()
+        if (cluster) params.append('cluster', cluster)
+        if (namespace) params.append('namespace', namespace)
+        const { data } = await api.get<{ issues: PodIssue[] }>(`/api/mcp/pod-issues?${params}`)
+        const newData = data.issues || []
+        const now = new Date()
 
-      // Update module-level cache
-      podIssuesCache = { data: newData, timestamp: now, key: cacheKey }
+        // Update module-level cache
+        podIssuesCache = { data: newData, timestamp: now, key: cacheKey }
 
-      setIssues(newData)
-      setError(null)
-      setLastUpdated(now)
-      setConsecutiveFailures(0)
-      setLastRefresh(now)
-    } catch (err) {
-      // Keep stale data, only use demo if no cached data
-      setConsecutiveFailures(prev => prev + 1)
-      setLastRefresh(new Date())
-      if (!silent && !podIssuesCache) {
-        setError('Failed to fetch pod issues')
-        // Don't use demo data - show empty instead to avoid confusion
-        setIssues([])
+        setIssues(newData)
+        setError(null)
+        setLastUpdated(now)
+        setConsecutiveFailures(0)
+        setLastRefresh(now)
+      } catch {
+        // Keep stale data, only use demo if no cached data
+        setConsecutiveFailures(prev => prev + 1)
+        setLastRefresh(new Date())
+        if (!silent && !podIssuesCache) {
+          setError('Failed to fetch pod issues')
+          // Don't use demo data - show empty instead to avoid confusion
+          setIssues([])
+        }
       }
-    } finally {
-      setIsLoading(false)
-      // Keep isRefreshing true for minimum time so user can see it, then reset
-      if (!silent) {
-        setTimeout(() => {
-          setIsRefreshing(false)
-        }, MIN_REFRESH_INDICATOR_MS)
-      } else {
+    }
+    // Always update loading states
+    setIsLoading(false)
+    // Keep isRefreshing true for minimum time so user can see it, then reset
+    if (!silent) {
+      setTimeout(() => {
         setIsRefreshing(false)
-      }
+      }, MIN_REFRESH_INDICATOR_MS)
+    } else {
+      setIsRefreshing(false)
     }
   }, [cluster, namespace, cacheKey])
 

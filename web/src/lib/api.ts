@@ -1,6 +1,6 @@
 const API_BASE = ''
 const DEFAULT_TIMEOUT = 5000 // 5 seconds default timeout
-const BACKEND_CHECK_INTERVAL = 30000 // 30 seconds between backend checks when unavailable
+const BACKEND_CHECK_INTERVAL = 60000 // 60 seconds between backend checks when unavailable
 
 // Error class for unauthenticated requests
 export class UnauthenticatedError extends Error {
@@ -48,6 +48,8 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
   // If we already know the status and it was checked recently, return it
   if (!forceCheck && backendAvailable !== null) {
     const now = Date.now()
+    // If backend was already determined available, return immediately
+    // If unavailable, allow re-check after interval
     if (backendAvailable || now - backendLastCheckTime < BACKEND_CHECK_INTERVAL) {
       return backendAvailable
     }
@@ -185,10 +187,9 @@ class ApiClient {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '')
-        // 5xx errors from Vite proxy indicate backend is down (proxy can't connect)
-        if (response.status >= 500) {
-          markBackendFailure()
-        }
+        // Note: We don't mark backend as failed on 500 responses here.
+        // The health check is the source of truth for backend availability.
+        // Individual API 500s could be endpoint-specific issues, not infrastructure failure.
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -227,9 +228,7 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        if (response.status >= 500) {
-          markBackendFailure()
-        }
+        // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(`API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -238,9 +237,9 @@ class ApiClient {
     } catch (err) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        markBackendFailure()
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
+      // Only mark backend failure on actual network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
       }
@@ -267,9 +266,7 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        if (response.status >= 500) {
-          markBackendFailure()
-        }
+        // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(`API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -278,9 +275,9 @@ class ApiClient {
     } catch (err) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        markBackendFailure()
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
+      // Only mark backend failure on actual network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
       }
@@ -306,18 +303,16 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        if (response.status >= 500) {
-          markBackendFailure()
-        }
+        // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(`API error: ${response.status}`)
       }
       markBackendSuccess()
     } catch (err) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        markBackendFailure()
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
+      // Only mark backend failure on actual network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
       }
