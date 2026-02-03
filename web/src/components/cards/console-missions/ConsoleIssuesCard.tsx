@@ -7,16 +7,25 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 1: AI Issues Overview - Shows issues AI can help fix
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { issues: allPodIssues } = useCachedPodIssues()
-  const { issues: allDeploymentIssues } = useCachedDeploymentIssues()
+  const { issues: allPodIssues, isLoading: podIssuesLoading } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   const { drillToPod, drillToDeployment } = useDrillDownActions()
+
+  const isLoading = podIssuesLoading || deployIssuesLoading
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
+  })
 
   // Filter issues by global cluster filter
   const podIssues = useMemo(() => {

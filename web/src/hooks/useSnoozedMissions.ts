@@ -23,7 +23,7 @@ interface StoredState {
 
 // Module-level state for cross-component sharing
 let state: StoredState = { snoozed: [], dismissed: [] }
-let listeners: Set<() => void> = new Set()
+const listeners: Set<() => void> = new Set()
 
 function notifyListeners() {
   listeners.forEach((listener) => listener())

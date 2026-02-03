@@ -26,6 +26,7 @@ import {
   CardPaginationFooter,
   CardEmptyState,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 interface MissionsProps {
   config?: Record<string, unknown>
@@ -106,9 +107,15 @@ const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:deployment-missions-clusters
 
 export function Missions(_props: MissionsProps) {
   const { missions, activeMissions, completedMissions } = useDeployMissions()
-  const { deduplicatedClusters } = useClusters()
+  const { deduplicatedClusters, isLoading } = useClusters()
   const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set())
   const [hideCompleted, setHideCompleted] = useState(false)
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: missions.length > 0 || deduplicatedClusters.length > 0,
+  })
 
   // Manual cluster filter — filters by target clusters (not source).
   // Can't use useCardData's built-in cluster filter because the global

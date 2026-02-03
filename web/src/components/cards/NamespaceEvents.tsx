@@ -7,6 +7,7 @@ import {
   useCardData, useCascadingSelection, commonComparators,
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 interface NamespaceEventsProps {
   config?: {
@@ -39,6 +40,17 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { isLoading: clustersLoading } = useClusters()
   const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
   const { drillToEvents } = useDrillDownActions()
+
+  const isLoading = clustersLoading || eventsLoading
+
+  // Report state to CardWrapper for refresh animation
+  const { showSkeleton: _showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allEvents.length > 0,
+  })
+
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || allEvents.length > 0
 
   // Use cascading selection hook for cluster -> namespace
   const {
@@ -119,8 +131,7 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     defaultLimit: 5,
   })
 
-  const isLoading = clustersLoading || eventsLoading
-  const showSkeleton = isLoading && allEvents.length === 0
+  const showSkeleton = isLoading && !hasData
 
   const getEventIcon = (type: string) => {
     if (type === 'Warning') return AlertTriangle

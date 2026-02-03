@@ -47,7 +47,7 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     const scopeKeys = Object.keys(scope)
     const scopeValues = scopeKeys.map(k => scope[k])
 
-    // eslint-disable-next-line no-new-func
+     
     const factory = new Function(...scopeKeys, moduleCode)
     const component = factory(...scopeValues) as ComponentType<CardComponentProps>
 

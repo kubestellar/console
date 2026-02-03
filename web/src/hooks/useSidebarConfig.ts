@@ -81,8 +81,8 @@ const DEPRECATED_ROUTES = ['/apps']
 // Migrate config to ensure all default routes exist
 function migrateConfig(stored: SidebarConfig): SidebarConfig {
   // First, remove deprecated routes
-  let primaryNav = stored.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
-  let secondaryNav = stored.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const primaryNav = stored.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const secondaryNav = stored.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
 
   // Find default routes that are missing from the stored config
   const existingHrefs = new Set([

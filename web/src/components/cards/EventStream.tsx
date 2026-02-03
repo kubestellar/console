@@ -9,6 +9,7 @@ import {
   CardSkeleton, CardSearchInput,
   CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 type SortByOption = 'time' | 'count' | 'type'
 
@@ -26,8 +27,13 @@ export function EventStream() {
     error,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
-  // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && rawEvents.length === 0
+  // Report state to CardWrapper for refresh animation
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: rawEvents.length > 0,
+    isFailed: !!error && rawEvents.length === 0,
+    consecutiveFailures: error ? 1 : 0,
+  })
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -103,7 +109,7 @@ export function EventStream() {
     return { icon: Info, color: 'text-blue-400', bg: 'bg-blue-500/10', tooltip: 'Informational event' }
   }
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={60} />
   }
 

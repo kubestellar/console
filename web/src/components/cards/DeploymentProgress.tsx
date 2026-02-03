@@ -6,6 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { Pagination } from '../ui/Pagination'
 import { CardControls } from '../ui/CardControls'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import type { SortDirection } from '../../lib/cards/cardHooks'
 import type { Deployment } from '../../hooks/useMCP'
@@ -73,8 +74,22 @@ const SORT_COMPARATORS: Record<SortByOption, (a: Deployment, b: Deployment) => n
 export function DeploymentProgress({ config }: DeploymentProgressProps) {
   const cluster = config?.cluster
   const namespace = config?.namespace
-  const { deployments, isLoading, error } = useCachedDeployments(cluster, namespace)
+  const {
+    deployments,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+    error
+  } = useCachedDeployments(cluster, namespace)
   const { drillToDeployment } = useDrillDownActions()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: deployments.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Card-specific status filter (kept as separate state)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')

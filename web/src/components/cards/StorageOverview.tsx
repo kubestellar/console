@@ -4,15 +4,25 @@ import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Filter, Chevron
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useCardLoadingState } from './CardDataContext'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
 import { useChartFilters } from '../../lib/cards'
 
 export function StorageOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { pvcs, isLoading: pvcsLoading } = usePVCs()
+  const { pvcs, isLoading: pvcsLoading, consecutiveFailures, isFailed } = usePVCs()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
+
+  // Report card data state
+  const combinedLoading = isLoading || pvcsLoading
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: combinedLoading,
+    hasAnyData: pvcs.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Local cluster filter
   const {
@@ -85,7 +95,7 @@ export function StorageOverview() {
   const hasRealData = !isLoading && filteredClusters.length > 0 &&
     filteredClusters.some(c => c.reachable !== false && c.storageGB !== undefined && c.nodeCount !== undefined && c.nodeCount > 0)
 
-  if (isLoading && !clusters.length) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading storage data...</div>

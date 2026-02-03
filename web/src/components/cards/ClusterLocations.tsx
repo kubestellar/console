@@ -6,6 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -213,6 +214,13 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToCluster } = useDrillDownActions()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
+  })
+
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -375,7 +383,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
   }, [])
 
-  if (isLoading && allClusters.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

@@ -3,6 +3,7 @@ import { Server, Check, Cpu, HardDrive, Layers, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useClusterCapabilities, ClusterCapability } from '../../hooks/useWorkloads'
+import { useCardLoadingState } from './CardDataContext'
 
 // Demo cluster data (fallback when no real clusters)
 const DEMO_CLUSTERS: ClusterCapability[] = [
@@ -58,6 +59,12 @@ export function ClusterDropZone({
   onDeploy,
 }: ClusterDropZoneProps) {
   const { data: realClusters, isLoading } = useClusterCapabilities()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: (realClusters?.length ?? 0) > 0 || DEMO_CLUSTERS.length > 0,
+  })
 
   if (!isDragging || !draggedWorkload) return null
 

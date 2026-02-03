@@ -9,6 +9,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 interface HelmHistoryProps {
   config?: {
@@ -35,7 +36,7 @@ const STATUS_ORDER: Record<string, number> = {
 }
 
 export function HelmHistory({ config }: HelmHistoryProps) {
-  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
 
@@ -96,14 +97,21 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     history: rawHistory,
     isLoading: historyLoading,
     isRefreshing: historyRefreshing,
+    isFailed,
+    consecutiveFailures,
   } = useHelmHistory(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
   )
 
-  // Only show skeleton when no cached data exists
-  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: historyLoading,
+    hasAnyData: rawHistory.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Apply global filters to clusters
   const clusters = useMemo(() => {
@@ -205,7 +213,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

@@ -7,6 +7,7 @@ import {
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { K8S_DOCS } from '../../config/externalApis'
+import { useCardLoadingState } from './CardDataContext'
 
 // Gateway status types
 type GatewayStatusType = 'Programmed' | 'Accepted' | 'Pending' | 'NotAccepted' | 'Unknown'
@@ -157,11 +158,15 @@ interface GatewayStatusProps {
 }
 
 export function GatewayStatus({ config: _config }: GatewayStatusProps) {
-  // Simulate loading state for demo data
-  // Set to true if fetching real data from API
+  // Demo data - always available, never loading/erroring
   const isLoading = false
-  // Set to true on fetch errors when implementing real API calls
   const hasError = false
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: DEMO_GATEWAYS.length > 0,
+  })
 
   const {
     items: paginatedGateways,

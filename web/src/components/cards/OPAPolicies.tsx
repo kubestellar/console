@@ -7,6 +7,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getDemoMode } from '../../hooks/useDemoMode'
+import { useCardLoadingState } from './CardDataContext'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -234,7 +235,7 @@ spec:
 // Module-level flag to prevent StrictMode double-checks
 // This persists across component mounts within the same page load
 let globalCheckInProgress = false
-let globalCheckedClusters = new Set<string>()
+const globalCheckedClusters = new Set<string>()
 
 async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperStatus> {
   try {
@@ -1048,8 +1049,14 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 }
 
 export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
+  })
 
   // Fetch clusters directly from agent as fallback (skip in demo mode)
   const [agentClusters, setAgentClusters] = useState<{ name: string; healthy?: boolean }[]>([])

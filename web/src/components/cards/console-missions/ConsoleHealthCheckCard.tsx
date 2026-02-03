@@ -8,16 +8,23 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 3: Cluster Health Check - Overall health assessment
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { deduplicatedClusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { issues: allPodIssues } = useCachedPodIssues()
   const { issues: allDeploymentIssues } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToPod } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
+  })
 
   // Filter clusters by global filter
   const clusters = useMemo(() => {

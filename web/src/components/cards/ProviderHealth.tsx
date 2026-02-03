@@ -6,6 +6,7 @@ import { AgentIcon } from '../agent/AgentIcon'
 import { CloudProviderIcon } from '../ui/CloudProviderIcon'
 import type { CloudProvider } from '../ui/CloudProviderIcon'
 import { cn } from '../../lib/cn'
+import { useCardLoadingState } from './CardDataContext'
 
 const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   operational: 'bg-green-500',
@@ -83,6 +84,12 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
 export function ProviderHealth() {
   const { aiProviders, cloudProviders, isLoading } = useProviderHealth()
   const navigate = useNavigate()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: aiProviders.length > 0 || cloudProviders.length > 0,
+  })
 
   const goToSettings = () => navigate('/settings')
 

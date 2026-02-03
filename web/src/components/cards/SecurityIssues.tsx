@@ -1,13 +1,71 @@
 import { Shield, AlertTriangle, User, Network, Server, ChevronRight, Search, Filter, ChevronDown } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
+import { useMemo } from 'react'
+import type { SecurityIssue } from '../../hooks/useMCP'
+import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { useCardData } from '../../lib/cards'
 import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
+import { useCardLoadingState } from './CardDataContext'
+
+// Demo security issues data for demo mode
+function getDemoSecurityIssues(): SecurityIssue[] {
+  return [
+    {
+      name: 'api-server-7d8f9c6b5-x2k4m',
+      namespace: 'production',
+      cluster: 'eks-prod-us-east-1',
+      issue: 'Privileged container',
+      severity: 'high',
+      details: 'Container running in privileged mode',
+    },
+    {
+      name: 'worker-deployment',
+      namespace: 'batch',
+      cluster: 'vllm-gpu-cluster',
+      issue: 'Running as root',
+      severity: 'high',
+      details: 'Container running as root user',
+    },
+    {
+      name: 'nginx-ingress',
+      namespace: 'ingress',
+      cluster: 'eks-prod-us-east-1',
+      issue: 'Host network enabled',
+      severity: 'medium',
+      details: 'Pod using host network namespace',
+    },
+    {
+      name: 'monitoring-agent',
+      namespace: 'monitoring',
+      cluster: 'gke-staging',
+      issue: 'Missing security context',
+      severity: 'low',
+      details: 'No security context defined',
+    },
+    {
+      name: 'redis-cache',
+      namespace: 'data',
+      cluster: 'openshift-prod',
+      issue: 'Capabilities not dropped',
+      severity: 'medium',
+      details: 'Container not dropping all capabilities',
+    },
+    {
+      name: 'legacy-app',
+      namespace: 'legacy',
+      cluster: 'vllm-gpu-cluster',
+      issue: 'Running as root',
+      severity: 'high',
+      details: 'Container running as root user',
+    },
+  ]
+}
 
 type SortByOption = 'severity' | 'name' | 'cluster'
 
@@ -38,8 +96,28 @@ const getSeverityColor = (severity: string) => {
 export function SecurityIssues({ config }: SecurityIssuesProps) {
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
-  const { issues: rawIssues, isLoading, error } = useSecurityIssues(clusterConfig, namespaceConfig)
+  const { isDemoMode } = useDemoMode()
+
+  // Fetch data with caching (stale-while-revalidate pattern)
+  // Cache persists to IndexedDB so data shows immediately on navigation/reload
+  const { issues: cachedIssues, isLoading: cachedLoading, error: cachedError, isFailed: cachedFailed, consecutiveFailures: cachedFailures } = useCachedSecurityIssues(clusterConfig, namespaceConfig)
+
+  // Use demo data when in demo mode, otherwise use cached/agent data
+  const rawIssues = useMemo(() => isDemoMode ? getDemoSecurityIssues() : cachedIssues, [isDemoMode, cachedIssues])
+  const isLoading = isDemoMode ? false : cachedLoading
+  const error = isDemoMode ? null : cachedError
+  const isFailed = isDemoMode ? false : cachedFailed
+  const consecutiveFailures = isDemoMode ? 0 : cachedFailures
+
   const { drillToPod } = useDrillDownActions()
+
+  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: rawIssues.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
 
@@ -103,7 +181,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
 
   // Show skeleton only on initial load (no cached data)
-  if (isLoading && rawIssues.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col">
         <div className="flex items-center justify-between mb-3">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
@@ -13,6 +13,9 @@ let eventsCache: EventsCache | null = null
 
 export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const cacheKey = `events:${cluster || 'all'}:${namespace || 'all'}:${limit}`
+  // Track AbortController for cleanup on unmount
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
 
   // Initialize from cache if available
   const getCachedData = () => {
@@ -61,6 +64,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       }
     }
 
+    // Abort any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     // Try local agent HTTP endpoint first (works without backend)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -70,10 +80,9 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         params.append('limit', limit.toString())
         console.log(`[useEvents] Fetching from local agent for ${cluster}`)
 
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 15000)
         const response = await fetch(`${LOCAL_AGENT_URL}/events?${params}`, {
-          signal: controller.signal,
+          signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
@@ -112,12 +121,11 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       params.append('limit', limit.toString())
       const url = `/api/mcp/events?${params}`
 
-      // Use direct fetch with timeout to prevent hanging
+      // Use direct fetch with shared AbortController signal
       const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 10000) // 10 second timeout
 
-      const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
+      const response = await fetch(url, { method: 'GET', headers, signal })
       clearTimeout(timeoutId)
       // console.log('[useEvents] Fetch completed with status:', response.status)
 
@@ -138,7 +146,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastRefresh(now)
       // console.log('[useEvents] Data updated successfully')
     } catch (err) {
+      // Ignore abort errors (expected on unmount or when a new request supersedes)
+      if (err instanceof Error && err.name === 'AbortError') {
+        return
+      }
       console.error('[useEvents] Failed to fetch events:', err)
+      // Only update state if still mounted
+      if (!isMountedRef.current) return
       // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
@@ -147,6 +161,8 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         setEvents(getDemoEvents())
       }
     } finally {
+      // Only update state if still mounted
+      if (!isMountedRef.current) return
       // console.log('[useEvents] Finally block started')
       setIsLoading(false)
       // Keep isRefreshing true for minimum time so user can see it, then reset
@@ -161,6 +177,18 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       }
     }
   }, [cluster, namespace, limit, cacheKey])
+
+  // Track mounted state for cleanup
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      // Abort any in-flight request on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const hasCachedData = eventsCache && eventsCache.key === cacheKey

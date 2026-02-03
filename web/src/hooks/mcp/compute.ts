@@ -124,6 +124,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     if (cluster) params.append('cluster', cluster)
 
     let newNodes: GPUNode[] = []
+    let agentSucceeded = false
 
     // Try local agent first (works without backend running)
     if (!isAgentUnavailable()) {
@@ -138,6 +139,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         if (response.ok) {
           const data = await response.json()
           newNodes = data.nodes || []
+          agentSucceeded = true // Agent worked, even if it returned 0 nodes
           reportAgentDataSuccess()
         } else {
           throw new Error('Local agent returned error')
@@ -147,8 +149,8 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       }
     }
 
-    // If agent didn't return data, try backend API as fallback (only if authenticated)
-    if (newNodes.length === 0 && token && token !== 'demo-token') {
+    // If agent didn't work (not just "returned 0 nodes"), try backend API as fallback
+    if (!agentSucceeded && token && token !== 'demo-token') {
       try {
         const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
         newNodes = data.nodes || []
@@ -187,8 +189,8 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         isLoading: false,
         isRefreshing: false,
         lastRefresh: new Date(),
-        // Only set error if we had no cache and got no data
-        error: !currentCacheHasData && !newDataHasContent ? 'No GPU nodes found' : null,
+        // Don't set error for "no GPU nodes" - that's expected, not an error
+        error: null,
       })
     }
   } catch (err) {
@@ -201,7 +203,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         nodes: getDemoGPUNodes(),
         isLoading: false,
         isRefreshing: false,
-        error: 'Failed to fetch GPU nodes',
+        error: null, // Don't show error - GPU nodes are optional
         consecutiveFailures: newFailures,
         lastRefresh: new Date(),
       })
@@ -217,21 +219,21 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
             lastRefresh: new Date(),
           })
         } else {
-          // No cache to restore, update state with error
+          // No cache to restore, update state (no error - GPU nodes are optional)
           updateGPUNodeCache({
             isLoading: false,
             isRefreshing: false,
-            error: 'Failed to fetch GPU nodes',
+            error: null, // Don't show error - GPU nodes are optional
             consecutiveFailures: newFailures,
             lastRefresh: new Date(),
           })
         }
       } else {
-        // Preserve existing memory cache on error
+        // Preserve existing memory cache on error (no error message - GPU nodes are optional)
         updateGPUNodeCache({
           isLoading: false,
           isRefreshing: false,
-          error: 'Failed to refresh GPU nodes',
+          error: null, // Don't show error - GPU nodes are optional
           consecutiveFailures: newFailures,
           lastRefresh: new Date(),
         })
@@ -473,7 +475,8 @@ export function useNodes(cluster?: string) {
         setNodes(placeholderNodes)
         setError(null)
       } else {
-        setError('Failed to fetch nodes')
+        // Don't show error at dashboard level
+        setError(null)
         setNodes([])
       }
     } finally {
@@ -509,7 +512,8 @@ export function useNVIDIAOperators(cluster?: string) {
       }
       setError(null)
     } catch (err) {
-      setError('Failed to fetch NVIDIA operator status')
+      // Don't show error - NVIDIA operators are optional
+      setError(null)
       setOperators([])
     } finally {
       setIsLoading(false)

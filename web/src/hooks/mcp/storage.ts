@@ -185,7 +185,8 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !pvcsCache) {
-        setError('Failed to fetch PVCs')
+        // Don't show error - PVCs are optional, some clusters may have none
+        setError(null)
         setPVCs([])
       }
     } finally {
@@ -221,21 +222,28 @@ export function usePVCs(cluster?: string, namespace?: string) {
 export function usePVs(cluster?: string) {
   const [pvs, setPVs] = useState<PV[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
+    setIsRefreshing(true)
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       const { data } = await api.get<{ pvs: PV[] }>(`/api/mcp/pvs?${params}`)
       setPVs(data.pvs || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch (err) {
-      setError('Failed to fetch PVs')
+      // Don't show error - PVs are optional
+      setError(null)
+      setConsecutiveFailures(prev => prev + 1)
       setPVs([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster])
 
@@ -245,7 +253,7 @@ export function usePVs(cluster?: string) {
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { pvs, isLoading, error, refetch }
+  return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // Hook to get ResourceQuotas
@@ -274,7 +282,8 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
       setResourceQuotas(data.resourceQuotas || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch ResourceQuotas')
+      // Don't show error - ResourceQuotas are optional
+      setError(null)
       // Don't fall back to demo data - show empty instead
       setResourceQuotas([])
     } finally {
@@ -317,7 +326,8 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       setLimitRanges(data.limitRanges || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch LimitRanges')
+      // Don't show error - LimitRanges are optional
+      setError(null)
       // Don't fall back to demo data - show empty instead
       setLimitRanges([])
     } finally {

@@ -1,22 +1,10 @@
-import { useMemo } from 'react'
 import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { useArgoCDHealth } from '../../hooks/useArgoCD'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
-}
-
-// Mock health status data
-function getMockHealthData(clusterCount: number) {
-  return {
-    healthy: Math.floor(clusterCount * 3.8),
-    degraded: Math.floor(clusterCount * 0.8),
-    progressing: Math.floor(clusterCount * 0.5),
-    missing: Math.floor(clusterCount * 0.2),
-    unknown: Math.floor(clusterCount * 0.1),
-  }
 }
 
 const healthConfig = {
@@ -28,21 +16,22 @@ const healthConfig = {
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const {
+    stats,
+    total,
+    healthyPercent,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+  } = useArgoCDHealth()
 
-  const filteredClusterCount = useMemo(() => {
-    if (isAllClustersSelected) return clusters.length
-    return selectedClusters.length
-  }, [clusters, selectedClusters, isAllClustersSelected])
-
-  const stats = useMemo(() => {
-    return getMockHealthData(filteredClusterCount)
-  }, [filteredClusterCount])
-
-  const total = Object.values(stats).reduce((a, b) => a + b, 0)
-  const healthyPercent = total > 0 ? (stats.healthy / total) * 100 : 0
-  const showSkeleton = isLoading && total === 0
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: total > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   if (showSkeleton) {
     return (

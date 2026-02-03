@@ -163,7 +163,8 @@ export function useNamespaceStats(cluster?: string) {
       setStats(sortedStats)
       setError(null)
     } catch (err) {
-      setError('Failed to fetch namespace stats')
+      // Don't show error at dashboard level
+      setError(null)
       // Fallback to demo data
       setStats(getDemoNamespaceStats())
     } finally {

@@ -9,6 +9,7 @@ import { useClusters } from '../../../hooks/useMCP'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../../hooks/useCachedData'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { cn } from '../../../lib/cn'
+import { useCardLoadingState } from '../CardDataContext'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, MonitoredResource, ResourceHealthStatus } from '../../../types/workloadMonitor'
@@ -49,6 +50,12 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const isLoading = clustersLoading || podsLoading || deploysLoading
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
+  })
 
   // Filter clusters by global filter
   const clusters = useMemo(() => {

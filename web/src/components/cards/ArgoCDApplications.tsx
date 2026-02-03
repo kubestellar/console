@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { useArgoCDApplications, type ArgoApplication } from '../../hooks/useArgoCD'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   commonComparators,
@@ -20,93 +21,6 @@ interface ArgoCDApplicationsProps {
     cluster?: string
     namespace?: string
   }
-}
-
-interface ArgoApplication {
-  name: string
-  namespace: string
-  cluster: string
-  syncStatus: 'Synced' | 'OutOfSync' | 'Unknown'
-  healthStatus: 'Healthy' | 'Degraded' | 'Progressing' | 'Missing' | 'Unknown'
-  source: {
-    repoURL: string
-    path: string
-    targetRevision: string
-  }
-  lastSynced?: string
-}
-
-/**
- * Mock ArgoCD applications for UI demonstration
- * NOTE: These are example URLs only. In production, ArgoCD applications
- * would be fetched from the ArgoCD API.
- */
-function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
-  const apps: ArgoApplication[] = []
-
-  clusters.forEach((cluster) => {
-    const baseApps = [
-      {
-        name: 'frontend-app',
-        namespace: 'production',
-        syncStatus: 'Synced' as const,
-        healthStatus: 'Healthy' as const,
-        source: {
-          repoURL: 'https://github.com/example-org/frontend-app',
-          path: 'k8s/overlays/production',
-          targetRevision: 'main',
-        },
-        lastSynced: '2 minutes ago',
-      },
-      {
-        name: 'api-gateway',
-        namespace: 'production',
-        syncStatus: 'OutOfSync' as const,
-        healthStatus: 'Healthy' as const,
-        source: {
-          repoURL: 'https://github.com/example-org/api-gateway',
-          path: 'deploy',
-          targetRevision: 'v2.3.0',
-        },
-        lastSynced: '15 minutes ago',
-      },
-      {
-        name: 'backend-service',
-        namespace: 'staging',
-        syncStatus: 'Synced' as const,
-        healthStatus: 'Progressing' as const,
-        source: {
-          repoURL: 'https://github.com/example-org/backend-service',
-          path: 'manifests',
-          targetRevision: 'develop',
-        },
-        lastSynced: '1 minute ago',
-      },
-      {
-        name: 'monitoring-stack',
-        namespace: 'monitoring',
-        syncStatus: 'OutOfSync' as const,
-        healthStatus: 'Degraded' as const,
-        source: {
-          repoURL: 'https://github.com/example-org/monitoring-stack',
-          path: 'helm/prometheus',
-          targetRevision: 'HEAD',
-        },
-        lastSynced: '30 minutes ago',
-      },
-    ]
-
-    baseApps.forEach((app, idx) => {
-      // Only add some apps to some clusters
-      if ((cluster.includes('prod') && idx < 3) ||
-          (cluster.includes('staging') && idx > 1) ||
-          (!cluster.includes('prod') && !cluster.includes('staging'))) {
-        apps.push({ ...app, cluster })
-      }
-    })
-  })
-
-  return apps
 }
 
 type SortByOption = 'syncStatus' | 'healthStatus' | 'name' | 'namespace'
@@ -143,15 +57,24 @@ const ARGO_SORT_COMPARATORS = {
 }
 
 export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const {
+    applications: allApps,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+  } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allApps.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
-
-  // Step 1: Generate all mock apps (useCardData will handle cluster filtering)
-  const allClusterNames = useMemo(() => clusters.map(c => c.name), [clusters])
-  const allApps = useMemo(() => getMockArgoApplications(allClusterNames), [allClusterNames])
 
   // Step 2: Pre-filter by config and status filter (card-specific)
   const preFiltered = useMemo(() => {
@@ -211,8 +134,6 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
     healthy: preFiltered.filter(a => a.healthStatus === 'Healthy').length,
     unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length,
   }), [preFiltered])
-
-  const showSkeleton = isLoading && allApps.length === 0
 
   if (showSkeleton) {
     return (

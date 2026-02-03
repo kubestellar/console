@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { TrendingUp, Clock, Filter, ChevronDown, Server } from 'lucide-react'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { useCardLoadingState } from './CardDataContext'
 import {
   AreaChart,
   Area,
@@ -44,6 +45,12 @@ export function GPUUtilization() {
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && gpuNodes.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: gpuNodes.length > 0,
+  })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)

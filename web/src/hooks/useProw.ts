@@ -171,7 +171,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
       }
       setIsRefreshing(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [prowCluster, namespace])
 
   useEffect(() => {

@@ -8,6 +8,47 @@ const REFRESH_INTERVAL_MS = 120000
 // Days before expiration to consider "expiring soon"
 const EXPIRING_SOON_DAYS = 30
 
+// localStorage cache key and helpers
+const CACHE_KEY = 'kc-cert-manager-cache'
+
+interface CacheData {
+  certificates: Certificate[]
+  issuers: Issuer[]
+  installed: boolean
+  timestamp: number
+}
+
+function loadFromCache(): CacheData | null {
+  try {
+    const stored = localStorage.getItem(CACHE_KEY)
+    if (!stored) return null
+    const data = JSON.parse(stored) as CacheData
+    // Convert date strings back to Date objects
+    data.certificates = data.certificates.map(c => ({
+      ...c,
+      notBefore: c.notBefore ? new Date(c.notBefore) : undefined,
+      notAfter: c.notAfter ? new Date(c.notAfter) : undefined,
+      renewalTime: c.renewalTime ? new Date(c.renewalTime) : undefined,
+    }))
+    return data
+  } catch {
+    return null
+  }
+}
+
+function saveToCache(certificates: Certificate[], issuers: Issuer[], installed: boolean): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      certificates,
+      issuers,
+      installed,
+      timestamp: Date.now(),
+    }))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export interface Certificate {
   id: string
   name: string
@@ -145,15 +186,20 @@ function getIssuerStatus(issuer: IssuerResource): Issuer['status'] {
  */
 export function useCertManager() {
   const { clusters: allClusters } = useClusters()
-  const [certificates, setCertificates] = useState<Certificate[]>([])
-  const [issuers, setIssuers] = useState<Issuer[]>([])
-  const [installed, setInstalled] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+
+  // Initialize state from cache
+  const cachedData = useRef(loadFromCache())
+  const [certificates, setCertificates] = useState<Certificate[]>(cachedData.current?.certificates || [])
+  const [issuers, setIssuers] = useState<Issuer[]>(cachedData.current?.issuers || [])
+  const [installed, setInstalled] = useState(cachedData.current?.installed || false)
+  const [isLoading, setIsLoading] = useState(!cachedData.current) // Only show loading if no cache
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-  const initialLoadDone = useRef(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(
+    cachedData.current?.timestamp ? new Date(cachedData.current.timestamp) : null
+  )
+  const initialLoadDone = useRef(!!cachedData.current)
 
   // Filter to reachable clusters
   const clusters = useMemo(() =>
@@ -292,6 +338,9 @@ export function useCertManager() {
       setConsecutiveFailures(0)
       setLastRefresh(new Date())
       initialLoadDone.current = true
+
+      // Save to localStorage cache
+      saveToCache(allCertificates, allIssuers, certManagerFound)
     } catch (err) {
       console.error('[useCertManager] Error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch cert-manager data')

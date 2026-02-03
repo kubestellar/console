@@ -1,28 +1,15 @@
-import { useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle, RefreshCw, AlertTriangle, ExternalLink, AlertCircle, Filter, ChevronDown, Server } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters } from '../../lib/cards'
+import { useArgoCDSyncStatus } from '../../hooks/useArgoCD'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ArgoCDSyncStatusProps {
   config?: Record<string, unknown>
 }
 
-// Mock sync status data
-function getMockSyncStatusData(clusterCount: number) {
-  return {
-    synced: Math.floor(clusterCount * 4.2),
-    outOfSync: Math.floor(clusterCount * 1.3),
-    unknown: Math.floor(clusterCount * 0.3),
-  }
-}
-
 export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-
   // Local cluster filter
   const {
     localClusterFilter,
@@ -40,23 +27,23 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
     storageKey: 'argocd-sync-status',
   })
 
-  const filteredClusterCount = useMemo(() => {
-    let count = isAllClustersSelected ? clusters.length : selectedClusters.length
-    // Apply local cluster filter
-    if (localClusterFilter.length > 0) {
-      count = localClusterFilter.length
-    }
-    return count
-  }, [clusters, selectedClusters, isAllClustersSelected, localClusterFilter])
+  const {
+    stats,
+    total,
+    syncedPercent,
+    outOfSyncPercent,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+  } = useArgoCDSyncStatus(localClusterFilter)
 
-  const stats = useMemo(() => {
-    return getMockSyncStatusData(filteredClusterCount)
-  }, [filteredClusterCount])
-
-  const total = stats.synced + stats.outOfSync + stats.unknown
-  const syncedPercent = total > 0 ? (stats.synced / total) * 100 : 0
-  const outOfSyncPercent = total > 0 ? (stats.outOfSync / total) * 100 : 0
-  const showSkeleton = isLoading && total === 0
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: total > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   if (showSkeleton) {
     return (

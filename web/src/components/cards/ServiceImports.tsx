@@ -5,6 +5,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../li
 import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceImport, ServiceImportType } from '../../types/mcs'
+import { useCardLoadingState } from './CardDataContext'
 
 // Demo data for MCS ServiceImports
 const DEMO_IMPORTS: ServiceImport[] = [
@@ -110,11 +111,15 @@ interface ServiceImportsProps {
 }
 
 export function ServiceImports({ config: _config }: ServiceImportsProps) {
-  // Simulate loading state for demo data
-  // Set to true if fetching real data from API
+  // Demo data - always available, never loading/erroring
   const isLoading = false
-  // Set to true on fetch errors when implementing real API calls
   const hasError = false
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: DEMO_IMPORTS.length > 0,
+  })
 
   const {
     items: filteredImports,

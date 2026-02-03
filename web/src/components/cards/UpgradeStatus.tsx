@@ -7,6 +7,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardLoadingState } from './CardDataContext'
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -40,7 +41,7 @@ function setCachedVersion(clusterName: string, version: string) {
 
 // Shared WebSocket for version fetching
 let versionWs: WebSocket | null = null
-let versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
+const versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
 let wsConnecting = false
 
 function ensureVersionWs(): Promise<WebSocket> {
@@ -257,6 +258,12 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
 
   // Only show skeleton when no cached data exists - prevents flickering on refresh
   const isLoading = isLoadingHook && allClusters.length === 0
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading: isLoadingHook,
+    hasAnyData: allClusters.length > 0,
+  })
 
   // Track previous agent connection state to detect reconnections
   const prevAgentConnectedRef = useRef(agentConnected)

@@ -5,8 +5,8 @@ import App from './App.tsx'
 import './index.css'
 // Initialize i18n before rendering
 import './lib/i18n'
-// Import cache migration utility
-import { migrateFromLocalStorage } from './lib/cache'
+// Import cache utilities
+import { migrateFromLocalStorage, preloadCacheFromStorage } from './lib/cache'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { registerDynamicCardType } from './components/cards/cardRegistry'
@@ -59,6 +59,14 @@ enableMocking()
       await migrateFromLocalStorage()
     } catch (e) {
       console.error('[Cache] Migration failed:', e)
+    }
+
+    // Preload common cache data from IndexedDB before rendering
+    // This ensures cached data is available immediately when components mount
+    try {
+      await preloadCacheFromStorage()
+    } catch (e) {
+      console.error('[Cache] Preload failed:', e)
     }
 
     // Restore dynamic cards and stat blocks from localStorage

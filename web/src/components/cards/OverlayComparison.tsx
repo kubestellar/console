@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useCardLoadingState } from './CardDataContext'
 
 interface OverlayComparisonProps {
   config?: {
@@ -30,6 +31,12 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
     isAllClustersSelected,
     customFilter,
   } = useGlobalFilters()
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
+  })
 
   // Apply global filters
   const clusters = useMemo(() => {

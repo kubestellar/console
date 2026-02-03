@@ -6,6 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardLoadingState } from './CardDataContext'
 
 interface GPUStatusProps {
   config?: Record<string, unknown>
@@ -35,8 +36,11 @@ export function GPUStatus({ config }: GPUStatusProps) {
   } = useGPUNodes(cluster)
   const { drillToCluster } = useDrillDownActions()
 
-  // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && rawNodes.length === 0
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: rawNodes.length > 0,
+  })
 
   // Card-specific GPU type filter (not handled by useCardData)
   const [selectedGpuType, setSelectedGpuType] = useState<string>('all')
@@ -121,7 +125,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     defaultLimit: 5,
   })
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-3">

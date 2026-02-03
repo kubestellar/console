@@ -27,6 +27,7 @@ import type {
   DeploymentIssue,
   Deployment,
   Service,
+  SecurityIssue,
 } from './useMCP'
 import type { ProwJob, ProwStatus } from './useProw'
 import type { LLMdServer, LLMdStatus, LLMdModel } from './useLLMd'
@@ -83,8 +84,26 @@ async function fetchAPI<T>(
   return response.json()
 }
 
-// Fetch list of available clusters (filtered to short names only)
+// Get list of reachable clusters (prefer local agent data for accurate reachability)
+function getReachableClusters(): string[] {
+  // Use local agent's cluster cache - it has up-to-date reachability info
+  if (clusterCacheRef.clusters.length > 0) {
+    return clusterCacheRef.clusters
+      .filter(c => c.reachable !== false && !c.name.includes('/'))
+      .map(c => c.name)
+  }
+  return []
+}
+
+// Fetch list of available clusters from backend (fallback)
 async function fetchClusters(): Promise<string[]> {
+  // First check local agent data - faster and more accurate reachability
+  const localClusters = getReachableClusters()
+  if (localClusters.length > 0) {
+    return localClusters
+  }
+
+  // Fall back to backend API
   const data = await fetchAPI<{ clusters: Array<{ name: string; reachable?: boolean }> }>('clusters')
   return (data.clusters || [])
     .filter(c => c.reachable !== false && !c.name.includes('/'))
@@ -252,6 +271,15 @@ const getDemoLLMdServers = (): LLMdServer[] => [
 const getDemoLLMdModels = (): LLMdModel[] => [
   { id: '1', name: 'llama-3-70b', namespace: 'llm-d', cluster: 'vllm-d', instances: 2, status: 'loaded' },
   { id: '2', name: 'granite-13b', namespace: 'llm-d', cluster: 'vllm-d', instances: 1, status: 'loaded' },
+]
+
+const getDemoSecurityIssues = (): SecurityIssue[] => [
+  { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'eks-prod-us-east-1', issue: 'Privileged container', severity: 'high', details: 'Container running in privileged mode' },
+  { name: 'worker-deployment', namespace: 'batch', cluster: 'vllm-gpu-cluster', issue: 'Running as root', severity: 'high', details: 'Container running as root user' },
+  { name: 'nginx-ingress', namespace: 'ingress', cluster: 'eks-prod-us-east-1', issue: 'Host network enabled', severity: 'medium', details: 'Pod using host network namespace' },
+  { name: 'monitoring-agent', namespace: 'monitoring', cluster: 'gke-staging', issue: 'Missing security context', severity: 'low', details: 'No security context defined' },
+  { name: 'redis-cache', namespace: 'data', cluster: 'openshift-prod', issue: 'Capabilities not dropped', severity: 'medium', details: 'Container not dropping all capabilities' },
+  { name: 'legacy-app', namespace: 'legacy', cluster: 'vllm-gpu-cluster', issue: 'Running as root', severity: 'high', details: 'Container running as root user' },
 ]
 
 // ============================================================================
@@ -1041,6 +1069,168 @@ export function useCachedLLMdModels(
 
   return {
     models: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+// ============================================================================
+// Security Cached Hooks
+// ============================================================================
+
+/**
+ * Fetch security issues via kubectlProxy - scans pods for security misconfigurations
+ */
+async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: string): Promise<SecurityIssue[]> {
+  const clusters = getAgentClusters()
+  if (clusters.length === 0) return []
+
+  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+  const results = await Promise.allSettled(
+    clusters
+      .filter(c => !cluster || c.name === cluster)
+      .map(async ({ name, context }) => {
+        const ctx = context || name
+        // Get all pods and check for security issues
+        const nsFlag = namespace ? ['-n', namespace] : ['-A']
+        const response = await kubectlProxy.exec(
+          ['get', 'pods', ...nsFlag, '-o', 'json'],
+          { context: ctx, timeout: 30000 }
+        )
+
+        if (response.exitCode !== 0) return []
+
+        const data = JSON.parse(response.output)
+        const issues: SecurityIssue[] = []
+
+        for (const pod of data.items || []) {
+          const podName = pod.metadata?.name || 'unknown'
+          const podNs = pod.metadata?.namespace || 'default'
+          const spec = pod.spec || {}
+
+          // Check for security misconfigurations
+          for (const container of spec.containers || []) {
+            const sc = container.securityContext || {}
+            const podSc = spec.securityContext || {}
+
+            // Privileged container
+            if (sc.privileged === true) {
+              issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Privileged container', severity: 'high', details: 'Container running in privileged mode' })
+            }
+
+            // Running as root
+            if (sc.runAsUser === 0 || (sc.runAsNonRoot !== true && podSc.runAsNonRoot !== true && !sc.runAsUser)) {
+              const isRoot = sc.runAsUser === 0 || podSc.runAsUser === 0
+              if (isRoot) {
+                issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Running as root', severity: 'high', details: 'Container running as root user' })
+              }
+            }
+
+            // Missing security context
+            if (!sc.runAsNonRoot && !sc.readOnlyRootFilesystem && !sc.allowPrivilegeEscalation && !sc.capabilities) {
+              issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Missing security context', severity: 'low', details: 'No security context defined' })
+            }
+
+            // Capabilities not dropped
+            if (sc.capabilities?.drop?.length === 0 || !sc.capabilities?.drop) {
+              if (sc.capabilities?.add?.length > 0) {
+                issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Capabilities not dropped', severity: 'medium', details: 'Container not dropping all capabilities' })
+              }
+            }
+          }
+
+          // Host network
+          if (spec.hostNetwork === true) {
+            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host network enabled', severity: 'medium', details: 'Pod using host network namespace' })
+          }
+
+          // Host PID
+          if (spec.hostPID === true) {
+            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host PID enabled', severity: 'high', details: 'Pod using host PID namespace' })
+          }
+
+          // Host IPC
+          if (spec.hostIPC === true) {
+            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host IPC enabled', severity: 'medium', details: 'Pod using host IPC namespace' })
+          }
+        }
+
+        return issues
+      })
+  )
+
+  const items: SecurityIssue[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  // Sort by severity
+  return items.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
+}
+
+/**
+ * Hook for fetching security issues with caching
+ * Provides stale-while-revalidate: shows cached data immediately while refreshing
+ */
+export function useCachedSecurityIssues(
+  cluster?: string,
+  namespace?: string,
+  options?: { category?: RefreshCategory }
+): CachedHookResult<SecurityIssue[]> & { issues: SecurityIssue[] } {
+  const { category = 'pods' } = options || {}
+  const key = `securityIssues:${cluster || 'all'}:${namespace || 'all'}`
+
+  const result = useCache({
+    key,
+    category,
+    initialData: getDemoSecurityIssues(),
+    enabled: true,
+    fetcher: async () => {
+      // Try kubectl proxy first (uses agent to run kubectl commands)
+      if (clusterCacheRef.clusters.length > 0) {
+        try {
+          const issues = await fetchSecurityIssuesViaKubectl(cluster, namespace)
+          if (issues.length > 0) return issues
+        } catch (err) {
+          console.warn('[useCachedSecurityIssues] kubectl fetch failed:', err)
+        }
+      }
+
+      // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        try {
+          const params = new URLSearchParams()
+          if (cluster) params.append('cluster', cluster)
+          if (namespace) params.append('namespace', namespace)
+          const response = await fetch(`/api/mcp/security-issues?${params}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          })
+          if (response.ok) {
+            const data = await response.json() as { issues: SecurityIssue[] }
+            if (data.issues && data.issues.length > 0) return data.issues
+          }
+        } catch (err) {
+          console.warn('[useCachedSecurityIssues] API fetch failed:', err)
+        }
+      }
+
+      return getDemoSecurityIssues()
+    },
+  })
+
+  return {
+    issues: result.data,
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,

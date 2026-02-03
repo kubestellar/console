@@ -66,33 +66,18 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Split Three.js into its own chunk
-          if (id.includes('three') || id.includes('@react-three')) {
+          // IMPORTANT: Libraries that use React hooks/context MUST go in vendor chunk
+          // Splitting them separately causes "undefined" errors for useLayoutEffect, createContext, etc.
+          // Only non-React libs (three.js core) can be safely split
+
+          // Split Three.js core into its own chunk (doesn't use React directly)
+          if (id.includes('three') && !id.includes('@react-three')) {
             return 'three'
           }
-          // Split recharts into its own chunk
-          if (id.includes('recharts')) {
-            return 'recharts'
-          }
-          // Split react-markdown and related into its own chunk
-          if (id.includes('react-markdown') || id.includes('remark-') || id.includes('unified') || id.includes('micromark')) {
-            return 'markdown'
-          }
-          // Split i18n into its own chunk
-          if (id.includes('i18next')) {
-            return 'i18n'
-          }
-          // Split lucide-react into its own chunk (37MB source, but tree-shakeable)
-          if (id.includes('lucide-react')) {
-            return 'icons'
-          }
-          // Split react-router into its own chunk
-          if (id.includes('react-router')) {
-            return 'router'
-          }
-          // Split dnd-kit into its own chunk
+          // Bundle dnd-kit with React to avoid useLayoutEffect issues
+          // (Previously split separately but caused React import errors)
           if (id.includes('@dnd-kit')) {
-            return 'dnd'
+            return 'vendor'
           }
           // Split node_modules into vendor chunks
           if (id.includes('node_modules')) {

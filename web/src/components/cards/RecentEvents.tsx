@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
@@ -33,6 +34,14 @@ export function RecentEvents() {
     lastRefresh,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
   const { filterByCluster } = useGlobalFilters()
+
+  // Report data state to CardWrapper for failure badge rendering
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: events.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Pre-filter to events within the last hour (before handing to useCardData)
   const recentEventsCandidates = useMemo(() => {
@@ -72,7 +81,7 @@ export function RecentEvents() {
     defaultLimit: 5,
   })
 
-  if (isLoading && events.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-3 p-1">
         <Skeleton className="h-10 w-full" />

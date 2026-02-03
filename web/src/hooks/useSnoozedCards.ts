@@ -14,7 +14,7 @@ export interface SnoozedSwap {
 
 // Simple in-memory store - in production this would sync with backend
 let snoozedSwaps: SnoozedSwap[] = []
-let listeners: Set<() => void> = new Set()
+const listeners: Set<() => void> = new Set()
 
 function notifyListeners() {
   listeners.forEach((listener) => listener())

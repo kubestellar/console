@@ -140,8 +140,9 @@ export function Nodes() {
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
-  const { nodes: gpuNodes, error: nodesError } = useGPUNodes()
-  const error = clustersError || nodesError
+  const { nodes: gpuNodes } = useGPUNodes()
+  // Only show cluster errors - GPU node errors are not useful (many clusters have no GPUs)
+  const error = clustersError
   const { drillToNode: _drillToNode, drillToAllNodes, drillToAllGPU, drillToAllPods, drillToAllClusters } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()

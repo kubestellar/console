@@ -6,6 +6,7 @@ import {
   useCardData, commonComparators,
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ChartVersionsProps {
   config?: {
@@ -36,10 +37,17 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   const {
     releases: allHelmReleases,
     isLoading: releasesLoading,
+    isFailed,
+    consecutiveFailures,
   } = useHelmReleases()
 
-  // Only show skeleton when no cached data exists
-  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading || releasesLoading,
+    hasAnyData: allHelmReleases.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Transform Helm releases to chart info
   const allCharts: ChartInfo[] = useMemo(() => {
@@ -107,7 +115,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   // Count unique charts
   const uniqueCharts = new Set(allCharts.map(c => c.chart)).size
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={50} />
   }
 

@@ -231,7 +231,7 @@ export function ContainerTetris(_props: CardComponentProps) {
   const hardDrop = useCallback(() => {
     if (!piece || gameOver || isPaused) return
 
-    let newPiece = { ...piece }
+    const newPiece = { ...piece }
     while (isValidPosition(board, { ...newPiece, y: newPiece.y + 1 })) {
       newPiece.y++
     }

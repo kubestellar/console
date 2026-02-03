@@ -9,8 +9,8 @@ export interface SnoozedRecommendation {
 
 // Simple in-memory store - in production this would sync with backend
 let snoozedRecs: SnoozedRecommendation[] = []
-let dismissedRecIds: Set<string> = new Set()
-let listeners: Set<() => void> = new Set()
+const dismissedRecIds: Set<string> = new Set()
+const listeners: Set<() => void> = new Set()
 
 function notifyListeners() {
   listeners.forEach((listener) => listener())

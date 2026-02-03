@@ -3,6 +3,8 @@ import type { Service } from '../../hooks/useMCP'
 import { useCachedServices } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { ClusterBadge } from '../ui/ClusterBadge'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
@@ -47,12 +49,21 @@ export function ServiceStatus() {
   const {
     services,
     isLoading: hookLoading,
+    isFailed,
+    consecutiveFailures,
     error
   } = useCachedServices()
 
-  // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && services.length === 0
   const { drillToService } = useDrillDownActions()
+
+  // Report data state to CardWrapper for failure badge rendering
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: services.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
+  const isLoading = showSkeleton
 
   const typeOrder: Record<string, number> = { 'LoadBalancer': 0, 'NodePort': 1, 'ClusterIP': 2, 'ExternalName': 3 }
 
@@ -215,8 +226,9 @@ export function ServiceStatus() {
                 {getTypeIcon(service.type || 'ClusterIP')}
                 <div className="min-w-0 flex-1">
                   <div className="text-sm text-foreground truncate group-hover:text-cyan-400">{service.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {service.namespace} • {service.cluster}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="truncate">{service.namespace}</span>
+                    <ClusterBadge cluster={service.cluster || ''} size="sm" />
                   </div>
                 </div>
               </div>

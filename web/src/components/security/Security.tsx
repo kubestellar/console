@@ -32,6 +32,8 @@ import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useMobile } from '../../hooks/useMobile'
+import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import {
   getMockSecurityData,
   getMockRBACData,
@@ -165,6 +167,12 @@ export function Security() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshError, setRefreshError] = useState<string | null>(null)
 
+  // Check demo mode
+  const { isDemoMode } = useDemoMode()
+
+  // Fetch cached security issues (stale-while-revalidate pattern)
+  const { issues: cachedSecurityIssues, isLoading: securityLoading, isRefreshing: securityRefreshing } = useCachedSecurityIssues()
+
   // Refresh function for security data
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
@@ -184,8 +192,8 @@ export function Security() {
   }, [])
 
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefresh)
-  const isRefreshing = dataRefreshing || showIndicator
-  const isFetching = isRefreshing || showIndicator
+  const isRefreshing = dataRefreshing || showIndicator || securityRefreshing
+  const isFetching = isRefreshing || showIndicator || securityRefreshing
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
@@ -264,10 +272,35 @@ export function Security() {
     setShowTemplates(false)
   }, [setCards, expandCards, setShowTemplates])
 
-  // In production, fetch from API
-  const securityIssues = useMemo(() => getMockSecurityData(), [])
-  const rbacBindings = useMemo(() => getMockRBACData(), [])
-  const complianceChecks = useMemo(() => getMockComplianceData(), [])
+  // Transform cached issues to match the page format
+  const securityIssues = useMemo(() => {
+    if (isDemoMode) return getMockSecurityData()
+
+    // Transform cached data to match mock format
+    return cachedSecurityIssues.map(issue => {
+      // Map issue string to type enum
+      let type: 'privileged' | 'root' | 'hostNetwork' | 'hostPID' | 'noSecurityContext' = 'noSecurityContext'
+      const issueLower = issue.issue.toLowerCase()
+      if (issueLower.includes('privileged')) type = 'privileged'
+      else if (issueLower.includes('root')) type = 'root'
+      else if (issueLower.includes('host network')) type = 'hostNetwork'
+      else if (issueLower.includes('host pid') || issueLower.includes('hostpid')) type = 'hostPID'
+      else if (issueLower.includes('security context') || issueLower.includes('capabilities')) type = 'noSecurityContext'
+
+      return {
+        type,
+        severity: issue.severity as 'high' | 'medium' | 'low',
+        resource: issue.name,
+        namespace: issue.namespace,
+        cluster: issue.cluster || 'unknown',
+        message: issue.details || issue.issue,
+      }
+    })
+  }, [isDemoMode, cachedSecurityIssues])
+
+  // RBAC and compliance still use mock data (TODO: implement cached hooks for these)
+  const rbacBindings = useMemo(() => isDemoMode ? getMockRBACData() : [], [isDemoMode])
+  const complianceChecks = useMemo(() => isDemoMode ? getMockComplianceData() : [], [isDemoMode])
 
   // Issues after global filter (before local severity filter)
   const globalFilteredIssues = useMemo(() => {
@@ -510,8 +543,8 @@ export function Security() {
       <StatsOverview
         dashboardType="security"
         getStatValue={getStatValue}
-        hasData={stats.total > 0}
-        isLoading={false}
+        hasData={stats.total > 0 || securityIssues.length > 0}
+        isLoading={securityLoading && cachedSecurityIssues.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-security-stats-collapsed"
       />

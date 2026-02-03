@@ -8,14 +8,21 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 4: Offline Detection - Detect offline nodes and unavailable GPUs
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { nodes: gpuNodes } = useGPUNodes()
+  const { nodes: gpuNodes, isLoading } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: gpuNodes.length > 0,
+  })
 
   // Get all nodes from direct API fetch
   const [allNodes, setAllNodes] = useState<Array<{ name: string; cluster?: string; status: string; roles: string[]; unschedulable?: boolean }>>([])

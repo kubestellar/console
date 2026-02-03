@@ -7,14 +7,21 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { deduplicatedClusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
+  })
 
   // Filter clusters by global filter
   const clusters = useMemo(() => {

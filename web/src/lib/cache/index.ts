@@ -304,6 +304,7 @@ class CacheStore<T> {
   private fetchingRef = false
   private refreshTimeoutRef: ReturnType<typeof setTimeout> | null = null
   private initialDataLoaded = false
+  private storageLoadPromise: Promise<void> | null = null
 
   constructor(
     private key: string,
@@ -313,19 +314,22 @@ class CacheStore<T> {
     // Initialize with initial data, then async load from IndexedDB
     const meta = this.loadMeta()
 
+    // When persisting to IndexedDB, don't show loading skeleton initially.
+    // Instead show initialData with isRefreshing to indicate data is coming.
+    // This prevents flashing skeleton when cached data is about to load.
     this.state = {
       data: initialData,
-      isLoading: true,
-      isRefreshing: false,
-      error: meta.lastError ?? null,
+      isLoading: !persist, // Only show loading if NOT persisting (no cached data possible)
+      isRefreshing: persist, // Show refreshing indicator when persisting (cache loading)
+      error: null, // Don't surface errors at dashboard level
       isFailed: meta.consecutiveFailures >= MAX_FAILURES,
       consecutiveFailures: meta.consecutiveFailures,
-      lastRefresh: null,
+      lastRefresh: meta.lastSuccessfulRefresh ?? null,
     }
 
-    // Async load from IndexedDB
+    // Async load from IndexedDB - store the promise so we can await it before fetching
     if (this.persist) {
-      this.loadFromStorage()
+      this.storageLoadPromise = this.loadFromStorage()
     }
   }
 
@@ -420,6 +424,13 @@ class CacheStore<T> {
     if (this.fetchingRef) return
     this.fetchingRef = true
 
+    // Wait for IndexedDB to load before determining if we have cached data
+    // This ensures we don't show skeleton when cached data is available
+    if (this.storageLoadPromise) {
+      await this.storageLoadPromise
+      this.storageLoadPromise = null
+    }
+
     const hasCachedData = this.state.data !== this.initialData || this.initialDataLoaded
     const startTime = Date.now()
 
@@ -452,6 +463,8 @@ class CacheStore<T> {
         lastRefresh: Date.now(),
       })
     } catch (e) {
+      // Don't show error messages at dashboard level - track failures internally
+      // but don't display user-facing error banners for optional data
       const errorMessage = e instanceof Error ? e.message : 'Failed to fetch data'
       const newFailures = this.state.consecutiveFailures + 1
 
@@ -464,7 +477,7 @@ class CacheStore<T> {
       this.setState({
         isLoading: false,
         isRefreshing: false,
-        error: errorMessage,
+        error: null, // Don't show error - it's not useful at dashboard level
         isFailed: newFailures >= MAX_FAILURES,
         consecutiveFailures: newFailures,
       })
@@ -724,6 +737,43 @@ export async function prefetchCache<T>(
 ): Promise<void> {
   const store = getOrCreateCache(key, initialData, true)
   await store.fetch(fetcher)
+}
+
+/**
+ * Preload common cache keys from IndexedDB at app startup.
+ * This ensures cached data is available immediately when components mount.
+ * Call this early in app initialization, before rendering routes.
+ */
+export async function preloadCacheFromStorage(): Promise<void> {
+  // Common cache keys that should be preloaded for instant display
+  const keysToPreload = [
+    'securityIssues:all:all',
+    'podIssues:all:all',
+    'deployments:all:all',
+    'deploymentIssues:all:all',
+    'events:all:all:100',
+    'services:all:all',
+  ]
+
+  let loadedCount = 0
+  const loadPromises = keysToPreload.map(async (key) => {
+    try {
+      const entry = await idbStorage.get<unknown>(key)
+      if (entry) {
+        // Pre-populate the registry with loaded data
+        // This creates a CacheStore with data already loaded
+        const store = getOrCreateCache(key, entry.data, true)
+        // Mark as loaded so it doesn't try to load again
+        ;(store as unknown as { initialDataLoaded: boolean }).initialDataLoaded = true
+        loadedCount++
+      }
+    } catch {
+      // Ignore individual load failures
+    }
+  })
+
+  await Promise.all(loadPromises)
+  console.log(`[Cache] Preloaded ${loadedCount}/${keysToPreload.length} cache entries`)
 }
 
 /** Migrate old localStorage cache to IndexedDB (run once on app startup) */

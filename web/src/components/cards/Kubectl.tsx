@@ -3,6 +3,7 @@ import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, Chev
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
+import { useCardLoadingState } from './CardDataContext'
 
 interface CommandHistoryItem {
   id: string
@@ -22,8 +23,14 @@ interface YAMLManifest {
 
 export function Kubectl() {
   const { execute } = useKubectl()
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selectedContext, setSelectedContext] = useState<string>('')
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
+  })
   const [command, setCommand] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')
   const [output, setOutput] = useState<string[]>([])
@@ -129,7 +136,7 @@ export function Kubectl() {
 
     try {
       // Parse command
-      let args = cmd.trim().split(/\s+/)
+      const args = cmd.trim().split(/\s+/)
       
       // Add output format if not specified
       if (!args.includes('-o') && !args.includes('--output') && outputFormat !== 'table') {

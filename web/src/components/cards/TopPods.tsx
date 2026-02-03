@@ -5,6 +5,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards'
 
 type SortByOption = 'restarts' | 'name' | 'cpu' | 'memory' | 'gpu'
@@ -65,7 +66,21 @@ export function TopPods({ config }: TopPodsProps) {
   const { drillToPod } = useDrillDownActions()
 
   // Fetch more pods to allow client-side filtering and pagination (using unified cache)
-  const { pods: rawPods, isLoading, error } = useCachedPods(clusterConfig, namespaceConfig, { limit: 100, category: 'pods' })
+  const {
+    pods: rawPods,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+    error
+  } = useCachedPods(clusterConfig, namespaceConfig, { limit: 100, category: 'pods' })
+
+  // Report data state to CardWrapper for failure badge rendering
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: rawPods.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -118,7 +133,7 @@ export function TopPods({ config }: TopPodsProps) {
     defaultLimit: config?.limit || 5,
   })
 
-  if (isLoading && pods.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

@@ -178,7 +178,7 @@ const demoSecurityIssues = [
 ]
 
 // Stored user data
-let currentUser = {
+const currentUser = {
   id: 'test-user',
   name: 'Test User',
   email: 'test@example.com',
@@ -229,6 +229,60 @@ export const handlers = [
     })
   }),
 
+  // Health check
+  http.get('/api/health', async () => {
+    await delay(50)
+    return HttpResponse.json({ status: 'ok', version: 'demo' })
+  }),
+
+  // Active users (for presence tracking)
+  http.get('/api/active-users', async () => {
+    await delay(50)
+    return HttpResponse.json({ activeUsers: 1, totalConnections: 1 })
+  }),
+
+  http.post('/api/active-users', async () => {
+    await delay(50)
+    return HttpResponse.json({ success: true })
+  }),
+
+  // Permissions
+  http.get('/api/permissions/summary', async () => {
+    await delay(50)
+    // Return proper PermissionsSummary structure with clusters map
+    const clusterPermissions = {
+      isClusterAdmin: true,
+      canListNodes: true,
+      canListNamespaces: true,
+      canCreateNamespaces: true,
+      canManageRBAC: true,
+      canViewSecrets: true,
+      accessibleNamespaces: ['default', 'kube-system'],
+    }
+    return HttpResponse.json({
+      clusters: {
+        'kind-local': clusterPermissions,
+        'minikube': clusterPermissions,
+        'k3s-edge': clusterPermissions,
+        'eks-prod-us-east-1': clusterPermissions,
+        'gke-staging': clusterPermissions,
+        'aks-dev-westeu': clusterPermissions,
+        'openshift-prod': clusterPermissions,
+        'oci-oke-phoenix': clusterPermissions,
+        'alibaba-ack-shanghai': clusterPermissions,
+        'do-nyc1-prod': clusterPermissions,
+        'rancher-mgmt': clusterPermissions,
+        'vllm-gpu-cluster': clusterPermissions,
+      },
+    })
+  }),
+
+  // Notifications
+  http.get('/api/notifications/unread-count', async () => {
+    await delay(50)
+    return HttpResponse.json({ count: 0 })
+  }),
+
   // MCP Status
   http.get('/api/mcp/status', async () => {
     await delay(100)
@@ -267,6 +321,30 @@ export const handlers = [
   http.get('/api/mcp/deployment-issues', async () => {
     await delay(150)
     return HttpResponse.json({ issues: demoDeploymentIssues })
+  }),
+
+  // Pods list (for cluster-specific queries)
+  http.get('/api/mcp/pods', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      pods: [
+        { name: 'nginx-abc123', namespace: 'default', status: 'Running', cluster: 'kind-local' },
+        { name: 'redis-xyz789', namespace: 'cache', status: 'Running', cluster: 'kind-local' },
+        { name: 'api-server-456', namespace: 'backend', status: 'Running', cluster: 'kind-local' },
+      ],
+    })
+  }),
+
+  // Deployments list (for cluster-specific queries)
+  http.get('/api/mcp/deployments', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      deployments: [
+        { name: 'nginx', namespace: 'default', replicas: 3, ready: 3, cluster: 'kind-local' },
+        { name: 'redis', namespace: 'cache', replicas: 2, ready: 2, cluster: 'kind-local' },
+        { name: 'api-server', namespace: 'backend', replicas: 5, ready: 5, cluster: 'kind-local' },
+      ],
+    })
   }),
 
   // Events
@@ -349,6 +427,12 @@ export const handlers = [
       return HttpResponse.json({ card })
     }
     return HttpResponse.json({ error: 'Card not found' }, { status: 404 })
+  }),
+
+  // List dashboards
+  http.get('/api/dashboards', async () => {
+    await delay(100)
+    return HttpResponse.json([])
   }),
 
   // Save dashboard configuration

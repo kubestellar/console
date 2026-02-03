@@ -11,6 +11,7 @@ import {
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { CardComponentProps } from './cardRegistry'
+import { useCardLoadingState } from './CardDataContext'
 
 // Resource types to monitor
 type ResourceType = 'pods' | 'deployments' | 'services' | 'configmaps' | 'secrets' | 'pvcs' | 'jobs'
@@ -90,9 +91,15 @@ const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
 }
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
+  })
 
   // UI state
   const [searchFilter, setSearchFilter] = useState('')

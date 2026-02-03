@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 export function EventSummary() {
   const {
@@ -17,6 +18,14 @@ export function EventSummary() {
     lastRefresh,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
   const { filterByCluster } = useGlobalFilters()
+
+  // Report state to CardWrapper for refresh animation
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: events.length > 0,
+    isFailed: isFailed && events.length === 0,
+    consecutiveFailures,
+  })
 
   const {
     localClusterFilter,
@@ -64,7 +73,7 @@ export function EventSummary() {
     return { warnings, normal, topReasons, topClusters }
   }, [filteredEvents])
 
-  if (isLoading && events.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-3 p-1">
         <Skeleton className="h-16 w-full" />

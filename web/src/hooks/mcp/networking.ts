@@ -231,7 +231,8 @@ export function useServices(cluster?: string, namespace?: string) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
-        setError('Failed to fetch services')
+        // Don't show error at dashboard level - services are optional
+        setError(null)
         // Fall back to demo data on error if no cached data
         if (services.length === 0) {
           setServices(getDemoServices().filter(s =>
@@ -279,10 +280,13 @@ export function useServices(cluster?: string, namespace?: string) {
 export function useIngresses(cluster?: string, namespace?: string) {
   const [ingresses, setIngresses] = useState<Ingress[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
+    setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
       try {
         const params = new URLSearchParams()
@@ -299,7 +303,9 @@ export function useIngresses(cluster?: string, namespace?: string) {
           const data = await response.json()
           setIngresses(data.ingresses || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
+          setIsRefreshing(false)
           reportAgentDataSuccess()
           return
         }
@@ -314,26 +320,33 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ ingresses: Ingress[] }>(`/api/mcp/ingresses?${params}`)
       setIngresses(data.ingresses || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
-      setError('Failed to fetch Ingresses')
+      // Don't show error - Ingresses are optional
+      setError(null)
+      setConsecutiveFailures(prev => prev + 1)
       setIngresses([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { ingresses, isLoading, error, refetch }
+  return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // Hook to get NetworkPolicies
 export function useNetworkPolicies(cluster?: string, namespace?: string) {
   const [networkpolicies, setNetworkPolicies] = useState<NetworkPolicy[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
+    setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
       try {
         const params = new URLSearchParams()
@@ -350,7 +363,9 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
           const data = await response.json()
           setNetworkPolicies(data.networkpolicies || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
+          setIsRefreshing(false)
           reportAgentDataSuccess()
           return
         }
@@ -365,16 +380,20 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ networkpolicies: NetworkPolicy[] }>(`/api/mcp/networkpolicies?${params}`)
       setNetworkPolicies(data.networkpolicies || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
-      setError('Failed to fetch NetworkPolicies')
+      // Don't show error - NetworkPolicies are optional
+      setError(null)
+      setConsecutiveFailures(prev => prev + 1)
       setNetworkPolicies([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { networkpolicies, isLoading, error, refetch }
+  return { networkpolicies, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 function getDemoServices(): Service[] {

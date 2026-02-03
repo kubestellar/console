@@ -7,6 +7,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useCardLoadingState } from './CardDataContext'
 
 interface NamespaceRBACProps {
   config?: {
@@ -66,6 +67,12 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   const isFetchingRBAC = selectedCluster && selectedNamespace && (rolesLoading || bindingsLoading || sasLoading)
   const isLoading = isInitialLoading
   const showSkeleton = isLoading && clusters.length === 0
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading: isInitialLoading || !!isFetchingRBAC,
+    hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
+  })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
   const rbacRoles: RBACItem[] = useMemo(() => {

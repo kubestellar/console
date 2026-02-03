@@ -2,6 +2,31 @@ import { useState, useEffect, useCallback } from 'react'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
+// LocalStorage cache keys
+const GITOPS_DRIFTS_CACHE_KEY = 'kc-gitops-drifts-cache'
+const CACHE_TTL_MS = 30000 // 30 seconds before stale
+
+// Load from localStorage
+function loadGitOpsDriftsFromStorage(): { data: GitOpsDrift[], timestamp: number } {
+  try {
+    const stored = localStorage.getItem(GITOPS_DRIFTS_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed.data)) {
+        return { data: parsed.data, timestamp: parsed.timestamp || 0 }
+      }
+    }
+  } catch { /* ignore */ }
+  return { data: [], timestamp: 0 }
+}
+
+// Save to localStorage
+function saveGitOpsDriftsToStorage(data: GitOpsDrift[], timestamp: number) {
+  try {
+    localStorage.setItem(GITOPS_DRIFTS_CACHE_KEY, JSON.stringify({ data, timestamp }))
+  } catch { /* ignore storage errors */ }
+}
+
 // Hook to get security issues
 export function useSecurityIssues(cluster?: string, namespace?: string) {
   const [issues, setIssues] = useState<SecurityIssue[]>([])
@@ -104,14 +129,18 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
   }
 }
 
-// Hook to get GitOps drifts
+// Hook to get GitOps drifts with localStorage persistence
 export function useGitOpsDrifts(cluster?: string, namespace?: string) {
-  const [drifts, setDrifts] = useState<GitOpsDrift[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  // Initialize from localStorage cache
+  const storedDrifts = loadGitOpsDriftsFromStorage()
+  const [drifts, setDrifts] = useState<GitOpsDrift[]>(storedDrifts.data)
+  const [isLoading, setIsLoading] = useState(storedDrifts.data.length === 0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(
+    storedDrifts.timestamp > 0 ? new Date(storedDrifts.timestamp) : null
+  )
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -134,8 +163,11 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
-        setDrifts(getDemoGitOpsDrifts())
-        setLastRefresh(new Date())
+        const demoData = getDemoGitOpsDrifts()
+        setDrifts(demoData)
+        const now = Date.now()
+        saveGitOpsDriftsToStorage(demoData, now)
+        setLastRefresh(new Date(now))
         setIsLoading(false)
         if (!silent) {
           setIsRefreshing(true)
@@ -154,18 +186,24 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
         throw new Error(`API error: ${response.status}`)
       }
       const data = await response.json() as { drifts: GitOpsDrift[] }
-      setDrifts(data.drifts || [])
+      const newDrifts = data.drifts || []
+      setDrifts(newDrifts)
       setError(null)
-      const now = new Date()
+      const now = Date.now()
       setConsecutiveFailures(0)
-      setLastRefresh(now)
+      setLastRefresh(new Date(now))
+      // Save to localStorage
+      saveGitOpsDriftsToStorage(newDrifts, now)
     } catch (err) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
         setError('Failed to fetch GitOps drifts')
-        setDrifts(getDemoGitOpsDrifts())
+        const demoData = getDemoGitOpsDrifts()
+        setDrifts(demoData)
+        saveGitOpsDriftsToStorage(demoData, Date.now())
       }
+      // Keep existing cached data on error
     } finally {
       if (!silent) {
         setIsLoading(false)
@@ -175,7 +213,22 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   useEffect(() => {
-    refetch(false)
+    // Use cached data if fresh enough
+    const cached = loadGitOpsDriftsFromStorage()
+    const cacheAge = Date.now() - cached.timestamp
+    const cacheValid = cached.data.length > 0 && cacheAge < CACHE_TTL_MS
+
+    if (cacheValid) {
+      setDrifts(cached.data)
+      setIsLoading(false)
+      // Still refresh in background if somewhat stale
+      if (cacheAge > CACHE_TTL_MS / 2) {
+        refetch(true)
+      }
+    } else {
+      refetch(false)
+    }
+
     // Poll every 30 seconds
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)

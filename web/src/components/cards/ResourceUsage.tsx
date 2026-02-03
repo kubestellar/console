@@ -5,9 +5,11 @@ import { Cpu, MemoryStick, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useChartFilters } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
+import { Skeleton } from '../ui/Skeleton'
 
 export function ResourceUsage() {
-  const { isLoading } = useClusters()
+  const { isLoading: clustersLoading } = useClusters()
   const { nodes: allGPUNodes } = useGPUNodes()
   const { drillToResources } = useDrillDownActions()
 
@@ -59,12 +61,34 @@ export function ResourceUsage() {
     drillToResources()
   }
 
-  const showSkeleton = isLoading && clusters.length === 0
+  // Report state to CardWrapper for refresh animation
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading,
+    hasAnyData: clusters.length > 0,
+  })
+  const isLoading = showSkeleton
 
-  if (showSkeleton) {
+  if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="spinner w-8 h-8" />
+      <div className="h-full flex flex-col min-h-[200px]">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton variant="text" width={80} height={16} />
+          <Skeleton variant="rounded" width={60} height={24} />
+        </div>
+        <div className="flex-1 flex items-center justify-around">
+          <div className="flex flex-col items-center">
+            <Skeleton variant="circular" width={80} height={80} />
+            <Skeleton variant="text" width={40} height={16} className="mt-2" />
+          </div>
+          <div className="flex flex-col items-center">
+            <Skeleton variant="circular" width={80} height={80} />
+            <Skeleton variant="text" width={50} height={16} className="mt-2" />
+          </div>
+        </div>
+        <div className="mt-4 pt-3 border-t border-border/50 grid grid-cols-2 gap-2">
+          <Skeleton variant="rounded" height={40} />
+          <Skeleton variant="rounded" height={40} />
+        </div>
       </div>
     )
   }

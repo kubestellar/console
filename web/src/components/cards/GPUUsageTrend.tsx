@@ -14,6 +14,7 @@ import {
 import { useGPUNodes, useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { useCardLoadingState } from './CardDataContext'
 
 interface GPUDataPoint {
   time: string
@@ -48,6 +49,12 @@ export function GPUUsageTrend() {
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && gpuNodes.length === 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Report state to CardWrapper for refresh animation
+  useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: gpuNodes.length > 0,
+  })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)

@@ -4,6 +4,7 @@
  */
 
 import { AlertTriangle, AlertCircle } from 'lucide-react'
+import { useCardLoadingState } from './CardDataContext'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -206,6 +207,12 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 export function ComplianceScore({ config: _config }: CardConfig) {
   const score = 85
   const trend = '+3%'
+
+  // Report loading state to CardWrapper - demo card always has data
+  useCardLoadingState({
+    isLoading: false,
+    hasAnyData: true,
+  })
 
   return (
     <div className="space-y-3">

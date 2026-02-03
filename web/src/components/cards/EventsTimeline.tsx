@@ -14,6 +14,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { useCardLoadingState } from './CardDataContext'
 
 interface TimePoint {
   time: string
@@ -82,9 +83,13 @@ export function EventsTimeline() {
     isLoading: hookLoading,
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
-  // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && events.length === 0
   const { deduplicatedClusters: clusters } = useClusters()
+
+  // Report state to CardWrapper for refresh animation
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: events.length > 0,
+  })
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -174,7 +179,7 @@ export function EventsTimeline() {
   const totalNormal = timeSeriesData.reduce((sum, d) => sum + d.normal, 0)
   const peakEvents = Math.max(...timeSeriesData.map(d => d.total))
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-2">
