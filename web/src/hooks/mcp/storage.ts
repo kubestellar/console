@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { getDemoMode } from '../useDemoMode'
@@ -70,10 +70,23 @@ export function usePVCs(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
-  // Reset state when cluster changes
+  // Track mounted state to prevent state updates after unmount (StrictMode)
+  const isMountedRef = useRef(true)
   useEffect(() => {
-    setPVCs([])
-    setIsLoading(true)
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
+
+  // Reset state when cluster changes (only if still mounted)
+  // Don't reset to loading if we have cached data (stale-while-revalidate)
+  useEffect(() => {
+    if (!isMountedRef.current) return
+    const newCacheKey = `pvcs:${cluster || 'all'}:${namespace || 'all'}`
+    const hasCached = pvcsCache && pvcsCache.key === newCacheKey
+    if (!hasCached) {
+      setPVCs([])
+      setIsLoading(true)
+    }
     setError(null)
   }, [cluster, namespace])
 
@@ -198,11 +211,27 @@ export function usePVCs(cluster?: string, namespace?: string) {
   }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
-    const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
+    // Use a flag to prevent state updates if this effect is cleaned up
+    let cancelled = false
+
+    const doFetch = async () => {
+      const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
+      if (!cancelled) {
+        await refetch(!!hasCachedData) // silent=true if we have cached data
+      }
+    }
+
+    doFetch()
+
     // Poll for PVC updates
-    const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+    const interval = setInterval(() => {
+      if (!cancelled) refetch(true)
+    }, getEffectiveInterval(REFRESH_INTERVAL_MS))
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [refetch, cacheKey])
 
   return {
