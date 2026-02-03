@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDHealth } from '../../hooks/useArgoCD'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
@@ -21,24 +21,17 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
     total,
     healthyPercent,
     isLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useArgoCDHealth()
 
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || total > 0
-
-  // Report data state to CardWrapper
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: total > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: isLoading && total === 0,
-    isRefreshing: isRefreshing || (isLoading && total > 0),
-    hasData,
   })
-
-  const showSkeleton = isLoading && total === 0 && !isFailed
 
   if (showSkeleton) {
     return (
