@@ -42,9 +42,26 @@ export function KubeCraft() {
     const saved = localStorage.getItem('kubeCraftWorld')
     if (saved) {
       try {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved)
+        // Validate that the saved world has the correct structure
+        if (
+          Array.isArray(parsed) &&
+          parsed.length === GRID_SIZE &&
+          parsed.every((row: unknown) =>
+            Array.isArray(row) &&
+            row.length === GRID_SIZE &&
+            row.every((cell: unknown) =>
+              cell && typeof cell === 'object' && 'type' in cell
+            )
+          )
+        ) {
+          return parsed
+        }
+        // Invalid structure, remove corrupted data
+        localStorage.removeItem('kubeCraftWorld')
       } catch {
-        // Fall through to generate new world
+        // Invalid JSON, remove corrupted data
+        localStorage.removeItem('kubeCraftWorld')
       }
     }
     return generateWorld()

@@ -297,6 +297,10 @@ export function GitOps() {
       </div>
 
       {/* Apps List */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-sm font-medium text-muted-foreground">GitOps Applications</span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Demo</span>
+      </div>
       {filteredApps.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">🔄</div>
@@ -304,7 +308,7 @@ export function GitOps() {
           <p className="text-sm text-muted-foreground">Configure ArgoCD or Flux to see sync status</p>
         </div>
       ) : (
-        <div className="space-y-4 mb-6">
+        <div className="space-y-4 mb-6 border-2 border-yellow-500/30 rounded-lg p-4">
           {filteredApps.map((app, i) => (
             <div
               key={i}
@@ -401,6 +405,7 @@ export function GitOps() {
           title: 'GitOps Dashboard',
           description: 'Add cards to monitor ArgoCD applications, Helm releases, and GitOps sync status.',
         }}
+        isDemoData={true}
       >
         {/* Info */}
         <div className="mt-8 p-4 rounded-lg bg-card/30 border border-border">

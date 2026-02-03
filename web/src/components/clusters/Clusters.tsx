@@ -1668,68 +1668,8 @@ export function Clusters() {
     }
   }, [globalFilteredClusters, gpuByCluster])
 
-  // Show skeleton when loading with no data OR when agent is offline and demo mode is OFF
-  if ((isLoading && clusters.length === 0) || forceSkeletonForOffline) {
-    return (
-      <div className="pt-16">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Server className="w-6 h-6 text-purple-400" />
-            Clusters
-          </h1>
-          <p className="text-muted-foreground">Manage your Kubernetes clusters</p>
-        </div>
-
-        {/* Stats Overview Skeleton */}
-        <StatsOverviewSkeleton />
-
-        {/* Filter Tabs Skeleton */}
-        <div className="flex gap-2 mb-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-10 w-24 bg-card/50 rounded-lg animate-pulse" />
-          ))}
-        </div>
-
-        {/* Dashboard Cards Section Skeleton */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-            <LayoutGrid className="w-4 h-4" />
-            <span>Dashboard Cards</span>
-            <ChevronDown className="w-4 h-4" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="glass rounded-xl p-4 md:col-span-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-5 w-5 bg-card/50 rounded animate-pulse" />
-                  <div className="h-5 w-32 bg-card/50 rounded animate-pulse" />
-                </div>
-                <div className="space-y-2">
-                  <div className="h-4 w-full bg-card/50 rounded animate-pulse" />
-                  <div className="h-4 w-3/4 bg-card/50 rounded animate-pulse" />
-                  <div className="h-4 w-1/2 bg-card/50 rounded animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Cluster Cards Section Skeleton */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
-            <Server className="w-4 h-4" />
-            <span>Cluster Cards</span>
-            <ChevronDown className="w-4 h-4" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <ClusterCardSkeleton key={i} />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Determine if we should show skeleton content (loading with no data OR offline without demo)
+  const showSkeletonContent = (isLoading && clusters.length === 0) || forceSkeletonForOffline
 
   // Note: We no longer block on errors - always show demo data gracefully
   // The error variable is kept for potential future use but UI always renders
@@ -1763,61 +1703,81 @@ export function Clusters() {
         </div>
 
         {showStats && (
-          <StatsOverview
-            stats={stats}
-            onFilterByStatus={(status) => {
-              setFilter(status)
-              setShowClusterGrid(true) // Ensure cluster grid is visible
-            }}
-            onCPUClick={() => window.location.href = '/compute'}
-            onMemoryClick={() => window.location.href = '/compute'}
-            onStorageClick={() => window.location.href = '/storage'}
-            onGPUClick={() => setShowGPUModal(true)}
-            onNodesClick={() => window.location.href = '/compute'}
-            onPodsClick={() => window.location.href = '/workloads'}
-          />
+          showSkeletonContent ? (
+            <StatsOverviewSkeleton />
+          ) : (
+            <StatsOverview
+              stats={stats}
+              onFilterByStatus={(status) => {
+                setFilter(status)
+                setShowClusterGrid(true) // Ensure cluster grid is visible
+              }}
+              onCPUClick={() => window.location.href = '/compute'}
+              onMemoryClick={() => window.location.href = '/compute'}
+              onStorageClick={() => window.location.href = '/storage'}
+              onGPUClick={() => setShowGPUModal(true)}
+              onNodesClick={() => window.location.href = '/compute'}
+              onPodsClick={() => window.location.href = '/workloads'}
+            />
+          )
         )}
       </div>
 
-      {/* Cluster Cards - collapsible */}
+      {/* Cluster Info Cards - collapsible */}
       <div className="mb-6">
         <button
           onClick={() => setShowClusterGrid(!showClusterGrid)}
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
         >
           <Server className="w-4 h-4" />
-          <span>Cluster Cards ({filteredClusters.length})</span>
+          <span>Cluster Info Cards {showSkeletonContent ? '' : `(${filteredClusters.length})`}</span>
           {showClusterGrid ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
 
         {showClusterGrid && (
-          <>
-            <FilterTabs
-              stats={stats}
-              filter={filter}
-              onFilterChange={setFilter}
-              sortBy={sortBy}
-              onSortByChange={setSortBy}
-              sortAsc={sortAsc}
-              onSortAscChange={setSortAsc}
-              layoutMode={layoutMode}
-              onLayoutModeChange={(mode) => {
-                setLayoutMode(mode)
-                localStorage.setItem('kubestellar-cluster-layout-mode', mode)
-              }}
-            />
-            <ClusterGrid
-              clusters={filteredClusters}
-              layoutMode={layoutMode}
-              gpuByCluster={gpuByCluster}
-              isConnected={isConnected}
-              permissionsLoading={permissionsLoading}
-              isClusterAdmin={isClusterAdmin}
-              onSelectCluster={setSelectedCluster}
-              onRenameCluster={setRenamingCluster}
-              onRefreshCluster={refreshSingleCluster}
-            />
-          </>
+          showSkeletonContent ? (
+            /* Show skeleton cluster cards when offline/loading */
+            <>
+              <div className="flex gap-2 mb-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-8 w-24 bg-card/50 rounded-lg animate-pulse" />
+                ))}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <ClusterCardSkeleton key={i} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <FilterTabs
+                stats={stats}
+                filter={filter}
+                onFilterChange={setFilter}
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+                sortAsc={sortAsc}
+                onSortAscChange={setSortAsc}
+                layoutMode={layoutMode}
+                onLayoutModeChange={(mode) => {
+                  setLayoutMode(mode)
+                  localStorage.setItem('kubestellar-cluster-layout-mode', mode)
+                }}
+              />
+              <ClusterGrid
+                clusters={filteredClusters}
+                layoutMode={layoutMode}
+                gpuByCluster={gpuByCluster}
+                isConnected={isConnected}
+                permissionsLoading={permissionsLoading}
+                isClusterAdmin={isClusterAdmin}
+                onSelectCluster={setSelectedCluster}
+                onRenameCluster={setRenamingCluster}
+                onRefreshCluster={refreshSingleCluster}
+              />
+            </>
+          )
         )}
       </div>
 
@@ -1956,7 +1916,7 @@ export function Clusters() {
         </div>
       )}
 
-      {/* Dashboard Cards Section */}
+      {/* Cluster Dashboard Cards Section */}
       <div className="mb-6">
         {/* Card section header with toggle and buttons */}
         <div className="flex items-center justify-between mb-3">
@@ -1965,7 +1925,7 @@ export function Clusters() {
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <LayoutGrid className="w-4 h-4" />
-            <span>Dashboard Cards ({cards.length})</span>
+            <span>Cluster Dashboard Cards ({cards.length})</span>
             {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>
