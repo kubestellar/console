@@ -724,9 +724,8 @@ export function CardWrapper({
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
   const isDemoMode = globalDemoMode && !isDemoExempt
 
-  // When demo mode is OFF and agent is offline, force skeleton display for LIVE cards
-  // This prevents showing stale/cached demo data when user expects live data
-  // Cards that only support demo data (don't use useCardLoadingState) are not affected
+  // When demo mode is OFF and agent is offline, force skeleton display
+  // This prevents showing stale/cached data when user expects live data
   const isAgentOffline = agentStatus !== 'connected' && agentStatus !== 'connecting'
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -750,11 +749,10 @@ export function CardWrapper({
 
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
-  // Only force skeleton for "live" cards that are NOT showing demo data
-  // Cards that only support demo data should still show their demo content
-  const isLiveCard = childDataState !== null
-  const isShowingDemoData = isDemoData || isDemoMode // Card is showing demo data
-  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && isLiveCard && !isShowingDemoData
+  // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
+  // This fixes the race condition where demo data briefly shows before skeleton
+  // Cards with isDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
+  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !isDemoData && !isDemoMode
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
