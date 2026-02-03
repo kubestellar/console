@@ -28,9 +28,9 @@ export function Settings() {
   const { forceCheck: forceVersionCheck } = useVersionCheck()
 
   return (
-    <div className="pt-16 max-w-4xl mx-auto">
+    <div data-testid="settings-page" className="pt-16 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+        <h1 data-testid="settings-title" className="text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">Configure console preferences and AI usage</p>
       </div>
 

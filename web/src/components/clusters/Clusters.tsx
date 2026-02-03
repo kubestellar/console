@@ -1697,7 +1697,7 @@ export function Clusters() {
   // The error variable is kept for potential future use but UI always renders
 
   return (
-    <div className="pt-16">
+    <div data-testid="clusters-page" className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Clusters"
