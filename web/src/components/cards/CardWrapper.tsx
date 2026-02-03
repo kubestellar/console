@@ -988,8 +988,8 @@ export function CardWrapper({
                 Refresh failed
               </span>
             )}
-            {/* Refresh indicator - shows when either isVisuallySpinning or child reports loading */}
-            {(isVisuallySpinning || effectiveIsLoading) && !effectiveIsFailed && (
+            {/* Refresh indicator - only shows when no refresh button is present (button handles its own spin) */}
+            {!onRefresh && (isVisuallySpinning || effectiveIsLoading) && !effectiveIsFailed && (
               <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
             )}
             {/* Last updated indicator */}
