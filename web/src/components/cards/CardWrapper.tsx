@@ -724,10 +724,19 @@ export function CardWrapper({
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
   const isDemoMode = globalDemoMode && !isDemoExempt
 
-  // When demo mode is OFF and agent is not connected, force skeleton display
-  // This prevents showing stale/cached data when user expects live data
-  // Include 'connecting' state because it may take time before we know agent is truly offline
-  const isAgentOffline = agentStatus !== 'connected'
+  // Track if agent was ever connected - only force skeleton after losing a connection
+  // This prevents flicker during initial page load when status goes connecting → connected
+  const [wasEverConnected, setWasEverConnected] = useState(agentStatus === 'connected')
+  useEffect(() => {
+    if (agentStatus === 'connected') {
+      setWasEverConnected(true)
+    }
+  }, [agentStatus])
+
+  // Only show forced offline state if:
+  // 1. Agent is confirmed disconnected (not connecting)
+  // 2. AND we were previously connected (so this is a lost connection, not initial load)
+  const isAgentOffline = agentStatus === 'disconnected' && wasEverConnected
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
