@@ -12,7 +12,8 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { usePodIssues, useClusters } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -140,8 +141,12 @@ function PodDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Pods() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
+  // Use cached hooks for stale-while-revalidate pattern
+  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastRefresh: podIssuesLastRefresh, refetch: refetchPodIssues } = useCachedPodIssues()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+
+  // Derive lastUpdated from cache timestamp
+  const lastUpdated = podIssuesLastRefresh ? new Date(podIssuesLastRefresh) : null
   const handleRefreshAll = useCallback(() => { refetchPodIssues(); refetchClusters() }, [refetchPodIssues, refetchClusters])
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshAll)
   const { drillToPod, drillToAllPods, drillToAllClusters } = useDrillDownActions()

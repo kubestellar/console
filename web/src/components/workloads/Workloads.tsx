@@ -12,7 +12,8 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedPodIssues, useCachedDeploymentIssues, useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -150,10 +151,14 @@ interface AppSummary {
 
 export function Workloads() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
-  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
-  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
+  // Use cached hooks for stale-while-revalidate pattern
+  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastRefresh: podIssuesLastRefresh, refetch: refetchPodIssues } = useCachedPodIssues()
+  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useCachedDeploymentIssues()
+  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useCachedDeployments()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+
+  // Derive lastUpdated from cache timestamp
+  const lastUpdated = podIssuesLastRefresh ? new Date(podIssuesLastRefresh) : null
 
   const combinedRefetch = useCallback(() => {
     refetchPodIssues()
