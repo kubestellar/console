@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { getDemoMode } from '../useDemoMode'
@@ -406,11 +406,22 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
-  // Reset state when cluster changes
+  // Track previous values to detect actual changes (not just initial mount)
+  const prevClusterRef = useRef<string | undefined>(cluster)
+  const prevNamespaceRef = useRef<string | undefined>(namespace)
+
+  // Reset state only when cluster/namespace actually CHANGES (not on initial mount)
   useEffect(() => {
-    setIssues([])
-    setIsLoading(true)
-    setError(null)
+    const clusterChanged = prevClusterRef.current !== cluster
+    const namespaceChanged = prevNamespaceRef.current !== namespace
+
+    if (clusterChanged || namespaceChanged) {
+      setIssues([])
+      setIsLoading(true)
+      setError(null)
+      prevClusterRef.current = cluster
+      prevNamespaceRef.current = namespace
+    }
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
@@ -690,11 +701,22 @@ export function useDeployments(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
-  // Reset state when cluster changes
+  // Track previous values to detect actual changes (not just initial mount)
+  const prevClusterRef = useRef<string | undefined>(cluster)
+  const prevNamespaceRef = useRef<string | undefined>(namespace)
+
+  // Reset state only when cluster/namespace actually CHANGES (not on initial mount)
   useEffect(() => {
-    setDeployments([])
-    setIsLoading(true)
-    setError(null)
+    const clusterChanged = prevClusterRef.current !== cluster
+    const namespaceChanged = prevNamespaceRef.current !== namespace
+
+    if (clusterChanged || namespaceChanged) {
+      setDeployments([])
+      setIsLoading(true)
+      setError(null)
+      prevClusterRef.current = cluster
+      prevNamespaceRef.current = namespace
+    }
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {

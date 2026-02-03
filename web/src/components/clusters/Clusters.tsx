@@ -1377,7 +1377,7 @@ export function Clusters() {
   const { isDemoMode } = useDemoMode()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
-  const isAgentOffline = agentStatus !== 'connected'
+  const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline
   const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
   const {

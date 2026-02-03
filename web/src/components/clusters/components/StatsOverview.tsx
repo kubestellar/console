@@ -180,7 +180,7 @@ export function StatsOverview({
   const { isDemoMode } = useDemoMode()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
-  const isAgentOffline = agentStatus !== 'connected'
+  const isAgentOffline = agentStatus === 'disconnected'
   const forceLoadingForOffline = !isDemoMode && isAgentOffline
 
   // Resource data is available if we have reachable clusters with node data

@@ -46,7 +46,7 @@ export function Workloads() {
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
   // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF
-  const isAgentOffline = agentStatus !== 'connected'
+  const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline
   const showSkeletons = ((allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { kubectlProxy } from '../../lib/kubectlProxy'
@@ -10,11 +10,17 @@ export function useNamespaces(cluster?: string) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset state when cluster changes
+  // Track previous cluster to detect actual changes (not just initial mount)
+  const prevClusterRef = useRef<string | undefined>(cluster)
+
+  // Reset state only when cluster actually CHANGES (not on initial mount)
   useEffect(() => {
-    setNamespaces([])
-    setIsLoading(true)
-    setError(null)
+    if (prevClusterRef.current !== cluster) {
+      setNamespaces([])
+      setIsLoading(true)
+      setError(null)
+      prevClusterRef.current = cluster
+    }
   }, [cluster])
 
   const refetch = useCallback(async () => {

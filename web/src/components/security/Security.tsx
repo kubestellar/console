@@ -55,7 +55,7 @@ export function Security() {
   const { status: agentStatus } = useLocalAgent()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
-  const isAgentOffline = agentStatus !== 'connected'
+  const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline
 
   // Fetch cached security issues (stale-while-revalidate pattern)

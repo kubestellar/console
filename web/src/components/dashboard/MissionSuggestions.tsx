@@ -58,7 +58,7 @@ export function MissionSuggestions() {
   // Check agent status for offline skeleton display
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
-  const isAgentOffline = agentStatus !== 'connected'
+  const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline
 
   // Force dependency on snoozedMissions for reactivity

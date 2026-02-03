@@ -154,9 +154,9 @@ export function StatsOverview({
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
 
-  // When demo mode is OFF and agent is not connected, force skeleton display
-  // Include 'connecting' state because it may take time before we know agent is truly offline
-  const isAgentOffline = agentStatus !== 'connected'
+  // When demo mode is OFF and agent is confirmed disconnected, force skeleton display
+  // Don't force skeleton during 'connecting' - show cached data to prevent flicker
+  const isAgentOffline = agentStatus === 'disconnected'
   const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline
   const effectiveIsLoading = isLoading || forceLoadingForOffline
   const effectiveHasData = forceLoadingForOffline ? false : hasData
