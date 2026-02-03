@@ -652,6 +652,19 @@ export function CardWrapper({
   // Declared early so it can be used in the refresh animation effect below
   const [childDataState, setChildDataState] = useState<CardDataState | null>(null)
 
+  // Brief initial period to show skeleton while waiting for card to report state
+  // This prevents blank cards on initial load while giving cards time to report
+  const [initialSkeletonPeriod, setInitialSkeletonPeriod] = useState(true)
+  useEffect(() => {
+    // End initial skeleton period after 300ms OR when card reports state
+    if (childDataState !== null) {
+      setInitialSkeletonPeriod(false)
+      return
+    }
+    const timer = setTimeout(() => setInitialSkeletonPeriod(false), 300)
+    return () => clearTimeout(timer)
+  }, [childDataState])
+
   // Handle minimum spin duration for refresh button
   // Include both prop and context-reported refresh state
   const contextIsRefreshing = childDataState?.isRefreshing || false
@@ -740,13 +753,18 @@ export function CardWrapper({
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || false
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
-  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || false
+  // Show loading if: card explicitly reports isLoading, OR we're in initial skeleton period
+  // Initial period (300ms) shows skeleton while waiting for cards to report their state
+  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (initialSkeletonPeriod && childDataState === null)
   const effectiveIsRefreshing = childDataState?.isRefreshing || false
   // hasData logic:
   // - If card explicitly reports hasData, use it
   // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
+  // - During initial skeleton period with no report, assume no data (show skeleton)
   // - Otherwise default to true (show content)
-  const effectiveHasData = childDataState?.hasData ?? (childDataState?.isLoading ? false : true)
+  const effectiveHasData = childDataState?.hasData ?? (
+    (childDataState?.isLoading || (initialSkeletonPeriod && childDataState === null)) ? false : true
+  )
 
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
