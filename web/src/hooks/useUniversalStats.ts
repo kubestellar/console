@@ -17,6 +17,7 @@ import {
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
+import { getDemoMode } from './useDemoMode'
 
 // Cost estimation constants (per-month, rough cloud averages)
 const COST_PER_CPU = 30
@@ -435,6 +436,10 @@ export function useUniversalStats() {
  * Creates a merged stat value getter that combines dashboard-specific values
  * with universal fallback values.
  *
+ * Automatically injects `isDemo: true` when in demo mode, so all stat blocks
+ * show the demo indicator (yellow border + flask icon) without each dashboard
+ * needing to handle this manually.
+ *
  * Usage in dashboards:
  * ```ts
  * const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -449,21 +454,31 @@ export function createMergedStatValueGetter(
   universalGetter: (blockId: string) => StatBlockValue | undefined
 ): (blockId: string) => StatBlockValue {
   return (blockId: string) => {
+    // Check demo mode once per call (not reactive, but fast)
+    const isDemo = getDemoMode()
+
     // First try the dashboard-specific getter
     const dashboardValue = dashboardGetter(blockId)
 
-    // If dashboard provides a real value, use it
+    // If dashboard provides a real value, use it (with demo flag if applicable)
     if (dashboardValue?.value !== undefined && dashboardValue.value !== '-') {
-      return dashboardValue
+      // Only override isDemo if dashboard didn't explicitly set it
+      return dashboardValue.isDemo !== undefined
+        ? dashboardValue
+        : { ...dashboardValue, isDemo }
     }
 
     // Fall back to universal getter
     const universalValue = universalGetter(blockId)
     if (universalValue?.value !== undefined) {
-      return universalValue
+      // Universal values already have isDemo set for demo-only stats,
+      // but we also want to mark real data as demo when in demo mode
+      return universalValue.isDemo !== undefined
+        ? universalValue
+        : { ...universalValue, isDemo }
     }
 
     // Final fallback - not available
-    return { value: '-', sublabel: 'Not available on this dashboard' }
+    return { value: '-', sublabel: 'Not available on this dashboard', isDemo }
   }
 }
