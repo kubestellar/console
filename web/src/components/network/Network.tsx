@@ -13,7 +13,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useServices } from '../../hooks/useMCP'
+import { useCachedServices } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -136,8 +136,12 @@ function NetworkDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Network() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()
+  // Use cached hooks for stale-while-revalidate pattern
+  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastRefresh, refetch, error } = useCachedServices()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
+
+  // Derive lastUpdated from cache timestamp
+  const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
   const isRefreshing = servicesRefreshing || showIndicator
 
   const {
