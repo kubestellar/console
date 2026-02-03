@@ -141,8 +141,9 @@ export function Compute() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
   const isRefreshing = dataRefreshing || showIndicator
-  const { nodes: gpuNodes, error: gpuError } = useGPUNodes()
-  const error = clustersError || gpuError
+  const { nodes: gpuNodes } = useGPUNodes()
+  // Only show cluster errors - GPU node errors are not useful (many clusters have no GPUs)
+  const error = clustersError
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,

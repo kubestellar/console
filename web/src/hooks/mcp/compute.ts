@@ -187,8 +187,8 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         isLoading: false,
         isRefreshing: false,
         lastRefresh: new Date(),
-        // Only set error if we had no cache and got no data
-        error: !currentCacheHasData && !newDataHasContent ? 'No GPU nodes found' : null,
+        // Don't set error for "no GPU nodes" - that's expected, not an error
+        error: null,
       })
     }
   } catch (err) {
@@ -201,7 +201,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
         nodes: getDemoGPUNodes(),
         isLoading: false,
         isRefreshing: false,
-        error: 'Failed to fetch GPU nodes',
+        error: null, // Don't show error - GPU nodes are optional
         consecutiveFailures: newFailures,
         lastRefresh: new Date(),
       })
@@ -217,21 +217,21 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
             lastRefresh: new Date(),
           })
         } else {
-          // No cache to restore, update state with error
+          // No cache to restore, update state (no error - GPU nodes are optional)
           updateGPUNodeCache({
             isLoading: false,
             isRefreshing: false,
-            error: 'Failed to fetch GPU nodes',
+            error: null, // Don't show error - GPU nodes are optional
             consecutiveFailures: newFailures,
             lastRefresh: new Date(),
           })
         }
       } else {
-        // Preserve existing memory cache on error
+        // Preserve existing memory cache on error (no error message - GPU nodes are optional)
         updateGPUNodeCache({
           isLoading: false,
           isRefreshing: false,
-          error: 'Failed to refresh GPU nodes',
+          error: null, // Don't show error - GPU nodes are optional
           consecutiveFailures: newFailures,
           lastRefresh: new Date(),
         })
