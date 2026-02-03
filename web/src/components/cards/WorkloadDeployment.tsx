@@ -406,16 +406,22 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  const availableClusters = useMemo(
-    () => deduplicatedClusters.filter(c => c.reachable !== false),
-    [deduplicatedClusters],
-  )
-
   // Fetch real workloads from API
   const { data: realWorkloads } = useWorkloads()
 
   // Use real data if available, otherwise demo data
   const isDemo = !realWorkloads || realWorkloads.length === 0
+
+  // In demo mode, derive available clusters from demo workloads' targetClusters
+  // In live mode, use real clusters from the API
+  const availableClusters = useMemo(() => {
+    if (isDemo) {
+      // Extract unique cluster names from demo workloads
+      const demoClusterNames = new Set(DEMO_WORKLOADS.flatMap(w => w.targetClusters))
+      return Array.from(demoClusterNames).map(name => ({ name, reachable: true }))
+    }
+    return deduplicatedClusters.filter(c => c.reachable !== false)
+  }, [deduplicatedClusters, isDemo])
   const workloads: Workload[] = useMemo(() => {
     if (isDemo) return DEMO_WORKLOADS
     // Transform API workloads to card format
@@ -492,13 +498,17 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     if (statusFilter !== 'All') {
       result = result.filter(w => w.status === statusFilter)
     }
-    if (localClusterFilter.length > 0) {
+    // Only apply cluster filter if selected clusters exist in available clusters
+    // This prevents old stored filters from hiding all data when switching to demo mode
+    const availableClusterNames = new Set(availableClusters.map(c => c.name))
+    const validClusterFilter = localClusterFilter.filter(c => availableClusterNames.has(c))
+    if (validClusterFilter.length > 0) {
       result = result.filter(w =>
-        w.targetClusters.some(c => localClusterFilter.includes(c)),
+        w.targetClusters.some(c => validClusterFilter.includes(c)),
       )
     }
     return result
-  }, [workloads, typeFilter, statusFilter, localClusterFilter])
+  }, [workloads, typeFilter, statusFilter, localClusterFilter, availableClusters])
 
   // useCardData handles search, sort, and pagination
   const {
