@@ -221,7 +221,7 @@ function ModalContent({
 }: ModalContentProps) {
   return (
     <div
-      className={`flex-1 ${scrollable ? 'overflow-y-auto' : 'overflow-hidden'} ${noPadding ? '' : 'p-6'} ${className}`}
+      className={`flex-1 ${scrollable ? 'overflow-y-auto overscroll-contain scroll-smooth' : 'overflow-hidden'} ${noPadding ? '' : 'p-6'} ${className}`}
     >
       {children}
     </div>
