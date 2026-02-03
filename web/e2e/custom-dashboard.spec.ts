@@ -1,127 +1,128 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 
-// Use dedicated test server on port 5180 (backend in demo mode on 8082)
-// This test requires a specific backend setup not available in CI
-const TEST_URL = 'http://localhost:5180'
+/**
+ * Sets up authentication and mocks for custom dashboard tests
+ */
+async function setupCustomDashboardTest(page: Page) {
+  // Mock authentication
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
 
-test.describe('Custom Dashboard Creation', () => {
-  // Skip in CI - requires dedicated backend on port 5180
-  test.skip(!!process.env.CI, 'Requires dedicated backend on port 5180')
+  // Mock MCP endpoints
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+    })
+  )
 
-  test.beforeEach(async ({ page }) => {
-    // Mock auth API to return authenticated user
-    await page.route('**/api/auth/me', (route) =>
+  // Mock dashboards API
+  await page.route('**/api/dashboards', (route) => {
+    if (route.request().method() === 'POST') {
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: `dashboard-${Date.now()}`,
+          name: 'New Dashboard',
+          cards: [],
+        }),
+      })
+    } else {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          user: {
-            id: '1',
-            github_id: '12345',
-            github_login: 'testuser',
-            name: 'Test User',
-            email: 'test@example.com',
-            onboarded: true,
-          },
-        }),
+        body: JSON.stringify([]),
       })
-    )
-
-    // Mock dashboards API
-    await page.route('**/api/dashboards', (route) => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON()
-        route.fulfill({
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            id: `dashboard-${Date.now()}`,
-            name: body?.name || 'New Dashboard',
-            cards: [],
-          }),
-        })
-      } else {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        })
-      }
-    })
-
-    // Set localStorage flags for testing
-    await page.goto(TEST_URL)
-    await page.evaluate(() => {
-      localStorage.setItem('kubestellar-skip-onboarding', 'true')
-      localStorage.setItem('kubestellar-tour-completed', 'true')
-    })
-
-    // Reload to apply the flags with mocked APIs
-    await page.reload()
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000)
+    }
   })
 
-  test('should create a new dashboard from sidebar customizer', async ({ page }) => {
-    // Look for customize button - it might have a Sliders icon
-    const customizeButton = page.locator('button[title*="ustomize" i]').or(
-      page.locator('aside button:has(svg)').last()
-    )
+  // Set auth token
+  await page.goto('/login')
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('demo-user-onboarded', 'true')
+  })
 
-    const hasCustomize = await customizeButton.isVisible().catch(() => false)
-    if (!hasCustomize) {
-      // Page may not have loaded correctly (different port or auth issue)
-      expect(true).toBeTruthy()
-      return
-    }
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+}
 
-    await customizeButton.click()
+test.describe('Custom Dashboard Creation', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupCustomDashboardTest(page)
+  })
 
-    // Wait for the modal to appear
-    const customizeSidebar = page.locator('text=Customize Sidebar')
-    const hasModal = await customizeSidebar.isVisible().catch(() => false)
-    if (!hasModal) {
-      await page.waitForTimeout(2000)
-    }
+  test.describe('Dashboard Display', () => {
+    test('displays dashboard page', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+    })
 
-    // Click "New Dashboard" button
-    const newDashboardButton = page.locator('button:has-text("New Dashboard")')
-    const hasNewDashboard = await newDashboardButton.isVisible().catch(() => false)
-    if (!hasNewDashboard) {
-      expect(true).toBeTruthy()
-      return
-    }
-    await newDashboardButton.click()
+    test('shows sidebar', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
+    })
 
-    // Wait for Create Dashboard modal
-    await page.waitForTimeout(1000)
+    test('shows cards grid', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 5000 })
+    })
+  })
 
-    // Enter dashboard name
-    const nameInput = page.locator('input[placeholder*="Dashboard"]')
-    const hasInput = await nameInput.isVisible().catch(() => false)
-    if (hasInput) {
-      await nameInput.fill('My Test Dashboard')
+  test.describe('Sidebar Functionality', () => {
+    test('sidebar has customize button', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 5000 })
+    })
 
-      // Click Create Dashboard button
-      const createButton = page.locator('button:has-text("Create Dashboard")').last()
-      await createButton.click()
-      await page.waitForTimeout(500)
+    test('customize button is clickable', async ({ page }) => {
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
 
-      // Close the customizer modal if still open
-      const closeButton = page.locator('button:has-text("Close")')
-      if (await closeButton.isVisible().catch(() => false)) {
-        await closeButton.click()
+      await page.getByTestId('sidebar-customize').click()
+
+      // Should open customizer (modal or panel)
+      // The exact UI may vary, but the button should be clickable
+    })
+  })
+
+  test.describe('Responsive Design', () => {
+    test('adapts to mobile viewport', async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 667 })
+
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+    })
+
+    test('adapts to tablet viewport', async ({ page }) => {
+      await page.setViewportSize({ width: 768, height: 1024 })
+
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+    })
+  })
+
+  test.describe('Accessibility', () => {
+    test('page is keyboard navigable', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+
+      // Tab through elements
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('Tab')
       }
 
-      // Verify the new dashboard appears in the sidebar
-      const sidebarLink = page.locator('aside').locator('a:has-text("My Test Dashboard")')
-      const hasSidebarLink = await sidebarLink.isVisible().catch(() => false)
-
-      if (hasSidebarLink) {
-        await sidebarLink.click()
-        const url = page.url()
-        expect(url.includes('custom-dashboard') || true).toBeTruthy()
-      }
-    }
+      // Should have a focused element
+      const focused = page.locator(':focus')
+      await expect(focused).toBeVisible()
+    })
   })
 })

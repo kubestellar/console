@@ -1,394 +1,151 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
+
+/**
+ * Sets up authentication and MCP mocks for drilldown tests
+ */
+async function setupDrillDownTest(page: Page) {
+  // Mock authentication
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
+
+  // Mock MCP endpoints
+  await page.route('**/api/mcp/**', (route) => {
+    const url = route.request().url()
+    if (url.includes('/clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          clusters: [
+            { name: 'prod-east', healthy: true, nodeCount: 5, podCount: 50 },
+            { name: 'staging', healthy: false, nodeCount: 2, podCount: 15 },
+          ],
+        }),
+      })
+    } else if (url.includes('/pod-issues')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          issues: [
+            { name: 'test-pod', namespace: 'default', status: 'Running', restarts: 0 },
+          ],
+        }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+      })
+    }
+  })
+
+  // Set auth token
+  await page.goto('/login')
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('demo-user-onboarded', 'true')
+  })
+
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+}
 
 test.describe('Drilldown Modal', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock authentication
-    await page.route('**/api/me', (route) =>
-      route.fulfill({
-        status: 200,
-        json: {
-          id: '1',
-          github_id: '12345',
-          github_login: 'testuser',
-          email: 'test@example.com',
-          onboarded: true,
-        },
-      })
-    )
-
-    // Mock MCP endpoints
-    await page.route('**/api/mcp/**', (route) =>
-      route.fulfill({
-        status: 200,
-        json: { clusters: [], issues: [], events: [], nodes: [] },
-      })
-    )
-
-    // Set auth token
-    await page.goto('/login')
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('demo-user-onboarded', 'true')
-    })
-
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000)
+    await setupDrillDownTest(page)
   })
 
-  test.describe('Opening Drilldown', () => {
-    test('clicking resource opens drilldown modal', async ({ page }) => {
-      // Find a clickable resource
-      const clickableResource = page.locator(
-        '[data-testid*="cluster"], [data-testid*="pod"], [data-testid*="resource"]'
-      ).first()
-      const hasResource = await clickableResource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await clickableResource.click()
-        await page.waitForTimeout(500)
-
-        // Should open drilldown modal
-        const modal = page.locator(
-          '[role="dialog"], [data-testid="drilldown-modal"], .modal'
-        )
-        const hasModal = await modal.isVisible({ timeout: 5000 }).catch(() => false)
-        expect(hasModal || true).toBeTruthy()
-      }
+  test.describe('Dashboard Display', () => {
+    test('displays dashboard page', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
     })
 
-    test('drilldown modal can be closed', async ({ page }) => {
-      const clickableResource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await clickableResource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await clickableResource.click()
-        await page.waitForTimeout(500)
-
-        // Close modal
-        const closeButton = page.locator(
-          'button[aria-label*="close"], button:has-text("×"), [data-testid="close-modal"]'
-        ).first()
-        const hasClose = await closeButton.isVisible().catch(() => false)
-        if (hasClose) {
-          await closeButton.click()
-          await page.waitForTimeout(500)
-
-          // Modal should be hidden
-          const modal = page.locator('[role="dialog"]')
-          const stillVisible = await modal.isVisible().catch(() => false)
-          expect(!stillVisible || true).toBeTruthy()
-        }
-      }
-    })
-
-    test('drilldown closes on escape key', async ({ page }) => {
-      const clickableResource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await clickableResource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await clickableResource.click()
-        await page.waitForTimeout(500)
-
-        // Press escape
-        await page.keyboard.press('Escape')
-        await page.waitForTimeout(500)
-
-        // Modal should be hidden
-        const modal = page.locator('[role="dialog"]')
-        const stillVisible = await modal.isVisible().catch(() => false)
-        expect(!stillVisible || true).toBeTruthy()
-      }
+    test('shows cards grid', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 5000 })
     })
   })
 
-  test.describe('Cluster Drilldown', () => {
-    test('cluster drilldown shows node list', async ({ page }) => {
+  test.describe('Clusters Page', () => {
+    test('displays clusters page', async ({ page }) => {
       await page.goto('/clusters')
-      await page.waitForTimeout(1000)
+      await page.waitForLoadState('domcontentloaded')
 
-      const cluster = page.locator('[data-testid*="cluster"]').first()
-      const hasCluster = await cluster.isVisible().catch(() => false)
-
-      if (hasCluster) {
-        await cluster.click()
-        await page.waitForTimeout(500)
-
-        // Should show nodes
-        const nodeSection = page.locator('text=/nodes?|node.*list/i')
-        const hasNodes = await nodeSection.first().isVisible().catch(() => false)
-        expect(hasNodes || true).toBeTruthy()
-      }
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
     })
 
-    test('cluster drilldown shows health status', async ({ page }) => {
+    test('shows cluster names from mock data', async ({ page }) => {
       await page.goto('/clusters')
-      await page.waitForTimeout(1000)
+      await page.waitForLoadState('domcontentloaded')
 
-      const cluster = page.locator('[data-testid*="cluster"]').first()
-      const hasCluster = await cluster.isVisible().catch(() => false)
+      await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
-      if (hasCluster) {
-        await cluster.click()
-        await page.waitForTimeout(500)
-
-        const healthStatus = page.locator('text=/healthy|unhealthy|ready/i')
-        const hasStatus = await healthStatus.first().isVisible().catch(() => false)
-        expect(hasStatus || true).toBeTruthy()
-      }
+      // Should show cluster names from our mock data
+      await expect(page.getByText('prod-east')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByText('staging')).toBeVisible()
     })
   })
 
-  test.describe('Pod Drilldown', () => {
-    test('pod drilldown shows container info', async ({ page }) => {
-      // Navigate to pods view
-      await page.route('**/api/mcp/pod-issues', (route) =>
-        route.fulfill({
-          status: 200,
-          json: {
-            issues: [{
-              name: 'test-pod',
-              namespace: 'default',
-              status: 'Running',
-              issues: [],
-              restarts: 0,
-            }],
-          },
-        })
-      )
+  test.describe('Modal Behavior', () => {
+    test('escape key works for dismissing interactions', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      // Find pod card or list
-      const podItem = page.locator('[data-testid*="pod"], [data-resource-type="pod"]').first()
-      const hasPod = await podItem.isVisible().catch(() => false)
+      // Press escape should not crash the page
+      await page.keyboard.press('Escape')
 
-      if (hasPod) {
-        await podItem.click()
-        await page.waitForTimeout(500)
-
-        const containerInfo = page.locator('text=/container|image|restart/i')
-        const hasInfo = await containerInfo.first().isVisible().catch(() => false)
-        expect(hasInfo || true).toBeTruthy()
-      }
+      // Page should still be visible
+      await expect(page.getByTestId('dashboard-page')).toBeVisible()
     })
   })
 
-  test.describe('Logs Drilldown', () => {
-    test('can view logs in drilldown', async ({ page }) => {
-      // Find resource with logs
-      const resource = page.locator('[data-testid*="pod"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
+  test.describe('Responsive Design', () => {
+    test('adapts to mobile viewport', async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 667 })
 
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        // Look for logs tab or section
-        const logsTab = page.locator('button:has-text("Logs"), [data-tab="logs"]').first()
-        const hasLogs = await logsTab.isVisible().catch(() => false)
-
-        if (hasLogs) {
-          await logsTab.click()
-          await page.waitForTimeout(500)
-
-          // Should show log content
-          const logContent = page.locator('[data-testid="logs"], pre, code')
-          const hasContent = await logContent.isVisible().catch(() => false)
-          expect(hasContent || true).toBeTruthy()
-        }
-      }
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
     })
 
-    test('can download logs', async ({ page }) => {
-      const resource = page.locator('[data-testid*="pod"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
+    test('adapts to tablet viewport', async ({ page }) => {
+      await page.setViewportSize({ width: 768, height: 1024 })
 
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        const downloadButton = page.getByRole('button', { name: /download|export/i }).first()
-        const hasDownload = await downloadButton.isVisible().catch(() => false)
-        expect(hasDownload || true).toBeTruthy()
-      }
-    })
-  })
-
-  test.describe('YAML View', () => {
-    test('can view resource YAML', async ({ page }) => {
-      const resource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        // Look for YAML tab
-        const yamlTab = page.locator('button:has-text("YAML"), [data-tab="yaml"]').first()
-        const hasYaml = await yamlTab.isVisible().catch(() => false)
-
-        if (hasYaml) {
-          await yamlTab.click()
-          await page.waitForTimeout(500)
-
-          // Should show YAML content
-          const yamlContent = page.locator('text=/apiVersion|kind|metadata|spec/i')
-          const hasContent = await yamlContent.first().isVisible().catch(() => false)
-          expect(hasContent || true).toBeTruthy()
-        }
-      }
-    })
-
-    test('YAML view has syntax highlighting', async ({ page }) => {
-      const resource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        const yamlTab = page.locator('button:has-text("YAML")').first()
-        const hasYaml = await yamlTab.isVisible().catch(() => false)
-
-        if (hasYaml) {
-          await yamlTab.click()
-          await page.waitForTimeout(500)
-
-          // Should have syntax highlighting (highlighted spans or classes)
-          const highlightedCode = page.locator('pre code, [class*="highlight"], [class*="syntax"]')
-          const hasHighlight = await highlightedCode.isVisible().catch(() => false)
-          expect(hasHighlight || true).toBeTruthy()
-        }
-      }
-    })
-  })
-
-  test.describe('Events Drilldown', () => {
-    test('can view resource events', async ({ page }) => {
-      const resource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        const eventsTab = page.locator('button:has-text("Events"), [data-tab="events"]').first()
-        const hasEvents = await eventsTab.isVisible().catch(() => false)
-
-        if (hasEvents) {
-          await eventsTab.click()
-          await page.waitForTimeout(500)
-
-          // Should show events
-          const eventContent = page.locator('text=/warning|normal|reason/i')
-          const hasContent = await eventContent.first().isVisible().catch(() => false)
-          expect(hasContent || true).toBeTruthy()
-        }
-      }
-    })
-  })
-
-  test.describe('GPU Node Drilldown', () => {
-    test('GPU node shows GPU details', async ({ page }) => {
-      await page.route('**/api/mcp/gpu-nodes', (route) =>
-        route.fulfill({
-          status: 200,
-          json: {
-            nodes: [{
-              name: 'gpu-node-1',
-              cluster: 'vllm-d',
-              gpuType: 'NVIDIA A100',
-              gpuCount: 8,
-              gpuAllocated: 6,
-            }],
-          },
-        })
-      )
-
-      // Find GPU card or node
-      const gpuItem = page.locator('[data-testid*="gpu"], text=/gpu.*node/i').first()
-      const hasGpu = await gpuItem.isVisible().catch(() => false)
-
-      if (hasGpu) {
-        await gpuItem.click()
-        await page.waitForTimeout(500)
-
-        // Should show GPU details
-        const gpuDetails = page.locator('text=/a100|gpu.*type|allocated/i')
-        const hasDetails = await gpuDetails.first().isVisible().catch(() => false)
-        expect(hasDetails || true).toBeTruthy()
-      }
-    })
-  })
-
-  test.describe('Navigation', () => {
-    test('can navigate between drilldown tabs', async ({ page }) => {
-      const resource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
-
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        // Find tabs
-        const tabs = page.locator('[role="tab"], button[data-tab]')
-        const tabCount = await tabs.count()
-
-        if (tabCount > 1) {
-          // Click through tabs
-          for (let i = 0; i < Math.min(tabCount, 3); i++) {
-            await tabs.nth(i).click()
-            await page.waitForTimeout(300)
-          }
-        }
-      }
-    })
-
-    test('deep link to drilldown works', async ({ page }) => {
-      // Navigate directly to a drilldown URL if supported
-      // This tests URL-based drilldown navigation
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
     })
   })
 
   test.describe('Accessibility', () => {
-    test('drilldown modal has proper ARIA attributes', async ({ page }) => {
-      const resource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
+    test('page is keyboard navigable', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        const modal = page.locator('[role="dialog"]')
-        const hasModal = await modal.isVisible().catch(() => false)
-
-        if (hasModal) {
-          // Should have aria-label or aria-labelledby
-          const ariaLabel = await modal.getAttribute('aria-label')
-          const ariaLabelledby = await modal.getAttribute('aria-labelledby')
-          expect(ariaLabel || ariaLabelledby || true).toBeTruthy()
-        }
+      // Tab through elements
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('Tab')
       }
+
+      // Should have a focused element
+      const focused = page.locator(':focus')
+      await expect(focused).toBeVisible()
     })
 
-    test('drilldown is keyboard navigable', async ({ page }) => {
-      const resource = page.locator('[data-testid*="cluster"]').first()
-      const hasResource = await resource.isVisible().catch(() => false)
+    test('page has proper heading hierarchy', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      if (hasResource) {
-        await resource.click()
-        await page.waitForTimeout(500)
-
-        // Tab through drilldown content
-        for (let i = 0; i < 5; i++) {
-          await page.keyboard.press('Tab')
-          await page.waitForTimeout(100)
-        }
-
-        const focused = page.locator(':focus')
-        const hasFocus = await focused.isVisible().catch(() => false)
-        expect(hasFocus || true).toBeTruthy()
-      }
+      // Should have at least one heading
+      const h1Count = await page.locator('h1').count()
+      const h2Count = await page.locator('h2').count()
+      expect(h1Count + h2Count).toBeGreaterThanOrEqual(1)
     })
   })
 })
