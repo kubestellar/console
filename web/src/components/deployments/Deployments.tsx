@@ -12,7 +12,8 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useDeployments, useDeploymentIssues, usePodIssues, useClusters } from '../../hooks/useMCP'
+import { useClusters } from '../../hooks/useMCP'
+import { useCachedDeployments, useCachedDeploymentIssues, useCachedPodIssues } from '../../hooks/useCachedData'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -135,11 +136,14 @@ function DeploymentsDragPreviewCard({ card }: { card: DashboardCard }) {
 
 export function Deployments() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { deployments, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: deploymentsError } = useDeployments()
-  const { issues: deploymentIssues, refetch: refetchIssues, error: deploymentIssuesError } = useDeploymentIssues()
-  const { issues: podIssues, error: podIssuesError } = usePodIssues()
+  // Use cached hooks for stale-while-revalidate pattern
+  const { deployments, isLoading, isRefreshing: dataRefreshing, lastRefresh, refetch, error: deploymentsError } = useCachedDeployments()
+  const { issues: deploymentIssues, refetch: refetchIssues, error: deploymentIssuesError } = useCachedDeploymentIssues()
+  const { issues: podIssues, error: podIssuesError } = useCachedPodIssues()
   const { clusters: _clusters, error: clustersError } = useClusters()
   const error = deploymentsError || deploymentIssuesError || podIssuesError || clustersError
+  // Derive lastUpdated from cache timestamp
+  const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
   const { drillToDeployment: _drillToDeployment, drillToPod: _drillToPod, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
