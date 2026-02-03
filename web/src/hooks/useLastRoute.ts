@@ -144,8 +144,8 @@ export function useLastRoute() {
     if (!container) return
 
     let attempts = 0
-    const maxAttempts = 40 // 40 × 150ms = 6s max (dashboard cards are lazy-loaded)
-    const minAttempts = 8  // min attempts to let lazy content stabilize
+    const maxAttempts = 10 // 10 × 100ms = 1s max (reduced from 6s)
+    const minAttempts = 3  // min attempts to let content stabilize
     let lastTarget = -1
     isRestoringRef.current = true
 
@@ -153,14 +153,17 @@ export function useLastRoute() {
       let target = savedPosition
 
       // Prefer card-based restore for robustness across layout shifts
+      // Only do expensive DOM queries if we have a card title to find
       if (cardTitle) {
         const cards = container.querySelectorAll('[data-tour="card"]')
+        // Only get container rect once per restore attempt
         const containerRect = container.getBoundingClientRect()
+        const scrollTop = container.scrollTop
         for (let i = 0; i < cards.length; i++) {
           const titleEl = cards[i].querySelector('h3')
           if (titleEl?.textContent?.trim() === cardTitle) {
             const cardRect = cards[i].getBoundingClientRect()
-            target = Math.max(0, cardRect.top - containerRect.top + container.scrollTop - 12)
+            target = Math.max(0, cardRect.top - containerRect.top + scrollTop - 12)
             break
           }
         }
@@ -174,21 +177,16 @@ export function useLastRoute() {
         return
       }
 
-      // After minimum attempts, stop when position stabilizes.
-      // But don't stabilize early if the target is far below the saved pixel
-      // position — that means lazy cards above haven't loaded yet, and the
-      // card we found is at a temporarily low position.
-      const contentStillLoading = target < savedPosition * 0.8
-      if (attempts >= minAttempts && Math.abs(target - lastTarget) < 2 && !contentStillLoading) {
+      // Stop early when position stabilizes (within 5px tolerance)
+      if (attempts >= minAttempts && Math.abs(target - lastTarget) < 5) {
         isRestoringRef.current = false
         return
       }
       lastTarget = target
 
-      // Content is lazy-loaded — scrolling reveals more cards which grows height.
-      // Wait for new content to render, then try again.
+      // Use shorter delay for faster convergence
       requestAnimationFrame(() => {
-        setTimeout(tryRestore, 150)
+        setTimeout(tryRestore, 100)
       })
     }
 
@@ -252,9 +250,10 @@ export function useLastRoute() {
     let timeoutId: ReturnType<typeof setTimeout>
     const handleScroll = () => {
       clearTimeout(timeoutId)
+      // Longer debounce (1s) to reduce forced reflows from getBoundingClientRect
       timeoutId = setTimeout(() => {
         saveScrollPositionNow(pathnameRef.current)
-      }, 500)
+      }, 1000)
     }
 
     container.addEventListener('scroll', handleScroll, { passive: true })
