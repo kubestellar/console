@@ -8,7 +8,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 3: Cluster Health Check - Overall health assessment
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
@@ -20,15 +20,10 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { drillToCluster, drillToPod } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
-  const hasData = allClusters.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Filter clusters by global filter

@@ -15,7 +15,7 @@ import {
 } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   commonComparators,
@@ -363,15 +363,11 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
   const isInitialLoading = clustersLoading
   const isFetchingData = quotasLoading || limitsLoading
-  const hasData = allClusters.length > 0
 
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isInitialLoading && !hasData,
-    isRefreshing: isFetchingData && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading: isInitialLoading || isFetchingData,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Handle save quota

@@ -8,7 +8,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 4: Offline Detection - Detect offline nodes and unavailable GPUs
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
@@ -18,16 +18,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || gpuNodes.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && gpuNodes.length === 0,
-    isRefreshing: isLoading && gpuNodes.length > 0,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: gpuNodes.length > 0,
   })
 
   // Get all nodes from direct API fetch

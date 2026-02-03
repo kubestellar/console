@@ -4,7 +4,7 @@
  */
 
 import { AlertTriangle, AlertCircle } from 'lucide-react'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -208,13 +208,10 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   const score = 85
   const trend = '+3%'
 
-  // Report card data state - demo card always has data
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
+  // Report loading state to CardWrapper - demo card always has data
+  useCardLoadingState({
     isLoading: false,
-    isRefreshing: false,
-    hasData: true,
+    hasAnyData: true,
   })
 
   return (

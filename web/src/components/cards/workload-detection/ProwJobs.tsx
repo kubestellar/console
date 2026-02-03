@@ -10,7 +10,7 @@ import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import type { ProwJob } from '../../../hooks/useProw'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 interface ProwJobsProps {
   config?: Record<string, unknown>
@@ -28,15 +28,12 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     error,
   } = useCachedProwJobs('prow', 'prow')
 
-  const hasData = jobs.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: isFailed && !hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: jobs.length > 0,
+    isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing && hasData,
-    hasData,
   })
 
   // Debug logging

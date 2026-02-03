@@ -3,7 +3,7 @@ import { CheckCircle, RefreshCw, AlertTriangle, ExternalLink, AlertCircle, Filte
 import { Skeleton } from '../ui/Skeleton'
 import { useChartFilters } from '../../lib/cards'
 import { useArgoCDSyncStatus } from '../../hooks/useArgoCD'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ArgoCDSyncStatusProps {
   config?: Record<string, unknown>
@@ -33,21 +33,17 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
     syncedPercent,
     outOfSyncPercent,
     isLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useArgoCDSyncStatus(localClusterFilter)
 
-  // Report data state to CardWrapper
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: total > 0,
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData: total > 0,
   })
-
-  const showSkeleton = isLoading && total === 0 && !isFailed
 
   if (showSkeleton) {
     return (

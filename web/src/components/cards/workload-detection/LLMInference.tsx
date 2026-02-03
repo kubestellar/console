@@ -12,7 +12,7 @@ import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
 import { LLMD_CLUSTERS } from './shared'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 interface LLMInferenceProps {
   config?: Record<string, unknown>
@@ -40,15 +40,12 @@ const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label
 export function LLMInference({ config: _config }: LLMInferenceProps) {
   const { servers, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(LLMD_CLUSTERS)
 
-  const hasData = servers.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: isFailed && !hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: servers.length > 0,
+    isFailed,
     consecutiveFailures,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing && hasData,
-    hasData,
   })
 
   // Debug logging

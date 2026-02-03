@@ -4,7 +4,7 @@ import { useClusters, useOperatorSubscriptions, OperatorSubscription } from '../
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   useCardFilters,
@@ -52,16 +52,14 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed } = useOperatorSubscriptions(undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, consecutiveFailures, isFailed } = useOperatorSubscriptions(undefined)
 
-  // Report card data state
-  const hasData = rawSubscriptions.length > 0
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading: subscriptionsLoading,
+    hasAnyData: rawSubscriptions.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: subscriptionsLoading && !hasData,
-    isRefreshing: isRefreshing || (subscriptionsLoading && hasData),
-    hasData,
   })
 
   // Use useCardFilters for summary counts (globally filtered, before local search/pagination)

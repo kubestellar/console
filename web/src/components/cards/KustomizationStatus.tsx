@@ -9,7 +9,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface KustomizationStatusProps {
   config?: {
@@ -99,17 +99,10 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     }
   }, [storedData.data.length])
 
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || kustomizationData.length > 0
-
-  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
-  // Using demo data so isFailed is always false, isRefreshing is false
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
     isLoading,
-    isRefreshing: false,
-    hasData,
+    hasAnyData: kustomizationData.length > 0,
   })
 
   // Apply global filters to cluster list for the dropdown
@@ -224,7 +217,6 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
 
   const readyCount = namespacedKustomizations.filter(k => k.status === 'Ready').length
   const notReadyCount = namespacedKustomizations.filter(k => k.status === 'NotReady').length
-  const showSkeleton = isLoading && allKustomizations.length === 0
 
   if (showSkeleton) {
     return (

@@ -22,7 +22,7 @@ import {
 } from '../../lib/cards'
 import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -79,16 +79,12 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const sasLoading = sasInitialLoading && allServiceAccounts.length === 0
   const openshiftUsersLoading = openshiftInitialLoading && allOpenshiftUsers.length === 0
 
-  const hasInitialData = allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0
-  const isLoadingData = clustersLoading || usersLoading || sasInitialLoading || openshiftInitialLoading
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: Boolean(usersError) && !hasInitialData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading: clustersLoading || usersLoading || sasInitialLoading || openshiftInitialLoading,
+    hasAnyData: allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0,
+    isFailed: Boolean(usersError),
     consecutiveFailures: usersError ? 1 : 0,
-    isLoading: isLoadingData && !hasInitialData,
-    isRefreshing: isLoadingData && hasInitialData,
-    hasData: hasInitialData,
   })
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()

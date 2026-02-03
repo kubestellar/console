@@ -8,24 +8,19 @@ import { Pagination } from '../../ui/Pagination'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import type { ProwJob } from '../../../hooks/useProw'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 interface ProwHistoryProps {
   config?: Record<string, unknown>
 }
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
-  const { jobs, isLoading, isRefreshing, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
+  const { jobs, isLoading, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
 
-  const hasData = jobs.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: (isRefreshing ?? isLoading) && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: jobs.length > 0,
   })
 
   // Pre-filter to only completed jobs

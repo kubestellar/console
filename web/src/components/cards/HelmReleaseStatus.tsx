@@ -8,7 +8,7 @@ import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface HelmReleaseStatusProps {
   config?: {
@@ -49,24 +49,16 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   const {
     releases: allHelmReleases,
     isLoading: releasesLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useHelmReleases()
 
-  // Only show loading skeleton when no data exists (not during refresh)
-  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
-
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || allHelmReleases.length > 0
-
-  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading || releasesLoading,
+    hasAnyData: allHelmReleases.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData,
   })
 
   // Transform API data to display format
@@ -183,7 +175,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   const deployedCount = namespacedReleases.filter(r => r.status === 'deployed').length
   const failedCount = namespacedReleases.filter(r => r.status === 'failed').length
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

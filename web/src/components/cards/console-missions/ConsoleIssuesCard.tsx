@@ -7,7 +7,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 // Card 1: AI Issues Overview - Shows issues AI can help fix
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
@@ -19,16 +19,12 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
 
   const { drillToPod, drillToDeployment } = useDrillDownActions()
 
-  const hasData = allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0
   const isLoading = podIssuesLoading || deployIssuesLoading
 
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
   })
 
   // Filter issues by global cluster filter

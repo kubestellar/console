@@ -4,7 +4,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDApplications, type ArgoApplication } from '../../hooks/useArgoCD'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   commonComparators,
@@ -60,22 +60,17 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   const {
     applications: allApps,
     isLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
 
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || allApps.length > 0
-
-  // Report data state to CardWrapper
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allApps.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: isLoading && allApps.length === 0,
-    isRefreshing: isRefreshing || (isLoading && allApps.length > 0),
-    hasData,
   })
 
   // Card-specific status filter
@@ -139,8 +134,6 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
     healthy: preFiltered.filter(a => a.healthStatus === 'Healthy').length,
     unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length,
   }), [preFiltered])
-
-  const showSkeleton = isLoading && allApps.length === 0 && !isFailed
 
   if (showSkeleton) {
     return (

@@ -14,7 +14,7 @@ import { useWorkloads } from '../../hooks/useWorkloads'
 import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
 import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
@@ -43,15 +43,10 @@ export function ResourceMarshall() {
   const [selectedWorkload, setSelectedWorkload] = useState<string>('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
-  const hasData = clusters.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
   })
 
   // Fetch namespaces for selected cluster

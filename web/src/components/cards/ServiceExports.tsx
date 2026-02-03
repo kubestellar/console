@@ -8,7 +8,7 @@ import {
 import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 // Demo data for MCS ServiceExports
 const DEMO_EXPORTS: ServiceExport[] = [
@@ -115,20 +115,14 @@ interface ServiceExportsProps {
 }
 
 export function ServiceExports({ config: _config }: ServiceExportsProps) {
-  // Simulate loading state for demo data
-  // Set to true if fetching real data from API
+  // Demo data - always available, never loading/erroring
   const isLoading = false
-  // Set to true on fetch errors when implementing real API calls
   const hasError = false
-  const hasData = DEMO_EXPORTS.length > 0
 
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: hasError && !hasData,
-    consecutiveFailures: hasError ? 1 : 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: DEMO_EXPORTS.length > 0,
   })
 
   const {
