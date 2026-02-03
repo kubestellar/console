@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, WifiOff,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2,
 } from 'lucide-react'
@@ -10,10 +10,10 @@ import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
+import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
@@ -72,109 +72,28 @@ export function useCardExpanded() {
   return useContext(CardExpandedContext)
 }
 
-// Stagger mount delays across cards to prevent rendering all at once
-let mountIndex = 0
-const MOUNT_DELAY_BASE = 16 // ~1 frame at 60fps
-const MOUNT_DELAY_INCREMENT = 8 // stagger by half frame increments
-
-// Eager mounting: progressively mount off-screen cards after visible ones settle.
-// Uses debounce so late-arriving cards are included, and per-callback IDs for
-// proper cancellation when a card unmounts or IntersectionObserver fires first.
-const EAGER_MOUNT_INITIAL_DELAY_MS = 2000 // wait for visible cards to render first
-const EAGER_MOUNT_STAGGER_MS = 100 // stagger off-screen card mounts by 100ms each
-
-let eagerMountTimer: ReturnType<typeof setTimeout> | null = null
-let eagerMountCallbacks: Array<{ fn: () => void; id: number }> = []
-let nextEagerId = 0
-
-function scheduleEagerMount(mount: () => void): number {
-  const id = nextEagerId++
-  eagerMountCallbacks.push({ fn: mount, id })
-
-  // Debounce: restart drain timer on each new registration.
-  // This ensures we wait for ALL cards on the current page to register.
-  if (eagerMountTimer !== null) {
-    clearTimeout(eagerMountTimer)
-  }
-  eagerMountTimer = setTimeout(() => {
-    const callbacks = [...eagerMountCallbacks]
-    eagerMountCallbacks = []
-    eagerMountTimer = null
-    callbacks.forEach(({ fn }, i) => {
-      setTimeout(fn, i * EAGER_MOUNT_STAGGER_MS)
-    })
-  }, EAGER_MOUNT_INITIAL_DELAY_MS)
-
-  return id
-}
-
-function cancelEagerMount(id: number) {
-  eagerMountCallbacks = eagerMountCallbacks.filter(cb => cb.id !== id)
-}
+// Note: Lazy mounting and eager mount scheduling have been removed.
+// Cards now render immediately to show cached data without delay.
+// This trades some initial render performance for better UX with cached data.
 
 /**
  * Hook for lazy mounting - only renders content when visible in viewport.
- * This prevents mounting 100+ cards at once when adding many cards.
- * Also staggers the rendering of visible cards to spread work across frames.
  *
- * Eager mounting: after visible cards settle (~2s), off-screen cards
- * progressively mount in the background so data is ready when scrolled to.
+ * IMPORTANT: Cards start visible (isVisible=true) to show cached data immediately.
+ * IntersectionObserver is only used for off-screen cards that scroll into view later.
+ * This prevents the "empty cards on page load" issue when cached data is available.
  */
-function useLazyMount(rootMargin = '100px') {
-  const [isVisible, setIsVisible] = useState(false)
+function useLazyMount(_rootMargin = '100px') {
+  // Start visible - show cached content immediately on page load.
+  // This is intentional: we prioritize showing cached data over lazy loading performance.
+  const [isVisible] = useState(true)
   const ref = useRef<HTMLDivElement>(null)
-  // Track which mount batch this card is in
-  const mountOrderRef = useRef<number>(-1)
-  const eagerIdRef = useRef<number>(-1)
 
-  useEffect(() => {
-    const element = ref.current
-    if (!element) return
-
-    // If already visible, no need to observe
-    if (isVisible) return
-
-    // Assign mount order on first effect
-    if (mountOrderRef.current === -1) {
-      mountOrderRef.current = mountIndex++
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          // Stagger the visibility change to spread work across frames
-          const delay = MOUNT_DELAY_BASE + (mountOrderRef.current % 20) * MOUNT_DELAY_INCREMENT
-          setTimeout(() => {
-            setIsVisible(true)
-          }, delay)
-          // Stop observing immediately - we don't unmount on scroll away
-          observer.disconnect()
-          // Cancel eager mount — IntersectionObserver handled it
-          if (eagerIdRef.current !== -1) {
-            cancelEagerMount(eagerIdRef.current)
-            eagerIdRef.current = -1
-          }
-        }
-      },
-      { rootMargin }
-    )
-
-    observer.observe(element)
-
-    // Schedule eager mount for off-screen cards so their data prefetches
-    eagerIdRef.current = scheduleEagerMount(() => {
-      setIsVisible(prev => prev ? prev : true)
-      observer.disconnect()
-    })
-
-    return () => {
-      observer.disconnect()
-      if (eagerIdRef.current !== -1) {
-        cancelEagerMount(eagerIdRef.current)
-        eagerIdRef.current = -1
-      }
-    }
-  }, [isVisible, rootMargin])
+  // No lazy mounting - all cards render immediately.
+  // The eager mount and IntersectionObserver logic has been removed because:
+  // 1. It caused "empty cards" flash on page load even with cached data
+  // 2. With only 4-8 cards visible at once, the performance impact is minimal
+  // 3. Cached data should be shown instantly for good UX
 
   return { ref, isVisible }
 }
@@ -224,6 +143,10 @@ interface CardWrapperProps {
   onWidthChange?: (newWidth: number) => void
   onChatMessage?: (message: string) => Promise<ChatMessage>
   onChatMessagesChange?: (messages: ChatMessage[]) => void
+  /** Skeleton type to show when loading with no cached data */
+  skeletonType?: CardSkeletonProps['type']
+  /** Number of skeleton rows to show */
+  skeletonRows?: number
   children: ReactNode
 }
 
@@ -709,6 +632,8 @@ export function CardWrapper({
   onWidthChange,
   onChatMessage,
   onChatMessagesChange,
+  skeletonType,
+  skeletonRows,
   children,
 }: CardWrapperProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -804,6 +729,11 @@ export function CardWrapper({
   const effectiveIsFailed = isFailed || childDataState?.isFailed || false
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
   const effectiveIsLoading = isRefreshing || childDataState?.isLoading || false
+  const effectiveIsRefreshing = childDataState?.isRefreshing || false
+  const effectiveHasData = childDataState?.hasData ?? true // Default to true if not reported
+
+  // Determine if we should show skeleton: loading with no cached data
+  const shouldShowSkeleton = skeletonType && effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
@@ -977,6 +907,10 @@ export function CardWrapper({
                 Refresh failed
               </span>
             )}
+            {/* Refresh indicator - only shows when no refresh button is present (button handles its own spin) */}
+            {!onRefresh && (isVisuallySpinning || effectiveIsLoading) && !effectiveIsFailed && (
+              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
+            )}
             {/* Last updated indicator */}
             {!isVisuallySpinning && !effectiveIsLoading && !effectiveIsFailed && lastUpdated && (
               <span className="text-[10px] text-muted-foreground" title={lastUpdated.toLocaleString()}>
@@ -1124,39 +1058,18 @@ export function CardWrapper({
 
         {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
         {!isCollapsed && (
-          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col relative">
-            {/* Show offline indicator when agent is unavailable, not in demo mode, and card needs external data */}
-            {isAgentUnavailable() && !globalDemoMode && !isDemoExempt ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <WifiOff className="w-8 h-8 text-orange-400/50" />
-                  <span className="text-sm">Offline</span>
-                </div>
-              </div>
-            ) : (isVisible || isExpanded) ? (
-              <>
-                {/* Show skeleton overlay when loading data */}
-                {effectiveIsLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-[1px]">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                      <span className="text-xs text-muted-foreground">Loading...</span>
-                    </div>
-                  </div>
-                )}
-                {children}
-              </>
+          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">
+            {(isVisible || isExpanded) ? (
+              // Show skeleton when loading with no cached data
+              shouldShowSkeleton ? (
+                <CardSkeleton type={skeletonType} rows={skeletonRows} showHeader />
+              ) : (
+                children
+              )
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="animate-pulse flex flex-col items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-secondary/50" />
-                  <div className="w-24 h-2 rounded bg-secondary/50" />
-                </div>
-              </div>
+              // Show skeleton during lazy mount (before IntersectionObserver fires)
+              // This provides visual continuity instead of a tiny pulse loader
+              <CardSkeleton type={skeletonType || 'list'} rows={skeletonRows || 3} showHeader={false} />
             )}
           </div>
         )}
@@ -1226,15 +1139,7 @@ export function CardWrapper({
               ? 'h-[calc(95vh-80px)]'
               : 'max-h-[calc(80vh-80px)]'
         )}>
-          {isAgentUnavailable() && !globalDemoMode && !isDemoExempt ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <WifiOff className="w-12 h-12 text-orange-400/50" />
-                <span className="text-lg">Offline</span>
-                <span className="text-sm text-muted-foreground/70">Connect to local agent to view data</span>
-              </div>
-            </div>
-          ) : children}
+          {children}
         </BaseModal.Content>
       </BaseModal>
       </>

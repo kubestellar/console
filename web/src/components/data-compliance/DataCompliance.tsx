@@ -18,15 +18,14 @@ import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
 import { TemplatesModal } from '../dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { UnifiedStatsSection, DATA_COMPLIANCE_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 // Width class lookup for Tailwind
@@ -97,6 +96,7 @@ const SortableCard = memo(function SortableCard({
         cardType={card.card_type}
         cardWidth={width}
         onWidthChange={onWidthChange}
+        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
         isRefreshing={isRefreshing}
         onRefresh={onRefresh}
         lastUpdated={lastUpdated}
@@ -306,7 +306,7 @@ export function DataCompliance() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title={<>Data Compliance <span className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"><FlaskConical className="w-3 h-3" />Demo</span></>}
@@ -332,12 +332,14 @@ export function DataCompliance() {
       )}
 
       {/* Stats Overview */}
-      <UnifiedStatsSection
-        config={DATA_COMPLIANCE_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="data-compliance"
         getStatValue={getStatValue}
         hasData={true}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-data-compliance-stats-collapsed"
+        isDemoData={true}
       />
 
       {/* Cards Grid */}

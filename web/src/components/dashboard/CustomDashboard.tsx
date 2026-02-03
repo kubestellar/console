@@ -37,8 +37,7 @@ import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { DashboardTemplate } from './templates'
 import { BaseModal } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { UnifiedStatsSection, DASHBOARD_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
@@ -436,7 +435,7 @@ export function CustomDashboard() {
   // Loading skeleton
   if (isLoading && cards.length === 0) {
     return (
-      <div className="">
+      <div className="pt-16">
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-64 bg-secondary/50 rounded" />
           <div className="h-4 w-96 bg-secondary/30 rounded" />
@@ -451,7 +450,7 @@ export function CustomDashboard() {
   }
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header - name from sidebar item takes priority for consistency */}
       <DashboardHeader
         title={sidebarItem?.name || dashboard?.name || 'Custom Dashboard'}
@@ -476,12 +475,13 @@ export function CustomDashboard() {
       />
 
       {/* Stats Overview */}
-      <UnifiedStatsSection
-        config={DASHBOARD_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="dashboard"
         getStatValue={getStatValue}
         hasData={deduplicatedClusters.length > 0}
         isLoading={isClustersLoading && deduplicatedClusters.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey={`kubestellar-custom-${id}-stats-collapsed`}
       />
 
       {/* AI Recommendations - always shown to help users add relevant cards */}

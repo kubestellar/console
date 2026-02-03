@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { TimeSeriesChart, MultiSeriesChart } from '../charts'
 import { useClusters } from '../../hooks/useMCP'
-import { getDemoMode } from '../../hooks/useDemoMode'
 import { Server, Clock, Filter, ChevronDown, Layers, TrendingUp } from 'lucide-react'
 import { useChartFilters } from '../../lib/cards'
 import { useReportCardDataState } from './CardDataContext'
@@ -95,27 +94,7 @@ export function ClusterMetrics() {
     return []
   }, [])
 
-  // Generate demo time series data for demo mode
-  const generateDemoHistory = useCallback((): MetricPoint[] => {
-    const now = Date.now()
-    const points: MetricPoint[] = []
-    // Generate 20 points over the last hour
-    for (let i = 19; i >= 0; i--) {
-      const timestamp = now - i * 3 * 60000 // 3 minutes apart
-      const variance = Math.sin(i * 0.5) * 0.1 + (Math.random() - 0.5) * 0.05
-      points.push({
-        time: new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp,
-        cpu: Math.round(656 * (1 + variance)),
-        memory: Math.round(3624 * (1 + variance)),
-        pods: Math.round(900 * (1 + variance * 0.5)),
-        nodes: Math.round(63 * (1 + variance * 0.3)),
-      })
-    }
-    return points
-  }, [])
-
-  const historyRef = useRef<MetricPoint[]>(getDemoMode() ? generateDemoHistory() : loadSavedHistory())
+  const historyRef = useRef<MetricPoint[]>(loadSavedHistory())
   const [history, setHistory] = useState<MetricPoint[]>(historyRef.current)
 
   // Save history to localStorage when it changes
@@ -146,16 +125,6 @@ export function ClusterMetrics() {
 
   // Track data points over time - add new point when values change
   useEffect(() => {
-    // In demo mode, regenerate demo history if needed
-    if (getDemoMode()) {
-      if (historyRef.current.length === 0) {
-        const demoHistory = generateDemoHistory()
-        historyRef.current = demoHistory
-        setHistory(demoHistory)
-      }
-      return
-    }
-
     if (isLoading || !hasRealData) return
     if (realValues.nodes === 0 && realValues.cpu === 0) return
 
@@ -195,7 +164,7 @@ export function ClusterMetrics() {
       historyRef.current = newHistory
       setHistory(newHistory)
     }
-  }, [realValues, isLoading, hasRealData, clusters, generateDemoHistory])
+  }, [realValues, isLoading, hasRealData, clusters])
 
   // Transform history to chart data for selected metric
   const data = useMemo(() => {

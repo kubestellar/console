@@ -18,8 +18,7 @@ import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { UnifiedStatsSection, OPERATORS_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -327,7 +326,7 @@ export function Operators() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Operators"
@@ -353,12 +352,13 @@ export function Operators() {
       )}
 
       {/* Stats Overview */}
-      <UnifiedStatsSection
-        config={OPERATORS_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="operators"
         getStatValue={getStatValue}
         hasData={totalOperators > 0 || reachableClusters.length > 0}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-operators-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

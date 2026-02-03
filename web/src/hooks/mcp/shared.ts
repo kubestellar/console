@@ -3,7 +3,6 @@ import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from
 import { getDemoMode, setGlobalDemoMode, isDemoModeForced } from '../useDemoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getPresentationMode } from '../usePresentationMode'
-import { clearAllCaches as clearCacheLibraryCaches } from '../../lib/cache'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
@@ -25,15 +24,6 @@ export const MIN_REFRESH_INDICATOR_MS = 500
 
 // Local agent URL for direct cluster access
 export const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
-
-// Centralized timeout configuration for consistent behavior
-export const TIMEOUT_CONFIG = {
-  clusterList: 3000,        // Fast - user is waiting for cluster list
-  healthCheck: 8000,        // Per-cluster health check (reduced from 15s)
-  distributionDetect: 5000, // Non-critical distribution detection
-  podMetrics: 15000,        // Background operations with more data
-  deployments: 15000,       // Background deployments fetch
-} as const
 
 // ============================================================================
 // Shared Cluster State - ensures all useClusters() consumers see the same data
@@ -154,24 +144,6 @@ function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   }
 }
 
-// Debounced storage writes to prevent main thread blocking during rapid updates
-let pendingStorageWrite: ClusterInfo[] | null = null
-let storageWriteTimeout: ReturnType<typeof setTimeout> | null = null
-
-function debouncedSaveClusterCache(clusters: ClusterInfo[]) {
-  pendingStorageWrite = clusters
-  if (storageWriteTimeout) return // Already scheduled
-
-  storageWriteTimeout = setTimeout(() => {
-    if (pendingStorageWrite) {
-      saveClusterCacheToStorage(pendingStorageWrite)
-      updateDistributionCache(pendingStorageWrite)
-      pendingStorageWrite = null
-    }
-    storageWriteTimeout = null
-  }, 200) // 200ms debounce batches rapid health check updates
-}
-
 // Merge stored cluster data with fresh cluster list (preserves cached metrics)
 // Uses cached value when new value is missing/zero (0 is treated as missing for metrics)
 function mergeWithStoredClusters(newClusters: ClusterInfo[]): ClusterInfo[] {
@@ -252,8 +224,9 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
   if (updates.clusters) {
     updates.clusters = mergeWithStoredClusters(updates.clusters)
     updates.clusters = applyDistributionCache(updates.clusters)
-    // Save cluster data to localStorage (debounced to prevent main thread blocking)
-    debouncedSaveClusterCache(updates.clusters)
+    // Save cluster data to localStorage
+    saveClusterCacheToStorage(updates.clusters)
+    updateDistributionCache(updates.clusters)
   }
   clusterCache = { ...clusterCache, ...updates }
   notifyClusterSubscribers()
@@ -515,8 +488,12 @@ export function updateSingleClusterInCache(clusterName: string, updates: Partial
     ...clusterCache,
     clusters: updatedClusters,
   }
-  // Persist cluster data to localStorage (debounced to prevent main thread blocking)
-  debouncedSaveClusterCache(updatedClusters)
+  // Persist all cluster data to localStorage
+  saveClusterCacheToStorage(updatedClusters)
+  // Persist distribution changes
+  if (updates.distribution) {
+    updateDistributionCache(updatedClusters)
+  }
   // Use debounced notification to batch multiple cluster updates
   notifyClusterSubscribersDebounced()
 }
@@ -687,114 +664,13 @@ if (import.meta.hot) {
   })
 }
 
-// ============================================================================
-// Demo Mode Switching - Clear caches and reset loading state
-// ============================================================================
-
-// List of localStorage keys that contain demo data and should be cleared
-const DEMO_CACHE_KEYS = [
-  'kubestellar-cluster-cache',
-  'kubestellar-cluster-distributions',
-  'kubestellar-gpu-cache',
-  'kubestellar-tpu-cache',
-  'kubestellar-events-cache',
-  'kubestellar-pods-cache',
-  'kubestellar-deployments-cache',
-]
-
-/**
- * Clear all demo data from caches and reset to loading state.
- * Called when switching from demo mode to live mode.
- * This ensures cards show loading skeletons until real data loads.
- */
-export async function clearDemoDataAndResetLoading() {
-  // Clear the cache library's IndexedDB and localStorage metadata
-  try {
-    await clearCacheLibraryCaches()
-  } catch {
-    // Ignore cache library errors
-  }
-
-  // Clear localStorage caches
-  DEMO_CACHE_KEYS.forEach(key => {
-    try {
-      localStorage.removeItem(key)
-    } catch {
-      // Ignore storage errors
-    }
-  })
-
-  // Clear any keys matching cache patterns
-  try {
-    const keysToRemove: string[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && (
-        key.startsWith('kubestellar-') ||
-        key.startsWith('console_cache_') ||
-        key.startsWith('kc-cache-')
-      )) {
-        keysToRemove.push(key)
-      }
-    }
-    keysToRemove.forEach(key => localStorage.removeItem(key))
-  } catch {
-    // Ignore storage errors
-  }
-
-  // Reset cluster cache to loading state (empty clusters, isLoading=true)
-  clusterCache = {
-    clusters: [],
-    lastUpdated: null,
-    isLoading: true,
-    isRefreshing: false,
-    error: null,
-    consecutiveFailures: 0,
-    isFailed: false,
-    lastRefresh: null,
-  }
-
-  // Reset fetch tracking
-  initialFetchStarted = false
-  healthCheckFailures = 0
-
-  // Clear per-cluster failure tracking
-  clusterHealthFailureStart.clear()
-
-  // Notify all subscribers immediately so they show loading state
-  notifyClusterSubscribers()
-
-  // Dispatch event so other hooks can reset their state
-  window.dispatchEvent(new CustomEvent('kc-clear-demo-data'))
-
-  // Trigger fresh fetch after a short delay to let React re-render
-  setTimeout(() => {
-    fullFetchClusters()
-  }, 100)
-}
-
-// Listen for demo mode changes and clear caches when switching to live mode
-if (typeof window !== 'undefined') {
-  let previousDemoMode = getDemoMode()
-
-  window.addEventListener('kc-demo-mode-change', (event: Event) => {
-    const customEvent = event as CustomEvent<boolean>
-    const newDemoMode = customEvent.detail
-
-    // When switching FROM demo mode TO live mode, clear all demo data
-    if (previousDemoMode && !newDemoMode) {
-      clearDemoDataAndResetLoading()
-    }
-
-    previousDemoMode = newDemoMode
-  })
-}
-
 // Fetch basic cluster list from local agent (fast, no health check)
 async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
-  // Skip agent entirely in demo mode — no local agent, requests would fail with errors.
-  // This includes both Netlify deployments (isDemoModeForced) and user-enabled demo mode.
-  if (isDemoModeForced || getDemoMode()) return null
+  // On Netlify deployments (isDemoModeForced), skip agent entirely — there is
+  // no local agent and the request would fail with CORS errors.
+  // On localhost, always attempt to reach the agent — it may be running even if
+  // AgentManager has not detected it yet.
+  if (isDemoModeForced) return null
 
   try {
     const controller = new AbortController()
@@ -813,7 +689,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
         context: c.context || c.name,
         server: c.server,
         user: c.user,
-        healthy: undefined, // Unknown until health check completes
+        healthy: true, // Will be updated by health check
         reachable: undefined, // Unknown until health check completes
         source: 'kubeconfig',
         nodeCount: undefined, // undefined = still checking, 0 = unreachable
@@ -835,9 +711,9 @@ export let healthCheckFailures = 0
 const MAX_HEALTH_CHECK_FAILURES = 3
 
 // Per-cluster failure tracking to prevent transient errors from showing "-"
-// Track first failure timestamp - only mark unreachable after consecutive failures
+// Track first failure timestamp - only mark unreachable after 5 minutes of consecutive failures
 const clusterHealthFailureStart = new Map<string, number>() // timestamp of first failure
-const OFFLINE_THRESHOLD_MS = 30 * 1000 // 30 seconds before marking as offline (reduced from 5 minutes)
+const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes before marking as offline
 
 // Helper to check if cluster has been failing long enough to mark offline
 export function shouldMarkOffline(clusterName: string): boolean {
@@ -862,8 +738,7 @@ export function clearClusterFailure(clusterName: string): void {
 export async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: string): Promise<ClusterHealth | null> {
   // Try local agent's HTTP endpoint first (same pattern as GPU nodes)
   // This is more reliable than WebSocket for simple data fetching
-  // Skip entirely in demo mode - no local agent available
-  if (!isDemoModeForced && !getDemoMode() && !isAgentUnavailable()) {
+  if (!isDemoModeForced && !isAgentUnavailable()) {
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
@@ -928,20 +803,20 @@ function detectDistributionFromNamespaces(namespaces: string[]): string | undefi
   return undefined
 }
 
-// Detect cluster distribution by checking for system namespaces
-// Uses kubectl via WebSocket only - distribution is non-critical, skip if kubectl fails
-async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
-  // Skip in demo mode - no local agent available
-  if (isDemoModeForced || getDemoMode()) return {}
+// Track backend API failures for distribution detection separately
+let distributionDetectionFailures = 0
+const MAX_DISTRIBUTION_FAILURES = 2
 
-  // Only try kubectl via WebSocket - skip if agent unavailable
-  // Distribution detection is non-critical (only affects cluster logos)
-  // Removed sequential backend fallbacks to eliminate 15s+ worst-case delay
+// Detect cluster distribution by checking for system namespaces
+// Uses kubectl via WebSocket when available, falls back to backend API
+async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
+  // Try kubectl via WebSocket first (if agent available)
+  // Use the kubectl context (full path) if provided, otherwise fall back to name
   if (!isAgentUnavailable()) {
     try {
       const response = await kubectlProxy.exec(
         ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-        { context: kubectlContext || clusterName, timeout: 5000 } // Reduced from 10s
+        { context: kubectlContext || clusterName, timeout: 10000 }
       )
       if (response.exitCode === 0 && response.output) {
         const namespaces = response.output.split(/\s+/).filter(Boolean)
@@ -949,9 +824,87 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
         return { distribution, namespaces }
       }
     } catch {
-      // kubectl failed - skip distribution detection entirely
-      // Logo will update on next successful health check cycle
+      // WebSocket failed, continue to backend fallback
     }
+  }
+
+  const token = localStorage.getItem('token')
+
+  // Skip backend if using demo token, too many failures, or health checks failing
+  if (!token || token === 'demo-token' ||
+      distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES ||
+      healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES) {
+    return {}
+  }
+
+  const headers: Record<string, string> = { 'Authorization': `Bearer ${token}` }
+
+  // Helper to extract namespaces from API response
+  const extractNamespaces = (items: Array<{ namespace?: string }>): string[] => {
+    return Array.from(new Set<string>(
+      items.map(item => item.namespace).filter((ns): ns is string => Boolean(ns))
+    ))
+  }
+
+  // Try pods endpoint first
+  try {
+    const response = await fetch(
+      `/api/mcp/pods?cluster=${encodeURIComponent(clusterName)}&limit=500`,
+      { signal: AbortSignal.timeout(5000), headers }
+    )
+    if (response.ok) {
+      distributionDetectionFailures = 0 // Reset on success
+      const data = await response.json()
+      const namespaces = extractNamespaces(data.pods || [])
+      const distribution = detectDistributionFromNamespaces(namespaces)
+      if (distribution) return { distribution, namespaces }
+    } else {
+      distributionDetectionFailures++
+      if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
+    }
+  } catch {
+    distributionDetectionFailures++
+    if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
+  }
+
+  // Fallback: try events endpoint
+  try {
+    const response = await fetch(
+      `/api/mcp/events?cluster=${encodeURIComponent(clusterName)}&limit=200`,
+      { signal: AbortSignal.timeout(5000), headers }
+    )
+    if (response.ok) {
+      distributionDetectionFailures = 0
+      const data = await response.json()
+      const namespaces = extractNamespaces(data.events || [])
+      const distribution = detectDistributionFromNamespaces(namespaces)
+      if (distribution) return { distribution, namespaces }
+    } else {
+      distributionDetectionFailures++
+      if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
+    }
+  } catch {
+    distributionDetectionFailures++
+    if (distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES) return {}
+  }
+
+  // Fallback: try deployments endpoint
+  try {
+    const response = await fetch(
+      `/api/mcp/deployments?cluster=${encodeURIComponent(clusterName)}`,
+      { signal: AbortSignal.timeout(5000), headers }
+    )
+    if (response.ok) {
+      distributionDetectionFailures = 0
+      const data = await response.json()
+      const namespaces = extractNamespaces(data.deployments || [])
+      const distribution = detectDistributionFromNamespaces(namespaces)
+      if (distribution) return { distribution, namespaces }
+    } else {
+      distributionDetectionFailures++
+    }
+  } catch {
+    distributionDetectionFailures++
   }
 
   return {}
@@ -1012,16 +965,14 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
         // Cluster reported as unreachable - check error type to decide handling
         recordClusterFailure(cluster.name)
 
-        // Connection refused/reset/timeout errors are definitive - mark offline immediately
+        // Connection refused/reset errors are definitive - mark offline immediately
+        // Timeout errors might be transient - use the 5-minute grace period
         const errorMsg = health.errorMessage?.toLowerCase() || ''
         const isDefinitiveError = errorMsg.includes('connection refused') ||
           errorMsg.includes('connection reset') ||
           errorMsg.includes('no such host') ||
           errorMsg.includes('network is unreachable') ||
-          errorMsg.includes('timeout') ||
-          errorMsg.includes('timed out') ||
-          health.errorType === 'network' ||
-          health.errorType === 'timeout'
+          health.errorType === 'network'
 
         if (isDefinitiveError || shouldMarkOffline(cluster.name)) {
           // Definitive error or 5+ minutes of failures - mark as unreachable
@@ -1064,7 +1015,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
 
 // Concurrency limit for health checks - rolling concurrency for 100+ clusters
 // Keep at 2 to avoid overwhelming the local agent WebSocket connection
-const HEALTH_CHECK_CONCURRENCY = 6 // Increased from 2 for faster cluster health population
+const HEALTH_CHECK_CONCURRENCY = 2
 
 // Progressive health check with rolling concurrency
 // Uses continuous processing: as soon as one finishes, the next starts
@@ -1202,17 +1153,18 @@ export async function fullFetchClusters() {
       return
     }
 
-    // Agent unavailable — if demo mode is explicitly on, always use demo data
-    // This ensures demo clusters (with cpuCores, memoryGB, etc.) are used
-    // regardless of whether user has a real token
+    // Agent unavailable — if demo mode is on and no real token, use demo data
     if (getDemoMode()) {
-      await finishWithMinDuration({
-        clusters: getDemoClusters(),
-        isLoading: false,
-        isRefreshing: false,
-        error: null,
-      })
-      return
+      const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        await finishWithMinDuration({
+          clusters: getDemoClusters(),
+          isLoading: false,
+          isRefreshing: false,
+          error: null,
+        })
+        return
+      }
     }
 
     // Skip backend if not authenticated
@@ -1350,19 +1302,18 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
 function getDemoClusters(): ClusterInfo[] {
   return [
     // One cluster for each provider type to showcase all icons
-    // cpuRequestsCores and memoryRequestsGB simulate 50-70% resource utilization
-    { name: 'kind-local', context: 'kind-local', healthy: true, source: 'kubeconfig', nodeCount: 1, podCount: 15, cpuCores: 4, memoryGB: 8, storageGB: 50, cpuRequestsCores: 2.4, memoryRequestsGB: 4.8, distribution: 'kind' },
-    { name: 'minikube', context: 'minikube', healthy: true, source: 'kubeconfig', nodeCount: 1, podCount: 12, cpuCores: 2, memoryGB: 4, storageGB: 20, cpuRequestsCores: 1.2, memoryRequestsGB: 2.4, distribution: 'minikube' },
-    { name: 'k3s-edge', context: 'k3s-edge', healthy: true, source: 'kubeconfig', nodeCount: 3, podCount: 28, cpuCores: 6, memoryGB: 12, storageGB: 100, cpuRequestsCores: 3.6, memoryRequestsGB: 7.2, distribution: 'k3s' },
-    { name: 'eks-prod-us-east-1', context: 'eks-prod', healthy: true, source: 'kubeconfig', nodeCount: 12, podCount: 156, cpuCores: 96, memoryGB: 384, storageGB: 2000, cpuRequestsCores: 67.2, memoryRequestsGB: 268.8, server: 'https://ABC123.gr7.us-east-1.eks.amazonaws.com', distribution: 'eks' },
-    { name: 'gke-staging', context: 'gke-staging', healthy: true, source: 'kubeconfig', nodeCount: 6, podCount: 78, cpuCores: 48, memoryGB: 192, storageGB: 1000, cpuRequestsCores: 28.8, memoryRequestsGB: 115.2, distribution: 'gke' },
-    { name: 'aks-dev-westeu', context: 'aks-dev', healthy: true, source: 'kubeconfig', nodeCount: 4, podCount: 45, cpuCores: 32, memoryGB: 128, storageGB: 500, cpuRequestsCores: 19.2, memoryRequestsGB: 76.8, server: 'https://aks-dev-dns-abc123.hcp.westeurope.azmk8s.io:443', distribution: 'aks' },
-    { name: 'openshift-prod', context: 'ocp-prod', healthy: true, source: 'kubeconfig', nodeCount: 9, podCount: 234, cpuCores: 72, memoryGB: 288, storageGB: 1500, cpuRequestsCores: 50.4, memoryRequestsGB: 201.6, server: 'api.openshift-prod.example.com:6443', distribution: 'openshift', namespaces: ['openshift-operators', 'openshift-monitoring'] },
-    { name: 'oci-oke-phoenix', context: 'oke-phoenix', healthy: true, source: 'kubeconfig', nodeCount: 5, podCount: 67, cpuCores: 40, memoryGB: 160, storageGB: 800, cpuRequestsCores: 24, memoryRequestsGB: 96, server: 'https://abc123.us-phoenix-1.clusters.oci.oraclecloud.com:6443', distribution: 'oci' },
-    { name: 'alibaba-ack-shanghai', context: 'ack-shanghai', healthy: false, source: 'kubeconfig', nodeCount: 8, podCount: 112, cpuCores: 64, memoryGB: 256, storageGB: 1200, cpuRequestsCores: 38.4, memoryRequestsGB: 153.6, distribution: 'alibaba' },
-    { name: 'do-nyc1-prod', context: 'do-nyc1', healthy: true, source: 'kubeconfig', nodeCount: 3, podCount: 34, cpuCores: 12, memoryGB: 48, storageGB: 300, cpuRequestsCores: 7.2, memoryRequestsGB: 28.8, distribution: 'digitalocean' },
-    { name: 'rancher-mgmt', context: 'rancher-mgmt', healthy: true, source: 'kubeconfig', nodeCount: 3, podCount: 89, cpuCores: 24, memoryGB: 96, storageGB: 400, cpuRequestsCores: 14.4, memoryRequestsGB: 57.6, distribution: 'rancher' },
-    { name: 'vllm-gpu-cluster', context: 'vllm-d', healthy: true, source: 'kubeconfig', nodeCount: 8, podCount: 124, cpuCores: 256, memoryGB: 2048, storageGB: 8000, cpuRequestsCores: 179.2, memoryRequestsGB: 1433.6, distribution: 'kubernetes' },
+    { name: 'kind-local', context: 'kind-local', healthy: true, source: 'kubeconfig', nodeCount: 1, podCount: 15, cpuCores: 4, memoryGB: 8, storageGB: 50, distribution: 'kind' },
+    { name: 'minikube', context: 'minikube', healthy: true, source: 'kubeconfig', nodeCount: 1, podCount: 12, cpuCores: 2, memoryGB: 4, storageGB: 20, distribution: 'minikube' },
+    { name: 'k3s-edge', context: 'k3s-edge', healthy: true, source: 'kubeconfig', nodeCount: 3, podCount: 28, cpuCores: 6, memoryGB: 12, storageGB: 100, distribution: 'k3s' },
+    { name: 'eks-prod-us-east-1', context: 'eks-prod', healthy: true, source: 'kubeconfig', nodeCount: 12, podCount: 156, cpuCores: 96, memoryGB: 384, storageGB: 2000, server: 'https://ABC123.gr7.us-east-1.eks.amazonaws.com', distribution: 'eks' },
+    { name: 'gke-staging', context: 'gke-staging', healthy: true, source: 'kubeconfig', nodeCount: 6, podCount: 78, cpuCores: 48, memoryGB: 192, storageGB: 1000, distribution: 'gke' },
+    { name: 'aks-dev-westeu', context: 'aks-dev', healthy: true, source: 'kubeconfig', nodeCount: 4, podCount: 45, cpuCores: 32, memoryGB: 128, storageGB: 500, server: 'https://aks-dev-dns-abc123.hcp.westeurope.azmk8s.io:443', distribution: 'aks' },
+    { name: 'openshift-prod', context: 'ocp-prod', healthy: true, source: 'kubeconfig', nodeCount: 9, podCount: 234, cpuCores: 72, memoryGB: 288, storageGB: 1500, server: 'api.openshift-prod.example.com:6443', distribution: 'openshift', namespaces: ['openshift-operators', 'openshift-monitoring'] },
+    { name: 'oci-oke-phoenix', context: 'oke-phoenix', healthy: true, source: 'kubeconfig', nodeCount: 5, podCount: 67, cpuCores: 40, memoryGB: 160, storageGB: 800, server: 'https://abc123.us-phoenix-1.clusters.oci.oraclecloud.com:6443', distribution: 'oci' },
+    { name: 'alibaba-ack-shanghai', context: 'ack-shanghai', healthy: false, source: 'kubeconfig', nodeCount: 8, podCount: 112, cpuCores: 64, memoryGB: 256, storageGB: 1200, distribution: 'alibaba' },
+    { name: 'do-nyc1-prod', context: 'do-nyc1', healthy: true, source: 'kubeconfig', nodeCount: 3, podCount: 34, cpuCores: 12, memoryGB: 48, storageGB: 300, distribution: 'digitalocean' },
+    { name: 'rancher-mgmt', context: 'rancher-mgmt', healthy: true, source: 'kubeconfig', nodeCount: 3, podCount: 89, cpuCores: 24, memoryGB: 96, storageGB: 400, distribution: 'rancher' },
+    { name: 'vllm-gpu-cluster', context: 'vllm-d', healthy: true, source: 'kubeconfig', nodeCount: 8, podCount: 124, cpuCores: 256, memoryGB: 2048, storageGB: 8000, distribution: 'kubernetes' },
   ]
 }
 

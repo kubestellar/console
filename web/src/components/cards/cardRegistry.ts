@@ -1,7 +1,5 @@
 import { lazy, Suspense, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
-import { getCardConfig, hasUnifiedConfig, getUnifiedCardTypes } from '../../config/cards'
-import { UnifiedCard } from '../../lib/unified'
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -406,28 +404,13 @@ export const DEMO_DATA_CARDS = new Set([
  * Arcade/game cards don't have "demo data" — they're always just games.
  */
 export const DEMO_EXEMPT_CARDS = new Set([
-  // All arcade/game cards - they don't use external data
   'sudoku_game',
-  'match_game',
-  'solitaire',
   'checkers',
-  'game_2048',
-  'kubedle',
-  'pod_sweeper',
   'container_tetris',
-  'flappy_pod',
-  'kube_man',
   'kube_kong',
-  'pod_pitfall',
-  'node_invaders',
   'pod_crosser',
-  'pod_brothers',
   'kube_kart',
-  'kube_pong',
   'kube_snake',
-  'kube_galaga',
-  'kube_doom',
-  'kube_craft',
   'kube_chess',
 ])
 
@@ -657,31 +640,8 @@ export function getDefaultCardWidth(cardType: string): number {
  * Falls back to the DynamicCard meta-component for dynamically registered types.
  * Returns undefined if the card type is not registered anywhere.
  */
-/**
- * Feature flag to enable unified card rendering.
- * Set to true to use the new unified card system for cards that have configs.
- * Cards with unified configs will render using UnifiedCard instead of legacy components.
- */
-const USE_UNIFIED_CARDS = true // Unified cards enabled for cards with configs
-
-/**
- * Create a component that renders a unified card from config
- */
-function createUnifiedCardComponent(cardType: string): CardComponent {
-  const config = getCardConfig(cardType)
-  if (!config) {
-    return () => createElement('div', { className: 'text-red-400' }, `Config not found: ${cardType}`)
-  }
-  return () => createElement(UnifiedCard, { config })
-}
-
 export function getCardComponent(cardType: string): CardComponent | undefined {
-  // Check for unified config first (when enabled)
-  if (USE_UNIFIED_CARDS && hasUnifiedConfig(cardType)) {
-    return createUnifiedCardComponent(cardType)
-  }
-
-  // Check static registry
+  // Check static registry first
   const staticComponent = CARD_COMPONENTS[cardType]
   if (staticComponent) return staticComponent
 
@@ -694,10 +654,10 @@ export function getCardComponent(cardType: string): CardComponent | undefined {
 }
 
 /**
- * Check if a card type is registered (static, dynamic, or unified).
+ * Check if a card type is registered (static or dynamic).
  */
 export function isCardTypeRegistered(cardType: string): boolean {
-  return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType) || hasUnifiedConfig(cardType)
+  return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType)
 }
 
 /**
@@ -709,11 +669,8 @@ export function registerDynamicCardType(cardType: string, width = 6): void {
 }
 
 /**
- * Get all registered card types (including unified cards).
+ * Get all registered card types.
  */
 export function getRegisteredCardTypes(): string[] {
-  const staticTypes = Object.keys(CARD_COMPONENTS)
-  const unifiedTypes = getUnifiedCardTypes()
-  // Combine and deduplicate
-  return [...new Set([...staticTypes, ...unifiedTypes])]
+  return Object.keys(CARD_COMPONENTS)
 }

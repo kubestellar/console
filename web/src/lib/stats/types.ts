@@ -147,7 +147,7 @@ export interface StatBlockValue {
   tooltip?: string
   /** Color override */
   color?: StatBlockColor
-  /** Whether this stat uses demo/mock data */
+  /** Whether this stat uses demo/mock data (shows yellow border + badge) */
   isDemo?: boolean
 }
 

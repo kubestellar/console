@@ -38,7 +38,6 @@ const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 
 // Default cards for the clusters dashboard
 const DEFAULT_CLUSTERS_CARDS = [
-  { type: 'console_ai_offline_detection', title: 'Offline Detection', position: { w: 4, h: 3 } },
   { type: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
   { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 3 } },
   { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 3 } },
@@ -1665,7 +1664,7 @@ export function Clusters() {
 
   if (isLoading && clusters.length === 0) {
     return (
-      <div className="">
+      <div className="pt-16">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Server className="w-6 h-6 text-purple-400" />
@@ -1698,7 +1697,7 @@ export function Clusters() {
   // The error variable is kept for potential future use but UI always renders
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Clusters"

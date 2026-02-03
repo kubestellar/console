@@ -16,8 +16,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { UnifiedStatsSection, GITOPS_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -248,7 +247,7 @@ export function HelmReleases() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Helm Releases"
@@ -274,12 +273,13 @@ export function HelmReleases() {
       )}
 
       {/* Stats Overview */}
-      <UnifiedStatsSection
-        config={GITOPS_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="gitops"
         getStatValue={getStatValue}
         hasData={reachableClusters.length > 0}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-helm-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

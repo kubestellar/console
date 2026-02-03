@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
@@ -13,6 +13,9 @@ let eventsCache: EventsCache | null = null
 
 export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const cacheKey = `events:${cluster || 'all'}:${namespace || 'all'}:${limit}`
+  // Track AbortController for cleanup on unmount
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
 
   // Initialize from cache if available
   const getCachedData = () => {
@@ -61,6 +64,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       }
     }
 
+    // Abort any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    abortControllerRef.current = new AbortController()
+    const signal = abortControllerRef.current.signal
+
     // Try local agent HTTP endpoint first (works without backend)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -68,12 +78,11 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
         params.append('limit', limit.toString())
-        // console.log(`[useEvents] Fetching from local agent for ${cluster}`)
+        console.log(`[useEvents] Fetching from local agent for ${cluster}`)
 
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 15000)
         const response = await fetch(`${LOCAL_AGENT_URL}/events?${params}`, {
-          signal: controller.signal,
+          signal,
           headers: { 'Accept': 'application/json' },
         })
         clearTimeout(timeoutId)
@@ -81,7 +90,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         if (response.ok) {
           const data = await response.json()
           const eventData = data.events || []
-          // console.log(`[useEvents] Got ${eventData.length} events for ${cluster} from local agent`)
+          console.log(`[useEvents] Got ${eventData.length} events for ${cluster} from local agent`)
           const now = new Date()
           eventsCache = { data: eventData, timestamp: now, key: cacheKey }
           setEvents(eventData)
@@ -98,13 +107,9 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
           reportAgentDataSuccess()
           return
         }
-        // console.log(`[useEvents] Local agent returned ${response.status}, trying REST API`)
+        console.log(`[useEvents] Local agent returned ${response.status}, trying REST API`)
       } catch (err) {
-        // Don't log abort errors - these are expected when component unmounts
-        const isAbortError = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
-        if (!isAbortError) {
-          console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
-        }
+        console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
       }
     }
 
@@ -116,12 +121,11 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       params.append('limit', limit.toString())
       const url = `/api/mcp/events?${params}`
 
-      // Use direct fetch with timeout to prevent hanging
+      // Use direct fetch with shared AbortController signal
       const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 10000) // 10 second timeout
 
-      const response = await fetch(url, { method: 'GET', headers, signal: controller.signal })
+      const response = await fetch(url, { method: 'GET', headers, signal })
       clearTimeout(timeoutId)
       // console.log('[useEvents] Fetch completed with status:', response.status)
 
@@ -142,24 +146,23 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastRefresh(now)
       // console.log('[useEvents] Data updated successfully')
     } catch (err) {
-      // Don't log abort errors - these are expected when component unmounts
-      const isAbortError = (err instanceof Error || err instanceof DOMException) && err.name === 'AbortError'
-      if (isAbortError) {
+      // Ignore abort errors (expected on unmount or when a new request supersedes)
+      if (err instanceof Error && err.name === 'AbortError') {
         return
       }
       console.error('[useEvents] Failed to fetch events:', err)
-      // Keep stale data, only use demo if no cached data AND in demo mode
+      // Only update state if still mounted
+      if (!isMountedRef.current) return
+      // Keep stale data, only use demo if no cached data
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !eventsCache) {
         setError('Failed to fetch events')
-        // Only fall back to demo data if in demo mode
-        const token = localStorage.getItem('token')
-        if (!token || token === 'demo-token') {
-          setEvents(getDemoEvents())
-        }
+        setEvents(getDemoEvents())
       }
     } finally {
+      // Only update state if still mounted
+      if (!isMountedRef.current) return
       // console.log('[useEvents] Finally block started')
       setIsLoading(false)
       // Keep isRefreshing true for minimum time so user can see it, then reset
@@ -175,6 +178,18 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     }
   }, [cluster, namespace, limit, cacheKey])
 
+  // Track mounted state for cleanup
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      // Abort any in-flight request on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   useEffect(() => {
     const hasCachedData = eventsCache && eventsCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
@@ -182,22 +197,6 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
-
-  // Listen for demo data clear event (when switching from demo to live mode)
-  useEffect(() => {
-    const handleClearDemoData = () => {
-      // Clear module-level cache
-      eventsCache = null
-      // Reset to loading state
-      setEvents([])
-      setIsLoading(true)
-      setLastUpdated(null)
-      setLastRefresh(null)
-    }
-
-    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
-    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
-  }, [])
 
   return {
     events,
@@ -291,14 +290,10 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       setError(null)
       setLastUpdated(now)
     } catch (err) {
-      // Keep stale data, only use demo if no cached data AND in demo mode
+      // Keep stale data, only use demo if no cached data
       if (!silent && !warningEventsCache) {
         setError('Failed to fetch warning events')
-        // Only fall back to demo data if in demo mode
-        const token = localStorage.getItem('token')
-        if (!token || token === 'demo-token') {
-          setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
-        }
+        setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
       }
     } finally {
       setIsLoading(false)
@@ -321,27 +316,10 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
-  // Listen for demo data clear event (when switching from demo to live mode)
-  useEffect(() => {
-    const handleClearDemoData = () => {
-      // Clear module-level cache
-      warningEventsCache = null
-      // Reset to loading state
-      setEvents([])
-      setIsLoading(true)
-      setLastUpdated(null)
-    }
-
-    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
-    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
-  }, [])
-
   return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
-// Demo events - cluster names must match getDemoClusters() in shared.ts
 function getDemoEvents(): ClusterEvent[] {
-  const now = Date.now()
   return [
     {
       type: 'Warning',
@@ -349,10 +327,8 @@ function getDemoEvents(): ClusterEvent[] {
       message: 'No nodes available to schedule pod',
       object: 'Pod/worker-5c6d7e8f9-n3p2q',
       namespace: 'batch',
-      cluster: 'vllm-gpu-cluster',
+      cluster: 'vllm-d',
       count: 3,
-      firstSeen: new Date(now - 5 * 60000).toISOString(),
-      lastSeen: new Date(now - 2 * 60000).toISOString(),
     },
     {
       type: 'Normal',
@@ -360,10 +336,8 @@ function getDemoEvents(): ClusterEvent[] {
       message: 'Successfully assigned pod to node-2',
       object: 'Pod/api-server-7d8f9c6b5-abc12',
       namespace: 'production',
-      cluster: 'eks-prod-us-east-1',
+      cluster: 'prod-east',
       count: 1,
-      firstSeen: new Date(now - 8 * 60000).toISOString(),
-      lastSeen: new Date(now - 8 * 60000).toISOString(),
     },
     {
       type: 'Warning',
@@ -371,10 +345,8 @@ function getDemoEvents(): ClusterEvent[] {
       message: 'Back-off restarting failed container',
       object: 'Pod/api-server-7d8f9c6b5-x2k4m',
       namespace: 'production',
-      cluster: 'eks-prod-us-east-1',
+      cluster: 'prod-east',
       count: 15,
-      firstSeen: new Date(now - 30 * 60000).toISOString(),
-      lastSeen: new Date(now - 1 * 60000).toISOString(),
     },
     {
       type: 'Normal',
@@ -382,10 +354,8 @@ function getDemoEvents(): ClusterEvent[] {
       message: 'Container image pulled successfully',
       object: 'Pod/frontend-8e9f0a1b2-def34',
       namespace: 'web',
-      cluster: 'gke-staging',
+      cluster: 'staging',
       count: 1,
-      firstSeen: new Date(now - 12 * 60000).toISOString(),
-      lastSeen: new Date(now - 12 * 60000).toISOString(),
     },
     {
       type: 'Warning',
@@ -393,65 +363,8 @@ function getDemoEvents(): ClusterEvent[] {
       message: 'Readiness probe failed: connection refused',
       object: 'Pod/cache-redis-0',
       namespace: 'data',
-      cluster: 'gke-staging',
+      cluster: 'staging',
       count: 8,
-      firstSeen: new Date(now - 20 * 60000).toISOString(),
-      lastSeen: new Date(now - 3 * 60000).toISOString(),
-    },
-    {
-      type: 'Normal',
-      reason: 'Created',
-      message: 'Created container nginx',
-      object: 'Pod/nginx-deployment-abc123',
-      namespace: 'default',
-      cluster: 'kind-local',
-      count: 2,
-      firstSeen: new Date(now - 6 * 60000).toISOString(),
-      lastSeen: new Date(now - 4 * 60000).toISOString(),
-    },
-    {
-      type: 'Normal',
-      reason: 'Started',
-      message: 'Started container nginx',
-      object: 'Pod/nginx-deployment-abc123',
-      namespace: 'default',
-      cluster: 'kind-local',
-      count: 2,
-      firstSeen: new Date(now - 6 * 60000).toISOString(),
-      lastSeen: new Date(now - 4 * 60000).toISOString(),
-    },
-    {
-      type: 'Warning',
-      reason: 'ImagePullBackOff',
-      message: 'Back-off pulling image "invalid-image:latest"',
-      object: 'Pod/broken-pod-xyz789',
-      namespace: 'staging',
-      cluster: 'aks-dev-westeu',
-      count: 5,
-      firstSeen: new Date(now - 15 * 60000).toISOString(),
-      lastSeen: new Date(now - 1 * 60000).toISOString(),
-    },
-    {
-      type: 'Normal',
-      reason: 'ScalingReplicaSet',
-      message: 'Scaled up replica set to 3',
-      object: 'Deployment/api-gateway',
-      namespace: 'production',
-      cluster: 'openshift-prod',
-      count: 1,
-      firstSeen: new Date(now - 10 * 60000).toISOString(),
-      lastSeen: new Date(now - 10 * 60000).toISOString(),
-    },
-    {
-      type: 'Warning',
-      reason: 'NodeNotReady',
-      message: 'Node condition Ready is now: Unknown',
-      object: 'Node/worker-node-3',
-      namespace: '',
-      cluster: 'alibaba-ack-shanghai',
-      count: 2,
-      firstSeen: new Date(now - 25 * 60000).toISOString(),
-      lastSeen: new Date(now - 7 * 60000).toISOString(),
     },
   ]
 }

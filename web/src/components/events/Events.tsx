@@ -30,8 +30,7 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { UnifiedStatsSection, EVENTS_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useMobile } from '../../hooks/useMobile'
@@ -240,11 +239,6 @@ export function Events() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
 
-  // Event Activity chart filters
-  const [activityClusterFilter, setActivityClusterFilter] = useState<string>('')
-  const [activityReasonFilter, setActivityReasonFilter] = useState<string>('')
-  const [activityTypeFilter, setActivityTypeFilter] = useState<'' | 'Warning' | 'Normal'>('')
-
   const isLoading = loadingAll
   const isRefreshing = refreshingAll || showIndicator
   const isFetching = isLoading || isRefreshing || showIndicator
@@ -353,20 +347,17 @@ export function Events() {
     [globalFilteredAllEvents]
   )
 
-  // Extract unique namespaces, reasons, and clusters from globally filtered events for filter dropdowns
-  const { namespaces, reasons, clusters } = useMemo(() => {
+  // Extract unique namespaces and reasons from globally filtered events for filter dropdowns
+  const { namespaces, reasons } = useMemo(() => {
     const nsSet = new Set<string>()
     const reasonSet = new Set<string>()
-    const clusterSet = new Set<string>()
     globalFilteredAllEvents.forEach(e => {
       if (e.namespace) nsSet.add(e.namespace)
       if (e.reason) reasonSet.add(e.reason)
-      if (e.cluster) clusterSet.add(e.cluster.split('/').pop() || e.cluster)
     })
     return {
       namespaces: Array.from(nsSet).sort(),
       reasons: Array.from(reasonSet).sort(),
-      clusters: Array.from(clusterSet).sort(),
     }
   }, [globalFilteredAllEvents])
 
@@ -513,56 +504,6 @@ export function Events() {
     }
   }, [globalFilteredAllEvents, globalFilteredWarningEvents])
 
-  // Filtered hourly data for Event Activity chart based on activity filters
-  const activityHourlyData = useMemo(() => {
-    // Apply activity filters to globalFilteredAllEvents
-    let filteredEvents = globalFilteredAllEvents
-
-    if (activityClusterFilter) {
-      filteredEvents = filteredEvents.filter(e => {
-        const clusterName = e.cluster?.split('/').pop() || e.cluster
-        return clusterName === activityClusterFilter
-      })
-    }
-
-    if (activityReasonFilter) {
-      filteredEvents = filteredEvents.filter(e => e.reason === activityReasonFilter)
-    }
-
-    if (activityTypeFilter) {
-      filteredEvents = filteredEvents.filter(e => e.type === activityTypeFilter)
-    }
-
-    // Compute hourly data from filtered events
-    const now = new Date()
-    const hourlyData: { name: string; value: number; color?: string }[] = []
-    for (let i = 23; i >= 0; i--) {
-      const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000)
-      const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
-
-      const hourTotal = filteredEvents.filter(e => {
-        if (!e.lastSeen) return false
-        const eventTime = new Date(e.lastSeen)
-        return eventTime >= hourStart && eventTime < hourEnd
-      }).length
-
-      const hourWarnings = filteredEvents.filter(e => {
-        if (!e.lastSeen) return false
-        const eventTime = new Date(e.lastSeen)
-        return eventTime >= hourStart && eventTime < hourEnd && e.type === 'Warning'
-      }).length
-
-      hourlyData.push({
-        name: hourStart.getHours().toString().padStart(2, '0') + ':00',
-        value: hourTotal,
-        // Color based on warning ratio
-        color: hourWarnings > hourTotal / 2 ? '#f59e0b' : '#9333ea',
-      })
-    }
-
-    return hourlyData
-  }, [globalFilteredAllEvents, activityClusterFilter, activityReasonFilter, activityTypeFilter])
-
   // Update module-level cache when we have real data
   useEffect(() => {
     if (!isRefreshing && stats.total > 0) {
@@ -655,7 +596,7 @@ export function Events() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Events"
@@ -670,12 +611,13 @@ export function Events() {
       />
 
       {/* Stats Overview - configurable */}
-      <UnifiedStatsSection
-        config={EVENTS_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="events"
         getStatValue={getStatValue}
         hasData={displayStats.total > 0}
         isLoading={isLoading}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-events-stats-collapsed"
       />
 
       {/* Tabs */}
@@ -927,45 +869,9 @@ export function Events() {
 
           {/* Event Activity (24h) */}
           <div className="glass p-4 rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Event Activity (Last 24 Hours)</h3>
-              <div className="flex items-center gap-2">
-                {/* Cluster Filter */}
-                <select
-                  value={activityClusterFilter}
-                  onChange={(e) => setActivityClusterFilter(e.target.value)}
-                  className="px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
-                >
-                  <option value="">All Clusters</option>
-                  {clusters.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                {/* Reason Filter */}
-                <select
-                  value={activityReasonFilter}
-                  onChange={(e) => setActivityReasonFilter(e.target.value)}
-                  className="px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
-                >
-                  <option value="">All Reasons</option>
-                  {reasons.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-                {/* Event Type Filter */}
-                <select
-                  value={activityTypeFilter}
-                  onChange={(e) => setActivityTypeFilter(e.target.value as '' | 'Warning' | 'Normal')}
-                  className="px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
-                >
-                  <option value="">All Types</option>
-                  <option value="Warning">Warning</option>
-                  <option value="Normal">Normal</option>
-                </select>
-              </div>
-            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">Event Activity (Last 24 Hours)</h3>
             <BarChart
-              data={activityHourlyData}
+              data={stats.hourlyData}
               height={200}
               color="#9333ea"
               showGrid={true}

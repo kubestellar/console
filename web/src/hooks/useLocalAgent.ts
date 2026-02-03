@@ -27,10 +27,9 @@ export interface ConnectionEvent {
 }
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
-const POLL_INTERVAL = 15000 // Check every 15 seconds when connected
-const DISCONNECTED_POLL_INTERVAL = 120000 // Check every 2 minutes when disconnected (reduce flickering)
-const INITIAL_FAILURE_THRESHOLD = 1 // Fail fast on initial connection (1 failure)
-const CONNECTED_FAILURE_THRESHOLD = 2 // Require 2 consecutive failures when already connected
+const POLL_INTERVAL = 10000 // Check every 10 seconds when connected
+const DISCONNECTED_POLL_INTERVAL = 60000 // Check every 60 seconds when disconnected
+const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecting
 const AGGRESSIVE_POLL_INTERVAL = 1000 // 1 second during aggressive detection burst
 const AGGRESSIVE_DETECT_DURATION = 10000 // 10 seconds of aggressive polling
 
@@ -66,17 +65,21 @@ interface AgentState {
 type Listener = (state: AgentState) => void
 
 class AgentManager {
-  // Start in disconnected state - only switch to connected after confirmed success
-  // This prevents UI flickering during initial connection attempts
-  private state: AgentState = {
+  private state: AgentState = getDemoMode() ? {
     status: 'disconnected',
     health: DEMO_DATA,
-    error: getDemoMode() ? 'Demo mode - agent connection skipped' : null,
+    error: 'Demo mode - agent connection skipped',
+    connectionEvents: [],
+    dataErrorCount: 0,
+    lastDataError: null,
+  } : {
+    status: 'connecting',
+    health: null,
+    error: null,
     connectionEvents: [],
     dataErrorCount: 0,
     lastDataError: null,
   }
-  private hasEverConnected = false // Track if we've ever had a successful connection
   private listeners: Set<Listener> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private failureCount = 0
@@ -104,11 +107,9 @@ class AgentManager {
       return
     }
 
-    // Don't change status to 'connecting' - stay disconnected until we confirm connection
-    // This prevents UI flickering
+    this.addEvent('connecting', 'Attempting to connect to local agent...')
     this.checkAgent()
-    // Start with disconnected poll interval - will speed up once connected
-    this.currentPollInterval = DISCONNECTED_POLL_INTERVAL
+    this.currentPollInterval = POLL_INTERVAL
     this.pollInterval = setInterval(() => this.checkAgent(), this.currentPollInterval)
   }
 
@@ -198,19 +199,15 @@ class AgentManager {
       const response = await fetch(`${LOCAL_AGENT_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        // Short timeout to fail fast
-        signal: AbortSignal.timeout(3000),
       })
 
       if (response.ok) {
         const data = await response.json()
         const wasDisconnected = this.state.status !== 'connected'
         this.failureCount = 0 // Reset failure count on success
-
         if (wasDisconnected) {
-          this.hasEverConnected = true
           this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
-          // Connected - speed up polling
+          // Reconnected - speed up polling
           this.adjustPollInterval(POLL_INTERVAL)
         }
         this.setState({
@@ -223,25 +220,23 @@ class AgentManager {
       }
     } catch {
       this.failureCount++
-
-      // Use different thresholds: fail fast initially, be more tolerant once connected
-      const threshold = this.hasEverConnected ? CONNECTED_FAILURE_THRESHOLD : INITIAL_FAILURE_THRESHOLD
-
-      if (this.failureCount >= threshold) {
+      // Only mark as disconnected after multiple consecutive failures
+      if (this.failureCount >= FAILURE_THRESHOLD) {
         const wasConnected = this.state.status === 'connected'
+        const wasConnecting = this.state.status === 'connecting'
         if (wasConnected) {
           this.addEvent('disconnected', 'Lost connection to local agent')
+        } else if (wasConnecting) {
+          this.addEvent('error', 'Failed to connect - local agent not available')
         }
-        // Stay/go to disconnected - don't flicker
         this.setState({
           status: 'disconnected',
           health: DEMO_DATA,
           error: 'Local agent not available',
         })
-        // Slow down polling when disconnected to reduce noise
+        // Slow down polling when disconnected to avoid spamming console errors
         this.adjustPollInterval(DISCONNECTED_POLL_INTERVAL)
       }
-      // If below threshold, silently continue without changing state
     } finally {
       this.isChecking = false
     }
@@ -280,7 +275,7 @@ class AgentManager {
     }
   }
 
-  // Report successful data fetch - can recover from degraded or disconnected
+  // Report successful data fetch - can recover from degraded
   reportDataSuccess() {
     if (this.state.status === 'degraded') {
       // Clear old errors and check if we can recover
@@ -297,26 +292,12 @@ class AgentManager {
           lastDataError: null,
         })
       }
-    } else if (this.state.status === 'disconnected') {
-      // If we're getting successful data from the agent, we're actually connected
-      // This can happen if /health is slow but data endpoints work
-      this.hasEverConnected = true
-      this.failureCount = 0
-      this.addEvent('connected', 'Connected via data endpoint')
-      this.setState({
-        status: 'connected',
-        error: null,
-        dataErrorCount: 0,
-        lastDataError: null,
-      })
-      // Speed up health polling now that we know agent is available
-      this.adjustPollInterval(POLL_INTERVAL)
     }
   }
 
   // Aggressively attempt to detect the agent.
-  // Fires rapid health checks for 10s to quickly find a newly started agent.
-  // Stays disconnected until confirmed connected (no UI flickering).
+  // Resets state to 'connecting' so isAgentUnavailable() returns false,
+  // fires an immediate health check, and enters rapid 1s polling for 10s.
   aggressiveDetect() {
     if (this.aggressiveDetectTimeout) {
       clearTimeout(this.aggressiveDetectTimeout)
@@ -324,7 +305,12 @@ class AgentManager {
     }
 
     this.failureCount = 0
-    // Don't change state to 'connecting' - stay disconnected until confirmed
+
+    this.addEvent('connecting', 'Aggressive detection: searching for local agent...')
+    this.setState({
+      status: 'connecting',
+      error: null,
+    })
 
     this.adjustPollInterval(AGGRESSIVE_POLL_INTERVAL)
     this.checkAgent()
@@ -342,24 +328,6 @@ class AgentManager {
 
 // Global singleton instance
 const agentManager = new AgentManager()
-
-// Listen for demo mode changes and restart agent checking when switching to live mode
-if (typeof window !== 'undefined') {
-  let previousDemoMode = getDemoMode()
-  window.addEventListener('kc-demo-mode-change', (event: Event) => {
-    const customEvent = event as CustomEvent<boolean>
-    const newDemoMode = customEvent.detail
-
-    // When switching FROM demo mode TO live mode, restart agent checking
-    if (previousDemoMode && !newDemoMode) {
-      agentManager.stop()
-      agentManager.start()
-      agentManager.aggressiveDetect()
-    }
-
-    previousDemoMode = newDemoMode
-  })
-}
 
 // ============================================================================
 // Non-hook API for reporting data errors from module-level code
@@ -392,10 +360,14 @@ export function isAgentConnected(): boolean {
 
 /**
  * Check if the agent is known to be unavailable (from non-hook code)
- * Returns true only if the agent is disconnected
+ * Returns true only if we've confirmed the agent is disconnected
+ * During 'connecting' state, we return false to allow hooks to try the agent
+ * (they have their own timeouts for handling failures)
  */
 export function isAgentUnavailable(): boolean {
   const state = agentManager.getState()
+  // Only skip agent if we've confirmed it's disconnected
+  // During 'connecting' or 'connected' or 'degraded', allow agent attempts
   return state.status === 'disconnected'
 }
 
@@ -404,8 +376,8 @@ export function isAgentUnavailable(): boolean {
  * Call this when the user toggles demo mode OFF to immediately
  * attempt to find the kc-agent without waiting for the next poll cycle.
  *
- * Fires rapid health checks every 1s for 10s to quickly detect a newly started agent.
- * Status stays disconnected until a successful connection is confirmed.
+ * Resets agent status to 'connecting' (isAgentUnavailable() returns false),
+ * fires an immediate health check, and polls every 1s for 10s.
  */
 export async function triggerAggressiveDetection(): Promise<boolean> {
   agentManager.aggressiveDetect()

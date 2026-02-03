@@ -42,8 +42,7 @@ import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
-import { UnifiedStatsSection, DASHBOARD_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
@@ -62,16 +61,15 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 const DASHBOARD_STORAGE_KEY = 'kubestellar-main-dashboard-cards'
 
 // Default cards for the main dashboard - balanced multi-cluster overview
-// Offline detection card MUST be first for visibility of connectivity issues
 const DEFAULT_DASHBOARD_CARDS: Card[] = [
-  { id: 'default-offline', card_type: 'console_ai_offline_detection', config: {}, position: { x: 0, y: 0, w: 4, h: 3 } },
-  { id: 'default-1', card_type: 'cluster_health', config: {}, position: { x: 4, y: 0, w: 4, h: 3 } },
-  { id: 'default-2', card_type: 'resource_usage', config: {}, position: { x: 8, y: 0, w: 4, h: 3 } },
-  { id: 'default-3', card_type: 'active_alerts', config: {}, position: { x: 0, y: 3, w: 4, h: 3 } },
-  { id: 'default-4', card_type: 'cluster_metrics', config: {}, position: { x: 4, y: 3, w: 4, h: 3 } },
-  { id: 'default-5', card_type: 'event_stream', config: {}, position: { x: 8, y: 3, w: 4, h: 4 } },
+  { id: 'default-1', card_type: 'cluster_health', config: {}, position: { x: 0, y: 0, w: 4, h: 3 } },
+  { id: 'default-2', card_type: 'resource_usage', config: {}, position: { x: 4, y: 0, w: 4, h: 3 } },
+  { id: 'default-3', card_type: 'active_alerts', config: {}, position: { x: 8, y: 0, w: 4, h: 3 } },
+  { id: 'default-4', card_type: 'cluster_metrics', config: {}, position: { x: 0, y: 3, w: 6, h: 3 } },
+  { id: 'default-5', card_type: 'event_stream', config: {}, position: { x: 6, y: 3, w: 6, h: 4 } },
   { id: 'default-6', card_type: 'deployment_status', config: {}, position: { x: 0, y: 6, w: 6, h: 3 } },
-  { id: 'default-7', card_type: 'pod_issues', config: {}, position: { x: 6, y: 6, w: 6, h: 3 } },
+  { id: 'default-7', card_type: 'pod_issues', config: {}, position: { x: 6, y: 7, w: 6, h: 3 } },
+  { id: 'default-8', card_type: 'provider_health', config: {}, position: { x: 0, y: 10, w: 6, h: 3 } },
 ]
 
 
@@ -784,7 +782,7 @@ export function Dashboard() {
 
   if (isLoading && localCards.length === 0) {
     return (
-      <div className="">
+      <div className="pt-16">
         {/* Header skeleton */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -820,7 +818,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Dashboard"
@@ -834,12 +832,13 @@ export function Dashboard() {
       />
 
       {/* Configurable Stats Overview */}
-      <UnifiedStatsSection
-        config={DASHBOARD_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="dashboard"
         getStatValue={getStatValue}
         hasData={clusters.length > 0}
         isLoading={isClustersLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-dashboard-stats-collapsed"
       />
 
       {/* AI Recommendations */}

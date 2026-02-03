@@ -26,8 +26,7 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { UnifiedStatsSection, COST_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 // Width class lookup for Tailwind (dynamic classes don't work)
@@ -377,7 +376,7 @@ export function Cost() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Cost Management"
@@ -403,12 +402,13 @@ export function Cost() {
       )}
 
       {/* Configurable Stats Overview */}
-      <UnifiedStatsSection
-        config={COST_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="cost"
         getStatValue={getStatValue}
         hasData={reachableClusters.length > 0}
         isLoading={isLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-cost-stats-collapsed"
       />
 
       {/* Cards Grid */}

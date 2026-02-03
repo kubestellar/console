@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Cpu, HardDrive, Zap, Loader2 } from 'lucide-react'
-import { useClusters, useGPUNodes, useTPUNodes, GPUNode, TPUNode } from '../../hooks/useMCP'
+import { useClusters, useGPUNodes, GPUNode } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
@@ -16,12 +16,12 @@ interface ResourceCapacityProps {
 
 interface ResourceItem {
   id: string
-  icon: 'cpu' | 'memory' | 'gpu' | 'tpu'
+  icon: 'cpu' | 'memory' | 'gpu'
   label: string
   requested: number
   capacity: number
   unit: string
-  color: 'blue' | 'purple' | 'yellow' | 'cyan'
+  color: 'blue' | 'purple' | 'yellow'
   format?: (v: number) => string
 }
 
@@ -36,7 +36,6 @@ const SORT_OPTIONS = [
 export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
-  const { nodes: tpuNodes } = useTPUNodes()
   const { drillToResources } = useDrillDownActions()
   const {
     selectedClusters: globalSelectedClusters,
@@ -95,18 +94,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
     return result
   }, [gpuNodes, globalSelectedClusters, isAllClustersSelected, localClusterFilter])
 
-  // Filter TPU nodes by selection
-  const filteredTPUNodes = useMemo(() => {
-    let result = tpuNodes
-    if (!isAllClustersSelected) {
-      result = result.filter(n => globalSelectedClusters.includes(n.cluster))
-    }
-    if (localClusterFilter.length > 0) {
-      result = result.filter(n => localClusterFilter.includes(n.cluster))
-    }
-    return result
-  }, [tpuNodes, globalSelectedClusters, isAllClustersSelected, localClusterFilter])
-
   // Calculate real totals from cluster data
   const totals = useMemo(() => {
     const clusterTotals = clusters.reduce(
@@ -133,17 +120,8 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       { totalGPUs: 0, allocatedGPUs: 0, gpuMemoryGB: 0 }
     )
 
-    // Calculate TPU totals from TPU nodes
-    const tpuTotals = filteredTPUNodes.reduce(
-      (acc: { totalTPUs: number; allocatedTPUs: number }, n: TPUNode) => ({
-        totalTPUs: acc.totalTPUs + (n.tpuCount || 0),
-        allocatedTPUs: acc.allocatedTPUs + (n.tpuAllocated || 0),
-      }),
-      { totalTPUs: 0, allocatedTPUs: 0 }
-    )
-
-    return { ...clusterTotals, ...gpuTotals, ...tpuTotals }
-  }, [clusters, filteredGPUNodes, filteredTPUNodes])
+    return { ...clusterTotals, ...gpuTotals }
+  }, [clusters, filteredGPUNodes])
 
   // Estimate pod capacity (110 pods per node is the default Kubernetes limit)
   const podCapacity = totals.nodes * 110
@@ -192,19 +170,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         capacity: totals.totalGPUs,
         unit: 'GPUs',
         color: 'yellow',
-      })
-    }
-
-    // Add TPU if available
-    if (totals.totalTPUs > 0) {
-      items.push({
-        id: 'tpu',
-        icon: 'tpu',
-        label: 'TPUs',
-        requested: totals.allocatedTPUs,
-        capacity: totals.totalTPUs,
-        unit: 'TPUs',
-        color: 'cyan',
       })
     }
 
@@ -259,7 +224,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       case 'cpu': return <Cpu className="w-4 h-4" />
       case 'memory': return <HardDrive className="w-4 h-4" />
       case 'gpu': return <Zap className="w-4 h-4" />
-      case 'tpu': return <Cpu className="w-4 h-4" />
     }
   }
 
@@ -306,7 +270,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
               green: 'bg-green-500',
               yellow: 'bg-yellow-500',
               orange: 'bg-orange-500',
-              cyan: 'bg-cyan-500',
             }
             const textClasses: Record<string, string> = {
               blue: 'text-blue-400',
@@ -314,7 +277,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
               green: 'text-green-400',
               yellow: 'text-yellow-400',
               orange: 'text-orange-400',
-              cyan: 'text-cyan-400',
             }
 
             const formatValue = (v: number) => {
@@ -374,12 +336,10 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
         </div>
       )}
 
+      {/* Summary */}
       {/* Summary footer */}
       <div
-        className={`mt-3 pt-3 border-t border-border/50 grid gap-2 text-center cursor-pointer hover:bg-secondary/30 rounded-lg transition-colors ${
-          totals.totalGPUs > 0 && totals.totalTPUs > 0 ? 'grid-cols-5' :
-          totals.totalGPUs > 0 || totals.totalTPUs > 0 ? 'grid-cols-4' : 'grid-cols-3'
-        }`}
+        className={`mt-3 pt-3 border-t border-border/50 grid ${totals.totalGPUs > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-center cursor-pointer hover:bg-secondary/30 rounded-lg transition-colors`}
         onClick={() => drillToResources()}
       >
         <div>
@@ -398,12 +358,6 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
           <div>
             <p className="text-xl font-bold text-yellow-400">{totals.totalGPUs}</p>
             <p className="text-xs text-muted-foreground">GPUs</p>
-          </div>
-        )}
-        {totals.totalTPUs > 0 && (
-          <div>
-            <p className="text-xl font-bold text-cyan-400">{totals.totalTPUs}</p>
-            <p className="text-xs text-muted-foreground">TPUs</p>
           </div>
         )}
       </div>

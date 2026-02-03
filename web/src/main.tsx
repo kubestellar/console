@@ -10,10 +10,6 @@ import { migrateFromLocalStorage, preloadCacheFromStorage } from './lib/cache'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { registerDynamicCardType } from './components/cards/cardRegistry'
-// Register unified card hooks at startup
-import './lib/unified/registerHooks'
-// Import backend cache reset for demo mode
-import { resetBackendAvailabilityCache } from './lib/api'
 
 // Suppress recharts dimension warnings (these occur when charts render before container is sized)
 const originalWarn = console.warn
@@ -24,12 +20,11 @@ console.warn = (...args) => {
   originalWarn.apply(console, args)
 }
 
-// Enable MSW mock service worker in demo mode (Netlify previews or localStorage toggle)
+// Enable MSW mock service worker in demo mode (Netlify previews)
 const enableMocking = async () => {
-  // Check env var, Netlify domain, OR localStorage demo mode toggle
+  // Check env var OR detect Netlify domain (more reliable)
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true' ||
-    window.location.hostname.includes('netlify.app') ||
-    localStorage.getItem('kc-demo-mode') === 'true'
+    window.location.hostname.includes('netlify.app')
 
   if (!isDemoMode) {
     return
@@ -42,15 +37,10 @@ const enableMocking = async () => {
     // to allow external resources (fonts, images) to load normally
     await worker.start({
       onUnhandledRequest: 'bypass',
-      quiet: true, // Suppress verbose request logging in console
       serviceWorker: {
         url: '/mockServiceWorker.js',
       },
     })
-
-    // Reset backend availability cache so fresh checks go through MSW
-    // This must happen AFTER MSW starts to ensure the health check uses mocks
-    resetBackendAvailabilityCache()
   } catch (error) {
     // If service worker fails to start (e.g., in some browser contexts),
     // log the error but continue rendering the app without mocking

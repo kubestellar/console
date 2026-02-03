@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, memo } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Rocket, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
 import { DashboardHeader } from '../shared/DashboardHeader'
-import { UnifiedStatsSection, DEPLOY_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useMobile } from '../../hooks/useMobile'
 import {
@@ -396,7 +395,7 @@ export function Deploy() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="KubeStellar Deploy"
@@ -411,12 +410,13 @@ export function Deploy() {
       />
 
       {/* Stats Overview */}
-      <UnifiedStatsSection
-        config={DEPLOY_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="deploy"
         getStatValue={getStatValue}
         hasData={cachedDeployments.length > 0}
         isLoading={deploymentsLoading && cachedDeployments.length === 0}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-deploy-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

@@ -193,9 +193,9 @@ export function useActiveUsers() {
   const [, setDemoTick] = useState(0)
 
   useEffect(() => {
-    // In demo mode (Netlify or user-enabled): use HTTP heartbeat for presence tracking
-    // With backend (non-demo): use WebSocket presence connection
-    if (isDemoModeForced || getDemoMode()) {
+    // On Netlify (no backend): use HTTP heartbeat for presence tracking
+    // With backend: use WebSocket presence connection
+    if (isDemoModeForced) {
       startHeartbeat()
     } else {
       startPresenceConnection()

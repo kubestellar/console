@@ -242,7 +242,7 @@ export function Arcade() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">

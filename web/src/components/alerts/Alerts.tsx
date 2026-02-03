@@ -23,8 +23,7 @@ import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
 import type { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { UnifiedStatsSection, ALERTS_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 
 const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
@@ -227,7 +226,7 @@ export function Alerts() {
 
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Alerts"
@@ -265,12 +264,13 @@ export function Alerts() {
       )}
 
       {/* Configurable Stats Overview */}
-      <UnifiedStatsSection
-        config={ALERTS_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="alerts"
         getStatValue={getStatValue}
         hasData={stats.firing > 0 || enabledRulesCount > 0}
         isLoading={false}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-alerts-stats-collapsed"
       />
 
       {/* Cards Grid */}

@@ -9,7 +9,7 @@ import { useMobile } from '../../hooks/useMobile'
 import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { cn } from '../../lib/cn'
@@ -141,6 +141,13 @@ export function Layout({ children }: LayoutProps) {
               <span className="hidden lg:inline">Want your own local KubeStellar Console?</span>
               <span className="lg:hidden">Get Console</span>
             </button>
+            <button
+              onClick={() => isDemoModeForced ? setShowSetupDialog(true) : toggleDemoMode()}
+              className="ml-1 md:ml-2 p-1 hover:bg-yellow-500/20 rounded transition-colors"
+              title={isDemoModeForced ? "Install your own console" : "Exit demo mode"}
+            >
+              <X className="w-3.5 h-3.5 text-yellow-400" />
+            </button>
           </div>
         </div>
       )}
@@ -194,7 +201,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex flex-1 overflow-hidden" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
         <main className={cn(
-          'flex-1 px-4 pt-5 pb-4 md:px-6 md:pt-6 md:pb-6 transition-[margin] duration-300 overflow-y-auto',
+          'flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto',
           // Mobile: no left margin (sidebar overlays)
           // Desktop: respect collapsed state
           isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),

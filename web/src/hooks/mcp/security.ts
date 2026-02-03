@@ -2,42 +2,43 @@ import { useState, useEffect, useCallback } from 'react'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
-// Check if in demo mode
-function isDemoMode(): boolean {
-  const token = localStorage.getItem('token')
-  return !token || token === 'demo-token'
+// LocalStorage cache keys
+const GITOPS_DRIFTS_CACHE_KEY = 'kc-gitops-drifts-cache'
+const CACHE_TTL_MS = 30000 // 30 seconds before stale
+
+// Load from localStorage
+function loadGitOpsDriftsFromStorage(): { data: GitOpsDrift[], timestamp: number } {
+  try {
+    const stored = localStorage.getItem(GITOPS_DRIFTS_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed.data)) {
+        return { data: parsed.data, timestamp: parsed.timestamp || 0 }
+      }
+    }
+  } catch { /* ignore */ }
+  return { data: [], timestamp: 0 }
+}
+
+// Save to localStorage
+function saveGitOpsDriftsToStorage(data: GitOpsDrift[], timestamp: number) {
+  try {
+    localStorage.setItem(GITOPS_DRIFTS_CACHE_KEY, JSON.stringify({ data, timestamp }))
+  } catch { /* ignore storage errors */ }
 }
 
 // Hook to get security issues
 export function useSecurityIssues(cluster?: string, namespace?: string) {
-  // Initialize with demo data if in demo mode to prevent loading flash
-  const [issues, setIssues] = useState<SecurityIssue[]>(() => isDemoMode() ? getDemoSecurityIssues() : [])
-  const [isLoading, setIsLoading] = useState(() => !isDemoMode())
+  const [issues, setIssues] = useState<SecurityIssue[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(() => isDemoMode() ? new Date() : null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(() => isDemoMode() ? new Date() : null)
-  const [isUsingDemoData, setIsUsingDemoData] = useState(() => isDemoMode())
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [isUsingDemoData, setIsUsingDemoData] = useState(false)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip API calls when using demo token
-    if (isDemoMode()) {
-      setIssues(getDemoSecurityIssues())
-      const now = new Date()
-      setLastUpdated(now)
-      setLastRefresh(now)
-      setIsLoading(false)
-      if (!silent) {
-        setIsRefreshing(true)
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-      } else {
-        setIsRefreshing(false)
-      }
-      setIsUsingDemoData(true)
-      return
-    }
-
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       setIsRefreshing(true)
@@ -60,10 +61,27 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/security-issues?${params}`
 
-      // Use direct fetch to bypass the global circuit breaker
+      // Skip API calls when using demo token
       const token = localStorage.getItem('token')
+      if (!token || token === 'demo-token') {
+        setIssues(getDemoSecurityIssues())
+        const now = new Date()
+        setLastUpdated(now)
+        setLastRefresh(now)
+        setIsLoading(false)
+        if (!silent) {
+          setIsRefreshing(true)
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
+        setIsUsingDemoData(true)
+        return
+      }
+
+      // Use direct fetch to bypass the global circuit breaker
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -77,17 +95,13 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       setLastRefresh(now)
       setIsUsingDemoData(false)
     } catch (err) {
-      // Only set demo data if we're in demo mode AND don't have existing data AND not silent
-      // In live mode, show error state instead of falling back to demo data
+      // Only set demo data if we don't have existing data and not silent
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && hadNoData) {
         setError('Failed to fetch security issues')
-        // Only fall back to demo data if in demo mode
-        if (isDemoMode()) {
-          setIssues(getDemoSecurityIssues())
-          setIsUsingDemoData(true)
-        }
+        setIssues(getDemoSecurityIssues())
+        setIsUsingDemoData(true)
       }
     } finally {
       if (!silent) {
@@ -100,22 +114,6 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
   useEffect(() => {
     refetch()
   }, [cluster, namespace]) // Only refetch on parameter changes, not on refetch function change
-
-  // Listen for demo data clear event (when switching from demo to live mode)
-  useEffect(() => {
-    const handleClearDemoData = () => {
-      // Reset to loading state and clear data
-      setIssues([])
-      setIsLoading(true)
-      setIsUsingDemoData(false)
-      setLastUpdated(null)
-      setLastRefresh(null)
-      // Refetch will be triggered by the mode change
-    }
-
-    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
-    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
-  }, [])
 
   return {
     issues,
@@ -131,14 +129,18 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
   }
 }
 
-// Hook to get GitOps drifts
+// Hook to get GitOps drifts with localStorage persistence
 export function useGitOpsDrifts(cluster?: string, namespace?: string) {
-  const [drifts, setDrifts] = useState<GitOpsDrift[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  // Initialize from localStorage cache
+  const storedDrifts = loadGitOpsDriftsFromStorage()
+  const [drifts, setDrifts] = useState<GitOpsDrift[]>(storedDrifts.data)
+  const [isLoading, setIsLoading] = useState(storedDrifts.data.length === 0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(
+    storedDrifts.timestamp > 0 ? new Date(storedDrifts.timestamp) : null
+  )
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -161,8 +163,11 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
       if (!token || token === 'demo-token') {
-        setDrifts(getDemoGitOpsDrifts())
-        setLastRefresh(new Date())
+        const demoData = getDemoGitOpsDrifts()
+        setDrifts(demoData)
+        const now = Date.now()
+        saveGitOpsDriftsToStorage(demoData, now)
+        setLastRefresh(new Date(now))
         setIsLoading(false)
         if (!silent) {
           setIsRefreshing(true)
@@ -181,21 +186,24 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
         throw new Error(`API error: ${response.status}`)
       }
       const data = await response.json() as { drifts: GitOpsDrift[] }
-      setDrifts(data.drifts || [])
+      const newDrifts = data.drifts || []
+      setDrifts(newDrifts)
       setError(null)
-      const now = new Date()
+      const now = Date.now()
       setConsecutiveFailures(0)
-      setLastRefresh(now)
+      setLastRefresh(new Date(now))
+      // Save to localStorage
+      saveGitOpsDriftsToStorage(newDrifts, now)
     } catch (err) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
         setError('Failed to fetch GitOps drifts')
-        // Only fall back to demo data if in demo mode
-        if (isDemoMode()) {
-          setDrifts(getDemoGitOpsDrifts())
-        }
+        const demoData = getDemoGitOpsDrifts()
+        setDrifts(demoData)
+        saveGitOpsDriftsToStorage(demoData, Date.now())
       }
+      // Keep existing cached data on error
     } finally {
       if (!silent) {
         setIsLoading(false)
@@ -205,25 +213,26 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   useEffect(() => {
-    refetch(false)
+    // Use cached data if fresh enough
+    const cached = loadGitOpsDriftsFromStorage()
+    const cacheAge = Date.now() - cached.timestamp
+    const cacheValid = cached.data.length > 0 && cacheAge < CACHE_TTL_MS
+
+    if (cacheValid) {
+      setDrifts(cached.data)
+      setIsLoading(false)
+      // Still refresh in background if somewhat stale
+      if (cacheAge > CACHE_TTL_MS / 2) {
+        refetch(true)
+      }
+    } else {
+      refetch(false)
+    }
+
     // Poll every 30 seconds
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch])
-
-  // Listen for demo data clear event (when switching from demo to live mode)
-  useEffect(() => {
-    const handleClearDemoData = () => {
-      // Reset to loading state and clear data
-      setDrifts([])
-      setIsLoading(true)
-      setLastRefresh(null)
-      // Refetch will be triggered by the mode change
-    }
-
-    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
-    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
-  }, [])
 
   return {
     drifts,
@@ -237,13 +246,12 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   }
 }
 
-// Demo data - cluster names must match getDemoClusters() in shared.ts
 function getDemoGitOpsDrifts(): GitOpsDrift[] {
   return [
     {
       resource: 'api-gateway',
       namespace: 'production',
-      cluster: 'eks-prod-us-east-1',
+      cluster: 'prod-east',
       kind: 'Deployment',
       driftType: 'modified',
       gitVersion: 'v2.4.0',
@@ -253,7 +261,7 @@ function getDemoGitOpsDrifts(): GitOpsDrift[] {
     {
       resource: 'config-secret',
       namespace: 'production',
-      cluster: 'eks-prod-us-east-1',
+      cluster: 'prod-east',
       kind: 'Secret',
       driftType: 'modified',
       gitVersion: 'abc123',
@@ -263,7 +271,7 @@ function getDemoGitOpsDrifts(): GitOpsDrift[] {
     {
       resource: 'debug-pod',
       namespace: 'default',
-      cluster: 'gke-staging',
+      cluster: 'staging',
       kind: 'Pod',
       driftType: 'added',
       gitVersion: '-',
@@ -273,13 +281,12 @@ function getDemoGitOpsDrifts(): GitOpsDrift[] {
   ]
 }
 
-// Demo data - cluster names must match getDemoClusters() in shared.ts
 function getDemoSecurityIssues(): SecurityIssue[] {
   return [
     {
       name: 'api-server-7d8f9c6b5-x2k4m',
       namespace: 'production',
-      cluster: 'eks-prod-us-east-1',
+      cluster: 'prod-east',
       issue: 'Privileged container',
       severity: 'high',
       details: 'Container running in privileged mode',
@@ -287,7 +294,7 @@ function getDemoSecurityIssues(): SecurityIssue[] {
     {
       name: 'worker-deployment',
       namespace: 'batch',
-      cluster: 'vllm-gpu-cluster',
+      cluster: 'vllm-d',
       issue: 'Running as root',
       severity: 'high',
       details: 'Container running as root user',
@@ -295,7 +302,7 @@ function getDemoSecurityIssues(): SecurityIssue[] {
     {
       name: 'nginx-ingress',
       namespace: 'ingress',
-      cluster: 'eks-prod-us-east-1',
+      cluster: 'prod-east',
       issue: 'Host network enabled',
       severity: 'medium',
       details: 'Pod using host network namespace',
@@ -303,26 +310,10 @@ function getDemoSecurityIssues(): SecurityIssue[] {
     {
       name: 'monitoring-agent',
       namespace: 'monitoring',
-      cluster: 'gke-staging',
+      cluster: 'staging',
       issue: 'Missing security context',
       severity: 'low',
       details: 'No security context defined',
-    },
-    {
-      name: 'redis-cache',
-      namespace: 'data',
-      cluster: 'openshift-prod',
-      issue: 'Capabilities not dropped',
-      severity: 'medium',
-      details: 'Container not dropping all capabilities',
-    },
-    {
-      name: 'etcd-backup',
-      namespace: 'kube-system',
-      cluster: 'aks-dev-westeu',
-      issue: 'Host path mount',
-      severity: 'high',
-      details: 'Container mounting host path /var/lib/etcd',
     },
   ]
 }

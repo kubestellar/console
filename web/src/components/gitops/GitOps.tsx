@@ -29,8 +29,7 @@ import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import type { DashboardTemplate } from '../dashboard/templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
-import { UnifiedStatsSection, GITOPS_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useDashboard, DashboardCard } from '../../lib/dashboards'
 import { useState } from 'react'
 
@@ -440,6 +439,7 @@ export function GitOps() {
   }, [driftResults, isDetecting, syncedApps])
 
   const filteredApps = useMemo(() => {
+    console.log('Filtering with:', { selectedCluster, statusFilter, appsCount: apps.length })
     const filtered = apps.map(app => {
       // If app was manually synced, update its status
       if (syncedApps.has(app.name)) {
@@ -460,6 +460,7 @@ export function GitOps() {
       if (statusFilter === 'drifted' && app.syncStatus !== 'out-of-sync') return false
       return true
     })
+    console.log('Filtered apps:', filtered.length)
     return filtered
   }, [apps, selectedCluster, statusFilter, syncedApps])
 
@@ -544,7 +545,7 @@ export function GitOps() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="GitOps"
@@ -559,12 +560,13 @@ export function GitOps() {
       />
 
       {/* Configurable Stats Overview */}
-      <UnifiedStatsSection
-        config={GITOPS_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="gitops"
         getStatValue={getStatValue}
         hasData={stats.total > 0}
         isLoading={false}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-gitops-stats-collapsed"
       />
 
       {/* Filters */}

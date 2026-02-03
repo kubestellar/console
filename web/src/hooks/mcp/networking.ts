@@ -231,9 +231,10 @@ export function useServices(cluster?: string, namespace?: string) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
-        setError('Failed to fetch services')
-        // Only fall back to demo data on error if in demo mode and no cached data
-        if (services.length === 0 && getDemoMode()) {
+        // Don't show error at dashboard level - services are optional
+        setError(null)
+        // Fall back to demo data on error if no cached data
+        if (services.length === 0) {
           setServices(getDemoServices().filter(s =>
             (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
           ))
@@ -279,20 +280,13 @@ export function useServices(cluster?: string, namespace?: string) {
 export function useIngresses(cluster?: string, namespace?: string) {
   const [ingresses, setIngresses] = useState<Ingress[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
-      const demoIngresses = getDemoIngresses().filter(i =>
-        (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
-      )
-      setIngresses(demoIngresses)
-      setIsLoading(false)
-      setError(null)
-      return
-    }
     setIsLoading(true)
+    setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
       try {
         const params = new URLSearchParams()
@@ -309,7 +303,9 @@ export function useIngresses(cluster?: string, namespace?: string) {
           const data = await response.json()
           setIngresses(data.ingresses || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
+          setIsRefreshing(false)
           reportAgentDataSuccess()
           return
         }
@@ -324,41 +320,33 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ ingresses: Ingress[] }>(`/api/mcp/ingresses?${params}`)
       setIngresses(data.ingresses || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
-      setError('Failed to fetch Ingresses')
-      // Only fall back to demo data on error if in demo mode
-      if (getDemoMode()) {
-        setIngresses(getDemoIngresses().filter(i =>
-          (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
-        ))
-      }
+      // Don't show error - Ingresses are optional
+      setError(null)
+      setConsecutiveFailures(prev => prev + 1)
+      setIngresses([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { ingresses, isLoading, error, refetch }
+  return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // Hook to get NetworkPolicies
 export function useNetworkPolicies(cluster?: string, namespace?: string) {
   const [networkpolicies, setNetworkPolicies] = useState<NetworkPolicy[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
-      const demoNPs = getDemoNetworkPolicies().filter(np =>
-        (!cluster || np.cluster === cluster) && (!namespace || np.namespace === namespace)
-      )
-      setNetworkPolicies(demoNPs)
-      setIsLoading(false)
-      setError(null)
-      return
-    }
     setIsLoading(true)
+    setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
       try {
         const params = new URLSearchParams()
@@ -375,7 +363,9 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
           const data = await response.json()
           setNetworkPolicies(data.networkpolicies || [])
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
+          setIsRefreshing(false)
           reportAgentDataSuccess()
           return
         }
@@ -390,21 +380,20 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const { data } = await api.get<{ networkpolicies: NetworkPolicy[] }>(`/api/mcp/networkpolicies?${params}`)
       setNetworkPolicies(data.networkpolicies || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
-      setError('Failed to fetch NetworkPolicies')
-      // Only fall back to demo data on error if in demo mode
-      if (getDemoMode()) {
-        setNetworkPolicies(getDemoNetworkPolicies().filter(np =>
-          (!cluster || np.cluster === cluster) && (!namespace || np.namespace === namespace)
-        ))
-      }
+      // Don't show error - NetworkPolicies are optional
+      setError(null)
+      setConsecutiveFailures(prev => prev + 1)
+      setNetworkPolicies([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster, namespace])
 
   useEffect(() => { refetch() }, [refetch])
-  return { networkpolicies, isLoading, error, refetch }
+  return { networkpolicies, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 function getDemoServices(): Service[] {
@@ -417,26 +406,5 @@ function getDemoServices(): Service[] {
     { name: 'prometheus', namespace: 'monitoring', cluster: 'staging', type: 'ClusterIP', clusterIP: '10.96.40.10', ports: ['9090/TCP'], age: '20d' },
     { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], age: '20d' },
     { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], age: '15d' },
-  ]
-}
-
-function getDemoIngresses(): Ingress[] {
-  return [
-    { name: 'api-ingress', namespace: 'production', cluster: 'prod-east', hosts: ['api.kubestellar.io'], address: '52.14.123.45', class: 'nginx', age: '30d' },
-    { name: 'frontend-ingress', namespace: 'web', cluster: 'prod-east', hosts: ['console.kubestellar.io'], address: '52.14.123.45', class: 'nginx', age: '25d' },
-    { name: 'grafana-ingress', namespace: 'monitoring', cluster: 'staging', hosts: ['grafana.staging.local'], class: 'nginx', age: '20d' },
-    { name: 'ml-api-ingress', namespace: 'ml', cluster: 'vllm-d', hosts: ['ml-api.kubestellar.io'], address: '34.56.78.90', class: 'nginx', age: '15d' },
-    { name: 'prometheus-ingress', namespace: 'monitoring', cluster: 'staging', hosts: ['prometheus.staging.local'], class: 'nginx', age: '20d' },
-  ]
-}
-
-function getDemoNetworkPolicies(): NetworkPolicy[] {
-  return [
-    { name: 'deny-all-ingress', namespace: 'production', cluster: 'prod-east', podSelector: '*', policyTypes: ['Ingress'], age: '30d' },
-    { name: 'allow-api-gateway', namespace: 'production', cluster: 'prod-east', podSelector: 'app=api-gateway', policyTypes: ['Ingress'], age: '30d' },
-    { name: 'allow-db-access', namespace: 'data', cluster: 'prod-east', podSelector: 'app=postgres', policyTypes: ['Ingress'], age: '40d' },
-    { name: 'default-deny', namespace: 'ml', cluster: 'vllm-d', podSelector: '*', policyTypes: ['Ingress', 'Egress'], age: '15d' },
-    { name: 'allow-inference', namespace: 'ml', cluster: 'vllm-d', podSelector: 'app=ml-inference', policyTypes: ['Ingress', 'Egress'], age: '15d' },
-    { name: 'monitoring-access', namespace: 'monitoring', cluster: 'staging', podSelector: 'app=prometheus', policyTypes: ['Ingress'], age: '20d' },
   ]
 }

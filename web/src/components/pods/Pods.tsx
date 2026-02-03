@@ -19,8 +19,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
-import { UnifiedStatsSection, PODS_STATS_CONFIG } from '../../lib/unified/stats'
-import type { StatBlockValue } from '../ui/StatsOverview'
+import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
@@ -316,7 +315,7 @@ export function Pods() {
   } : null
 
   return (
-    <div className="">
+    <div className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Pods"
@@ -331,12 +330,13 @@ export function Pods() {
       />
 
       {/* Stats Overview */}
-      <UnifiedStatsSection
-        config={PODS_STATS_CONFIG}
+      <StatsOverview
+        dashboardType="pods"
         getStatValue={getStatValue}
         hasData={!showSkeletons}
         isLoading={showSkeletons}
         lastUpdated={lastUpdated}
+        collapsedStorageKey="kubestellar-pods-stats-collapsed"
       />
 
       {/* Dashboard Cards Section */}

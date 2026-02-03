@@ -137,13 +137,13 @@ export function usePermissions() {
 
   // Get all clusters
   const clusters = useMemo(() => {
-    if (!permissions?.clusters) return []
+    if (!permissions) return []
     return Object.keys(permissions.clusters)
   }, [permissions])
 
   // Check if user has limited access (not cluster-admin) on any cluster
   const hasLimitedAccess = useMemo(() => {
-    if (!permissions?.clusters) return false
+    if (!permissions) return false
     return Object.values(permissions.clusters).some(p => !p.isClusterAdmin)
   }, [permissions])
 

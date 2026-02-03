@@ -185,7 +185,8 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent && !pvcsCache) {
-        setError('Failed to fetch PVCs')
+        // Don't show error - PVCs are optional, some clusters may have none
+        setError(null)
         setPVCs([])
       }
     } finally {
@@ -221,34 +222,28 @@ export function usePVCs(cluster?: string, namespace?: string) {
 export function usePVs(cluster?: string) {
   const [pvs, setPVs] = useState<PV[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
-      const demoPVs = getDemoPVs().filter(pv =>
-        (!cluster || pv.cluster === cluster)
-      )
-      setPVs(demoPVs)
-      setIsLoading(false)
-      setError(null)
-      return
-    }
     setIsLoading(true)
+    setIsRefreshing(true)
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       const { data } = await api.get<{ pvs: PV[] }>(`/api/mcp/pvs?${params}`)
       setPVs(data.pvs || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch (err) {
-      setError('Failed to fetch PVs')
-      // Fall back to demo data on error
-      setPVs(getDemoPVs().filter(pv =>
-        (!cluster || pv.cluster === cluster)
-      ))
+      // Don't show error - PVs are optional
+      setError(null)
+      setConsecutiveFailures(prev => prev + 1)
+      setPVs([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster])
 
@@ -258,7 +253,7 @@ export function usePVs(cluster?: string) {
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { pvs, isLoading, error, refetch }
+  return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // Hook to get ResourceQuotas
@@ -287,7 +282,8 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
       setResourceQuotas(data.resourceQuotas || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch ResourceQuotas')
+      // Don't show error - ResourceQuotas are optional
+      setError(null)
       // Don't fall back to demo data - show empty instead
       setResourceQuotas([])
     } finally {
@@ -330,7 +326,8 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       setLimitRanges(data.limitRanges || [])
       setError(null)
     } catch (err) {
-      setError('Failed to fetch LimitRanges')
+      // Don't show error - LimitRanges are optional
+      setError(null)
       // Don't fall back to demo data - show empty instead
       setLimitRanges([])
     } finally {
@@ -380,18 +377,6 @@ export const COMMON_RESOURCE_TYPES = [
 ] as const
 
 // Demo data functions (not exported)
-
-function getDemoPVs(): PV[] {
-  return [
-    { name: 'pv-postgres-data', cluster: 'prod-east', capacity: '100Gi', accessModes: ['ReadWriteOnce'], reclaimPolicy: 'Retain', status: 'Bound', storageClass: 'gp3', claimRef: 'data/postgres-data', age: '40d' },
-    { name: 'pv-redis-data', cluster: 'prod-east', capacity: '20Gi', accessModes: ['ReadWriteOnce'], reclaimPolicy: 'Retain', status: 'Bound', storageClass: 'gp3', claimRef: 'data/redis-data', age: '40d' },
-    { name: 'pv-prometheus', cluster: 'staging', capacity: '50Gi', accessModes: ['ReadWriteOnce'], reclaimPolicy: 'Delete', status: 'Bound', storageClass: 'standard', claimRef: 'monitoring/prometheus-data', age: '20d' },
-    { name: 'pv-grafana', cluster: 'staging', capacity: '10Gi', accessModes: ['ReadWriteOnce'], reclaimPolicy: 'Delete', status: 'Bound', storageClass: 'standard', claimRef: 'monitoring/grafana-data', age: '20d' },
-    { name: 'pv-model-cache', cluster: 'vllm-d', capacity: '500Gi', accessModes: ['ReadWriteMany'], reclaimPolicy: 'Retain', status: 'Bound', storageClass: 'fast-ssd', claimRef: 'ml/model-cache', age: '15d' },
-    { name: 'pv-training-data', cluster: 'vllm-d', capacity: '1Ti', accessModes: ['ReadWriteMany'], reclaimPolicy: 'Retain', status: 'Available', storageClass: 'fast-ssd', age: '10d' },
-    { name: 'pv-logs', cluster: 'prod-east', capacity: '200Gi', accessModes: ['ReadWriteOnce'], reclaimPolicy: 'Delete', status: 'Bound', storageClass: 'cold-storage', claimRef: 'logging/logs-archive', age: '60d' },
-  ]
-}
 
 function getDemoPVCs(): PVC[] {
   return [
