@@ -1,34 +1,12 @@
-import { useEffect, useCallback, useRef, memo, useState } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
-import { Cpu, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical, GitCompare, CheckSquare, Square, AlertCircle } from 'lucide-react'
-import { DashboardHeader } from '../shared/DashboardHeader'
-import {
-  DndContext,
-  closestCenter,
-  DragOverlay,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { GitCompare, CheckSquare, Square, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
-import { AddCardModal } from '../dashboard/AddCardModal'
-import { TemplatesModal } from '../dashboard/TemplatesModal'
-import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
-import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
-import { DashboardTemplate } from '../dashboard/templates'
-import { formatCardTitle } from '../../lib/formatCardTitle'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-import { useDashboard, DashboardCard } from '../../lib/dashboards'
-import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
-import { useMobile } from '../../hooks/useMobile'
+import { StatBlockValue } from '../ui/StatsOverview'
+import { DashboardPage } from '../../lib/dashboards'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
@@ -41,106 +19,11 @@ const DEFAULT_COMPUTE_CARDS = [
   { type: 'top_pods', title: 'Top Resource Consumers', position: { w: 8, h: 3 } },
 ]
 
-// Sortable card component with drag handle
-interface SortableComputeCardProps {
-  card: DashboardCard
-  onConfigure: () => void
-  onRemove: () => void
-  onWidthChange: (newWidth: number) => void
-  isDragging: boolean
-  isRefreshing?: boolean
-  onRefresh?: () => void
-  lastUpdated?: Date | null
-}
-
-const SortableComputeCard = memo(function SortableComputeCard({
-  card,
-  onConfigure,
-  onRemove,
-  onWidthChange,
-  isDragging,
-  isRefreshing,
-  onRefresh,
-  lastUpdated,
-}: SortableComputeCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: card.id })
-  const { isMobile } = useMobile()
-
-  const cardWidth = card.position?.w || 4
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-  if (!CardComponent) {
-    return null
-  }
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <CardWrapper
-        cardId={card.id}
-        cardType={card.card_type}
-        title={formatCardTitle(card.card_type)}
-        cardWidth={cardWidth}
-        onConfigure={onConfigure}
-        onRemove={onRemove}
-        onWidthChange={onWidthChange}
-        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
-        isRefreshing={isRefreshing}
-        onRefresh={onRefresh}
-        lastUpdated={lastUpdated}
-        dragHandle={
-          <button
-            {...attributes}
-            {...listeners}
-            className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            title="Drag to reorder"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        }
-      >
-        <CardComponent config={card.config} />
-      </CardWrapper>
-    </div>
-  )
-})
-
-// Drag preview for overlay
-function ComputeDragPreviewCard({ card }: { card: DashboardCard }) {
-  const cardWidth = card.position?.w || 4
-  return (
-    <div
-      className="glass rounded-lg p-4 shadow-xl"
-      style={{ width: `${(cardWidth / 12) * 100}%`, minWidth: 200, maxWidth: 400 }}
-    >
-      <div className="flex items-center gap-2">
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium truncate">
-          {formatCardTitle(card.card_type)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 export function Compute() {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
-  const { showIndicator, triggerRefresh } = useRefreshIndicator(refetch)
-  const isRefreshing = dataRefreshing || showIndicator
   const { nodes: gpuNodes } = useGPUNodes()
   // Only show cluster errors - GPU node errors are not useful (many clusters have no GPUs)
   const error = clustersError
@@ -150,92 +33,22 @@ export function Compute() {
   } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
-  
+
   // State for cluster comparison selection
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([])
   const [showClusterList, setShowClusterList] = useState(false)
 
-  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
-  const {
-    cards,
-    setCards,
-    addCards,
-    removeCard,
-    configureCard,
-    updateCardWidth,
-    reset,
-    isCustomized,
-    showAddCard,
-    setShowAddCard,
-    showTemplates,
-    setShowTemplates,
-    configuringCard,
-    setConfiguringCard,
-    openConfigureCard,
-    showCards,
-    setShowCards,
-    expandCards,
-    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
-    autoRefresh,
-    setAutoRefresh,
-  } = useDashboard({
-    storageKey: COMPUTE_CARDS_KEY,
-    defaultCards: DEFAULT_COMPUTE_CARDS,
-    onRefresh: refetch,
-  })
-
-  // Combined loading/refreshing states (useClusters has shared cache so data persists)
-  const isFetching = isLoading || isRefreshing || showIndicator
-  // Only show skeletons when we have no data yet
-  const showSkeletons = clusters.length === 0 && isLoading
-
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {
     if (searchParams.get('addCard') === 'true') {
-      setShowAddCard(true)
       setSearchParams({}, { replace: true })
     }
-  }, [searchParams, setSearchParams, setShowAddCard])
+  }, [searchParams, setSearchParams])
 
   // Trigger refresh when navigating to this page (location.key changes on each navigation)
   useEffect(() => {
     refetch()
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    addCards(newCards)
-    expandCards()
-    setShowAddCard(false)
-  }, [addCards, expandCards, setShowAddCard])
-
-  const handleRemoveCard = useCallback((cardId: string) => {
-    removeCard(cardId)
-  }, [removeCard])
-
-  const handleConfigureCard = useCallback((cardId: string) => {
-    openConfigureCard(cardId, cards)
-  }, [openConfigureCard, cards])
-
-  const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    configureCard(cardId, config)
-    setConfiguringCard(null)
-  }, [configureCard, setConfiguringCard])
-
-  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    updateCardWidth(cardId, newWidth)
-  }, [updateCardWidth])
-
-  const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards = template.cards.map((card, i) => ({
-      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.card_type,
-      config: card.config || {},
-      title: card.title,
-    }))
-    setCards(newCards)
-    expandCards()
-    setShowTemplates(false)
-  }, [setCards, expandCards, setShowTemplates])
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -359,29 +172,130 @@ export function Compute() {
     setSelectedForComparison([])
   }, [])
 
-  // Transform card for ConfigureCardModal
-  const configureCardData = configuringCard ? {
-    id: configuringCard.id,
-    card_type: configuringCard.card_type,
-    config: configuringCard.config,
-    title: configuringCard.title,
-  } : null
+  // Cluster comparison section (rendered between stats and cards)
+  const clusterComparisonSection = (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <button
+          onClick={() => setShowClusterList(!showClusterList)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          aria-expanded={showClusterList}
+          aria-controls="cluster-comparison-list"
+        >
+          <GitCompare className="w-4 h-4" />
+          <span>Cluster Comparison</span>
+          {showClusterList ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+        {selectedForComparison.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {selectedForComparison.length} selected
+            </span>
+            <button
+              onClick={clearSelection}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+            {selectedForComparison.length >= 2 && (
+              <button
+                onClick={handleCompare}
+                className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors text-sm font-medium"
+              >
+                <GitCompare className="w-4 h-4" />
+                Compare ({selectedForComparison.length})
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showClusterList && (
+        <div id="cluster-comparison-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {filteredClusters.map((cluster) => {
+            const isSelected = selectedForComparison.includes(cluster.name)
+            const isDisabled = !isSelected && selectedForComparison.length >= 4
+
+            return (
+              <button
+                key={cluster.name}
+                onClick={() => !isDisabled && toggleClusterSelection(cluster.name)}
+                disabled={isDisabled}
+                className={`glass p-4 rounded-lg text-left transition-all ${
+                  isSelected
+                    ? 'ring-2 ring-purple-500 bg-purple-500/10'
+                    : isDisabled
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:bg-secondary/50'
+                }`}
+                aria-label={`${isSelected ? 'Deselect' : 'Select'} ${cluster.context || cluster.name} for comparison`}
+                aria-pressed={isSelected}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    {isSelected ? (
+                      <CheckSquare className="w-5 h-5 text-purple-400" />
+                    ) : (
+                      <Square className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                      <h4 className="font-medium text-foreground truncate" title={cluster.name}>
+                        {cluster.context || cluster.name}
+                      </h4>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <div className="text-muted-foreground">Nodes</div>
+                        <div className="text-foreground font-medium">{cluster.nodeCount || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">CPUs</div>
+                        <div className="text-foreground font-medium">{cluster.cpuCores || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Pods</div>
+                        <div className="text-foreground font-medium">{cluster.podCount || 0}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {showClusterList && filteredClusters.length === 0 && (
+        <div className="glass p-8 rounded-lg text-center">
+          <p className="text-muted-foreground">No clusters available</p>
+        </div>
+      )}
+    </div>
+  )
 
   return (
-    <div className="pt-16">
-      {/* Header */}
-      <DashboardHeader
-        title="Compute"
-        subtitle="Monitor compute resources across clusters"
-        icon={<Cpu className="w-6 h-6 text-purple-400" />}
-        isFetching={isFetching}
-        onRefresh={triggerRefresh}
-        autoRefresh={autoRefresh}
-        onAutoRefreshChange={setAutoRefresh}
-        autoRefreshId="compute-auto-refresh"
-        lastUpdated={lastUpdated}
-      />
-
+    <DashboardPage
+      title="Compute"
+      subtitle="Monitor compute resources across clusters"
+      icon="Cpu"
+      storageKey={COMPUTE_CARDS_KEY}
+      defaultCards={DEFAULT_COMPUTE_CARDS}
+      statsType="compute"
+      getStatValue={getStatValue}
+      onRefresh={refetch}
+      isLoading={isLoading}
+      isRefreshing={dataRefreshing}
+      lastUpdated={lastUpdated}
+      hasData={hasDataToShow}
+      beforeCards={clusterComparisonSection}
+      emptyState={{
+        title: 'Compute Dashboard',
+        description: 'Add cards to monitor CPU and memory utilization, node health, and resource quotas across your clusters.',
+      }}
+    >
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
@@ -392,220 +306,6 @@ export function Compute() {
           </div>
         </div>
       )}
-
-      {/* Stats Overview - configurable */}
-      <StatsOverview
-        dashboardType="compute"
-        getStatValue={getStatValue}
-        hasData={hasDataToShow}
-        isLoading={showSkeletons}
-        lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-compute-stats-collapsed"
-      />
-
-      {/* Cluster Selection for Comparison */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowClusterList(!showClusterList)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            aria-expanded={showClusterList}
-            aria-controls="cluster-comparison-list"
-          >
-            <GitCompare className="w-4 h-4" />
-            <span>Cluster Comparison</span>
-            {showClusterList ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          {selectedForComparison.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">
-                {selectedForComparison.length} selected
-              </span>
-              <button
-                onClick={clearSelection}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear
-              </button>
-              {selectedForComparison.length >= 2 && (
-                <button
-                  onClick={handleCompare}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors text-sm font-medium"
-                >
-                  <GitCompare className="w-4 h-4" />
-                  Compare ({selectedForComparison.length})
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {showClusterList && (
-          <div id="cluster-comparison-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {filteredClusters.map((cluster) => {
-              const isSelected = selectedForComparison.includes(cluster.name)
-              const isDisabled = !isSelected && selectedForComparison.length >= 4
-              
-              return (
-                <button
-                  key={cluster.name}
-                  onClick={() => !isDisabled && toggleClusterSelection(cluster.name)}
-                  disabled={isDisabled}
-                  className={`glass p-4 rounded-lg text-left transition-all ${
-                    isSelected 
-                      ? 'ring-2 ring-purple-500 bg-purple-500/10' 
-                      : isDisabled 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : 'hover:bg-secondary/50'
-                  }`}
-                  aria-label={`${isSelected ? 'Deselect' : 'Select'} ${cluster.context || cluster.name} for comparison`}
-                  aria-pressed={isSelected}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {isSelected ? (
-                        <CheckSquare className="w-5 h-5 text-purple-400" />
-                      ) : (
-                        <Square className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
-                        <h4 className="font-medium text-foreground truncate" title={cluster.name}>
-                          {cluster.context || cluster.name}
-                        </h4>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <div className="text-muted-foreground">Nodes</div>
-                          <div className="text-foreground font-medium">{cluster.nodeCount || 0}</div>
-                        </div>
-                        <div>
-                          <div className="text-muted-foreground">CPUs</div>
-                          <div className="text-foreground font-medium">{cluster.cpuCores || 0}</div>
-                        </div>
-                        <div>
-                          <div className="text-muted-foreground">Pods</div>
-                          <div className="text-foreground font-medium">{cluster.podCount || 0}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {showClusterList && filteredClusters.length === 0 && (
-          <div className="glass p-8 rounded-lg text-center">
-            <p className="text-muted-foreground">No clusters available</p>
-          </div>
-        )}
-      </div>
-
-      {/* Dashboard Cards Section */}
-      <div className="mb-6">
-        {/* Card section header with toggle and buttons */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowCards(!showCards)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Compute Cards ({cards.length})</span>
-            {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {/* Cards grid */}
-        {showCards && (
-          <>
-            {cards.length === 0 ? (
-              <div className="glass p-8 rounded-lg border-2 border-dashed border-border/50 text-center">
-                <div className="flex justify-center mb-4">
-                  <Cpu className="w-12 h-12 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">Compute Dashboard</h3>
-                <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-                  Add cards to monitor CPU and memory utilization, node health, and resource quotas across your clusters.
-                </p>
-                <button
-                  onClick={() => setShowAddCard(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Cards
-                </button>
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    {cards.map(card => (
-                      <SortableComputeCard
-                        key={card.id}
-                        card={card}
-                        onConfigure={() => handleConfigureCard(card.id)}
-                        onRemove={() => handleRemoveCard(card.id)}
-                        onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-                        isDragging={activeId === card.id}
-                        isRefreshing={isRefreshing}
-                        onRefresh={triggerRefresh}
-                        lastUpdated={lastUpdated}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-                <DragOverlay>
-                  {activeId ? (
-                    <div className="opacity-80 rotate-3 scale-105">
-                      <ComputeDragPreviewCard card={cards.find(c => c.id === activeId)!} />
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Floating action buttons */}
-      <FloatingDashboardActions
-        onAddCard={() => setShowAddCard(true)}
-        onOpenTemplates={() => setShowTemplates(true)}
-        onResetToDefaults={reset}
-        isCustomized={isCustomized}
-      />
-
-      {/* Add Card Modal */}
-      <AddCardModal
-        isOpen={showAddCard}
-        onClose={() => setShowAddCard(false)}
-        onAddCards={handleAddCards}
-        existingCardTypes={cards.map(c => c.card_type)}
-      />
-
-      {/* Templates Modal */}
-      <TemplatesModal
-        isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        onApplyTemplate={applyTemplate}
-      />
-
-      {/* Configure Card Modal */}
-      <ConfigureCardModal
-        isOpen={!!configuringCard}
-        card={configureCardData}
-        onClose={() => setConfiguringCard(null)}
-        onSave={handleSaveCardConfig}
-      />
-    </div>
+    </DashboardPage>
   )
 }
