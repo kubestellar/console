@@ -179,6 +179,22 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
+  // Listen for demo data clear event (when switching from demo to live mode)
+  useEffect(() => {
+    const handleClearDemoData = () => {
+      // Clear module-level cache
+      eventsCache = null
+      // Reset to loading state
+      setEvents([])
+      setIsLoading(true)
+      setLastUpdated(null)
+      setLastRefresh(null)
+    }
+
+    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
+    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
+  }, [])
+
   return {
     events,
     isLoading,
@@ -296,6 +312,21 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
+
+  // Listen for demo data clear event (when switching from demo to live mode)
+  useEffect(() => {
+    const handleClearDemoData = () => {
+      // Clear module-level cache
+      warningEventsCache = null
+      // Reset to loading state
+      setEvents([])
+      setIsLoading(true)
+      setLastUpdated(null)
+    }
+
+    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
+    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
+  }, [])
 
   return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }

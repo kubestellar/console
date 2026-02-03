@@ -3,6 +3,7 @@ import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from
 import { getDemoMode, setGlobalDemoMode, isDemoModeForced } from '../useDemoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getPresentationMode } from '../usePresentationMode'
+import { clearAllCaches as clearCacheLibraryCaches } from '../../lib/cache'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
@@ -661,6 +662,110 @@ if (import.meta.hot) {
       lastRefresh: null,
     }
     clusterSubscribers.clear()
+  })
+}
+
+// ============================================================================
+// Demo Mode Switching - Clear caches and reset loading state
+// ============================================================================
+
+// List of localStorage keys that contain demo data and should be cleared
+const DEMO_CACHE_KEYS = [
+  'kubestellar-cluster-cache',
+  'kubestellar-cluster-distributions',
+  'kubestellar-gpu-cache',
+  'kubestellar-tpu-cache',
+  'kubestellar-events-cache',
+  'kubestellar-pods-cache',
+  'kubestellar-deployments-cache',
+]
+
+/**
+ * Clear all demo data from caches and reset to loading state.
+ * Called when switching from demo mode to live mode.
+ * This ensures cards show loading skeletons until real data loads.
+ */
+export async function clearDemoDataAndResetLoading() {
+  // Clear the cache library's IndexedDB and localStorage metadata
+  try {
+    await clearCacheLibraryCaches()
+  } catch {
+    // Ignore cache library errors
+  }
+
+  // Clear localStorage caches
+  DEMO_CACHE_KEYS.forEach(key => {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // Ignore storage errors
+    }
+  })
+
+  // Clear any keys matching cache patterns
+  try {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (
+        key.startsWith('kubestellar-') ||
+        key.startsWith('console_cache_') ||
+        key.startsWith('kc-cache-')
+      )) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+  } catch {
+    // Ignore storage errors
+  }
+
+  // Reset cluster cache to loading state (empty clusters, isLoading=true)
+  clusterCache = {
+    clusters: [],
+    lastUpdated: null,
+    isLoading: true,
+    isRefreshing: false,
+    error: null,
+    consecutiveFailures: 0,
+    isFailed: false,
+    lastRefresh: null,
+  }
+
+  // Reset fetch tracking
+  initialFetchStarted = false
+  healthCheckFailures = 0
+  distributionDetectionFailures = 0
+
+  // Clear per-cluster failure tracking
+  clusterHealthFailureStart.clear()
+
+  // Notify all subscribers immediately so they show loading state
+  notifyClusterSubscribers()
+
+  // Dispatch event so other hooks can reset their state
+  window.dispatchEvent(new CustomEvent('kc-clear-demo-data'))
+
+  // Trigger fresh fetch after a short delay to let React re-render
+  setTimeout(() => {
+    fullFetchClusters()
+  }, 100)
+}
+
+// Listen for demo mode changes and clear caches when switching to live mode
+if (typeof window !== 'undefined') {
+  let previousDemoMode = getDemoMode()
+
+  window.addEventListener('kc-demo-mode-change', (event: Event) => {
+    const customEvent = event as CustomEvent<boolean>
+    const newDemoMode = customEvent.detail
+
+    // When switching FROM demo mode TO live mode, clear all demo data
+    if (previousDemoMode && !newDemoMode) {
+      clearDemoDataAndResetLoading()
+    }
+
+    previousDemoMode = newDemoMode
   })
 }
 

@@ -97,6 +97,22 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
     refetch()
   }, [cluster, namespace]) // Only refetch on parameter changes, not on refetch function change
 
+  // Listen for demo data clear event (when switching from demo to live mode)
+  useEffect(() => {
+    const handleClearDemoData = () => {
+      // Reset to loading state and clear data
+      setIssues([])
+      setIsLoading(true)
+      setIsUsingDemoData(false)
+      setLastUpdated(null)
+      setLastRefresh(null)
+      // Refetch will be triggered by the mode change
+    }
+
+    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
+    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
+  }, [])
+
   return {
     issues,
     isLoading,
@@ -187,6 +203,20 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch])
+
+  // Listen for demo data clear event (when switching from demo to live mode)
+  useEffect(() => {
+    const handleClearDemoData = () => {
+      // Reset to loading state and clear data
+      setDrifts([])
+      setIsLoading(true)
+      setLastRefresh(null)
+      // Refetch will be triggered by the mode change
+    }
+
+    window.addEventListener('kc-clear-demo-data', handleClearDemoData)
+    return () => window.removeEventListener('kc-clear-demo-data', handleClearDemoData)
+  }, [])
 
   return {
     drifts,
