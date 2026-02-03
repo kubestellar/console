@@ -57,6 +57,8 @@ export interface DashboardPageProps {
   hasData?: boolean
   /** Dashboard-specific content (rendered below cards) */
   children?: ReactNode
+  /** Content rendered between stats and cards section (e.g., tabs, filters) */
+  beforeCards?: ReactNode
   /** Empty state configuration for no cards */
   emptyState?: {
     title: string
@@ -89,6 +91,7 @@ export function DashboardPage({
   lastUpdated,
   hasData = true,
   children,
+  beforeCards,
   emptyState,
   isDemoData = false,
 }: DashboardPageProps) {
@@ -227,6 +230,9 @@ export function DashboardPage({
         collapsedStorageKey={`${storageKey}-stats-collapsed`}
         isDemoData={isDemoData}
       />
+
+      {/* Content before cards (tabs, filters, etc.) */}
+      {beforeCards}
 
       {/* Dashboard Cards Section */}
       <div className="mb-6">
