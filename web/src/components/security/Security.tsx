@@ -11,7 +11,9 @@ import { cn } from '../../lib/cn'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
+import { Skeleton } from '../ui/Skeleton'
 import {
   getMockSecurityData,
   getMockRBACData,
@@ -48,8 +50,13 @@ export function Security() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [refreshError, setRefreshError] = useState<string | null>(null)
 
-  // Check demo mode
+  // Check demo mode and agent status
   const { isDemoMode } = useDemoMode()
+  const { status: agentStatus } = useLocalAgent()
+
+  // When demo mode is OFF and agent is not connected, force skeleton display
+  const isAgentOffline = agentStatus !== 'connected'
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline
 
   // Fetch cached security issues (stale-while-revalidate pattern)
   const { issues: cachedSecurityIssues, isLoading: securityLoading, isRefreshing: securityRefreshing } = useCachedSecurityIssues()
@@ -388,6 +395,56 @@ export function Security() {
         description: 'Add cards to monitor security issues, RBAC policies, and compliance checks across your clusters.',
       }}
     >
+      {/* Show skeleton when agent is offline and demo mode is OFF */}
+      {forceSkeletonForOffline ? (
+        <div className="space-y-6">
+          {/* Quick Stats Skeleton */}
+          <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="glass p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Skeleton variant="circular" width={40} height={40} />
+                  <div>
+                    <Skeleton variant="text" width={60} height={28} className="mb-1" />
+                    <Skeleton variant="text" width={80} height={12} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Charts Skeleton */}
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass p-4 rounded-lg">
+                <Skeleton variant="text" width={100} height={16} className="mb-4" />
+                <div className="flex justify-center">
+                  <Skeleton variant="circular" width={150} height={150} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Lists Skeleton */}
+          <div className="grid grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="glass p-4 rounded-lg">
+                <Skeleton variant="text" width={120} height={16} className="mb-4" />
+                <div className="space-y-2">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="flex items-center gap-3 p-2 rounded bg-secondary/20">
+                      <Skeleton variant="circular" width={16} height={16} />
+                      <div className="flex-1">
+                        <Skeleton variant="text" width={150} height={14} className="mb-1" />
+                        <Skeleton variant="text" width={80} height={12} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -933,6 +990,8 @@ export function Security() {
             )
           })}
         </div>
+      )}
+      </>
       )}
     </DashboardPage>
   )
