@@ -5,6 +5,7 @@ import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCa
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ClusterFocusProps {
   config?: {
@@ -20,6 +21,18 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { issues: deploymentIssues } = useCachedDeploymentIssues(selectedCluster)
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
+
+  const hasData = allClusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersLoading && hasData,
+    hasData,
+  })
+
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,

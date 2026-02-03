@@ -14,6 +14,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
+import { useReportCardDataState } from './CardDataContext'
 
 interface TimePoint {
   time: string
@@ -84,7 +85,17 @@ export function EventsTimeline() {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && events.length === 0
+  const hasData = events.length > 0
   const { deduplicatedClusters: clusters } = useClusters()
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading,
+    isRefreshing: hookLoading && hasData,
+    hasData,
+  })
   const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])

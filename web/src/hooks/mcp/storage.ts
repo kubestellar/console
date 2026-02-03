@@ -222,22 +222,28 @@ export function usePVCs(cluster?: string, namespace?: string) {
 export function usePVs(cluster?: string) {
   const [pvs, setPVs] = useState<PV[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
+    setIsRefreshing(true)
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       const { data } = await api.get<{ pvs: PV[] }>(`/api/mcp/pvs?${params}`)
       setPVs(data.pvs || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch (err) {
       // Don't show error - PVs are optional
       setError(null)
+      setConsecutiveFailures(prev => prev + 1)
       setPVs([])
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [cluster])
 
@@ -247,7 +253,7 @@ export function usePVs(cluster?: string) {
     return () => clearInterval(interval)
   }, [refetch])
 
-  return { pvs, isLoading, error, refetch }
+  return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // Hook to get ResourceQuotas

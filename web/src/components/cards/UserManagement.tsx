@@ -22,6 +22,7 @@ import {
 } from '../../lib/cards'
 import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
+import { useReportCardDataState } from './CardDataContext'
 
 interface UserManagementProps {
   config?: Record<string, unknown>
@@ -68,7 +69,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const { drillToRBAC } = useDrillDownActions()
   const { user: currentUser } = useAuth()
   const { users: allUsers, isLoading: usersLoading, error: usersError, updateUserRole, deleteUser } = useConsoleUsers()
-  const { deduplicatedClusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   // Fetch ALL SAs from ALL clusters upfront, filter locally
   const { serviceAccounts: allServiceAccounts, isLoading: sasInitialLoading, failedClusters: _saFailedClusters } = useAllK8sServiceAccounts(allClusters)
   // Fetch ALL OpenShift users from ALL clusters upfront, filter locally
@@ -77,6 +78,18 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   // Only show loading state on initial load when there's no data
   const sasLoading = sasInitialLoading && allServiceAccounts.length === 0
   const openshiftUsersLoading = openshiftInitialLoading && allOpenshiftUsers.length === 0
+
+  const hasInitialData = allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0
+  const isLoadingData = clustersLoading || usersLoading || sasInitialLoading || openshiftInitialLoading
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: Boolean(usersError) && !hasInitialData,
+    consecutiveFailures: usersError ? 1 : 0,
+    isLoading: isLoadingData && !hasInitialData,
+    isRefreshing: isLoadingData && hasInitialData,
+    hasData: hasInitialData,
+  })
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 

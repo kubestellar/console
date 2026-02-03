@@ -3,6 +3,7 @@ import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, Chev
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
+import { useReportCardDataState } from './CardDataContext'
 
 interface CommandHistoryItem {
   id: string
@@ -22,8 +23,19 @@ interface YAMLManifest {
 
 export function Kubectl() {
   const { execute } = useKubectl()
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selectedContext, setSelectedContext] = useState<string>('')
+
+  const hasData = clusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
   const [command, setCommand] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')
   const [output, setOutput] = useState<string[]>([])

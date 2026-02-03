@@ -6,6 +6,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useReportCardDataState } from './CardDataContext'
 
 interface NamespaceOverviewProps {
   config?: {
@@ -62,6 +63,17 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   }, [allDeploymentIssues, selectedNamespace])
 
   const cluster = clusters.find(c => c.name === selectedCluster)
+
+  const hasData = allClusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersLoading && hasData,
+    hasData,
+  })
 
   if (clustersLoading && allClusters.length === 0) {
     return (

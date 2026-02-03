@@ -5,6 +5,7 @@ import { useClusters, useNodes, useNamespaces, useDeployments, useServices, useP
 import { useCachedPodIssues } from '../../../hooks/useCachedData'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useReportCardDataState } from '../CardDataContext'
 import { CardControls, SortDirection } from '../../ui/CardControls'
 import { useChartFilters } from '../../../lib/cards'
 import { TreeNode } from './TreeRenderer'
@@ -13,9 +14,20 @@ import { buildNamespaceResources, getVisibleNamespaces, getIssueCounts, getPodsF
 import type { ClusterResourceTreeProps, TreeLens, SortByOption, NamespaceResources, ClusterDataCache } from './types'
 
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToCluster, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
+
+  const hasData = clusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
 
   // Tree view state - start with clusters expanded
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['clusters']))

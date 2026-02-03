@@ -4,6 +4,7 @@ import type { DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { useReportCardDataState } from './CardDataContext'
 import {
   useCardData, commonComparators,
   CardSkeleton, CardEmptyState, CardSearchInput,
@@ -35,12 +36,25 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   const {
     issues: rawIssues,
     isLoading: hookLoading,
+    isRefreshing,
+    isFailed,
+    consecutiveFailures,
     error
   } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
   // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && rawIssues.length === 0
+  const hasData = rawIssues.length > 0
+  const isLoading = hookLoading && !hasData
   const { drillToDeployment } = useDrillDownActions()
+
+  // Report data state to CardWrapper for failure badge rendering
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isRefreshing || (hookLoading && hasData),
+    hasData,
+  })
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

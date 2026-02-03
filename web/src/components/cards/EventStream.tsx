@@ -9,6 +9,7 @@ import {
   CardSkeleton, CardSearchInput,
   CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 type SortByOption = 'time' | 'count' | 'type'
 
@@ -28,6 +29,16 @@ export function EventStream() {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawEvents.length === 0
+  const hasData = rawEvents.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: !!error && !hasData,
+    consecutiveFailures: error ? 1 : 0,
+    isLoading,
+    isRefreshing: hookLoading && hasData,
+    hasData,
+  })
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

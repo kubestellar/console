@@ -6,6 +6,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useReportCardDataState } from './CardDataContext'
 
 interface GPUStatusProps {
   config?: Record<string, unknown>
@@ -37,6 +38,16 @@ export function GPUStatus({ config }: GPUStatusProps) {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
+  const hasData = rawNodes.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading,
+    isRefreshing: hookLoading && hasData,
+    hasData,
+  })
 
   // Card-specific GPU type filter (not handled by useCardData)
   const [selectedGpuType, setSelectedGpuType] = useState<string>('all')

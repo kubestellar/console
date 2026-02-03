@@ -9,6 +9,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../li
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable } from '../clusters/utils'
+import { useReportCardDataState } from './CardDataContext'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -127,6 +128,16 @@ export function ClusterHealth() {
 
   // Only show skeleton when no cached data exists - prevents flickering on refresh
   const isLoading = isLoadingHook && rawClusters.length === 0
+  const hasData = rawClusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: !!error && !hasData,
+    consecutiveFailures: error ? 1 : 0,
+    isLoading,
+    isRefreshing: isLoadingHook && hasData,
+    hasData,
+  })
 
   // Calculate GPU counts per cluster
   const gpuByCluster = useMemo(() => {

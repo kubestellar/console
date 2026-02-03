@@ -6,6 +6,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatMemoryStat } from '../../lib/formatStats'
 import { useChartFilters } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 export function ComputeOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -90,6 +91,17 @@ export function ComputeOverview() {
   // Check if we have real data from reachable clusters
   const hasRealData = !isLoading && filteredClusters.length > 0 &&
     filteredClusters.some(c => c.reachable !== false && c.cpuCores !== undefined && c.nodeCount !== undefined && c.nodeCount > 0)
+
+  const hasData = clusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: (isLoading || gpuLoading) && hasData,
+    hasData,
+  })
 
   if (isLoading && !clusters.length) {
     return (

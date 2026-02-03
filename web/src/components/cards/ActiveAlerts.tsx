@@ -23,6 +23,7 @@ import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 // Format relative time
 function formatRelativeTime(dateString: string): string {
@@ -44,6 +45,17 @@ type SortField = 'severity' | 'time'
 export function ActiveAlerts() {
   const { activeAlerts, acknowledgedAlerts, stats, acknowledgeAlert, runAIDiagnosis } = useAlerts()
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
+
+  const hasData = activeAlerts.length > 0 || acknowledgedAlerts.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: false,
+    isRefreshing: false,
+    hasData,
+  })
   const { open } = useDrillDown()
   const { missions, setActiveMission, openSidebar } = useMissions()
 

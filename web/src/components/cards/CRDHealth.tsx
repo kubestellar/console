@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, XCircle, Database } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { useReportCardDataState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 
@@ -35,6 +36,16 @@ const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1,
 
 export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { isLoading, deduplicatedClusters } = useClusters()
+
+  // Report card data state (CRDHealth uses demo data, so never fails)
+  const hasData = deduplicatedClusters.length > 0
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
 
   const [filterGroup, setFilterGroup] = useState<string>('')
 

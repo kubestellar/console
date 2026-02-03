@@ -6,6 +6,7 @@ import { AgentIcon } from '../agent/AgentIcon'
 import { CloudProviderIcon } from '../ui/CloudProviderIcon'
 import type { CloudProvider } from '../ui/CloudProviderIcon'
 import { cn } from '../../lib/cn'
+import { useReportCardDataState } from './CardDataContext'
 
 const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   operational: 'bg-green-500',
@@ -83,6 +84,17 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
 export function ProviderHealth() {
   const { aiProviders, cloudProviders, isLoading } = useProviderHealth()
   const navigate = useNavigate()
+
+  const hasData = aiProviders.length > 0 || cloudProviders.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
 
   const goToSettings = () => navigate('/settings')
 

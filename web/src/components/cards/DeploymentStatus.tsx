@@ -77,15 +77,23 @@ export function DeploymentStatus() {
   const {
     deployments: allDeployments,
     isLoading: hookLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useCachedDeployments()
 
-  // Report data state to CardWrapper for failure badge rendering
-  useReportCardDataState({ isFailed, consecutiveFailures })
-
   // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && allDeployments.length === 0
+  const hasData = allDeployments.length > 0
+  const isLoading = hookLoading && !hasData
+
+  // Report data state to CardWrapper for failure badge rendering
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isRefreshing || (hookLoading && hasData),
+    hasData,
+  })
 
   // Card-specific status filter (kept as separate hook)
   const { statusFilter, setStatusFilter } = useStatusFilter({

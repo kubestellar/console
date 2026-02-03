@@ -4,6 +4,7 @@ import { useCachedEvents } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
+import { useReportCardDataState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
@@ -44,6 +45,16 @@ export function WarningEvents() {
 
   // Pre-filter to only warning events before passing to useCardData
   const warningOnly = useMemo(() => events.filter(e => e.type === 'Warning'), [events])
+
+  // Report data state to CardWrapper for failure badge rendering
+  const hasData = events.length > 0
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isRefreshing || (isLoading && hasData),
+    hasData,
+  })
 
   const {
     items: displayedEvents,

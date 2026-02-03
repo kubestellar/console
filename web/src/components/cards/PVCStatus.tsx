@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { usePVCs } from '../../hooks/useMCP'
 import type { PVC } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useReportCardDataState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -66,8 +67,18 @@ function getStatusColor(status: string) {
 }
 
 export function PVCStatus() {
-  const { pvcs, isLoading, error } = usePVCs()
+  const { pvcs, isLoading, isRefreshing, error, consecutiveFailures, isFailed } = usePVCs()
   const { drillToPVC } = useDrillDownActions()
+
+  // Report card data state
+  const hasData = pvcs.length > 0
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isRefreshing || (isLoading && hasData),
+    hasData,
+  })
 
   const {
     items: displayPVCs,

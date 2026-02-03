@@ -29,6 +29,7 @@ import {
   type ClusterGroupQuery,
 } from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -103,8 +104,19 @@ function relativeTime(iso: string): string {
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
   const { groups, createGroup, updateGroup, deleteGroup, evaluateGroup } = useClusterGroups()
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [isCreating, setIsCreating] = useState(false)
+
+  const hasData = clusters.length > 0 || groups.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [refreshing, setRefreshing] = useState<Set<string>>(new Set())

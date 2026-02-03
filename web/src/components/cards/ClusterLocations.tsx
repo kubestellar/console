@@ -6,6 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -213,6 +214,18 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToCluster } = useDrillDownActions()
+
+  const hasData = allClusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
+
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,

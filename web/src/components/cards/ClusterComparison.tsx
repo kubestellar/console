@@ -4,6 +4,7 @@ import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ClusterComparisonProps {
   config?: {
@@ -12,9 +13,21 @@ interface ClusterComparisonProps {
 }
 
 export function ClusterComparison({ config }: ClusterComparisonProps) {
-  const { deduplicatedClusters: rawClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: rawClusters, isLoading: clustersLoading } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
+
+  const isLoading = clustersLoading && rawClusters.length === 0
+  const hasData = rawClusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading,
+    isRefreshing: clustersLoading && hasData,
+    hasData,
+  })
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,

@@ -4,15 +4,26 @@ import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Filter, Chevron
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useReportCardDataState } from './CardDataContext'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
 import { useChartFilters } from '../../lib/cards'
 
 export function StorageOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { pvcs, isLoading: pvcsLoading } = usePVCs()
+  const { pvcs, isLoading: pvcsLoading, isRefreshing, consecutiveFailures, isFailed } = usePVCs()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToPVC } = useDrillDownActions()
+
+  // Report card data state
+  const hasData = pvcs.length > 0
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading: (isLoading || pvcsLoading) && !hasData,
+    isRefreshing: isRefreshing || ((isLoading || pvcsLoading) && hasData),
+    hasData,
+  })
 
   // Local cluster filter
   const {

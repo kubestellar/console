@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow } from '../../lib/cards/CardComponents'
+import { useReportCardDataState } from './CardDataContext'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
@@ -26,7 +27,17 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
+  const hasData = rawNodes.length > 0
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading,
+    isRefreshing: hookLoading && hasData,
+    hasData,
+  })
   const { drillToResources } = useDrillDownActions()
 
   const [selectedGpuType, setSelectedGpuType] = useState<string>('all')

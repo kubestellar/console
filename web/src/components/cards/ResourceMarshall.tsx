@@ -14,6 +14,7 @@ import { useWorkloads } from '../../hooks/useWorkloads'
 import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
 import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
+import { useReportCardDataState } from './CardDataContext'
 
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
@@ -35,12 +36,23 @@ function groupDependencies(deps: ResolvedDependency[]) {
 }
 
 export function ResourceMarshall() {
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
 
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [selectedWorkload, setSelectedWorkload] = useState<string>('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  const hasData = clusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
 
   // Fetch namespaces for selected cluster
   const { namespaces, isLoading: nsLoading } = useNamespaces(selectedCluster || undefined)

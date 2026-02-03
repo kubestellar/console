@@ -8,6 +8,7 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
 import { useChartFilters } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ResourceCapacityProps {
   config?: Record<string, unknown>
@@ -44,6 +45,17 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const [sortBy, setSortBy] = useState<SortByOption>('name')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
+
+  const hasData = allClusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isRefreshing && hasData,
+    hasData,
+  })
 
   // Local cluster filter
   const {

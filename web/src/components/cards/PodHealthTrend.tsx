@@ -14,6 +14,7 @@ import {
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useReportCardDataState } from './CardDataContext'
 
 interface HealthPoint {
   time: string
@@ -36,6 +37,18 @@ export function PodHealthTrend() {
   const { issues, isLoading: issuesLoading } = useCachedPodIssues()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  const hasData = clusters.length > 0 || issues.length > 0
+  const isLoadingData = clustersLoading || issuesLoading
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoadingData && !hasData,
+    isRefreshing: isLoadingData && hasData,
+    hasData,
+  })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)

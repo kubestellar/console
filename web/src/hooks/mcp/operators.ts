@@ -62,6 +62,7 @@ export function useOperators(cluster?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   // Track cluster count to re-fetch when clusters become available
   const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
   // Version counter to force refetch
@@ -86,6 +87,7 @@ export function useOperators(cluster?: string) {
           const allOperators = clusters.flatMap(c => getDemoOperators(c))
           setOperators(allOperators)
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           setIsRefreshing(false)
         }
@@ -119,6 +121,7 @@ export function useOperators(cluster?: string) {
           setOperators(allOperators)
           saveOperatorsCacheToStorage(allOperators, cacheKey)
           setError(null)
+          setConsecutiveFailures(0)
           setLastRefresh(Date.now())
           setIsLoading(false)
           setIsRefreshing(false)
@@ -133,12 +136,14 @@ export function useOperators(cluster?: string) {
           setOperators(newOperators)
           saveOperatorsCacheToStorage(newOperators, cacheKey)
           setError(null)
+          setConsecutiveFailures(0)
           setLastRefresh(Date.now())
         }
       } catch (err) {
         if (!cancelled) {
           // Don't show error - operators are optional
           setError(null)
+          setConsecutiveFailures(prev => prev + 1)
           // Keep cached data on error instead of clearing
           if (operators.length === 0) {
             setOperators([])
@@ -163,7 +168,7 @@ export function useOperators(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [])
 
-  return { operators, isLoading, isRefreshing, error, refetch, lastRefresh }
+  return { operators, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // Hook to get operator subscriptions for a cluster (or all clusters if undefined)
@@ -176,6 +181,7 @@ export function useOperatorSubscriptions(cluster?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   // Track cluster count to re-fetch when clusters become available
   const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
   // Version counter to force refetch
@@ -200,6 +206,7 @@ export function useOperatorSubscriptions(cluster?: string) {
           const allSubscriptions = clusters.flatMap(c => getDemoOperatorSubscriptions(c))
           setSubscriptions(allSubscriptions)
           setError(null)
+          setConsecutiveFailures(0)
           setIsLoading(false)
           setIsRefreshing(false)
         }
@@ -233,6 +240,7 @@ export function useOperatorSubscriptions(cluster?: string) {
           setSubscriptions(allSubscriptions)
           saveSubscriptionsCacheToStorage(allSubscriptions, cacheKey)
           setError(null)
+          setConsecutiveFailures(0)
           setLastRefresh(Date.now())
           setIsLoading(false)
           setIsRefreshing(false)
@@ -247,12 +255,14 @@ export function useOperatorSubscriptions(cluster?: string) {
           setSubscriptions(newSubscriptions)
           saveSubscriptionsCacheToStorage(newSubscriptions, cacheKey)
           setError(null)
+          setConsecutiveFailures(0)
           setLastRefresh(Date.now())
         }
       } catch (err) {
         if (!cancelled) {
           // Don't show error - subscriptions are optional
           setError(null)
+          setConsecutiveFailures(prev => prev + 1)
           // Keep cached data on error instead of clearing
           if (subscriptions.length === 0) {
             setSubscriptions([])
@@ -277,7 +287,7 @@ export function useOperatorSubscriptions(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [])
 
-  return { subscriptions, isLoading, isRefreshing, error, refetch, lastRefresh }
+  return { subscriptions, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 function getDemoOperators(cluster: string): Operator[] {

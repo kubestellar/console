@@ -7,6 +7,7 @@ import {
   CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
 import { K8S_DOCS } from '../../config/externalApis'
+import { useReportCardDataState } from './CardDataContext'
 
 // Gateway status types
 type GatewayStatusType = 'Programmed' | 'Accepted' | 'Pending' | 'NotAccepted' | 'Unknown'
@@ -162,6 +163,16 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   const isLoading = false
   // Set to true on fetch errors when implementing real API calls
   const hasError = false
+  const hasData = DEMO_GATEWAYS.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: hasError && !hasData,
+    consecutiveFailures: hasError ? 1 : 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
 
   const {
     items: paginatedGateways,

@@ -84,8 +84,26 @@ async function fetchAPI<T>(
   return response.json()
 }
 
-// Fetch list of available clusters (filtered to short names only)
+// Get list of reachable clusters (prefer local agent data for accurate reachability)
+function getReachableClusters(): string[] {
+  // Use local agent's cluster cache - it has up-to-date reachability info
+  if (clusterCacheRef.clusters.length > 0) {
+    return clusterCacheRef.clusters
+      .filter(c => c.reachable !== false && !c.name.includes('/'))
+      .map(c => c.name)
+  }
+  return []
+}
+
+// Fetch list of available clusters from backend (fallback)
 async function fetchClusters(): Promise<string[]> {
+  // First check local agent data - faster and more accurate reachability
+  const localClusters = getReachableClusters()
+  if (localClusters.length > 0) {
+    return localClusters
+  }
+
+  // Fall back to backend API
   const data = await fetchAPI<{ clusters: Array<{ name: string; reachable?: boolean }> }>('clusters')
   return (data.clusters || [])
     .filter(c => c.reachable !== false && !c.name.includes('/'))

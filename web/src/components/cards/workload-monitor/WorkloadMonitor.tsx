@@ -8,6 +8,7 @@ import { useClusters, useNamespaces } from '../../../hooks/useMCP'
 import { useWorkloads } from '../../../hooks/useWorkloads'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { cn } from '../../../lib/cn'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   MonitoredResource,
   MonitorViewMode,
@@ -33,10 +34,21 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const monitorConfig = config as WorkloadMonitorConfig | undefined
 
   // Cascading selectors (used when config doesn't pre-specify the workload)
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState(monitorConfig?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState(monitorConfig?.namespace || '')
   const [selectedWorkload, setSelectedWorkload] = useState(monitorConfig?.workload || '')
+
+  const hasData = clusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: clustersLoading && !hasData,
+    isRefreshing: clustersLoading && hasData,
+    hasData,
+  })
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)
   const activeCluster = isPreConfigured ? monitorConfig!.cluster! : selectedCluster

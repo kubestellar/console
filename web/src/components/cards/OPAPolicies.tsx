@@ -7,6 +7,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getDemoMode } from '../../hooks/useDemoMode'
+import { useReportCardDataState } from './CardDataContext'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -1048,8 +1049,19 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 }
 
 export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
+
+  const hasData = clusters.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: isLoading && hasData,
+    hasData,
+  })
 
   // Fetch clusters directly from agent as fallback (skip in demo mode)
   const [agentClusters, setAgentClusters] = useState<{ name: string; healthy?: boolean }[]>([])

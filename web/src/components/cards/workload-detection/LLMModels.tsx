@@ -5,6 +5,7 @@ import { CardPaginationFooter, CardControlsRow } from '../../../lib/cards/CardCo
 import { useCachedLLMdModels } from '../../../hooks/useCachedData'
 import { LLMD_CLUSTERS } from './shared'
 import type { LLMdModel } from '../../../hooks/useLLMd'
+import { useReportCardDataState } from '../CardDataContext'
 
 type SortByOption = 'name'
 
@@ -17,7 +18,18 @@ interface LLMModelsProps {
 }
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
-  const { models, isLoading } = useCachedLLMdModels(LLMD_CLUSTERS)
+  const { models, isLoading, isRefreshing } = useCachedLLMdModels(LLMD_CLUSTERS)
+
+  const hasData = models.length > 0
+
+  // Report state to CardWrapper for refresh animation
+  useReportCardDataState({
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: isLoading && !hasData,
+    isRefreshing: (isRefreshing ?? isLoading) && hasData,
+    hasData,
+  })
 
   const {
     items: paginatedItems,
