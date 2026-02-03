@@ -5,24 +5,23 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedServices } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import { useChartFilters } from '../../lib/cards'
 
 export function NetworkOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { services, isLoading: servicesLoading, isRefreshing, consecutiveFailures, isFailed } = useCachedServices()
+  const { services, isLoading: servicesLoading, consecutiveFailures, isFailed } = useCachedServices()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
 
   // Report card data state
-  const hasData = services.length > 0
-  useReportCardDataState({
+  const combinedLoading = isLoading || servicesLoading
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: combinedLoading,
+    hasAnyData: services.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: (isLoading || servicesLoading) && !hasData,
-    isRefreshing: isRefreshing || ((isLoading || servicesLoading) && hasData),
-    hasData,
   })
 
   // Local cluster filter
@@ -92,7 +91,7 @@ export function NetworkOverview() {
     }
   }, [filteredServices])
 
-  if (isLoading && !clusters.length) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading network data...</div>

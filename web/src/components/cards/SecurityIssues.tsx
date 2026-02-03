@@ -11,7 +11,7 @@ import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { useCardData } from '../../lib/cards'
 import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 // Demo security issues data for demo mode
 function getDemoSecurityIssues(): SecurityIssue[] {
@@ -100,28 +100,23 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
 
   // Fetch data with caching (stale-while-revalidate pattern)
   // Cache persists to IndexedDB so data shows immediately on navigation/reload
-  const { issues: cachedIssues, isLoading: cachedLoading, isRefreshing: cachedRefreshing, error: cachedError, isFailed: cachedFailed, consecutiveFailures: cachedFailures } = useCachedSecurityIssues(clusterConfig, namespaceConfig)
+  const { issues: cachedIssues, isLoading: cachedLoading, error: cachedError, isFailed: cachedFailed, consecutiveFailures: cachedFailures } = useCachedSecurityIssues(clusterConfig, namespaceConfig)
 
   // Use demo data when in demo mode, otherwise use cached/agent data
   const rawIssues = useMemo(() => isDemoMode ? getDemoSecurityIssues() : cachedIssues, [isDemoMode, cachedIssues])
   const isLoading = isDemoMode ? false : cachedLoading
-  const isRefreshing = isDemoMode ? false : cachedRefreshing
   const error = isDemoMode ? null : cachedError
   const isFailed = isDemoMode ? false : cachedFailed
   const consecutiveFailures = isDemoMode ? 0 : cachedFailures
 
   const { drillToPod } = useDrillDownActions()
 
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || rawIssues.length > 0
-
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
-  useReportCardDataState({
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: rawIssues.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData,
   })
 
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
@@ -186,7 +181,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
 
   // Show skeleton only on initial load (no cached data)
-  if (isLoading && rawIssues.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col">
         <div className="flex items-center justify-between mb-3">

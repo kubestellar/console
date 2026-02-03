@@ -5,7 +5,7 @@ import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCa
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ClusterFocusProps {
   config?: {
@@ -22,15 +22,10 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const { drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const [internalCluster, setInternalCluster] = useState<string>('')
 
-  const hasData = allClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: clustersLoading && !hasData,
-    isRefreshing: clustersLoading && hasData,
-    hasData,
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   const {
@@ -73,7 +68,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const clusterPodIssues = podIssues.length
   const clusterDeploymentIssues = deploymentIssues.length
 
-  if (clustersLoading && allClusters.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

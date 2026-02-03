@@ -4,7 +4,7 @@ import { useCachedServices } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
@@ -49,25 +49,21 @@ export function ServiceStatus() {
   const {
     services,
     isLoading: hookLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
     error
   } = useCachedServices()
 
-  // Only show skeleton when no cached data exists
-  const hasData = services.length > 0
-  const isLoading = hookLoading && !hasData
   const { drillToService } = useDrillDownActions()
 
   // Report data state to CardWrapper for failure badge rendering
-  useReportCardDataState({
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: services.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing || (hookLoading && hasData),
-    hasData,
   })
+  const isLoading = showSkeleton
 
   const typeOrder: Record<string, number> = { 'LoadBalancer': 0, 'NodePort': 1, 'ClusterIP': 2, 'ExternalName': 3 }
 

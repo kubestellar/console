@@ -6,7 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -215,15 +215,10 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToCluster } = useDrillDownActions()
 
-  const hasData = allClusters.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   const {
@@ -388,7 +383,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
   }, [])
 
-  if (isLoading && allClusters.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

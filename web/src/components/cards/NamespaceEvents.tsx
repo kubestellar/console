@@ -7,7 +7,7 @@ import {
   useCardData, useCascadingSelection, commonComparators,
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface NamespaceEventsProps {
   config?: {
@@ -41,17 +41,16 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const { events: allEvents, isLoading: eventsLoading } = useWarningEvents()
   const { drillToEvents } = useDrillDownActions()
 
-  const hasData = allEvents.length > 0
   const isLoading = clustersLoading || eventsLoading
 
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  const { showSkeleton: _showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allEvents.length > 0,
   })
+
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || allEvents.length > 0
 
   // Use cascading selection hook for cluster -> namespace
   const {

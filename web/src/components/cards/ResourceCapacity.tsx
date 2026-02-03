@@ -8,7 +8,7 @@ import { CardControls, SortDirection } from '../ui/CardControls'
 import { Pagination, usePagination } from '../ui/Pagination'
 import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
 import { useChartFilters } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ResourceCapacityProps {
   config?: Record<string, unknown>
@@ -46,15 +46,10 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
 
-  const hasData = allClusters.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Local cluster filter
@@ -203,7 +198,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const hasCapacityData = totals.cpuCores > 0 || totals.memoryGB > 0 || totals.totalGPUs > 0
   const hasClusters = clusters.length > 0
 
-  if (isLoading && clusters.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

@@ -5,7 +5,7 @@ import { Cpu, MemoryStick, Filter, ChevronDown, Server } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useChartFilters } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
 
 export function ResourceUsage() {
@@ -61,18 +61,12 @@ export function ResourceUsage() {
     drillToResources()
   }
 
-  // Loading state: show skeleton when clusters haven't loaded yet
-  const isLoading = clustersLoading && clusters.length === 0
-  const hasData = clusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading,
-    isRefreshing: clustersLoading && hasData,
-    hasData,
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading,
+    hasAnyData: clusters.length > 0,
   })
+  const isLoading = showSkeleton
 
   if (isLoading) {
     return (

@@ -8,7 +8,7 @@ import { Pagination } from '../ui/Pagination'
 import { CardControls } from '../ui/CardControls'
 import { Skeleton } from '../ui/Skeleton'
 import type { Deployment } from '../../hooks/useMCP'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   useCardFilters,
@@ -77,23 +77,18 @@ export function DeploymentStatus() {
   const {
     deployments: allDeployments,
     isLoading: hookLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useCachedDeployments()
 
-  // Only show skeleton when no cached data exists
-  const hasData = allDeployments.length > 0
-  const isLoading = hookLoading && !hasData
-
   // Report data state to CardWrapper for failure badge rendering
-  useReportCardDataState({
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: allDeployments.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing || (hookLoading && hasData),
-    hasData,
   })
+  const isLoading = showSkeleton
 
   // Card-specific status filter (kept as separate hook)
   const { statusFilter, setStatusFilter } = useStatusFilter({

@@ -9,7 +9,7 @@ import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface GPUInventoryProps {
   config?: Record<string, unknown>
@@ -44,15 +44,13 @@ export function GPUInventory({ config }: GPUInventoryProps) {
 
   // Only show skeleton when no cached data exists
   const isLoading = hookLoading && rawNodes.length === 0
-  const hasData = rawNodes.length > 0
 
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: !!error && !hasData,
+  useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: rawNodes.length > 0,
+    isFailed: !!error && rawNodes.length === 0,
     consecutiveFailures: error ? 1 : 0,
-    isLoading,
-    isRefreshing: hookLoading && hasData,
-    hasData,
   })
 
   // Use unified card data hook for filtering, sorting, and pagination

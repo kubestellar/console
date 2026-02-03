@@ -3,7 +3,7 @@ import { Server, Globe, Shield, ExternalLink } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ClusterNetworkProps {
   config?: {
@@ -15,15 +15,10 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
 
-  const hasData = allClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   const {
@@ -70,7 +65,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     }
   }, [cluster])
 
-  if (isLoading && allClusters.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-between mb-4">

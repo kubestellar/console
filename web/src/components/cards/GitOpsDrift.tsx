@@ -8,7 +8,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useCardData } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 
@@ -62,26 +62,18 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   const {
     drifts,
     isLoading: isLoadingHook,
-    isRefreshing,
     error,
     isFailed,
     consecutiveFailures,
   } = useGitOpsDrifts(cluster, namespace)
   const { selectedSeverities, isAllSeveritiesSelected, customFilter } = useGlobalFilters()
 
-  // Only show skeleton when no cached data exists - prevents flickering
-  const isLoading = isLoadingHook && drifts.length === 0
-
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || drifts.length > 0
-
-  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: isLoadingHook,
+    hasAnyData: drifts.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData,
   })
 
   // Map drift severity to global SeverityLevel
@@ -173,7 +165,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   // Compute stats from the hook's sorted+filtered data (before pagination)
   const filteredDrifts = severityFilteredDrifts
 
-  if (isLoading && drifts.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

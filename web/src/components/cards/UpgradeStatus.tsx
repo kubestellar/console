@@ -7,7 +7,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -259,15 +259,10 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   // Only show skeleton when no cached data exists - prevents flickering on refresh
   const isLoading = isLoadingHook && allClusters.length === 0
 
-  const hasData = allClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoadingHook && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading: isLoadingHook,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Track previous agent connection state to detect reconnections

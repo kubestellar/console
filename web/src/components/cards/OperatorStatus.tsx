@@ -4,7 +4,7 @@ import { useClusters, useOperators, Operator } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   useCardFilters,
@@ -54,16 +54,14 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch operators - pass undefined to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed } = useOperators(undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, consecutiveFailures, isFailed } = useOperators(undefined)
 
   // Report card data state
-  const hasData = rawOperators.length > 0
-  useReportCardDataState({
+  useCardLoadingState({
+    isLoading: operatorsLoading,
+    hasAnyData: rawOperators.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: operatorsLoading && !hasData,
-    isRefreshing: isRefreshing || (operatorsLoading && hasData),
-    hasData,
   })
 
   // Use useCardFilters for status counts (globally filtered, before local search/pagination)

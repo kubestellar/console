@@ -6,7 +6,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { CloudProviderIcon, type CloudProvider as IconProvider } from '../ui/CloudProviderIcon'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
@@ -185,15 +185,10 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
 
-  const hasData = allClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Cloud provider selection

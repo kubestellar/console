@@ -4,7 +4,7 @@ import type { DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData, commonComparators,
   CardSkeleton, CardEmptyState, CardSearchInput,
@@ -36,25 +36,19 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   const {
     issues: rawIssues,
     isLoading: hookLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
     error
   } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
-  // hasData should be true once loading completes (even with empty data)
-  // This prevents skeleton showing forever when API returns empty array
-  const hasData = !hookLoading || rawIssues.length > 0
-  const isLoading = hookLoading && rawIssues.length === 0
   const { drillToDeployment } = useDrillDownActions()
 
-  // Report data state to CardWrapper for failure badge rendering
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: rawIssues.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing || (hookLoading && hasData),
-    hasData,
   })
 
   // Use shared card data hook for filtering, sorting, and pagination
@@ -111,7 +105,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
     })
   }
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={100} />
   }
 

@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ResourcePoint {
   time: string
@@ -44,15 +44,10 @@ export function ResourceTrend() {
   const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
   const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
 
-  const hasData = clusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0,
   })
 
   // Close dropdown when clicking outside

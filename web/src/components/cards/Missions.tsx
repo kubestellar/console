@@ -26,7 +26,7 @@ import {
   CardPaginationFooter,
   CardEmptyState,
 } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface MissionsProps {
   config?: Record<string, unknown>
@@ -111,15 +111,10 @@ export function Missions(_props: MissionsProps) {
   const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set())
   const [hideCompleted, setHideCompleted] = useState(false)
 
-  const hasData = missions.length > 0 || deduplicatedClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: missions.length > 0 || deduplicatedClusters.length > 0,
   })
 
   // Manual cluster filter — filters by target clusters (not source).

@@ -8,7 +8,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface HelmValuesDiffProps {
   config?: {
@@ -56,15 +56,10 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()
 
-  const hasData = allClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: clustersLoading && !hasData,
-    isRefreshing: clustersLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading: clustersLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Local cluster filter (card-specific, kept as separate state)

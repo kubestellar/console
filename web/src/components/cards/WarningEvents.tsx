@@ -4,7 +4,7 @@ import { useCachedEvents } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
@@ -47,13 +47,11 @@ export function WarningEvents() {
   const warningOnly = useMemo(() => events.filter(e => e.type === 'Warning'), [events])
 
   // Report data state to CardWrapper for failure badge rendering
-  const hasData = events.length > 0
-  useReportCardDataState({
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: events.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isRefreshing || (isLoading && hasData),
-    hasData,
   })
 
   const {
@@ -99,7 +97,7 @@ export function WarningEvents() {
     defaultLimit: 5,
   })
 
-  if (isLoading && events.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="space-y-3 p-1">
         <Skeleton className="h-10 w-full" />

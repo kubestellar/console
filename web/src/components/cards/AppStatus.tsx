@@ -4,7 +4,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData,
   commonComparators,
@@ -46,8 +46,13 @@ export function AppStatus(_props: AppStatusProps) {
   const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isFailed, consecutiveFailures } = useCachedDeployments()
 
-  // Report data state to CardWrapper for failure badge rendering
-  useReportCardDataState({ isFailed, consecutiveFailures })
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: deployments.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -164,7 +169,7 @@ export function AppStatus(_props: AppStatusProps) {
     drillToDeployment(cluster, app.namespace, app.name)
   }
 
-  if (isLoading && rawApps.length === 0) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

@@ -5,7 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface OverlayComparisonProps {
   config?: {
@@ -32,15 +32,10 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
     customFilter,
   } = useGlobalFilters()
 
-  const hasData = allClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: allClusters.length > 0,
   })
 
   // Apply global filters

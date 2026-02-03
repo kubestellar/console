@@ -17,7 +17,7 @@ import {
   CardControlsRow,
   CardPaginationFooter,
 } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 type SortField = 'name' | 'severity' | 'enabled'
 
@@ -41,12 +41,9 @@ export function AlertRulesCard() {
   const [editingRule, setEditingRule] = useState<AlertRule | undefined>(undefined)
 
   // Report state to CardWrapper (local storage rules are always available)
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
+  useCardLoadingState({
     isLoading: false,
-    isRefreshing: false,
-    hasData: true,
+    hasAnyData: true,
   })
 
   // Use shared card data hook for filtering, sorting, and pagination

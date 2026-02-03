@@ -29,7 +29,7 @@ import {
   type ClusterGroupQuery,
 } from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
@@ -107,15 +107,10 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [isCreating, setIsCreating] = useState(false)
 
-  const hasData = clusters.length > 0 || groups.length > 0
-
-  // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: clusters.length > 0 || groups.length > 0,
   })
   const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())

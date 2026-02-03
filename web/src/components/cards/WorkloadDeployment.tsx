@@ -20,7 +20,7 @@ import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardP
 import { cn } from '../../lib/cn'
 import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
 import { useClusters } from '../../hooks/useMCP'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -362,15 +362,10 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   // so we can't use useCardData's built-in clusterField filtering.
   const { deduplicatedClusters, isLoading } = useClusters()
 
-  const hasData = deduplicatedClusters.length > 0 || DEMO_WORKLOADS.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: deduplicatedClusters.length > 0 || DEMO_WORKLOADS.length > 0,
   })
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     try {

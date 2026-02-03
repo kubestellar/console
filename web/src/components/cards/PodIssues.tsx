@@ -4,7 +4,7 @@ import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import {
   useCardData, commonComparators, getStatusColors,
   CardSkeleton, CardEmptyState, CardSearchInput,
@@ -36,11 +36,13 @@ export function PodIssues() {
     error
   } = useCachedPodIssues()
 
-  // Report data state to CardWrapper for failure badge rendering
-  useReportCardDataState({ isFailed, consecutiveFailures })
-
-  // Only show skeleton when no cached data exists
-  const isLoading = hookLoading && rawIssues.length === 0
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: hookLoading,
+    hasAnyData: rawIssues.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
   const { drillToPod } = useDrillDownActions()
 
   // Use shared card data hook for filtering, sorting, and pagination
@@ -91,7 +93,7 @@ export function PodIssues() {
     defaultLimit: 5,
   })
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={80} />
   }
 

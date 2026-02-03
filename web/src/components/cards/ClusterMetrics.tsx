@@ -4,7 +4,7 @@ import { TimeSeriesChart, MultiSeriesChart } from '../charts'
 import { useClusters } from '../../hooks/useMCP'
 import { Server, Clock, Filter, ChevronDown, Layers, TrendingUp } from 'lucide-react'
 import { useChartFilters } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -53,15 +53,10 @@ export function ClusterMetrics() {
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [chartMode, setChartMode] = useState<ChartMode>('total')
 
-  const hasData = deduplicatedClusters.length > 0
-
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: deduplicatedClusters.length > 0,
   })
 
   // Use shared chart filters hook for cluster filtering

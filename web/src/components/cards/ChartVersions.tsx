@@ -6,7 +6,7 @@ import {
   useCardData, commonComparators,
   CardSkeleton, CardSearchInput, CardControlsRow, CardPaginationFooter,
 } from '../../lib/cards'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface ChartVersionsProps {
   config?: {
@@ -37,24 +37,16 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   const {
     releases: allHelmReleases,
     isLoading: releasesLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
   } = useHelmReleases()
 
-  // Only show skeleton when no cached data exists
-  const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
-
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || allHelmReleases.length > 0
-
-  // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
-  useReportCardDataState({
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading || releasesLoading,
+    hasAnyData: allHelmReleases.length > 0,
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData,
   })
 
   // Transform Helm releases to chart info
@@ -123,7 +115,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   // Count unique charts
   const uniqueCharts = new Set(allCharts.map(c => c.chart)).size
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={50} />
   }
 

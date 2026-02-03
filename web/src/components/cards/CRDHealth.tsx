@@ -3,7 +3,7 @@ import { CheckCircle, AlertTriangle, XCircle, Database } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 
@@ -36,16 +36,6 @@ const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1,
 
 export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { isLoading, deduplicatedClusters } = useClusters()
-
-  // Report card data state (CRDHealth uses demo data, so never fails)
-  const hasData = deduplicatedClusters.length > 0
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
-    hasData,
-  })
 
   const [filterGroup, setFilterGroup] = useState<string>('')
 
@@ -80,6 +70,12 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     })
     return crdsWithClusters
   }, [deduplicatedClusters, getClusterCRDs])
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const { showSkeleton } = useCardLoadingState({
+    isLoading,
+    hasAnyData: allCRDs.length > 0,
+  })
 
   // Apply group filter before passing to useCardData
   const groupFilteredCRDs = useMemo(() => {
@@ -181,8 +177,6 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   const healthyCount = statsSource.filter(c => c.status === 'Established').length
   const unhealthyCount = statsSource.filter(c => c.status !== 'Established').length
   const totalInstances = statsSource.reduce((sum, c) => sum + c.instances, 0)
-
-  const showSkeleton = isLoading && allCRDs.length === 0
 
   if (showSkeleton) {
     return (

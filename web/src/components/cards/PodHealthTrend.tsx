@@ -14,7 +14,7 @@ import {
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 
 interface HealthPoint {
   time: string
@@ -38,16 +38,13 @@ export function PodHealthTrend() {
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  const hasData = clusters.length > 0 || issues.length > 0
+  // hasData should be true once loading completes (even with empty data)
   const isLoadingData = clustersLoading || issuesLoading
 
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: isLoadingData && !hasData,
-    isRefreshing: isLoadingData && hasData,
-    hasData,
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: isLoadingData,
+    hasAnyData: clusters.length > 0 || issues.length > 0,
   })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -223,9 +220,7 @@ export function PodHealthTrend() {
     }
   }, [currentStats, history.length])
 
-  const isLoading = clustersLoading || issuesLoading
-
-  if (isLoading && history.length === 0) {
+  if (showSkeleton && history.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading pod health...</div>

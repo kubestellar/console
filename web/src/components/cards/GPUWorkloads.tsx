@@ -8,7 +8,7 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { useReportCardDataState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
 
 interface GPUWorkloadsProps {
@@ -67,15 +67,11 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
 
   // Only show loading when no cached data exists
   const isLoading = (gpuLoading && gpuNodes.length === 0) || (podsLoading && allPods.length === 0)
-  const hasData = gpuNodes.length > 0 || allPods.length > 0
 
   // Report state to CardWrapper for refresh animation
-  useReportCardDataState({
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading,
-    isRefreshing: (gpuLoading || podsLoading) && hasData,
-    hasData,
+  useCardLoadingState({
+    isLoading: gpuLoading || podsLoading,
+    hasAnyData: gpuNodes.length > 0 || allPods.length > 0,
   })
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)
