@@ -314,14 +314,17 @@ class CacheStore<T> {
     // Initialize with initial data, then async load from IndexedDB
     const meta = this.loadMeta()
 
+    // When persisting to IndexedDB, don't show loading skeleton initially.
+    // Instead show initialData with isRefreshing to indicate data is coming.
+    // This prevents flashing skeleton when cached data is about to load.
     this.state = {
       data: initialData,
-      isLoading: true,
-      isRefreshing: false,
+      isLoading: !persist, // Only show loading if NOT persisting (no cached data possible)
+      isRefreshing: persist, // Show refreshing indicator when persisting (cache loading)
       error: meta.lastError ?? null,
       isFailed: meta.consecutiveFailures >= MAX_FAILURES,
       consecutiveFailures: meta.consecutiveFailures,
-      lastRefresh: null,
+      lastRefresh: meta.lastSuccessfulRefresh ?? null,
     }
 
     // Async load from IndexedDB - store the promise so we can await it before fetching
@@ -732,6 +735,43 @@ export async function prefetchCache<T>(
 ): Promise<void> {
   const store = getOrCreateCache(key, initialData, true)
   await store.fetch(fetcher)
+}
+
+/**
+ * Preload common cache keys from IndexedDB at app startup.
+ * This ensures cached data is available immediately when components mount.
+ * Call this early in app initialization, before rendering routes.
+ */
+export async function preloadCacheFromStorage(): Promise<void> {
+  // Common cache keys that should be preloaded for instant display
+  const keysToPreload = [
+    'securityIssues:all:all',
+    'podIssues:all:all',
+    'deployments:all:all',
+    'deploymentIssues:all:all',
+    'events:all:all:100',
+    'services:all:all',
+  ]
+
+  let loadedCount = 0
+  const loadPromises = keysToPreload.map(async (key) => {
+    try {
+      const entry = await idbStorage.get<unknown>(key)
+      if (entry) {
+        // Pre-populate the registry with loaded data
+        // This creates a CacheStore with data already loaded
+        const store = getOrCreateCache(key, entry.data, true)
+        // Mark as loaded so it doesn't try to load again
+        ;(store as unknown as { initialDataLoaded: boolean }).initialDataLoaded = true
+        loadedCount++
+      }
+    } catch {
+      // Ignore individual load failures
+    }
+  })
+
+  await Promise.all(loadPromises)
+  console.log(`[Cache] Preloaded ${loadedCount}/${keysToPreload.length} cache entries`)
 }
 
 /** Migrate old localStorage cache to IndexedDB (run once on app startup) */
