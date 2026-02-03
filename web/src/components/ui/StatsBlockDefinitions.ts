@@ -133,8 +133,8 @@ export const COMPLIANCE_STAT_BLOCKS: StatBlockConfig[] = [
   // Overall compliance
   { id: 'score', name: 'Score', icon: 'Percent', visible: true, color: 'purple' },
   { id: 'total_checks', name: 'Total Checks', icon: 'ClipboardList', visible: true, color: 'blue' },
-  { id: 'passing', name: 'Passing', icon: 'CheckCircle2', visible: true, color: 'green' },
-  { id: 'failing', name: 'Failing', icon: 'XCircle', visible: true, color: 'red' },
+  { id: 'checks_passing', name: 'Passing', icon: 'CheckCircle2', visible: true, color: 'green' },
+  { id: 'checks_failing', name: 'Failing', icon: 'XCircle', visible: true, color: 'red' },
 
   // Framework compliance scores
   { id: 'cis_score', name: 'CIS', icon: 'ShieldCheck', visible: true, color: 'cyan' },

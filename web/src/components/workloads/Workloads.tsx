@@ -1,37 +1,13 @@
-import { useEffect, useCallback, useMemo, memo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Layers, Plus, LayoutGrid, ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
-import {
-  DndContext,
-  closestCenter,
-  DragOverlay,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useMemo, useCallback } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
-import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { CardWrapper } from '../cards/CardWrapper'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
-import { AddCardModal } from '../dashboard/AddCardModal'
-import { TemplatesModal } from '../dashboard/TemplatesModal'
-import { ConfigureCardModal } from '../dashboard/ConfigureCardModal'
-import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
-import { DashboardTemplate } from '../dashboard/templates'
-import { formatCardTitle } from '../../lib/formatCardTitle'
-import { useDashboard, DashboardCard } from '../../lib/dashboards'
-import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
-import { DashboardHeader } from '../shared/DashboardHeader'
-import { useMobile } from '../../hooks/useMobile'
+import { StatBlockValue } from '../ui/StatsOverview'
+import { DashboardPage } from '../../lib/dashboards'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -44,101 +20,6 @@ const DEFAULT_WORKLOAD_CARDS = [
   { type: 'deployment_issues', title: 'Deployment Issues', position: { w: 6, h: 2 } },
 ]
 
-// Sortable card component with drag handle
-interface SortableWorkloadCardProps {
-  card: DashboardCard
-  onConfigure: () => void
-  onRemove: () => void
-  onWidthChange: (newWidth: number) => void
-  isDragging: boolean
-  isRefreshing?: boolean
-  onRefresh?: () => void
-  lastUpdated?: Date | null
-}
-
-const SortableWorkloadCard = memo(function SortableWorkloadCard({
-  card,
-  onConfigure,
-  onRemove,
-  onWidthChange,
-  isDragging,
-  isRefreshing,
-  onRefresh,
-  lastUpdated,
-}: SortableWorkloadCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: card.id })
-  const { isMobile } = useMobile()
-
-  const cardWidth = card.position?.w || 4
-  const cardHeight = card.position?.h || 3
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
-    gridRow: `span ${cardHeight}`,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  const CardComponent = CARD_COMPONENTS[card.card_type]
-  if (!CardComponent) {
-    return null
-  }
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <CardWrapper
-        cardId={card.id}
-        cardType={card.card_type}
-        title={formatCardTitle(card.card_type)}
-        cardWidth={cardWidth}
-        onConfigure={onConfigure}
-        onRemove={onRemove}
-        onWidthChange={onWidthChange}
-        isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
-        isRefreshing={isRefreshing}
-        onRefresh={onRefresh}
-        lastUpdated={lastUpdated}
-        dragHandle={
-          <button
-            {...attributes}
-            {...listeners}
-            className="p-1 rounded hover:bg-secondary cursor-grab active:cursor-grabbing"
-            title="Drag to reorder"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </button>
-        }
-      >
-        <CardComponent config={card.config} />
-      </CardWrapper>
-    </div>
-  )
-})
-
-// Drag preview for overlay
-function WorkloadDragPreviewCard({ card }: { card: DashboardCard }) {
-  const cardWidth = card.position?.w || 4
-  return (
-    <div
-      className="glass rounded-lg p-4 shadow-xl"
-      style={{ width: `${(cardWidth / 12) * 100}%`, minWidth: 200, maxWidth: 400 }}
-    >
-      <div className="flex items-center gap-2">
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-medium truncate">
-          {formatCardTitle(card.card_type)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 interface AppSummary {
   namespace: string
   cluster: string
@@ -149,105 +30,27 @@ interface AppSummary {
 }
 
 export function Workloads() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  // Data fetching
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
   const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
 
-  const combinedRefetch = useCallback(() => {
+  const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
+
+  // Combined states
+  const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
+  const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
+  const showSkeletons = (allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading
+
+  // Combined refresh
+  const handleRefresh = useCallback(() => {
     refetchPodIssues()
     refetchDeploymentIssues()
     refetchDeployments()
     refetchClusters()
   }, [refetchPodIssues, refetchDeploymentIssues, refetchDeployments, refetchClusters])
-  const { showIndicator, triggerRefresh } = useRefreshIndicator(combinedRefetch)
-  const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
-  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
-  const {
-    cards,
-    setCards,
-    addCards,
-    removeCard,
-    configureCard,
-    updateCardWidth,
-    reset,
-    isCustomized,
-    showAddCard,
-    setShowAddCard,
-    showTemplates,
-    setShowTemplates,
-    configuringCard,
-    setConfiguringCard,
-    openConfigureCard,
-    showCards,
-    setShowCards,
-    expandCards,
-    dnd: { sensors, activeId, handleDragStart, handleDragEnd },
-    autoRefresh,
-    setAutoRefresh,
-  } = useDashboard({
-    storageKey: WORKLOADS_CARDS_KEY,
-    defaultCards: DEFAULT_WORKLOAD_CARDS,
-    onRefresh: () => {
-      refetchPodIssues()
-      refetchDeploymentIssues()
-      refetchDeployments()
-      refetchClusters()
-    },
-  })
-
-  // Combined loading/refreshing states
-  const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
-  const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing || showIndicator
-  const isFetching = isLoading || isRefreshing || showIndicator
-  // Only show skeletons when we have no data yet
-  const showSkeletons = (allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading
-
-  // Handle addCard URL param - open modal and clear param
-  useEffect(() => {
-    if (searchParams.get('addCard') === 'true') {
-      setShowAddCard(true)
-      setSearchParams({}, { replace: true })
-    }
-  }, [searchParams, setSearchParams, setShowAddCard])
-
-  const handleAddCards = useCallback((newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    addCards(newCards)
-    expandCards()
-    setShowAddCard(false)
-  }, [addCards, expandCards, setShowAddCard])
-
-  const handleRemoveCard = useCallback((cardId: string) => {
-    removeCard(cardId)
-  }, [removeCard])
-
-  const handleConfigureCard = useCallback((cardId: string) => {
-    openConfigureCard(cardId, cards)
-  }, [openConfigureCard, cards])
-
-  const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    configureCard(cardId, config)
-    setConfiguringCard(null)
-  }, [configureCard, setConfiguringCard])
-
-  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    updateCardWidth(cardId, newWidth)
-  }, [updateCardWidth])
-
-  const applyTemplate = useCallback((template: DashboardTemplate) => {
-    const newCards = template.cards.map((card, i) => ({
-      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.card_type,
-      config: card.config || {},
-      title: card.title,
-    }))
-    setCards(newCards)
-    expandCards()
-    setShowTemplates(false)
-  }, [setCards, expandCards, setShowTemplates])
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
@@ -256,7 +59,6 @@ export function Workloads() {
 
   // Group applications by namespace with global filter applied
   const apps = useMemo(() => {
-    // Filter deployments and issues by global cluster selection
     let filteredDeployments = allDeployments
     let filteredPodIssues = podIssues
     let filteredDeploymentIssues = deploymentIssues
@@ -273,7 +75,6 @@ export function Workloads() {
       )
     }
 
-    // Apply custom text filter
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
       filteredDeployments = filteredDeployments.filter(d =>
@@ -295,7 +96,6 @@ export function Workloads() {
 
     const appMap = new Map<string, AppSummary>()
 
-    // First, populate from ALL deployments (not just issues)
     filteredDeployments.forEach(deployment => {
       const key = `${deployment.cluster}/${deployment.namespace}`
       if (!appMap.has(key)) {
@@ -312,7 +112,6 @@ export function Workloads() {
       app.deploymentCount++
     })
 
-    // Add pod issues to the map
     filteredPodIssues.forEach(issue => {
       const key = `${issue.cluster}/${issue.namespace}`
       if (!appMap.has(key)) {
@@ -330,7 +129,6 @@ export function Workloads() {
       app.status = app.podIssues > 3 ? 'error' : 'warning'
     })
 
-    // Add deployment issues to the map
     filteredDeploymentIssues.forEach(issue => {
       const key = `${issue.cluster}/${issue.namespace}`
       if (!appMap.has(key)) {
@@ -351,12 +149,10 @@ export function Workloads() {
     })
 
     return Array.from(appMap.values()).sort((a, b) => {
-      // Sort by status (critical first), then by deployment count
       const statusOrder: Record<string, number> = { error: 0, critical: 0, warning: 1, healthy: 2 }
       if (statusOrder[a.status] !== statusOrder[b.status]) {
         return statusOrder[a.status] - statusOrder[b.status]
       }
-      // Then sort by deployment count (more deployments = more important)
       return b.deploymentCount - a.deploymentCount
     })
   }, [allDeployments, podIssues, deploymentIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
@@ -393,150 +189,27 @@ export function Workloads() {
     }
   }, [stats, apps, drillToAllNamespaces, drillToAllDeployments, drillToAllPods])
 
-  // Merged getter: dashboard-specific values first, then universal fallback
-  const getStatValue = useCallback(
-    (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
-    [getDashboardStatValue, getUniversalStatValue]
-  )
-
-  // Transform card for ConfigureCardModal
-  const configureCardData = configuringCard ? {
-    id: configuringCard.id,
-    card_type: configuringCard.card_type,
-    config: configuringCard.config,
-    title: configuringCard.title,
-  } : null
-
   return (
-    <div className="pt-16">
-      {/* Header */}
-      <DashboardHeader
-        title="Workloads"
-        subtitle="View and manage deployed applications across clusters"
-        icon={<Layers className="w-6 h-6 text-purple-400" />}
-        isFetching={isFetching}
-        onRefresh={() => triggerRefresh()}
-        autoRefresh={autoRefresh}
-        onAutoRefreshChange={setAutoRefresh}
-        autoRefreshId="workloads-auto-refresh"
-        lastUpdated={lastUpdated}
-      />
-
-      {/* Stats Overview - configurable */}
-      <StatsOverview
-        dashboardType="workloads"
-        getStatValue={getStatValue}
-        hasData={apps.length > 0 || !showSkeletons}
-        isLoading={showSkeletons}
-        lastUpdated={lastUpdated}
-        collapsedStorageKey="kubestellar-workloads-stats-collapsed"
-      />
-
-      {/* Dashboard Cards Section */}
-      <div className="mb-6">
-        {/* Card section header with toggle and buttons */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowCards(!showCards)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Workload Cards ({cards.length})</span>
-            {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {/* Cards grid */}
-        {showCards && (
-          <>
-            {cards.length === 0 ? (
-              <div className="glass p-8 rounded-lg border-2 border-dashed border-border/50 text-center">
-                <div className="flex justify-center mb-4">
-                  <Layers className="w-12 h-12 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">Workloads Dashboard</h3>
-                <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-                  Add cards to monitor deployments, pods, and application health across your clusters.
-                </p>
-                <button
-                  onClick={() => setShowAddCard(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Cards
-                </button>
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    {cards.map(card => (
-                      <SortableWorkloadCard
-                        key={card.id}
-                        card={card}
-                        onConfigure={() => handleConfigureCard(card.id)}
-                        onRemove={() => handleRemoveCard(card.id)}
-                        onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-                        isDragging={activeId === card.id}
-                        isRefreshing={isRefreshing}
-                        onRefresh={triggerRefresh}
-                        lastUpdated={lastUpdated}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-                <DragOverlay>
-                  {activeId ? (
-                    <div className="opacity-80 rotate-3 scale-105">
-                      <WorkloadDragPreviewCard card={cards.find(c => c.id === activeId)!} />
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Floating action buttons */}
-      <FloatingDashboardActions
-        onAddCard={() => setShowAddCard(true)}
-        onOpenTemplates={() => setShowTemplates(true)}
-        onResetToDefaults={reset}
-        isCustomized={isCustomized}
-      />
-
-      {/* Add Card Modal */}
-      <AddCardModal
-        isOpen={showAddCard}
-        onClose={() => setShowAddCard(false)}
-        onAddCards={handleAddCards}
-        existingCardTypes={cards.map(c => c.card_type)}
-      />
-
-      {/* Templates Modal */}
-      <TemplatesModal
-        isOpen={showTemplates}
-        onClose={() => setShowTemplates(false)}
-        onApplyTemplate={applyTemplate}
-      />
-
-      {/* Configure Card Modal */}
-      <ConfigureCardModal
-        isOpen={!!configuringCard}
-        card={configureCardData}
-        onClose={() => setConfiguringCard(null)}
-        onSave={handleSaveCardConfig}
-      />
-
+    <DashboardPage
+      title="Workloads"
+      subtitle="View and manage deployed applications across clusters"
+      icon="Layers"
+      storageKey={WORKLOADS_CARDS_KEY}
+      defaultCards={DEFAULT_WORKLOAD_CARDS}
+      statsType="workloads"
+      getStatValue={getDashboardStatValue}
+      onRefresh={handleRefresh}
+      isLoading={isLoading}
+      isRefreshing={isRefreshing}
+      lastUpdated={lastUpdated}
+      hasData={apps.length > 0 || !showSkeletons}
+      emptyState={{
+        title: 'Workloads Dashboard',
+        description: 'Add cards to monitor deployments, pods, and application health across your clusters.',
+      }}
+    >
       {/* Workloads List */}
       {showSkeletons ? (
-        // Loading skeletons for workloads list (only when no cached data)
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
@@ -629,6 +302,6 @@ export function Workloads() {
           ))}
         </div>
       </div>
-    </div>
+    </DashboardPage>
   )
 }

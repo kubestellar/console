@@ -332,9 +332,9 @@ export function useUniversalStats() {
         return { value: '87%', sublabel: 'compliance score', isClickable: false, isDemo: true }
       case 'total_checks':
         return { value: 156, sublabel: 'checks run', isClickable: false, isDemo: true }
-      case 'passing':
+      case 'checks_passing':
         return { value: 136, sublabel: 'passing', isClickable: false, isDemo: true }
-      case 'failing':
+      case 'checks_failing':
         return { value: 20, sublabel: 'failing', isClickable: false, isDemo: true }
       case 'gatekeeper_violations':
         return { value: 8, sublabel: 'violations', isClickable: false, isDemo: true }

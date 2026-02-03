@@ -28,6 +28,9 @@ export interface SortableDashboardCardProps {
   onRemove: () => void
   onWidthChange: (newWidth: number) => void
   isDragging: boolean
+  isRefreshing?: boolean
+  onRefresh?: () => void
+  lastUpdated?: Date | null
 }
 
 export const SortableDashboardCard = memo(function SortableDashboardCard({
@@ -36,6 +39,9 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   onRemove,
   onWidthChange,
   isDragging,
+  isRefreshing,
+  onRefresh,
+  lastUpdated,
 }: SortableDashboardCardProps) {
   const {
     attributes,
@@ -74,6 +80,9 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
         onRemove={onRemove}
         onWidthChange={onWidthChange}
         isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        lastUpdated={lastUpdated}
         dragHandle={
           <button
             {...attributes}

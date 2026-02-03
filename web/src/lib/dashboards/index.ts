@@ -42,5 +42,11 @@ export {
   type DashboardCardsGridProps,
 } from './DashboardComponents'
 
+// DashboardPage - Unified dashboard wrapper
+export {
+  DashboardPage,
+  type DashboardPageProps,
+} from './DashboardPage'
+
 // Dashboard Types
 export * from './types'
