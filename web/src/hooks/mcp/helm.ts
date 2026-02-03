@@ -332,6 +332,9 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       }
     } else if (release) {
       refetch()
+    } else {
+      // No release selected - not loading, just waiting for user selection
+      setIsLoading(false)
     }
   }, [cluster, release, refetch])
 

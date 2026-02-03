@@ -647,9 +647,15 @@ export function CardWrapper({
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
   const spinStartRef = useRef<number | null>(null)
 
+  // Child-reported data state (from card components via CardDataContext)
+  // Declared early so it can be used in the refresh animation effect below
+  const [childDataState, setChildDataState] = useState<CardDataState | null>(null)
+
   // Handle minimum spin duration for refresh button
+  // Include both prop and context-reported refresh state
+  const contextIsRefreshing = childDataState?.isRefreshing || false
   useEffect(() => {
-    if (isRefreshing) {
+    if (isRefreshing || contextIsRefreshing) {
       setIsVisuallySpinning(true)
       spinStartRef.current = Date.now()
     } else if (spinStartRef.current !== null) {
@@ -667,7 +673,7 @@ export function CardWrapper({
         spinStartRef.current = null
       }
     }
-  }, [isRefreshing])
+  }, [isRefreshing, contextIsRefreshing])
 
   // Re-trigger animation when flashType changes to a non-none value
   useEffect(() => {
@@ -718,8 +724,7 @@ export function CardWrapper({
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Child-reported data state (from card components via CardDataContext)
-  const [childDataState, setChildDataState] = useState<CardDataState | null>(null)
+  // Report callback for CardDataContext (childDataState is declared earlier for refresh animation)
   const reportCallback = useCallback((state: CardDataState) => {
     setChildDataState(state)
   }, [])
