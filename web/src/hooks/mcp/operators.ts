@@ -4,12 +4,64 @@ import { getDemoMode } from '../useDemoMode'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
 
+// localStorage cache keys
+const OPERATORS_CACHE_KEY = 'kubestellar-operators-cache'
+const SUBSCRIPTIONS_CACHE_KEY = 'kubestellar-subscriptions-cache'
+
+// Load operators from localStorage
+function loadOperatorsCacheFromStorage(cacheKey: string): { data: Operator[], timestamp: number } | null {
+  try {
+    const stored = localStorage.getItem(OPERATORS_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (parsed.key === cacheKey && parsed.data && parsed.data.length > 0) {
+        return { data: parsed.data, timestamp: parsed.timestamp || Date.now() }
+      }
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveOperatorsCacheToStorage(data: Operator[], key: string) {
+  try {
+    if (data.length > 0 && !getDemoMode()) {
+      localStorage.setItem(OPERATORS_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now(), key }))
+    }
+  } catch { /* ignore */ }
+}
+
+// Load subscriptions from localStorage
+function loadSubscriptionsCacheFromStorage(cacheKey: string): { data: OperatorSubscription[], timestamp: number } | null {
+  try {
+    const stored = localStorage.getItem(SUBSCRIPTIONS_CACHE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (parsed.key === cacheKey && parsed.data && parsed.data.length > 0) {
+        return { data: parsed.data, timestamp: parsed.timestamp || Date.now() }
+      }
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveSubscriptionsCacheToStorage(data: OperatorSubscription[], key: string) {
+  try {
+    if (data.length > 0 && !getDemoMode()) {
+      localStorage.setItem(SUBSCRIPTIONS_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now(), key }))
+    }
+  } catch { /* ignore */ }
+}
+
 // Hook to get operators for a cluster (or all clusters if undefined)
 export function useOperators(cluster?: string) {
-  const [operators, setOperators] = useState<Operator[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `operators:${cluster || 'all'}`
+  const cached = loadOperatorsCacheFromStorage(cacheKey)
+
+  const [operators, setOperators] = useState<Operator[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   // Track cluster count to re-fetch when clusters become available
   const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
   // Version counter to force refetch
@@ -65,7 +117,9 @@ export function useOperators(cluster?: string) {
         }
         if (!cancelled) {
           setOperators(allOperators)
+          saveOperatorsCacheToStorage(allOperators, cacheKey)
           setError(null)
+          setLastRefresh(Date.now())
           setIsLoading(false)
           setIsRefreshing(false)
         }
@@ -75,13 +129,19 @@ export function useOperators(cluster?: string) {
       try {
         const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(cluster)}`)
         if (!cancelled) {
-          setOperators((data.operators || []).map(op => ({ ...op, cluster })))
+          const newOperators = (data.operators || []).map(op => ({ ...op, cluster }))
+          setOperators(newOperators)
+          saveOperatorsCacheToStorage(newOperators, cacheKey)
           setError(null)
+          setLastRefresh(Date.now())
         }
       } catch (err) {
         if (!cancelled) {
           setError('Failed to fetch operators')
-          setOperators([])
+          // Keep cached data on error instead of clearing
+          if (operators.length === 0) {
+            setOperators([])
+          }
         }
       } finally {
         if (!cancelled) {
@@ -96,21 +156,25 @@ export function useOperators(cluster?: string) {
     return () => {
       cancelled = true
     }
-  }, [cluster, clusterCount, fetchVersion])
+  }, [cluster, clusterCount, fetchVersion, cacheKey])
 
   const refetch = useCallback(() => {
     setFetchVersion(v => v + 1)
   }, [])
 
-  return { operators, isLoading, isRefreshing, error, refetch }
+  return { operators, isLoading, isRefreshing, error, refetch, lastRefresh }
 }
 
 // Hook to get operator subscriptions for a cluster (or all clusters if undefined)
 export function useOperatorSubscriptions(cluster?: string) {
-  const [subscriptions, setSubscriptions] = useState<OperatorSubscription[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `subscriptions:${cluster || 'all'}`
+  const cached = loadSubscriptionsCacheFromStorage(cacheKey)
+
+  const [subscriptions, setSubscriptions] = useState<OperatorSubscription[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<number | null>(cached?.timestamp || null)
   // Track cluster count to re-fetch when clusters become available
   const [clusterCount, setClusterCount] = useState(clusterCacheRef.clusters.length)
   // Version counter to force refetch
@@ -166,7 +230,9 @@ export function useOperatorSubscriptions(cluster?: string) {
         }
         if (!cancelled) {
           setSubscriptions(allSubscriptions)
+          saveSubscriptionsCacheToStorage(allSubscriptions, cacheKey)
           setError(null)
+          setLastRefresh(Date.now())
           setIsLoading(false)
           setIsRefreshing(false)
         }
@@ -176,13 +242,19 @@ export function useOperatorSubscriptions(cluster?: string) {
       try {
         const { data } = await api.get<{ subscriptions: OperatorSubscription[] }>(`/api/mcp/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`)
         if (!cancelled) {
-          setSubscriptions((data.subscriptions || []).map(sub => ({ ...sub, cluster })))
+          const newSubscriptions = (data.subscriptions || []).map(sub => ({ ...sub, cluster }))
+          setSubscriptions(newSubscriptions)
+          saveSubscriptionsCacheToStorage(newSubscriptions, cacheKey)
           setError(null)
+          setLastRefresh(Date.now())
         }
       } catch (err) {
         if (!cancelled) {
           setError('Failed to fetch subscriptions')
-          setSubscriptions([])
+          // Keep cached data on error instead of clearing
+          if (subscriptions.length === 0) {
+            setSubscriptions([])
+          }
         }
       } finally {
         if (!cancelled) {
@@ -197,13 +269,13 @@ export function useOperatorSubscriptions(cluster?: string) {
     return () => {
       cancelled = true
     }
-  }, [cluster, clusterCount, fetchVersion])
+  }, [cluster, clusterCount, fetchVersion, cacheKey])
 
   const refetch = useCallback(() => {
     setFetchVersion(v => v + 1)
   }, [])
 
-  return { subscriptions, isLoading, isRefreshing, error, refetch }
+  return { subscriptions, isLoading, isRefreshing, error, refetch, lastRefresh }
 }
 
 function getDemoOperators(cluster: string): Operator[] {
