@@ -724,9 +724,10 @@ export function CardWrapper({
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
   const isDemoMode = globalDemoMode && !isDemoExempt
 
-  // When demo mode is OFF and agent is offline, force skeleton display
+  // When demo mode is OFF and agent is not connected, force skeleton display
   // This prevents showing stale/cached data when user expects live data
-  const isAgentOffline = agentStatus !== 'connected' && agentStatus !== 'connecting'
+  // Include 'connecting' state because it may take time before we know agent is truly offline
+  const isAgentOffline = agentStatus !== 'connected'
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
