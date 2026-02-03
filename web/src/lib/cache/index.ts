@@ -304,6 +304,7 @@ class CacheStore<T> {
   private fetchingRef = false
   private refreshTimeoutRef: ReturnType<typeof setTimeout> | null = null
   private initialDataLoaded = false
+  private storageLoadPromise: Promise<void> | null = null
 
   constructor(
     private key: string,
@@ -323,9 +324,9 @@ class CacheStore<T> {
       lastRefresh: null,
     }
 
-    // Async load from IndexedDB
+    // Async load from IndexedDB - store the promise so we can await it before fetching
     if (this.persist) {
-      this.loadFromStorage()
+      this.storageLoadPromise = this.loadFromStorage()
     }
   }
 
@@ -419,6 +420,13 @@ class CacheStore<T> {
   async fetch(fetcher: () => Promise<T>, merge?: (old: T, new_: T) => T): Promise<void> {
     if (this.fetchingRef) return
     this.fetchingRef = true
+
+    // Wait for IndexedDB to load before determining if we have cached data
+    // This ensures we don't show skeleton when cached data is available
+    if (this.storageLoadPromise) {
+      await this.storageLoadPromise
+      this.storageLoadPromise = null
+    }
 
     const hasCachedData = this.state.data !== this.initialData || this.initialDataLoaded
     const startTime = Date.now()
