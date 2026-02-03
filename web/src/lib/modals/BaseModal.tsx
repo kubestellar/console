@@ -105,7 +105,7 @@ export function BaseModal({
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] p-4 overflow-y-auto overscroll-contain"
       onClick={handleBackdropClick}
     >
       <div
@@ -115,6 +115,7 @@ export function BaseModal({
         <div
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
           onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
         >
           {children}
         </div>
@@ -221,7 +222,7 @@ function ModalContent({
 }: ModalContentProps) {
   return (
     <div
-      className={`flex-1 ${scrollable ? 'overflow-y-auto overscroll-contain scroll-smooth' : 'overflow-hidden'} ${noPadding ? '' : 'p-6'} ${className}`}
+      className={`flex-1 ${scrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'} ${noPadding ? '' : 'p-6'} ${className}`}
     >
       {children}
     </div>

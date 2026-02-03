@@ -451,7 +451,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                       onWheel={(e) => e.stopPropagation()}
                     >
                       {/* Search input - sticky at top */}
-                      <div className="p-2 border-b border-border sticky top-0 bg-card z-20">
+                      <div className="p-2 border-b border-border flex-shrink-0 bg-card">
                         <div className="relative">
                           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <input
@@ -465,7 +465,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
                         </div>
                       </div>
                       {/* Known routes grouped by category */}
-                      <div className="overflow-y-auto py-2">
+                      <div className="overflow-y-auto py-2 overscroll-contain">
                         {(() => {
                           const searchLower = routeSearch.toLowerCase()
                           const filteredCategories = ROUTE_CATEGORIES.filter(category => {
@@ -508,7 +508,7 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
 
                             return (
                               <div key={category}>
-                                <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-card sticky top-0 z-10 flex items-center justify-between">
+                                <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-secondary/50 flex items-center justify-between">
                                   <span>{category}</span>
                                   {availableRoutes.length > 0 && (
                                     <button
