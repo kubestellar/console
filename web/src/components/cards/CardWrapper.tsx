@@ -733,7 +733,9 @@ export function CardWrapper({
   const effectiveHasData = childDataState?.hasData ?? true // Default to true if not reported
 
   // Determine if we should show skeleton: loading with no cached data
-  const shouldShowSkeleton = skeletonType && effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing
+  // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
+  const effectiveSkeletonType = skeletonType || 'list'
+  const shouldShowSkeleton = effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
@@ -1062,14 +1064,14 @@ export function CardWrapper({
             {(isVisible || isExpanded) ? (
               // Show skeleton when loading with no cached data
               shouldShowSkeleton ? (
-                <CardSkeleton type={skeletonType} rows={skeletonRows} showHeader />
+                <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
               ) : (
                 children
               )
             ) : (
               // Show skeleton during lazy mount (before IntersectionObserver fires)
               // This provides visual continuity instead of a tiny pulse loader
-              <CardSkeleton type={skeletonType || 'list'} rows={skeletonRows || 3} showHeader={false} />
+              <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />
             )}
           </div>
         )}

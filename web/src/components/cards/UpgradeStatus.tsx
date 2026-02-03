@@ -41,7 +41,7 @@ function setCachedVersion(clusterName: string, version: string) {
 
 // Shared WebSocket for version fetching
 let versionWs: WebSocket | null = null
-let versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
+const versionPendingRequests: Map<string, (version: string | null) => void> = new Map()
 let wsConnecting = false
 
 function ensureVersionWs(): Promise<WebSocket> {

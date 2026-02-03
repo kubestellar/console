@@ -93,7 +93,7 @@ export function UnifiedStatBlock({
       isDemo: resolved.isDemo,
       isClickable: !!config.onClick,
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [config, data, getValue])
 
   // Get components

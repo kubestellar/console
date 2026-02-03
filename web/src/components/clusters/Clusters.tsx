@@ -797,14 +797,14 @@ function NamespaceResources({ clusterName, namespace }: NamespaceResourcesProps)
 }
 
 // Legacy ClusterDetail - kept for reference, using ClusterDetailModal instead
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 interface _ClusterDetailProps {
   clusterName: string
   onClose: () => void
   onRename?: (clusterName: string) => void
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetailProps) {
   const { health, isLoading } = useClusterHealth(clusterName)
   const { issues: podIssues } = usePodIssues(clusterName)

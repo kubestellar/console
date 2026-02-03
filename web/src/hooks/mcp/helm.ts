@@ -315,7 +315,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       setIsRefreshing(false)
     }
     // Note: cachedEntry deliberately excluded to prevent infinite loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [cluster, release, namespace])
 
   useEffect(() => {

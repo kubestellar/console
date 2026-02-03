@@ -141,7 +141,7 @@ export function Kubectl() {
 
     try {
       // Parse command
-      let args = cmd.trim().split(/\s+/)
+      const args = cmd.trim().split(/\s+/)
       
       // Add output format if not specified
       if (!args.includes('-o') && !args.includes('--output') && outputFormat !== 'table') {

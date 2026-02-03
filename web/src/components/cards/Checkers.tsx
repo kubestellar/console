@@ -522,7 +522,7 @@ export function Checkers(_props: CardComponentProps) {
       if (result.move) {
         let newBoard = applyMove(board, result.move)
         let lastPos = result.move.to
-        let capturedAny = result.move.isJump
+        const capturedAny = result.move.isJump
 
         // Show combat animation for captures
         if (result.move.isJump && result.move.captures.length > 0) {

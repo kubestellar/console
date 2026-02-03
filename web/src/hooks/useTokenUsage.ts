@@ -35,7 +35,7 @@ let sharedUsage: TokenUsage = {
   resetDate: getNextResetDate(),
 }
 let pollStarted = false
-let subscribers = new Set<(usage: TokenUsage) => void>()
+const subscribers = new Set<(usage: TokenUsage) => void>()
 
 // Initialize from localStorage
 if (typeof window !== 'undefined') {

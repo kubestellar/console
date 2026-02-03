@@ -235,7 +235,7 @@ spec:
 // Module-level flag to prevent StrictMode double-checks
 // This persists across component mounts within the same page load
 let globalCheckInProgress = false
-let globalCheckedClusters = new Set<string>()
+const globalCheckedClusters = new Set<string>()
 
 async function checkGatekeeperStatus(clusterName: string): Promise<GatekeeperStatus> {
   try {

@@ -96,7 +96,7 @@ function slideLine(line: (number | null)[]): [(number | null)[], number, boolean
 
 // Move grid in direction
 function moveGrid(grid: Grid, direction: 'up' | 'down' | 'left' | 'right'): { grid: Grid; score: number; moved: boolean } {
-  let newGrid = grid.map(row => [...row])
+  const newGrid = grid.map(row => [...row])
   let totalScore = 0
   let anyMoved = false
 
@@ -192,7 +192,7 @@ export function Game2048(_props: CardComponentProps) {
     const result = moveGrid(grid, direction)
 
     if (result.moved) {
-      let newGrid = addRandomTile(result.grid)
+      const newGrid = addRandomTile(result.grid)
       setGrid(newGrid)
       const newScore = score + result.score
       setScore(newScore)
