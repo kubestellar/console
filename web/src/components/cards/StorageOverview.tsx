@@ -16,12 +16,14 @@ export function StorageOverview() {
   const { drillToPVC } = useDrillDownActions()
 
   // Report card data state
-  const hasData = pvcs.length > 0
+  // hasData should be true once loading completes (even with empty data)
+  const combinedLoading = isLoading || pvcsLoading
+  const hasData = !combinedLoading || pvcs.length > 0
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
-    isLoading: (isLoading || pvcsLoading) && !hasData,
-    isRefreshing: isRefreshing || ((isLoading || pvcsLoading) && hasData),
+    isLoading: combinedLoading && pvcs.length === 0,
+    isRefreshing: isRefreshing || (combinedLoading && pvcs.length > 0),
     hasData,
   })
 

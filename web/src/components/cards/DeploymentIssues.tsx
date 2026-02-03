@@ -42,9 +42,10 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
     error
   } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
-  // Only show skeleton when no cached data exists
-  const hasData = rawIssues.length > 0
-  const isLoading = hookLoading && !hasData
+  // hasData should be true once loading completes (even with empty data)
+  // This prevents skeleton showing forever when API returns empty array
+  const hasData = !hookLoading || rawIssues.length > 0
+  const isLoading = hookLoading && rawIssues.length === 0
   const { drillToDeployment } = useDrillDownActions()
 
   // Report data state to CardWrapper for failure badge rendering

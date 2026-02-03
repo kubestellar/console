@@ -18,14 +18,15 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
-  const hasData = gpuNodes.length > 0
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || gpuNodes.length > 0
 
   // Report state to CardWrapper for refresh animation
   useReportCardDataState({
     isFailed: false,
     consecutiveFailures: 0,
-    isLoading: isLoading && !hasData,
-    isRefreshing: isLoading && hasData,
+    isLoading: isLoading && gpuNodes.length === 0,
+    isRefreshing: isLoading && gpuNodes.length > 0,
     hasData,
   })
 

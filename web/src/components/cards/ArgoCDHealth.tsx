@@ -26,13 +26,16 @@ export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
     consecutiveFailures,
   } = useArgoCDHealth()
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || total > 0
+
   // Report data state to CardWrapper
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData: total > 0,
+    isLoading: isLoading && total === 0,
+    isRefreshing: isRefreshing || (isLoading && total > 0),
+    hasData,
   })
 
   const showSkeleton = isLoading && total === 0 && !isFailed

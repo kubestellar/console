@@ -66,13 +66,16 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || allApps.length > 0
+
   // Report data state to CardWrapper
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
-    isLoading,
-    isRefreshing,
-    hasData: allApps.length > 0,
+    isLoading: isLoading && allApps.length === 0,
+    isRefreshing: isRefreshing || (isLoading && allApps.length > 0),
+    hasData,
   })
 
   // Card-specific status filter

@@ -99,6 +99,9 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     }
   }, [storedData.data.length])
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || kustomizationData.length > 0
+
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
   // Using demo data so isFailed is always false, isRefreshing is false
   useReportCardDataState({
@@ -106,7 +109,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     consecutiveFailures: 0,
     isLoading,
     isRefreshing: false,
-    hasData: kustomizationData.length > 0,
+    hasData,
   })
 
   // Apply global filters to cluster list for the dropdown

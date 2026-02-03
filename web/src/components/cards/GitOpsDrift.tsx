@@ -72,13 +72,16 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   // Only show skeleton when no cached data exists - prevents flickering
   const isLoading = isLoadingHook && drifts.length === 0
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || drifts.length > 0
+
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
     isLoading,
     isRefreshing,
-    hasData: drifts.length > 0,
+    hasData,
   })
 
   // Map drift severity to global SeverityLevel

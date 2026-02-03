@@ -108,13 +108,16 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   // Only show skeleton when no cached data exists
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !historyLoading || rawHistory.length > 0
+
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
-    isLoading: historyLoading,
-    isRefreshing: historyRefreshing,
-    hasData: rawHistory.length > 0,
+    isLoading: historyLoading && rawHistory.length === 0,
+    isRefreshing: historyRefreshing || (historyLoading && rawHistory.length > 0),
+    hasData,
   })
 
   // Apply global filters to clusters

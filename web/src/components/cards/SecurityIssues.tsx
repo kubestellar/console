@@ -112,13 +112,16 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
 
   const { drillToPod } = useDrillDownActions()
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || rawIssues.length > 0
+
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
     isLoading,
     isRefreshing,
-    hasData: rawIssues.length > 0,
+    hasData,
   })
 
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }

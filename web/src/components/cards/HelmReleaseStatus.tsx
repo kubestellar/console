@@ -57,13 +57,16 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   // Only show loading skeleton when no data exists (not during refresh)
   const isLoading = (clustersLoading || releasesLoading) && allHelmReleases.length === 0
 
+  // hasData should be true once loading completes (even with empty data)
+  const hasData = !isLoading || allHelmReleases.length > 0
+
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
     isLoading,
     isRefreshing,
-    hasData: allHelmReleases.length > 0,
+    hasData,
   })
 
   // Transform API data to display format
