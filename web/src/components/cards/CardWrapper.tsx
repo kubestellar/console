@@ -730,7 +730,11 @@ export function CardWrapper({
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
   const effectiveIsLoading = isRefreshing || childDataState?.isLoading || false
   const effectiveIsRefreshing = childDataState?.isRefreshing || false
-  const effectiveHasData = childDataState?.hasData ?? true // Default to true if not reported
+  // hasData logic:
+  // - If card explicitly reports hasData, use it
+  // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
+  // - Otherwise default to true (show content)
+  const effectiveHasData = childDataState?.hasData ?? (childDataState?.isLoading ? false : true)
 
   // Determine if we should show skeleton: loading with no cached data
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
