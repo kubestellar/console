@@ -62,6 +62,8 @@ export interface DashboardPageProps {
     title: string
     description: string
   }
+  /** Whether this dashboard shows demo/mock data */
+  isDemoData?: boolean
 }
 
 // Helper to get icon component
@@ -88,6 +90,7 @@ export function DashboardPage({
   hasData = true,
   children,
   emptyState,
+  isDemoData = false,
 }: DashboardPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -222,6 +225,7 @@ export function DashboardPage({
         isLoading={isLoading && !hasData}
         lastUpdated={lastUpdated}
         collapsedStorageKey={`${storageKey}-stats-collapsed`}
+        isDemoData={isDemoData}
       />
 
       {/* Dashboard Cards Section */}
