@@ -47,6 +47,7 @@ const DEFAULT_CLUSTERS_CARDS = [
 ]
 
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useMissions } from '../../hooks/useMissions'
@@ -1372,7 +1373,12 @@ export function Clusters() {
   const isFetching = isLoading || isRefreshing || showIndicator
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
-  const { isConnected } = useLocalAgent()
+  const { isConnected, status: agentStatus } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
+
+  // When demo mode is OFF and agent is not connected, force skeleton display
+  const isAgentOffline = agentStatus !== 'connected'
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline
   const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
   const {
     selectedClusters: globalSelectedClusters,
@@ -1662,7 +1668,8 @@ export function Clusters() {
     }
   }, [globalFilteredClusters, gpuByCluster])
 
-  if (isLoading && clusters.length === 0) {
+  // Show skeleton when loading with no data OR when agent is offline and demo mode is OFF
+  if ((isLoading && clusters.length === 0) || forceSkeletonForOffline) {
     return (
       <div className="pt-16">
         <div className="mb-6">

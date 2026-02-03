@@ -757,7 +757,8 @@ export function CardWrapper({
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
-  const shouldShowSkeleton = (effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline
+  // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
+  const shouldShowSkeleton = !isDemoData && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages

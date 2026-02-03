@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { WifiOff, HardDrive, Server, CheckCircle2, XCircle, Cpu, MemoryStick, Layers, Zap, Box, Settings } from 'lucide-react'
 import { formatStat, formatMemoryStat } from '../../../lib/formatStats'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
+import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useDemoMode } from '../../../hooks/useDemoMode'
+import { Skeleton } from '../../ui/Skeleton'
 
 export interface ClusterStats {
   total: number
@@ -173,9 +176,15 @@ export function StatsOverview({
 }: StatsOverviewProps) {
   const { blocks, saveBlocks, visibleBlocks } = useStatsConfig(configKey)
   const [showConfig, setShowConfig] = useState(false)
+  const { status: agentStatus } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
+
+  // When demo mode is OFF and agent is not connected, force skeleton display
+  const isAgentOffline = agentStatus !== 'connected'
+  const forceLoadingForOffline = !isDemoMode && isAgentOffline
 
   // Resource data is available if we have reachable clusters with node data
-  const hasData = stats.hasResourceData !== false
+  const hasData = forceLoadingForOffline ? false : stats.hasResourceData !== false
 
   // Map block IDs to their click handlers
   const getClickHandler = (blockId: string) => {
@@ -226,17 +235,31 @@ export function StatsOverview({
 
       {/* Stats grid */}
       <div className={`grid ${gridCols} gap-3`}>
-        {visibleBlocks.map(block => (
-          <StatBlock
-            key={block.id}
-            blockId={block.id}
-            stats={stats}
-            hasData={hasData}
-            onClick={getClickHandler(block.id)}
-            color={block.color}
-            icon={block.icon}
-          />
-        ))}
+        {forceLoadingForOffline ? (
+          // Show skeletons when agent is offline and demo mode is OFF
+          visibleBlocks.map(block => (
+            <div key={block.id} className="glass p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Skeleton variant="circular" width={20} height={20} />
+                <Skeleton variant="text" width={80} height={16} />
+              </div>
+              <Skeleton variant="text" width={60} height={36} className="mb-1" />
+              <Skeleton variant="text" width={100} height={12} />
+            </div>
+          ))
+        ) : (
+          visibleBlocks.map(block => (
+            <StatBlock
+              key={block.id}
+              blockId={block.id}
+              stats={stats}
+              hasData={hasData}
+              onClick={getClickHandler(block.id)}
+              color={block.color}
+              icon={block.icon}
+            />
+          ))
+        )}
       </div>
 
       {/* Config modal */}

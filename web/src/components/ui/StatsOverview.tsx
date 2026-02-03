@@ -9,6 +9,8 @@ import {
 import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { Skeleton } from './Skeleton'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -149,6 +151,15 @@ export function StatsOverview({
   isDemoData = false,
 }: StatsOverviewProps) {
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType)
+  const { status: agentStatus } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
+
+  // When demo mode is OFF and agent is not connected, force skeleton display
+  // Include 'connecting' state because it may take time before we know agent is truly offline
+  const isAgentOffline = agentStatus !== 'connected'
+  const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline
+  const effectiveIsLoading = isLoading || forceLoadingForOffline
+  const effectiveHasData = forceLoadingForOffline ? false : hasData
   const [showConfig, setShowConfig] = useState(false)
 
   // Manage collapsed state with localStorage persistence
@@ -226,7 +237,7 @@ export function StatsOverview({
       {/* Stats grid */}
       {(!collapsible || isExpanded) && (
         <div className={`grid ${gridCols} gap-4`}>
-          {isLoading ? (
+          {effectiveIsLoading ? (
             // Loading skeletons
             <>
               {visibleBlocks.map((block) => (
@@ -252,7 +263,7 @@ export function StatsOverview({
                     key={block.id}
                     block={block}
                     data={safeData}
-                    hasData={hasData && data?.value !== undefined}
+                    hasData={effectiveHasData && data?.value !== undefined}
                   />
                 )
               })}

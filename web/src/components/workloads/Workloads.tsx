@@ -289,24 +289,37 @@ export function Workloads() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {clusters
-            .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
-            .map((cluster) => (
-            <div key={cluster.name} className="glass p-3 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <StatusIndicator
-                  status={cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'}
-                  size="sm"
-                />
-                <span className="font-medium text-foreground text-sm truncate">
-                  {cluster.context || cluster.name.split('/').pop()}
-                </span>
+          {forceSkeletonForOffline ? (
+            // Show skeleton when agent is offline and demo mode is OFF
+            [1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="glass p-3 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Skeleton variant="circular" width={16} height={16} />
+                  <Skeleton variant="text" width={100} height={16} />
+                </div>
+                <Skeleton variant="text" width={80} height={12} />
               </div>
-              <div className="text-xs text-muted-foreground">
-                {cluster.reachable !== false ? (cluster.podCount ?? '-') : '-'} pods • {cluster.reachable !== false ? (cluster.nodeCount ?? '-') : '-'} nodes
+            ))
+          ) : (
+            clusters
+              .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
+              .map((cluster) => (
+              <div key={cluster.name} className="glass p-3 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <StatusIndicator
+                    status={cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'}
+                    size="sm"
+                  />
+                  <span className="font-medium text-foreground text-sm truncate">
+                    {cluster.context || cluster.name.split('/').pop()}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {cluster.reachable !== false ? (cluster.podCount ?? '-') : '-'} pods • {cluster.reachable !== false ? (cluster.nodeCount ?? '-') : '-'} nodes
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </DashboardPage>
