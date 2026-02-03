@@ -115,7 +115,6 @@ export function BaseModal({
         <div
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
           onClick={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
         >
           {children}
         </div>

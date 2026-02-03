@@ -346,6 +346,7 @@
   background: var(--scrollbar-thumb-hover);
 }
 
+
 /* Star field background - only when theme supports it */
 .star-field {
   position: fixed;

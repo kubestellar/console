@@ -206,7 +206,6 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
   const [newItemTarget, setNewItemTarget] = useState<'primary' | 'secondary'>('primary')
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedKnownRoutes, setSelectedKnownRoutes] = useState<Set<string>>(new Set())
-  const [showRouteDropdown, setShowRouteDropdown] = useState(false)
   const [routeSearch, setRouteSearch] = useState('')
   const [expandedSection, setExpandedSection] = useState<string | null>('primary')
   const [dashboardsWithCards, setDashboardsWithCards] = useState<Dashboard[]>([])
@@ -422,177 +421,162 @@ export function SidebarCustomizer({ isOpen, onClose }: SidebarCustomizerProps) {
             </div>
           )}
 
-          {/* Add Item Form */}
+          {/* Add Item Form - Inline checklist (no dropdown) */}
           {showAddForm && (
             <div className="mb-6 p-4 rounded-lg bg-secondary/30 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-3">Add Dashboards to Sidebar</h3>
 
-              {/* Route Selection - Multi-select dropdown */}
-              <div className="mb-4">
-                <label className="text-xs text-muted-foreground mb-1 block">Select Dashboards</label>
+              {/* Search filter */}
+              <div className="mb-3">
                 <div className="relative">
-                  <button
-                    onClick={() => setShowRouteDropdown(!showRouteDropdown)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-secondary border border-border text-sm text-left"
-                  >
-                    {selectedKnownRoutes.size > 0 ? (
-                      <span className="text-foreground">
-                        {selectedKnownRoutes.size} dashboard{selectedKnownRoutes.size !== 1 ? 's' : ''} selected
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Select dashboards to add...</span>
-                    )}
-                    <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', showRouteDropdown && 'rotate-180')} />
-                  </button>
-
-                  {showRouteDropdown && (
-                    <div
-                      className="absolute top-full left-0 right-0 mt-1 rounded-lg bg-card border border-border shadow-xl z-50 max-h-[350px] flex flex-col overscroll-contain"
-                      onWheel={(e) => e.stopPropagation()}
-                    >
-                      {/* Search input - sticky at top */}
-                      <div className="p-2 border-b border-border flex-shrink-0 bg-card">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <input
-                            type="text"
-                            value={routeSearch}
-                            onChange={(e) => setRouteSearch(e.target.value)}
-                            placeholder="Search dashboards..."
-                            className="w-full pl-8 pr-3 py-1.5 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                            autoFocus
-                          />
-                        </div>
-                      </div>
-                      {/* Known routes grouped by category */}
-                      <div className="overflow-y-auto py-2 overscroll-contain">
-                        {(() => {
-                          const searchLower = routeSearch.toLowerCase()
-                          const filteredCategories = ROUTE_CATEGORIES.filter(category => {
-                            const routes = KNOWN_ROUTES.filter(r => r.category === category)
-                            if (!searchLower) return true
-                            return routes.some(r =>
-                              r.name.toLowerCase().includes(searchLower) ||
-                              r.description.toLowerCase().includes(searchLower) ||
-                              r.href.toLowerCase().includes(searchLower)
-                            )
-                          })
-
-                          if (filteredCategories.length === 0) {
-                            return (
-                              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                                No dashboards found matching "{routeSearch}"
-                              </div>
-                            )
-                          }
-
-                          return filteredCategories.map(category => {
-                            const routes = KNOWN_ROUTES.filter(r => r.category === category)
-                            const filteredRoutes = searchLower
-                              ? routes.filter(r =>
-                                  r.name.toLowerCase().includes(searchLower) ||
-                                  r.description.toLowerCase().includes(searchLower) ||
-                                  r.href.toLowerCase().includes(searchLower)
-                                )
-                              : routes
-
-                            if (filteredRoutes.length === 0) return null
-
-                            // Get available routes in category (not already added)
-                            const availableRoutes = filteredRoutes.filter(r =>
-                              !config.primaryNav.some(item => item.href === r.href) &&
-                              !config.secondaryNav.some(item => item.href === r.href)
-                            )
-                            const allCategorySelected = availableRoutes.length > 0 &&
-                              availableRoutes.every(r => selectedKnownRoutes.has(r.href))
-
-                            return (
-                              <div key={category}>
-                                <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider bg-secondary/50 flex items-center justify-between">
-                                  <span>{category}</span>
-                                  {availableRoutes.length > 0 && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        const newSelected = new Set(selectedKnownRoutes)
-                                        if (allCategorySelected) {
-                                          availableRoutes.forEach(r => newSelected.delete(r.href))
-                                        } else {
-                                          availableRoutes.forEach(r => newSelected.add(r.href))
-                                        }
-                                        setSelectedKnownRoutes(newSelected)
-                                      }}
-                                      className={cn(
-                                        'text-[10px] px-1.5 py-0.5 rounded',
-                                        allCategorySelected
-                                          ? 'bg-purple-500/30 text-purple-300'
-                                          : 'bg-secondary/80 text-muted-foreground hover:text-foreground'
-                                      )}
-                                    >
-                                      {allCategorySelected ? 'Deselect All' : 'Select All'}
-                                    </button>
-                                  )}
-                                </div>
-                                {filteredRoutes.map(route => {
-                                  const isAlreadyAdded = config.primaryNav.some(item => item.href === route.href) ||
-                                                          config.secondaryNav.some(item => item.href === route.href)
-                                  const isSelected = selectedKnownRoutes.has(route.href)
-                                  return (
-                                    <button
-                                      key={route.href}
-                                      onClick={() => !isAlreadyAdded && toggleKnownRoute(route.href)}
-                                      disabled={isAlreadyAdded}
-                                      className={cn(
-                                        'w-full px-3 py-2 text-left transition-colors',
-                                        isAlreadyAdded
-                                          ? 'opacity-50 cursor-not-allowed'
-                                          : 'hover:bg-secondary/50',
-                                        isSelected && 'bg-purple-500/10'
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        {/* Checkbox */}
-                                        <div className={cn(
-                                          'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
-                                          isAlreadyAdded ? 'border-green-500/50 bg-green-500/20' :
-                                          isSelected ? 'border-purple-500 bg-purple-500' : 'border-border bg-secondary'
-                                        )}>
-                                          {(isSelected || isAlreadyAdded) && (
-                                            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                                              <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                            </svg>
-                                          )}
-                                        </div>
-                                        {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground')}
-                                        <span className={cn(
-                                          'text-sm font-medium',
-                                          isSelected ? 'text-purple-400' : 'text-foreground'
-                                        )}>
-                                          {route.name}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground ml-auto">{route.href}</span>
-                                        {isAlreadyAdded && (
-                                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Added</span>
-                                        )}
-                                      </div>
-                                      <p className="text-xs text-muted-foreground pl-10 mt-0.5">{route.description}</p>
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            )
-                          })
-                        })()}
-                      </div>
-                    </div>
-                  )}
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={routeSearch}
+                    onChange={(e) => setRouteSearch(e.target.value)}
+                    placeholder="Filter dashboards..."
+                    className="w-full pl-8 pr-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 border border-border"
+                  />
                 </div>
               </div>
 
-              {/* Tip */}
-              <p className="text-xs text-muted-foreground">
-                Select dashboards from the dropdown above. The Add button appears in the header when items are selected.
-              </p>
+              {/* Inline checklist grouped by category */}
+              <div className="space-y-1">
+                {(() => {
+                  const searchLower = routeSearch.toLowerCase()
+                  const filteredCategories = ROUTE_CATEGORIES.filter(category => {
+                    const routes = KNOWN_ROUTES.filter(r => r.category === category)
+                    if (!searchLower) return true
+                    return routes.some(r =>
+                      r.name.toLowerCase().includes(searchLower) ||
+                      r.description.toLowerCase().includes(searchLower) ||
+                      r.href.toLowerCase().includes(searchLower)
+                    )
+                  })
+
+                  if (filteredCategories.length === 0) {
+                    return (
+                      <div className="py-4 text-center text-sm text-muted-foreground">
+                        No dashboards found matching "{routeSearch}"
+                      </div>
+                    )
+                  }
+
+                  return filteredCategories.map(category => {
+                    const routes = KNOWN_ROUTES.filter(r => r.category === category)
+                    const filteredRoutes = searchLower
+                      ? routes.filter(r =>
+                          r.name.toLowerCase().includes(searchLower) ||
+                          r.description.toLowerCase().includes(searchLower) ||
+                          r.href.toLowerCase().includes(searchLower)
+                        )
+                      : routes
+
+                    if (filteredRoutes.length === 0) return null
+
+                    // Get available routes in category (not already added)
+                    const availableRoutes = filteredRoutes.filter(r =>
+                      !config.primaryNav.some(item => item.href === r.href) &&
+                      !config.secondaryNav.some(item => item.href === r.href)
+                    )
+                    const allCategorySelected = availableRoutes.length > 0 &&
+                      availableRoutes.every(r => selectedKnownRoutes.has(r.href))
+
+                    return (
+                      <div key={category} className="rounded-lg border border-border/50 overflow-hidden">
+                        {/* Category header */}
+                        <div className="px-3 py-2 text-xs font-medium uppercase tracking-wider bg-secondary/80 flex items-center justify-between text-muted-foreground">
+                          <span>{category}</span>
+                          {availableRoutes.length > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const newSelected = new Set(selectedKnownRoutes)
+                                if (allCategorySelected) {
+                                  availableRoutes.forEach(r => newSelected.delete(r.href))
+                                } else {
+                                  availableRoutes.forEach(r => newSelected.add(r.href))
+                                }
+                                setSelectedKnownRoutes(newSelected)
+                              }}
+                              className={cn(
+                                'text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                                allCategorySelected
+                                  ? 'bg-purple-500/30 text-purple-300 hover:bg-purple-500/40'
+                                  : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                              )}
+                            >
+                              {allCategorySelected ? 'Deselect All' : 'Select All'}
+                            </button>
+                          )}
+                        </div>
+                        {/* Routes in this category */}
+                        <div className="divide-y divide-border/30">
+                          {filteredRoutes.map(route => {
+                            const isAlreadyAdded = config.primaryNav.some(item => item.href === route.href) ||
+                                                    config.secondaryNav.some(item => item.href === route.href)
+                            const isSelected = selectedKnownRoutes.has(route.href)
+                            return (
+                              <button
+                                key={route.href}
+                                onClick={() => !isAlreadyAdded && toggleKnownRoute(route.href)}
+                                disabled={isAlreadyAdded}
+                                className={cn(
+                                  'w-full px-3 py-2 text-left transition-colors',
+                                  isAlreadyAdded
+                                    ? 'opacity-50 cursor-not-allowed bg-secondary/20'
+                                    : 'hover:bg-secondary/50',
+                                  isSelected && !isAlreadyAdded && 'bg-purple-500/10'
+                                )}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {/* Checkbox */}
+                                  <div className={cn(
+                                    'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
+                                    isAlreadyAdded ? 'border-green-500/50 bg-green-500/20' :
+                                    isSelected ? 'border-purple-500 bg-purple-500' : 'border-border bg-secondary'
+                                  )}>
+                                    {(isSelected || isAlreadyAdded) && (
+                                      <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                                        <path d="M2 6l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    )}
+                                  </div>
+                                  {renderIcon(route.icon, 'w-4 h-4 text-muted-foreground flex-shrink-0')}
+                                  <span className={cn(
+                                    'text-sm font-medium truncate',
+                                    isSelected && !isAlreadyAdded ? 'text-purple-400' : 'text-foreground'
+                                  )}>
+                                    {route.name}
+                                  </span>
+                                  {isAlreadyAdded && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 flex-shrink-0 ml-auto">Added</span>
+                                  )}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+
+              {/* Selection summary */}
+              {selectedKnownRoutes.size > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedKnownRoutes.size} dashboard{selectedKnownRoutes.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedKnownRoutes(new Set())}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
