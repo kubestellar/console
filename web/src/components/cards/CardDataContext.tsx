@@ -9,7 +9,7 @@
  *   useReportCardDataState({ isFailed, consecutiveFailures })
  */
 
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useLayoutEffect } from 'react'
 
 export interface CardDataState {
   /** Whether 3+ consecutive fetch failures have occurred */
@@ -40,7 +40,9 @@ export const CardDataReportContext = createContext<CardDataReportContextValue>(N
 export function useReportCardDataState(state: CardDataState) {
   const { isFailed, consecutiveFailures, isLoading, isRefreshing, hasData } = state
   const ctx = useContext(CardDataReportContext)
-  useEffect(() => {
+  // useLayoutEffect runs synchronously before paint, ensuring cached data
+  // is reported before CardWrapper decides to show skeleton
+  useLayoutEffect(() => {
     ctx.report({ isFailed, consecutiveFailures, isLoading, isRefreshing, hasData })
   }, [ctx, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData])
 }

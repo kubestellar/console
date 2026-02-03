@@ -652,18 +652,16 @@ export function CardWrapper({
   // Declared early so it can be used in the refresh animation effect below
   const [childDataState, setChildDataState] = useState<CardDataState | null>(null)
 
-  // Brief initial period to show skeleton while waiting for card to report state
-  // This prevents blank cards on initial load while giving cards time to report
-  const [initialSkeletonPeriod, setInitialSkeletonPeriod] = useState(true)
+  // Skeleton timeout: show skeleton for up to 5 seconds while waiting for card to report
+  // After timeout, assume card doesn't use reporting and show content
+  // IMPORTANT: Don't reset on childDataState change - this allows cached data to show immediately
+  const [skeletonTimedOut, setSkeletonTimedOut] = useState(false)
   useEffect(() => {
-    // End initial skeleton period after 300ms OR when card reports state
-    if (childDataState !== null) {
-      setInitialSkeletonPeriod(false)
-      return
-    }
-    const timer = setTimeout(() => setInitialSkeletonPeriod(false), 300)
+    // Only run timeout once on mount - don't reset when childDataState changes
+    // Cards with cached data will report hasData: true quickly, hiding skeleton
+    const timer = setTimeout(() => setSkeletonTimedOut(true), 5000)
     return () => clearTimeout(timer)
-  }, [childDataState])
+  }, []) // Empty deps - only run on mount
 
   // Handle minimum spin duration for refresh button
   // Include both prop and context-reported refresh state
@@ -753,17 +751,21 @@ export function CardWrapper({
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || false
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
-  // Show loading if: card explicitly reports isLoading, OR we're in initial skeleton period
-  // Initial period (300ms) shows skeleton while waiting for cards to report their state
-  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (initialSkeletonPeriod && childDataState === null)
+  // Show loading when:
+  // - Card explicitly reports isLoading: true, OR
+  // - Card hasn't reported yet AND skeleton hasn't timed out (shows skeleton initially)
+  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (childDataState === null && !skeletonTimedOut)
   const effectiveIsRefreshing = childDataState?.isRefreshing || false
   // hasData logic:
   // - If card explicitly reports hasData, use it
+  // - If card hasn't reported AND skeleton timed out, assume has data (show content)
+  // - If card hasn't reported AND skeleton NOT timed out, assume no data (show skeleton)
   // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
-  // - During initial skeleton period with no report, assume no data (show skeleton)
   // - Otherwise default to true (show content)
   const effectiveHasData = childDataState?.hasData ?? (
-    (childDataState?.isLoading || (initialSkeletonPeriod && childDataState === null)) ? false : true
+    childDataState === null
+      ? skeletonTimedOut  // After timeout, assume content ready
+      : (childDataState?.isLoading ? false : true)
   )
 
   // Determine if we should show skeleton: loading with no cached data
@@ -1103,12 +1105,18 @@ export function CardWrapper({
         {!isCollapsed && (
           <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">
             {(isVisible || isExpanded) ? (
-              // Show skeleton when loading with no cached data
-              shouldShowSkeleton ? (
-                <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
-              ) : (
-                children
-              )
+              <>
+                {/* Show skeleton overlay when loading with no cached data */}
+                {shouldShowSkeleton && (
+                  <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
+                )}
+                {/* ALWAYS render children so they can report their data state via useCardLoadingState.
+                    Hide visually when skeleton is showing, but keep mounted so useLayoutEffect runs.
+                    This prevents the deadlock where CardWrapper waits for hasData but children never mount. */}
+                <div className={shouldShowSkeleton ? 'hidden' : 'contents'}>
+                  {children}
+                </div>
+              </>
             ) : (
               // Show skeleton during lazy mount (before IntersectionObserver fires)
               // This provides visual continuity instead of a tiny pulse loader
