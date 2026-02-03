@@ -10,6 +10,37 @@ export class UnauthenticatedError extends Error {
   }
 }
 
+// Error class for 401 unauthorized responses (invalid/expired token)
+export class UnauthorizedError extends Error {
+  constructor() {
+    super('Token is invalid or expired')
+    this.name = 'UnauthorizedError'
+  }
+}
+
+// Debounce 401 handling to avoid multiple simultaneous logouts
+let handling401 = false
+
+/**
+ * Handle 401 Unauthorized responses by clearing auth state and redirecting to login.
+ * This is debounced to avoid multiple simultaneous logouts from parallel API calls.
+ */
+function handle401(): void {
+  if (handling401) return
+  handling401 = true
+
+  console.warn('[API] Received 401 Unauthorized - token invalid or expired, logging out')
+
+  // Clear auth state
+  localStorage.removeItem('token')
+  localStorage.removeItem('kc-user-cache')
+
+  // Redirect to login after a brief delay (allows console message to be seen)
+  setTimeout(() => {
+    window.location.href = '/login'
+  }, 100)
+}
+
 // Error class for backend unavailable
 export class BackendUnavailableError extends Error {
   constructor() {
@@ -186,6 +217,11 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - token is invalid or expired
+        if (response.status === 401) {
+          handle401()
+          throw new UnauthorizedError()
+        }
         const errorText = await response.text().catch(() => '')
         // Note: We don't mark backend as failed on 500 responses here.
         // The health check is the source of truth for backend availability.
@@ -228,6 +264,11 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - token is invalid or expired
+        if (response.status === 401) {
+          handle401()
+          throw new UnauthorizedError()
+        }
         // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(`API error: ${response.status}`)
       }
@@ -266,6 +307,11 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - token is invalid or expired
+        if (response.status === 401) {
+          handle401()
+          throw new UnauthorizedError()
+        }
         // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(`API error: ${response.status}`)
       }
@@ -303,6 +349,11 @@ class ApiClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - token is invalid or expired
+        if (response.status === 401) {
+          handle401()
+          throw new UnauthorizedError()
+        }
         // Note: Don't mark backend as failed on 500s - health check is source of truth
         throw new Error(`API error: ${response.status}`)
       }
