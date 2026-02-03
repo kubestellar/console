@@ -285,16 +285,10 @@ export function useLastRoute() {
       }, 50)
       return () => clearTimeout(timeoutId)
     } else {
-      // Scroll to top. Set isRestoringRef to prevent the scroll listener
-      // from treating this programmatic scroll as a user-initiated scroll
-      // (which would clear the saved position for this path).
-      isRestoringRef.current = true
+      // Pin is off - just scroll to top immediately with no delay.
+      // We don't need to protect against scroll save since Pin is off
+      // and we won't restore the position anyway.
       container.scrollTo({ top: 0, behavior: 'instant' })
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          isRestoringRef.current = false
-        }, 100)
-      })
     }
   }, [location.pathname, restoreScrollPosition])
 
