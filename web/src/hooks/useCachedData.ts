@@ -1197,7 +1197,7 @@ export function useCachedSecurityIssues(
           const issues = await fetchSecurityIssuesViaKubectl(cluster, namespace)
           if (issues.length > 0) return issues
         } catch (err) {
-          console.warn('[useCachedSecurityIssues] kubectl fetch failed:', err)
+          console.error('[useCachedSecurityIssues] kubectl fetch failed:', err)
         }
       }
 
@@ -1221,7 +1221,7 @@ export function useCachedSecurityIssues(
             if (data.issues && data.issues.length > 0) return data.issues
           }
         } catch (err) {
-          console.warn('[useCachedSecurityIssues] API fetch failed:', err)
+          console.error('[useCachedSecurityIssues] API fetch failed:', err)
         }
       }
 
