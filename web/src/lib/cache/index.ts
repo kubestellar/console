@@ -314,13 +314,13 @@ class CacheStore<T> {
     // Initialize with initial data, then async load from IndexedDB
     const meta = this.loadMeta()
 
-    // When persisting to IndexedDB, don't show loading skeleton initially.
-    // Instead show initialData with isRefreshing to indicate data is coming.
-    // This prevents flashing skeleton when cached data is about to load.
+    // Always start with isLoading=true until we confirm cached data exists.
+    // This prevents the "blank card" state where isLoading=false but data hasn't arrived.
+    // The loadFromStorage() method will set isLoading=false, isRefreshing=true when cache is found.
     this.state = {
       data: initialData,
-      isLoading: !persist, // Only show loading if NOT persisting (no cached data possible)
-      isRefreshing: persist, // Show refreshing indicator when persisting (cache loading)
+      isLoading: true, // Always start loading - will be set false when cache found or fetch completes
+      isRefreshing: false,
       error: null, // Don't surface errors at dashboard level
       isFailed: meta.consecutiveFailures >= MAX_FAILURES,
       consecutiveFailures: meta.consecutiveFailures,
@@ -340,19 +340,18 @@ class CacheStore<T> {
     try {
       const entry = await idbStorage.get<T>(this.key)
       if (entry) {
+        // Cache found - show cached data immediately, start background refresh
         this.initialDataLoaded = true
         this.setState({
           data: entry.data,
           isLoading: false,
+          isRefreshing: true, // Will fetch latest in background
           lastRefresh: entry.timestamp,
         })
-      } else {
-        // No IDB data — set lastRefresh so cards don't show "Never refreshed"
-        // while the first fetch is in flight
-        this.setState({ lastRefresh: Date.now() })
       }
+      // If no IDB data, keep isLoading=true - fetch() will handle it
     } catch {
-      // Ignore errors, will use initial data
+      // Ignore errors, will use initial data with isLoading=true
     }
   }
 
