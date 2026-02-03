@@ -1690,11 +1690,42 @@ export function Clusters() {
           ))}
         </div>
 
-        {/* Cluster Grid Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <ClusterCardSkeleton key={i} />
-          ))}
+        {/* Dashboard Cards Section Skeleton */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+            <LayoutGrid className="w-4 h-4" />
+            <span>Dashboard Cards</span>
+            <ChevronDown className="w-4 h-4" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="glass rounded-xl p-4 md:col-span-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-5 w-5 bg-card/50 rounded animate-pulse" />
+                  <div className="h-5 w-32 bg-card/50 rounded animate-pulse" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-card/50 rounded animate-pulse" />
+                  <div className="h-4 w-3/4 bg-card/50 rounded animate-pulse" />
+                  <div className="h-4 w-1/2 bg-card/50 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cluster Cards Section Skeleton */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+            <Server className="w-4 h-4" />
+            <span>Cluster Cards</span>
+            <ChevronDown className="w-4 h-4" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <ClusterCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </div>
     )
