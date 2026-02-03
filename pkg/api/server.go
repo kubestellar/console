@@ -60,6 +60,30 @@ type Server struct {
 
 // NewServer creates a new API server
 func NewServer(cfg Config) (*Server, error) {
+	// Compute default frontend URL if not explicitly set
+	// This must happen here (not in LoadConfigFromEnv) so the --dev flag takes effect
+	if cfg.FrontendURL == "" {
+		if cfg.DevMode {
+			cfg.FrontendURL = "http://localhost:5174" // Vite dev server
+		} else {
+			cfg.FrontendURL = "http://localhost:8080" // Backend serves frontend
+		}
+	}
+
+	// JWT secret handling - CRITICAL SECURITY FIX
+	// This must happen here (not in LoadConfigFromEnv) so the --dev flag takes effect
+	if cfg.JWTSecret == "" {
+		if cfg.DevMode {
+			// Only allow default secret in dev mode
+			cfg.JWTSecret = generateDevSecret()
+			log.Println("WARNING: Using dev-mode JWT secret. Set JWT_SECRET env var for production.")
+		} else {
+			// In production, fail fast if JWT_SECRET is not configured
+			log.Fatal("FATAL: JWT_SECRET environment variable is required in production mode. " +
+				"Set JWT_SECRET to a cryptographically secure random string (at least 32 characters).")
+		}
+	}
+
 	// Initialize store
 	db, err := store.NewSQLiteStore(cfg.DatabasePath)
 	if err != nil {
@@ -480,32 +504,14 @@ func LoadConfigFromEnv() Config {
 
 	devMode := os.Getenv("DEV_MODE") == "true"
 
-	// Default frontend URL depends on mode:
-	// - Dev mode: Vite dev server on 5174
-	// - Production mode: Backend serves frontend on 8080
-	frontendURL := "http://localhost:8080"
-	if devMode {
-		frontendURL = "http://localhost:5174"
-	}
-	if u := os.Getenv("FRONTEND_URL"); u != "" {
-		frontendURL = u
-	}
+	// Frontend URL can be explicitly set via env var
+	// If not set, leave empty and compute default in NewServer based on final DevMode
+	// (This allows --dev flag to override env var for frontend URL default)
+	frontendURL := os.Getenv("FRONTEND_URL")
 
-	// JWT secret handling - CRITICAL SECURITY FIX
-	// In production, JWT_SECRET MUST be set via environment variable
-	// In dev mode, use a stable secret so tokens persist across restarts
+	// JWT secret - read from env, validation and default generation happens in NewServer
+	// (This allows --dev flag to override env var for JWT secret default)
 	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		if devMode {
-			// Only allow default secret in dev mode
-			jwtSecret = generateDevSecret()
-			log.Println("WARNING: Using dev-mode JWT secret. Set JWT_SECRET env var for production.")
-		} else {
-			// In production, fail fast if JWT_SECRET is not configured
-			log.Fatal("FATAL: JWT_SECRET environment variable is required in production mode. " +
-				"Set JWT_SECRET to a cryptographically secure random string (at least 32 characters).")
-		}
-	}
 
 	return Config{
 		Port:             port,
