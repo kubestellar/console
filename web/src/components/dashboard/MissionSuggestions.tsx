@@ -4,6 +4,9 @@ import { Lightbulb, Clock, X, ChevronDown, Zap, AlertTriangle, Shield, Server, S
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
 import { useSnoozedMissions, formatTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { useMissions } from '../../hooks/useMissions'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useDemoMode } from '../../hooks/useDemoMode'
+import { Skeleton } from '../ui/Skeleton'
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -51,6 +54,12 @@ export function MissionSuggestions() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Check agent status for offline skeleton display
+  const { status: agentStatus } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
+  const isAgentOffline = agentStatus !== 'connected'
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline
 
   // Force dependency on snoozedMissions for reactivity
   void snoozedMissions
@@ -140,6 +149,23 @@ export function MissionSuggestions() {
     e.stopPropagation()
     dismissMission(suggestion.id)
     setExpandedId(null)
+  }
+
+  // Show skeleton when agent is offline and demo mode is OFF
+  if (forceSkeletonForOffline) {
+    return (
+      <div data-tour="mission-suggestions" className="mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 text-muted-foreground mr-1">
+            <Lightbulb className="w-4 h-4 text-purple-400" />
+            <span className="text-xs font-medium">Actions:</span>
+          </div>
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} variant="rounded" width={120} height={26} className="rounded-full" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (!hasSuggestions) return null
