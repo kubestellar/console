@@ -1,22 +1,10 @@
-import { useMemo } from 'react'
 import { CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink, AlertCircle } from 'lucide-react'
-import { useClusters } from '../../hooks/useMCP'
-import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
+import { useArgoCDHealth } from '../../hooks/useArgoCD'
+import { useReportCardDataState } from './CardDataContext'
 
 interface ArgoCDHealthProps {
   config?: Record<string, unknown>
-}
-
-// Mock health status data
-function getMockHealthData(clusterCount: number) {
-  return {
-    healthy: Math.floor(clusterCount * 3.8),
-    degraded: Math.floor(clusterCount * 0.8),
-    progressing: Math.floor(clusterCount * 0.5),
-    missing: Math.floor(clusterCount * 0.2),
-    unknown: Math.floor(clusterCount * 0.1),
-  }
 }
 
 const healthConfig = {
@@ -28,21 +16,26 @@ const healthConfig = {
 }
 
 export function ArgoCDHealth({ config: _config }: ArgoCDHealthProps) {
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
-  const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
+  const {
+    stats,
+    total,
+    healthyPercent,
+    isLoading,
+    isRefreshing,
+    isFailed,
+    consecutiveFailures,
+  } = useArgoCDHealth()
 
-  const filteredClusterCount = useMemo(() => {
-    if (isAllClustersSelected) return clusters.length
-    return selectedClusters.length
-  }, [clusters, selectedClusters, isAllClustersSelected])
+  // Report data state to CardWrapper
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isLoading,
+    isRefreshing,
+    hasData: total > 0,
+  })
 
-  const stats = useMemo(() => {
-    return getMockHealthData(filteredClusterCount)
-  }, [filteredClusterCount])
-
-  const total = Object.values(stats).reduce((a, b) => a + b, 0)
-  const healthyPercent = total > 0 ? (stats.healthy / total) * 100 : 0
-  const showSkeleton = isLoading && total === 0
+  const showSkeleton = isLoading && total === 0 && !isFailed
 
   if (showSkeleton) {
     return (
