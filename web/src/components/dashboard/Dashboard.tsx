@@ -818,7 +818,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="pt-16">
+    <div data-testid="dashboard-page" className="pt-16">
       {/* Header */}
       <DashboardHeader
         title="Dashboard"
@@ -891,7 +891,7 @@ export function Dashboard() {
         onDragCancel={handleDragCancel}
       >
         <SortableContext items={localCards.map(c => c.id)} strategy={rectSortingStrategy}>
-          <div data-tour="dashboard" className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
+          <div data-testid="dashboard-cards-grid" data-tour="dashboard" className="grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(180px,auto)]">
             {localCards.map((card) => (
               <SortableCard
                 key={card.id}

@@ -33,7 +33,7 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#0a0a0a] relative overflow-hidden">
+    <div data-testid="login-page" className="min-h-screen flex bg-[#0a0a0a] relative overflow-hidden">
       {/* Left side - Login form */}
       <div className="flex-1 flex items-center justify-center relative z-10">
         {/* Star field background (left side only) */}
@@ -76,7 +76,7 @@ export function Login() {
 
           {/* Welcome text */}
           <div className="text-center mb-8">
-            <h2 className="text-xl font-semibold text-foreground mb-2">
+            <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
               Welcome back
             </h2>
             <p className="text-muted-foreground">
@@ -86,6 +86,7 @@ export function Login() {
 
           {/* GitHub login button */}
           <button
+            data-testid="github-login-button"
             onClick={login}
             className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 transition-all duration-200 hover:shadow-lg"
           >

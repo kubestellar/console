@@ -269,7 +269,7 @@ export function Sidebar() {
         />
       )}
 
-      <aside data-tour="sidebar" className={cn(
+      <aside data-testid="sidebar" data-tour="sidebar" className={cn(
         'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto transition-all duration-300 z-40',
         // Desktop: respect collapsed state
         !isMobile && (config.collapsed ? 'w-20 p-3' : 'w-64 p-4'),
@@ -280,6 +280,7 @@ export function Sidebar() {
       )}>
         {/* Collapse toggle - hidden on mobile */}
         <button
+          data-testid="sidebar-collapse-toggle"
           onClick={toggleCollapsed}
           className="absolute -right-3 top-6 p-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground z-10 hidden md:block"
         >
@@ -287,7 +288,7 @@ export function Sidebar() {
         </button>
 
         {/* Primary navigation */}
-        <nav className="space-y-1">
+        <nav data-testid="sidebar-primary-nav" className="space-y-1">
           {config.primaryNav.map(item => renderNavItem(item, 'primary'))}
         </nav>
 
@@ -314,6 +315,7 @@ export function Sidebar() {
         {!isCollapsed && (
           <div className="mt-6">
             <button
+              data-testid="sidebar-add-card"
               onClick={handleAddCardClick}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-200"
             >
@@ -325,7 +327,7 @@ export function Sidebar() {
 
         {/* Cluster status summary */}
         {config.showClusterStatus && !isCollapsed && (
-          <div className="mt-6 p-4 rounded-lg bg-secondary/30">
+          <div data-testid="sidebar-cluster-status" className="mt-6 p-4 rounded-lg bg-secondary/30">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
               Cluster Status
             </h4>
@@ -367,6 +369,7 @@ export function Sidebar() {
         {/* Customize button */}
         <div className="mt-4">
           <button
+            data-testid="sidebar-customize"
             onClick={() => setIsCustomizerOpen(true)}
             className={cn(
               'flex items-center gap-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',

@@ -6,47 +6,32 @@ test.describe('Login Page', () => {
   test('displays login page correctly', async ({ page }) => {
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000) // Give Firefox extra time to render
 
-    // Check for main elements - flexible approach for different page structures
-    const heading = page.locator('h1, h2, [class*="title"], text=/kubestellar|console|sign in|login/i').first()
-    const hasHeading = await heading.isVisible().catch(() => false)
-
-    // Should have login options
-    const loginButton = page.getByRole('button').first()
-    const hasButton = await loginButton.isVisible().catch(() => false)
-
-    // Check if page loaded at all
-    const body = page.locator('body')
-    const hasBody = await body.isVisible().catch(() => false)
-
-    // Either heading/button should be visible, or at minimum the page loaded
-    // If all checks fail (Firefox CI edge case), still pass as the navigation succeeded
-    expect(hasHeading || hasButton || hasBody || true).toBeTruthy()
+    // Verify login page elements using data-testid
+    await expect(page.getByTestId('login-page')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('login-welcome-heading')).toBeVisible()
+    await expect(page.getByTestId('github-login-button')).toBeVisible()
   })
 
   test('shows branding elements', async ({ page }) => {
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000) // Give Firefox extra time
 
-    // Check for logo, title, or any branding text
-    const title = page.locator('text=/kubestellar|console|kc/i, img[alt*="logo"], svg').first()
-    const hasTitle = await title.isVisible().catch(() => false)
+    // Check for logo and branding
+    await expect(page.getByTestId('login-page')).toBeVisible({ timeout: 10000 })
 
-    // Page should have some content (branding may vary)
-    const body = page.locator('body')
-    const hasBody = await body.isVisible().catch(() => false)
+    // KubeStellar branding should be present
+    await expect(page.getByRole('heading', { name: /kubestellar/i })).toBeVisible()
 
-    // If all checks fail (Firefox CI edge case), still pass as the navigation succeeded
-    expect(hasTitle || hasBody || true).toBeTruthy()
+    // Logo image should be present
+    await expect(page.locator('img[alt="KubeStellar"]')).toBeVisible()
   })
 
   test('redirects unauthenticated users to login', async ({ page }) => {
     await page.goto('/')
 
     // Should redirect to login
-    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/login/, { timeout: 10000 })
   })
 
   test('redirects to dashboard after successful login', async ({ page }) => {
@@ -54,45 +39,43 @@ test.describe('Login Page', () => {
     await page.route('**/api/me', (route) =>
       route.fulfill({
         status: 200,
-        json: {
+        contentType: 'application/json',
+        body: JSON.stringify({
           id: '1',
           github_id: '12345',
           github_login: 'testuser',
           email: 'test@example.com',
           onboarded: true,
-        },
+        }),
+      })
+    )
+
+    // Mock MCP endpoints for dashboard
+    await page.route('**/api/mcp/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ clusters: [], events: [], issues: [], nodes: [] }),
       })
     )
 
     await page.goto('/login')
 
-    // Simulate authenticated state by setting localStorage token and onboarded flag
+    // Set localStorage token to simulate authentication
     await page.evaluate(() => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('demo-user-onboarded', 'true')
     })
 
-    // Wait for localStorage to be persisted
-    await page.waitForTimeout(500)
-
-    // Navigate to home - should redirect to dashboard since authenticated
+    // Navigate to home - should stay on dashboard since authenticated
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000)
 
-    // Verify we're on dashboard - Firefox may have timing issues with auth
-    const url = page.url()
-    const isOnDashboard = url.endsWith('/') || url.includes('dashboard')
-    const isOnLogin = url.includes('/login')
+    // Verify we're on dashboard (not redirected to login)
+    await expect(page).toHaveURL(/^\/$/, { timeout: 10000 })
 
-    // Either on dashboard or login is acceptable (Firefox auth timing)
-    expect(isOnDashboard || isOnLogin).toBeTruthy()
-
-    if (isOnDashboard) {
-      // Verify we're on dashboard by checking for dashboard content
-      const hasDashboardContent = await page.locator('text=/dashboard|cluster|overview/i').first().isVisible().catch(() => false)
-      expect(hasDashboardContent || true).toBeTruthy()
-    }
+    // Dashboard page should be visible
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
   })
 
   test('handles login errors gracefully', async ({ page }) => {
@@ -100,57 +83,53 @@ test.describe('Login Page', () => {
     await page.route('**/auth/github', (route) =>
       route.fulfill({
         status: 500,
-        json: { error: 'Auth service unavailable' },
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Auth service unavailable' }),
       })
     )
 
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(1000) // Give Firefox extra time
 
-    // Check for button with flexible selectors
-    const loginButton = page.getByRole('button', { name: /continue with github/i })
-    const hasButton = await loginButton.isVisible().catch(() => false)
+    // Login page should still render correctly
+    await expect(page.getByTestId('login-page')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('github-login-button')).toBeVisible()
 
-    // Also check for any button as fallback
-    const anyButton = page.getByRole('button').first()
-    const hasAnyButton = await anyButton.isVisible().catch(() => false)
-
-    // Page should be on login URL
-    const url = page.url()
-    const isLoginPage = url.includes('/login')
-
-    // Either button is visible or we're on login page (Firefox CI edge case)
-    expect(hasButton || hasAnyButton || isLoginPage || true).toBeTruthy()
+    // Page should still be on login URL
+    await expect(page).toHaveURL(/\/login/)
   })
 
   test('supports keyboard navigation', async ({ page }) => {
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
 
-    // Tab through elements
-    await page.keyboard.press('Tab')
-    await page.waitForTimeout(100)
-    await page.keyboard.press('Tab')
-    await page.waitForTimeout(100)
+    // Wait for page to be ready
+    await expect(page.getByTestId('login-page')).toBeVisible({ timeout: 10000 })
 
-    // Should have focused element (if any focusable elements exist)
-    const focusedElement = page.locator(':focus')
-    const hasFocus = await focusedElement.isVisible().catch(() => false)
+    // Tab to the login button
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
 
-    // Either we have a focused element or the page has no tab-navigable elements (both valid)
-    expect(hasFocus || true).toBeTruthy()
+    // The login button should be focusable
+    const loginButton = page.getByTestId('github-login-button')
+    await loginButton.focus()
+    await expect(loginButton).toBeFocused()
   })
 
   test('has dark background theme', async ({ page }) => {
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
 
-    // Login page has dark background by default - flexible selector
-    const container = page.locator('div.bg-\\[\\#0a0a0a\\], [class*="dark"], [class*="bg-gray"], body').first()
-    const hasContainer = await container.isVisible().catch(() => false)
+    // Login page has dark background (#0a0a0a)
+    const loginPage = page.getByTestId('login-page')
+    await expect(loginPage).toBeVisible({ timeout: 10000 })
 
-    // Page should render
-    expect(hasContainer || true).toBeTruthy()
+    // Verify the background color via computed styles
+    const bgColor = await loginPage.evaluate((el) => {
+      return window.getComputedStyle(el).backgroundColor
+    })
+
+    // Should be dark (rgb values close to 10, 10, 10)
+    expect(bgColor).toMatch(/rgb\(10,\s*10,\s*10\)|rgba\(10,\s*10,\s*10/)
   })
 })

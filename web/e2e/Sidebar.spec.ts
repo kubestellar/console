@@ -1,456 +1,301 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
+
+/**
+ * Sets up authentication and MCP mocks for sidebar tests
+ */
+async function setupSidebarTest(page: Page) {
+  // Mock authentication
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
+
+  // Mock MCP endpoints
+  await page.route('**/api/mcp/**', (route) => {
+    const url = route.request().url()
+    if (url.includes('/clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          clusters: [
+            { name: 'prod-east', healthy: true, reachable: true, nodeCount: 5 },
+            { name: 'prod-west', healthy: true, reachable: true, nodeCount: 3 },
+            { name: 'staging', healthy: false, reachable: true, nodeCount: 2 },
+          ],
+        }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+      })
+    }
+  })
+
+  // Set auth token
+  await page.goto('/login')
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('demo-user-onboarded', 'true')
+  })
+
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+}
 
 test.describe('Sidebar Navigation', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock authentication
-    await page.route('**/api/me', (route) =>
-      route.fulfill({
-        status: 200,
-        json: {
-          id: '1',
-          github_id: '12345',
-          github_login: 'testuser',
-          email: 'test@example.com',
-          onboarded: true,
-        },
-      })
-    )
-
-    // Mock MCP endpoints
-    await page.route('**/api/mcp/**', (route) => {
-      const url = route.request().url()
-      if (url.includes('/clusters')) {
-        route.fulfill({
-          status: 200,
-          json: {
-            clusters: [
-              { name: 'prod-east', healthy: true, nodeCount: 5 },
-              { name: 'prod-west', healthy: true, nodeCount: 3 },
-              { name: 'staging', healthy: false, nodeCount: 2 },
-            ],
-          },
-        })
-      } else {
-        route.fulfill({
-          status: 200,
-          json: { issues: [], events: [], nodes: [] },
-        })
-      }
-    })
-
-    // Set auth token
-    await page.goto('/login')
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('demo-user-onboarded', 'true')
-    })
-
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(500)
+    await setupSidebarTest(page)
   })
 
   test.describe('Navigation Links', () => {
-    test('displays primary navigation links', async ({ page }) => {
-      await page.waitForTimeout(1000) // Give browsers extra time
+    test('displays sidebar with primary navigation', async ({ page }) => {
+      // Wait for sidebar to be visible
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible()
 
+      // Should have navigation links
+      const navLinks = page.getByTestId('sidebar-primary-nav').locator('a')
+      const linkCount = await navLinks.count()
+      expect(linkCount).toBeGreaterThan(0)
+    })
+
+    test('dashboard link navigates to home', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+
+      // Click dashboard link
       const dashboardLink = page.getByRole('link', { name: /dashboard/i })
+      await expect(dashboardLink).toBeVisible()
+      await dashboardLink.click()
+
+      // Should be on dashboard
+      await expect(page).toHaveURL(/^\/$/, { timeout: 5000 })
+    })
+
+    test('clusters link navigates to clusters page', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+
+      // Click clusters link
       const clustersLink = page.getByRole('link', { name: /clusters/i })
+      await expect(clustersLink).toBeVisible()
+      await clustersLink.click()
 
-      const hasDashboard = await dashboardLink.isVisible().catch(() => false)
-      const hasClusters = await clustersLink.isVisible().catch(() => false)
-
-      // At least some navigation should be visible
-      const anyNav = page.locator('aside a, nav a').first()
-      const hasAnyNav = await anyNav.isVisible().catch(() => false)
-
-      expect(hasDashboard || hasClusters || hasAnyNav || true).toBeTruthy()
+      // Should be on clusters page
+      await expect(page).toHaveURL(/\/clusters/, { timeout: 5000 })
     })
 
-    test('displays secondary navigation links', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('events link navigates to events page', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      const settingsLink = page.getByRole('link', { name: /settings/i })
-      const hasSettings = await settingsLink.isVisible().catch(() => false)
-
-      // Navigation may vary
-      expect(hasSettings || true).toBeTruthy()
-    })
-
-    test('dashboard link is active by default', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      const dashboardLink = page.getByRole('link', { name: /dashboard/i })
-      const isVisible = await dashboardLink.isVisible().catch(() => false)
-
-      if (isVisible) {
-        // Active links may have purple highlight - but style varies
-        const hasClass = await dashboardLink.getAttribute('class')
-        expect(hasClass || true).toBeTruthy()
-      }
-    })
-
-    test('clicking clusters navigates to clusters page', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      const clustersLink = page.getByRole('link', { name: /clusters/i })
-      const isVisible = await clustersLink.isVisible().catch(() => false)
-
-      if (isVisible) {
-        await clustersLink.click()
-        await page.waitForTimeout(500)
-        const url = page.url()
-        expect(url.includes('/clusters') || true).toBeTruthy()
-      }
-    })
-
-    test('clicking events navigates to events page', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
+      // Click events link
       const eventsLink = page.getByRole('link', { name: /events/i })
-      const isVisible = await eventsLink.isVisible().catch(() => false)
+      await expect(eventsLink).toBeVisible()
+      await eventsLink.click()
 
-      if (isVisible) {
-        await eventsLink.click()
-        await page.waitForTimeout(500)
-        const url = page.url()
-        expect(url.includes('/events') || true).toBeTruthy()
-      }
-    })
-
-    test('clicking settings navigates to settings page', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      const settingsLink = page.getByRole('link', { name: /settings/i })
-      const isVisible = await settingsLink.isVisible().catch(() => false)
-
-      if (isVisible) {
-        await settingsLink.click()
-        await page.waitForTimeout(500)
-        const url = page.url()
-        expect(url.includes('/settings') || true).toBeTruthy()
-      }
+      // Should be on events page
+      await expect(page).toHaveURL(/\/events/, { timeout: 5000 })
     })
   })
 
   test.describe('Collapse/Expand', () => {
-    test('sidebar can be collapsed', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('sidebar can be collapsed via toggle button', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // Find the collapse toggle button (chevron-left when expanded)
-      const sidebar = page.locator('[data-tour="sidebar"], aside').first()
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
+      // Find and click collapse toggle
+      const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
+      await expect(collapseToggle).toBeVisible()
 
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
+      // Get initial sidebar width
+      const initialWidth = await page.getByTestId('sidebar').evaluate(el => el.offsetWidth)
 
-      if (hasCollapse) {
-        // Click to collapse
-        await collapseButton.click()
-        await page.waitForTimeout(500)
+      // Click to collapse
+      await collapseToggle.click()
 
-        // Sidebar styling may vary
-        const sidebarClass = await sidebar.getAttribute('class')
-        expect(sidebarClass || true).toBeTruthy()
-      }
+      // Wait for animation
+      await page.waitForTimeout(300)
+
+      // Sidebar should be narrower when collapsed
+      const collapsedWidth = await page.getByTestId('sidebar').evaluate(el => el.offsetWidth)
+      expect(collapsedWidth).toBeLessThan(initialWidth)
     })
 
     test('sidebar can be expanded after collapse', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
+      const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
 
-      if (hasCollapse) {
-        // Collapse first
-        await collapseButton.click()
-        await page.waitForTimeout(500)
+      // Collapse first
+      await collapseToggle.click()
+      await page.waitForTimeout(300)
 
-        // Find expand button (chevron-right when collapsed)
-        const expandButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-right') }).first()
-        const hasExpand = await expandButton.isVisible().catch(() => false)
+      // Click again to expand
+      await collapseToggle.click()
+      await page.waitForTimeout(300)
 
-        if (hasExpand) {
-          await expandButton.click()
-          await page.waitForTimeout(500)
-        }
-      }
-
-      // Test passes if we got here
-      expect(true).toBeTruthy()
+      // Add Card button should be visible when expanded
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
     })
 
-    test('collapsed sidebar hides text labels', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('collapsed sidebar hides Add Card button', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
+      // Verify Add Card is visible when expanded
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
 
-      if (hasCollapse) {
-        // Collapse the sidebar
-        await collapseButton.click()
-        await page.waitForTimeout(500)
+      // Collapse sidebar
+      await page.getByTestId('sidebar-collapse-toggle').click()
+      await page.waitForTimeout(300)
 
-        // Text "Dashboard" may or may not be visible depending on implementation
-        const dashboardText = page.locator('aside').getByText('Dashboard')
-        const isVisible = await dashboardText.isVisible().catch(() => false)
-        // Either it's hidden or we pass anyway
-        expect(!isVisible || true).toBeTruthy()
-      }
-    })
-
-    test('collapsed sidebar shows icon-only navigation', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
-
-      if (hasCollapse) {
-        // Collapse the sidebar
-        await collapseButton.click()
-        await page.waitForTimeout(500)
-
-        // Navigation links should still be clickable
-        const clustersLink = page.getByRole('link', { name: /clusters/i })
-        const hasLink = await clustersLink.isVisible().catch(() => false)
-
-        if (hasLink) {
-          await clustersLink.click()
-          await page.waitForTimeout(500)
-          const url = page.url()
-          expect(url.includes('/clusters') || true).toBeTruthy()
-        }
-      }
+      // Add Card should be hidden when collapsed
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible()
     })
   })
 
   test.describe('Cluster Status', () => {
-    test('displays cluster status summary', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('displays cluster status summary when enabled', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // Look for cluster status section
-      const statusSection = page.locator('text=Cluster Status')
-      const hasStatus = await statusSection.isVisible().catch(() => false)
+      // Cluster status section should be visible
+      const clusterStatus = page.getByTestId('sidebar-cluster-status')
 
-      // Status section may vary by implementation
-      expect(hasStatus || true).toBeTruthy()
+      // This section may or may not be visible depending on user settings
+      const isVisible = await clusterStatus.isVisible().catch(() => false)
+
+      if (isVisible) {
+        // Should show healthy/unhealthy counts
+        await expect(page.getByText('Healthy')).toBeVisible()
+      }
     })
 
-    test('shows healthy cluster count', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('cluster status links navigate to filtered cluster view', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // With our mock data: 2 healthy clusters (prod-east, prod-west)
-      const healthyCount = page.locator('aside').locator('text=Healthy').locator('xpath=following-sibling::*')
-      const hasHealthy = await healthyCount.isVisible().catch(() => false)
-      expect(hasHealthy || true).toBeTruthy()
-    })
+      const clusterStatus = page.getByTestId('sidebar-cluster-status')
+      const isVisible = await clusterStatus.isVisible().catch(() => false)
 
-    test('shows critical cluster count', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      if (isVisible) {
+        // Click healthy status
+        await page.getByTestId('sidebar-cluster-status').getByText('Healthy').click()
 
-      // With our mock data: 1 unhealthy cluster (staging)
-      const criticalLabel = page.locator('aside').getByText('Critical')
-      const hasCritical = await criticalLabel.isVisible().catch(() => false)
-
-      // Critical label may vary
-      expect(hasCritical || true).toBeTruthy()
+        // Should navigate to clusters with filter
+        await expect(page).toHaveURL(/\/clusters/, { timeout: 5000 })
+      }
     })
   })
 
   test.describe('Add Card Button', () => {
     test('displays Add Card button in sidebar', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      // Specifically look for the Add Card button in the sidebar (aside)
-      const addCardButton = page.locator('aside').getByRole('button', { name: /add card/i })
-      const hasButton = await addCardButton.isVisible().catch(() => false)
-
-      // Button may not exist in all configurations
-      expect(hasButton || true).toBeTruthy()
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
     })
 
-    test('Add Card button is hidden when collapsed', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('Add Card button opens modal', async ({ page }) => {
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible({ timeout: 10000 })
 
-      // Collapse sidebar
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
+      // Click Add Card
+      await page.getByTestId('sidebar-add-card').click()
 
-      if (hasCollapse) {
-        await collapseButton.click()
-        await page.waitForTimeout(500)
-
-        // Add Card button in sidebar may not be visible
-        const addCardButton = page.locator('aside').getByRole('button', { name: /add card/i })
-        const isVisible = await addCardButton.isVisible().catch(() => false)
-        // Either hidden or we pass anyway
-        expect(!isVisible || true).toBeTruthy()
-      }
+      // Modal should appear
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
     })
   })
 
   test.describe('Customize Button', () => {
     test('displays Customize button', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      const customizeButton = page.getByRole('button', { name: /customize/i })
-      const hasButton = await customizeButton.isVisible().catch(() => false)
-
-      // Button may not exist
-      expect(hasButton || true).toBeTruthy()
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible()
     })
 
     test('clicking Customize opens customizer modal', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
 
-      const customizeButton = page.locator('aside').getByRole('button', { name: /customize/i })
-      const hasButton = await customizeButton.isVisible().catch(() => false)
+      // Click customize
+      await page.getByTestId('sidebar-customize').click()
 
-      if (hasButton) {
-        await customizeButton.click()
-        await page.waitForTimeout(500)
-
-        // Modal should appear (look for various modal indicators)
-        const modal = page.locator('[role="dialog"], .fixed.inset-0, [data-testid="customizer-modal"]')
-        const hasModal = await modal.first().isVisible().catch(() => false)
-        expect(hasModal || true).toBeTruthy()
-      }
+      // Modal should appear
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
     })
 
     test('customizer modal can be closed', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
 
       // Open customizer
-      const customizeButton = page.getByRole('button', { name: /customize/i })
-      const hasButton = await customizeButton.isVisible().catch(() => false)
+      await page.getByTestId('sidebar-customize').click()
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
 
-      if (hasButton) {
-        await customizeButton.click()
-        await page.waitForTimeout(500)
+      // Close it via Escape key
+      await page.keyboard.press('Escape')
 
-        // Close it
-        const closeButton = page.locator('[role="dialog"] button').filter({ has: page.locator('svg.lucide-x') })
-        const hasClose = await closeButton.isVisible().catch(() => false)
-
-        if (hasClose) {
-          await closeButton.click()
-          await page.waitForTimeout(500)
-        }
-      }
-
-      // Test passes if we got here
-      expect(true).toBeTruthy()
-    })
-  })
-
-  test.describe('Snoozed Cards', () => {
-    test('displays snoozed cards section', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      // Snoozed cards section is wrapped in data-tour="snoozed"
-      const snoozedSection = page.locator('[data-tour="snoozed"]')
-      const hasSnoozed = await snoozedSection.isVisible().catch(() => false)
-      expect(hasSnoozed || true).toBeTruthy()
-    })
-
-    test('snoozed cards hidden when sidebar collapsed', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      // Collapse sidebar
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
-
-      if (hasCollapse) {
-        await collapseButton.click()
-        await page.waitForTimeout(500)
-
-        // Snoozed section may not be visible
-        const snoozedSection = page.locator('[data-tour="snoozed"]')
-        const isVisible = await snoozedSection.isVisible().catch(() => false)
-        // Either hidden or pass anyway
-        expect(!isVisible || true).toBeTruthy()
-      }
+      // Modal should be gone
+      await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 })
     })
   })
 
   test.describe('Accessibility', () => {
-    test('sidebar has proper landmark role', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('sidebar has proper landmark element (aside)', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      const sidebar = page.locator('aside')
-      const hasSidebar = await sidebar.isVisible().catch(() => false)
-
-      // Page should have some navigation structure
-      expect(hasSidebar || true).toBeTruthy()
+      // Verify it's an aside element
+      const tagName = await page.getByTestId('sidebar').evaluate(el => el.tagName)
+      expect(tagName.toLowerCase()).toBe('aside')
     })
 
     test('navigation links are keyboard navigable', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // Tab to sidebar navigation
-      for (let i = 0; i < 10; i++) {
-        await page.keyboard.press('Tab')
-        await page.waitForTimeout(100)
-      }
+      // Tab into sidebar navigation
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
 
-      // Should have a focused element
+      // Should have focused element
       const focused = page.locator(':focus')
-      const hasFocus = await focused.isVisible().catch(() => false)
-
-      // Keyboard nav may work differently
-      expect(hasFocus || true).toBeTruthy()
-    })
-
-    test('navigation links have proper roles', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      const navLinks = page.locator('aside').getByRole('link')
-      const count = await navLinks.count()
-
-      // May have navigation links or may not
-      expect(count >= 0).toBeTruthy()
+      await expect(focused).toBeVisible()
     })
 
     test('collapse button is keyboard accessible', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // Tab to collapse button
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
+      const collapseToggle = page.getByTestId('sidebar-collapse-toggle')
 
-      if (hasCollapse) {
-        await collapseButton.focus()
+      // Focus the button
+      await collapseToggle.focus()
+      await expect(collapseToggle).toBeFocused()
 
-        // Press Enter to toggle
-        await page.keyboard.press('Enter')
-        await page.waitForTimeout(500)
-      }
+      // Press Enter to toggle
+      await page.keyboard.press('Enter')
 
-      // Test passes if we got here
-      expect(true).toBeTruthy()
+      // Sidebar should collapse
+      await page.waitForTimeout(300)
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible()
     })
   })
 
   test.describe('Responsive Behavior', () => {
-    test('sidebar persists collapse state', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('sidebar state persists on navigation', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
-      // Collapse the sidebar
-      const collapseButton = page.locator('aside button').filter({ has: page.locator('svg.lucide-chevron-left') }).first()
-      const hasCollapse = await collapseButton.isVisible().catch(() => false)
+      // Collapse sidebar
+      await page.getByTestId('sidebar-collapse-toggle').click()
+      await page.waitForTimeout(300)
 
-      if (hasCollapse) {
-        await collapseButton.click()
-        await page.waitForTimeout(500)
+      // Navigate to clusters
+      await page.goto('/clusters')
+      await page.waitForLoadState('domcontentloaded')
 
-        // Navigate to another page
-        await page.goto('/clusters')
-        await page.waitForLoadState('domcontentloaded')
-        await page.waitForTimeout(500)
-      }
-
-      // Test passes - state persistence may vary
-      expect(true).toBeTruthy()
+      // Sidebar should still be collapsed (Add Card hidden)
+      await expect(page.getByTestId('sidebar-add-card')).not.toBeVisible()
     })
   })
 })

@@ -74,11 +74,11 @@ export function DashboardHeader({
   const displayTimestamp = externalLastUpdated ?? internalLastUpdated
 
   return (
-    <div className="flex items-center justify-between mb-6">
+    <div data-testid="dashboard-header" className="flex items-center justify-between mb-6">
       {/* Left side: title + hourglass */}
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 data-testid="dashboard-title" className="text-2xl font-bold text-foreground flex items-center gap-2">
             {icon}
             {title}
           </h1>
@@ -133,6 +133,7 @@ export function DashboardHeader({
             </label>
           )}
           <button
+            data-testid="dashboard-refresh-button"
             onClick={onRefresh}
             disabled={isFetching}
             className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"

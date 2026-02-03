@@ -1,316 +1,249 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
+
+/**
+ * Sets up authentication and MCP mocks for dashboard tests
+ */
+async function setupDashboardTest(page: Page) {
+  // Mock authentication
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
+
+  // Mock cluster data
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        clusters: [
+          { name: 'cluster-1', context: 'ctx-1', healthy: true, nodeCount: 5, podCount: 45 },
+          { name: 'cluster-2', context: 'ctx-2', healthy: true, nodeCount: 3, podCount: 32 },
+        ],
+        issues: [],
+        events: [],
+        nodes: [],
+      }),
+    })
+  )
+
+  // Set token before navigating
+  await page.goto('/login')
+  await page.evaluate(() => {
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('demo-user-onboarded', 'true')
+  })
+
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded')
+}
 
 test.describe('Dashboard Page', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock authentication
-    await page.route('**/api/me', (route) =>
-      route.fulfill({
-        status: 200,
-        json: {
-          id: '1',
-          github_id: '12345',
-          github_login: 'testuser',
-          email: 'test@example.com',
-          onboarded: true,
-        },
-      })
-    )
-
-    // Mock cluster data
-    await page.route('**/api/mcp/**', (route) =>
-      route.fulfill({
-        status: 200,
-        json: { clusters: [], issues: [], events: [], nodes: [] },
-      })
-    )
-
-    // Set token before navigating
-    await page.goto('/login')
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('demo-user-onboarded', 'true')
-    })
-
-    // Wait for localStorage to persist before navigation
-    await page.waitForTimeout(500)
-
-    await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    await page.waitForTimeout(500)
+    await setupDashboardTest(page)
   })
 
   test.describe('Layout and Structure', () => {
     test('displays dashboard with sidebar', async ({ page }) => {
-      // Check for main layout elements - flexible selectors
-      const sidebar = page.locator('[data-testid="sidebar"], nav, aside, [class*="sidebar"]').first()
-      const hasSidebar = await sidebar.isVisible().catch(() => false)
-
-      // Check for main content area
-      const main = page.locator('main, [role="main"], [class*="main"], .flex-1').first()
-      const hasMain = await main.isVisible().catch(() => false)
-
-      // Dashboard should have some structure - Firefox may have timing issues
-      expect(hasSidebar || hasMain || true).toBeTruthy()
+      // Check for main layout elements using data-testid
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
     })
 
     test('displays navigation items in sidebar', async ({ page }) => {
-      // Check for navigation links - these may be in various places
-      const dashboardLink = page.getByRole('link', { name: /dashboard|home/i }).first()
-      const hasDashboard = await dashboardLink.isVisible().catch(() => false)
+      // Sidebar should have navigation
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible()
 
-      const clustersLink = page.getByRole('link', { name: /cluster/i }).first()
-      const hasClusters = await clustersLink.isVisible().catch(() => false)
-
-      // Should have at least some navigation or links
-      const anyNav = page.locator('nav a, aside a, [class*="nav"] a, a[href]').first()
-      const hasAnyNav = await anyNav.isVisible().catch(() => false)
-
-      // Or any button that acts as nav
-      const anyNavButton = page.locator('nav button, aside button').first()
-      const hasNavButton = await anyNavButton.isVisible().catch(() => false)
-
-      expect(hasDashboard || hasClusters || hasAnyNav || hasNavButton || true).toBeTruthy()
+      // Should have navigation links
+      const navLinks = page.getByTestId('sidebar-primary-nav').locator('a')
+      const linkCount = await navLinks.count()
+      expect(linkCount).toBeGreaterThan(0)
     })
 
-    test('displays navbar with user info', async ({ page }) => {
-      // Check for navbar (top navigation) - flexible selectors
-      const navbar = page.locator('nav, header, [class*="navbar"], [class*="header"]').first()
-      const hasNavbar = await navbar.isVisible().catch(() => false)
-
-      // Should have logo or title text
-      const logoText = page.locator('text=/kubestellar|console|kc/i').first()
-      const hasLogo = await logoText.isVisible().catch(() => false)
-
-      // Firefox may have timing issues with auth - use permissive check
-      expect(hasNavbar || hasLogo || true).toBeTruthy()
+    test('displays header with refresh controls', async ({ page }) => {
+      // Check for navbar/header elements
+      await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: 5000 })
+      await expect(page.getByTestId('dashboard-title')).toBeVisible()
+      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible()
     })
   })
 
   test.describe('Dashboard Cards', () => {
-    test('displays dashboard cards', async ({ page }) => {
-      // Wait for cards to load
-      await page.waitForTimeout(1000)
-
-      // Check for card containers - flexible selectors
-      const cards = page.locator('[data-testid*="card"], .card, [class*="card"], .glass, [class*="rounded"]')
-      const cardCount = await cards.count()
-
-      // Cards may or may not be present depending on user config - check page renders
-      const pageContent = page.locator('body')
-      const isVisible = await pageContent.isVisible().catch(() => false)
-
-      // Either has cards or page is empty state (both valid) - Firefox may have issues
-      expect(cardCount >= 0 || isVisible || true).toBeTruthy()
+    test('displays dashboard cards grid', async ({ page }) => {
+      // Wait for cards grid to be visible
+      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 })
     })
 
     test('cards have proper structure', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      // Wait for cards grid
+      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 })
 
-      // Cards should have headers/titles
-      const cardHeaders = page.locator('[data-testid*="card"] h2, [data-testid*="card"] h3, .card h2, .card h3')
-      const headerCount = await cardHeaders.count()
+      // Cards should have content
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const cards = cardsGrid.locator('> div')
+      const cardCount = await cards.count()
 
-      // Should have at least one card with a header
-      expect(headerCount).toBeGreaterThanOrEqual(0)
+      // Dashboard should have at least one card (defaults are set)
+      expect(cardCount).toBeGreaterThanOrEqual(0)
     })
 
     test('cards are interactive (hover/click)', async ({ page }) => {
-      await page.waitForTimeout(1000)
+      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 })
 
-      // Find a card
-      const firstCard = page.locator('[data-testid*="card"], .card, [class*="card"]').first()
+      // Find first card in the grid
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const firstCard = cardsGrid.locator('> div').first()
+
+      // Card should be visible
       const isVisible = await firstCard.isVisible().catch(() => false)
 
       if (isVisible) {
-        // Test hover
+        // Test hover - should not throw
         await firstCard.hover()
 
-        // Test click (should open drilldown or perform action)
-        const isClickable = await firstCard.isEnabled().catch(() => false)
-        expect(isClickable || true).toBeTruthy()
+        // Card should remain visible after hover
+        await expect(firstCard).toBeVisible()
       }
     })
   })
 
   test.describe('Card Management', () => {
     test('has add card button in sidebar', async ({ page }) => {
-      // Look for add card button anywhere on the page
-      const addButton = page.getByRole('button', { name: /add.*card|new.*card|\+/i }).first()
-      const hasAddButton = await addButton.isVisible().catch(() => false)
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
 
-      // Or look for any add/plus button
-      const anyAddButton = page.locator('button:has-text("+"), button[aria-label*="add"]').first()
-      const hasAnyAdd = await anyAddButton.isVisible().catch(() => false)
-
-      // Feature may not be implemented yet - pass if page renders
-      expect(hasAddButton || hasAnyAdd || true).toBeTruthy()
+      // Add card button should be visible (when sidebar is expanded)
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible()
     })
 
-    test('card menu shows options', async ({ page }) => {
-      await page.waitForTimeout(1000)
+    test('clicking add card opens modal', async ({ page }) => {
+      await expect(page.getByTestId('sidebar-add-card')).toBeVisible({ timeout: 5000 })
 
-      // Find card menu button (usually three dots)
-      const menuButton = page.locator('[data-testid*="card-menu"], button[aria-label*="menu"]').first()
-      const hasMenu = await menuButton.isVisible().catch(() => false)
+      // Click add card button
+      await page.getByTestId('sidebar-add-card').click()
 
-      if (hasMenu) {
-        await menuButton.click()
-
-        // Should show menu options - use permissive check for Firefox
-        const menuOptions = page.locator('[role="menu"], [role="menuitem"], .dropdown-menu')
-        const menuVisible = await menuOptions.isVisible().catch(() => false)
-        expect(menuVisible || true).toBeTruthy()
-      }
-    })
-
-    test('can remove card from dashboard', async ({ page }) => {
-      await page.waitForTimeout(1000)
-
-      // Count initial cards
-      const initialCards = await page.locator('[data-testid*="card"], .card').count()
-
-      // Find remove/close button on a card
-      const removeButton = page.locator('[data-testid*="remove-card"], [aria-label*="remove"], [aria-label*="close"]').first()
-      const hasRemove = await removeButton.isVisible().catch(() => false)
-
-      if (hasRemove && initialCards > 0) {
-        await removeButton.click()
-
-        // Confirm if needed
-        const confirmButton = page.getByRole('button', { name: /confirm|yes|remove/i })
-        const hasConfirm = await confirmButton.isVisible().catch(() => false)
-        if (hasConfirm) {
-          await confirmButton.click()
-        }
-
-        // Card count should decrease
-        await page.waitForTimeout(500)
-      }
+      // Modal should appear (look for modal content)
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
     })
   })
 
   test.describe('Data Loading', () => {
-    test('shows loading states', async ({ page }) => {
-      // Intercept API and delay response
+    test('shows loading state initially', async ({ page }) => {
+      // Reset to fresh page without mocks set up yet
+      await page.goto('/login')
+
+      // Delay the API response to see loading state
       await page.route('**/api/mcp/**', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 2000))
-        await route.continue()
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+        })
       })
 
-      await page.reload()
+      await page.evaluate(() => {
+        localStorage.setItem('token', 'test-token')
+        localStorage.setItem('demo-user-onboarded', 'true')
+      })
 
-      // Should show loading indicators
-      const loading = page.locator('[data-testid="loading"], .loading, .spinner, [class*="animate-spin"]')
-      const hasLoading = await loading.first().isVisible().catch(() => false)
+      await page.goto('/')
 
-      // Loading state should appear during data fetch
-      expect(hasLoading || true).toBeTruthy()
+      // Dashboard page should be visible even during loading
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
     })
 
     test('handles API errors gracefully', async ({ page }) => {
-      // Mock API error
+      // Reset and mock error
+      await page.goto('/login')
+
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 500,
-          json: { error: 'Server error' },
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Server error' }),
         })
       )
 
-      await page.reload()
-      await page.waitForTimeout(1000)
+      await page.evaluate(() => {
+        localStorage.setItem('token', 'test-token')
+        localStorage.setItem('demo-user-onboarded', 'true')
+      })
 
-      // Should not crash, page should still be functional
-      const main = page.locator('main, [role="main"], body, .flex-1').first()
-      const hasMain = await main.isVisible().catch(() => false)
+      await page.goto('/')
 
-      // Page should render something
-      expect(hasMain || true).toBeTruthy()
+      // Dashboard should still render (not crash)
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
     })
 
-    test('refreshes data periodically', async ({ page }) => {
-      // This test checks that the page makes API calls
-      // The beforeEach already sets up mocks, so we just verify the page loaded
-      await page.waitForTimeout(2000)
+    test('refresh button triggers data reload', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: 5000 })
 
-      // Page should have loaded and made some API calls
-      // We verify this by checking that the page is interactive
-      const body = page.locator('body')
-      const isVisible = await body.isVisible().catch(() => false)
+      // Click refresh
+      await page.getByTestId('dashboard-refresh-button').click()
 
-      // Test passes if page renders (API calls happened in beforeEach)
-      // Firefox may have timing issues so use permissive check
-      expect(isVisible || true).toBeTruthy()
+      // Button should still be visible after click
+      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible()
     })
   })
 
   test.describe('Responsive Design', () => {
     test('adapts to mobile viewport', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 })
-      await page.waitForTimeout(500)
 
-      // Page should still render at mobile size - permissive for Firefox
-      const body = page.locator('body')
-      const isVisible = await body.isVisible().catch(() => false)
-      expect(isVisible || true).toBeTruthy()
+      // Page should still render at mobile size
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      // Sidebar might collapse to hamburger menu or remain visible
-      const hamburger = page.locator('[data-testid="hamburger"], [aria-label*="menu"], button svg').first()
-      const sidebar = page.locator('[data-testid="sidebar"], nav, aside').first()
-
-      const hamburgerVisible = await hamburger.isVisible().catch(() => false)
-      const sidebarVisible = await sidebar.isVisible().catch(() => false)
-
-      // Either has some navigation or page still renders (both valid)
-      expect(hamburgerVisible || sidebarVisible || true).toBeTruthy()
+      // Header should still be visible
+      await expect(page.getByTestId('dashboard-header')).toBeVisible()
     })
 
     test('adapts to tablet viewport', async ({ page }) => {
       await page.setViewportSize({ width: 768, height: 1024 })
-      await page.waitForTimeout(500)
 
       // Content should still be accessible
-      const main = page.locator('main, [role="main"], body, .flex-1').first()
-      const hasMain = await main.isVisible().catch(() => false)
-
-      expect(hasMain || true).toBeTruthy()
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-header')).toBeVisible()
     })
   })
 
   test.describe('Accessibility', () => {
     test('has proper heading hierarchy', async ({ page }) => {
-      const h1 = await page.locator('h1').count()
-      const h2 = await page.locator('h2').count()
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      // Should have at least one heading - Firefox may have auth timing issues
-      expect(h1 + h2 > 0 || true).toBeTruthy()
+      // Should have h1 heading
+      const h1Count = await page.locator('h1').count()
+      expect(h1Count).toBeGreaterThanOrEqual(1)
     })
 
     test('supports keyboard navigation', async ({ page }) => {
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+
       // Tab through elements
       for (let i = 0; i < 5; i++) {
         await page.keyboard.press('Tab')
       }
 
-      // Should have a focused element - Firefox may have different focus behavior
+      // Should have a focused element
       const focused = page.locator(':focus')
-      const hasFocus = await focused.isVisible().catch(() => false)
-      expect(hasFocus || true).toBeTruthy()
+      await expect(focused).toBeVisible()
     })
 
     test('has proper ARIA labels', async ({ page }) => {
-      // Check for buttons with labels
-      const buttons = page.locator('button')
-      const buttonCount = await buttons.count()
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
-      if (buttonCount > 0) {
-        // Buttons should be accessible
-        const firstButton = buttons.first()
-        const ariaLabel = await firstButton.getAttribute('aria-label')
-        const text = await firstButton.textContent()
-
-        // Should have either aria-label or text content
-        expect(ariaLabel || text).toBeTruthy()
-      }
+      // Refresh button should have title for accessibility
+      const refreshButton = page.getByTestId('dashboard-refresh-button')
+      await expect(refreshButton).toHaveAttribute('title', 'Refresh data')
     })
   })
 })
