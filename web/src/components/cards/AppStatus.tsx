@@ -47,7 +47,7 @@ export function AppStatus(_props: AppStatusProps) {
   const { deployments, isLoading, isFailed, consecutiveFailures } = useCachedDeployments()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: deployments.length > 0,
     isFailed,
@@ -173,6 +173,15 @@ export function AppStatus(_props: AppStatusProps) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No applications found</p>
+        <p className="text-xs mt-1">Deploy applications to see their status</p>
       </div>
     )
   }

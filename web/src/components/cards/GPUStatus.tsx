@@ -37,7 +37,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const { drillToCluster } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawNodes.length > 0,
   })
@@ -142,7 +142,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     )
   }
 
-  if (preFilteredNodes.length === 0) {
+  if (showEmptyState || preFilteredNodes.length === 0) {
     return (
       <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-end mb-3">

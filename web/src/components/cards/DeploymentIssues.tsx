@@ -44,7 +44,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
   const { drillToDeployment } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawIssues.length > 0,
     isFailed,
@@ -117,6 +117,15 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
         message="No issues detected"
         variant="success"
       />
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No deployment issues</p>
+        <p className="text-xs mt-1">All deployments are healthy</p>
+      </div>
     )
   }
 

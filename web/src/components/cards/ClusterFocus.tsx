@@ -23,7 +23,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
   const [internalCluster, setInternalCluster] = useState<string>('')
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: allClusters.length > 0,
   })
@@ -81,6 +81,15 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
           <Skeleton variant="rounded" height={80} />
           <Skeleton variant="rounded" height={80} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No clusters available</p>
+        <p className="text-xs mt-1">Add clusters to your kubeconfig</p>
       </div>
     )
   }

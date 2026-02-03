@@ -66,17 +66,22 @@ export interface CardLoadingStateOptions {
  * - `hasData` should be true once loading completes (even with empty data)
  * - `hasData` should be true if we have cached data (even while refreshing)
  * - Skeleton should only show when loading AND no cached data exists
+ * - Empty state should show when loading finishes but no data exists
  *
  * @example
  * ```tsx
  * const { clusters, isLoading } = useClusters()
- * const { showSkeleton } = useCardLoadingState({
+ * const { showSkeleton, showEmptyState } = useCardLoadingState({
  *   isLoading,
  *   hasAnyData: clusters.length > 0,
  * })
  *
  * if (showSkeleton) {
  *   return <CardSkeleton type="list" rows={3} />
+ * }
+ *
+ * if (showEmptyState) {
+ *   return <CardEmptyState message="No clusters found" />
  * }
  * ```
  */
@@ -106,6 +111,8 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     hasData,
     /** Whether to show skeleton loading state (only when loading with no cached data) */
     showSkeleton: isLoading && !hasAnyData,
+    /** Whether to show empty state (loading finished but no data exists) */
+    showEmptyState: !isLoading && !hasAnyData,
     /** Whether data is being refreshed (has cache, fetching update) */
     isRefreshing: isLoading && hasData,
   }

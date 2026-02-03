@@ -66,7 +66,7 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
   const { drillToArgoApp } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allApps.length > 0,
     isFailed,
@@ -147,6 +147,15 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
           <Skeleton variant="rounded" height={60} />
           <Skeleton variant="rounded" height={60} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No ArgoCD applications</p>
+        <p className="text-xs mt-1">Deploy applications with ArgoCD to see them here</p>
       </div>
     )
   }

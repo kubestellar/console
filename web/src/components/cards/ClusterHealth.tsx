@@ -127,7 +127,7 @@ export function ClusterHealth() {
   })
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoadingHook,
     hasAnyData: rawClusters.length > 0,
     isFailed: !!error && rawClusters.length === 0,
@@ -207,6 +207,15 @@ export function ClusterHealth() {
         <div className="mt-4 pt-3 border-t border-border/50">
           <Skeleton variant="text" width="60%" height={12} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No clusters configured</p>
+        <p className="text-xs mt-1">Add clusters to your kubeconfig to get started</p>
       </div>
     )
   }

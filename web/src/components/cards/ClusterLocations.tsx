@@ -216,7 +216,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { drillToCluster } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
   })
@@ -391,6 +391,15 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
         <Skeleton variant="rounded" className="flex-1" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No clusters available</p>
+        <p className="text-xs mt-1">Add clusters to see their locations</p>
       </div>
     )
   }

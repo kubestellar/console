@@ -100,7 +100,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   }, [storedData.data.length])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: kustomizationData.length > 0,
   })
@@ -231,6 +231,15 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           <Skeleton variant="rounded" height={60} />
           <Skeleton variant="rounded" height={60} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No Kustomizations</p>
+        <p className="text-xs mt-1">Kustomizations will appear here</p>
       </div>
     )
   }

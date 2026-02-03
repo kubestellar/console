@@ -47,7 +47,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const [limit, setLimit] = useState<number | 'unlimited'>(10)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
   })
@@ -210,6 +210,15 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
           <Skeleton variant="rounded" height={56} />
           <Skeleton variant="rounded" height={56} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No clusters available</p>
+        <p className="text-xs mt-1">Connect to clusters to see resource capacity</p>
       </div>
     )
   }

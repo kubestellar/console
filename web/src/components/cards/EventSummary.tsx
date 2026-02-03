@@ -20,7 +20,7 @@ export function EventSummary() {
   const { filterByCluster } = useGlobalFilters()
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: events.length > 0,
     isFailed: isFailed && events.length === 0,
@@ -79,6 +79,15 @@ export function EventSummary() {
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No events</p>
+        <p className="text-xs mt-1">Cluster events will appear here</p>
       </div>
     )
   }

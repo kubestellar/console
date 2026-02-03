@@ -55,8 +55,8 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, consecutiveFailures, isFailed } = useOperatorSubscriptions(undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
-    isLoading: subscriptionsLoading,
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading: clustersLoading || subscriptionsLoading,
     hasAnyData: rawSubscriptions.length > 0,
     isFailed,
     consecutiveFailures,
@@ -106,9 +106,6 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     defaultLimit: 5,
   })
 
-  const isLoading = clustersLoading || subscriptionsLoading
-  const showSkeleton = isLoading && rawSubscriptions.length === 0
-
   // Summary counts from globally filtered data (before local search/pagination)
   const { autoCount, manualCount, pendingCount } = useMemo(() => ({
     autoCount: globalFilteredSubscriptions.filter(s => s.installPlanApproval === 'Automatic').length,
@@ -128,6 +125,15 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           <Skeleton variant="rounded" height={60} />
           <Skeleton variant="rounded" height={60} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No subscriptions</p>
+        <p className="text-xs mt-1">Operator subscriptions will appear here</p>
       </div>
     )
   }

@@ -93,7 +93,7 @@ export function ComputeOverview() {
     filteredClusters.some(c => c.reachable !== false && c.cpuCores !== undefined && c.nodeCount !== undefined && c.nodeCount > 0)
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading || gpuLoading,
     hasAnyData: clusters.length > 0,
   })
@@ -102,6 +102,15 @@ export function ComputeOverview() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading compute data...</div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No compute data</p>
+        <p className="text-xs mt-1">Connect to clusters to see compute metrics</p>
       </div>
     )
   }

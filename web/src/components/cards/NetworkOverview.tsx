@@ -17,7 +17,7 @@ export function NetworkOverview() {
 
   // Report card data state
   const combinedLoading = isLoading || servicesLoading
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: combinedLoading,
     hasAnyData: services.length > 0,
     isFailed,
@@ -95,6 +95,15 @@ export function NetworkOverview() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading network data...</div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No network services</p>
+        <p className="text-xs mt-1">Services will appear when deployed</p>
       </div>
     )
   }

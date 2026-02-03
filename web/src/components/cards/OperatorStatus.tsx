@@ -57,8 +57,8 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
   const { operators: rawOperators, isLoading: operatorsLoading, consecutiveFailures, isFailed } = useOperators(undefined)
 
   // Report card data state
-  useCardLoadingState({
-    isLoading: operatorsLoading,
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading: clustersLoading || operatorsLoading,
     hasAnyData: rawOperators.length > 0,
     isFailed,
     consecutiveFailures,
@@ -109,9 +109,6 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
     defaultLimit: 5,
   })
 
-  const isLoading = clustersLoading || operatorsLoading
-  const showSkeleton = isLoading && rawOperators.length === 0
-
   const getStatusIcon = (status: Operator['status']) => {
     switch (status) {
       case 'Succeeded': return CheckCircle
@@ -151,6 +148,15 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
           <Skeleton variant="rounded" height={50} />
           <Skeleton variant="rounded" height={50} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No operators</p>
+        <p className="text-xs mt-1">Operators will appear when installed</p>
       </div>
     )
   }

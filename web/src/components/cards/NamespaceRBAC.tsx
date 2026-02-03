@@ -65,11 +65,9 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
   // Check if we're loading initial data or fetching RBAC data
   const isInitialLoading = clustersLoading
   const isFetchingRBAC = selectedCluster && selectedNamespace && (rolesLoading || bindingsLoading || sasLoading)
-  const isLoading = isInitialLoading
-  const showSkeleton = isLoading && clusters.length === 0
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isInitialLoading || !!isFetchingRBAC,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
   })
@@ -166,6 +164,15 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
           <Skeleton variant="rounded" height={40} />
           <Skeleton variant="rounded" height={40} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No RBAC data</p>
+        <p className="text-xs mt-1">RBAC roles and bindings will appear here</p>
       </div>
     )
   }

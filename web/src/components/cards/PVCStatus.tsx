@@ -71,7 +71,7 @@ export function PVCStatus() {
   const { drillToPVC } = useDrillDownActions()
 
   // Report card data state
-  useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: pvcs.length > 0,
     isFailed,
@@ -149,12 +149,19 @@ export function PVCStatus() {
     }
   }, [pvcs, localClusterFilter, search])
 
-  const showSkeleton = isLoading && pvcs.length === 0
-
   if (showSkeleton) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading PVCs...</div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No PVCs</p>
+        <p className="text-xs mt-1">Persistent Volume Claims will appear here</p>
       </div>
     )
   }

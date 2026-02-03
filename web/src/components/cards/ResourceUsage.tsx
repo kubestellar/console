@@ -62,13 +62,12 @@ export function ResourceUsage() {
   }
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: clusters.length > 0,
   })
-  const isLoading = showSkeleton
 
-  if (isLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-[200px]">
         <div className="flex items-center justify-between mb-4">
@@ -89,6 +88,15 @@ export function ResourceUsage() {
           <Skeleton variant="rounded" height={40} />
           <Skeleton variant="rounded" height={40} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No clusters available</p>
+        <p className="text-xs mt-1">Connect to clusters to see resource usage</p>
       </div>
     )
   }

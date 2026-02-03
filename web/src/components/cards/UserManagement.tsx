@@ -80,7 +80,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const openshiftUsersLoading = openshiftInitialLoading && allOpenshiftUsers.length === 0
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || usersLoading || sasInitialLoading || openshiftInitialLoading,
     hasAnyData: allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0,
     isFailed: Boolean(usersError),
@@ -304,11 +304,6 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     }
   }
 
-  // Only show skeleton during initial loading
-  const hasData = allUsers.length > 0 || currentUser !== null
-  const hasError = Boolean(usersError)
-  const showSkeleton = usersLoading && !hasData && !hasError
-
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
@@ -328,6 +323,15 @@ export function UserManagement({ config: _config }: UserManagementProps) {
           <Skeleton variant="rounded" height={56} />
           <Skeleton variant="rounded" height={56} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No users</p>
+        <p className="text-xs mt-1">Users and service accounts will appear here</p>
       </div>
     )
   }

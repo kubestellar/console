@@ -112,7 +112,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const { drillToPod } = useDrillDownActions()
 
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: rawIssues.length > 0,
     isFailed,
@@ -215,7 +215,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
     )
   }
 
-  if (issues.length === 0) {
+  if (showEmptyState || issues.length === 0) {
     return (
       <div className="h-full flex flex-col">
         <div className="flex items-center justify-end mb-3">

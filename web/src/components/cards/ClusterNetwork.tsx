@@ -16,7 +16,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allClusters.length > 0,
   })
@@ -74,6 +74,15 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
         </div>
         <Skeleton variant="rounded" height={80} className="mb-3" />
         <Skeleton variant="rounded" height={60} />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No network data</p>
+        <p className="text-xs mt-1">Connect to clusters to see network status</p>
       </div>
     )
   }

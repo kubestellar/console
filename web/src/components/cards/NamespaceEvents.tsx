@@ -44,13 +44,10 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
   const isLoading = clustersLoading || eventsLoading
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton: _showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: allEvents.length > 0,
   })
-
-  // hasData should be true once loading completes (even with empty data)
-  const hasData = !isLoading || allEvents.length > 0
 
   // Use cascading selection hook for cluster -> namespace
   const {
@@ -131,8 +128,6 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
     defaultLimit: 5,
   })
 
-  const showSkeleton = isLoading && !hasData
-
   const getEventIcon = (type: string) => {
     if (type === 'Warning') return AlertTriangle
     if (type === 'Error') return AlertCircle
@@ -158,6 +153,15 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader showSearch rowHeight={60} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No events</p>
+        <p className="text-xs mt-1">Namespace events will appear here</p>
+      </div>
+    )
   }
 
   return (

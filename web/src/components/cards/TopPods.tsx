@@ -75,7 +75,7 @@ export function TopPods({ config }: TopPodsProps) {
   } = useCachedPods(clusterConfig, namespaceConfig, { limit: 100, category: 'pods' })
 
   // Report data state to CardWrapper for failure badge rendering
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: rawPods.length > 0,
     isFailed,
@@ -137,6 +137,15 @@ export function TopPods({ config }: TopPodsProps) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No pods</p>
+        <p className="text-xs mt-1">Pods will appear when running</p>
       </div>
     )
   }

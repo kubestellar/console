@@ -65,7 +65,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const cluster = clusters.find(c => c.name === selectedCluster)
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading,
     hasAnyData: allClusters.length > 0,
   })
@@ -81,6 +81,15 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           <Skeleton variant="rounded" height={80} />
           <Skeleton variant="rounded" height={80} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No namespaces</p>
+        <p className="text-xs mt-1">Connect to clusters to see namespaces</p>
       </div>
     )
   }

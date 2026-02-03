@@ -42,7 +42,7 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
   } = useHelmReleases()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || releasesLoading,
     hasAnyData: allHelmReleases.length > 0,
     isFailed,
@@ -117,6 +117,15 @@ export function ChartVersions({ config: _config }: ChartVersionsProps) {
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={50} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No Helm charts</p>
+        <p className="text-xs mt-1">Install Helm charts to track versions</p>
+      </div>
+    )
   }
 
   return (

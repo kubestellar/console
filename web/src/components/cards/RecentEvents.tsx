@@ -36,7 +36,7 @@ export function RecentEvents() {
   const { filterByCluster } = useGlobalFilters()
 
   // Report data state to CardWrapper for failure badge rendering
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: events.length > 0,
     isFailed,
@@ -87,6 +87,15 @@ export function RecentEvents() {
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No events</p>
+        <p className="text-xs mt-1">Recent events will appear here</p>
       </div>
     )
   }

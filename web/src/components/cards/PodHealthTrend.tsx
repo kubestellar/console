@@ -42,7 +42,7 @@ export function PodHealthTrend() {
   const isLoadingData = clustersLoading || issuesLoading
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoadingData,
     hasAnyData: clusters.length > 0 || issues.length > 0,
   })
@@ -224,6 +224,15 @@ export function PodHealthTrend() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading pod health...</div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No pod data</p>
+        <p className="text-xs mt-1">Pod health trends will appear here</p>
       </div>
     )
   }

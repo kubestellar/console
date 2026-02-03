@@ -38,7 +38,7 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
   } = useArgoCDSyncStatus(localClusterFilter)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading,
     hasAnyData: total > 0,
     isFailed,
@@ -57,6 +57,15 @@ export function ArgoCDSyncStatus({ config: _config }: ArgoCDSyncStatusProps) {
           <Skeleton variant="rounded" height={20} />
           <Skeleton variant="rounded" height={20} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No ArgoCD data</p>
+        <p className="text-xs mt-1">Connect ArgoCD to see sync status</p>
       </div>
     )
   }

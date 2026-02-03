@@ -28,7 +28,7 @@ export function EventStream() {
   } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: rawEvents.length > 0,
     isFailed: !!error && rawEvents.length === 0,
@@ -111,6 +111,15 @@ export function EventStream() {
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={60} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No events</p>
+        <p className="text-xs mt-1">Cluster events will appear here</p>
+      </div>
+    )
   }
 
   return (

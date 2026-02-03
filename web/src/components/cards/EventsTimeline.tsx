@@ -86,7 +86,7 @@ export function EventsTimeline() {
   const { deduplicatedClusters: clusters } = useClusters()
 
   // Report state to CardWrapper for refresh animation
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading,
     hasAnyData: events.length > 0,
   })
@@ -188,6 +188,15 @@ export function EventsTimeline() {
         </div>
         <SkeletonStats className="mb-4" />
         <Skeleton variant="rounded" height={160} className="flex-1" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No events</p>
+        <p className="text-xs mt-1">Cluster events will appear here</p>
       </div>
     )
   }
