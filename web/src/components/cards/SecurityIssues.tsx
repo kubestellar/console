@@ -1,7 +1,8 @@
 import { Shield, AlertTriangle, User, Network, Server, ChevronRight, Search, Filter, ChevronDown } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useMemo } from 'react'
-import { useSecurityIssues, SecurityIssue } from '../../hooks/useMCP'
+import type { SecurityIssue } from '../../hooks/useMCP'
+import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -97,16 +98,17 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const namespaceConfig = config?.namespace as string | undefined
   const { isDemoMode } = useDemoMode()
 
-  // Fetch real data from agent (only used when not in demo mode)
-  const { issues: agentIssues, isLoading: agentLoading, isRefreshing: agentRefreshing, error: agentError, isFailed: agentFailed, consecutiveFailures: agentFailures } = useSecurityIssues(clusterConfig, namespaceConfig)
+  // Fetch data with caching (stale-while-revalidate pattern)
+  // Cache persists to IndexedDB so data shows immediately on navigation/reload
+  const { issues: cachedIssues, isLoading: cachedLoading, isRefreshing: cachedRefreshing, error: cachedError, isFailed: cachedFailed, consecutiveFailures: cachedFailures } = useCachedSecurityIssues(clusterConfig, namespaceConfig)
 
-  // Use demo data when in demo mode, otherwise use agent data
-  const rawIssues = useMemo(() => isDemoMode ? getDemoSecurityIssues() : agentIssues, [isDemoMode, agentIssues])
-  const isLoading = isDemoMode ? false : agentLoading
-  const isRefreshing = isDemoMode ? false : agentRefreshing
-  const error = isDemoMode ? null : agentError
-  const isFailed = isDemoMode ? false : agentFailed
-  const consecutiveFailures = isDemoMode ? 0 : agentFailures
+  // Use demo data when in demo mode, otherwise use cached/agent data
+  const rawIssues = useMemo(() => isDemoMode ? getDemoSecurityIssues() : cachedIssues, [isDemoMode, cachedIssues])
+  const isLoading = isDemoMode ? false : cachedLoading
+  const isRefreshing = isDemoMode ? false : cachedRefreshing
+  const error = isDemoMode ? null : cachedError
+  const isFailed = isDemoMode ? false : cachedFailed
+  const consecutiveFailures = isDemoMode ? 0 : cachedFailures
 
   const { drillToPod } = useDrillDownActions()
 
