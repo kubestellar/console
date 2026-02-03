@@ -24,6 +24,8 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { api } from '../../lib/api'
 
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+
 type GroupByMode = 'cluster' | 'type'
 
 interface NamespaceDetails {
@@ -140,28 +142,64 @@ export function NamespaceManager() {
     // Fetch namespaces from clusters progressively (not waiting for all)
     const fetchPromises = clustersToFetch.map(async (cluster) => {
       try {
-        // Use MCP pods endpoint to get namespace information
-        const response = await api.get<{ pods: Array<{ namespace: string; status: string }> }>(
-          `/api/mcp/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`
-        )
+        let clusterNamespaces: NamespaceDetails[] = []
 
-        // Extract unique namespaces from pods
-        const nsSet = new Set<string>()
-        response.data.pods?.forEach(pod => {
-          if (pod.namespace) nsSet.add(pod.namespace)
-        })
+        // Always try local agent first (works without backend auth)
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 8000)
+          const response = await fetch(
+            `${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`,
+            { signal: controller.signal, headers: { 'Accept': 'application/json' } }
+          )
+          clearTimeout(timeoutId)
 
-        // Convert to NamespaceDetails and cache
-        const clusterNamespaces: NamespaceDetails[] = []
-        nsSet.forEach(ns => {
-          clusterNamespaces.push({
-            name: ns,
-            cluster,
-            status: 'Active',
-            createdAt: new Date().toISOString(),
-          })
-        })
-        namespaceCache.set(cluster, clusterNamespaces)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.namespaces && Array.isArray(data.namespaces)) {
+              clusterNamespaces = data.namespaces.map((ns: { name: string; status?: string; labels?: Record<string, string>; createdAt?: string }) => ({
+                name: ns.name,
+                cluster,
+                status: ns.status || 'Active',
+                labels: ns.labels,
+                createdAt: ns.createdAt || new Date().toISOString(),
+              }))
+            }
+          }
+        } catch {
+          // Local agent failed, will fall back to API
+        }
+
+        // Fall back to API if local agent didn't return data
+        if (clusterNamespaces.length === 0) {
+          try {
+            const response = await api.get<{ pods: Array<{ namespace: string; status: string }> }>(
+              `/api/mcp/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`
+            )
+
+            // Extract unique namespaces from pods
+            const nsSet = new Set<string>()
+            response.data.pods?.forEach(pod => {
+              if (pod.namespace) nsSet.add(pod.namespace)
+            })
+
+            nsSet.forEach(ns => {
+              clusterNamespaces.push({
+                name: ns,
+                cluster,
+                status: 'Active',
+                createdAt: new Date().toISOString(),
+              })
+            })
+          } catch {
+            // API also failed - cluster is likely unreachable
+          }
+        }
+
+        // Only cache if we got data
+        if (clusterNamespaces.length > 0) {
+          namespaceCache.set(cluster, clusterNamespaces)
+        }
 
         // Update UI progressively as each cluster completes
         setLoadingClusters(prev => {
@@ -173,10 +211,7 @@ export function NamespaceManager() {
       } catch (err) {
         // Don't fail completely, just note which clusters failed
         failedClusters.push(cluster)
-        // Still cache empty array to prevent repeated failed fetches
-        if (!namespaceCache.has(cluster)) {
-          namespaceCache.set(cluster, [])
-        }
+        // DON'T cache empty arrays on failure - allow retry next time
         // Update loading state even on failure
         setLoadingClusters(prev => {
           const next = new Set(prev)
@@ -192,11 +227,19 @@ export function NamespaceManager() {
     // Final update from cache
     updateNamespacesFromCache()
 
-    if (failedClusters.length > 0 && allNamespaces.length === 0) {
-      setError(`Failed to fetch namespaces from: ${failedClusters.join(', ')}`)
-    } else if (failedClusters.length > 0) {
-      // Partial success - show warning but don't set as error
-      console.warn(`Some clusters failed: ${failedClusters.join(', ')}`)
+    // Check actual cache size, not stale state
+    let totalCachedNamespaces = 0
+    for (const clusterName of allClusterNames) {
+      const cached = namespaceCache.get(clusterName)
+      if (cached) totalCachedNamespaces += cached.length
+    }
+
+    // Only show error if ALL clusters failed (no namespaces at all)
+    if (failedClusters.length > 0 && totalCachedNamespaces === 0) {
+      setError(`Unable to connect to clusters. Check that the KC agent is running.`)
+    } else {
+      // Clear any previous error since we have data
+      setError(null)
     }
 
     setLoading(false)
@@ -341,10 +384,10 @@ export function NamespaceManager() {
         rightExtra={
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/80 text-white text-sm hover:bg-blue-500 transition-colors"
           >
-            <Plus className="w-4 h-4" />
-            Create Namespace
+            <Plus className="w-3.5 h-3.5" />
+            Create
           </button>
         }
       />
@@ -463,13 +506,7 @@ export function NamespaceManager() {
                     {/* Cluster namespaces or skeleton */}
                     {!isCollapsed && (
                       <div className="space-y-2 ml-6">
-                        {isUnreachable ? (
-                          // Show offline message for offline clusters
-                          <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                            <WifiOff className="w-4 h-4 text-yellow-400" />
-                            <span className="text-sm text-yellow-400">Cluster offline - cannot fetch namespaces</span>
-                          </div>
-                        ) : isClusterLoading && !hasData ? (
+                        {isClusterLoading && !hasData && !isUnreachable ? (
                           // Show skeleton for loading clusters (only on initial load, not refresh)
                           [1, 2, 3].map((i) => (
                             <NamespaceCardSkeleton key={`${clusterName}-skeleton-${i}`} />
@@ -631,7 +668,10 @@ export function NamespaceManager() {
       {/* Create Namespace Modal */}
       {showCreateModal && (
         <CreateNamespaceModal
-          clusters={targetClusters}
+          clusters={targetClusters.filter(clusterName => {
+            const cluster = clusters.find(c => c.name === clusterName)
+            return cluster?.reachable !== false
+          })}
           onClose={() => setShowCreateModal(false)}
           onCreated={(cluster: string) => {
             setShowCreateModal(false)
