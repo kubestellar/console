@@ -317,9 +317,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 The AI missions feature requires the local agent to be running.
 
 **To get started:**
-1. Install the agent: \`brew install kubestellar/tap/kc-agent\`
-2. Start the agent: \`kc-agent\`
-3. [Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
+1. Install and run the console locally:
+   \`\`\`
+   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start-dev.sh | bash
+   \`\`\`
+2. Open the console: http://localhost:5174
+3. [⚙️ Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
 
             const pendingMissionIds = new Set(pendingRequests.current.values())
             setMissions(prev => prev.map(m => {
@@ -605,9 +608,12 @@ The AI missions feature requires the local agent to be running.
 The AI missions feature requires the local agent to be running.
 
 **To get started:**
-1. Install the agent: \`brew install kubestellar/tap/kc-agent\`
-2. Start the agent: \`kc-agent\`
-3. [Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
+1. Install and run the console locally:
+   \`\`\`
+   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start-dev.sh | bash
+   \`\`\`
+2. Open the console: http://localhost:5174
+3. [⚙️ Configure API Keys →](/settings) for Claude, OpenAI, or Gemini`
 
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
