@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,6 +63,9 @@ type Server struct {
 	// Prediction system
 	predictionWorker *PredictionWorker
 	metricsHistory   *MetricsHistory
+
+	// Hardware device tracking
+	deviceTracker *DeviceTracker
 }
 
 // NewServer creates a new agent server
@@ -126,6 +130,17 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize prediction system
 	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
 	server.metricsHistory = NewMetricsHistory(k8sClient)
+
+	// Initialize device tracker with notification callback
+	server.deviceTracker = NewDeviceTracker(k8sClient, func(msgType string, payload interface{}) {
+		server.BroadcastToClients(msgType, payload)
+		// Send native notification for device alerts
+		if msgType == "device_alerts_updated" {
+			if resp, ok := payload.(DeviceAlertsResponse); ok && len(resp.Alerts) > 0 {
+				server.sendNativeNotification(resp.Alerts)
+			}
+		}
+	})
 
 	return server, nil
 }
@@ -223,6 +238,11 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/predictions/analyze", s.handlePredictionsAnalyze)
 	mux.HandleFunc("/predictions/feedback", s.handlePredictionsFeedback)
 	mux.HandleFunc("/predictions/stats", s.handlePredictionsStats)
+
+	// Device tracking endpoints
+	mux.HandleFunc("/devices/alerts", s.handleDeviceAlerts)
+	mux.HandleFunc("/devices/alerts/clear", s.handleDeviceAlertsClear)
+	mux.HandleFunc("/devices/inventory", s.handleDeviceInventory)
 	mux.HandleFunc("/metrics/history", s.handleMetricsHistory)
 
 	// Prometheus metrics endpoint
@@ -277,6 +297,12 @@ func (s *Server) Start() error {
 	if s.metricsHistory != nil {
 		s.metricsHistory.Start(10 * time.Minute)
 		log.Println("Metrics history started")
+	}
+
+	// Start device tracker
+	if s.deviceTracker != nil {
+		s.deviceTracker.Start()
+		log.Println("Device tracker started")
 	}
 
 	return http.ListenAndServe(addr, mux)
@@ -2483,4 +2509,153 @@ func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(s.metricsHistory.GetSnapshots())
+}
+
+// handleDeviceAlerts returns current hardware device alerts
+func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		json.NewEncoder(w).Encode(DeviceAlertsResponse{
+			Alerts:    []DeviceAlert{},
+			NodeCount: 0,
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.deviceTracker.GetAlerts())
+}
+
+// handleDeviceAlertsClear clears a specific device alert
+func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		http.Error(w, "Device tracker not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req struct {
+		AlertID string `json:"alertId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.AlertID == "" {
+		http.Error(w, "alertId is required", http.StatusBadRequest)
+		return
+	}
+
+	cleared := s.deviceTracker.ClearAlert(req.AlertID)
+	json.NewEncoder(w).Encode(map[string]bool{"cleared": cleared})
+}
+
+func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		json.NewEncoder(w).Encode(DeviceInventoryResponse{
+			Nodes:     []NodeDeviceInventory{},
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	response := s.deviceTracker.GetInventory()
+	json.NewEncoder(w).Encode(response)
+}
+
+// sendNativeNotification sends a native macOS notification for device alerts
+func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
+	if len(alerts) == 0 {
+		return
+	}
+
+	// Build notification message
+	var title, message string
+	if len(alerts) == 1 {
+		alert := alerts[0]
+		title = fmt.Sprintf("⚠️ Hardware Alert: %s", alert.DeviceType)
+		message = fmt.Sprintf("%s on %s/%s: %d → %d",
+			alert.DeviceType, alert.Cluster, alert.NodeName,
+			alert.PreviousCount, alert.CurrentCount)
+	} else {
+		critical := 0
+		for _, a := range alerts {
+			if a.Severity == "critical" {
+				critical++
+			}
+		}
+		title = fmt.Sprintf("⚠️ %d Hardware Alerts", len(alerts))
+		if critical > 0 {
+			message = fmt.Sprintf("%d critical, %d warning - devices have disappeared",
+				critical, len(alerts)-critical)
+		} else {
+			message = fmt.Sprintf("%d devices have disappeared from nodes", len(alerts))
+		}
+	}
+
+	// Use osascript for macOS notifications (non-blocking)
+	go func() {
+		script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`,
+			message, title)
+		cmd := exec.Command("osascript", "-e", script)
+		if err := cmd.Run(); err != nil {
+			log.Printf("[DeviceTracker] Failed to send notification: %v", err)
+		}
+	}()
 }

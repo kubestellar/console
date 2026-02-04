@@ -99,6 +99,7 @@ const CARD_CATALOG = {
     { type: 'console_ai_kubeconfig_audit', title: 'AI Kubeconfig Audit', description: 'Audit kubeconfig for stale contexts', visualization: 'status' },
     { type: 'console_ai_health_check', title: 'AI Health Check', description: 'Comprehensive AI health analysis', visualization: 'gauge' },
     { type: 'console_ai_offline_detection', title: 'Offline Detection', description: 'Detect offline nodes and unavailable GPUs', visualization: 'status' },
+    { type: 'hardware_health', title: 'Hardware Health', description: 'Track GPU, NIC, NVMe, InfiniBand disappearances on SuperMicro/HGX nodes', visualization: 'status' },
   ],
   'Alerting': [
     { type: 'active_alerts', title: 'Active Alerts', description: 'Firing alerts with severity and quick actions', visualization: 'status' },
@@ -216,6 +217,33 @@ function generateCardSuggestions(query: string): CardSuggestion[] {
         type: 'active_alerts',
         title: 'Active Alerts',
         description: 'Firing alerts with severity',
+        visualization: 'status',
+        config: {},
+      },
+    ]
+  }
+
+  // Hardware-related queries
+  if (lowerQuery.includes('hardware') || lowerQuery.includes('supermicro') || lowerQuery.includes('hgx') || lowerQuery.includes('nic') || lowerQuery.includes('nvme') || lowerQuery.includes('infiniband') || lowerQuery.includes('mellanox')) {
+    return [
+      {
+        type: 'hardware_health',
+        title: 'Hardware Health',
+        description: 'Track GPU, NIC, NVMe, InfiniBand disappearances on SuperMicro/HGX nodes',
+        visualization: 'status',
+        config: {},
+      },
+      {
+        type: 'gpu_overview',
+        title: 'GPU Overview',
+        description: 'Total GPUs across all clusters',
+        visualization: 'gauge',
+        config: {},
+      },
+      {
+        type: 'console_ai_offline_detection',
+        title: 'Offline Detection',
+        description: 'Detect offline nodes and unavailable GPUs',
         visualization: 'status',
         config: {},
       },

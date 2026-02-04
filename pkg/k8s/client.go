@@ -189,6 +189,9 @@ type NodeInfo struct {
 	PodCapacity       string            `json:"podCapacity"`
 	GPUCount          int               `json:"gpuCount"`
 	GPUType           string            `json:"gpuType,omitempty"`
+	NICCount          int               `json:"nicCount,omitempty"`          // Network interface count (from NFD)
+	NVMECount         int               `json:"nvmeCount,omitempty"`         // NVME device count (from NFD)
+	InfiniBandCount   int               `json:"infinibandCount,omitempty"`   // InfiniBand HCA count
 	Conditions        []NodeCondition   `json:"conditions"`
 	Labels            map[string]string `json:"labels,omitempty"`
 	Taints            []string          `json:"taints,omitempty"`
@@ -1549,6 +1552,44 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 		} else if gpu, ok := node.Status.Allocatable["gpu.intel.com/i915"]; ok {
 			info.GPUCount = int(gpu.Value())
 			info.GPUType = "Intel GPU"
+		}
+
+		// Get NIC/InfiniBand count from allocatable resources and labels
+		// Check for Mellanox InfiniBand HCAs (common on HGX systems)
+		for key, val := range node.Status.Allocatable {
+			keyStr := string(key)
+			if strings.HasPrefix(keyStr, "rdma/") || strings.Contains(keyStr, "hca") {
+				info.InfiniBandCount += int(val.Value())
+			}
+			// NVIDIA ConnectX NICs
+			if strings.Contains(keyStr, "mellanox") || strings.Contains(keyStr, "connectx") {
+				info.NICCount += int(val.Value())
+			}
+		}
+		// Fallback: count from NFD labels (feature.node.kubernetes.io/pci-15b3.present = Mellanox)
+		if info.InfiniBandCount == 0 {
+			for key := range node.Labels {
+				if strings.Contains(key, "pci-15b3") || strings.Contains(key, "infiniband") {
+					info.InfiniBandCount = 1 // At least one present
+					break
+				}
+			}
+		}
+
+		// Get NVME count from NFD labels or allocatable resources
+		for key := range node.Labels {
+			if strings.Contains(key, "nvme") && strings.Contains(key, "present") {
+				info.NVMECount = 1 // NFD marks presence, count from capacity if available
+				break
+			}
+		}
+		// Check allocatable for explicit NVME count (some device plugins expose this)
+		for key, val := range node.Status.Allocatable {
+			keyStr := string(key)
+			if strings.Contains(keyStr, "nvme") {
+				info.NVMECount = int(val.Value())
+				break
+			}
 		}
 
 		// Get conditions

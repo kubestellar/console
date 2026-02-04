@@ -16,6 +16,7 @@ export const gpuDashboardConfig: UnifiedDashboardConfig = {
     { id: 'gpu-utilization-1', cardType: 'gpu_utilization', position: { w: 6, h: 3 } },
     { id: 'gpu-usage-trend-1', cardType: 'gpu_usage_trend', position: { w: 6, h: 3 } },
     { id: 'gpu-workloads-1', cardType: 'gpu_workloads', position: { w: 6, h: 3 } },
+    { id: 'hardware-health-1', cardType: 'hardware_health', title: 'Hardware Health', position: { w: 6, h: 3 } },
   ],
   features: {
     dragDrop: true,

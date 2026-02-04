@@ -77,48 +77,54 @@ export const mainDashboardConfig: UnifiedDashboardConfig = {
     {
       id: 'default-offline',
       cardType: 'console_ai_offline_detection',
-      position: { w: 4, h: 3, x: 0, y: 0 },
+      position: { w: 6, h: 3, x: 0, y: 0 },
+    },
+    {
+      id: 'default-hardware',
+      cardType: 'hardware_health',
+      position: { w: 6, h: 3, x: 6, y: 0 },
     },
     {
       id: 'default-1',
       cardType: 'cluster_health',
-      position: { w: 4, h: 3, x: 4, y: 0 },
+      position: { w: 4, h: 3, x: 0, y: 3 },
     },
     {
       id: 'default-2',
       cardType: 'resource_usage',
-      position: { w: 4, h: 3, x: 8, y: 0 },
+      position: { w: 4, h: 3, x: 4, y: 3 },
     },
     {
       id: 'default-3',
       cardType: 'pod_issues',
-      position: { w: 4, h: 3, x: 0, y: 3 },
+      position: { w: 4, h: 3, x: 8, y: 3 },
     },
     {
       id: 'default-4',
       cardType: 'cluster_metrics',
-      position: { w: 6, h: 3, x: 0, y: 3 },
+      position: { w: 6, h: 3, x: 0, y: 6 },
     },
     {
       id: 'default-5',
       cardType: 'event_stream',
-      position: { w: 6, h: 4, x: 6, y: 3 },
+      position: { w: 6, h: 4, x: 6, y: 6 },
     },
     {
       id: 'default-6',
       cardType: 'deployment_status',
-      position: { w: 6, h: 3, x: 0, y: 6 },
+      position: { w: 6, h: 3, x: 0, y: 9 },
     },
     {
       id: 'default-7',
       cardType: 'events_timeline',
-      position: { w: 6, h: 3, x: 6, y: 7 },
+      position: { w: 6, h: 3, x: 6, y: 10 },
     },
   ],
 
   // Available card types for add menu
   availableCardTypes: [
     'console_ai_offline_detection',
+    'hardware_health',
     'cluster_health',
     'resource_usage',
     'pod_issues',

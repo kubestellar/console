@@ -30,6 +30,7 @@ export const aiMlDashboardConfig: UnifiedDashboardConfig = {
     { id: 'ml-jobs-1', cardType: 'ml_jobs', position: { w: 4, h: 3 } },
     { id: 'ml-notebooks-1', cardType: 'ml_notebooks', position: { w: 4, h: 3 } },
     { id: 'gpu-overview-1', cardType: 'gpu_overview', position: { w: 4, h: 3 } },
+    { id: 'hardware-health-1', cardType: 'hardware_health', title: 'Hardware Health', position: { w: 6, h: 3 } },
   ],
   features: {
     dragDrop: true,

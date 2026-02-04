@@ -61,6 +61,7 @@ const ConsoleIssuesCard = lazy(() => import('./console-missions/ConsoleIssuesCar
 const ConsoleKubeconfigAuditCard = lazy(() => import('./console-missions/ConsoleKubeconfigAuditCard').then(m => ({ default: m.ConsoleKubeconfigAuditCard })))
 const ConsoleHealthCheckCard = lazy(() => import('./console-missions/ConsoleHealthCheckCard').then(m => ({ default: m.ConsoleHealthCheckCard })))
 const ConsoleOfflineDetectionCard = lazy(() => import('./console-missions/ConsoleOfflineDetectionCard').then(m => ({ default: m.ConsoleOfflineDetectionCard })))
+const HardwareHealthCard = lazy(() => import('./HardwareHealthCard').then(m => ({ default: m.HardwareHealthCard })))
 const ActiveAlerts = lazy(() => import('./ActiveAlerts').then(m => ({ default: m.ActiveAlerts })))
 const AlertRulesCard = lazy(() => import('./AlertRules').then(m => ({ default: m.AlertRulesCard })))
 const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ default: m.OpenCostOverview })))
@@ -234,6 +235,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   console_ai_kubeconfig_audit: ConsoleKubeconfigAuditCard,
   console_ai_health_check: ConsoleHealthCheckCard,
   console_ai_offline_detection: ConsoleOfflineDetectionCard,
+  hardware_health: HardwareHealthCard,
   // Alerting cards
   active_alerts: ActiveAlerts,
   alert_rules: AlertRulesCard,
@@ -605,6 +607,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   console_ai_kubeconfig_audit: 6,
   console_ai_health_check: 6,
   console_ai_offline_detection: 8,
+  hardware_health: 6,
   user_management: 6,
   // Weather card
   weather: 6,
