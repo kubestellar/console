@@ -7,10 +7,19 @@
  * Install: Click browser menu → "Install app" or "Add to Desktop"
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Maximize2, Settings, Download } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
+
+// Node data type from agent
+interface NodeData {
+  name: string
+  cluster?: string
+  status: string
+  roles: string[]
+  unschedulable?: boolean
+}
 
 // Stat card component
 function StatCard({
@@ -75,12 +84,42 @@ export function MiniDashboard() {
   const [isInstalled, setIsInstalled] = useState(false)
   const [isSafariBrowser] = useState(() => isSafari())
 
-  // Fetch data
+  // Fetch data from MCP hooks
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading, refetch: refetchGPU } = useGPUNodes()
+
+  // Fetch nodes from local agent for offline detection
+  const [allNodes, setAllNodes] = useState<NodeData[]>([])
+  const [nodesLoading, setNodesLoading] = useState(true)
+
+  const fetchNodes = useCallback(async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8585/nodes')
+      if (response.ok) {
+        const data = await response.json()
+        setAllNodes(data.nodes || [])
+      }
+    } catch {
+      // Agent might not be running - that's ok for widget
+    } finally {
+      setNodesLoading(false)
+    }
+  }, [])
+
+  // Initial fetch and subscribe to updates
+  useEffect(() => {
+    fetchNodes()
+    const interval = setInterval(fetchNodes, 30000)
+    return () => clearInterval(interval)
+  }, [fetchNodes])
+
+  // Calculate offline nodes (not Ready or unschedulable)
+  const offlineNodes = useMemo(() => {
+    return allNodes.filter(n => n.status !== 'Ready' || n.unschedulable === true)
+  }, [allNodes])
   const { issues: podIssues, isLoading: issuesLoading, refetch: refetchIssues } = usePodIssues()
 
-  const isLoading = clustersLoading || gpuLoading || issuesLoading
+  const isLoading = clustersLoading || gpuLoading || issuesLoading || nodesLoading
 
   // Calculate stats
   const totalClusters = clusters?.length || 0
@@ -88,22 +127,23 @@ export function MiniDashboard() {
   const totalGPUs = gpuNodes?.reduce((sum, n) => sum + (n.gpuCount || 0), 0) || 0
   const allocatedGPUs = gpuNodes?.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0) || 0
   const totalIssues = podIssues?.length || 0
+  const offlineCount = offlineNodes.length
   // Critical issues are those with CrashLoopBackOff, OOMKilled, or Error status
   const criticalIssues = podIssues?.filter((i) =>
     i.status === 'CrashLoopBackOff' || i.status === 'OOMKilled' || i.status === 'Error'
   ).length || 0
 
-  // Overall health status
+  // Overall health status - include offline nodes
   const overallStatus: 'healthy' | 'warning' | 'error' =
-    criticalIssues > 0 ? 'error' : totalIssues > 3 ? 'warning' : 'healthy'
+    offlineCount > 0 || criticalIssues > 0 ? 'error' : totalIssues > 3 ? 'warning' : 'healthy'
 
   // Manual refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
-    await Promise.all([refetchClusters?.(), refetchGPU?.(), refetchIssues?.()])
+    await Promise.all([refetchClusters?.(), refetchGPU?.(), refetchIssues?.(), fetchNodes()])
     setLastUpdated(new Date())
     setIsRefreshing(false)
-  }, [refetchClusters, refetchGPU, refetchIssues])
+  }, [refetchClusters, refetchGPU, refetchIssues, fetchNodes])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -155,7 +195,7 @@ export function MiniDashboard() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <StatusDot status={overallStatus} />
-          <h1 className="text-lg font-semibold">KC Console</h1>
+          <h1 className="text-lg font-semibold">KubeStellar Console</h1>
         </div>
         <div className="flex items-center gap-2">
           {lastUpdated && (
@@ -181,8 +221,8 @@ export function MiniDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      {/* Stats Grid - 3 columns for 6 stats */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
         <StatCard
           label="Clusters"
           value={totalClusters}
@@ -191,15 +231,27 @@ export function MiniDashboard() {
         />
         <StatCard
           label="GPUs"
-          value={totalGPUs}
+          value={`${allocatedGPUs}/${totalGPUs}`}
           color="text-green-400"
-          subValue={`${allocatedGPUs} allocated`}
+          subValue="allocated/total"
+        />
+        <StatCard
+          label="Nodes Offline"
+          value={offlineCount}
+          color={offlineCount > 0 ? 'text-red-400' : 'text-green-400'}
+          subValue={offlineCount > 0 ? 'needs attention' : 'all online'}
         />
         <StatCard
           label="Pod Issues"
           value={totalIssues}
           color={totalIssues > 0 ? 'text-orange-400' : 'text-gray-400'}
           subValue={criticalIssues > 0 ? `${criticalIssues} critical` : undefined}
+        />
+        <StatCard
+          label="Nodes"
+          value={allNodes.length}
+          color="text-blue-400"
+          subValue={`${allNodes.length - offlineCount} ready`}
         />
         <StatCard
           label="Status"
@@ -261,14 +313,14 @@ export function MiniDashboard() {
           </div>
         ) : (
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>KC Console Widget</span>
-            <a
-              href="/settings"
+            <span>KubeStellar Console Widget</span>
+            <button
+              onClick={openFullDashboard}
               className="flex items-center gap-1 hover:text-gray-400 transition-colors"
             >
-              <Settings className="w-3 h-3" />
-              Settings
-            </a>
+              <Maximize2 className="w-3 h-3" />
+              Open Full Dashboard
+            </button>
           </div>
         )}
       </div>

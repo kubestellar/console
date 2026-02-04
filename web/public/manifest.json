@@ -1,6 +1,6 @@
 {
-  "name": "KC Console Widget",
-  "short_name": "KC Widget",
+  "name": "KubeStellar Console Widget",
+  "short_name": "KubeStellar",
   "description": "KubeStellar Console mini-dashboard widget",
   "start_url": "/widget",
   "display": "standalone",
@@ -25,7 +25,7 @@
     {
       "name": "Full Dashboard",
       "url": "/dashboard",
-      "description": "Open full KC Console dashboard"
+      "description": "Open full KubeStellar Console dashboard"
     }
   ]
 }
