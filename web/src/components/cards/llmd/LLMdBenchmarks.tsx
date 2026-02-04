@@ -13,7 +13,7 @@ type ViewMode = 'comparison' | 'latency' | 'throughput'
 type ModelFilter = 'all' | 'Llama-3-70B' | 'Granite-13B' | 'DeepSeek-R1'
 
 const COLORS = {
-  baseline: '#64748b',
+  baseline: '#475569',
   'llm-d': '#9333ea',
   disaggregated: '#22c55e',
 }
@@ -231,6 +231,9 @@ export function LLMdBenchmarks() {
                   border: '1px solid #334155',
                   borderRadius: '8px',
                 }}
+                labelStyle={{ color: '#e5e5e5' }}
+                itemStyle={{ color: '#a1a1aa' }}
+                cursor={{ fill: 'rgba(30, 41, 59, 0.5)' }}
               />
               <Bar dataKey="baselineTTFT" name="Baseline" fill={COLORS.baseline} radius={[0, 4, 4, 0]} />
               <Bar dataKey="llmdTTFT" name="llm-d" fill={COLORS['llm-d']} radius={[0, 4, 4, 0]} />
@@ -250,6 +253,9 @@ export function LLMdBenchmarks() {
                   border: '1px solid #334155',
                   borderRadius: '8px',
                 }}
+                labelStyle={{ color: '#e5e5e5' }}
+                itemStyle={{ color: '#a1a1aa' }}
+                cursor={{ fill: 'rgba(30, 41, 59, 0.5)' }}
               />
               <Bar dataKey="p50" name="P50" stackId="a" fill="#22c55e" />
               <Bar dataKey="p95" name="P95" stackId="a" fill="#f59e0b" />

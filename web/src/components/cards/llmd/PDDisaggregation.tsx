@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Split, ArrowRight, Cpu, Zap, Clock, Activity } from 'lucide-react'
+import { Acronym } from './shared/PortalTooltip'
 
 interface ServerStats {
   id: string
@@ -142,7 +143,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
         </div>
 
         <div>
-          <span className="text-muted-foreground">{isPrefill ? 'TTFT' : 'TPOT'}</span>
+          <span className="text-muted-foreground">{isPrefill ? <Acronym term="TTFT" /> : <Acronym term="TPOT" />}</span>
           <div className="text-white font-mono mt-0.5">{server.latencyMs}ms</div>
         </div>
       </div>
@@ -150,7 +151,7 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
       {/* GPU memory bar */}
       <div className="mt-2">
         <div className="flex justify-between text-xs mb-0.5">
-          <span className="text-muted-foreground">GPU Mem</span>
+          <span className="text-muted-foreground"><Acronym term="GPU" /> Mem</span>
           <span className="text-white font-mono">{server.gpuMemory}%</span>
         </div>
         <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
@@ -266,7 +267,7 @@ export function PDDisaggregation() {
         <div className="bg-purple-500/10 rounded-lg p-2 text-center">
           <div className="flex items-center justify-center gap-1 text-purple-400 mb-1">
             <Clock size={12} />
-            <span className="text-xs">TTFT</span>
+            <span className="text-xs"><Acronym term="TTFT" /></span>
           </div>
           <div className="text-white font-mono text-sm">{metrics.prefillAvgTTFT}</div>
           <div className="text-xs text-muted-foreground">ms</div>
@@ -293,7 +294,7 @@ export function PDDisaggregation() {
         <div className="bg-green-500/10 rounded-lg p-2 text-center">
           <div className="flex items-center justify-center gap-1 text-green-400 mb-1">
             <Clock size={12} />
-            <span className="text-xs">TPOT</span>
+            <span className="text-xs"><Acronym term="TPOT" /></span>
           </div>
           <div className="text-white font-mono text-sm">{metrics.decodeAvgTPOT}</div>
           <div className="text-xs text-muted-foreground">ms</div>
@@ -341,7 +342,7 @@ export function PDDisaggregation() {
           </AnimatePresence>
 
           <div className="z-10 bg-slate-900 px-2 py-1 rounded text-xs text-cyan-400">
-            KV Cache
+            <Acronym term="KV" /> Cache
           </div>
         </div>
 

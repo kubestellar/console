@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, Zap, Split, Layers, Scale, ChevronRight, Check, Copy, ExternalLink } from 'lucide-react'
 import { getConfiguratorPresets, type ConfiguratorPreset } from '../../../lib/llmd/mockData'
+import { Acronym } from './shared/PortalTooltip'
 
 const CATEGORY_ICONS = {
   scheduling: Zap,
@@ -61,7 +62,7 @@ function PresetCard({ preset, isSelected, onSelect }: PresetCardProps) {
       {/* Impact preview */}
       <div className="flex items-center gap-3 text-xs">
         <div className="flex items-center gap-1">
-          <span className="text-muted-foreground">TTFT:</span>
+          <span className="text-muted-foreground"><Acronym term="TTFT" />:</span>
           <span className="text-green-400 font-mono">-{preset.expectedImpact.ttftImprovement}%</span>
         </div>
         <div className="flex items-center gap-1">
@@ -202,20 +203,15 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
           <span className="font-medium text-white">Configurator</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <a
-            href="https://github.com/llm-d/llm-d"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-white transition-colors"
-          >
-            <ExternalLink size={12} />
-            Docs
-          </a>
-          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
-            Demo
-          </span>
-        </div>
+        <a
+          href="https://github.com/llm-d/llm-d"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-white transition-colors"
+        >
+          <ExternalLink size={12} />
+          Docs
+        </a>
       </div>
 
       {/* Presets grid */}
@@ -262,7 +258,7 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
             {/* Expected impact */}
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
-                <div className="text-xs text-muted-foreground">TTFT Improvement</div>
+                <div className="text-xs text-muted-foreground"><Acronym term="TTFT" /> Improvement</div>
                 <div className="text-lg font-bold text-green-400">
                   -{selectedPreset.expectedImpact.ttftImprovement}%
                 </div>

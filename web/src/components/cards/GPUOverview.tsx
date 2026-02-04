@@ -59,12 +59,6 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     defaultLimit: 'unlimited',
   })
 
-  // Apply GPU type filter on top of useCardData filtered nodes
-  const nodes = useMemo(() => {
-    if (selectedGpuType === 'all') return filteredNodes
-    return filteredNodes.filter(n => n.gpuType === selectedGpuType)
-  }, [filteredNodes, selectedGpuType])
-
   // Get all unique GPU types for filter dropdown (from raw data)
   const allGpuTypes = useMemo(() => {
     const types = new Set<string>()
@@ -78,7 +72,26 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     return clusters.filter(c => selectedClusters.includes(c.name))
   }, [clusters, selectedClusters, isAllClustersSelected])
 
+  // Get set of unreachable cluster names to filter out their GPU nodes
+  const unreachableClusterNames = useMemo(() => {
+    return new Set(
+      filteredClusters
+        .filter(c => c.reachable === false || (c.nodeCount === undefined && c.reachable !== true))
+        .map(c => c.name)
+    )
+  }, [filteredClusters])
+
   const hasReachableClusters = filteredClusters.some(c => c.reachable !== false && c.nodeCount !== undefined && c.nodeCount > 0)
+
+  // Apply GPU type filter on top of useCardData filtered nodes
+  // Also filter out nodes from unreachable clusters
+  const nodes = useMemo(() => {
+    let result = filteredNodes.filter(n => !unreachableClusterNames.has(n.cluster))
+    if (selectedGpuType !== 'all') {
+      result = result.filter(n => n.gpuType === selectedGpuType)
+    }
+    return result
+  }, [filteredNodes, selectedGpuType, unreachableClusterNames])
 
   if (isLoading && hasReachableClusters) {
     return (

@@ -293,6 +293,13 @@ export const CARD_TITLES: Record<string, string> = {
   // ML/AI workload cards
   llm_inference: 'llm-d Inference',
   llm_models: 'llm-d Models',
+  llmd_flow: 'llm-d Request Flow',
+  llmd_benchmarks: 'llm-d Benchmarks',
+  llmd_ai_insights: 'llm-d AI Insights',
+  llmd_configurator: 'llm-d Configurator',
+  kvcache_monitor: 'KV Cache Monitor',
+  epp_routing: 'EPP Routing',
+  pd_disaggregation: 'P/D Disaggregation',
   ml_jobs: 'ML Jobs',
   ml_notebooks: 'ML Notebooks',
 

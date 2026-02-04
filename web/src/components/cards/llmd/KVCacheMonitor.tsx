@@ -1,99 +1,143 @@
 /**
  * KVCache Monitor
  *
- * Real-time visualization of KV cache levels across pods
- * with animated gauges, heat maps, and trend indicators.
+ * High-definition visualization of KV cache levels across pods
+ * with stunning glowing gauges inspired by Home Assistant.
  */
-import { useState, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { Database, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Database, TrendingUp, TrendingDown } from 'lucide-react'
 import { generateKVCacheStats, type KVCacheStats } from '../../../lib/llmd/mockData'
+import { HorseshoeGauge } from './shared/HorseshoeGauge'
 
-interface GaugeProps {
+// Premium gauge with glowing arcs and ambient lighting
+interface PremiumGaugeProps {
   value: number
   maxValue: number
   label: string
   sublabel?: string
-  size?: 'sm' | 'md' | 'lg'
-  showWarning?: boolean
+  size?: number
 }
 
-function AnimatedGauge({ value, maxValue, label, sublabel, size = 'md', showWarning }: GaugeProps) {
+function PremiumGauge({ value, maxValue, label, sublabel, size = 140 }: PremiumGaugeProps) {
   const percentage = Math.min((value / maxValue) * 100, 100)
+  const viewSize = 100
+  const cx = viewSize / 2
+  const cy = viewSize / 2
+  const primaryRadius = 40
+  const strokeWidth = 8
+  const trackStrokeWidth = 5
 
-  const sizes = {
-    sm: { radius: 32, stroke: 6, fontSize: 12 },
-    md: { radius: 48, stroke: 8, fontSize: 14 },
-    lg: { radius: 64, stroke: 10, fontSize: 16 },
-  }
-
-  const { radius, stroke, fontSize } = sizes[size]
-  const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (percentage / 100) * circumference
+  // Arc angles (270 degrees, bottom open)
+  const startAngle = -225
+  const endAngle = 45
+  const totalAngle = endAngle - startAngle
+  const valueAngle = startAngle + (percentage / 100) * totalAngle
 
   // Color based on utilization
-  const getColor = (pct: number) => {
-    if (pct >= 90) return '#ef4444' // Red
-    if (pct >= 75) return '#f59e0b' // Amber
-    if (pct >= 50) return '#eab308' // Yellow
-    return '#22c55e' // Green
+  const getColors = (pct: number) => {
+    if (pct >= 90) return { start: '#ef4444', end: '#f87171', glow: '#ef4444' }
+    if (pct >= 75) return { start: '#f59e0b', end: '#fbbf24', glow: '#f59e0b' }
+    if (pct >= 50) return { start: '#eab308', end: '#facc15', glow: '#eab308' }
+    return { start: '#22c55e', end: '#4ade80', glow: '#22c55e' }
   }
 
-  const color = getColor(percentage)
-  const glowColor = `${color}66`
+  const colors = getColors(percentage)
+  const uniqueId = useMemo(() => `gauge-${Math.random().toString(36).substr(2, 9)}`, [])
+
+  // Convert polar to cartesian
+  const polarToCartesian = (angle: number, r: number) => {
+    const rad = ((angle - 90) * Math.PI) / 180
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+  }
+
+  // Create arc path
+  const createArc = (r: number, start: number, end: number) => {
+    const startPt = polarToCartesian(end, r)
+    const endPt = polarToCartesian(start, r)
+    const largeArc = end - start > 180 ? 1 : 0
+    return `M ${startPt.x} ${startPt.y} A ${r} ${r} 0 ${largeArc} 0 ${endPt.x} ${endPt.y}`
+  }
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: radius * 2 + stroke, height: radius * 2 + stroke }}>
-        {/* Background circle */}
-        <svg
-          width={radius * 2 + stroke}
-          height={radius * 2 + stroke}
-          className="transform -rotate-90"
-        >
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg viewBox={`0 0 ${viewSize} ${viewSize}`} className="w-full h-full">
+          <defs>
+            {/* Subtle glow filter */}
+            <filter id={`glow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feFlood floodColor={colors.glow} floodOpacity="0.45" result="color" />
+              <feComposite in="color" in2="blur" operator="in" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+
+            {/* Arc gradient */}
+            <linearGradient id={`gradient-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={colors.start} />
+              <stop offset="100%" stopColor={colors.end} />
+            </linearGradient>
+
+            {/* Inner ambient glow - subtle */}
+            <radialGradient id={`inner-glow-${uniqueId}`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={colors.glow} stopOpacity="0.15" />
+              <stop offset="60%" stopColor={colors.glow} stopOpacity="0.05" />
+              <stop offset="100%" stopColor={colors.glow} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+
+          {/* Inner ambient glow circle */}
           <circle
-            cx={radius + stroke / 2}
-            cy={radius + stroke / 2}
-            r={radius}
-            fill="none"
-            stroke="#334155"
-            strokeWidth={stroke}
+            cx={cx}
+            cy={cy}
+            r={primaryRadius - 6}
+            fill={`url(#inner-glow-${uniqueId})`}
           />
 
-          {/* Animated progress arc */}
-          <motion.circle
-            cx={radius + stroke / 2}
-            cy={radius + stroke / 2}
-            r={radius}
+          {/* Track background */}
+          <path
+            d={createArc(primaryRadius, startAngle, endAngle)}
             fill="none"
-            stroke={color}
-            strokeWidth={stroke}
+            stroke="#1e293b"
+            strokeWidth={trackStrokeWidth}
             strokeLinecap="round"
-            strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-            style={{ filter: `drop-shadow(0 0 6px ${glowColor})` }}
+            opacity={0.9}
           />
-        </svg>
 
-        {/* Center content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <motion.span
-            className="font-bold text-white"
-            style={{ fontSize }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          {/* Value arc with glow */}
+          <motion.path
+            d={createArc(primaryRadius, startAngle, valueAngle)}
+            fill="none"
+            stroke={`url(#gradient-${uniqueId})`}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            filter={`url(#glow-${uniqueId})`}
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, ease: 'easeOut' }}
+          />
+
+          {/* Center value text */}
+          <text
+            x={cx}
+            y={cy - 2}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#ffffff"
+            fontSize="16"
+            fontWeight="bold"
+            style={{ textShadow: `0 0 6px ${colors.glow}` }}
           >
             {Math.round(percentage)}%
-          </motion.span>
-          {showWarning && percentage >= 85 && (
-            <AlertTriangle size={12} className="text-amber-400 mt-0.5" />
-          )}
-        </div>
+          </text>
+        </svg>
       </div>
 
-      <span className="text-xs text-white mt-2 font-medium truncate max-w-full">{label}</span>
+      <span className="text-sm text-white font-medium truncate max-w-full mt-1">{label}</span>
       {sublabel && (
         <span className="text-xs text-muted-foreground">{sublabel}</span>
       )}
@@ -101,48 +145,131 @@ function AnimatedGauge({ value, maxValue, label, sublabel, size = 'md', showWarn
   )
 }
 
-interface CacheHeatMapProps {
-  stats: KVCacheStats[]
+// Heat map cell with glow
+interface HeatCellProps {
+  stat: KVCacheStats
+  delay: number
 }
 
-function CacheHeatMap({ stats }: CacheHeatMapProps) {
-  const maxCells = 24 // 6x4 grid
-  const cells = stats.slice(0, maxCells)
+function HeatCell({ stat, delay }: HeatCellProps) {
+  const pct = stat.utilizationPercent
 
-  const getHeatColor = (pct: number) => {
-    if (pct >= 90) return 'bg-red-500'
-    if (pct >= 75) return 'bg-amber-500'
-    if (pct >= 50) return 'bg-yellow-500'
-    if (pct >= 25) return 'bg-green-500'
-    return 'bg-green-700'
+  const getColor = (p: number) => {
+    if (p >= 90) return { bg: '#ef4444', glow: 'rgba(239,68,68,0.6)' }
+    if (p >= 75) return { bg: '#f59e0b', glow: 'rgba(245,158,11,0.5)' }
+    if (p >= 50) return { bg: '#eab308', glow: 'rgba(234,179,8,0.5)' }
+    if (p >= 25) return { bg: '#22c55e', glow: 'rgba(34,197,94,0.5)' }
+    return { bg: '#166534', glow: 'rgba(22,101,52,0.4)' }
   }
 
+  const colors = getColor(pct)
+
   return (
-    <div className="grid grid-cols-6 gap-1">
-      {cells.map((stat, i) => (
-        <motion.div
-          key={stat.podName}
-          className={`h-6 rounded ${getHeatColor(stat.utilizationPercent)} relative group cursor-pointer`}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 0.8, scale: 1 }}
-          transition={{ delay: i * 0.05 }}
-          whileHover={{ opacity: 1, scale: 1.1 }}
-        >
-          {/* Tooltip */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <div className="text-white font-medium">{stat.podName}</div>
-            <div className="text-muted-foreground">{stat.utilizationPercent}% used</div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
+    <motion.div
+      className="relative rounded-md cursor-pointer group"
+      style={{
+        background: colors.bg,
+        boxShadow: `0 0 12px ${colors.glow}, inset 0 0 8px rgba(255,255,255,0.1)`,
+        height: '32px',
+      }}
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 0.85, scale: 1 }}
+      transition={{ delay, type: 'spring', stiffness: 200 }}
+      whileHover={{
+        opacity: 1,
+        scale: 1.1,
+        boxShadow: `0 0 20px ${colors.glow}, inset 0 0 12px rgba(255,255,255,0.2)`,
+      }}
+    >
+      {/* Tooltip */}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900/95 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-slate-700 shadow-xl">
+        <div className="text-white font-medium">{stat.podName}</div>
+        <div className="text-muted-foreground">{stat.utilizationPercent}% used</div>
+        <div className="text-cyan-400 text-[10px]">{stat.usedGB}/{stat.totalCapacityGB} GB</div>
+      </div>
+    </motion.div>
+  )
+}
+
+type MetricType = 'util' | 'hitRate'
+
+// Sparkline for time-series in info panel
+function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number[]; color: string; width?: number; height?: number }) {
+  if (data.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
+
+  const max = Math.max(...data, 1)
+  const min = Math.min(...data, 0)
+  const range = max - min || 1
+
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - ((v - min) / range) * (height - 4) - 2
+    return `${x},${y}`
+  }).join(' ')
+
+  const areaPath = `M 0,${height} L ${points} L ${width},${height} Z`
+
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      <defs>
+        <linearGradient id={`info-sparkline-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#info-sparkline-${color.replace('#', '')})`} />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+      />
+      <circle
+        cx={width}
+        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
+        r="2.5"
+        fill={color}
+      />
+    </svg>
   )
 }
 
 export function KVCacheMonitor() {
   const [stats, setStats] = useState<KVCacheStats[]>([])
-  const [viewMode, setViewMode] = useState<'gauges' | 'heatmap'>('gauges')
+  const [viewMode, setViewMode] = useState<'gauges' | 'horseshoe' | 'heatmap'>('gauges')
   const [history, setHistory] = useState<number[]>([])
+  const [selectedPod, setSelectedPod] = useState<string | null>(null)
+  const [podHistory, setPodHistory] = useState<Record<string, { util: number[]; hitRate: number[] }>>({})
+  const [selectedMetrics, setSelectedMetrics] = useState<MetricType[]>(['util'])
+  const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null)
+  const gaugeRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // Handle gauge click - calculate portal position
+  const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {
+    if (selectedPod === podName) {
+      setSelectedPod(null)
+      setPanelPosition(null)
+    } else {
+      setSelectedPod(podName)
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        setPanelPosition({
+          x: rect.right + 8,
+          y: rect.top,
+        })
+      }
+    }
+  }
+
+  const toggleMetric = (metric: MetricType) => {
+    setSelectedMetrics(prev => {
+      if (prev.includes(metric)) {
+        if (prev.length === 1) return prev
+        return prev.filter(m => m !== metric)
+      }
+      return [...prev, metric]
+    })
+  }
 
   // Update stats periodically
   useEffect(() => {
@@ -153,6 +280,21 @@ export function KVCacheMonitor() {
       // Track average utilization history
       const avg = newStats.reduce((sum, s) => sum + s.utilizationPercent, 0) / newStats.length
       setHistory(prev => [...prev.slice(-20), avg])
+
+      // Track per-pod history
+      setPodHistory(prev => {
+        const updated = { ...prev }
+        newStats.forEach(s => {
+          if (!updated[s.podName]) {
+            updated[s.podName] = { util: [], hitRate: [] }
+          }
+          updated[s.podName] = {
+            util: [...updated[s.podName].util.slice(-19), s.utilizationPercent],
+            hitRate: [...updated[s.podName].hitRate.slice(-19), s.hitRate * 100],
+          }
+        })
+        return updated
+      })
     }
 
     updateStats()
@@ -179,32 +321,44 @@ export function KVCacheMonitor() {
   }, [history])
 
   return (
-    <div className="p-4 h-full flex flex-col">
+    <div className="p-4 h-full flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Database size={18} className="text-cyan-400" />
+          <div className="p-1.5 rounded-lg bg-cyan-500/20">
+            <Database size={16} className="text-cyan-400" />
+          </div>
           <span className="font-medium text-white">KV Cache Monitor</span>
         </div>
 
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
-          <div className="flex bg-slate-800 rounded-lg p-0.5">
+          <div className="flex bg-slate-800/80 rounded-lg p-0.5 backdrop-blur-sm">
             <button
               onClick={() => setViewMode('gauges')}
-              className={`px-2 py-1 text-xs rounded ${
+              className={`px-2 py-1 text-xs rounded transition-all ${
                 viewMode === 'gauges'
-                  ? 'bg-cyan-500/20 text-cyan-400'
+                  ? 'bg-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20'
                   : 'text-muted-foreground hover:text-white'
               }`}
             >
               Gauges
             </button>
             <button
+              onClick={() => setViewMode('horseshoe')}
+              className={`px-2 py-1 text-xs rounded transition-all ${
+                viewMode === 'horseshoe'
+                  ? 'bg-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                  : 'text-muted-foreground hover:text-white'
+              }`}
+            >
+              Horseshoe
+            </button>
+            <button
               onClick={() => setViewMode('heatmap')}
-              className={`px-2 py-1 text-xs rounded ${
+              className={`px-2 py-1 text-xs rounded transition-all ${
                 viewMode === 'heatmap'
-                  ? 'bg-cyan-500/20 text-cyan-400'
+                  ? 'bg-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20'
                   : 'text-muted-foreground hover:text-white'
               }`}
             >
@@ -212,16 +366,15 @@ export function KVCacheMonitor() {
             </button>
           </div>
 
-          {/* Demo badge */}
           <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
             Demo
           </span>
         </div>
       </div>
 
-      {/* Summary stats */}
+      {/* Summary stats with glow */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="bg-slate-800/50 rounded-lg p-2 text-center">
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
           <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
             {aggregateMetrics.avgUtil}%
             {trend > 2 && <TrendingUp size={14} className="text-red-400" />}
@@ -229,99 +382,270 @@ export function KVCacheMonitor() {
           </div>
           <div className="text-xs text-muted-foreground">Avg Util</div>
         </div>
-        <div className="bg-slate-800/50 rounded-lg p-2 text-center">
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
           <div className="text-lg font-bold text-white">
             {aggregateMetrics.totalUsed.toFixed(0)}
             <span className="text-xs text-muted-foreground">/{aggregateMetrics.totalCapacity}GB</span>
           </div>
           <div className="text-xs text-muted-foreground">Used</div>
         </div>
-        <div className="bg-slate-800/50 rounded-lg p-2 text-center">
-          <div className="text-lg font-bold text-green-400">{aggregateMetrics.avgHitRate}%</div>
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
+          <div className="text-lg font-bold text-green-400" style={{ textShadow: '0 0 10px rgba(34,197,94,0.5)' }}>
+            {aggregateMetrics.avgHitRate}%
+          </div>
           <div className="text-xs text-muted-foreground">Hit Rate</div>
         </div>
-        <div className="bg-slate-800/50 rounded-lg p-2 text-center">
-          <div className="text-lg font-bold text-white">{stats.length}</div>
+        <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg p-2 text-center border border-slate-700/50">
+          <div className="text-lg font-bold text-cyan-400" style={{ textShadow: '0 0 10px rgba(6,182,212,0.5)' }}>
+            {stats.length}
+          </div>
           <div className="text-xs text-muted-foreground">Pods</div>
         </div>
       </div>
 
       {/* Main visualization */}
-      <div className="flex-1 overflow-hidden">
-        {viewMode === 'gauges' ? (
-          <div className="grid grid-cols-3 gap-4 h-full place-items-center">
-            {stats.slice(0, 6).map((stat) => (
-              <AnimatedGauge
-                key={stat.podName}
-                value={stat.utilizationPercent}
-                maxValue={100}
-                label={stat.podName.replace('vllm-', '').slice(0, 12)}
-                sublabel={`${stat.usedGB}/${stat.totalCapacityGB}GB`}
-                size="md"
-                showWarning
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="h-full flex flex-col">
-            <CacheHeatMap stats={stats} />
+      <div className="flex-1 overflow-visible relative">
+        {/* Portal-based info panel */}
+        {createPortal(
+          <AnimatePresence>
+            {selectedPod && panelPosition && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="fixed bg-slate-900/95 backdrop-blur-sm rounded-lg border border-slate-700 p-3 shadow-2xl w-[200px] z-[9999]"
+                style={{ left: panelPosition.x, top: panelPosition.y }}
+              >
+                {(() => {
+                  const stat = stats.find(s => s.podName === selectedPod)
+                  const podHist = podHistory[selectedPod]
+                  if (!stat) return null
 
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-4 mt-4 text-xs">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-green-700" />
-                <span className="text-muted-foreground">&lt;25%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-green-500" />
-                <span className="text-muted-foreground">25-50%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-yellow-500" />
-                <span className="text-muted-foreground">50-75%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-amber-500" />
-                <span className="text-muted-foreground">75-90%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-red-500" />
-                <span className="text-muted-foreground">&gt;90%</span>
-              </div>
-            </div>
-          </div>
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-white font-medium text-sm">{stat.podName.replace('vllm-', '').slice(0, 14)}</span>
+                        <button
+                          onClick={() => { setSelectedPod(null); setPanelPosition(null) }}
+                          className="text-slate-400 hover:text-white text-xs p-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="text-xs text-slate-400 mb-2">
+                        {stat.usedGB.toFixed(1)} / {stat.totalCapacityGB} GB
+                      </div>
+
+                      {/* Clickable metrics */}
+                      <div className="flex gap-1 mb-2">
+                        {(['util', 'hitRate'] as MetricType[]).map((metric) => (
+                          <button
+                            key={metric}
+                            onClick={() => toggleMetric(metric)}
+                            className={`px-2 py-0.5 text-xs rounded transition-all ${
+                              selectedMetrics.includes(metric)
+                                ? metric === 'util'
+                                  ? 'bg-amber-500/20 text-amber-400'
+                                  : 'bg-green-500/20 text-green-400'
+                                : 'bg-slate-700/50 text-slate-500 hover:text-slate-300'
+                            }`}
+                          >
+                            {metric === 'util' ? 'Util' : 'Hit Rate'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Current values */}
+                      <div className="flex gap-3 text-xs mb-2">
+                        {selectedMetrics.includes('util') && (
+                          <div>
+                            <span className="text-slate-500">Util:</span>{' '}
+                            <span className="text-amber-400 font-mono">{stat.utilizationPercent}%</span>
+                          </div>
+                        )}
+                        {selectedMetrics.includes('hitRate') && (
+                          <div>
+                            <span className="text-slate-500">Hit:</span>{' '}
+                            <span className="text-green-400 font-mono">{Math.round(stat.hitRate * 100)}%</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Time-series sparklines */}
+                      {podHist && (
+                        <div className={`grid gap-2 ${selectedMetrics.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                          {selectedMetrics.includes('util') && (
+                            <div>
+                              <div className="text-[10px] text-amber-400/70 mb-1">Util %</div>
+                              <InfoSparkline
+                                data={podHist.util}
+                                color="#f59e0b"
+                                width={selectedMetrics.length === 2 ? 75 : 170}
+                                height={32}
+                              />
+                            </div>
+                          )}
+                          {selectedMetrics.includes('hitRate') && (
+                            <div>
+                              <div className="text-[10px] text-green-400/70 mb-1">Hit Rate</div>
+                              <InfoSparkline
+                                data={podHist.hitRate}
+                                color="#22c55e"
+                                width={selectedMetrics.length === 2 ? 75 : 170}
+                                height={32}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
+
+        <AnimatePresence mode="wait">
+          {viewMode === 'gauges' ? (
+            <motion.div
+              key="gauges"
+              className="grid grid-cols-3 gap-4 h-full place-items-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {stats.slice(0, 6).map((stat) => (
+                <div
+                  key={stat.podName}
+                  ref={(el) => { gaugeRefs.current[stat.podName] = el }}
+                  className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-full' : ''}`}
+                  onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
+                >
+                  <PremiumGauge
+                    value={stat.utilizationPercent}
+                    maxValue={100}
+                    label={stat.podName.replace('vllm-', '').slice(0, 12)}
+                    sublabel={`${stat.usedGB}/${stat.totalCapacityGB}GB`}
+                    size={130}
+                  />
+                </div>
+              ))}
+            </motion.div>
+          ) : viewMode === 'horseshoe' ? (
+            <motion.div
+              key="horseshoe"
+              className="grid grid-cols-3 gap-1 h-full place-items-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {stats.slice(0, 6).map((stat) => (
+                <div
+                  key={stat.podName}
+                  ref={(el) => { gaugeRefs.current[stat.podName] = el }}
+                  className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-lg' : ''}`}
+                  onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
+                >
+                  <HorseshoeGauge
+                    value={stat.utilizationPercent}
+                    maxValue={100}
+                    label={stat.podName.replace('vllm-', '').slice(0, 12)}
+                    sublabel={`${stat.totalCapacityGB}GB`}
+                    secondaryLeft={{ value: `${stat.usedGB.toFixed(1)}`, label: 'IN USE' }}
+                    secondaryRight={{ value: `${(stat.totalCapacityGB - stat.usedGB).toFixed(1)}`, label: 'FREE' }}
+                    size={180}
+                  />
+                </div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="heatmap"
+              className="h-full flex flex-col"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <div className="grid grid-cols-6 gap-2">
+                {stats.slice(0, 24).map((stat, i) => (
+                  <HeatCell key={stat.podName} stat={stat} delay={i * 0.03} />
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-4 mt-4 text-xs">
+                {[
+                  { color: '#166534', label: '<25%' },
+                  { color: '#22c55e', label: '25-50%' },
+                  { color: '#eab308', label: '50-75%' },
+                  { color: '#f59e0b', label: '75-90%' },
+                  { color: '#ef4444', label: '>90%' },
+                ].map(({ color, label }) => (
+                  <div key={label} className="flex items-center gap-1.5">
+                    <div
+                      className="w-3 h-3 rounded"
+                      style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }}
+                    />
+                    <span className="text-muted-foreground">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Trend sparkline */}
-      <div className="mt-4 h-8">
-        <svg width="100%" height="100%" viewBox="0 0 100 20" preserveAspectRatio="none">
+      {/* Trend sparkline with glow */}
+      <div className="mt-4 h-10 relative">
+        <svg width="100%" height="100%" viewBox="0 0 100 24" preserveAspectRatio="none">
           <defs>
             <linearGradient id="sparklineGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.3" />
+              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.4" />
               <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
             </linearGradient>
+            <filter id="sparkline-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1" result="blur" />
+              <feFlood floodColor="#06b6d4" floodOpacity="0.8" />
+              <feComposite in2="blur" operator="in" />
+              <feMerge>
+                <feMergeNode />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
           {history.length > 1 && (
             <>
               {/* Area fill */}
               <path
-                d={`M 0 20 ${history.map((v, i) =>
-                  `L ${(i / (history.length - 1)) * 100} ${20 - (v / 100) * 20}`
-                ).join(' ')} L 100 20 Z`}
+                d={`M 0 24 ${history.map((v, i) =>
+                  `L ${(i / (history.length - 1)) * 100} ${24 - (v / 100) * 22}`
+                ).join(' ')} L 100 24 Z`}
                 fill="url(#sparklineGradient)"
               />
 
-              {/* Line */}
+              {/* Glowing line */}
               <path
                 d={`M ${history.map((v, i) =>
-                  `${(i / (history.length - 1)) * 100} ${20 - (v / 100) * 20}`
+                  `${(i / (history.length - 1)) * 100} ${24 - (v / 100) * 22}`
                 ).join(' L ')}`}
                 fill="none"
                 stroke="#06b6d4"
-                strokeWidth="1"
-                style={{ filter: 'drop-shadow(0 0 2px #06b6d4)' }}
+                strokeWidth="1.5"
+                filter="url(#sparkline-glow)"
+              />
+
+              {/* End dot */}
+              <circle
+                cx={100}
+                cy={24 - (history[history.length - 1] / 100) * 22}
+                r="2"
+                fill="#06b6d4"
+                filter="url(#sparkline-glow)"
               />
             </>
           )}

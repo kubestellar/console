@@ -1,35 +1,33 @@
 /**
  * LLM-d Flow Visualization
  *
- * Animated request flow diagram showing the full inference pipeline
- * with particle effects, real-time routing, and interactive elements.
+ * Premium animated request flow diagram with Home Assistant-style
+ * glowing gauges, time-series sparklines, and interactive elements.
  */
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Zap, Database, Server, Radio, ArrowRight } from 'lucide-react'
+import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
+import { Acronym } from './shared/PortalTooltip'
 
-// Node positions for the flow diagram (relative coordinates 0-100)
+type ViewMode = 'default' | 'horseshoe'
+
+// Node positions for the flow diagram (coordinates in viewBox units)
 const NODE_POSITIONS = {
-  client: { x: 5, y: 50 },
-  gateway: { x: 20, y: 50 },
-  epp: { x: 40, y: 50 },
-  prefill0: { x: 60, y: 20 },
-  prefill1: { x: 60, y: 50 },
-  prefill2: { x: 60, y: 80 },
-  decode0: { x: 80, y: 35 },
-  decode1: { x: 80, y: 65 },
-  kvcache: { x: 70, y: 95 },
+  client: { x: 10, y: 50 },
+  gateway: { x: 28, y: 50 },
+  epp: { x: 48, y: 50 },
+  prefill0: { x: 70, y: 18 },
+  prefill1: { x: 70, y: 50 },
+  prefill2: { x: 70, y: 82 },
+  decode0: { x: 92, y: 34 },
+  decode1: { x: 92, y: 66 },
 }
 
-// Particle representing a request flowing through the system
-interface Particle {
-  id: string
-  path: string[]
-  progress: number
-  type: 'prefill' | 'decode' | 'kv-transfer'
-  speed: number
-}
+// Node styling constants
+const NODE_RADIUS = 7
+const STROKE_WIDTH = 1.5
+const TRACK_WIDTH = 1
 
 // Connection between nodes
 interface Connection {
@@ -53,41 +51,63 @@ const CONNECTIONS: Connection[] = [
   { from: 'prefill1', to: 'decode1', type: 'decode', trafficPercent: 50 },
   { from: 'prefill2', to: 'decode0', type: 'decode', trafficPercent: 50 },
   { from: 'prefill2', to: 'decode1', type: 'decode', trafficPercent: 50 },
-  { from: 'prefill0', to: 'kvcache', type: 'kv-transfer', trafficPercent: 100 },
-  { from: 'prefill1', to: 'kvcache', type: 'kv-transfer', trafficPercent: 100 },
-  { from: 'prefill2', to: 'kvcache', type: 'kv-transfer', trafficPercent: 100 },
-  { from: 'kvcache', to: 'decode0', type: 'kv-transfer', trafficPercent: 50 },
-  { from: 'kvcache', to: 'decode1', type: 'kv-transfer', trafficPercent: 50 },
 ]
 
 // Color palette
 const COLORS = {
-  prefill: '#9333ea', // Purple
-  decode: '#22c55e', // Green
-  'kv-transfer': '#06b6d4', // Cyan
-  gateway: '#3b82f6', // Blue
-  epp: '#f59e0b', // Amber
-  healthy: '#22c55e',
-  degraded: '#f59e0b',
-  unhealthy: '#ef4444',
+  prefill: '#9333ea',
+  decode: '#22c55e',
+  'kv-transfer': '#06b6d4',
+  gateway: '#3b82f6',
+  epp: '#f59e0b',
 }
 
-interface FlowNodeProps {
+// Get color based on load percentage
+const getLoadColors = (load: number) => {
+  if (load >= 90) return { start: '#ef4444', end: '#f87171', glow: '#ef4444' }
+  if (load >= 70) return { start: '#f59e0b', end: '#fbbf24', glow: '#f59e0b' }
+  if (load >= 50) return { start: '#eab308', end: '#facc15', glow: '#eab308' }
+  return { start: '#22c55e', end: '#4ade80', glow: '#22c55e' }
+}
+
+// Premium gauge node with glowing arc
+interface PremiumNodeProps {
   id: keyof typeof NODE_POSITIONS
   label: string
-  icon: React.ReactNode
   metrics?: ServerMetrics
-  isHighlighted?: boolean
+  nodeColor: string
+  isSelected?: boolean
   onClick?: () => void
+  uniqueId: string
 }
 
-function FlowNode({ id, label, icon, metrics, isHighlighted, onClick }: FlowNodeProps) {
+function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqueId }: PremiumNodeProps) {
   const pos = NODE_POSITIONS[id]
-  const status = metrics?.status || 'healthy'
   const load = metrics?.load || 0
+  const loadColors = getLoadColors(load)
 
-  const statusColor = COLORS[status]
-  const glowIntensity = isHighlighted ? 0.8 : load > 70 ? 0.6 : 0.3
+  // Arc calculation (270 degrees, bottom open)
+  const startAngle = -225
+  const endAngle = 45
+  const totalAngle = endAngle - startAngle
+  const valueAngle = startAngle + (load / 100) * totalAngle
+
+  const polarToCartesian = (angle: number, r: number) => {
+    const rad = ((angle - 90) * Math.PI) / 180
+    return { x: pos.x + r * Math.cos(rad), y: pos.y + r * Math.sin(rad) }
+  }
+
+  const createArc = (r: number, start: number, end: number) => {
+    const s = polarToCartesian(end, r)
+    const e = polarToCartesian(start, r)
+    const large = end - start > 180 ? 1 : 0
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y}`
+  }
+
+  const filterIdGlow = `glow-${uniqueId}-${id}`
+  const gradientId = `gradient-${uniqueId}-${id}`
+  const innerGlowId = `inner-glow-${uniqueId}-${id}`
+  const centerGradientId = `center-${uniqueId}-${id}`
 
   return (
     <motion.g
@@ -97,158 +117,193 @@ function FlowNode({ id, label, icon, metrics, isHighlighted, onClick }: FlowNode
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.1 }}
     >
-      {/* Glow effect */}
-      <motion.circle
-        cx={`${pos.x}%`}
-        cy={`${pos.y}%`}
-        r="28"
-        fill="none"
-        stroke={statusColor}
-        strokeWidth="2"
-        opacity={glowIntensity}
-        animate={{
-          opacity: [glowIntensity, glowIntensity * 1.5, glowIntensity],
-          r: [28, 32, 28],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        style={{ filter: `drop-shadow(0 0 8px ${statusColor})` }}
-      />
+      <defs>
+        {/* Glow filter - subtle */}
+        <filter id={filterIdGlow} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="0.4" result="blur" />
+          <feFlood floodColor={loadColors.glow} floodOpacity="0.5" result="color" />
+          <feComposite in="color" in2="blur" operator="in" result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
 
-      {/* Main node circle */}
+        {/* Arc gradient */}
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={loadColors.start} />
+          <stop offset="100%" stopColor={loadColors.end} />
+        </linearGradient>
+
+        {/* Inner ambient glow - subtle */}
+        <radialGradient id={innerGlowId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor={loadColors.glow} stopOpacity="0.2" />
+          <stop offset="60%" stopColor={loadColors.glow} stopOpacity="0.08" />
+          <stop offset="100%" stopColor={loadColors.glow} stopOpacity="0" />
+        </radialGradient>
+
+        {/* Dark center gradient for depth */}
+        <radialGradient id={centerGradientId} cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="#1e293b" />
+          <stop offset="100%" stopColor="#0f172a" />
+        </radialGradient>
+      </defs>
+
+      {/* Outer glow ring - uses node color for identity */}
       <circle
-        cx={`${pos.x}%`}
-        cy={`${pos.y}%`}
-        r="24"
-        fill="#1a1a2e"
-        stroke={statusColor}
-        strokeWidth="2"
-        style={{ filter: `drop-shadow(0 0 4px ${statusColor}40)` }}
+        cx={pos.x}
+        cy={pos.y}
+        r={NODE_RADIUS + 0.5}
+        fill="none"
+        stroke={metrics ? loadColors.glow : nodeColor}
+        strokeWidth="0.3"
+        opacity={0.3}
+        style={{ filter: `blur(1px)` }}
       />
 
-      {/* Load indicator arc */}
-      {load > 0 && (
+      {/* Selection highlight ring */}
+      {isSelected && (
         <motion.circle
-          cx={`${pos.x}%`}
-          cy={`${pos.y}%`}
-          r="24"
+          cx={pos.x}
+          cy={pos.y}
+          r={NODE_RADIUS + 1.5}
           fill="none"
-          stroke={load > 80 ? '#ef4444' : load > 60 ? '#f59e0b' : '#22c55e'}
-          strokeWidth="3"
-          strokeDasharray={`${(load / 100) * 150.8} 150.8`}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${pos.x} ${pos.y})`}
-          style={{ transformOrigin: `${pos.x}% ${pos.y}%` }}
-          initial={{ strokeDasharray: '0 150.8' }}
-          animate={{ strokeDasharray: `${(load / 100) * 150.8} 150.8` }}
-          transition={{ duration: 1 }}
+          stroke="#ffffff"
+          strokeWidth="0.3"
+          opacity={0.5}
+          animate={{ opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
         />
       )}
 
-      {/* Icon placeholder (using foreignObject for React icons) */}
-      <foreignObject
-        x={`${pos.x - 2}%`}
-        y={`${pos.y - 2}%`}
-        width="4%"
-        height="4%"
-        style={{ overflow: 'visible' }}
-      >
-        <div className="flex items-center justify-center w-full h-full text-white">
-          {icon}
-        </div>
-      </foreignObject>
+      {/* Track background (270 degree arc) */}
+      <path
+        d={createArc(NODE_RADIUS, startAngle, endAngle)}
+        fill="none"
+        stroke="#1e293b"
+        strokeWidth={TRACK_WIDTH}
+        strokeLinecap="round"
+        opacity={0.9}
+      />
 
-      {/* Label */}
+      {/* Load arc with glow */}
+      {load > 0 && (
+        <motion.path
+          d={createArc(NODE_RADIUS, startAngle, valueAngle)}
+          fill="none"
+          stroke={`url(#${gradientId})`}
+          strokeWidth={STROKE_WIDTH}
+          strokeLinecap="round"
+          filter={`url(#${filterIdGlow})`}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1, ease: 'easeOut' }}
+        />
+      )}
+
+      {/* Dark center fill with gradient for depth */}
+      <circle
+        cx={pos.x}
+        cy={pos.y}
+        r={NODE_RADIUS - 1.8}
+        fill={`url(#${centerGradientId})`}
+      />
+
+      {/* Inner ambient glow overlay */}
+      <circle
+        cx={pos.x}
+        cy={pos.y}
+        r={NODE_RADIUS - 1.8}
+        fill={`url(#${innerGlowId})`}
+      />
+
+      {/* Load percentage inside gauge - primary metric */}
+      {metrics && (
+        <>
+          <text
+            x={pos.x}
+            y={pos.y - 0.5}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#ffffff"
+            fontSize="3.2"
+            fontWeight="700"
+            style={{ textShadow: `0 0 4px ${loadColors.glow}` }}
+          >
+            {load}%
+          </text>
+          {/* RPS inside gauge - secondary metric */}
+          <text
+            x={pos.x}
+            y={pos.y + 2.5}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#94a3b8"
+            fontSize="1.8"
+          >
+            {metrics.throughputRps}
+          </text>
+        </>
+      )}
+
+      {/* Label below gauge */}
       <text
-        x={`${pos.x}%`}
-        y={`${pos.y + 6}%`}
+        x={pos.x}
+        y={pos.y + NODE_RADIUS + 3}
         textAnchor="middle"
-        fill="#a1a1aa"
-        fontSize="10"
-        fontWeight="500"
+        fill="#e5e5e5"
+        fontSize="3"
+        fontWeight="600"
       >
         {label}
       </text>
-
-      {/* Metrics tooltip on hover */}
-      {metrics && (
-        <text
-          x={`${pos.x}%`}
-          y={`${pos.y - 5}%`}
-          textAnchor="middle"
-          fill="#71717a"
-          fontSize="8"
-        >
-          {metrics.throughputRps} rps
-        </text>
-      )}
     </motion.g>
   )
 }
 
-interface FlowConnectionProps {
-  connection: Connection
-  isAnimating?: boolean
-}
-
-function FlowConnection({ connection, isAnimating = true }: FlowConnectionProps) {
+// Connection line with animated flow - sleek design
+function FlowConnection({ connection, isAnimating }: { connection: Connection; isAnimating: boolean }) {
   const from = NODE_POSITIONS[connection.from]
   const to = NODE_POSITIONS[connection.to]
-
   const color = COLORS[connection.type]
-  const strokeWidth = Math.max(1, connection.trafficPercent / 20)
+  // Thinner lines - max 0.8px
+  const strokeWidth = Math.max(0.2, connection.trafficPercent / 150)
 
-  // Calculate control points for curved path
   const midX = (from.x + to.x) / 2
   const midY = (from.y + to.y) / 2
-  const curve = Math.abs(from.y - to.y) > 20 ? 10 : 5
-
-  const pathD = `M ${from.x}% ${from.y}% Q ${midX}% ${midY - curve}% ${to.x}% ${to.y}%`
+  const curve = Math.abs(from.y - to.y) > 20 ? 8 : 3
+  const pathD = `M ${from.x} ${from.y} Q ${midX} ${midY - curve} ${to.x} ${to.y}`
 
   return (
     <g>
-      {/* Background line */}
+      {/* Subtle glow underneath */}
       <path
         d={pathD}
         fill="none"
         stroke={color}
-        strokeWidth={strokeWidth}
-        opacity={0.2}
+        strokeWidth={strokeWidth + 0.5}
+        opacity={0.05}
+        style={{ filter: `blur(1px)` }}
       />
-
-      {/* Animated dashed line */}
+      {/* Main line - very subtle */}
+      <path d={pathD} fill="none" stroke={color} strokeWidth={strokeWidth} opacity={0.18} />
+      {/* Animated flowing dots - slower and subtler */}
       {isAnimating && (
         <motion.path
           d={pathD}
           fill="none"
           stroke={color}
-          strokeWidth={strokeWidth}
-          strokeDasharray="4 4"
-          opacity={0.6}
-          animate={{
-            strokeDashoffset: [0, -16],
-          }}
-          transition={{
-            duration: 1,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
+          strokeWidth={strokeWidth * 1.2}
+          strokeDasharray="0.4 4"
+          strokeLinecap="round"
+          opacity={0.5}
+          animate={{ strokeDashoffset: [0, -8] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
         />
       )}
-
-      {/* Traffic percentage label */}
-      {connection.trafficPercent > 10 && (
-        <text
-          x={`${midX}%`}
-          y={`${midY - 2}%`}
-          textAnchor="middle"
-          fill={color}
-          fontSize="8"
-          opacity={0.8}
-        >
+      {/* Percentage label - smaller and more subtle */}
+      {connection.trafficPercent >= 20 && (
+        <text x={midX} y={midY - 1.5} textAnchor="middle" fill={color} fontSize="2" opacity={0.6} fontWeight="500">
           {connection.trafficPercent}%
         </text>
       )}
@@ -256,73 +311,256 @@ function FlowConnection({ connection, isAnimating = true }: FlowConnectionProps)
   )
 }
 
-// Animated particle moving along a path
-interface FlowParticleProps {
-  particle: Particle
-  onComplete: () => void
+// Color based on percentage for horseshoe
+const getHorseshoeColor = (pct: number) => {
+  if (pct >= 90) return '#ef4444'
+  if (pct >= 70) return '#f59e0b'
+  if (pct >= 50) return '#eab308'
+  return '#22c55e'
 }
 
-function FlowParticle({ particle, onComplete }: FlowParticleProps) {
-  const [pathIndex, setPathIndex] = useState(0)
-  const [progress, setProgress] = useState(0)
+// Horseshoe node for alternative view
+interface HorseshoeFlowNodeProps {
+  id: keyof typeof NODE_POSITIONS
+  label: string
+  metrics?: ServerMetrics
+  isSelected?: boolean
+  onClick?: () => void
+  uniqueId: string
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 1) {
-          if (pathIndex < particle.path.length - 2) {
-            setPathIndex(i => i + 1)
-            return 0
-          } else {
-            onComplete()
-            return prev
-          }
-        }
-        return prev + particle.speed
-      })
-    }, 16)
+function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId }: HorseshoeFlowNodeProps) {
+  const pos = NODE_POSITIONS[id]
+  const load = metrics?.load || 0
+  const color = getHorseshoeColor(load)
+  const filterId = `hsf-glow-${uniqueId}-${id}`
 
-    return () => clearInterval(interval)
-  }, [pathIndex, particle.path.length, particle.speed, onComplete])
+  const radius = 8
+  const strokeWidth = 2.5
+  const cx = pos.x
+  const cy = pos.y
 
-  if (pathIndex >= particle.path.length - 1) return null
+  const startAngle = 135
+  const endAngle = 45
+  const totalSweep = 270
+  const valueSweep = (load / 100) * totalSweep
+  const valueEndAngle = startAngle + valueSweep
 
-  const fromKey = particle.path[pathIndex] as keyof typeof NODE_POSITIONS
-  const toKey = particle.path[pathIndex + 1] as keyof typeof NODE_POSITIONS
-  const from = NODE_POSITIONS[fromKey]
-  const to = NODE_POSITIONS[toKey]
+  const toCartesian = (angleDeg: number, r: number) => {
+    const rad = (angleDeg * Math.PI) / 180
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+  }
 
-  if (!from || !to) return null
-
-  const x = from.x + (to.x - from.x) * progress
-  const y = from.y + (to.y - from.y) * progress
-
-  const color = COLORS[particle.type]
+  const createArc = (r: number, fromAngle: number, toAngle: number, sweep: number) => {
+    const start = toCartesian(fromAngle, r)
+    const end = toCartesian(toAngle, r)
+    const largeArc = sweep > 180 ? 1 : 0
+    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`
+  }
 
   return (
-    <motion.circle
-      cx={`${x}%`}
-      cy={`${y}%`}
-      r="4"
-      fill={color}
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      exit={{ scale: 0 }}
-      style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-    />
+    <motion.g
+      className="cursor-pointer"
+      onClick={onClick}
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.5, delay: 0.1 }}
+    >
+      <defs>
+        <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="0.8" result="blur" />
+          <feFlood floodColor={color} floodOpacity="0.5" result="color" />
+          <feComposite in="color" in2="blur" operator="in" result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {isSelected && (
+        <motion.circle
+          cx={cx}
+          cy={cy}
+          r={radius + 1.5}
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="0.3"
+          opacity={0.6}
+          animate={{ opacity: [0.4, 0.7, 0.4] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+      )}
+
+      <path
+        d={createArc(radius, startAngle, endAngle, totalSweep)}
+        fill="none"
+        stroke="#374151"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+
+      {load > 0 && (
+        <motion.path
+          d={createArc(radius, startAngle, valueEndAngle, valueSweep)}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          filter={`url(#${filterId})`}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        />
+      )}
+
+      <circle cx={cx} cy={cy} r={radius - 3} fill="#0f172a" />
+
+      {metrics && (
+        <>
+          <text
+            x={cx}
+            y={cy - 0.5}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#ffffff"
+            fontSize="4"
+            fontWeight="700"
+            style={{ textShadow: `0 0 4px ${color}` }}
+          >
+            {load}%
+          </text>
+          <text
+            x={cx}
+            y={cy + 3}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#94a3b8"
+            fontSize="2"
+          >
+            {metrics.throughputRps}
+          </text>
+        </>
+      )}
+
+      <text
+        x={cx}
+        y={cy + radius + 4}
+        textAnchor="middle"
+        fill="#e5e5e5"
+        fontSize="3"
+        fontWeight="600"
+      >
+        {label}
+      </text>
+    </motion.g>
   )
+}
+
+// Mini sparkline for time-series data
+function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
+  if (data.length < 2) return null
+
+  const max = Math.max(...data, 1)
+  const min = Math.min(...data, 0)
+  const range = max - min || 1
+
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - ((v - min) / range) * (height - 4) - 2
+    return `${x},${y}`
+  }).join(' ')
+
+  const areaPath = `M 0,${height} L ${points} L ${width},${height} Z`
+
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      <defs>
+        <linearGradient id="sparkline-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+        <filter id="sparkline-glow-line" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1" result="blur" />
+          <feFlood floodColor={color} floodOpacity="0.6" />
+          <feComposite in2="blur" operator="in" />
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <path d={areaPath} fill="url(#sparkline-fill)" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        filter="url(#sparkline-glow-line)"
+      />
+      <circle
+        cx={width}
+        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
+        r="2"
+        fill={color}
+        filter="url(#sparkline-glow-line)"
+      />
+    </svg>
+  )
+}
+
+
+type MetricType = 'load' | 'queue' | 'rps'
+
+interface MetricsHistoryData {
+  rps: number[]
+  load: number[]
+  queue: number[]
 }
 
 export function LLMdFlow() {
   const [serverMetrics, setServerMetrics] = useState<ServerMetrics[]>([])
-  const [particles, setParticles] = useState<Particle[]>([])
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [isAnimating, setIsAnimating] = useState(true)
+  const [metricsHistory, setMetricsHistory] = useState<Record<string, MetricsHistoryData>>({})
+  const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['rps'])
+  const [viewMode, setViewMode] = useState<ViewMode>('default')
+  const uniqueId = useRef(`flow-${Math.random().toString(36).substr(2, 9)}`).current
 
-  // Update metrics periodically
+  // Toggle metric selection
+  const toggleMetric = (metric: MetricType) => {
+    setSelectedMetricTypes(prev => {
+      if (prev.includes(metric)) {
+        // Don't allow removing the last metric
+        if (prev.length === 1) return prev
+        return prev.filter(m => m !== metric)
+      }
+      return [...prev, metric]
+    })
+  }
+
+  // Update metrics periodically and track history for all metric types
   useEffect(() => {
     const updateMetrics = () => {
-      setServerMetrics(generateServerMetrics())
+      const newMetrics = generateServerMetrics()
+      setServerMetrics(newMetrics)
+
+      // Update history for each node and each metric type
+      setMetricsHistory(prev => {
+        const updated = { ...prev }
+        newMetrics.forEach(m => {
+          const key = m.name
+          if (!updated[key]) {
+            updated[key] = { rps: [], load: [], queue: [] }
+          }
+          updated[key] = {
+            rps: [...updated[key].rps.slice(-19), m.throughputRps],
+            load: [...updated[key].load.slice(-19), m.load],
+            queue: [...updated[key].queue.slice(-19), m.queueDepth],
+          }
+        })
+        return updated
+      })
     }
 
     updateMetrics()
@@ -330,42 +568,7 @@ export function LLMdFlow() {
     return () => clearInterval(interval)
   }, [])
 
-  // Generate particles for animation
-  useEffect(() => {
-    if (!isAnimating) return
-
-    const spawnParticle = () => {
-      const paths = [
-        ['client', 'gateway', 'epp', 'prefill0', 'decode0'],
-        ['client', 'gateway', 'epp', 'prefill1', 'decode1'],
-        ['client', 'gateway', 'epp', 'prefill2', 'decode0'],
-        ['client', 'gateway', 'epp', 'decode0'],
-        ['client', 'gateway', 'epp', 'decode1'],
-      ]
-
-      const types: Array<'prefill' | 'decode'> = ['prefill', 'prefill', 'prefill', 'decode', 'decode']
-      const index = Math.floor(Math.random() * paths.length)
-
-      const newParticle: Particle = {
-        id: `particle-${Date.now()}-${Math.random()}`,
-        path: paths[index],
-        progress: 0,
-        type: types[index],
-        speed: 0.02 + Math.random() * 0.01,
-      }
-
-      setParticles(prev => [...prev.slice(-20), newParticle]) // Keep max 20 particles
-    }
-
-    const interval = setInterval(spawnParticle, 300)
-    return () => clearInterval(interval)
-  }, [isAnimating])
-
-  const removeParticle = useCallback((id: string) => {
-    setParticles(prev => prev.filter(p => p.id !== id))
-  }, [])
-
-  const getMetricsForNode = (nodeId: string): ServerMetrics | undefined => {
+  const getMetricsForNode = useCallback((nodeId: string): ServerMetrics | undefined => {
     const nameMap: Record<string, string> = {
       gateway: 'Istio Gateway',
       epp: 'EPP Scheduler',
@@ -374,12 +577,25 @@ export function LLMdFlow() {
       prefill2: 'Prefill-2',
       decode0: 'Decode-0',
       decode1: 'Decode-1',
-      kvcache: 'KV Cache',
     }
     return serverMetrics.find(m => m.name === nameMap[nodeId])
-  }
+  }, [serverMetrics])
 
-  // Calculate aggregate stats
+  const getHistoryForNode = useCallback((nodeId: string, metricType: MetricType): number[] => {
+    const nameMap: Record<string, string> = {
+      gateway: 'Istio Gateway',
+      epp: 'EPP Scheduler',
+      prefill0: 'Prefill-0',
+      prefill1: 'Prefill-1',
+      prefill2: 'Prefill-2',
+      decode0: 'Decode-0',
+      decode1: 'Decode-1',
+    }
+    const history = metricsHistory[nameMap[nodeId]]
+    if (!history) return []
+    return history[metricType] || []
+  }, [metricsHistory])
+
   const totalThroughput = useMemo(() =>
     serverMetrics
       .filter(m => m.type === 'prefill' || m.type === 'decode')
@@ -394,54 +610,79 @@ export function LLMdFlow() {
       : 0
   }, [serverMetrics])
 
+  const selectedMetrics = selectedNode ? getMetricsForNode(selectedNode) : undefined
+
+  // Get color for the selected node
+  const getNodeColor = (nodeId: string | null) => {
+    if (!nodeId) return COLORS.gateway
+    if (nodeId.startsWith('prefill')) return COLORS.prefill
+    if (nodeId.startsWith('decode')) return COLORS.decode
+    if (nodeId === 'epp') return COLORS.epp
+    return COLORS.gateway
+  }
+
+  const metricConfig: Record<MetricType, { label: string; color: string; unit: string }> = {
+    load: { label: 'Load', color: '#f59e0b', unit: '%' },
+    queue: { label: 'Queue', color: '#06b6d4', unit: '' },
+    rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' },
+  }
+
   return (
-    <div className="relative w-full h-full min-h-[400px] bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden">
+    <div className="relative w-full h-full min-h-[300px] bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm">
+      <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">Throughput:</span>
-            <span className="text-white font-mono">{totalThroughput} rps</span>
+            <span className="text-white font-mono font-medium">{totalThroughput} <Acronym term="RPS" /></span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">Avg Load:</span>
-            <span className={`font-mono ${avgLoad > 70 ? 'text-amber-400' : 'text-green-400'}`}>
+            <span className={`font-mono font-medium ${avgLoad > 70 ? 'text-amber-400' : 'text-green-400'}`}>
               {avgLoad}%
             </span>
           </div>
         </div>
 
-        <button
-          onClick={() => setIsAnimating(!isAnimating)}
-          className={`px-3 py-1 rounded text-xs transition-colors ${
-            isAnimating
-              ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-              : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
-          }`}
-        >
-          {isAnimating ? 'Pause' : 'Resume'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode(viewMode === 'default' ? 'horseshoe' : 'default')}
+            className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+              viewMode === 'horseshoe'
+                ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                : 'bg-slate-700/50 text-slate-400'
+            }`}
+            title="Toggle horseshoe gauge view"
+          >
+            <CircleDot size={12} />
+          </button>
+          <button
+            onClick={() => setIsAnimating(!isAnimating)}
+            className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+              isAnimating
+                ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 shadow-lg shadow-purple-500/20'
+                : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
+            }`}
+          >
+            {isAnimating ? 'Pause' : 'Play'}
+          </button>
+        </div>
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 flex items-center gap-4 text-xs z-10">
+      <div className="absolute bottom-2 left-3 flex items-center gap-4 text-xs z-10">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.prefill }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.prefill, boxShadow: `0 0 6px ${COLORS.prefill}` }} />
           <span className="text-muted-foreground">Prefill</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.decode }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.decode, boxShadow: `0 0 6px ${COLORS.decode}` }} />
           <span className="text-muted-foreground">Decode</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS['kv-transfer'] }} />
-          <span className="text-muted-foreground">KV Transfer</span>
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS['kv-transfer'], boxShadow: `0 0 6px ${COLORS['kv-transfer']}` }} />
+          <span className="text-muted-foreground"><Acronym term="KV" /> Transfer</span>
         </div>
-      </div>
-
-      {/* Demo badge */}
-      <div className="absolute top-4 right-4 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded z-10">
-        Demo Data
       </div>
 
       {/* SVG Flow Diagram */}
@@ -449,6 +690,7 @@ export function LLMdFlow() {
         viewBox="0 0 100 100"
         className="w-full h-full"
         preserveAspectRatio="xMidYMid meet"
+        style={{ padding: '30px 5px 20px 5px' }}
       >
         {/* Connections */}
         {CONNECTIONS.map((conn, i) => (
@@ -459,133 +701,225 @@ export function LLMdFlow() {
           />
         ))}
 
-        {/* Particles */}
-        <AnimatePresence>
-          {particles.map(particle => (
-            <FlowParticle
-              key={particle.id}
-              particle={particle}
-              onComplete={() => removeParticle(particle.id)}
+        {/* Nodes - render either default or horseshoe style */}
+        {viewMode === 'horseshoe' ? (
+          <>
+            <HorseshoeFlowNode
+              id="client"
+              label="Clients"
+              isSelected={selectedNode === 'client'}
+              onClick={() => setSelectedNode(selectedNode === 'client' ? null : 'client')}
+              uniqueId={uniqueId}
             />
-          ))}
-        </AnimatePresence>
-
-        {/* Nodes */}
-        <FlowNode
-          id="client"
-          label="Clients"
-          icon={<Radio size={14} />}
-          isHighlighted={selectedNode === 'client'}
-          onClick={() => setSelectedNode(selectedNode === 'client' ? null : 'client')}
-        />
-        <FlowNode
-          id="gateway"
-          label="Gateway"
-          icon={<Activity size={14} />}
-          metrics={getMetricsForNode('gateway')}
-          isHighlighted={selectedNode === 'gateway'}
-          onClick={() => setSelectedNode(selectedNode === 'gateway' ? null : 'gateway')}
-        />
-        <FlowNode
-          id="epp"
-          label="EPP"
-          icon={<Zap size={14} />}
-          metrics={getMetricsForNode('epp')}
-          isHighlighted={selectedNode === 'epp'}
-          onClick={() => setSelectedNode(selectedNode === 'epp' ? null : 'epp')}
-        />
-        <FlowNode
-          id="prefill0"
-          label="Prefill-0"
-          icon={<Server size={14} />}
-          metrics={getMetricsForNode('prefill0')}
-          isHighlighted={selectedNode === 'prefill0'}
-          onClick={() => setSelectedNode(selectedNode === 'prefill0' ? null : 'prefill0')}
-        />
-        <FlowNode
-          id="prefill1"
-          label="Prefill-1"
-          icon={<Server size={14} />}
-          metrics={getMetricsForNode('prefill1')}
-          isHighlighted={selectedNode === 'prefill1'}
-          onClick={() => setSelectedNode(selectedNode === 'prefill1' ? null : 'prefill1')}
-        />
-        <FlowNode
-          id="prefill2"
-          label="Prefill-2"
-          icon={<Server size={14} />}
-          metrics={getMetricsForNode('prefill2')}
-          isHighlighted={selectedNode === 'prefill2'}
-          onClick={() => setSelectedNode(selectedNode === 'prefill2' ? null : 'prefill2')}
-        />
-        <FlowNode
-          id="decode0"
-          label="Decode-0"
-          icon={<ArrowRight size={14} />}
-          metrics={getMetricsForNode('decode0')}
-          isHighlighted={selectedNode === 'decode0'}
-          onClick={() => setSelectedNode(selectedNode === 'decode0' ? null : 'decode0')}
-        />
-        <FlowNode
-          id="decode1"
-          label="Decode-1"
-          icon={<ArrowRight size={14} />}
-          metrics={getMetricsForNode('decode1')}
-          isHighlighted={selectedNode === 'decode1'}
-          onClick={() => setSelectedNode(selectedNode === 'decode1' ? null : 'decode1')}
-        />
-        <FlowNode
-          id="kvcache"
-          label="KV Cache"
-          icon={<Database size={14} />}
-          metrics={getMetricsForNode('kvcache')}
-          isHighlighted={selectedNode === 'kvcache'}
-          onClick={() => setSelectedNode(selectedNode === 'kvcache' ? null : 'kvcache')}
-        />
+            <HorseshoeFlowNode
+              id="gateway"
+              label="Gateway"
+              metrics={getMetricsForNode('gateway')}
+              isSelected={selectedNode === 'gateway'}
+              onClick={() => setSelectedNode(selectedNode === 'gateway' ? null : 'gateway')}
+              uniqueId={uniqueId}
+            />
+            <HorseshoeFlowNode
+              id="epp"
+              label="EPP"
+              metrics={getMetricsForNode('epp')}
+              isSelected={selectedNode === 'epp'}
+              onClick={() => setSelectedNode(selectedNode === 'epp' ? null : 'epp')}
+              uniqueId={uniqueId}
+            />
+            <HorseshoeFlowNode
+              id="prefill0"
+              label="Prefill-0"
+              metrics={getMetricsForNode('prefill0')}
+              isSelected={selectedNode === 'prefill0'}
+              onClick={() => setSelectedNode(selectedNode === 'prefill0' ? null : 'prefill0')}
+              uniqueId={uniqueId}
+            />
+            <HorseshoeFlowNode
+              id="prefill1"
+              label="Prefill-1"
+              metrics={getMetricsForNode('prefill1')}
+              isSelected={selectedNode === 'prefill1'}
+              onClick={() => setSelectedNode(selectedNode === 'prefill1' ? null : 'prefill1')}
+              uniqueId={uniqueId}
+            />
+            <HorseshoeFlowNode
+              id="prefill2"
+              label="Prefill-2"
+              metrics={getMetricsForNode('prefill2')}
+              isSelected={selectedNode === 'prefill2'}
+              onClick={() => setSelectedNode(selectedNode === 'prefill2' ? null : 'prefill2')}
+              uniqueId={uniqueId}
+            />
+            <HorseshoeFlowNode
+              id="decode0"
+              label="Decode-0"
+              metrics={getMetricsForNode('decode0')}
+              isSelected={selectedNode === 'decode0'}
+              onClick={() => setSelectedNode(selectedNode === 'decode0' ? null : 'decode0')}
+              uniqueId={uniqueId}
+            />
+            <HorseshoeFlowNode
+              id="decode1"
+              label="Decode-1"
+              metrics={getMetricsForNode('decode1')}
+              isSelected={selectedNode === 'decode1'}
+              onClick={() => setSelectedNode(selectedNode === 'decode1' ? null : 'decode1')}
+              uniqueId={uniqueId}
+            />
+          </>
+        ) : (
+          <>
+            <PremiumNode
+              id="client"
+              label="Clients"
+              nodeColor={COLORS.gateway}
+              isSelected={selectedNode === 'client'}
+              onClick={() => setSelectedNode(selectedNode === 'client' ? null : 'client')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="gateway"
+              label="Gateway"
+              metrics={getMetricsForNode('gateway')}
+              nodeColor={COLORS.gateway}
+              isSelected={selectedNode === 'gateway'}
+              onClick={() => setSelectedNode(selectedNode === 'gateway' ? null : 'gateway')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="epp"
+              label="EPP"
+              metrics={getMetricsForNode('epp')}
+              nodeColor={COLORS.epp}
+              isSelected={selectedNode === 'epp'}
+              onClick={() => setSelectedNode(selectedNode === 'epp' ? null : 'epp')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="prefill0"
+              label="Prefill-0"
+              metrics={getMetricsForNode('prefill0')}
+              nodeColor={COLORS.prefill}
+              isSelected={selectedNode === 'prefill0'}
+              onClick={() => setSelectedNode(selectedNode === 'prefill0' ? null : 'prefill0')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="prefill1"
+              label="Prefill-1"
+              metrics={getMetricsForNode('prefill1')}
+              nodeColor={COLORS.prefill}
+              isSelected={selectedNode === 'prefill1'}
+              onClick={() => setSelectedNode(selectedNode === 'prefill1' ? null : 'prefill1')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="prefill2"
+              label="Prefill-2"
+              metrics={getMetricsForNode('prefill2')}
+              nodeColor={COLORS.prefill}
+              isSelected={selectedNode === 'prefill2'}
+              onClick={() => setSelectedNode(selectedNode === 'prefill2' ? null : 'prefill2')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="decode0"
+              label="Decode-0"
+              metrics={getMetricsForNode('decode0')}
+              nodeColor={COLORS.decode}
+              isSelected={selectedNode === 'decode0'}
+              onClick={() => setSelectedNode(selectedNode === 'decode0' ? null : 'decode0')}
+              uniqueId={uniqueId}
+            />
+            <PremiumNode
+              id="decode1"
+              label="Decode-1"
+              metrics={getMetricsForNode('decode1')}
+              nodeColor={COLORS.decode}
+              isSelected={selectedNode === 'decode1'}
+              onClick={() => setSelectedNode(selectedNode === 'decode1' ? null : 'decode1')}
+              uniqueId={uniqueId}
+            />
+          </>
+        )}
       </svg>
 
-      {/* Selected node details panel */}
+      {/* Selected node details panel - LEFT side with clickable metrics */}
       <AnimatePresence>
-        {selectedNode && (
+        {selectedNode && selectedMetrics && (
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="absolute top-16 right-4 w-56 bg-slate-800/90 backdrop-blur-sm rounded-lg p-4 border border-slate-700"
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute top-10 left-3 w-56 bg-slate-900/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700 shadow-xl"
           >
-            <h4 className="text-white font-medium mb-2">
-              {getMetricsForNode(selectedNode)?.name || selectedNode}
-            </h4>
-            {getMetricsForNode(selectedNode) && (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className={`capitalize ${
-                    getMetricsForNode(selectedNode)?.status === 'healthy' ? 'text-green-400' :
-                    getMetricsForNode(selectedNode)?.status === 'degraded' ? 'text-amber-400' :
-                    'text-red-400'
-                  }`}>
-                    {getMetricsForNode(selectedNode)?.status}
-                  </span>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-white font-semibold text-sm">
+                {selectedMetrics.name}
+              </h4>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                selectedMetrics.status === 'healthy' ? 'bg-green-500/20 text-green-400' :
+                selectedMetrics.status === 'degraded' ? 'bg-amber-500/20 text-amber-400' :
+                'bg-red-500/20 text-red-400'
+              }`}>
+                {selectedMetrics.status.charAt(0).toUpperCase() + selectedMetrics.status.slice(1)}
+              </span>
+            </div>
+
+            {/* Clickable metrics - toggle to show time-series */}
+            <div className="flex gap-1 mb-3">
+              {(['load', 'queue', 'rps'] as MetricType[]).map(metric => (
+                <button
+                  key={metric}
+                  onClick={() => toggleMetric(metric)}
+                  className={`flex-1 px-2 py-1.5 rounded text-[10px] font-medium transition-all ${
+                    selectedMetricTypes.includes(metric)
+                      ? 'bg-slate-700 text-white ring-1 ring-slate-500'
+                      : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-[9px] text-slate-500 uppercase">{metricConfig[metric].label}</div>
+                    <div className="font-mono" style={{ color: selectedMetricTypes.includes(metric) ? metricConfig[metric].color : undefined }}>
+                      {metric === 'load' ? `${selectedMetrics.load}%` :
+                       metric === 'queue' ? selectedMetrics.queueDepth :
+                       selectedMetrics.throughputRps}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Time-series graphs - side by side based on selection */}
+            <div className={`grid gap-2 ${
+              selectedMetricTypes.length === 1 ? 'grid-cols-1' :
+              selectedMetricTypes.length === 2 ? 'grid-cols-2' :
+              'grid-cols-3'
+            }`}>
+              {selectedMetricTypes.map(metric => (
+                <div key={metric} className="bg-slate-800/50 rounded-lg p-2">
+                  <div className="text-[9px] text-muted-foreground mb-1 flex items-center gap-1">
+                    <div
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: metricConfig[metric].color }}
+                    />
+                    {metricConfig[metric].label}
+                  </div>
+                  <Sparkline
+                    data={getHistoryForNode(selectedNode, metric)}
+                    color={metricConfig[metric].color}
+                    width={selectedMetricTypes.length === 1 ? 180 : selectedMetricTypes.length === 2 ? 85 : 55}
+                    height={35}
+                  />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Load</span>
-                  <span className="text-white">{getMetricsForNode(selectedNode)?.load}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Queue</span>
-                  <span className="text-white">{getMetricsForNode(selectedNode)?.queueDepth}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Throughput</span>
-                  <span className="text-white">{getMetricsForNode(selectedNode)?.throughputRps} rps</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Connections</span>
-                  <span className="text-white">{getMetricsForNode(selectedNode)?.activeConnections}</span>
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
+
+            {/* Hint text */}
+            <div className="text-[9px] text-slate-500 mt-2 text-center">
+              Click metrics above to compare
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

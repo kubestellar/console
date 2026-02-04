@@ -5,7 +5,7 @@ import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const llmdStackMonitorConfig: UnifiedCardConfig = {
   type: 'llmd_stack_monitor',
-  title: 'LLMd Stack',
+  title: 'llm-d Stack',
   category: 'ai-ml',
   description: 'LLM-d stack health monitoring',
   icon: 'Layers',

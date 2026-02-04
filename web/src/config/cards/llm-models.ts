@@ -5,7 +5,7 @@ import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const llmModelsConfig: UnifiedCardConfig = {
   type: 'llm_models',
-  title: 'LLM Models',
+  title: 'llm-d Models',
   category: 'ai-ml',
   description: 'Deployed LLM models',
   icon: 'Brain',

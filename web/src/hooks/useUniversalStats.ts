@@ -130,7 +130,20 @@ export function useUniversalStats() {
   const upgradesAvailable = allSubs.filter(s => s.pendingUpgrade).length
 
   // ─── GPU-derived values ───
-  const realGPUCount = (gpuNodes || []).reduce((sum, n) => sum + (n.gpuCount || 0), 0)
+  // Only count GPUs from reachable clusters
+  const unreachableClusterNames = useMemo(() => {
+    return new Set(
+      deduplicatedClusters
+        .filter(c => c.reachable === false)
+        .map(c => c.name)
+    )
+  }, [deduplicatedClusters])
+
+  const realGPUCount = useMemo(() => {
+    return (gpuNodes || [])
+      .filter(n => !unreachableClusterNames.has(n.cluster))
+      .reduce((sum, n) => sum + (n.gpuCount || 0), 0)
+  }, [gpuNodes, unreachableClusterNames])
 
   // ─── Alert-derived values ───
   const firingAlerts = alertStats?.firing || 0

@@ -1614,9 +1614,13 @@ export function Clusters() {
 
   const stats = useMemo(() => {
     // Calculate total GPUs from GPU nodes that match filtered clusters
+    // Only include GPUs from reachable clusters
     let totalGPUs = 0
     let allocatedGPUs = 0
     globalFilteredClusters.forEach(cluster => {
+      // Skip offline clusters - don't count their GPUs
+      if (isClusterUnreachable(cluster)) return
+
       const clusterKey = cluster.name.split('/')[0]
       const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
       if (gpuInfo) {

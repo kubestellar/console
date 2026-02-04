@@ -420,7 +420,7 @@ export const DEMO_DATA_CARDS = new Set([
   'pd_disaggregation',
   'llmd_benchmarks',
   'llmd_ai_insights',
-  'llmd_configurator',
+  // Note: llmd_configurator NOT in demo list - shows real llm-d presets from the project
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
 ])
