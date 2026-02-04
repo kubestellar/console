@@ -407,7 +407,13 @@ Please:
                 : 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
               : 'bg-green-500/10 border-green-500/20 cursor-default'
           )}
-          title={totalPredicted > 0 ? `${totalPredicted} predicted risk${totalPredicted !== 1 ? 's' : ''} - AI-detected potential failures` : 'No predicted risks'}
+          title={`Predictive Failure Detection analyzes:
+• Pods with 3+ restarts → likely to crash
+• Clusters with >80% CPU → throttling risk
+• Clusters with >85% memory → OOM risk
+• GPU nodes at full capacity → no headroom
+
+${totalPredicted > 0 ? `Currently: ${totalPredicted} predicted risk${totalPredicted !== 1 ? 's' : ''}${criticalPredicted > 0 ? ` (${criticalPredicted} critical)` : ''}` : 'No predicted risks detected'}`}
         >
           <div className="flex items-center gap-1">
             <TrendingUp className={cn('w-3 h-3', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')} />
