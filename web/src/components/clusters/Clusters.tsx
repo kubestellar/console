@@ -885,7 +885,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="glass p-8 rounded-lg">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
         </div>
       </div>
     )

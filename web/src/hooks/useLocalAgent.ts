@@ -30,6 +30,7 @@ const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 10000 // Check every 10 seconds when connected
 const DISCONNECTED_POLL_INTERVAL = 60000 // Check every 60 seconds when disconnected
 const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecting
+const SUCCESS_THRESHOLD = 2 // Require 2 consecutive successes before reconnecting (prevents flicker)
 const AGGRESSIVE_POLL_INTERVAL = 1000 // 1 second during aggressive detection burst
 const AGGRESSIVE_DETECT_DURATION = 10000 // 10 seconds of aggressive polling
 
@@ -83,6 +84,7 @@ class AgentManager {
   private listeners: Set<Listener> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private failureCount = 0
+  private successCount = 0 // Track consecutive successes for hysteresis
   private dataErrorTimestamps: number[] = [] // Track recent data errors
   private isChecking = false
   private isStarted = false
@@ -203,23 +205,46 @@ class AgentManager {
 
       if (response.ok) {
         const data = await response.json()
-        const wasDisconnected = this.state.status !== 'connected'
+        const wasDisconnected = this.state.status === 'disconnected'
+        const wasConnecting = this.state.status === 'connecting'
+        const wasConnected = this.state.status === 'connected' || this.state.status === 'degraded'
         this.failureCount = 0 // Reset failure count on success
-        if (wasDisconnected) {
+        this.successCount++ // Track consecutive successes
+
+        // Hysteresis: require multiple successes to reconnect from disconnected (prevents flicker)
+        if (wasDisconnected && this.successCount >= SUCCESS_THRESHOLD) {
           this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
           // Reconnected - speed up polling
           this.adjustPollInterval(POLL_INTERVAL)
+          this.setState({
+            health: data,
+            status: 'connected',
+            error: null,
+          })
+        } else if (wasConnecting) {
+          // Initial connection - connect immediately on first success
+          this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
+          this.adjustPollInterval(POLL_INTERVAL)
+          this.setState({
+            health: data,
+            status: 'connected',
+            error: null,
+          })
+        } else if (wasConnected) {
+          // Already connected - just update health data
+          this.setState({
+            health: data,
+            status: 'connected',
+            error: null,
+          })
         }
-        this.setState({
-          health: data,
-          status: 'connected',
-          error: null,
-        })
+        // If wasDisconnected but not enough successes yet, don't change status
       } else {
         throw new Error(`Agent returned ${response.status}`)
       }
     } catch {
       this.failureCount++
+      this.successCount = 0 // Reset success count on failure
       // Only mark as disconnected after multiple consecutive failures
       if (this.failureCount >= FAILURE_THRESHOLD) {
         const wasConnected = this.state.status === 'connected'
@@ -305,6 +330,7 @@ class AgentManager {
     }
 
     this.failureCount = 0
+    this.successCount = 0
 
     this.addEvent('connecting', 'Aggressive detection: searching for local agent...')
     this.setState({

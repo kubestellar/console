@@ -445,7 +445,7 @@ export function Events() {
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
+            <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" /></div>
           ) : filteredEvents.length === 0 ? (
             <div className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />

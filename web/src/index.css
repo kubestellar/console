@@ -280,20 +280,19 @@
   animation: card-flash-error 1s ease-out;
 }
 
-/* Card refresh pulse - subtle border tint on refresh */
+/* Card refresh pulse - GPU-accelerated opacity animation (no layout shift) */
 @keyframes card-refresh-pulse {
   0% {
-    border-color: rgba(59, 130, 246, 0.35);
-    border-width: 2px;
+    opacity: 0.7;
   }
   100% {
-    border-color: var(--glass-border);
-    border-width: 1px;
+    opacity: 1;
   }
 }
 
 .animate-card-refresh-pulse {
-  animation: card-refresh-pulse 1s ease-out;
+  animation: card-refresh-pulse 0.5s ease-out;
+  will-change: opacity;
 }
 
 /* Disable card flash animations when reduce motion is enabled */
@@ -405,10 +404,13 @@
   @apply transition-all duration-200;
 }
 
-/* Loading spinner - uses theme primary */
+/* Loading spinner - uses theme primary with GPU acceleration */
 .spinner {
   @apply animate-spin rounded-full border-2 border-muted;
   border-top-color: var(--ks-purple);
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Shimmer animation for skeleton loading */
@@ -437,6 +439,15 @@
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* GPU acceleration for spinning animations - prevents layout shift/flickering */
+.animate-spin,
+.animate-spin-slow,
+.animate-spin-slower {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Smooth value transitions */

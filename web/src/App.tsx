@@ -118,7 +118,8 @@ function LoadingFallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      {/* Full border with transparent sides enables GPU acceleration during rotation */}
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
     </div>
   )
 }

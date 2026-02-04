@@ -915,7 +915,8 @@ export function CardWrapper({
             'flex flex-col transition-all duration-200',
             isCollapsed ? 'h-auto' : 'h-full',
             (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
-            (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-card-refresh-pulse',
+            // Only animate for actual loading, not offline state (prevents flicker when agent status changes)
+            (isVisuallySpinning || effectiveIsLoading) && !forceSkeletonForOffline && 'animate-card-refresh-pulse',
             getFlashClass()
           )}
           onMouseEnter={() => setShowSummary(true)}
