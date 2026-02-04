@@ -221,37 +221,42 @@ export function MiniDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid - 3 columns for 6 stats */}
+      {/* Stats Grid - 3 columns for 6 stats - clickable to navigate to full console */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <StatCard
           label="Clusters"
           value={totalClusters}
           color="text-purple-400"
           subValue={`${healthyClusters} healthy`}
+          onClick={() => window.open('/clusters', '_blank')}
         />
         <StatCard
           label="GPUs"
           value={`${allocatedGPUs}/${totalGPUs}`}
           color="text-green-400"
           subValue="allocated/total"
+          onClick={() => window.open('/compute?card=gpu_overview', '_blank')}
         />
         <StatCard
           label="Nodes Offline"
           value={offlineCount}
           color={offlineCount > 0 ? 'text-red-400' : 'text-green-400'}
           subValue={offlineCount > 0 ? 'needs attention' : 'all online'}
+          onClick={() => window.open('/nodes', '_blank')}
         />
         <StatCard
           label="Pod Issues"
           value={totalIssues}
           color={totalIssues > 0 ? 'text-orange-400' : 'text-gray-400'}
           subValue={criticalIssues > 0 ? `${criticalIssues} critical` : undefined}
+          onClick={() => window.open('/pods?card=pod_issues', '_blank')}
         />
         <StatCard
           label="Nodes"
           value={allNodes.length}
           color="text-blue-400"
           subValue={`${allNodes.length - offlineCount} ready`}
+          onClick={() => window.open('/nodes', '_blank')}
         />
         <StatCard
           label="Status"
@@ -263,6 +268,7 @@ export function MiniDashboard() {
               ? 'text-yellow-400'
               : 'text-red-400'
           }
+          onClick={() => window.open('/dashboard', '_blank')}
         />
       </div>
 
@@ -274,9 +280,10 @@ export function MiniDashboard() {
             {podIssues?.slice(0, 5).map((issue, i) => {
               const isCritical = issue.status === 'CrashLoopBackOff' || issue.status === 'OOMKilled' || issue.status === 'Error'
               return (
-                <div
+                <button
                   key={i}
-                  className="flex items-center gap-2 text-xs p-2 rounded bg-gray-800/50 border border-gray-700/30"
+                  onClick={() => window.open(`/pods?search=${encodeURIComponent(issue.name)}`, '_blank')}
+                  className="w-full flex items-center gap-2 text-xs p-2 rounded bg-gray-800/50 border border-gray-700/30 hover:bg-gray-700/50 hover:border-gray-600 transition-colors text-left"
                 >
                   <span
                     className={cn(
@@ -286,7 +293,7 @@ export function MiniDashboard() {
                   />
                   <span className="truncate text-gray-300">{issue.name}</span>
                   <span className="text-gray-500 ml-auto flex-shrink-0">{issue.reason || issue.status}</span>
-                </div>
+                </button>
               )
             })}
           </div>
