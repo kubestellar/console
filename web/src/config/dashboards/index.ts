@@ -26,6 +26,10 @@ import { helmDashboardConfig } from './helm'
 import { alertsDashboardConfig } from './alerts'
 import { aiMlDashboardConfig } from './ai-ml'
 import { ciCdDashboardConfig } from './ci-cd'
+import { logsDashboardConfig } from './logs'
+import { dataComplianceDashboardConfig } from './data-compliance'
+import { arcadeDashboardConfig } from './arcade'
+import { deployDashboardConfig } from './deploy'
 
 /**
  * Registry of all unified dashboard configurations
@@ -52,6 +56,10 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   alerts: alertsDashboardConfig,
   'ai-ml': aiMlDashboardConfig,
   'ci-cd': ciCdDashboardConfig,
+  logs: logsDashboardConfig,
+  'data-compliance': dataComplianceDashboardConfig,
+  arcade: arcadeDashboardConfig,
+  deploy: deployDashboardConfig,
 }
 
 /**
@@ -134,4 +142,8 @@ export {
   alertsDashboardConfig,
   aiMlDashboardConfig,
   ciCdDashboardConfig,
+  logsDashboardConfig,
+  dataComplianceDashboardConfig,
+  arcadeDashboardConfig,
+  deployDashboardConfig,
 }
