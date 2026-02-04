@@ -598,6 +598,7 @@ jobs:
         run: |
           echo "Cross-referencing INVENTORY.md component files against source..."
           ISSUES=""
+          HAS_ERRORS=false
 
           # Extract component file paths from INVENTORY.md
           if [ -f "../INVENTORY.md" ]; then
@@ -611,6 +612,7 @@ jobs:
               TOTAL=$((TOTAL + 1))
               if [ ! -f "$p" ]; then
                 MISSING="${MISSING}  - \`${p}\` — listed in INVENTORY.md but file not found\n"
+                HAS_ERRORS=true
               else
                 FOUND=$((FOUND + 1))
               fi
@@ -622,6 +624,7 @@ jobs:
             ISSUES="${ISSUES}### Summary: ${FOUND}/${TOTAL} listed component files exist\n\n"
           else
             ISSUES="${ISSUES}### INVENTORY.md not found in repo root\n\n"
+            HAS_ERRORS=true
           fi
 
           # Check that page component files referenced exist
@@ -631,6 +634,7 @@ jobs:
             MATCH=$(find src -name "$page" 2>/dev/null | head -1)
             if [ -z "$MATCH" ]; then
               PAGE_MISSING="${PAGE_MISSING}  - \`${page}\` — referenced in INVENTORY.md but not found in src/\n"
+              HAS_ERRORS=true
             fi
           done
 
@@ -638,7 +642,7 @@ jobs:
             ISSUES="${ISSUES}### Page components referenced but not found\n${PAGE_MISSING}\n"
           fi
 
-          if [ -n "$ISSUES" ]; then
+          if [ "$HAS_ERRORS" = "true" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
             printf "%b" "$ISSUES" > /tmp/focus-missing-files.txt
             echo "Consistency issues found"
