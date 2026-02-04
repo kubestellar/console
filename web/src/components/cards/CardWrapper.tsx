@@ -727,8 +727,15 @@ export function CardWrapper({
   const collapseKey = cardId || `${cardType}-default`
   const { isCollapsed: hookCollapsed, setCollapsed: hookSetCollapsed } = useCardCollapse(collapseKey)
 
+  // Track whether initial data load has completed
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false)
+
   // Allow external control to override hook state
-  const isCollapsed = externalCollapsed ?? hookCollapsed
+  // IMPORTANT: Don't collapse until initial data load is complete
+  // This prevents the jarring sequence of: skeleton → collapse → show data
+  // Cards stay expanded showing skeleton until data arrives, then respect collapsed state
+  const savedCollapsedState = externalCollapsed ?? hookCollapsed
+  const isCollapsed = hasCompletedInitialLoad ? savedCollapsedState : false
   const setCollapsed = useCallback((collapsed: boolean) => {
     if (onCollapsedChange) {
       onCollapsedChange(collapsed)
@@ -799,6 +806,14 @@ export function CardWrapper({
   // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
   const wantsToShowSkeleton = !isDemoData && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
   const shouldShowSkeleton = wantsToShowSkeleton && skeletonDelayPassed
+
+  // Mark initial load as complete when data is ready or skeleton times out
+  // This allows the saved collapsed state to take effect only after content is ready
+  useEffect(() => {
+    if (!hasCompletedInitialLoad && (effectiveHasData || skeletonTimedOut || isDemoData)) {
+      setHasCompletedInitialLoad(true)
+    }
+  }, [hasCompletedInitialLoad, effectiveHasData, skeletonTimedOut, isDemoData])
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
