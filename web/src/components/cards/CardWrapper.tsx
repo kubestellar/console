@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2,
 } from 'lucide-react'
@@ -15,6 +15,8 @@ import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
+import { isCardExportable } from '../../lib/widgets/widgetRegistry'
+import { WidgetExportModal } from '../widgets/WidgetExportModal'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
@@ -737,6 +739,7 @@ export function CardWrapper({
 
   const [showSummary, setShowSummary] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showWidgetExport, setShowWidgetExport] = useState(false)
   const [showResizeMenu, setShowResizeMenu] = useState(false)
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
   const [_timeRemaining, setTimeRemaining] = useState<number | null>(null)
@@ -1090,6 +1093,19 @@ export function CardWrapper({
                       )}
                     </div>
                   )}
+                  {isCardExportable(cardType) && (
+                    <button
+                      onClick={() => {
+                        setShowMenu(false)
+                        setShowWidgetExport(true)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                      title="Export this card as a desktop widget for Übersicht"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Widget
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setShowMenu(false)
@@ -1211,6 +1227,13 @@ export function CardWrapper({
           {children}
         </BaseModal.Content>
       </BaseModal>
+
+      {/* Widget Export Modal */}
+      <WidgetExportModal
+        isOpen={showWidgetExport}
+        onClose={() => setShowWidgetExport(false)}
+        cardType={cardType}
+      />
       </>
     </CardDataReportContext.Provider>
     </CardExpandedContext.Provider>
