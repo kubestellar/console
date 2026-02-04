@@ -5,6 +5,7 @@ import { useAIMode } from '../../hooks/useAIMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAccessibility } from '../../hooks/useAccessibility'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { usePredictionSettings } from '../../hooks/usePredictionSettings'
 import { UpdateSettings } from './UpdateSettings'
 import {
   AISettingsSection,
@@ -16,6 +17,7 @@ import {
   ThemeSection,
   AccessibilitySection,
   PermissionsSection,
+  PredictionSettingsSection,
 } from './sections'
 
 export function Settings() {
@@ -26,6 +28,7 @@ export function Settings() {
   const { health, isConnected, refresh } = useLocalAgent()
   const { colorBlindMode, setColorBlindMode, reduceMotion, setReduceMotion, highContrast, setHighContrast } = useAccessibility()
   const { forceCheck: forceVersionCheck } = useVersionCheck()
+  const { settings: predictionSettings, updateSettings: updatePredictionSettings, resetSettings: resetPredictionSettings } = usePredictionSettings()
 
   return (
     <div data-testid="settings-page" className="pt-16 max-w-4xl mx-auto">
@@ -37,6 +40,13 @@ export function Settings() {
       <div className="space-y-6">
         {/* AI Usage Mode */}
         <AISettingsSection mode={mode} setMode={setMode} description={description} />
+
+        {/* Predictive Failure Detection */}
+        <PredictionSettingsSection
+          settings={predictionSettings}
+          updateSettings={updatePredictionSettings}
+          resetSettings={resetPredictionSettings}
+        />
 
         {/* Profile */}
         <ProfileSection

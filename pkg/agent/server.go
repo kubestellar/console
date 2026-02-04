@@ -58,6 +58,10 @@ type Server struct {
 	todayTokensIn    int64
 	todayTokensOut   int64
 	todayDate        string // YYYY-MM-DD format to detect day change
+
+	// Prediction system
+	predictionWorker *PredictionWorker
+	metricsHistory   *MetricsHistory
 }
 
 // NewServer creates a new agent server
@@ -115,6 +119,10 @@ func NewServer(cfg Config) (*Server, error) {
 	server.upgrader = websocket.Upgrader{
 		CheckOrigin: server.checkOrigin,
 	}
+
+	// Initialize prediction system
+	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
+	server.metricsHistory = NewMetricsHistory(k8sClient)
 
 	return server, nil
 }
@@ -207,6 +215,16 @@ func (s *Server) Start() error {
 	// Provider health check (proxies status page checks server-side to avoid CORS)
 	mux.HandleFunc("/providers/health", s.handleProvidersHealth)
 
+	// Prediction endpoints
+	mux.HandleFunc("/predictions/ai", s.handlePredictionsAI)
+	mux.HandleFunc("/predictions/analyze", s.handlePredictionsAnalyze)
+	mux.HandleFunc("/predictions/feedback", s.handlePredictionsFeedback)
+	mux.HandleFunc("/predictions/stats", s.handlePredictionsStats)
+	mux.HandleFunc("/metrics/history", s.handleMetricsHistory)
+
+	// Prometheus metrics endpoint
+	mux.Handle("/metrics", GetMetricsHandler())
+
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
@@ -230,6 +248,16 @@ func (s *Server) Start() error {
 
 	// Validate all configured API keys on startup (run in background to not delay startup)
 	go s.ValidateAllKeys()
+
+	// Start prediction system
+	if s.predictionWorker != nil {
+		s.predictionWorker.Start()
+		log.Println("Prediction worker started")
+	}
+	if s.metricsHistory != nil {
+		s.metricsHistory.Start(10 * time.Minute)
+		log.Println("Metrics history started")
+	}
 
 	return http.ListenAndServe(addr, mux)
 }
@@ -2171,4 +2199,201 @@ func checkPingHealth(client *http.Client, pingURL string) string {
 	}
 	defer resp.Body.Close()
 	return "operational"
+}
+
+// =============================================================================
+// Prediction Handlers
+// =============================================================================
+
+// handlePredictionsAI returns current AI predictions
+func (s *Server) handlePredictionsAI(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.predictionWorker == nil {
+		json.NewEncoder(w).Encode(AIPredictionsResponse{
+			Predictions: []AIPrediction{},
+			Stale:       true,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.predictionWorker.GetPredictions())
+}
+
+// handlePredictionsAnalyze triggers a manual AI analysis
+func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.predictionWorker == nil {
+		http.Error(w, "Prediction worker not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Parse optional providers from request body
+	var req AIAnalysisRequest
+	if r.Body != nil {
+		json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	if s.predictionWorker.IsAnalyzing() {
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "already_running",
+		})
+		return
+	}
+
+	if err := s.predictionWorker.TriggerAnalysis(req.Providers); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":        "started",
+		"estimatedTime": "30s",
+	})
+}
+
+// PredictionFeedbackRequest represents a feedback submission
+type PredictionFeedbackRequest struct {
+	PredictionID string `json:"predictionId"`
+	Feedback     string `json:"feedback"` // "accurate" or "inaccurate"
+}
+
+// handlePredictionsFeedback handles prediction feedback submissions
+func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req PredictionFeedbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.PredictionID == "" || (req.Feedback != "accurate" && req.Feedback != "inaccurate") {
+		http.Error(w, "Invalid predictionId or feedback", http.StatusBadRequest)
+		return
+	}
+
+	// For now, just acknowledge - feedback is stored client-side
+	// In the future, this could store to a database for model improvement
+	log.Printf("[Predictions] Feedback received: %s = %s", req.PredictionID, req.Feedback)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "recorded",
+	})
+}
+
+// handlePredictionsStats returns prediction accuracy statistics
+func (s *Server) handlePredictionsStats(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Stats are calculated client-side from localStorage
+	// This endpoint is for future server-side aggregation
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"totalPredictions":   0,
+		"accurateFeedback":   0,
+		"inaccurateFeedback": 0,
+		"accuracyRate":       0.0,
+		"byProvider":         map[string]interface{}{},
+	})
+}
+
+// handleMetricsHistory returns historical metrics for trend analysis
+func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.metricsHistory == nil {
+		json.NewEncoder(w).Encode(MetricsHistoryResponse{
+			Snapshots: []MetricsSnapshot{},
+			Retention: "24h",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.metricsHistory.GetSnapshots())
 }

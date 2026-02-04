@@ -1,5 +1,5 @@
 /**
- * Node Offline Detection - Übersicht Widget
+ * AI Node Offline Detection - Übersicht Widget
  *
  * Monitors Kubernetes nodes and alerts when nodes go offline or become unschedulable.
  *
@@ -153,7 +153,7 @@ export const render = ({ state }) => {
       <div style={styles.card}>
         <div style={styles.header}>
           <div style={{ ...styles.statusDot, backgroundColor: styles.colors.info }} />
-          <span style={styles.title}>Node Offline Detection</span>
+          <span style={styles.title}>AI Node Offline Detection</span>
         </div>
         <div style={{ color: '#9ca3af', fontSize: '12px' }}>Loading...</div>
       </div>
@@ -165,7 +165,7 @@ export const render = ({ state }) => {
       <div style={styles.card}>
         <div style={styles.header}>
           <div style={{ ...styles.statusDot, backgroundColor: styles.colors.error }} />
-          <span style={styles.title}>Node Offline Detection</span>
+          <span style={styles.title}>AI Node Offline Detection</span>
         </div>
         <div style={{ color: styles.colors.error, fontSize: '12px' }}>Error: {state.error}</div>
       </div>
@@ -180,7 +180,7 @@ export const render = ({ state }) => {
     <div style={styles.card}>
       <div style={styles.header}>
         <div style={{ ...styles.statusDot, backgroundColor: statusColor }} />
-        <span style={styles.title}>Node Offline Detection</span>
+        <span style={styles.title}>AI Node Offline Detection</span>
       </div>
 
       <div style={styles.statsGrid}>

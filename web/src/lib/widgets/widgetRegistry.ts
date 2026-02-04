@@ -125,7 +125,7 @@ export const WIDGET_CARDS: Record<string, WidgetCardDefinition> = {
   // AI/Console cards
   console_ai_offline_detection: {
     cardType: 'console_ai_offline_detection',
-    displayName: 'Node Offline Detection',
+    displayName: 'AI Node Offline Detection',
     description: 'Detects offline nodes and unavailable GPUs',
     apiEndpoints: ['/nodes', '/api/mcp/gpu-nodes'],
     supportsTheme: true,
