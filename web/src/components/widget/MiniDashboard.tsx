@@ -359,7 +359,7 @@ export function MiniDashboard() {
             ) : (
               <>
                 <p className="text-yellow-500/80">⚠️ Install from THIS page for the mini widget</p>
-                <p>Click the install icon <span className="inline-block px-1 py-0.5 bg-gray-700 rounded text-[10px]">⊕</span> in your address bar</p>
+                <p>Click <strong className="text-gray-300">Open in app</strong> in your address bar</p>
               </>
             )}
           </div>
