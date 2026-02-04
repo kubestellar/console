@@ -231,8 +231,23 @@ export function MiniDashboard() {
     openInBrowser('/dashboard')
   }
 
+  // Try to resize window to widget size when running as standalone PWA
+  useEffect(() => {
+    if (isStandalone() && window.resizeTo) {
+      // Target size: 540x360 (wider, less tall)
+      try {
+        window.resizeTo(540, 360)
+      } catch {
+        // Browser may not allow resizing - that's ok
+      }
+    }
+  }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white flex items-center justify-center p-2">
+      {/* Fixed-size widget container */}
+      <div className="w-[520px] h-[320px] flex flex-col bg-gray-900/50 rounded-xl border border-gray-700/50 overflow-hidden">
+        <div className="flex-1 p-4 overflow-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -342,8 +357,10 @@ export function MiniDashboard() {
         </div>
       )}
 
-      {/* Footer / Install Prompt */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-gray-900/90 border-t border-gray-800">
+        </div>{/* End scrollable content */}
+
+        {/* Footer / Install Prompt */}
+        <div className="p-3 bg-gray-900/90 border-t border-gray-700/50 flex-shrink-0">
         {!isInstalled && installPrompt ? (
           <button
             onClick={handleInstall}
@@ -377,8 +394,7 @@ export function MiniDashboard() {
         )}
       </div>
 
-      {/* Padding for fixed footer */}
-      <div className="h-16" />
+        </div>{/* End fixed-size container */}
     </div>
   )
 }
