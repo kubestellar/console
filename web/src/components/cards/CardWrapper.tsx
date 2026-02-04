@@ -680,6 +680,15 @@ export function CardWrapper({
     return () => clearTimeout(timer)
   }, []) // Empty deps - only run on mount
 
+  // Quick initial render timeout for cards that don't report state (static/demo cards)
+  // If a card hasn't reported state within 150ms, assume it rendered content immediately
+  // This prevents blank cards while still giving reporting cards time to report
+  const [initialRenderTimedOut, setInitialRenderTimedOut] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setInitialRenderTimedOut(true), 150)
+    return () => clearTimeout(timer)
+  }, []) // Empty deps - only run on mount
+
   // Handle minimum spin duration for refresh button
   // Include both prop and context-reported refresh state
   const contextIsRefreshing = childDataState?.isRefreshing || false
@@ -727,15 +736,16 @@ export function CardWrapper({
   const collapseKey = cardId || `${cardType}-default`
   const { isCollapsed: hookCollapsed, setCollapsed: hookSetCollapsed } = useCardCollapse(collapseKey)
 
-  // Track whether initial data load has completed
+  // Track whether initial data load has completed AND content has been visible
   const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false)
+  const [collapseDelayPassed, setCollapseDelayPassed] = useState(false)
 
   // Allow external control to override hook state
-  // IMPORTANT: Don't collapse until initial data load is complete
+  // IMPORTANT: Don't collapse until initial data load is complete AND a brief delay has passed
   // This prevents the jarring sequence of: skeleton → collapse → show data
-  // Cards stay expanded showing skeleton until data arrives, then respect collapsed state
+  // Cards stay expanded showing content briefly, then respect collapsed state
   const savedCollapsedState = externalCollapsed ?? hookCollapsed
-  const isCollapsed = hasCompletedInitialLoad ? savedCollapsedState : false
+  const isCollapsed = (hasCompletedInitialLoad && collapseDelayPassed) ? savedCollapsedState : false
   const setCollapsed = useCallback((collapsed: boolean) => {
     if (onCollapsedChange) {
       onCollapsedChange(collapsed)
@@ -778,18 +788,19 @@ export function CardWrapper({
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
   // Show loading when:
   // - Card explicitly reports isLoading: true, OR
-  // - Card hasn't reported yet AND skeleton hasn't timed out (shows skeleton initially)
-  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (childDataState === null && !skeletonTimedOut)
+  // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
+  // Static/demo cards that never report will stop showing as loading after 150ms
+  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
   const effectiveIsRefreshing = childDataState?.isRefreshing || false
   // hasData logic:
   // - If card explicitly reports hasData, use it
+  // - If card hasn't reported AND quick timeout passed, assume has data (static/demo card)
   // - If card hasn't reported AND skeleton timed out, assume has data (show content)
-  // - If card hasn't reported AND skeleton NOT timed out, assume no data (show skeleton)
   // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
   // - Otherwise default to true (show content)
   const effectiveHasData = childDataState?.hasData ?? (
     childDataState === null
-      ? skeletonTimedOut  // After timeout, assume content ready
+      ? (initialRenderTimedOut || skeletonTimedOut)  // After quick timeout, assume static card has content
       : (childDataState?.isLoading ? false : true)
   )
 
@@ -803,17 +814,34 @@ export function CardWrapper({
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
   // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
+  // This includes both explicitly marked isDemoData cards AND cards in global demo mode
   // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
-  const wantsToShowSkeleton = !isDemoData && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
+  const wantsToShowSkeleton = !(isDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
   const shouldShowSkeleton = wantsToShowSkeleton && skeletonDelayPassed
 
-  // Mark initial load as complete when data is ready or skeleton times out
+  // Mark initial load as complete when data is ready or various timeouts pass
   // This allows the saved collapsed state to take effect only after content is ready
+  // Conditions (any triggers completion):
+  // - effectiveHasData: card reported it has data
+  // - initialRenderTimedOut: 150ms passed, assume static card has content
+  // - skeletonTimedOut: 5s passed, fallback for slow loading cards
+  // - isDemoData/isDemoMode: demo cards always have content immediately
   useEffect(() => {
-    if (!hasCompletedInitialLoad && (effectiveHasData || skeletonTimedOut || isDemoData)) {
+    if (!hasCompletedInitialLoad && (effectiveHasData || initialRenderTimedOut || skeletonTimedOut || isDemoData || isDemoMode)) {
       setHasCompletedInitialLoad(true)
     }
-  }, [hasCompletedInitialLoad, effectiveHasData, skeletonTimedOut, isDemoData])
+  }, [hasCompletedInitialLoad, effectiveHasData, initialRenderTimedOut, skeletonTimedOut, isDemoData, isDemoMode])
+
+  // Add a small delay before allowing collapse to ensure content is visible
+  // This prevents immediate collapse for demo cards and ensures smooth UX
+  useEffect(() => {
+    if (hasCompletedInitialLoad && !collapseDelayPassed) {
+      const timer = setTimeout(() => {
+        setCollapseDelayPassed(true)
+      }, 300) // 300ms delay to show content before collapsing
+      return () => clearTimeout(timer)
+    }
+  }, [hasCompletedInitialLoad, collapseDelayPassed])
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
