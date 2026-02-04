@@ -73,26 +73,34 @@ export const className = css\`
   }
 \`;
 
-// Drag handlers
+// Drag handlers - use direct DOM manipulation for smooth dragging
+let dragElement = null;
+
 const handleDragStart = (e) => {
   isDragging = true;
   dragStart = { x: e.clientX, y: e.clientY };
   posStart = { ...widgetPosition };
+  // Find the widget container element
+  dragElement = e.target.closest('.widget-container');
   document.addEventListener("mousemove", handleDragMove);
   document.addEventListener("mouseup", handleDragEnd);
   e.preventDefault();
 };
 
 const handleDragMove = (e) => {
-  if (!isDragging) return;
-  widgetPosition = {
-    top: Math.max(0, posStart.top + (e.clientY - dragStart.y)),
-    left: Math.max(0, posStart.left + (e.clientX - dragStart.x)),
-  };
+  if (!isDragging || !dragElement) return;
+  const newTop = Math.max(0, posStart.top + (e.clientY - dragStart.y));
+  const newLeft = Math.max(0, posStart.left + (e.clientX - dragStart.x));
+  // Update position in memory
+  widgetPosition = { top: newTop, left: newLeft };
+  // Directly update DOM for smooth dragging
+  dragElement.style.top = \`\${newTop}px\`;
+  dragElement.style.left = \`\${newLeft}px\`;
 };
 
 const handleDragEnd = () => {
   isDragging = false;
+  dragElement = null;
   savePosition(widgetPosition);
   document.removeEventListener("mousemove", handleDragMove);
   document.removeEventListener("mouseup", handleDragEnd);
@@ -120,6 +128,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     cursor: 'grab',
+    pointerEvents: 'auto',
   },
   dragIndicator: {
     fontSize: '14px',
