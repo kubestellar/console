@@ -385,11 +385,34 @@ export function WidgetSettingsSection() {
 
       {/* Installation Options */}
       <div className="space-y-4">
-        {/* Option 1: Download */}
+        {/* Option 1: Browser Widget */}
+        <div className="p-4 rounded-lg bg-secondary/30 border border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <Monitor className="w-4 h-4 text-blue-400" />
+            <span className="font-medium text-sm">Option 1: Browser Widget Page</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Open a minimal widget view in Safari or Chrome for Picture-in-Picture or Always-on-Top.
+          </p>
+          <a
+            href="/widget"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open Widget Page
+          </a>
+          <div className="mt-3 text-xs text-muted-foreground">
+            <p>Tip: In Safari, right-click the tab and select "Enter Picture in Picture" for a floating widget.</p>
+          </div>
+        </div>
+
+        {/* Option 2: Übersicht Download */}
         <div className="p-4 rounded-lg bg-secondary/30 border border-border">
           <div className="flex items-center gap-2 mb-2">
             <Smartphone className="w-4 h-4 text-purple-400" />
-            <span className="font-medium text-sm">Option 1: Übersicht Widget (macOS)</span>
+            <span className="font-medium text-sm">Option 2: Übersicht Widget (macOS)</span>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             Download the widget file and place it in your Übersicht widgets folder.
@@ -418,29 +441,6 @@ export function WidgetSettingsSection() {
               <li>Ensure kc-agent is running on port 8585</li>
               <li>Restart Übersicht</li>
             </ol>
-          </div>
-        </div>
-
-        {/* Option 2: Browser Widget */}
-        <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <Monitor className="w-4 h-4 text-blue-400" />
-            <span className="font-medium text-sm">Option 2: Browser Widget Page</span>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Open a minimal widget view in Safari or Chrome for Picture-in-Picture or Always-on-Top.
-          </p>
-          <a
-            href="/widget"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Open Widget Page
-          </a>
-          <div className="mt-3 text-xs text-muted-foreground">
-            <p>Tip: In Safari, right-click the tab and select "Enter Picture in Picture" for a floating widget.</p>
           </div>
         </div>
 
