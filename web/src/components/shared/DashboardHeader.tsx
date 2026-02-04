@@ -143,10 +143,18 @@ export function DashboardHeader({
           </button>
         </div>
         {error ? (
-          <span className="text-xs text-red-400 flex items-center gap-1" role="alert" aria-live="polite">
+          <button
+            onClick={onRefresh}
+            disabled={isFetching}
+            className="text-xs text-red-400 flex items-center gap-1.5 hover:text-red-300 transition-colors disabled:opacity-50 cursor-pointer"
+            role="alert"
+            aria-live="polite"
+            title="Click to retry"
+          >
             <AlertTriangle className="w-3 h-3" aria-hidden="true" />
             <span>{error}</span>
-          </span>
+            <RefreshCw className="w-3 h-3" />
+          </button>
         ) : displayTimestamp ? (
           <span className="text-xs text-muted-foreground">
             Updated {displayTimestamp.toLocaleTimeString()}

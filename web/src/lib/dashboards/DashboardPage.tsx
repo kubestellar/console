@@ -55,6 +55,8 @@ export interface DashboardPageProps {
   lastUpdated?: Date | null
   /** Whether there is data to display */
   hasData?: boolean
+  /** Error message to display (optional) */
+  error?: string | null
   /** Dashboard-specific content (rendered below cards) */
   children?: ReactNode
   /** Content rendered between stats and cards section (e.g., tabs, filters) */
@@ -90,6 +92,7 @@ export function DashboardPage({
   isRefreshing: externalRefreshing = false,
   lastUpdated,
   hasData = true,
+  error,
   children,
   beforeCards,
   emptyState,
@@ -218,6 +221,7 @@ export function DashboardPage({
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId={`${storageKey}-auto-refresh`}
         lastUpdated={lastUpdated}
+        error={error}
       />
 
       {/* Stats Overview */}
