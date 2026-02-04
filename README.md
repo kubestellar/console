@@ -27,6 +27,7 @@ KubeStellar Console (kc) is a web-based dashboard for managing multiple Kubernet
 - **Real-time Updates**: WebSocket-powered live event streaming from all clusters
 - **Card Swap Mechanism**: Dashboard cards auto-swap based on context, with snooze/expedite/cancel controls
 - **App-Centric View**: Focus on applications, not just resources - see app health across all clusters
+- **Alert Notifications**: Multi-channel alert delivery via Slack, Email, and webhooks with Grafana-style notification routing
 
 ## How It Works
 
@@ -584,6 +585,11 @@ npm run dev
 - [ ] Phase 3: Onboarding & Personalization
 - [ ] Phase 4: Claude AI Integration
 - [ ] Phase 5: Polish & Deploy
+
+## Documentation
+
+- [Alert Notifications Setup](docs/ALERT_NOTIFICATIONS.md) - Configure Slack and Email alert delivery
+- [Contributing Guide](CONTRIBUTING.md) - Guidelines for contributing to the project
 
 ## Contributing
 
