@@ -603,10 +603,12 @@ export function connectSharedWebSocket() {
           wsBackendUnavailable = false // Backend is available
         } else if (msg.type === 'error') {
           ws.close()
-        } else if (msg.type === 'kubeconfig_changed') {
+        } else if (msg.type === 'kubeconfig_changed' || msg.type === 'clusters_updated') {
           // Reset failure tracking on fresh kubeconfig
           clusterCache.consecutiveFailures = 0
           clusterCache.isFailed = false
+          // If clusters_updated includes cluster data, we could use it directly
+          // For now, just trigger a full refresh to get health data too
           fullFetchClusters()
         }
       } catch {
@@ -1196,9 +1198,9 @@ export async function fullFetchClusters() {
         }
         return newCluster
       })
-      // Filter out long context-path duplicates (names containing '/')
-      // e.g. 'default/api-fmaas-vllm-d-...:6443/...' duplicates the short-named 'vllm-d'
-      const dedupedClusters = mergedClusters.filter(c => !c.name.includes('/'))
+      // Deduplicate clusters by server URL - prefers short names when available
+      // but keeps long names (e.g., '/api-pokprod001...' or 'default/api-...') if no short alias exists
+      const dedupedClusters = deduplicateClustersByServer(mergedClusters)
 
       // Show clusters immediately with preserved health data
       await finishWithMinDuration({

@@ -7,6 +7,7 @@ import type {
 import { getPredictionSettings, getSettingsForBackend } from './usePredictionSettings'
 import { getDemoMode } from './useDemoMode'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
+import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
 const AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
@@ -65,6 +66,7 @@ function aiPredictionToRisk(prediction: AIPrediction): PredictedRisk {
     severity: prediction.severity,
     name: prediction.name,
     cluster: prediction.cluster,
+    namespace: prediction.namespace,
     reason: prediction.reason,
     reasonDetailed: prediction.reasonDetailed,
     source: 'ai',
@@ -162,6 +164,12 @@ function connectWebSocket(): void {
           providers = message.payload.providers || []
           isStale = false
           notifySubscribers()
+        } else if (message.type === 'clusters_updated') {
+          // Kubeconfig changed - refresh cluster data
+          console.log('[AIPredictions WS] Received clusters_updated, refreshing clusters...')
+          clusterCache.consecutiveFailures = 0
+          clusterCache.isFailed = false
+          fullFetchClusters()
         }
       } catch {
         // Invalid JSON, ignore

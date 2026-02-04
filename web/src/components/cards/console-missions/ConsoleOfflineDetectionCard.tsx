@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap } from 'lucide-react'
 import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useMissions } from '../../../hooks/useMissions'
@@ -14,6 +14,37 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 import type { PredictedRisk, TrendDirection } from '../../../types/predictions'
+import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../../lib/cards/CardComponents'
+import { ClusterBadge } from '../../ui/ClusterBadge'
+
+// ============================================================================
+// Unified Item Type for all card items
+// ============================================================================
+type UnifiedItem = {
+  id: string
+  category: 'offline' | 'gpu' | 'prediction'
+  name: string
+  cluster: string
+  severity: 'critical' | 'warning' | 'info'
+  reason: string
+  reasonDetailed?: string
+  metric?: string
+  // Original data references
+  nodeData?: NodeData
+  gpuData?: { nodeName: string; cluster: string; expected: number; available: number; reason: string }
+  predictionData?: PredictedRisk
+}
+
+// Sort field options
+type SortField = 'name' | 'cluster' | 'severity' | 'category'
+
+// Sort options for CardControls
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'severity', label: 'Severity' },
+  { value: 'name', label: 'Name' },
+  { value: 'cluster', label: 'Cluster' },
+  { value: 'category', label: 'Type' },
+]
 
 // ============================================================================
 // Module-level cache for all nodes (shared across card instances)
@@ -227,6 +258,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
           severity: pod.restarts >= 5 ? 'critical' : 'warning',
           name: pod.name,
           cluster: pod.cluster,
+          namespace: pod.namespace,
           reason: `${pod.restarts} restarts - likely to crash`,
           reasonDetailed: `Pod has restarted ${pod.restarts} times, which indicates instability. This typically suggests memory pressure (OOMKill), application bugs, or configuration issues. Recommended actions: Check pod logs with 'kubectl logs ${pod.name}', describe the pod to see recent events, and review resource limits.`,
           metric: `${pod.restarts} restarts`,
@@ -348,31 +380,210 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       })
   }, [heuristicPredictions, aiPredictions, aiEnabled, selectedClusters, isAllClustersSelected])
 
-  const totalIssues = offlineNodes.length + gpuIssues.length
   const totalPredicted = predictedRisks.length
   const criticalPredicted = predictedRisks.filter(r => r.severity === 'critical').length
   const aiPredictionCount = predictedRisks.filter(r => r.source === 'ai').length
   const heuristicPredictionCount = predictedRisks.filter(r => r.source === 'heuristic').length
-  const affectedClusters = new Set([
-    ...offlineNodes.map(n => n.cluster || 'unknown'),
-    ...gpuIssues.map(g => g.cluster)
-  ]).size
+
+  // ============================================================================
+  // Unified items list for filtering/sorting/pagination
+  // ============================================================================
+  const unifiedItems = useMemo((): UnifiedItem[] => {
+    const items: UnifiedItem[] = []
+
+    // Add offline nodes
+    offlineNodes.forEach((node, i) => {
+      items.push({
+        id: `offline-${node.name}-${node.cluster || i}`,
+        category: 'offline',
+        name: node.name,
+        cluster: node.cluster || 'unknown',
+        severity: 'critical',
+        reason: node.unschedulable ? 'Cordoned' : node.status,
+        nodeData: node,
+      })
+    })
+
+    // Add GPU issues
+    gpuIssues.forEach((issue, i) => {
+      items.push({
+        id: `gpu-${issue.nodeName}-${issue.cluster}-${i}`,
+        category: 'gpu',
+        name: issue.nodeName,
+        cluster: issue.cluster,
+        severity: 'warning',
+        reason: issue.reason,
+        gpuData: issue,
+      })
+    })
+
+    // Add predictions
+    predictedRisks.forEach(risk => {
+      items.push({
+        id: risk.id,
+        category: 'prediction',
+        name: risk.name,
+        cluster: risk.cluster || 'unknown',
+        severity: risk.severity,
+        reason: risk.reason,
+        reasonDetailed: risk.reasonDetailed,
+        metric: risk.metric,
+        predictionData: risk,
+      })
+    })
+
+    return items
+  }, [offlineNodes, gpuIssues, predictedRisks])
+
+  // ============================================================================
+  // Card controls state
+  // ============================================================================
+  const [search, setSearch] = useState('')
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const [sortField, setSortField] = useState<SortField>('severity')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
+
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  // Close cluster dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(target)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Available clusters for filtering
+  const availableClustersForFilter = useMemo(() => {
+    const clusterSet = new Set<string>()
+    unifiedItems.forEach(item => clusterSet.add(item.cluster))
+    return Array.from(clusterSet).sort()
+  }, [unifiedItems])
+
+  // Filter items
+  const filteredItems = useMemo(() => {
+    let result = unifiedItems
+
+    // Apply search
+    if (search.trim()) {
+      const query = search.toLowerCase()
+      result = result.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.cluster.toLowerCase().includes(query) ||
+        item.reason.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      result = result.filter(item => localClusterFilter.includes(item.cluster))
+    }
+
+    return result
+  }, [unifiedItems, search, localClusterFilter])
+
+  // Sort items
+  const sortedItems = useMemo(() => {
+    const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 }
+    const categoryOrder: Record<string, number> = { offline: 0, gpu: 1, prediction: 2 }
+
+    return [...filteredItems].sort((a, b) => {
+      let cmp = 0
+      switch (sortField) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name)
+          break
+        case 'cluster':
+          cmp = a.cluster.localeCompare(b.cluster)
+          break
+        case 'severity':
+          cmp = (severityOrder[a.severity] ?? 999) - (severityOrder[b.severity] ?? 999)
+          break
+        case 'category':
+          cmp = (categoryOrder[a.category] ?? 999) - (categoryOrder[b.category] ?? 999)
+          break
+      }
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+  }, [filteredItems, sortField, sortDirection])
+
+  // Pagination
+  const effectivePerPage = itemsPerPage === 'unlimited' ? sortedItems.length : itemsPerPage
+  const totalPages = Math.ceil(sortedItems.length / effectivePerPage) || 1
+  const needsPagination = itemsPerPage !== 'unlimited' && sortedItems.length > effectivePerPage
+
+  const paginatedItems = useMemo(() => {
+    if (itemsPerPage === 'unlimited') return sortedItems
+    const start = (currentPage - 1) * effectivePerPage
+    return sortedItems.slice(start, start + effectivePerPage)
+  }, [sortedItems, currentPage, effectivePerPage, itemsPerPage])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, localClusterFilter, sortField])
+
+  // Ensure current page is valid
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages))
+    }
+  }, [currentPage, totalPages])
+
+  const toggleClusterFilter = (cluster: string) => {
+    setLocalClusterFilter(prev =>
+      prev.includes(cluster) ? prev.filter(c => c !== cluster) : [...prev, cluster]
+    )
+  }
+
+  const clearClusterFilter = () => {
+    setLocalClusterFilter([])
+  }
+
+  // Filtered counts for the action button (respects search and cluster filter)
+  const filteredOfflineCount = sortedItems.filter(i => i.category === 'offline').length
+  const filteredGpuCount = sortedItems.filter(i => i.category === 'gpu').length
+  const filteredPredictionCount = sortedItems.filter(i => i.category === 'prediction').length
+  const filteredTotalIssues = filteredOfflineCount + filteredGpuCount
+  const filteredTotalPredicted = filteredPredictionCount
+  const filteredCriticalPredicted = sortedItems.filter(i => i.category === 'prediction' && i.predictionData?.severity === 'critical').length
+  const filteredAIPredictionCount = sortedItems.filter(i => i.category === 'prediction' && i.predictionData?.source === 'ai').length
+  const isFiltered = search.trim() !== '' || localClusterFilter.length > 0
 
   const runningMission = missions.find(m =>
     m.title.includes('Offline') && m.status === 'running'
   )
 
   const doStartAnalysis = () => {
-    const nodesSummary = offlineNodes.map(n =>
+    // When filter is active, use filtered data from sortedItems
+    // Otherwise use the full unfiltered data
+    const filteredOfflineNodes = isFiltered
+      ? sortedItems.filter(i => i.category === 'offline' && i.nodeData).map(i => i.nodeData!)
+      : offlineNodes
+    const filteredGpuIssuesList = isFiltered
+      ? sortedItems.filter(i => i.category === 'gpu' && i.gpuData).map(i => i.gpuData!)
+      : gpuIssues
+    const filteredPredictedRisks = isFiltered
+      ? sortedItems.filter(i => i.category === 'prediction' && i.predictionData).map(i => i.predictionData!)
+      : predictedRisks
+
+    const nodesSummary = filteredOfflineNodes.map(n =>
       `- Node ${n.name} (${n.cluster || 'unknown'}): Status=${n.unschedulable ? 'Cordoned' : n.status}`
     ).join('\n')
 
-    const gpuSummary = gpuIssues.map(g =>
+    const gpuSummary = filteredGpuIssuesList.map(g =>
       `- Node ${g.nodeName} (${g.cluster}): ${g.reason}`
     ).join('\n')
 
     // Include both summary and detailed explanation for each prediction
-    const predictedSummary = predictedRisks.map(r => {
+    const predictedSummary = filteredPredictedRisks.map(r => {
       const sourceLabel = r.source === 'ai' ? `AI (${r.confidence || 0}% confidence)` : 'Heuristic'
       const trendLabel = r.trend ? ` [${r.trend}]` : ''
       let entry = `- [${r.severity.toUpperCase()}] [${sourceLabel}]${trendLabel} ${r.name} (${r.cluster || 'unknown'}):\n  Summary: ${r.reason}`
@@ -382,24 +593,26 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       return entry
     }).join('\n\n')
 
-    const hasCurrentIssues = totalIssues > 0
-    const hasPredictions = totalPredicted > 0
+    const filteredAICount = filteredPredictedRisks.filter(r => r.source === 'ai').length
+    const filteredHeuristicCount = filteredPredictedRisks.filter(r => r.source === 'heuristic').length
+    const hasCurrentIssues = filteredTotalIssues > 0
+    const hasPredictions = filteredTotalPredicted > 0
 
     startMission({
       title: hasPredictions && !hasCurrentIssues ? 'Predictive Failure Analysis' : 'Node & GPU Analysis',
       description: hasCurrentIssues
-        ? `Analyzing ${totalIssues} issues${hasPredictions ? ` + ${totalPredicted} predicted risks` : ''}`
-        : `Analyzing ${totalPredicted} predicted failure risks (${aiPredictionCount} AI, ${heuristicPredictionCount} heuristic)`,
+        ? `Analyzing ${filteredTotalIssues} issues${hasPredictions ? ` + ${filteredTotalPredicted} predicted risks` : ''}`
+        : `Analyzing ${filteredTotalPredicted} predicted failure risks (${filteredAICount} AI, ${filteredHeuristicCount} heuristic)`,
       type: 'troubleshoot',
       initialPrompt: `I need help analyzing ${hasCurrentIssues ? 'current issues and ' : ''}potential failures in my Kubernetes clusters.
 
-${hasCurrentIssues ? `**Current Offline/Unhealthy Nodes (${offlineNodes.length}):**
+${hasCurrentIssues ? `**Current Offline/Unhealthy Nodes (${filteredOfflineNodes.length}):**
 ${nodesSummary || 'None detected'}
 
-**Current GPU Issues (${gpuIssues.length}):**
+**Current GPU Issues (${filteredGpuIssuesList.length}):**
 ${gpuSummary || 'None detected'}
 
-` : ''}**Predicted Failure Risks (${totalPredicted} total: ${aiPredictionCount} AI-detected, ${heuristicPredictionCount} threshold-based):**
+` : ''}**Predicted Failure Risks (${filteredTotalPredicted} total: ${filteredAICount} AI-detected, ${filteredHeuristicCount} threshold-based):**
 ${predictedSummary || 'None predicted'}
 
 Please:
@@ -410,25 +623,21 @@ Please:
 5. Prioritize by severity and potential impact
 6. Suggest proactive measures to prevent future failures`,
       context: {
-        offlineNodes: offlineNodes.slice(0, 20),
-        gpuIssues,
-        predictedRisks: predictedRisks.slice(0, 20),
-        affectedClusters,
-        criticalPredicted,
-        aiPredictionCount,
-        heuristicPredictionCount,
+        offlineNodes: filteredOfflineNodes.slice(0, 20),
+        gpuIssues: filteredGpuIssuesList,
+        predictedRisks: filteredPredictedRisks.slice(0, 20),
+        affectedClusters: new Set([
+          ...filteredOfflineNodes.map(n => n.cluster || 'unknown'),
+          ...filteredGpuIssuesList.map(g => g.cluster)
+        ]).size,
+        criticalPredicted: filteredCriticalPredicted,
+        aiPredictionCount: filteredAICount,
+        heuristicPredictionCount: filteredHeuristicCount,
       },
     })
   }
 
   const handleStartAnalysis = () => checkKeyAndRun(doStartAnalysis)
-
-  // Determine status color
-  const statusColor = totalIssues === 0
-    ? 'green'
-    : offlineNodes.length > 0
-      ? 'red'
-      : 'yellow'
 
   return (
     <div className="h-full flex flex-col relative">
@@ -486,11 +695,7 @@ Please:
           className={cn(
             'p-2 rounded-lg border',
             totalPredicted > 0
-              ? criticalPredicted > 0
-                ? 'bg-orange-500/10 border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors'
-                : aiPredictionCount > 0
-                  ? 'bg-purple-500/10 border-purple-500/20 cursor-pointer hover:bg-purple-500/20 transition-colors'
-                  : 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
+              ? 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
               : 'bg-green-500/10 border-green-500/20 cursor-default'
           )}
           onClick={aiEnabled && !isAnalyzing ? () => triggerAIAnalysis() : undefined}
@@ -510,24 +715,18 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
         >
           <div className="flex items-center gap-1">
             {aiPredictionCount > 0 ? (
-              <Sparkles className={cn('w-3 h-3', criticalPredicted > 0 ? 'text-orange-400' : 'text-purple-400')} />
+              <Sparkles className="w-3 h-3 text-blue-400" />
             ) : (
-              <TrendingUp className={cn('w-3 h-3', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')} />
+              <TrendingUp className={cn('w-3 h-3', totalPredicted > 0 ? 'text-blue-400' : 'text-green-400')} />
             )}
             <span className="text-xl font-bold text-foreground">{totalPredicted}</span>
             {isAnalyzing && (
-              <RefreshCw className="w-3 h-3 text-purple-400 animate-spin" />
+              <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
             )}
           </div>
           <div className={cn(
             'text-[10px] flex items-center gap-1',
-            totalPredicted > 0
-              ? criticalPredicted > 0
-                ? 'text-orange-400'
-                : aiPredictionCount > 0
-                  ? 'text-purple-400'
-                  : 'text-blue-400'
-              : 'text-green-400'
+            totalPredicted > 0 ? 'text-blue-400' : 'text-green-400'
           )}>
             Predicted
             <Info className="w-3 h-3 opacity-60" />
@@ -535,199 +734,271 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
         </div>
       </div>
 
-      {/* Issues Preview */}
-      <div className="flex-1 space-y-2 overflow-y-auto mb-4">
-        {offlineNodes.slice(0, 2).map((node, i) => (
-          <div
-            key={`node-${i}`}
-            className="p-2 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20 transition-colors group flex items-center justify-between"
-            onClick={() => node.cluster && drillToNode(node.cluster, node.name, {
-              status: node.unschedulable ? 'Cordoned' : node.status,
-              unschedulable: node.unschedulable,
-              roles: node.roles,
-              issue: node.unschedulable ? 'Node is cordoned and not accepting new workloads' : `Node status: ${node.status}`
-            })}
-            title={`Click to diagnose ${node.name}`}
-          >
-            <div className="min-w-0">
-              <div className="font-medium text-foreground truncate">{node.name}</div>
-              <div className="text-red-400">
-                {node.unschedulable ? 'Cordoned' : node.status} • {node.cluster || 'unknown'}
-              </div>
-            </div>
-            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
-          </div>
-        ))}
-        {gpuIssues.slice(0, 1).map((issue, i) => (
-          <div
-            key={`gpu-${i}`}
-            className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex items-center justify-between"
-            onClick={() => drillToCluster(issue.cluster)}
-            title={`Click to view cluster ${issue.cluster}`}
-          >
-            <div className="min-w-0">
-              <div className="font-medium text-foreground truncate">{issue.nodeName}</div>
-              <div className="text-yellow-400">0 GPUs • {issue.cluster}</div>
-            </div>
-            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
-          </div>
-        ))}
-        {/* Predicted Risks */}
-        {predictedRisks.slice(0, 2).map((risk) => {
-          const feedback = risk.id ? getFeedback(risk.id) : null
-          return (
-            <div
-              key={risk.id}
-              className={cn(
-                'p-2 rounded text-xs transition-colors group',
-                risk.severity === 'critical'
-                  ? 'bg-orange-500/10 hover:bg-orange-500/20'
-                  : risk.source === 'ai'
-                    ? 'bg-purple-500/10 hover:bg-purple-500/20'
-                    : 'bg-blue-500/10 hover:bg-blue-500/20'
-              )}
-              title={risk.reasonDetailed || risk.reason}
-            >
-              <div className="flex items-center justify-between">
-                <div
-                  className="min-w-0 flex items-center gap-2 flex-1 cursor-pointer"
-                  onClick={() => risk.cluster && drillToCluster(risk.cluster)}
-                >
-                  {/* Type Icon */}
-                  {risk.type === 'pod-crash' && <RefreshCw className="w-3 h-3 text-orange-400 flex-shrink-0" />}
-                  {risk.type === 'resource-exhaustion' && <Cpu className="w-3 h-3 text-blue-400 flex-shrink-0" />}
-                  {risk.type === 'gpu-exhaustion' && <HardDrive className="w-3 h-3 text-purple-400 flex-shrink-0" />}
-                  {(risk.type === 'resource-trend' || risk.type === 'capacity-risk' || risk.type === 'anomaly') && (
-                    <Sparkles className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                  )}
+      {/* Card Controls: Search, Cluster Filter, Sort */}
+      <CardControlsRow
+        clusterFilter={{
+          availableClusters: availableClustersForFilter.map(c => ({ name: c })),
+          selectedClusters: localClusterFilter,
+          onToggle: toggleClusterFilter,
+          onClear: clearClusterFilter,
+          isOpen: showClusterFilter,
+          setIsOpen: setShowClusterFilter,
+          containerRef: clusterFilterRef,
+          minClusters: 1,
+        }}
+        clusterIndicator={localClusterFilter.length > 0 ? {
+          selectedCount: localClusterFilter.length,
+          totalCount: availableClustersForFilter.length,
+        } : undefined}
+        cardControls={{
+          limit: itemsPerPage,
+          onLimitChange: setItemsPerPage,
+          sortBy: sortField,
+          sortOptions: SORT_OPTIONS,
+          onSortChange: (s) => setSortField(s as SortField),
+          sortDirection,
+          onSortDirectionChange: setSortDirection,
+        }}
+      />
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium text-foreground truncate">{risk.name}</span>
-                      {/* Source Badge */}
-                      {risk.source === 'ai' ? (
-                        <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-purple-500/20 text-purple-400 rounded">
-                          AI
-                        </span>
-                      ) : (
-                        <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400 rounded flex items-center gap-0.5">
-                          <Zap className="w-2 h-2" />
-                        </span>
-                      )}
-                      {/* Confidence */}
-                      {risk.confidence !== undefined && (
-                        <span className="text-[9px] text-muted-foreground">{risk.confidence}%</span>
-                      )}
-                      {/* Trend */}
-                      {risk.trend && <TrendIcon trend={risk.trend} />}
-                    </div>
-                    <div className={cn(
-                      'truncate',
-                      risk.severity === 'critical' ? 'text-orange-400' : risk.source === 'ai' ? 'text-purple-400' : 'text-blue-400'
-                    )}>
-                      {risk.metric ? `${risk.metric} • ` : ''}{risk.cluster}
-                    </div>
+      <CardSearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search issues..."
+        className="mb-3"
+      />
+
+      {/* Items List */}
+      <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">
+        {paginatedItems.map((item) => {
+          // Render based on category
+          if (item.category === 'offline' && item.nodeData) {
+            const node = item.nodeData
+            return (
+              <div
+                key={item.id}
+                className="p-2 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20 transition-colors group flex items-center justify-between"
+                onClick={() => node.cluster && drillToNode(node.cluster, node.name, {
+                  status: node.unschedulable ? 'Cordoned' : node.status,
+                  unschedulable: node.unschedulable,
+                  roles: node.roles,
+                  issue: node.unschedulable ? 'Node is cordoned and not accepting new workloads' : `Node status: ${node.status}`
+                })}
+                title={`Click to diagnose ${node.name}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-foreground truncate">{node.name}</span>
+                    <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-red-500/20 text-red-400 rounded">
+                      Offline
+                    </span>
+                    {node.cluster && (
+                      <ClusterBadge cluster={node.cluster} size="sm" />
+                    )}
+                  </div>
+                  <div className="text-red-400 truncate mt-0.5">
+                    {node.unschedulable ? 'Cordoned' : node.status}
                   </div>
                 </div>
+                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+              </div>
+            )
+          }
 
-                {/* Feedback Buttons + Chevron */}
-                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                  {risk.source === 'ai' && risk.id && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          submitFeedback(risk.id, 'accurate', risk.type, risk.provider)
-                        }}
-                        className={cn(
-                          'p-1 rounded transition-colors',
-                          feedback === 'accurate'
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/10'
-                        )}
-                        title="Mark as accurate"
-                      >
-                        <ThumbsUp className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          submitFeedback(risk.id, 'inaccurate', risk.type, risk.provider)
-                        }}
-                        className={cn(
-                          'p-1 rounded transition-colors',
-                          feedback === 'inaccurate'
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/10'
-                        )}
-                        title="Mark as inaccurate"
-                      >
-                        <ThumbsDown className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                  <ChevronRight
-                    className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-pointer"
+          if (item.category === 'gpu' && item.gpuData) {
+            const issue = item.gpuData
+            return (
+              <div
+                key={item.id}
+                className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex items-center justify-between"
+                onClick={() => drillToCluster(issue.cluster)}
+                title={`Click to view cluster ${issue.cluster}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-foreground truncate">{issue.nodeName}</span>
+                    <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-yellow-500/20 text-yellow-400 rounded">
+                      GPU
+                    </span>
+                    <ClusterBadge cluster={issue.cluster} size="sm" />
+                  </div>
+                  <div className="text-yellow-400 truncate mt-0.5">0 GPUs available</div>
+                </div>
+                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+              </div>
+            )
+          }
+
+          if (item.category === 'prediction' && item.predictionData) {
+            const risk = item.predictionData
+            const feedback = risk.id ? getFeedback(risk.id) : null
+            return (
+              <div
+                key={item.id}
+                className={cn(
+                  'p-2 rounded text-xs transition-colors group',
+                  // All predictions are blue
+                  'bg-blue-500/10 hover:bg-blue-500/20'
+                )}
+                title={risk.reasonDetailed || risk.reason}
+              >
+                <div className="flex items-center justify-between">
+                  <div
+                    className="min-w-0 flex items-center gap-2 flex-1 cursor-pointer"
                     onClick={() => risk.cluster && drillToCluster(risk.cluster)}
-                  />
+                  >
+                    {/* Type Icon - all blue */}
+                    {risk.type === 'pod-crash' && (
+                      <RefreshCw className="w-3 h-3 flex-shrink-0 text-blue-400" />
+                    )}
+                    {risk.type === 'resource-exhaustion' && <Cpu className="w-3 h-3 flex-shrink-0 text-blue-400" />}
+                    {risk.type === 'gpu-exhaustion' && <HardDrive className="w-3 h-3 flex-shrink-0 text-blue-400" />}
+                    {(risk.type === 'resource-trend' || risk.type === 'capacity-risk' || risk.type === 'anomaly') && (
+                      <Sparkles className="w-3 h-3 flex-shrink-0 text-blue-400" />
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-foreground truncate">{risk.name}</span>
+                        {/* Source Badge */}
+                        {risk.source === 'ai' ? (
+                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400 rounded">
+                            AI
+                          </span>
+                        ) : (
+                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-blue-500/20 text-blue-400 rounded flex items-center gap-0.5">
+                            <Zap className="w-2 h-2" />
+                          </span>
+                        )}
+                        {/* Confidence */}
+                        {risk.confidence !== undefined && (
+                          <span className="text-[9px] text-muted-foreground">{risk.confidence}%</span>
+                        )}
+                        {/* Trend */}
+                        {risk.trend && <TrendIcon trend={risk.trend} />}
+                        {/* Namespace Badge */}
+                        {risk.namespace && (
+                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-slate-500/20 text-slate-400 rounded truncate max-w-[80px]" title={risk.namespace}>
+                            {risk.namespace}
+                          </span>
+                        )}
+                        {/* Cluster Badge */}
+                        {risk.cluster && (
+                          <ClusterBadge cluster={risk.cluster} size="sm" />
+                        )}
+                      </div>
+                      <div className="truncate mt-0.5 text-blue-400">
+                        {risk.metric || risk.reason}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feedback Buttons + Chevron */}
+                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    {risk.source === 'ai' && risk.id && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            submitFeedback(risk.id, 'accurate', risk.type, risk.provider)
+                          }}
+                          className={cn(
+                            'p-1 rounded transition-colors',
+                            feedback === 'accurate'
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/10'
+                          )}
+                          title="Mark as accurate"
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            submitFeedback(risk.id, 'inaccurate', risk.type, risk.provider)
+                          }}
+                          className={cn(
+                            'p-1 rounded transition-colors',
+                            feedback === 'inaccurate'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/10'
+                          )}
+                          title="Mark as inaccurate"
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
+                    <ChevronRight
+                      className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-pointer"
+                      onClick={() => risk.cluster && drillToCluster(risk.cluster)}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )
+            )
+          }
+
+          return null
         })}
-        {totalIssues === 0 && totalPredicted === 0 && (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground" title="All nodes and GPUs healthy">
+
+        {/* Empty state */}
+        {sortedItems.length === 0 && (
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-4" title="All nodes and GPUs healthy">
             <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
-            All nodes & GPUs healthy
-          </div>
-        )}
-        {(totalIssues + totalPredicted) > 5 && (
-          <div className="text-xs text-muted-foreground text-center" title={`${totalIssues + totalPredicted - 5} additional issues`}>
-            +{totalIssues + totalPredicted - 5} more
+            {search || localClusterFilter.length > 0 ? 'No matching items' : 'All nodes & GPUs healthy'}
           </div>
         )}
       </div>
 
-      {/* Action Button */}
+      {/* Pagination */}
+      <CardPaginationFooter
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedItems.length}
+        itemsPerPage={effectivePerPage}
+        onPageChange={setCurrentPage}
+        needsPagination={needsPagination}
+      />
+
+      {/* Action Button - uses filtered counts when filter is active */}
       <button
         onClick={handleStartAnalysis}
-        disabled={(totalIssues === 0 && totalPredicted === 0) || !!runningMission}
+        disabled={(filteredTotalIssues === 0 && filteredTotalPredicted === 0) || !!runningMission}
         className={cn(
           'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all',
-          totalIssues === 0 && totalPredicted === 0
+          filteredTotalIssues === 0 && filteredTotalPredicted === 0
             ? 'bg-green-500/20 text-green-400 cursor-default'
             : runningMission
-              ? 'bg-purple-500/20 text-purple-400 cursor-wait'
-              : totalIssues > 0
-                ? statusColor === 'red'
+              ? 'bg-blue-500/20 text-blue-400 cursor-wait'
+              : filteredTotalIssues > 0
+                ? filteredOfflineCount > 0
                   ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
                   : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
-                : aiPredictionCount > 0
-                  ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-400'
-                  : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
+                : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
         )}
       >
-        {totalIssues === 0 && totalPredicted === 0 ? (
+        {filteredTotalIssues === 0 && filteredTotalPredicted === 0 ? (
           <>
             <CheckCircle className="w-4 h-4" />
-            All Healthy
+            {isFiltered ? 'No matching items' : 'All Healthy'}
           </>
         ) : runningMission ? (
           <>
             <Clock className="w-4 h-4 animate-pulse" />
             Analyzing...
           </>
-        ) : totalIssues > 0 ? (
+        ) : filteredTotalIssues > 0 ? (
           <>
             <AlertCircle className="w-4 h-4" />
-            Analyze {totalIssues} Issue{totalIssues !== 1 ? 's' : ''}{totalPredicted > 0 ? ` + ${totalPredicted} Risks` : ''}
+            Analyze {filteredTotalIssues} Issue{filteredTotalIssues !== 1 ? 's' : ''}{filteredTotalPredicted > 0 ? ` + ${filteredTotalPredicted} Risks` : ''}
           </>
         ) : (
           <>
-            {aiPredictionCount > 0 ? <Sparkles className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-            Analyze {totalPredicted} Predicted Risk{totalPredicted !== 1 ? 's' : ''}
-            {aiPredictionCount > 0 && (
-              <span className="text-xs opacity-75">({aiPredictionCount} AI)</span>
+            {filteredAIPredictionCount > 0 ? <Sparkles className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+            Analyze {filteredTotalPredicted} Predicted Risk{filteredTotalPredicted !== 1 ? 's' : ''}
+            {filteredAIPredictionCount > 0 && (
+              <span className="text-xs opacity-75">({filteredAIPredictionCount} AI)</span>
             )}
           </>
         )}

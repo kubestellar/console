@@ -252,6 +252,23 @@ func (s *Server) Start() error {
 	// Validate all configured API keys on startup (run in background to not delay startup)
 	go s.ValidateAllKeys()
 
+	// Start kubeconfig file watcher (uses k8s client's built-in watcher)
+	if s.k8sClient != nil {
+		s.k8sClient.SetOnReload(func() {
+			log.Println("[Server] Kubeconfig reloaded, broadcasting to clients...")
+			s.kubectl.Reload()
+			clusters, current := s.kubectl.ListContexts()
+			s.BroadcastToClients("clusters_updated", protocol.ClustersPayload{
+				Clusters: clusters,
+				Current:  current,
+			})
+			log.Printf("[Server] Broadcasted %d clusters to clients", len(clusters))
+		})
+		if err := s.k8sClient.StartWatching(); err != nil {
+			log.Printf("Warning: failed to start kubeconfig watcher: %v", err)
+		}
+	}
+
 	// Start prediction system
 	if s.predictionWorker != nil {
 		s.predictionWorker.Start()

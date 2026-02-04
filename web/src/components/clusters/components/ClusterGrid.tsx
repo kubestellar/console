@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server } from 'lucide-react'
+import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound } from 'lucide-react'
 import { FlashingValue } from '../../ui/FlashingValue'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -21,6 +21,11 @@ function isClusterHealthy(cluster: ClusterInfo): boolean {
   }
   // No node data yet - use healthy flag
   return cluster.healthy === true
+}
+
+// Helper to detect token/auth expiration errors
+function isTokenExpired(cluster: ClusterInfo): boolean {
+  return cluster.errorType === 'auth'
 }
 
 interface GPUInfo {
@@ -105,6 +110,10 @@ const FullClusterCard = memo(function FullClusterCard({
             <div className="flex flex-col items-center gap-2 flex-shrink-0">
               {initialLoading ? (
                 <StatusIndicator status="loading" size="lg" showLabel={false} />
+              ) : isTokenExpired(cluster) ? (
+                <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center" title="Token Expired - re-authenticate to access this cluster">
+                  <KeyRound className="w-4 h-4 text-red-400" />
+                </div>
               ) : unreachable ? (
                 <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center" title="Offline - check network connection">
                   <WifiOff className="w-4 h-4 text-yellow-400" />
@@ -297,6 +306,10 @@ const ListClusterCard = memo(function ListClusterCard({
           <div className="flex-shrink-0">
             {initialLoading ? (
               <StatusIndicator status="loading" size="md" showLabel={false} />
+            ) : isTokenExpired(cluster) ? (
+              <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center" title="Token Expired">
+                <KeyRound className="w-3 h-3 text-red-400" />
+              </div>
             ) : unreachable ? (
               <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center" title="Offline">
                 <WifiOff className="w-3 h-3 text-yellow-400" />
@@ -430,7 +443,9 @@ const CompactClusterCard = memo(function CompactClusterCard({
       <div className="relative glass p-3 rounded-lg h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 mb-2">
-          {unreachable ? (
+          {isTokenExpired(cluster) ? (
+            <span title="Token Expired"><KeyRound className="w-3 h-3 text-red-400" /></span>
+          ) : unreachable ? (
             <WifiOff className="w-3 h-3 text-yellow-400" />
           ) : !isClusterHealthy(cluster) ? (
             <AlertCircle className="w-3 h-3 text-orange-400" />

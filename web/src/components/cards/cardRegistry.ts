@@ -604,7 +604,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   console_ai_issues: 6,
   console_ai_kubeconfig_audit: 6,
   console_ai_health_check: 6,
-  console_ai_offline_detection: 6,
+  console_ai_offline_detection: 8,
   user_management: 6,
   // Weather card
   weather: 6,

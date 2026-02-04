@@ -38,6 +38,8 @@ export interface PredictedRisk {
   name: string
   /** Cluster name if applicable */
   cluster?: string
+  /** Namespace if applicable (for pod-level predictions) */
+  namespace?: string
   /** Brief summary explanation (shown in list, max ~80 chars) */
   reason: string
   /** Detailed explanation with context and recommendations (shown on hover/expand) */
@@ -67,6 +69,8 @@ export interface AIPrediction {
   severity: PredictionSeverity
   name: string
   cluster: string
+  /** Namespace if applicable (for pod-level predictions) */
+  namespace?: string
   reason: string
   reasonDetailed: string
   confidence: number
