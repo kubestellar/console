@@ -148,7 +148,8 @@ export const updateState = (event, previousState) => {
 };
 
 export const render = ({ state }) => {
-  if (state.loading) {
+  // Guard against undefined state (before initial state is set)
+  if (!state || state.loading) {
     return (
       <div style={styles.card}>
         <div style={styles.header}>
