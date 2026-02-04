@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, Cpu, HardDrive, RefreshCw } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, Cpu, HardDrive, RefreshCw, Info } from 'lucide-react'
 import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useMissions } from '../../../hooks/useMissions'
 import { useGPUNodes, usePodIssues, useClusters } from '../../../hooks/useMCP'
@@ -419,8 +419,9 @@ ${totalPredicted > 0 ? `Currently: ${totalPredicted} predicted risk${totalPredic
             <TrendingUp className={cn('w-3 h-3', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')} />
             <span className="text-xl font-bold text-foreground">{totalPredicted}</span>
           </div>
-          <div className={cn('text-[10px]', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')}>
+          <div className={cn('text-[10px] flex items-center gap-1', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')}>
             Predicted
+            <Info className="w-3 h-3 opacity-60" />
           </div>
         </div>
       </div>
