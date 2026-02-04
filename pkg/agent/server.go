@@ -120,6 +120,9 @@ func NewServer(cfg Config) (*Server, error) {
 		CheckOrigin: server.checkOrigin,
 	}
 
+	// Load persisted token usage from disk
+	server.loadTokenUsage()
+
 	// Initialize prediction system
 	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
 	server.metricsHistory = NewMetricsHistory(k8sClient)
@@ -1703,6 +1706,73 @@ func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	s.sessionTokensOut += int64(usage.OutputTokens)
 	s.todayTokensIn += int64(usage.InputTokens)
 	s.todayTokensOut += int64(usage.OutputTokens)
+
+	// Persist to disk (non-blocking)
+	go s.saveTokenUsage()
+}
+
+// tokenUsageData is persisted to disk
+type tokenUsageData struct {
+	Date      string `json:"date"`
+	InputIn   int64  `json:"inputIn"`
+	OutputOut int64  `json:"outputOut"`
+}
+
+// getTokenUsagePath returns the path to the token usage file
+func getTokenUsagePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/kc-agent-tokens.json"
+	}
+	return home + "/.kc-agent-tokens.json"
+}
+
+// loadTokenUsage loads token usage from disk on startup
+func (s *Server) loadTokenUsage() {
+	path := getTokenUsagePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return // File doesn't exist yet
+	}
+
+	var usage tokenUsageData
+	if err := json.Unmarshal(data, &usage); err != nil {
+		log.Printf("Warning: could not parse token usage file: %v", err)
+		return
+	}
+
+	s.tokenMux.Lock()
+	defer s.tokenMux.Unlock()
+
+	// Only load if same day
+	today := time.Now().Format("2006-01-02")
+	if usage.Date == today {
+		s.todayTokensIn = usage.InputIn
+		s.todayTokensOut = usage.OutputOut
+		s.todayDate = today
+		log.Printf("Loaded token usage: %d input, %d output tokens for today", usage.InputIn, usage.OutputOut)
+	}
+}
+
+// saveTokenUsage persists token usage to disk
+func (s *Server) saveTokenUsage() {
+	s.tokenMux.RLock()
+	usage := tokenUsageData{
+		Date:      s.todayDate,
+		InputIn:   s.todayTokensIn,
+		OutputOut: s.todayTokensOut,
+	}
+	s.tokenMux.RUnlock()
+
+	data, err := json.Marshal(usage)
+	if err != nil {
+		return
+	}
+
+	path := getTokenUsagePath()
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		log.Printf("Warning: could not save token usage: %v", err)
+	}
 }
 
 // KeyStatus represents the status of an API key for a provider

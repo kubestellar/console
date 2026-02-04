@@ -378,12 +378,24 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		}
 	}
 
-	// Get pod issues from all clusters
+	// Build set of healthy clusters to skip offline ones (avoids timeouts)
+	healthyClusterSet := make(map[string]bool)
+	for _, c := range data.Clusters {
+		if c.Healthy {
+			healthyClusterSet[c.Name] = true
+		}
+	}
+
+	// Get pod issues from healthy clusters only
 	clusters, err := w.k8sClient.ListClusters(ctx)
 	if err != nil {
 		log.Printf("[PredictionWorker] Error listing clusters: %v", err)
 	} else {
 		for _, cluster := range clusters {
+			if !healthyClusterSet[cluster.Name] {
+				log.Printf("[PredictionWorker] Skipping offline cluster: %s", cluster.Name)
+				continue
+			}
 			pods, err := w.k8sClient.FindPodIssues(ctx, cluster.Context, "")
 			if err != nil {
 				log.Printf("[PredictionWorker] Error getting pod issues for %s: %v", cluster.Name, err)
@@ -400,11 +412,14 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		}
 	}
 
-	// Get GPU nodes from all clusters
+	// Get GPU nodes from healthy clusters only
 	if clusters == nil {
 		clusters, _ = w.k8sClient.ListClusters(ctx)
 	}
 	for _, cluster := range clusters {
+		if !healthyClusterSet[cluster.Name] {
+			continue
+		}
 		gpuNodes, err := w.k8sClient.GetGPUNodes(ctx, cluster.Context)
 		if err != nil {
 			log.Printf("[PredictionWorker] Error getting GPU nodes for %s: %v", cluster.Name, err)
@@ -420,8 +435,11 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		}
 	}
 
-	// Get offline/unhealthy nodes from all clusters
+	// Get offline/unhealthy nodes from healthy clusters only
 	for _, cluster := range clusters {
+		if !healthyClusterSet[cluster.Name] {
+			continue
+		}
 		nodes, err := w.k8sClient.GetNodes(ctx, cluster.Context)
 		if err != nil {
 			log.Printf("[PredictionWorker] Error getting nodes for %s: %v", cluster.Name, err)
@@ -446,9 +464,22 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 }
 
 func (w *PredictionWorker) buildAnalysisPrompt(data *ClusterAnalysisData) string {
-	dataJSON, _ := json.MarshalIndent(data, "", "  ")
+	// Filter to only include healthy clusters
+	filteredData := &ClusterAnalysisData{Timestamp: data.Timestamp}
+	for _, c := range data.Clusters {
+		if c.Healthy {
+			filteredData.Clusters = append(filteredData.Clusters, c)
+		}
+	}
+	filteredData.PodIssues = data.PodIssues
+	filteredData.GPUNodes = data.GPUNodes
+	filteredData.OfflineNodes = data.OfflineNodes
 
-	return fmt.Sprintf(`You are a Kubernetes cluster health analyzer. Analyze the provided metrics and identify potential failures BEFORE they occur.
+	dataJSON, _ := json.MarshalIndent(filteredData, "", "  ")
+
+	return fmt.Sprintf(`You are a Kubernetes cluster health analyzer. Analyze the provided metrics for HEALTHY clusters and predict potential failures BEFORE they occur.
+
+IMPORTANT: Only analyze healthy clusters. Do NOT report on offline clusters - that's already known.
 
 Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
 {
@@ -465,22 +496,24 @@ Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
   ]
 }
 
-Look for:
-1. Pods with increasing restart patterns (not just count, but rate)
-2. Resources trending toward limits (memory climbing over past hour)
-3. Correlated issues (multiple pods from same deployment failing)
-4. Unusual patterns (sudden spikes, resources not returning to baseline)
-5. Capacity risks (node nearly full, no room for failover)
+Focus on predicting FUTURE problems in healthy clusters:
+1. Pods with restart patterns suggesting imminent crash (3+ restarts)
+2. Resource utilization trending toward dangerous levels (>80%% CPU or >85%% memory)
+3. GPU nodes nearing full allocation (no headroom for failover)
+4. Pods in warning states (Evicted, OOMKilled, CrashLoopBackOff)
+5. Nodes with conditions suggesting impending failure
 
+If there are no concerning patterns, return {"predictions": []} - don't invent issues.
 Only include predictions with confidence >= 60.
 
-Current cluster data:
+Current healthy cluster data:
 %s`, string(dataJSON))
 }
 
 func (w *PredictionWorker) getAvailableProviders() []string {
 	providers := []string{}
-	for _, name := range []string{"claude", "openai", "gemini", "ollama"} {
+	// Include local CLI providers (claude-code, bob) and API providers
+	for _, name := range []string{"claude-code", "bob", "claude", "openai", "gemini", "ollama"} {
 		if provider, err := w.registry.Get(name); err == nil && provider.IsAvailable() {
 			providers = append(providers, name)
 		}
