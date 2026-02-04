@@ -131,7 +131,6 @@ const KNOWN_ROUTES: KnownRoute[] = [
   { href: '/ai-ml', name: 'AI/ML', description: 'AI and machine learning workloads, GPU utilization, and model serving', icon: 'Brain', category: 'Core Dashboards' },
   { href: '/ci-cd', name: 'CI/CD', description: 'Continuous integration and deployment pipelines, Prow jobs, and GitHub workflows', icon: 'GitPullRequest', category: 'Core Dashboards' },
   { href: '/compliance', name: 'Compliance', description: 'Regulatory compliance, audit logs, and policy enforcement', icon: 'ClipboardCheck', category: 'Core Dashboards' },
-  { href: '/gpu', name: 'GPU', description: 'GPU monitoring, utilization, and workload management', icon: 'Cpu', category: 'Core Dashboards' },
   // Resource Pages
   { href: '/namespaces', name: 'Namespaces', description: 'Namespace management and resource allocation', icon: 'FolderTree', category: 'Resources' },
   { href: '/nodes', name: 'Nodes', description: 'Cluster node health and resource usage', icon: 'HardDrive', category: 'Resources' },
