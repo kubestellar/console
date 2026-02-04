@@ -11,6 +11,8 @@ import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
+import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
+import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 
 // GitOps app configuration (repos to monitor)
 interface GitOpsAppConfig {
@@ -315,7 +317,11 @@ export function GitOps() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <StatusIndicator status={healthStatusIndicator(app.healthStatus)} size="lg" />
+                  <PortalTooltip content={STATUS_TOOLTIPS[healthStatusIndicator(app.healthStatus)]}>
+                    <span>
+                      <StatusIndicator status={healthStatusIndicator(app.healthStatus)} size="lg" />
+                    </span>
+                  </PortalTooltip>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-foreground">{app.name}</span>

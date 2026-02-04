@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle, X } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // Sync phases
 type SyncPhase = 'detection' | 'plan' | 'execution' | 'complete'
@@ -28,12 +29,21 @@ function getResourceIcon(kind: string) {
 // Format resource kind for display
 function formatResourceKind(kind: string): string {
   if (!kind) return 'Resource'
-  // Common abbreviations
+  // Common abbreviations - these will be wrapped with tooltips where they're rendered
   if (kind.toLowerCase() === 'customresourcedefinition') return 'CRD'
   if (kind.toLowerCase() === 'serviceaccount') return 'ServiceAccount'
   if (kind.toLowerCase() === 'clusterrole') return 'ClusterRole'
   if (kind.toLowerCase() === 'clusterrolebinding') return 'ClusterRoleBinding'
   return kind
+}
+
+// Wrapper to format resource kind with tooltip if it's an acronym
+function FormattedResourceKind({ kind }: { kind: string }) {
+  const formatted = formatResourceKind(kind)
+  if (formatted === 'CRD') {
+    return <TechnicalAcronym term="CRD">CRD</TechnicalAcronym>
+  }
+  return <>{formatted}</>
 }
 
 interface DriftedResource {
@@ -358,7 +368,7 @@ export function SyncDialog({
                       <div className="flex items-center gap-2 text-sm">
                         {getResourceIcon(r.kind)}
                         <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-card text-muted-foreground">
-                          {formatResourceKind(r.kind)}
+                          <FormattedResourceKind kind={r.kind} />
                         </span>
                         <span className="font-medium text-foreground truncate">{r.name}</span>
                       </div>
@@ -390,7 +400,7 @@ export function SyncDialog({
                           {item.action.toUpperCase()}
                         </span>
                         {getResourceIcon(kind)}
-                        <span className="text-muted-foreground text-xs">{formatResourceKind(kind)}</span>
+                        <span className="text-muted-foreground text-xs"><FormattedResourceKind kind={kind} /></span>
                         <span className="text-foreground truncate">{name}</span>
                       </div>
                     )
