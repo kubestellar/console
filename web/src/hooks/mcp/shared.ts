@@ -916,14 +916,16 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
     const health = await fetchSingleClusterHealth(cluster.name, cluster.context)
 
     if (health) {
-      // If we got a health response (HTTP 200), the agent/backend is reachable
-      // This is the key fix: receiving ANY response means connectivity is restored,
-      // even if the response contains cached error data from a previous failure
-      clearClusterFailure(cluster.name)
-      
-      // Now check if the cluster itself is reachable based on the response data
+      // Check if the cluster itself is reachable based on the response data
+      // A cluster is reachable if it has valid node data OR no error message
       const hasValidData = health.nodeCount !== undefined && health.nodeCount > 0
       const isReachable = hasValidData || !health.errorMessage
+
+      // Only clear failure tracking if the cluster is actually reachable
+      // Don't clear just because we got a response - the response might say "unreachable"
+      if (isReachable) {
+        clearClusterFailure(cluster.name)
+      }
 
       if (isReachable) {
         // Cluster is reachable - update with fresh data
@@ -962,11 +964,17 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           refreshing: false,
         })
       } else {
-        // Cluster reported as unreachable - check error type to decide handling
+        // Cluster reported as unreachable by the agent
+        // Trust the agent's reachable: false immediately - the agent has direct
+        // access to the cluster and knows best. The 5-minute grace period is for
+        // cases where we get no response at all (backend/agent unavailable).
         recordClusterFailure(cluster.name)
 
-        // Connection refused/reset errors are definitive - mark offline immediately
-        // Timeout errors might be transient - use the 5-minute grace period
+        // If agent explicitly says reachable: false, mark offline immediately
+        // This is more reliable than trying to parse error messages
+        const agentSaysUnreachable = health.reachable === false
+
+        // Also check for definitive network errors as a fallback
         const errorMsg = health.errorMessage?.toLowerCase() || ''
         const isDefinitiveError = errorMsg.includes('connection refused') ||
           errorMsg.includes('connection reset') ||
@@ -974,8 +982,8 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           errorMsg.includes('network is unreachable') ||
           health.errorType === 'network'
 
-        if (isDefinitiveError || shouldMarkOffline(cluster.name)) {
-          // Definitive error or 5+ minutes of failures - mark as unreachable
+        if (agentSaysUnreachable || isDefinitiveError || shouldMarkOffline(cluster.name)) {
+          // Agent says unreachable, definitive error, or 5+ minutes of failures - mark as unreachable
           updateSingleClusterInCache(cluster.name, {
             healthy: false,
             reachable: false,

@@ -238,28 +238,14 @@ export function useClusterHealth(cluster?: string) {
           setHealth(data)
           setError(null)
         } else {
-          // Cluster reported as unreachable - track failure start time
+          // Cluster reported as unreachable by the agent - trust this immediately
+          // The agent has direct access to the cluster and knows best
           recordClusterFailure(cluster)
 
-          if (shouldMarkOffline(cluster)) {
-            // 5+ minutes of failures - show unreachable status
-            setHealth(data)
-            setError(null)
-          } else {
-            // Transient failure - keep showing previous good data if available
-            if (prevHealthRef.current) {
-              setHealth(prevHealthRef.current)
-            } else {
-              // No previous data - use cached data from shared cache if available
-              const cached = getCachedHealth()
-              if (cached) {
-                setHealth(cached)
-              } else {
-                setHealth(data) // Fall back to showing unreachable
-              }
-            }
-            setError(null)
-          }
+          // Show the unreachable status immediately when agent says reachable: false
+          // Don't wait 5 minutes - the agent's assessment is authoritative
+          setHealth(data)
+          setError(null)
         }
       } else {
         // No health data available - track failure start time
