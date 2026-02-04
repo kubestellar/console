@@ -166,14 +166,19 @@ export function Pods() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <PortalTooltip content={STATUS_TOOLTIPS[issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning']}>
-                    <span>
-                      <StatusIndicator
-                        status={issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning'}
-                        size="lg"
-                      />
-                    </span>
-                  </PortalTooltip>
+                  {(() => {
+                    const status = issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning';
+                    return (
+                      <PortalTooltip content={STATUS_TOOLTIPS[status]}>
+                        <span>
+                          <StatusIndicator
+                            status={status}
+                            size="lg"
+                          />
+                        </span>
+                      </PortalTooltip>
+                    );
+                  })()}
                   <div>
                     <h3 className="font-semibold text-foreground">{issue.name}</h3>
                     <div className="flex items-center gap-2">

@@ -20,23 +20,24 @@ function wrapAbbreviations(text: string): ReactNode {
   
   const parts: ReactNode[] = []
   let lastIndex = 0
-  let match
   
   // Find all matches and split the text
-  while ((match = pattern.exec(text)) !== null) {
+  for (const match of text.matchAll(pattern)) {
     // Add text before the match
-    if (match.index > lastIndex) {
+    if (match.index !== undefined && match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index))
     }
     
     // Add the wrapped abbreviation
-    parts.push(
-      <TechnicalAcronym key={`${match.index}-${match[0]}`} term={match[0]}>
-        {match[0]}
-      </TechnicalAcronym>
-    )
-    
-    lastIndex = match.index + match[0].length
+    if (match.index !== undefined) {
+      parts.push(
+        <TechnicalAcronym key={`${match.index}-${match[0]}`} term={match[0]}>
+          {match[0]}
+        </TechnicalAcronym>
+      )
+      
+      lastIndex = match.index + match[0].length
+    }
   }
   
   // Add any remaining text

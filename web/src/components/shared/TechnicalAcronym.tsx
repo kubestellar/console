@@ -50,11 +50,11 @@ export const TECHNICAL_ACRONYMS: Record<string, { full: string; desc: string }> 
   },
   Secret: { 
     full: 'Kubernetes Secret', 
-    desc: 'Stores sensitive data like passwords, tokens, or keys in base64 encoding' 
+    desc: 'Stores sensitive data like passwords, tokens, or keys with encryption at rest' 
   },
   Secrets: { 
     full: 'Kubernetes Secrets', 
-    desc: 'Store sensitive data like passwords, tokens, or keys in base64 encoding' 
+    desc: 'Store sensitive data like passwords, tokens, or keys with encryption at rest' 
   },
   
   // Pod Status & Errors
