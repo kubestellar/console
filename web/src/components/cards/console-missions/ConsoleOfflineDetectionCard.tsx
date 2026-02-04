@@ -61,15 +61,16 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
-  // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
-    isLoading,
-    hasAnyData: gpuNodes.length > 0,
-  })
-
   // Get all nodes from shared cache
   const [allNodes, setAllNodes] = useState<NodeData[]>(() => nodesCache)
-  const [, setNodesLoading] = useState(nodesCache.length === 0)
+  const [nodesLoading, setNodesLoading] = useState(nodesCache.length === 0)
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  // Consider both GPU nodes AND local nodes cache for hasAnyData
+  useCardLoadingState({
+    isLoading: isLoading && nodesLoading,
+    hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0,
+  })
 
   // Subscribe to cache updates and fetch nodes
   useEffect(() => {
