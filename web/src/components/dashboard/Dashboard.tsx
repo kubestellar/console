@@ -75,7 +75,7 @@ export function Dashboard() {
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>(() => {
-    // Priority: cache > localStorage > empty
+    // Priority: cache > localStorage > default cards
     if (dashboardCache?.cards?.length) return dashboardCache.cards
     try {
       const stored = localStorage.getItem(DASHBOARD_STORAGE_KEY)
@@ -86,7 +86,7 @@ export function Dashboard() {
     } catch {
       // Ignore parse errors
     }
-    return []
+    return DEFAULT_DASHBOARD_CARDS
   })
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -477,6 +477,7 @@ export function Dashboard() {
            cardId.startsWith('restored-') ||
            cardId.startsWith('ai-') ||
            cardId.startsWith('rec-') ||
+           cardId.startsWith('default-') ||
            cardId.startsWith('demo-')
   }
 
