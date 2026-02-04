@@ -353,11 +353,14 @@ export function MiniDashboard() {
             Install as Desktop Widget
           </button>
         ) : !isInstalled ? (
-          <div className="text-center text-xs text-gray-500">
+          <div className="text-center text-xs text-gray-500 space-y-1">
             {isSafariBrowser ? (
               <p>Safari: <strong>File → Add to Dock</strong> to install</p>
             ) : (
-              <p>Use browser menu → "Install app" to add to desktop</p>
+              <>
+                <p className="text-yellow-500/80">⚠️ Install from THIS page for the mini widget</p>
+                <p>Click the install icon <span className="inline-block px-1 py-0.5 bg-gray-700 rounded text-[10px]">⊕</span> in your address bar</p>
+              </>
             )}
           </div>
         ) : (
