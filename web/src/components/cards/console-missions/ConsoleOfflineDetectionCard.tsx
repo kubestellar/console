@@ -878,7 +878,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                         {risk.trend && <TrendIcon trend={risk.trend} />}
                         {/* Namespace Badge */}
                         {risk.namespace && (
-                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-slate-500/20 text-slate-400 rounded truncate max-w-[80px]" title={risk.namespace}>
+                          <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-slate-500/20 text-slate-400 rounded truncate max-w-[80px]" title={`namespace: ${risk.namespace}`}>
                             {risk.namespace}
                           </span>
                         )}
