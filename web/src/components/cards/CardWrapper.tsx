@@ -663,6 +663,14 @@ export function CardWrapper({
     return () => clearTimeout(timer)
   }, []) // Empty deps - only run on mount
 
+  // Skeleton delay: don't show skeleton immediately, wait a brief moment
+  // This prevents flicker when cache loads quickly from IndexedDB
+  const [skeletonDelayPassed, setSkeletonDelayPassed] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSkeletonDelayPassed(true), 100)
+    return () => clearTimeout(timer)
+  }, []) // Empty deps - only run on mount
+
   // Handle minimum spin duration for refresh button
   // Include both prop and context-reported refresh state
   const contextIsRefreshing = childDataState?.isRefreshing || false
@@ -778,7 +786,9 @@ export function CardWrapper({
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
   // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
-  const shouldShowSkeleton = !isDemoData && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
+  // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
+  const wantsToShowSkeleton = !isDemoData && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
+  const shouldShowSkeleton = wantsToShowSkeleton && skeletonDelayPassed
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages

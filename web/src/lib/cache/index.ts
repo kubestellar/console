@@ -762,8 +762,20 @@ export async function preloadCacheFromStorage(): Promise<void> {
         // Pre-populate the registry with loaded data
         // This creates a CacheStore with data already loaded
         const store = getOrCreateCache(key, entry.data, true)
-        // Mark as loaded so it doesn't try to load again
-        ;(store as unknown as { initialDataLoaded: boolean }).initialDataLoaded = true
+        // Mark as loaded and set proper state so it shows cached data immediately
+        const storeWithState = store as unknown as {
+          initialDataLoaded: boolean
+          state: CacheState<unknown>
+          notify: () => void
+        }
+        storeWithState.initialDataLoaded = true
+        storeWithState.state = {
+          ...storeWithState.state,
+          data: entry.data,
+          isLoading: false,
+          isRefreshing: true, // Will fetch fresh data in background
+          lastRefresh: entry.timestamp,
+        }
         loadedCount++
       }
     } catch {
