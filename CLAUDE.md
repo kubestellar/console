@@ -41,9 +41,30 @@
 
 ## Development
 
-When starting the frontend dev server, always use:
+### Starting the Console (Recommended)
+
+Use `./startup-oauth.sh` to start the full development environment:
 ```bash
-npm run dev -- --port 5174
+./startup-oauth.sh
+```
+
+This script automatically:
+- Kills existing processes on ports 8080, 5174, 8585
+- Loads `.env` credentials (GitHub OAuth)
+- Starts kc-agent, backend (OAuth mode), and frontend
+- Handles Ctrl+C cleanup
+
+**Requirements**: Create a `.env` file with GitHub OAuth credentials:
+```
+GITHUB_CLIENT_ID=<your-client-id>
+GITHUB_CLIENT_SECRET=<your-client-secret>
+```
+
+### Manual Startup
+
+If you need to start components individually:
+```bash
+npm run dev -- --port 5174  # Frontend
 ```
 
 The backend (KC API server) runs on port 8080. The KC agent WebSocket runs on port 8585.
