@@ -324,11 +324,12 @@ type ClusterSummary struct {
 
 // PodIssueSummary is a simplified pod issue for AI
 type PodIssueSummary struct {
-	Name     string `json:"name"`
-	Cluster  string `json:"cluster"`
-	Restarts int    `json:"restarts"`
-	Status   string `json:"status"`
-	Age      string `json:"age"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster"`
+	Restarts  int    `json:"restarts"`
+	Status    string `json:"status"`
+	Age       string `json:"age"`
 }
 
 // GPUNodeSummary is a simplified GPU node for AI
@@ -404,10 +405,11 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 			}
 			for _, p := range pods {
 				data.PodIssues = append(data.PodIssues, PodIssueSummary{
-					Name:     p.Name,
-					Cluster:  cluster.Name,
-					Restarts: p.Restarts,
-					Status:   p.Status,
+					Name:      p.Name,
+					Namespace: p.Namespace,
+					Cluster:   cluster.Name,
+					Restarts:  p.Restarts,
+					Status:    p.Status,
 				})
 			}
 		}
