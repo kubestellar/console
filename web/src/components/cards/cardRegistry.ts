@@ -126,6 +126,15 @@ const WorkloadMonitor = lazy(() => import('./workload-monitor/WorkloadMonitor').
 const DynamicCard = lazy(() => import('./DynamicCard').then(m => ({ default: m.DynamicCard })))
 const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor').then(m => ({ default: m.LLMdStackMonitor })))
 const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
+
+// LLM-d stunning visualization cards
+const LLMdFlow = lazy(() => import('./llmd/LLMdFlow').then(m => ({ default: m.LLMdFlow })))
+const KVCacheMonitor = lazy(() => import('./llmd/KVCacheMonitor').then(m => ({ default: m.KVCacheMonitor })))
+const EPPRouting = lazy(() => import('./llmd/EPPRouting').then(m => ({ default: m.EPPRouting })))
+const PDDisaggregation = lazy(() => import('./llmd/PDDisaggregation').then(m => ({ default: m.PDDisaggregation })))
+const LLMdBenchmarks = lazy(() => import('./llmd/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
+const LLMdAIInsights = lazy(() => import('./llmd/LLMdAIInsights').then(m => ({ default: m.LLMdAIInsights })))
+const LLMdConfigurator = lazy(() => import('./llmd/LLMdConfigurator').then(m => ({ default: m.LLMdConfigurator })))
 const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
 const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
 const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
@@ -329,6 +338,15 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Provider Health card (AI + Cloud provider status)
   provider_health: ProviderHealth,
 
+  // LLM-d stunning visualization cards
+  llmd_flow: LLMdFlow,
+  kvcache_monitor: KVCacheMonitor,
+  epp_routing: EPPRouting,
+  pd_disaggregation: PDDisaggregation,
+  llmd_benchmarks: LLMdBenchmarks,
+  llmd_ai_insights: LLMdAIInsights,
+  llmd_configurator: LLMdConfigurator,
+
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
 
@@ -395,6 +413,14 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
+  // LLM-d visualization cards - demo data when VPN is unavailable
+  'llmd_flow',
+  'kvcache_monitor',
+  'epp_routing',
+  'pd_disaggregation',
+  'llmd_benchmarks',
+  'llmd_ai_insights',
+  'llmd_configurator',
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
 ])
@@ -516,6 +542,15 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   cluster_health_monitor: 6,
   // Provider Health card
   provider_health: 6,
+
+  // LLM-d stunning visualization cards
+  llmd_flow: 8,           // Hero animated flow diagram
+  kvcache_monitor: 4,     // KV cache gauges
+  epp_routing: 6,         // EPP Sankey diagram
+  pd_disaggregation: 6,   // Prefill/Decode split view
+  llmd_benchmarks: 6,     // Benchmark charts
+  llmd_ai_insights: 6,    // AI insights panel
+  llmd_configurator: 4,   // Configurator showcase
 
   // Event dashboard cards
   event_summary: 6,

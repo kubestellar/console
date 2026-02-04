@@ -28,6 +28,7 @@
     "@react-three/drei": "^9.120.4",
     "@react-three/fiber": "^8.17.10",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.31.0",
     "i18next": "^25.7.4",
     "i18next-browser-languagedetector": "^8.2.0",
     "lucide-react": "^0.468.0",
