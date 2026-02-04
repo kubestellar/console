@@ -1,14 +1,32 @@
 import { useMemo, useState, useEffect } from 'react'
-import { AlertCircle, CheckCircle, Clock, ChevronRight } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, Cpu, HardDrive, RefreshCw } from 'lucide-react'
 import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useMissions } from '../../../hooks/useMissions'
-import { useGPUNodes } from '../../../hooks/useMCP'
+import { useGPUNodes, usePodIssues, useClusters } from '../../../hooks/useMCP'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { cn } from '../../../lib/cn'
 import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+
+// Prediction thresholds
+const THRESHOLDS = {
+  highRestartCount: 3,        // Pods with 3+ restarts are at risk
+  cpuPressure: 80,            // 80% CPU = at risk
+  memoryPressure: 85,         // 85% memory = at risk
+  gpuMemoryPressure: 90,      // 90% GPU memory = critical
+}
+
+// Predicted risk types
+type PredictedRisk = {
+  type: 'pod-crash' | 'node-pressure' | 'gpu-exhaustion' | 'resource-exhaustion'
+  severity: 'warning' | 'critical'
+  name: string
+  cluster?: string
+  reason: string
+  metric?: string
+}
 
 // ============================================================================
 // Module-level cache for all nodes (shared across card instances)
@@ -53,10 +71,12 @@ async function fetchAllNodes(): Promise<NodeData[]> {
   return nodesCache
 }
 
-// Card 4: Offline Detection - Detect offline nodes and unavailable GPUs
+// Card 4: Offline Detection - Detect offline nodes and unavailable GPUs + Predictive Failures
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { nodes: gpuNodes, isLoading } = useGPUNodes()
+  const { issues: podIssues } = usePodIssues()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -165,7 +185,99 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     return issues
   }, [gpuNodes, selectedClusters, isAllClustersSelected])
 
+  // Predict potential failures using AI-informed heuristics
+  const predictedRisks = useMemo(() => {
+    const risks: PredictedRisk[] = []
+
+    // 1. Pods with high restart counts - likely to crash
+    const filteredPodIssues = isAllClustersSelected
+      ? podIssues
+      : podIssues.filter(p => selectedClusters.includes(p.cluster || ''))
+
+    filteredPodIssues.forEach(pod => {
+      if (pod.restarts && pod.restarts >= THRESHOLDS.highRestartCount) {
+        risks.push({
+          type: 'pod-crash',
+          severity: pod.restarts >= 5 ? 'critical' : 'warning',
+          name: pod.name,
+          cluster: pod.cluster,
+          reason: `${pod.restarts} restarts - likely to crash`,
+          metric: `${pod.restarts} restarts`,
+        })
+      }
+    })
+
+    // 2. Clusters with high resource usage - at risk of node pressure
+    const filteredClusters = isAllClustersSelected
+      ? clusters
+      : clusters.filter(c => selectedClusters.includes(c.name))
+
+    filteredClusters.forEach(cluster => {
+      // Check CPU pressure (if metrics available)
+      if (cluster.cpuCores && cluster.cpuUsageCores) {
+        const cpuPercent = (cluster.cpuUsageCores / cluster.cpuCores) * 100
+        if (cpuPercent >= THRESHOLDS.cpuPressure) {
+          risks.push({
+            type: 'resource-exhaustion',
+            severity: cpuPercent >= 90 ? 'critical' : 'warning',
+            name: cluster.name,
+            cluster: cluster.name,
+            reason: `CPU at ${cpuPercent.toFixed(0)}% - risk of throttling`,
+            metric: `${cpuPercent.toFixed(0)}% CPU`,
+          })
+        }
+      }
+
+      // Check memory pressure
+      if (cluster.memoryGB && cluster.memoryUsageGB) {
+        const memPercent = (cluster.memoryUsageGB / cluster.memoryGB) * 100
+        if (memPercent >= THRESHOLDS.memoryPressure) {
+          risks.push({
+            type: 'resource-exhaustion',
+            severity: memPercent >= 95 ? 'critical' : 'warning',
+            name: cluster.name,
+            cluster: cluster.name,
+            reason: `Memory at ${memPercent.toFixed(0)}% - risk of OOM`,
+            metric: `${memPercent.toFixed(0)}% memory`,
+          })
+        }
+      }
+    })
+
+    // 3. GPU nodes with high allocation - risk of GPU exhaustion
+    const filteredGpuNodes = isAllClustersSelected
+      ? gpuNodes
+      : gpuNodes.filter(n => selectedClusters.includes(n.cluster))
+
+    filteredGpuNodes.forEach(node => {
+      if (node.gpuCount > 0 && node.gpuAllocated >= node.gpuCount) {
+        risks.push({
+          type: 'gpu-exhaustion',
+          severity: 'warning',
+          name: node.name,
+          cluster: node.cluster,
+          reason: `All ${node.gpuCount} GPUs allocated - no capacity`,
+          metric: `${node.gpuAllocated}/${node.gpuCount} GPUs`,
+        })
+      }
+    })
+
+    // Deduplicate and sort by severity
+    const uniqueRisks = risks.reduce((acc, risk) => {
+      const key = `${risk.type}-${risk.name}-${risk.cluster}`
+      if (!acc.has(key) || acc.get(key)!.severity === 'warning' && risk.severity === 'critical') {
+        acc.set(key, risk)
+      }
+      return acc
+    }, new Map<string, PredictedRisk>())
+
+    return Array.from(uniqueRisks.values())
+      .sort((a, b) => a.severity === 'critical' ? -1 : b.severity === 'critical' ? 1 : 0)
+  }, [podIssues, clusters, gpuNodes, selectedClusters, isAllClustersSelected])
+
   const totalIssues = offlineNodes.length + gpuIssues.length
+  const totalPredicted = predictedRisks.length
+  const criticalPredicted = predictedRisks.filter(r => r.severity === 'critical').length
   const affectedClusters = new Set([
     ...offlineNodes.map(n => n.cluster || 'unknown'),
     ...gpuIssues.map(g => g.cluster)
@@ -184,28 +296,43 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       `- Node ${g.nodeName} (${g.cluster}): ${g.reason}`
     ).join('\n')
 
-    startMission({
-      title: 'Offline Node/GPU Detection',
-      description: `Analyzing ${totalIssues} offline issues across ${affectedClusters} clusters`,
-      type: 'troubleshoot',
-      initialPrompt: `I need help analyzing offline nodes and unavailable GPUs in my Kubernetes clusters.
+    const predictedSummary = predictedRisks.map(r =>
+      `- [${r.severity.toUpperCase()}] ${r.name} (${r.cluster || 'unknown'}): ${r.reason}`
+    ).join('\n')
 
-**Offline/Unhealthy Nodes (${offlineNodes.length}):**
+    const hasCurrentIssues = totalIssues > 0
+    const hasPredictions = totalPredicted > 0
+
+    startMission({
+      title: hasPredictions && !hasCurrentIssues ? 'Predictive Failure Analysis' : 'Node & GPU Analysis',
+      description: hasCurrentIssues
+        ? `Analyzing ${totalIssues} issues${hasPredictions ? ` + ${totalPredicted} predicted risks` : ''}`
+        : `Analyzing ${totalPredicted} predicted failure risks`,
+      type: 'troubleshoot',
+      initialPrompt: `I need help analyzing ${hasCurrentIssues ? 'current issues and ' : ''}potential failures in my Kubernetes clusters.
+
+${hasCurrentIssues ? `**Current Offline/Unhealthy Nodes (${offlineNodes.length}):**
 ${nodesSummary || 'None detected'}
 
-**GPU Availability Issues (${gpuIssues.length}):**
+**Current GPU Issues (${gpuIssues.length}):**
 ${gpuSummary || 'None detected'}
 
+` : ''}**AI-Predicted Failure Risks (${totalPredicted}):**
+${predictedSummary || 'None predicted'}
+
 Please:
-1. Identify the root cause for each offline node
-2. Check for common patterns (network issues, resource exhaustion, driver failures)
-3. For GPU issues, check NVIDIA driver pod status and GPU operator health
-4. Provide specific remediation steps for each issue
-5. Prioritize issues by severity and impact`,
+1. ${hasCurrentIssues ? 'Identify root causes for current offline nodes' : 'Analyze the predicted risks and their likelihood'}
+2. ${hasPredictions ? 'Assess the predicted failures - which are most likely to occur?' : 'Check for patterns in the current issues'}
+3. Provide preventive actions to avoid predicted failures
+4. ${hasCurrentIssues ? 'Provide remediation steps for current issues' : 'Recommend monitoring thresholds to catch issues earlier'}
+5. Prioritize by severity and potential impact
+6. Suggest proactive measures to prevent future failures`,
       context: {
         offlineNodes: offlineNodes.slice(0, 20),
         gpuIssues,
+        predictedRisks: predictedRisks.slice(0, 20),
         affectedClusters,
+        criticalPredicted,
       },
     })
   }
@@ -232,10 +359,10 @@ Please:
       </div>
 
       {/* Status Summary */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4">
         <div
           className={cn(
-            'p-3 rounded-lg border',
+            'p-2 rounded-lg border',
             offlineNodes.length > 0
               ? 'bg-red-500/10 border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors'
               : 'bg-green-500/10 border-green-500/20 cursor-default'
@@ -247,14 +374,14 @@ Please:
           }}
           title={offlineNodes.length > 0 ? `${offlineNodes.length} offline node${offlineNodes.length !== 1 ? 's' : ''} - Click to view` : 'All nodes online'}
         >
-          <div className="text-2xl font-bold text-foreground">{offlineNodes.length}</div>
-          <div className={cn('text-xs', offlineNodes.length > 0 ? 'text-red-400' : 'text-green-400')}>
-            Offline Nodes
+          <div className="text-xl font-bold text-foreground">{offlineNodes.length}</div>
+          <div className={cn('text-[10px]', offlineNodes.length > 0 ? 'text-red-400' : 'text-green-400')}>
+            Offline
           </div>
         </div>
         <div
           className={cn(
-            'p-3 rounded-lg border',
+            'p-2 rounded-lg border',
             gpuIssues.length > 0
               ? 'bg-yellow-500/10 border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors'
               : 'bg-green-500/10 border-green-500/20 cursor-default'
@@ -266,9 +393,28 @@ Please:
           }}
           title={gpuIssues.length > 0 ? `${gpuIssues.length} GPU issue${gpuIssues.length !== 1 ? 's' : ''} - Click to view` : 'All GPUs available'}
         >
-          <div className="text-2xl font-bold text-foreground">{gpuIssues.length}</div>
-          <div className={cn('text-xs', gpuIssues.length > 0 ? 'text-yellow-400' : 'text-green-400')}>
+          <div className="text-xl font-bold text-foreground">{gpuIssues.length}</div>
+          <div className={cn('text-[10px]', gpuIssues.length > 0 ? 'text-yellow-400' : 'text-green-400')}>
             GPU Issues
+          </div>
+        </div>
+        <div
+          className={cn(
+            'p-2 rounded-lg border',
+            totalPredicted > 0
+              ? criticalPredicted > 0
+                ? 'bg-orange-500/10 border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors'
+                : 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
+              : 'bg-green-500/10 border-green-500/20 cursor-default'
+          )}
+          title={totalPredicted > 0 ? `${totalPredicted} predicted risk${totalPredicted !== 1 ? 's' : ''} - AI-detected potential failures` : 'No predicted risks'}
+        >
+          <div className="flex items-center gap-1">
+            <TrendingUp className={cn('w-3 h-3', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')} />
+            <span className="text-xl font-bold text-foreground">{totalPredicted}</span>
+          </div>
+          <div className={cn('text-[10px]', totalPredicted > 0 ? criticalPredicted > 0 ? 'text-orange-400' : 'text-blue-400' : 'text-green-400')}>
+            Predicted
           </div>
         </div>
       </div>
@@ -296,7 +442,7 @@ Please:
             <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
           </div>
         ))}
-        {gpuIssues.slice(0, 2).map((issue, i) => (
+        {gpuIssues.slice(0, 1).map((issue, i) => (
           <div
             key={`gpu-${i}`}
             className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex items-center justify-between"
@@ -310,15 +456,42 @@ Please:
             <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
           </div>
         ))}
-        {totalIssues === 0 && (
+        {/* Predicted Risks */}
+        {predictedRisks.slice(0, 2).map((risk, i) => (
+          <div
+            key={`risk-${i}`}
+            className={cn(
+              'p-2 rounded text-xs cursor-pointer transition-colors group flex items-center justify-between',
+              risk.severity === 'critical'
+                ? 'bg-orange-500/10 hover:bg-orange-500/20'
+                : 'bg-blue-500/10 hover:bg-blue-500/20'
+            )}
+            onClick={() => risk.cluster && drillToCluster(risk.cluster)}
+            title={`Predicted: ${risk.reason}`}
+          >
+            <div className="min-w-0 flex items-center gap-2">
+              {risk.type === 'pod-crash' && <RefreshCw className="w-3 h-3 text-orange-400 flex-shrink-0" />}
+              {risk.type === 'resource-exhaustion' && <Cpu className="w-3 h-3 text-blue-400 flex-shrink-0" />}
+              {risk.type === 'gpu-exhaustion' && <HardDrive className="w-3 h-3 text-purple-400 flex-shrink-0" />}
+              <div>
+                <div className="font-medium text-foreground truncate">{risk.name}</div>
+                <div className={risk.severity === 'critical' ? 'text-orange-400' : 'text-blue-400'}>
+                  {risk.metric} • {risk.cluster}
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+          </div>
+        ))}
+        {totalIssues === 0 && totalPredicted === 0 && (
           <div className="flex items-center justify-center h-full text-sm text-muted-foreground" title="All nodes and GPUs healthy">
             <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
             All nodes & GPUs healthy
           </div>
         )}
-        {totalIssues > 4 && (
-          <div className="text-xs text-muted-foreground text-center" title={`${totalIssues - 4} additional issues`}>
-            +{totalIssues - 4} more issues
+        {(totalIssues + totalPredicted) > 5 && (
+          <div className="text-xs text-muted-foreground text-center" title={`${totalIssues + totalPredicted - 5} additional issues`}>
+            +{totalIssues + totalPredicted - 5} more
           </div>
         )}
       </div>
@@ -326,19 +499,21 @@ Please:
       {/* Action Button */}
       <button
         onClick={handleStartAnalysis}
-        disabled={totalIssues === 0 || !!runningMission}
+        disabled={(totalIssues === 0 && totalPredicted === 0) || !!runningMission}
         className={cn(
           'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all',
-          totalIssues === 0
+          totalIssues === 0 && totalPredicted === 0
             ? 'bg-green-500/20 text-green-400 cursor-default'
             : runningMission
               ? 'bg-purple-500/20 text-purple-400 cursor-wait'
-              : statusColor === 'red'
-                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
-                : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
+              : totalIssues > 0
+                ? statusColor === 'red'
+                  ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
+                  : 'bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400'
+                : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
         )}
       >
-        {totalIssues === 0 ? (
+        {totalIssues === 0 && totalPredicted === 0 ? (
           <>
             <CheckCircle className="w-4 h-4" />
             All Healthy
@@ -348,10 +523,15 @@ Please:
             <Clock className="w-4 h-4 animate-pulse" />
             Analyzing...
           </>
-        ) : (
+        ) : totalIssues > 0 ? (
           <>
             <AlertCircle className="w-4 h-4" />
-            Analyze {totalIssues} Issue{totalIssues !== 1 ? 's' : ''}
+            Analyze {totalIssues} Issue{totalIssues !== 1 ? 's' : ''}{totalPredicted > 0 ? ` + ${totalPredicted} Risks` : ''}
+          </>
+        ) : (
+          <>
+            <TrendingUp className="w-4 h-4" />
+            Analyze {totalPredicted} Predicted Risk{totalPredicted !== 1 ? 's' : ''}
           </>
         )}
       </button>
