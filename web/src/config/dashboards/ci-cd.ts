@@ -10,12 +10,12 @@ export const ciCdDashboardConfig: UnifiedDashboardConfig = {
   route: '/ci-cd',
   statsType: 'ci-cd',
   cards: [
-    { id: 'github-ci-monitor-1', cardType: 'github_ci_monitor', position: { w: 6, h: 4 } },
-    { id: 'github-activity-1', cardType: 'github_activity', position: { w: 6, h: 4 } },
-    { id: 'prow-status-1', cardType: 'prow_status', position: { w: 6, h: 3 } },
-    { id: 'prow-jobs-1', cardType: 'prow_jobs', position: { w: 6, h: 3 } },
-    { id: 'prow-ci-monitor-1', cardType: 'prow_ci_monitor', position: { w: 6, h: 3 } },
-    { id: 'prow-history-1', cardType: 'prow_history', position: { w: 6, h: 3 } },
+    { id: 'prow-status-1', cardType: 'prow_status', position: { w: 4, h: 3 } },
+    { id: 'prow-jobs-1', cardType: 'prow_jobs', position: { w: 4, h: 3 } },
+    { id: 'prow-ci-monitor-1', cardType: 'prow_ci_monitor', position: { w: 4, h: 3 } },
+    { id: 'prow-history-1', cardType: 'prow_history', position: { w: 4, h: 3 } },
+    { id: 'github-ci-monitor-1', cardType: 'github_ci_monitor', position: { w: 4, h: 3 } },
+    { id: 'github-activity-1', cardType: 'github_activity', position: { w: 4, h: 3 } },
   ],
   features: {
     dragDrop: true,

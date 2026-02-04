@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import { useClusters } from '../../hooks/useMCP'
+import { useClusters, useGPUNodes } from '../../hooks/useMCP'
+import { useCachedLLMdModels } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
@@ -10,12 +11,27 @@ const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 // Default cards for AI/ML dashboard
 const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
 
+// LLM-d clusters to monitor
+const LLMD_CLUSTERS = ['vllm-d', 'platform-eval']
+
 export function AIML() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
+  const { models: llmModels, isLoading: llmLoading } = useCachedLLMdModels(LLMD_CLUSTERS)
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Filter reachable clusters
   const reachableClusters = clusters.filter(c => c.reachable !== false)
+
+  // Calculate total GPUs
+  const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
+
+  // Calculate ML workload count (LLM models + other ML deployments)
+  const mlWorkloadCount = llmModels.length
+
+  // Determine if we have real data (not just loading or error states)
+  const hasRealData = gpuNodes.length > 0 || llmModels.length > 0
+  const isDemoData = !hasRealData && !gpuLoading && !llmLoading
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
@@ -23,13 +39,31 @@ export function AIML() {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', isClickable: false }
       case 'gpu_nodes':
-        return { value: 0, sublabel: 'GPU nodes', isClickable: false, isDemo: true }
+        return {
+          value: gpuNodes.length,
+          sublabel: `${totalGPUs} GPUs total`,
+          isClickable: false,
+          isDemo: gpuNodes.length === 0 && !gpuLoading
+        }
       case 'ml_workloads':
-        return { value: 0, sublabel: 'ML workloads', isClickable: false, isDemo: true }
+        return {
+          value: mlWorkloadCount,
+          sublabel: 'ML workloads',
+          isClickable: false,
+          isDemo: mlWorkloadCount === 0 && !llmLoading
+        }
+      case 'loaded_models':
+        const loadedCount = llmModels.filter(m => m.status === 'loaded').length
+        return {
+          value: loadedCount,
+          sublabel: 'models loaded',
+          isClickable: false,
+          isDemo: llmModels.length === 0 && !llmLoading
+        }
       default:
         return { value: '-' }
     }
-  }, [reachableClusters])
+  }, [reachableClusters, gpuNodes, totalGPUs, mlWorkloadCount, llmModels, gpuLoading, llmLoading])
 
   const getStatValue = useCallback(
     (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId),
@@ -46,11 +80,11 @@ export function AIML() {
       statsType="compute"
       getStatValue={getStatValue}
       onRefresh={refetch}
-      isLoading={isLoading}
+      isLoading={isLoading || gpuLoading || llmLoading}
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
-      hasData={reachableClusters.length > 0}
-      isDemoData={true}
+      hasData={reachableClusters.length > 0 || hasRealData}
+      isDemoData={isDemoData}
       emptyState={{
         title: 'AI/ML Dashboard',
         description: 'Add cards to monitor GPU utilization, ML workloads, and model training across your clusters.',
