@@ -15,11 +15,19 @@ export function useDemoData<T>(data: T): DemoState & { data: T } {
 // Keywords that indicate a cluster may have LLM-d or AI/ML workloads
 const LLMD_CLUSTER_KEYWORDS = [
   'vllm', 'llm', 'inference', 'model', 'eval', 'gpu', 'ai', 'ml',
-  'tgi', 'triton', 'serving', 'aibrix', 'hc4ai'
+  'tgi', 'triton', 'serving', 'aibrix', 'hc4ai', 'pok', 'prod',
 ]
 
 // Default clusters known to have llm-d stacks (fallback)
-export const LLMD_CLUSTERS = ['vllm-d', 'platform-eval']
+// pok-prod-* clusters often have production LLM workloads
+export const LLMD_CLUSTERS = [
+  'vllm-d',
+  'platform-eval',
+  'pok-prod-0001',
+  'pok-prod-0002',
+  'pokprod001',
+  'pokprod002',
+]
 
 /**
  * Dynamically discover clusters that likely have LLM-d stacks
