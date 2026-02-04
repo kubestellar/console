@@ -3,6 +3,7 @@
   "short_name": "KubeStellar",
   "description": "KubeStellar Console mini-dashboard widget",
   "start_url": "/widget",
+  "scope": "/widget",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#7c3aed",
