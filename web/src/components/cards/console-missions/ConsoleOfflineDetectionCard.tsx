@@ -29,6 +29,7 @@ type UnifiedItem = {
   reason: string
   reasonDetailed?: string
   metric?: string
+  rootCause?: { cause: string; details: string }
   // Original data references
   nodeData?: NodeData
   gpuData?: { nodeName: string; cluster: string; expected: number; available: number; reason: string }
@@ -49,7 +50,99 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 // ============================================================================
 // Module-level cache for all nodes (shared across card instances)
 // ============================================================================
-type NodeData = { name: string; cluster?: string; status: string; roles: string[]; unschedulable?: boolean }
+type NodeCondition = {
+  type: string
+  status: string
+  reason?: string
+  message?: string
+}
+
+type NodeData = {
+  name: string
+  cluster?: string
+  status: string
+  roles: string[]
+  unschedulable?: boolean
+  conditions?: NodeCondition[]
+}
+
+// Analyze node conditions to determine root cause of unhealthy status
+function analyzeRootCause(node: NodeData): { cause: string; details: string } | null {
+  if (!node.conditions || node.conditions.length === 0) {
+    return null
+  }
+
+  // Check for problematic conditions
+  const problems: string[] = []
+  const details: string[] = []
+
+  for (const condition of node.conditions) {
+    // MemoryPressure, DiskPressure, PIDPressure should be False
+    if (['MemoryPressure', 'DiskPressure', 'PIDPressure', 'NetworkUnavailable'].includes(condition.type)) {
+      if (condition.status === 'True') {
+        problems.push(condition.type)
+        details.push(`${condition.type}: ${condition.message || condition.reason || 'Unknown'}`)
+      }
+    }
+    // Ready should be True
+    if (condition.type === 'Ready' && condition.status !== 'True') {
+      if (condition.reason && condition.reason !== 'KubeletNotReady') {
+        problems.push(condition.reason)
+      }
+      if (condition.message) {
+        details.push(`Ready: ${condition.message}`)
+      }
+    }
+  }
+
+  if (problems.length === 0) {
+    // Node is cordoned but healthy otherwise
+    if (node.unschedulable) {
+      return {
+        cause: 'Cordoned for maintenance',
+        details: 'Node is healthy but marked as unschedulable. This is typically done for planned maintenance or upgrades.'
+      }
+    }
+    return null
+  }
+
+  // Determine primary root cause
+  if (problems.includes('MemoryPressure')) {
+    return {
+      cause: 'Memory pressure',
+      details: details.join('; ') || 'Node is running low on memory. Pods may be evicted.'
+    }
+  }
+  if (problems.includes('DiskPressure')) {
+    return {
+      cause: 'Disk pressure',
+      details: details.join('; ') || 'Node is running low on disk space. Image pulls may fail.'
+    }
+  }
+  if (problems.includes('PIDPressure')) {
+    return {
+      cause: 'PID pressure',
+      details: details.join('; ') || 'Node is running low on process IDs. New processes may fail to start.'
+    }
+  }
+  if (problems.includes('NetworkUnavailable')) {
+    return {
+      cause: 'Network unavailable',
+      details: details.join('; ') || 'Network is not configured correctly. Pods may not be able to communicate.'
+    }
+  }
+  if (problems.includes('KubeletDown') || problems.includes('ContainerRuntimeUnhealthy')) {
+    return {
+      cause: 'Kubelet/Runtime issue',
+      details: details.join('; ') || 'Kubelet or container runtime is not responding.'
+    }
+  }
+
+  return {
+    cause: problems.join(', '),
+    details: details.join('; ') || 'Multiple conditions are affecting this node.'
+  }
+}
 
 let nodesCache: NodeData[] = []
 let nodesCacheTimestamp = 0
@@ -391,15 +484,18 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const unifiedItems = useMemo((): UnifiedItem[] => {
     const items: UnifiedItem[] = []
 
-    // Add offline nodes
+    // Add offline nodes with root cause analysis
     offlineNodes.forEach((node, i) => {
+      const rootCause = analyzeRootCause(node)
       items.push({
         id: `offline-${node.name}-${node.cluster || i}`,
         category: 'offline',
         name: node.name,
         cluster: node.cluster || 'unknown',
         severity: 'critical',
-        reason: node.unschedulable ? 'Cordoned' : node.status,
+        reason: rootCause?.cause || (node.unschedulable ? 'Cordoned' : node.status),
+        reasonDetailed: rootCause?.details,
+        rootCause: rootCause || undefined,
         nodeData: node,
       })
     })
@@ -564,9 +660,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const doStartAnalysis = () => {
     // When filter is active, use filtered data from sortedItems
     // Otherwise use the full unfiltered data
-    const filteredOfflineNodes = isFiltered
-      ? sortedItems.filter(i => i.category === 'offline' && i.nodeData).map(i => i.nodeData!)
-      : offlineNodes
+    const filteredOfflineItems = isFiltered
+      ? sortedItems.filter(i => i.category === 'offline')
+      : unifiedItems.filter(i => i.category === 'offline')
+    const filteredOfflineNodes = filteredOfflineItems.map(i => i.nodeData!).filter(Boolean)
     const filteredGpuIssuesList = isFiltered
       ? sortedItems.filter(i => i.category === 'gpu' && i.gpuData).map(i => i.gpuData!)
       : gpuIssues
@@ -574,9 +671,17 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       ? sortedItems.filter(i => i.category === 'prediction' && i.predictionData).map(i => i.predictionData!)
       : predictedRisks
 
-    const nodesSummary = filteredOfflineNodes.map(n =>
-      `- Node ${n.name} (${n.cluster || 'unknown'}): Status=${n.unschedulable ? 'Cordoned' : n.status}`
-    ).join('\n')
+    // Include root cause analysis in the summary
+    const nodesSummary = filteredOfflineItems.map(item => {
+      const n = item.nodeData!
+      const rootCause = item.rootCause
+      let line = `- Node ${n.name} (${n.cluster || 'unknown'}): Status=${n.unschedulable ? 'Cordoned' : n.status}`
+      if (rootCause) {
+        line += `\n  Root Cause: ${rootCause.cause}`
+        line += `\n  Details: ${rootCause.details}`
+      }
+      return line
+    }).join('\n')
 
     const gpuSummary = filteredGpuIssuesList.map(g =>
       `- Node ${g.nodeName} (${g.cluster}): ${g.reason}`
@@ -774,6 +879,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           // Render based on category
           if (item.category === 'offline' && item.nodeData) {
             const node = item.nodeData
+            const rootCause = item.rootCause
             return (
               <div
                 key={item.id}
@@ -782,22 +888,23 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                   status: node.unschedulable ? 'Cordoned' : node.status,
                   unschedulable: node.unschedulable,
                   roles: node.roles,
-                  issue: node.unschedulable ? 'Node is cordoned and not accepting new workloads' : `Node status: ${node.status}`
+                  issue: rootCause?.details || (node.unschedulable ? 'Node is cordoned and not accepting new workloads' : `Node status: ${node.status}`),
+                  rootCause: rootCause?.cause,
                 })}
-                title={`Click to diagnose ${node.name}`}
+                title={rootCause ? `${rootCause.cause}: ${rootCause.details}` : `Click to diagnose ${node.name}`}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium text-foreground truncate">{node.name}</span>
                     <span className="flex-shrink-0 px-1 py-0.5 text-[9px] font-medium bg-red-500/20 text-red-400 rounded">
-                      Offline
+                      {rootCause?.cause || 'Offline'}
                     </span>
                     {node.cluster && (
                       <ClusterBadge cluster={node.cluster} size="sm" />
                     )}
                   </div>
                   <div className="text-red-400 truncate mt-0.5">
-                    {node.unschedulable ? 'Cordoned' : node.status}
+                    {rootCause?.details || (node.unschedulable ? 'Cordoned' : node.status)}
                   </div>
                 </div>
                 <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
