@@ -18,6 +18,7 @@ import {
   AccessibilitySection,
   PermissionsSection,
   PredictionSettingsSection,
+  WidgetSettingsSection,
 } from './sections'
 
 export function Settings() {
@@ -57,6 +58,9 @@ export function Settings() {
 
         {/* Local Agent */}
         <AgentSection isConnected={isConnected} health={health} refresh={refresh} />
+
+        {/* Desktop Widget */}
+        <WidgetSettingsSection />
 
         {/* GitHub Integration */}
         <GitHubTokenSection forceVersionCheck={forceVersionCheck} />

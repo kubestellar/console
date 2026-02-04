@@ -92,3 +92,9 @@ After completing implementation tasks, create test tasks that use:
 - `mcp__chrome-devtools__click` / `mcp__chrome-devtools__fill` - Interact with UI
 - `mcp__chrome-devtools__take_screenshot` - Capture visual state
 - `mcp__chrome-devtools__list_network_requests` - Verify API calls
+
+---
+
+## TODO
+
+- [ ] Test token counter works with predictions in the offline detector
