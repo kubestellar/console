@@ -20,16 +20,12 @@ import {
   getMockComplianceData,
   type ComplianceCheck,
 } from '../../mocks/securityData'
+import { getDefaultCards } from '../../config/dashboards'
 
 const SECURITY_CARDS_KEY = 'kubestellar-security-cards'
 
 // Default cards for the security dashboard
-const DEFAULT_SECURITY_CARDS = [
-  { type: 'security_overview', title: 'Security Overview', position: { w: 4, h: 3 } },
-  { type: 'security_issues', title: 'Security Issues', position: { w: 4, h: 3 } },
-  { type: 'rbac_summary', title: 'RBAC Summary', position: { w: 4, h: 3 } },
-  { type: 'compliance_score', title: 'Compliance Score', position: { w: 6, h: 3 } },
-]
+const DEFAULT_SECURITY_CARDS = getDefaultCards('security')
 
 type ViewTab = 'overview' | 'issues' | 'rbac' | 'compliance'
 

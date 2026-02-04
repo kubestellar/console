@@ -6,17 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 
 // Default cards for the Cost dashboard
-const DEFAULT_COST_CARDS = [
-  { type: 'cluster_costs', position: { w: 6, h: 4 } },
-  { type: 'opencost_overview', position: { w: 6, h: 4 } },
-  { type: 'kubecost_overview', position: { w: 6, h: 4 } },
-  { type: 'resource_usage', position: { w: 3, h: 2 } },
-  { type: 'resource_capacity', position: { w: 3, h: 2 } },
-]
+const DEFAULT_COST_CARDS = getDefaultCards('cost')
 
 export function Cost() {
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()

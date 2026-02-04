@@ -8,6 +8,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 // PVC List Modal
 interface PVCListModalProps {
@@ -114,10 +115,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
 const STORAGE_CARDS_KEY = 'kubestellar-storage-cards'
 
 // Default cards for the storage dashboard
-const DEFAULT_STORAGE_CARDS = [
-  { type: 'storage_overview', title: 'Storage Overview', position: { w: 4, h: 3 } },
-  { type: 'pvc_status', title: 'PVC Status', position: { w: 8, h: 3 } },
-]
+const DEFAULT_STORAGE_CARDS = getDefaultCards('storage')
 
 export function Storage() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()

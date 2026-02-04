@@ -6,17 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const ALERTS_STORAGE_KEY = 'kubestellar-alerts-dashboard-cards'
 
 // Default cards for the alerts dashboard
-const DEFAULT_ALERT_CARDS = [
-  { type: 'active_alerts', title: 'Active Alerts', position: { w: 6, h: 2 } },
-  { type: 'alert_rules', title: 'Alert Rules', position: { w: 6, h: 2 } },
-  { type: 'pod_issues', title: 'Pod Issues', position: { w: 4, h: 2 } },
-  { type: 'deployment_issues', title: 'Deployment Issues', position: { w: 4, h: 2 } },
-  { type: 'security_issues', title: 'Security Issues', position: { w: 4, h: 2 } },
-]
+const DEFAULT_ALERT_CARDS = getDefaultCards('alerts')
 
 export function Alerts() {
   const { stats, evaluateConditions } = useAlerts()

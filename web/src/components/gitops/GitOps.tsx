@@ -10,6 +10,7 @@ import { api } from '../../lib/api'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 // GitOps app configuration (repos to monitor)
 interface GitOpsAppConfig {
@@ -45,13 +46,7 @@ interface DriftResult {
 const GITOPS_STORAGE_KEY = 'kubestellar-gitops-dashboard-cards'
 
 // Default cards for the GitOps dashboard
-const DEFAULT_GITOPS_CARDS = [
-  { type: 'argocd_applications', title: 'ArgoCD Applications', position: { w: 6, h: 4 } },
-  { type: 'argocd_sync_status', title: 'ArgoCD Sync Status', position: { w: 6, h: 3 } },
-  { type: 'helm_release_status', title: 'Helm Releases', position: { w: 6, h: 3 } },
-  { type: 'kustomization_status', title: 'Kustomization Status', position: { w: 6, h: 3 } },
-  { type: 'gitops_drift', title: 'GitOps Drift', position: { w: 6, h: 3 } },
-]
+const DEFAULT_GITOPS_CARDS = getDefaultCards('gitops')
 
 // Apps to monitor - these could come from a config file or API
 function getGitOpsAppConfigs(): GitOpsAppConfig[] {

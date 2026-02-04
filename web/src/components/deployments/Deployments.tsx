@@ -7,16 +7,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const DEPLOYMENTS_CARDS_KEY = 'kubestellar-deployments-cards'
 
 // Default cards for the deployments dashboard
-const DEFAULT_DEPLOYMENTS_CARDS = [
-  { type: 'deployment_status', title: 'Deployment Status', position: { w: 6, h: 3 } },
-  { type: 'deployment_progress', title: 'Deployment Progress', position: { w: 6, h: 3 } },
-  { type: 'deployment_issues', title: 'Deployment Issues', position: { w: 6, h: 3 } },
-  { type: 'app_status', title: 'Workload Status', position: { w: 6, h: 3 } },
-]
+const DEFAULT_DEPLOYMENTS_CARDS = getDefaultCards('deployments')
 
 export function Deployments() {
   // Use cached hooks for stale-while-revalidate pattern

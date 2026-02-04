@@ -6,17 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 
 // Default cards for the nodes dashboard
-const DEFAULT_NODES_CARDS = [
-  { type: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-  { type: 'compute_overview', title: 'Compute Overview', position: { w: 4, h: 3 } },
-  { type: 'resource_capacity', title: 'Resource Capacity', position: { w: 4, h: 3 } },
-  { type: 'resource_usage', title: 'Resource Usage', position: { w: 6, h: 3 } },
-  { type: 'cluster_metrics', title: 'Cluster Metrics', position: { w: 6, h: 3 } },
-]
+const DEFAULT_NODES_CARDS = getDefaultCards('nodes')
 
 export function Nodes() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()

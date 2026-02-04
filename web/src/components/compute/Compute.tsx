@@ -7,17 +7,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
 // Default cards for the compute dashboard
-const DEFAULT_COMPUTE_CARDS = [
-  { type: 'compute_overview', title: 'Compute Overview', position: { w: 4, h: 3 } },
-  { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 2 } },
-  { type: 'resource_capacity', title: 'Resource Capacity', position: { w: 4, h: 2 } },
-  { type: 'cluster_metrics', title: 'Cluster Metrics', position: { w: 4, h: 2 } },
-  { type: 'top_pods', title: 'Top Resource Consumers', position: { w: 8, h: 3 } },
-]
+const DEFAULT_COMPUTE_CARDS = getDefaultCards('compute')
 
 export function Compute() {
   const [searchParams, setSearchParams] = useSearchParams()

@@ -10,16 +10,12 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 
 // Default cards for the pods dashboard
-const DEFAULT_POD_CARDS = [
-  { type: 'pod_issues', title: 'Pod Issues', position: { w: 6, h: 2 } },
-  { type: 'pod_health_trend', title: 'Pod Health Trend', position: { w: 6, h: 2 } },
-  { type: 'top_pods', title: 'Top Pods', position: { w: 6, h: 2 } },
-  { type: 'app_status', title: 'Workload Status', position: { w: 6, h: 2 } },
-]
+const DEFAULT_POD_CARDS = getDefaultCards('pods')
 
 export function Pods() {
   // Use cached hooks for stale-while-revalidate pattern

@@ -10,6 +10,49 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 
+// ============================================================================
+// Module-level cache for all nodes (shared across card instances)
+// ============================================================================
+type NodeData = { name: string; cluster?: string; status: string; roles: string[]; unschedulable?: boolean }
+
+let nodesCache: NodeData[] = []
+let nodesCacheTimestamp = 0
+let nodesFetchInProgress = false
+const NODES_CACHE_TTL = 30000 // 30 seconds
+const nodesSubscribers = new Set<(nodes: NodeData[]) => void>()
+
+function notifyNodesSubscribers() {
+  nodesSubscribers.forEach(cb => cb(nodesCache))
+}
+
+async function fetchAllNodes(): Promise<NodeData[]> {
+  // Return cached data if still fresh
+  if (Date.now() - nodesCacheTimestamp < NODES_CACHE_TTL && nodesCache.length > 0) {
+    return nodesCache
+  }
+
+  // If fetch in progress, wait and return cache
+  if (nodesFetchInProgress) {
+    return nodesCache
+  }
+
+  nodesFetchInProgress = true
+  try {
+    const response = await fetch('http://127.0.0.1:8585/nodes')
+    if (response.ok) {
+      const data = await response.json()
+      nodesCache = data.nodes || []
+      nodesCacheTimestamp = Date.now()
+      notifyNodesSubscribers()
+    }
+  } catch (error) {
+    console.error('[OfflineDetection] Error fetching nodes:', error)
+  } finally {
+    nodesFetchInProgress = false
+  }
+  return nodesCache
+}
+
 // Card 4: Offline Detection - Detect offline nodes and unavailable GPUs
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
@@ -24,11 +67,11 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     hasAnyData: gpuNodes.length > 0,
   })
 
-  // Get all nodes from direct API fetch
-  const [allNodes, setAllNodes] = useState<Array<{ name: string; cluster?: string; status: string; roles: string[]; unschedulable?: boolean }>>([])
-  const [, setNodesLoading] = useState(true)
+  // Get all nodes from shared cache
+  const [allNodes, setAllNodes] = useState<NodeData[]>(() => nodesCache)
+  const [, setNodesLoading] = useState(nodesCache.length === 0)
 
-  // Fetch nodes from local agent (no auth required)
+  // Subscribe to cache updates and fetch nodes
   useEffect(() => {
     // Skip agent requests in demo mode (no local agent on Netlify)
     if (getDemoMode()) {
@@ -36,27 +79,26 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       return
     }
 
-    const fetchNodes = async () => {
-      setNodesLoading(true)
-      try {
-        // Use local agent directly - works without auth
-        const response = await fetch('http://127.0.0.1:8585/nodes')
-
-        if (response.ok) {
-          const data = await response.json()
-          setAllNodes(data.nodes || [])
-        }
-      } catch (error) {
-        console.error('[OfflineDetection] Error fetching nodes:', error)
-      } finally {
-        setNodesLoading(false)
-      }
+    // Subscribe to cache updates
+    const handleUpdate = (nodes: NodeData[]) => {
+      setAllNodes(nodes)
+      setNodesLoading(false)
     }
+    nodesSubscribers.add(handleUpdate)
 
-    fetchNodes()
+    // Initial fetch (will use cache if fresh)
+    fetchAllNodes().then(nodes => {
+      setAllNodes(nodes)
+      setNodesLoading(false)
+    })
+
     // Poll every 30 seconds
-    const interval = setInterval(fetchNodes, 30000)
-    return () => clearInterval(interval)
+    const interval = setInterval(() => fetchAllNodes(), 30000)
+
+    return () => {
+      nodesSubscribers.delete(handleUpdate)
+      clearInterval(interval)
+    }
   }, [])
 
   // Filter nodes by global cluster filter

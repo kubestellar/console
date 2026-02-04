@@ -6,16 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const HELM_CARDS_KEY = 'kubestellar-helm-cards'
 
 // Default cards for the helm releases dashboard
-const DEFAULT_HELM_CARDS = [
-  { type: 'helm_release_status', title: 'Helm Releases', position: { w: 6, h: 3 } },
-  { type: 'chart_versions', title: 'Chart Versions', position: { w: 6, h: 3 } },
-  { type: 'helm_history', title: 'Release History', position: { w: 6, h: 3 } },
-  { type: 'helm_values_diff', title: 'Values Diff', position: { w: 6, h: 3 } },
-]
+const DEFAULT_HELM_CARDS = getDefaultCards('helm')
 
 export function HelmReleases() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()

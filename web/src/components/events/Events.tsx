@@ -11,16 +11,12 @@ import { cn } from '../../lib/cn'
 import { formatStat } from '../../lib/formatStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const EVENTS_CARDS_KEY = 'kubestellar-events-cards'
 
 // Default cards for the events dashboard
-const DEFAULT_EVENTS_CARDS = [
-  { type: 'event_stream', title: 'Event Stream', position: { w: 6, h: 3 } },
-  { type: 'event_summary', title: 'Event Summary', position: { w: 6, h: 3 } },
-  { type: 'warning_events', title: 'Warning Events', position: { w: 6, h: 3 } },
-  { type: 'recent_events', title: 'Recent Events', position: { w: 6, h: 3 } },
-]
+const DEFAULT_EVENTS_CARDS = getDefaultCards('events')
 
 // Module-level cache for events stats (persists across navigation)
 interface EventsStatsCache {

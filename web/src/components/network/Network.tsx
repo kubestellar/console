@@ -6,15 +6,12 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
 // Default cards for the network dashboard
-const DEFAULT_NETWORK_CARDS = [
-  { type: 'network_overview', title: 'Network Overview', position: { w: 4, h: 3 } },
-  { type: 'service_status', title: 'Service Status', position: { w: 8, h: 3 } },
-  { type: 'cluster_network', title: 'Cluster Network', position: { w: 6, h: 2 } },
-]
+const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()

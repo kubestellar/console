@@ -6,16 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const COMPLIANCE_CARDS_KEY = 'compliance-dashboard-cards'
 
 // Default cards for the Compliance dashboard
-const DEFAULT_COMPLIANCE_CARDS = [
-  { type: 'opa_policies', title: 'OPA Gatekeeper', position: { w: 4, h: 3 } },
-  { type: 'kyverno_policies', title: 'Kyverno Policies', position: { w: 4, h: 3 } },
-  { type: 'security_issues', title: 'Security Issues', position: { w: 8, h: 4 } },
-  { type: 'namespace_rbac', title: 'Namespace RBAC', position: { w: 6, h: 4 } },
-]
+const DEFAULT_COMPLIANCE_CARDS = getDefaultCards('compliance')
 
 // Mock compliance posture data
 function getCompliancePosture(clusterCount: number) {

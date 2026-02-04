@@ -3,14 +3,12 @@ import { useClusters } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'
 
 // Default cards for CI/CD dashboard
-const DEFAULT_CICD_CARDS = [
-  { type: 'pipeline_status', title: 'Pipeline Status', position: { w: 6, h: 3 } },
-  { type: 'deployment_history', title: 'Deployment History', position: { w: 6, h: 3 } },
-]
+const DEFAULT_CICD_CARDS = getDefaultCards('ci-cd')
 
 export function CICD() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()

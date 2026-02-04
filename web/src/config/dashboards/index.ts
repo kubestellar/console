@@ -75,6 +75,42 @@ export function getUnifiedDashboardIds(): string[] {
   return Object.keys(DASHBOARD_CONFIGS)
 }
 
+/**
+ * Get default cards for a dashboard in the legacy format used by DashboardPage
+ * Converts from UnifiedDashboardConfig.cards to the legacy { type, title, position } format
+ */
+export function getDefaultCards(dashboardId: string): Array<{ type: string; title?: string; position: { w: number; h: number } }> {
+  const config = DASHBOARD_CONFIGS[dashboardId]
+  if (!config?.cards) return []
+
+  return config.cards.map(card => ({
+    type: card.cardType,
+    title: card.title,
+    position: { w: card.position.w, h: card.position.h },
+  }))
+}
+
+/**
+ * Get default cards for a dashboard in the Dashboard.tsx format
+ * Converts from UnifiedDashboardConfig.cards to { id, card_type, config, position } format
+ */
+export function getDefaultCardsForDashboard(dashboardId: string): Array<{ id: string; card_type: string; config: Record<string, unknown>; position: { x: number; y: number; w: number; h: number } }> {
+  const config = DASHBOARD_CONFIGS[dashboardId]
+  if (!config?.cards) return []
+
+  return config.cards.map((card, index) => ({
+    id: card.id || `default-${index}`,
+    card_type: card.cardType,
+    config: {},
+    position: {
+      x: card.position.x ?? (index % 3) * 4,
+      y: card.position.y ?? Math.floor(index / 3) * 3,
+      w: card.position.w,
+      h: card.position.h,
+    },
+  }))
+}
+
 // Re-export individual configs
 export {
   mainDashboardConfig,

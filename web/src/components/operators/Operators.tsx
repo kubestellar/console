@@ -6,16 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const OPERATORS_CARDS_KEY = 'kubestellar-operators-cards'
 
 // Default cards for the operators dashboard
-const DEFAULT_OPERATORS_CARDS = [
-  { type: 'operator_status', title: 'Operator Status', position: { w: 4, h: 3 } },
-  { type: 'operator_subscriptions', title: 'Subscriptions', position: { w: 8, h: 3 } },
-  { type: 'crd_health', title: 'CRD Health', position: { w: 4, h: 3 } },
-  { type: 'event_stream', title: 'Operator Events', config: { filter: 'operator' }, position: { w: 8, h: 3 } },
-]
+const DEFAULT_OPERATORS_CARDS = getDefaultCards('operators')
 
 export function Operators() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()

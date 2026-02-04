@@ -3,14 +3,12 @@ import { useClusters } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 
 // Default cards for AI/ML dashboard
-const DEFAULT_AIML_CARDS = [
-  { type: 'gpu_utilization', title: 'GPU Utilization', position: { w: 6, h: 3 } },
-  { type: 'ml_workloads', title: 'ML Workloads', position: { w: 6, h: 3 } },
-]
+const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
 
 export function AIML() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()

@@ -6,16 +6,12 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
+import { getDefaultCards } from '../../config/dashboards'
 
 const SERVICES_CARDS_KEY = 'kubestellar-services-cards'
 
 // Default cards for the services dashboard
-const DEFAULT_SERVICES_CARDS = [
-  { type: 'service_status', title: 'Service Status', position: { w: 8, h: 3 } },
-  { type: 'network_overview', title: 'Network Overview', position: { w: 4, h: 3 } },
-  { type: 'cluster_network', title: 'Cluster Network', position: { w: 6, h: 3 } },
-  { type: 'event_stream', title: 'Network Events', config: { filter: 'network' }, position: { w: 6, h: 3 } },
-]
+const DEFAULT_SERVICES_CARDS = getDefaultCards('services')
 
 export function Services() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()

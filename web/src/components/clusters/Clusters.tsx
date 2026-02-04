@@ -32,19 +32,13 @@ import { isClusterUnreachable } from './utils'
 import { formatK8sMemory } from '../../lib/formatters'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { getDefaultCards } from '../../config/dashboards'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 
-// Default cards for the clusters dashboard
-const DEFAULT_CLUSTERS_CARDS = [
-  { type: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-  { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 3 } },
-  { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 3 } },
-  { type: 'pod_issues', title: 'Pod Issues', position: { w: 6, h: 3 } },
-  { type: 'events_timeline', title: 'Events Timeline', position: { w: 6, h: 3 } },
-  { type: 'cluster_locations', title: 'Cluster Locations', position: { w: 8, h: 4 } },
-]
+// Default cards loaded from centralized config
+const DEFAULT_CLUSTERS_CARDS = getDefaultCards('clusters')
 
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
