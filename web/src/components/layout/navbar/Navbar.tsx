@@ -108,9 +108,8 @@ export function Navbar() {
           <TourTrigger />
 
           {/* Active Viewers */}
-          <div 
+          <div
             className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground"
-            title={viewersError ? 'Failed to load viewer count' : viewersLoading ? 'Loading viewers...' : `${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
           >
             <User className={`w-4 h-4 ${viewersError ? 'text-red-400' : ''}`} />
             <span className={`text-xs tabular-nums ${viewersLoading ? 'animate-pulse' : ''}`}>
@@ -182,9 +181,8 @@ export function Navbar() {
                   <div className="border-t border-border my-2" />
                   <div className="px-3 py-2 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Viewers</span>
-                    <div 
+                    <div
                       className="flex items-center gap-1 text-muted-foreground"
-                      title={viewersError ? 'Failed to load viewer count' : viewersLoading ? 'Loading viewers...' : `${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
                     >
                       <User className={`w-4 h-4 ${viewersError ? 'text-red-400' : ''}`} />
                       <span className={`text-xs tabular-nums ${viewersLoading ? 'animate-pulse' : ''}`}>
