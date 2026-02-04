@@ -1,6 +1,6 @@
 # KubeStellar Console - Complete Inventory
 
-Last Updated: 2026-02-02
+Last Updated: 2026-02-04
 
 ## Summary
 
@@ -10,7 +10,7 @@ Last Updated: 2026-02-02
 | Card Types | 143 |
 | Cards with Drill-Down | 40 |
 | Drill-Down Views | 23 |
-| Modal Dialogs | 28 |
+| Modal Dialogs | 37 |
 | Stats Block Types | 93 (across 14 dashboard types) |
 | Cards with Demo Data | 42 (29%) |
 | Cards with Live Data Hooks | 101 (71%) |
@@ -517,7 +517,7 @@ Based on feature requests:
 
 ---
 
-## 7. Modal Dialogs (28 Total)
+## 7. Modal Dialogs (37 Total)
 
 ### Dashboard-Related Modals (9)
 | # | Name | File | Trigger | Description |
@@ -585,11 +585,44 @@ Based on feature requests:
 |---|------|------|---------|-------------|
 | 26 | StatsConfigModal | `clusters/components/StatsConfig.tsx`, `ui/StatsConfig.tsx` | Stats settings icon | Configure visible stats and drag-drop reordering for stat blocks |
 
+### API Key & Settings Modals (2)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 27 | APIKeySettings | `agent/APIKeySettings.tsx` | Settings > API Keys | Configure AI provider API keys (Claude, OpenAI, Gemini) with validation and status |
+| 28 | ApiKeyPromptModal | `cards/console-missions/shared.tsx` | AI feature without key | Prompt to configure API key when AI features are used without credentials |
+
+### Policy & Security Modals (3)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 29 | PolicyDetailModal | `cards/OPAPolicies.tsx` | Click policy in OPA card | Display policy details, violations, and enforcement mode with option to create similar |
+| 30 | ClusterOPAModal | `cards/OPAPolicies.tsx` | Click violations count | Full cluster OPA status with policies and violations management |
+| 31 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit namespace resource quotas with GPU presets |
+
+### Resource Detail Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 32 | ResourceDetailModal | `clusters/Clusters.tsx` | Click pod/event item | Generic resource details with tabs: Overview/Labels/Related/Describe/Logs/Events/YAML |
+
+### Widget & Export Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 33 | WidgetExportModal | `widgets/WidgetExportModal.tsx` | Export menu | Export dashboard cards as standalone desktop widgets for Übersicht and other platforms |
+
+### Onboarding Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 34 | InstallModal | `onboarding/DemoInstallGuide.tsx` | Demo mode banner | Installation guide with copy-paste commands and OAuth configuration |
+
+### Rewards Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 35 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
+
 ### Utility Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 27 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
-| 28 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
+| 36 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
+| 37 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
 
 ### Modal Features
 - All modals support ESC key to close
