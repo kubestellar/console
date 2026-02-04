@@ -190,6 +190,7 @@ Please analyze this cluster and provide:
         deploymentIssuesCount: clusterDeploymentIssues.length,
       }
     })
+    onClose()
   }
 
   const handleRepair = () => {
@@ -221,6 +222,7 @@ After I approve, help me execute the repairs step by step.`,
         deploymentIssues: clusterDeploymentIssues.slice(0, 10),
       }
     })
+    onClose()
   }
 
   // Determine cluster status - use same logic as utils.ts
@@ -369,6 +371,7 @@ After I approve, help me execute the repairs step by step.`,
                   initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${health?.memoryGB || 0} GB memory. How can I help you?`,
                   context: { clusterName, health }
                 })
+                onClose()
               }}
               disabled={isUnreachable}
               className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
