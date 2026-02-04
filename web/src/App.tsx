@@ -50,6 +50,7 @@ const Arcade = lazy(() => import('./components/arcade/Arcade').then(m => ({ defa
 const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ default: m.Deploy })))
 const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
+const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
 
 // Prefetch all lazy route chunks after initial page load.
 // This runs during idle time so by the time the user navigates,
@@ -193,6 +194,15 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* PWA Mini Dashboard - lightweight widget mode */}
+        <Route
+          path="/widget"
+          element={
+            <ProtectedRoute>
+              <MiniDashboard />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/onboarding"
           element={

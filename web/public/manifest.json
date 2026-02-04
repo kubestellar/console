@@ -1,0 +1,31 @@
+{
+  "name": "KC Console Widget",
+  "short_name": "KC Widget",
+  "description": "KubeStellar Console mini-dashboard widget",
+  "start_url": "/widget",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#7c3aed",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/kubestellar.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Full Dashboard",
+      "url": "/dashboard",
+      "description": "Open full KC Console dashboard"
+    }
+  ]
+}
