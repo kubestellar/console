@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Black background with rounded corners for maskable icon -->
+  <rect width="512" height="512" rx="64" fill="#0f172a"/>
+
+  <!-- KubeStellar hexagon logo centered -->
+  <g transform="translate(56, 56) scale(0.78)">
+    <defs>
+      <linearGradient id="pwa-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#60a5fa"/>
+        <stop offset="50%" style="stop-color:#34d399"/>
+        <stop offset="100%" style="stop-color:#a78bfa"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Outer hexagon ring -->
+    <path d="M256 32 L448 128 L448 320 L256 416 L64 320 L64 128 Z"
+          fill="none" stroke="url(#pwa-gradient)" stroke-width="8" opacity="0.3"/>
+
+    <!-- Middle hexagon -->
+    <path d="M256 64 L416 144 L416 304 L256 384 L96 304 L96 144 Z"
+          fill="none" stroke="url(#pwa-gradient)" stroke-width="6" opacity="0.5"/>
+
+    <!-- Inner filled hexagon grid -->
+    <g fill="url(#pwa-gradient)" opacity="0.9">
+      <!-- Center hexagon -->
+      <path d="M256 176 L296 200 L296 248 L256 272 L216 248 L216 200 Z"/>
+
+      <!-- Top -->
+      <path d="M256 96 L296 120 L296 168 L256 192 L216 168 L216 120 Z"/>
+
+      <!-- Top-right -->
+      <path d="M336 136 L376 160 L376 208 L336 232 L296 208 L296 160 Z"/>
+
+      <!-- Bottom-right -->
+      <path d="M336 216 L376 240 L376 288 L336 312 L296 288 L296 240 Z"/>
+
+      <!-- Bottom -->
+      <path d="M256 256 L296 280 L296 328 L256 352 L216 328 L216 280 Z"/>
+
+      <!-- Bottom-left -->
+      <path d="M176 216 L216 240 L216 288 L176 312 L136 288 L136 240 Z"/>
+
+      <!-- Top-left -->
+      <path d="M176 136 L216 160 L216 208 L176 232 L136 208 L136 160 Z"/>
+    </g>
+  </g>
+</svg>
