@@ -45,14 +45,9 @@ const config = {
   refreshInterval: ${refreshInterval},
 };
 
-const headers = {
-  'Authorization': \`Bearer \${process.env.KC_API_TOKEN || ''}\`,
-  'Content-Type': 'application/json',
-};
-
 // Fetch data from KC API
 export const command = (dispatch) => {
-  fetch('${endpoints[0]}', { headers })
+  fetch('${endpoints[0]}')
     .then(response => {
       if (!response.ok) throw new Error(\`HTTP \${response.status}\`);
       return response.json();
@@ -263,15 +258,10 @@ const config = {
   refreshInterval: ${refreshInterval},
 };
 
-const headers = {
-  'Authorization': \`Bearer \${process.env.KC_API_TOKEN || ''}\`,
-  'Content-Type': 'application/json',
-};
-
 export const command = async (dispatch) => {
   try {
     const results = await Promise.all([
-      ${endpoints.map((ep) => `fetch('${ep}', { headers }).then(r => r.json())`).join(',\n      ')}
+      ${endpoints.map((ep) => `fetch('${ep}').then(r => r.json())`).join(',\n      ')}
     ]);
     dispatch({ type: 'DATA_LOADED', data: results });
   } catch (error) {
@@ -390,15 +380,10 @@ const config = {
   refreshInterval: ${refreshInterval},
 };
 
-const headers = {
-  'Authorization': \`Bearer \${process.env.KC_API_TOKEN || ''}\`,
-  'Content-Type': 'application/json',
-};
-
 export const command = async (dispatch) => {
   try {
     const [${allEndpoints.map((_, i) => `data${i}`).join(', ')}] = await Promise.all([
-      ${allEndpoints.map((ep) => `fetch('${apiEndpoint}${ep}', { headers }).then(r => r.json())`).join(',\n      ')}
+      ${allEndpoints.map((ep) => `fetch('${apiEndpoint}${ep}').then(r => r.json())`).join(',\n      ')}
     ]);
     dispatch({
       type: 'DATA_LOADED',

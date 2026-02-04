@@ -267,9 +267,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                     <li>
                       Move to <code className="bg-blue-500/20 px-1 rounded">~/Library/Application Support/Übersicht/widgets/</code>
                     </li>
-                    <li>
-                      Add <code className="bg-blue-500/20 px-1 rounded">export KC_API_TOKEN="your-token"</code> to ~/.zshrc
-                    </li>
+                    <li>Ensure KC agent is running locally on port 8080</li>
                     <li>Restart Übersicht</li>
                   </ol>
                 </div>
