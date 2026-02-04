@@ -64,13 +64,27 @@ function saveDistributionCache(cache: DistributionCache) {
 }
 
 // Apply cached distributions to cluster list
+// Falls back to URL-based detection for unreachable clusters
 function applyDistributionCache(clusters: ClusterInfo[]): ClusterInfo[] {
   const distCache = loadDistributionCache()
   return clusters.map(cluster => {
+    // If cluster already has distribution, keep it
+    if (cluster.distribution) {
+      return cluster
+    }
+
+    // Try cached distribution first
     const cached = distCache[cluster.name]
-    if (cached && !cluster.distribution) {
+    if (cached) {
       return { ...cluster, distribution: cached.distribution, namespaces: cached.namespaces }
     }
+
+    // Fallback: detect from server URL (works for unreachable clusters)
+    const urlDistribution = detectDistributionFromServer(cluster.server)
+    if (urlDistribution) {
+      return { ...cluster, distribution: urlDistribution }
+    }
+
     return cluster
   })
 }
@@ -803,6 +817,50 @@ function detectDistributionFromNamespaces(namespaces: string[]): string | undefi
   return undefined
 }
 
+// Helper to detect distribution from server URL (fallback when cluster is unreachable)
+// This allows identifying cluster type even without namespace access
+function detectDistributionFromServer(server?: string): string | undefined {
+  if (!server) return undefined
+  const lower = server.toLowerCase()
+
+  // OpenShift patterns
+  if (lower.includes('.openshiftapps.com') ||
+      lower.includes('.openshift.com') ||
+      // IBM FMAAS OpenShift clusters (api.fmaas-*.fmaas.res.ibm.com:6443)
+      (lower.includes('.fmaas.') && lower.includes(':6443')) ||
+      // Generic OpenShift API pattern (api.*.example.com:6443)
+      (lower.match(/^https?:\/\/api\.[^/]+:6443/) && !lower.includes('.eks.') && !lower.includes('.azmk8s.'))) {
+    return 'openshift'
+  }
+
+  // EKS pattern
+  if (lower.includes('.eks.amazonaws.com')) {
+    return 'eks'
+  }
+
+  // GKE pattern
+  if (lower.includes('.gke.io') || lower.includes('.container.googleapis.com')) {
+    return 'gke'
+  }
+
+  // AKS pattern
+  if (lower.includes('.azmk8s.io') || lower.includes('.hcp.')) {
+    return 'aks'
+  }
+
+  // OCI OKE pattern
+  if (lower.includes('.oraclecloud.com') || lower.includes('.oci.')) {
+    return 'oci'
+  }
+
+  // DigitalOcean pattern
+  if (lower.includes('.digitalocean.com') || lower.includes('.k8s.ondigitalocean.')) {
+    return 'digitalocean'
+  }
+
+  return undefined
+}
+
 // Track backend API failures for distribution detection separately
 let distributionDetectionFailures = 0
 const MAX_DISTRIBUTION_FAILURES = 2
@@ -1119,9 +1177,9 @@ export async function fullFetchClusters() {
           // Preserve existing health data and detected distribution during refresh
           return {
             ...newCluster,
-            // Always preserve detected distribution and namespaces
-            distribution: existing.distribution,
-            namespaces: existing.namespaces,
+            // Preserve detected distribution and namespaces (use existing if available, else keep new)
+            distribution: existing.distribution || newCluster.distribution,
+            namespaces: existing.namespaces?.length ? existing.namespaces : newCluster.namespaces,
             // Preserve health data if available
             ...(existing.nodeCount !== undefined ? {
               nodeCount: existing.nodeCount,
@@ -1191,9 +1249,9 @@ export async function fullFetchClusters() {
       if (existing) {
         return {
           ...newCluster,
-          // Preserve detected distribution and namespaces
-          distribution: existing.distribution,
-          namespaces: existing.namespaces,
+          // Preserve detected distribution and namespaces (use existing if available, else keep new)
+          distribution: existing.distribution || newCluster.distribution,
+          namespaces: existing.namespaces?.length ? existing.namespaces : newCluster.namespaces,
           // Preserve health data if available
           ...(existing.nodeCount !== undefined ? {
             nodeCount: existing.nodeCount,
