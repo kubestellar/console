@@ -1,24 +1,30 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useCachedLLMdModels } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
+import { useLLMdClusters } from '../cards/workload-detection/shared'
 
 const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 
 // Default cards for AI/ML dashboard
 const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
 
-// LLM-d clusters to monitor
-const LLMD_CLUSTERS = ['vllm-d', 'platform-eval']
-
 export function AIML() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
-  const { models: llmModels, isLoading: llmLoading } = useCachedLLMdModels(LLMD_CLUSTERS)
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
+
+  // Get GPU cluster names for intelligent LLM-d cluster discovery
+  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+
+  // Dynamically discover LLM-d clusters from available reachable clusters
+  // Scans for clusters with GPU nodes or AI/ML naming patterns
+  const llmdClusters = useLLMdClusters(clusters, gpuClusterNames)
+
+  const { models: llmModels, isLoading: llmLoading } = useCachedLLMdModels(llmdClusters)
 
   // Filter reachable clusters
   const reachableClusters = clusters.filter(c => c.reachable !== false)
