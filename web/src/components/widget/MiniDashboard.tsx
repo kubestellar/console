@@ -81,7 +81,7 @@ export function MiniDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(() => isStandalone())
   const [isSafariBrowser] = useState(() => isSafari())
 
   // Fetch data from MCP hooks
