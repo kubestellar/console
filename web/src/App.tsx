@@ -194,15 +194,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        {/* PWA Mini Dashboard - lightweight widget mode */}
-        <Route
-          path="/widget"
-          element={
-            <ProtectedRoute>
-              <MiniDashboard />
-            </ProtectedRoute>
-          }
-        />
+        {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
+        <Route path="/widget" element={<MiniDashboard />} />
         <Route
           path="/onboarding"
           element={

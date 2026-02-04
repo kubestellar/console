@@ -56,11 +56,24 @@ function StatusDot({ status }: { status: 'healthy' | 'warning' | 'error' }) {
   )
 }
 
+// Detect Safari browser
+function isSafari(): boolean {
+  const ua = navigator.userAgent
+  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium')
+}
+
+// Detect if running as standalone (installed PWA or Add to Dock)
+function isStandalone(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+}
+
 export function MiniDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [isSafariBrowser] = useState(() => isSafari())
 
   // Fetch data
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
@@ -113,8 +126,8 @@ export function MiniDashboard() {
     }
     window.addEventListener('beforeinstallprompt', handler as EventListener)
 
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Check if already installed (standalone mode or Safari's navigator.standalone)
+    if (isStandalone()) {
       setIsInstalled(true)
     }
 
@@ -240,7 +253,11 @@ export function MiniDashboard() {
           </button>
         ) : !isInstalled ? (
           <div className="text-center text-xs text-gray-500">
-            <p>Use browser menu → "Install app" to add to desktop</p>
+            {isSafariBrowser ? (
+              <p>Safari: <strong>File → Add to Dock</strong> to install</p>
+            ) : (
+              <p>Use browser menu → "Install app" to add to desktop</p>
+            )}
           </div>
         ) : (
           <div className="flex items-center justify-between text-xs text-gray-500">
