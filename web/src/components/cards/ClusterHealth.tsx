@@ -79,6 +79,7 @@ export function ClusterHealth() {
     deduplicatedClusters: rawClusters,
     isLoading: isLoadingHook,
     error,
+    lastRefresh,
   } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -127,10 +128,14 @@ export function ClusterHealth() {
   })
 
   // Report state to CardWrapper for refresh animation
+  // Show skeleton if loading OR if we haven't completed the initial fetch yet
+  // This prevents the empty card flash while waiting for initial data
+  const hasCompletedInitialFetch = lastRefresh !== null
+  const hasData = rawClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoadingHook,
-    hasAnyData: rawClusters.length > 0,
-    isFailed: !!error && rawClusters.length === 0,
+    isLoading: isLoadingHook || !hasCompletedInitialFetch,
+    hasAnyData: hasData,
+    isFailed: !!error && !hasData,
     consecutiveFailures: error ? 1 : 0,
   })
   const isLoading = showSkeleton
