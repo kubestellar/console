@@ -7,7 +7,7 @@
  * Install: Click browser menu → "Install app" or "Add to Desktop"
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { RefreshCw, Maximize2, Download } from 'lucide-react'
 import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
@@ -137,6 +137,33 @@ export function MiniDashboard() {
   const overallStatus: 'healthy' | 'warning' | 'error' =
     offlineCount > 0 || criticalIssues > 0 ? 'error' : totalIssues > 3 ? 'warning' : 'healthy'
 
+  // Track previous offline count for notifications
+  const prevOfflineCountRef = useRef<number>(0)
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Send notification when new offline nodes detected
+  useEffect(() => {
+    if (offlineCount > prevOfflineCountRef.current && prevOfflineCountRef.current >= 0) {
+      const newOffline = offlineCount - prevOfflineCountRef.current
+      if ('Notification' in window && Notification.permission === 'granted' && newOffline > 0) {
+        const nodeNames = offlineNodes.slice(0, 3).map(n => n.name).join(', ')
+        new Notification('KubeStellar: Nodes Offline', {
+          body: `${newOffline} node${newOffline > 1 ? 's' : ''} went offline: ${nodeNames}${offlineCount > 3 ? '...' : ''}`,
+          icon: '/kubestellar-logo.svg',
+          tag: 'node-offline', // Prevents duplicate notifications
+          requireInteraction: true, // Keeps notification until dismissed
+        })
+      }
+    }
+    prevOfflineCountRef.current = offlineCount
+  }, [offlineCount, offlineNodes])
+
   // Manual refresh
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true)
@@ -184,9 +211,24 @@ export function MiniDashboard() {
     }
   }
 
+  // Open URL in system browser (not in PWA)
+  // Uses full URL with noopener to force external browser
+  const openInBrowser = useCallback((path: string) => {
+    const fullUrl = `${window.location.origin}${path}`
+    // Create a temporary link with target="_blank" and rel="noopener"
+    // This forces the system to open in default browser
+    const link = document.createElement('a')
+    link.href = fullUrl
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }, [])
+
   // Open full dashboard in new window
   const openFullDashboard = () => {
-    window.open('/dashboard', '_blank')
+    openInBrowser('/dashboard')
   }
 
   return (
@@ -228,35 +270,35 @@ export function MiniDashboard() {
           value={totalClusters}
           color="text-purple-400"
           subValue={`${healthyClusters} healthy`}
-          onClick={() => window.open('/clusters', '_blank')}
+          onClick={() => openInBrowser('/clusters')}
         />
         <StatCard
           label="GPUs"
           value={`${allocatedGPUs}/${totalGPUs}`}
           color="text-green-400"
           subValue="allocated/total"
-          onClick={() => window.open('/compute?card=gpu_overview', '_blank')}
+          onClick={() => openInBrowser('/compute?card=gpu_overview')}
         />
         <StatCard
           label="Nodes Offline"
           value={offlineCount}
           color={offlineCount > 0 ? 'text-red-400' : 'text-green-400'}
           subValue={offlineCount > 0 ? 'needs attention' : 'all online'}
-          onClick={() => window.open('/nodes', '_blank')}
+          onClick={() => openInBrowser('/nodes')}
         />
         <StatCard
           label="Pod Issues"
           value={totalIssues}
           color={totalIssues > 0 ? 'text-orange-400' : 'text-gray-400'}
           subValue={criticalIssues > 0 ? `${criticalIssues} critical` : undefined}
-          onClick={() => window.open('/pods?card=pod_issues', '_blank')}
+          onClick={() => openInBrowser('/pods?card=pod_issues')}
         />
         <StatCard
           label="Nodes"
           value={allNodes.length}
           color="text-blue-400"
           subValue={`${allNodes.length - offlineCount} ready`}
-          onClick={() => window.open('/nodes', '_blank')}
+          onClick={() => openInBrowser('/nodes')}
         />
         <StatCard
           label="Status"
@@ -268,7 +310,7 @@ export function MiniDashboard() {
               ? 'text-yellow-400'
               : 'text-red-400'
           }
-          onClick={() => window.open('/dashboard', '_blank')}
+          onClick={() => openInBrowser('/dashboard')}
         />
       </div>
 
@@ -282,7 +324,7 @@ export function MiniDashboard() {
               return (
                 <button
                   key={i}
-                  onClick={() => window.open(`/pods?search=${encodeURIComponent(issue.name)}`, '_blank')}
+                  onClick={() => openInBrowser(`/pods?search=${encodeURIComponent(issue.name)}`)}
                   className="w-full flex items-center gap-2 text-xs p-2 rounded bg-gray-800/50 border border-gray-700/30 hover:bg-gray-700/50 hover:border-gray-600 transition-colors text-left"
                 >
                   <span
