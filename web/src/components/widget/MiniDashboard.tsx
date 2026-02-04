@@ -212,18 +212,25 @@ export function MiniDashboard() {
   }
 
   // Open URL in system browser (not in PWA)
-  // Uses full URL with noopener to force external browser
+  // PWAs need special handling to open in actual browser, not PWA windows
   const openInBrowser = useCallback((path: string) => {
     const fullUrl = `${window.location.origin}${path}`
-    // Create a temporary link with target="_blank" and rel="noopener"
-    // This forces the system to open in default browser
-    const link = document.createElement('a')
-    link.href = fullUrl
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+
+    if (isStandalone()) {
+      // In PWA standalone mode, use window.open with specific features
+      // to hint Chrome to open in browser. The 'location=yes' feature
+      // signals we want a full browser window with address bar.
+      window.open(fullUrl, '_blank', 'noopener,noreferrer,location=yes,menubar=yes,toolbar=yes')
+    } else {
+      // In regular browser, just use standard link behavior
+      const link = document.createElement('a')
+      link.href = fullUrl
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }, [])
 
   // Open full dashboard in new window
