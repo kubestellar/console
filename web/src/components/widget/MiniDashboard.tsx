@@ -187,18 +187,33 @@ export function MiniDashboard() {
 
   // PWA install prompt
   useEffect(() => {
+    // If already in standalone mode, don't set up install prompt
+    if (isStandalone()) {
+      setIsInstalled(true)
+      setInstallPrompt(null)
+      return
+    }
+
     const handler = (e: BeforeInstallPromptEvent) => {
       e.preventDefault()
       setInstallPrompt(e)
     }
     window.addEventListener('beforeinstallprompt', handler as EventListener)
 
-    // Check if already installed (standalone mode or Safari's navigator.standalone)
-    if (isStandalone()) {
-      setIsInstalled(true)
+    // Listen for display mode changes (in case user installs while viewing)
+    const mediaQuery = window.matchMedia('(display-mode: standalone)')
+    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        setIsInstalled(true)
+        setInstallPrompt(null)
+      }
     }
+    mediaQuery.addEventListener('change', handleDisplayModeChange)
 
-    return () => window.removeEventListener('beforeinstallprompt', handler as EventListener)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler as EventListener)
+      mediaQuery.removeEventListener('change', handleDisplayModeChange)
+    }
   }, [])
 
   const handleInstall = async () => {
@@ -212,25 +227,19 @@ export function MiniDashboard() {
   }
 
   // Open URL in system browser (not in PWA)
-  // PWAs need special handling to open in actual browser, not PWA windows
+  // Use a different origin (127.0.0.1 vs localhost) to force browser window
   const openInBrowser = useCallback((path: string) => {
-    const fullUrl = `${window.location.origin}${path}`
+    // Swap localhost <-> 127.0.0.1 to force Chrome to open in browser
+    const currentHost = window.location.host
+    let targetOrigin = window.location.origin
 
-    if (isStandalone()) {
-      // In PWA standalone mode, use window.open with specific features
-      // to hint Chrome to open in browser. The 'location=yes' feature
-      // signals we want a full browser window with address bar.
-      window.open(fullUrl, '_blank', 'noopener,noreferrer,location=yes,menubar=yes,toolbar=yes')
-    } else {
-      // In regular browser, just use standard link behavior
-      const link = document.createElement('a')
-      link.href = fullUrl
-      link.target = '_blank'
-      link.rel = 'noopener noreferrer'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+    if (currentHost.includes('localhost')) {
+      targetOrigin = window.location.origin.replace('localhost', '127.0.0.1')
+    } else if (currentHost.includes('127.0.0.1')) {
+      targetOrigin = window.location.origin.replace('127.0.0.1', 'localhost')
     }
+
+    window.open(`${targetOrigin}${path}`, '_blank')
   }, [])
 
   // Open full dashboard in new window
