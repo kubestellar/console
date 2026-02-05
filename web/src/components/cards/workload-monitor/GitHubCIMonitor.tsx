@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, ExternalLink, Key,
+  Clock, Loader2, ExternalLink, Key,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
@@ -111,11 +111,9 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const ghConfig = config as GitHubCIConfig | undefined
   const [workflows, setWorkflows] = useState<WorkflowRun[]>(DEMO_WORKFLOWS)
   const [isLoading, setIsLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isUsingDemoData, setIsUsingDemoData] = useState(true)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
-  const [refreshCount, setRefreshCount] = useState(0)
 
   const repos = ghConfig?.repos || ['kubestellar/kubestellar', 'kubestellar/console']
 
@@ -129,8 +127,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       return
     }
 
-    if (isRefresh) setIsRefreshing(true)
-    else setIsLoading(true)
+    if (!isRefresh) setIsLoading(true)
     setError(null)
 
     try {
@@ -171,7 +168,6 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       // Keep demo data on error
     } finally {
       setIsLoading(false)
-      setIsRefreshing(false)
     }
   }, [repos, ghConfig?.token])
 
@@ -327,26 +323,6 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         )}>
           {overallHealth}
         </span>
-        <button
-          onClick={() => {
-            setRefreshCount(c => c + 1)
-            fetchWorkflows(true)
-          }}
-          disabled={isRefreshing}
-          className={cn(
-            "p-1 rounded hover:bg-secondary transition-colors",
-            isRefreshing && "bg-purple-500/10"
-          )}
-          title="Refresh"
-        >
-          <RefreshCw
-            className={cn(
-              "w-3.5 h-3.5 transition-transform duration-1000 ease-in-out",
-              isRefreshing ? "text-purple-400" : "text-muted-foreground hover:text-purple-400"
-            )}
-            style={{ transform: `rotate(${refreshCount * 360}deg)` }}
-          />
-        </button>
       </div>
 
       {/* Demo data indicator - no token configured */}
