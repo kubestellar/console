@@ -27,6 +27,17 @@ export interface LLMdStackComponent {
   podNames?: string[]
 }
 
+export type AutoscalerType = 'HPA' | 'WVA' | 'VPA' | null
+
+export interface AutoscalerInfo {
+  type: AutoscalerType
+  name?: string
+  minReplicas?: number
+  maxReplicas?: number
+  currentReplicas?: number
+  desiredReplicas?: number
+}
+
 export interface LLMdStack {
   id: string                    // Format: "namespace@cluster"
   name: string                  // Display name (namespace or InferencePool name)
@@ -45,6 +56,7 @@ export interface LLMdStack {
   model?: string                // Primary model name
   totalReplicas: number
   readyReplicas: number
+  autoscaler?: AutoscalerInfo   // Autoscaler info if detected
 }
 
 interface PodResource {
@@ -228,6 +240,58 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
           const gateways = (gwData.items || []) as GatewayResource[]
           const gatewayByNamespace = new Map(gateways.map(g => [g.metadata.namespace, g]))
 
+          // Fetch HPAs
+          const hpaResponse = await kubectlProxy.exec(
+            ['get', 'hpa', '-A', '-o', 'json'],
+            { context: cluster, timeout: 15000 }
+          )
+          const hpaData = hpaResponse.exitCode === 0 ? JSON.parse(hpaResponse.output) : { items: [] }
+          interface HPAResource {
+            metadata: { name: string; namespace: string }
+            spec?: { minReplicas?: number; maxReplicas?: number }
+            status?: { currentReplicas?: number; desiredReplicas?: number }
+          }
+          const hpas = (hpaData.items || []) as HPAResource[]
+          const hpaByNamespace = new Map<string, HPAResource>()
+          for (const hpa of hpas) {
+            // Associate HPA with namespace if it targets llm-d resources
+            if (!hpaByNamespace.has(hpa.metadata.namespace)) {
+              hpaByNamespace.set(hpa.metadata.namespace, hpa)
+            }
+          }
+
+          // Fetch WVA (VariantAutoscaling) - custom CRD
+          const wvaResponse = await kubectlProxy.exec(
+            ['get', 'variantautoscalings', '-A', '-o', 'json'],
+            { context: cluster, timeout: 15000 }
+          )
+          const wvaData = wvaResponse.exitCode === 0 ? JSON.parse(wvaResponse.output) : { items: [] }
+          interface WVAResource {
+            metadata: { name: string; namespace: string }
+            spec?: { minReplicas?: number; maxReplicas?: number }
+            status?: { currentReplicas?: number; desiredReplicas?: number }
+          }
+          const wvas = (wvaData.items || []) as WVAResource[]
+          const wvaByNamespace = new Map<string, WVAResource>()
+          for (const wva of wvas) {
+            wvaByNamespace.set(wva.metadata.namespace, wva)
+          }
+
+          // Fetch VPA (VerticalPodAutoscaler)
+          const vpaResponse = await kubectlProxy.exec(
+            ['get', 'vpa', '-A', '-o', 'json'],
+            { context: cluster, timeout: 15000 }
+          )
+          const vpaData = vpaResponse.exitCode === 0 ? JSON.parse(vpaResponse.output) : { items: [] }
+          interface VPAResource {
+            metadata: { name: string; namespace: string }
+          }
+          const vpas = (vpaData.items || []) as VPAResource[]
+          const vpaByNamespace = new Map<string, VPAResource>()
+          for (const vpa of vpas) {
+            vpaByNamespace.set(vpa.metadata.namespace, vpa)
+          }
+
           // Build stacks from namespaces
           for (const [namespace, nsPods] of podsByNamespace) {
             const prefillPods: PodResource[] = []
@@ -345,6 +409,37 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               decodeComponents.reduce((sum, c) => sum + c.readyReplicas, 0) +
               bothComponents.reduce((sum, c) => sum + c.readyReplicas, 0)
 
+            // Detect autoscaler - WVA takes precedence, then HPA, then VPA
+            let autoscaler: AutoscalerInfo | undefined
+            const wva = wvaByNamespace.get(namespace)
+            const hpa = hpaByNamespace.get(namespace)
+            const vpa = vpaByNamespace.get(namespace)
+
+            if (wva) {
+              autoscaler = {
+                type: 'WVA',
+                name: wva.metadata.name,
+                minReplicas: wva.spec?.minReplicas,
+                maxReplicas: wva.spec?.maxReplicas,
+                currentReplicas: wva.status?.currentReplicas,
+                desiredReplicas: wva.status?.desiredReplicas,
+              }
+            } else if (hpa) {
+              autoscaler = {
+                type: 'HPA',
+                name: hpa.metadata.name,
+                minReplicas: hpa.spec?.minReplicas,
+                maxReplicas: hpa.spec?.maxReplicas,
+                currentReplicas: hpa.status?.currentReplicas,
+                desiredReplicas: hpa.status?.desiredReplicas,
+              }
+            } else if (vpa) {
+              autoscaler = {
+                type: 'VPA',
+                name: vpa.metadata.name,
+              }
+            }
+
             discoveredStacks.push({
               id: `${namespace}@${cluster}`,
               name: pool?.metadata.name || namespace,
@@ -357,6 +452,7 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               model,
               totalReplicas,
               readyReplicas,
+              autoscaler,
             })
           }
         } catch (err) {

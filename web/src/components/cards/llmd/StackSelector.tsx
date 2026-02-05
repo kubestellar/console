@@ -110,23 +110,24 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
           </span>
         </div>
 
-        {/* Replica counts */}
+        {/* Replica counts - show all non-zero counts */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-          {stack.hasDisaggregation ? (
-            <>
-              <span className="text-purple-400" title="Prefill replicas">
-                P:{prefillCount}
-              </span>
-              <span className="text-green-400" title="Decode replicas">
-                D:{decodeCount}
-              </span>
-            </>
-          ) : unifiedCount > 0 ? (
+          {prefillCount > 0 && (
+            <span className="text-purple-400" title="Prefill replicas">
+              P:{prefillCount}
+            </span>
+          )}
+          {decodeCount > 0 && (
+            <span className="text-green-400" title="Decode replicas">
+              D:{decodeCount}
+            </span>
+          )}
+          {unifiedCount > 0 && prefillCount === 0 && decodeCount === 0 && (
             <span title="Unified replicas">
               <Server className="w-3 h-3 inline mr-0.5" />
               {unifiedCount}
             </span>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -151,6 +152,22 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
             <Cpu className="w-3 h-3" />
             <span>{gpuInfo.count}×</span>
             <span className="text-cyan-400/70 truncate max-w-[80px]">{gpuInfo.type.replace('NVIDIA ', '')}</span>
+          </span>
+        )}
+
+        {/* Autoscaler indicator */}
+        {stack.autoscaler && (
+          <span
+            className={`px-1 py-0.5 rounded font-medium ${
+              stack.autoscaler.type === 'WVA' ? 'bg-purple-500/20 text-purple-400' :
+              stack.autoscaler.type === 'HPA' ? 'bg-blue-500/20 text-blue-400' :
+              'bg-green-500/20 text-green-400'
+            }`}
+            title={`${stack.autoscaler.type}: ${stack.autoscaler.name || 'enabled'}${
+              stack.autoscaler.minReplicas !== undefined ? ` (${stack.autoscaler.minReplicas}-${stack.autoscaler.maxReplicas})` : ''
+            }`}
+          >
+            {stack.autoscaler.type}
           </span>
         )}
 
@@ -277,11 +294,13 @@ export function StackSelector() {
             : 'bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-600'
         }`}
       >
-        {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-        ) : selectedStack ? (
+        {selectedStack ? (
           <>
-            <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[selectedStack.status]}`} />
+            {isLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
+            ) : (
+              <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[selectedStack.status]}`} />
+            )}
             <span className="text-sm font-medium text-white max-w-[160px] truncate">
               {selectedStack.name}
             </span>
@@ -289,6 +308,11 @@ export function StackSelector() {
             {isDemoMode && (
               <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">Demo</span>
             )}
+          </>
+        ) : isLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+            <span className="text-sm text-slate-400">Loading stacks...</span>
           </>
         ) : (
           <>

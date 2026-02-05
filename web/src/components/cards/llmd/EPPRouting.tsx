@@ -508,7 +508,7 @@ export function EPPRouting() {
 
     if (hasDisaggregation) {
       // Disaggregated topology - spread prefill nodes from y=18 to y=82 (matching demo NODES)
-      const maxPrefill = Math.min(prefillCount, 3)
+      const maxPrefill = Math.min(prefillCount, 10)
       for (let i = 0; i < maxPrefill; i++) {
         // For 1 node: y=50, for 2 nodes: y=18,82, for 3 nodes: y=18,50,82
         const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
@@ -524,7 +524,7 @@ export function EPPRouting() {
       }
 
       // Decode nodes - spread from y=34 to y=66 (matching demo NODES)
-      const maxDecode = Math.min(decodeCount, 2)
+      const maxDecode = Math.min(decodeCount, 10)
       for (let i = 0; i < maxDecode; i++) {
         const y = maxDecode === 1 ? 50 : 34 + (32 * i) / (maxDecode - 1)
         nodes.push({
@@ -539,7 +539,7 @@ export function EPPRouting() {
       }
     } else if (decodeCount > 0) {
       // Decode-only topology - spread from y=18 to y=82
-      const maxDecode = Math.min(decodeCount, 4)
+      const maxDecode = Math.min(decodeCount, 10)
       for (let i = 0; i < maxDecode; i++) {
         const y = maxDecode === 1 ? 50 : 18 + (64 * i) / (maxDecode - 1)
         nodes.push({
@@ -554,7 +554,7 @@ export function EPPRouting() {
       }
     } else if (prefillCount > 0) {
       // Prefill-only topology - spread from y=18 to y=82
-      const maxPrefill = Math.min(prefillCount, 4)
+      const maxPrefill = Math.min(prefillCount, 10)
       for (let i = 0; i < maxPrefill; i++) {
         const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
         nodes.push({
@@ -569,7 +569,7 @@ export function EPPRouting() {
       }
     } else if (unifiedCount > 0) {
       // Unified topology - spread from y=18 to y=82
-      const maxServers = Math.min(unifiedCount, 4)
+      const maxServers = Math.min(unifiedCount, 10)
       for (let i = 0; i < maxServers; i++) {
         const y = maxServers === 1 ? 50 : 18 + (64 * i) / (maxServers - 1)
         nodes.push({

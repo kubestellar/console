@@ -29,7 +29,7 @@ const NODE_POSITIONS = {
 }
 
 // Node styling constants
-const NODE_RADIUS = 7
+const NODE_RADIUS = 6
 const STROKE_WIDTH = 1.5
 const TRACK_WIDTH = 1
 
@@ -614,13 +614,13 @@ export function LLMdFlow() {
 
     if (hasDisaggregation) {
       // Disaggregated topology (both prefill AND decode)
-      const maxPrefill = Math.min(prefillCount, 3) // Show up to 3 prefill
-      const maxDecode = Math.min(decodeCount, 2)   // Show up to 2 decode
+      const maxPrefill = Math.min(prefillCount, 10) // Show up to 3 prefill
+      const maxDecode = Math.min(decodeCount, 10)   // Show up to 2 decode
 
       // Position prefill nodes - spread from y=18 to y=82
       for (let i = 0; i < maxPrefill; i++) {
         const key = `prefill${i}`
-        const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
+        const y = maxPrefill === 1 ? 50 : 5 + (90 * i) / (maxPrefill - 1)
         positions[key] = { x: 70, y }
         labels[key] = `Prefill-${i}`
         conns.push({
@@ -656,10 +656,10 @@ export function LLMdFlow() {
       }
     } else if (decodeCount > 0) {
       // Decode-only topology - spread from y=18 to y=82
-      const maxDecode = Math.min(decodeCount, 4)
+      const maxDecode = Math.min(decodeCount, 10)
       for (let i = 0; i < maxDecode; i++) {
         const key = `decode${i}`
-        const y = maxDecode === 1 ? 50 : 18 + (64 * i) / (maxDecode - 1)
+        const y = maxDecode === 1 ? 50 : 5 + (90 * i) / (maxDecode - 1)
         positions[key] = { x: 78, y }
         labels[key] = `Decode-${i}`
         conns.push({
@@ -671,10 +671,10 @@ export function LLMdFlow() {
       }
     } else if (prefillCount > 0) {
       // Prefill-only topology - spread from y=18 to y=82
-      const maxPrefill = Math.min(prefillCount, 4)
+      const maxPrefill = Math.min(prefillCount, 10)
       for (let i = 0; i < maxPrefill; i++) {
         const key = `prefill${i}`
-        const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
+        const y = maxPrefill === 1 ? 50 : 5 + (90 * i) / (maxPrefill - 1)
         positions[key] = { x: 78, y }
         labels[key] = `Prefill-${i}`
         conns.push({
@@ -686,10 +686,10 @@ export function LLMdFlow() {
       }
     } else if (unifiedCount > 0) {
       // Unified serving topology - spread from y=18 to y=82
-      const maxServers = Math.min(unifiedCount, 4)
+      const maxServers = Math.min(unifiedCount, 10)
       for (let i = 0; i < maxServers; i++) {
         const key = `server${i}`
-        const y = maxServers === 1 ? 50 : 18 + (64 * i) / (maxServers - 1)
+        const y = maxServers === 1 ? 50 : 5 + (90 * i) / (maxServers - 1)
         positions[key] = { x: 78, y }
         labels[key] = `Server-${i}`
         conns.push({
