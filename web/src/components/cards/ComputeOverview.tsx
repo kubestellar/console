@@ -140,7 +140,7 @@ export function ComputeOverview() {
           {stats.degradedClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="degraded" size="sm" />
-              <span className="text-yellow-400">{stats.degradedClusters} degraded</span>
+              <span className="text-orange-400">{stats.degradedClusters} degraded</span>
             </span>
           )}
           {stats.offlineClusters > 0 && (
