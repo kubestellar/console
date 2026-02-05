@@ -147,18 +147,39 @@ export function MiniDashboard() {
     }
   }, [])
 
-  // Send notification when new offline nodes detected
+  // Send notification when new offline nodes detected (with deep link support)
   useEffect(() => {
     if (offlineCount > prevOfflineCountRef.current && prevOfflineCountRef.current >= 0) {
       const newOffline = offlineCount - prevOfflineCountRef.current
       if ('Notification' in window && Notification.permission === 'granted' && newOffline > 0) {
+        const firstOfflineNode = offlineNodes[0]
         const nodeNames = offlineNodes.slice(0, 3).map(n => n.name).join(', ')
-        new Notification('KubeStellar: Nodes Offline', {
+
+        const notification = new Notification('KubeStellar: Nodes Offline', {
           body: `${newOffline} node${newOffline > 1 ? 's' : ''} went offline: ${nodeNames}${offlineCount > 3 ? '...' : ''}`,
           icon: '/kubestellar-logo.svg',
           tag: 'node-offline', // Prevents duplicate notifications
           requireInteraction: true, // Keeps notification until dismissed
         })
+
+        // Deep link to node drilldown when notification is clicked
+        notification.onclick = () => {
+          window.focus()
+          if (firstOfflineNode) {
+            // Build deep link URL to node drilldown
+            const params = new URLSearchParams({
+              drilldown: 'node',
+              cluster: firstOfflineNode.cluster || 'unknown',
+              node: firstOfflineNode.name,
+              issue: 'Node went offline',
+            })
+            window.location.href = `${window.location.origin}/?${params.toString()}`
+          } else {
+            // Fallback to main dashboard
+            window.location.href = window.location.origin + '/'
+          }
+          notification.close()
+        }
       }
     }
     prevOfflineCountRef.current = offlineCount

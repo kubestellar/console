@@ -12,6 +12,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
+import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
@@ -55,6 +56,9 @@ export function Layout({ children }: LayoutProps) {
 
   // Persist and restore last route and scroll position
   useLastRoute()
+
+  // Handle deep links from notifications (opens drilldowns based on URL params)
+  useDeepLink()
 
   return (
     <TourProvider>
