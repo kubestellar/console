@@ -425,7 +425,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   gpu_workloads: 'Workloads running on GPU-enabled nodes.',
   gpu_utilization: 'Real-time GPU utilization percentage and temperature.',
   gpu_usage_trend: 'Historical GPU usage trends over time.',
-  hardware_health: 'Hardware device health including GPUs, NICs, NVMe, and InfiniBand.',
+  hardware_health: 'Detects hardware device disappearances (GPUs, NICs, NVMe, InfiniBand) that often require a power cycle to recover. Common with SuperMicro/HGX systems. Also shows full device inventory per node.',
   security_issues: 'Security vulnerabilities and misconfigurations detected.',
   rbac_overview: 'Overview of RBAC roles, bindings, and permissions.',
   policy_violations: 'Active policy violations from OPA, Kyverno, or other engines.',
