@@ -51,9 +51,9 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         const nextSection = document.getElementById('system-updates-settings')
         const input = document.getElementById('github-token') as HTMLInputElement | null
 
-        // Scroll to the NEXT section so GitHub token is at top of viewport
+        // Scroll to the NEXT section with block: 'center' so GitHub token is centered
         if (nextSection) {
-          nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          nextSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
         } else if (section) {
           // Fallback: scroll to section itself
           section.scrollIntoView({ behavior: 'smooth', block: 'start' })
