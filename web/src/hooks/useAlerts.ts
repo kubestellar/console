@@ -99,6 +99,8 @@ export function useAlerts() {
     deleteAlert,
     runAIDiagnosis,
     evaluateConditions,
+    isLoadingData,
+    dataError,
   } = useAlertsContext()
 
   return {
@@ -112,6 +114,8 @@ export function useAlerts() {
     deleteAlert,
     runAIDiagnosis,
     evaluateConditions,
+    isLoadingData,
+    dataError,
   }
 }
 
