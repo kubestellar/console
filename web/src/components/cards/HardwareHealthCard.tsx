@@ -184,14 +184,6 @@ export function HardwareHealthCard() {
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
   })
 
-  // Node count should use deduplicated inventory (same logic as deduplicatedInventory)
-  // This is computed before deduplicatedInventory but uses the same extractHostname logic
-  const deduplicatedNodeCount = useMemo(() => {
-    const uniqueHostnames = new Set<string>()
-    inventory.forEach(node => uniqueHostnames.add(extractHostname(node.nodeName)))
-    return uniqueHostnames.size || nodeCount
-  }, [inventory, nodeCount])
-
   // Fetch device alerts and inventory
   useEffect(() => {
     if (getDemoMode()) {
@@ -323,6 +315,9 @@ export function HardwareHealthCard() {
     })
     return Array.from(byHostname.values())
   }, [inventory])
+
+  // Node count should use deduplicated inventory count for consistency
+  const deduplicatedNodeCount = deduplicatedInventory.length || nodeCount
 
   // Available clusters for filtering (from deduplicated data)
   const availableClustersForFilter = useMemo(() => {
