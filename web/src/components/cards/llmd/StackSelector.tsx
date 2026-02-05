@@ -6,7 +6,7 @@
  * Includes search, sort, and filter capabilities.
  */
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Loader2, Cpu, Search, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
@@ -128,6 +128,11 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
               {unifiedCount}
             </span>
           )}
+          {prefillCount === 0 && decodeCount === 0 && unifiedCount === 0 && (
+            <span className="text-slate-500 italic" title="No running pods - scaled to 0">
+              0 pods
+            </span>
+          )}
         </div>
       </div>
 
@@ -155,7 +160,7 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
           </span>
         )}
 
-        {/* Autoscaler indicator */}
+        {/* Autoscaler indicator with value */}
         {stack.autoscaler && (
           <span
             className={`px-1 py-0.5 rounded font-medium ${
@@ -164,10 +169,14 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
               'bg-green-500/20 text-green-400'
             }`}
             title={`${stack.autoscaler.type}: ${stack.autoscaler.name || 'enabled'}${
-              stack.autoscaler.minReplicas !== undefined ? ` (${stack.autoscaler.minReplicas}-${stack.autoscaler.maxReplicas})` : ''
+              stack.autoscaler.minReplicas !== undefined ? ` (min: ${stack.autoscaler.minReplicas}, max: ${stack.autoscaler.maxReplicas})` : ''
             }`}
           >
-            {stack.autoscaler.type}
+            {stack.autoscaler.type === 'VPA' ? 'VPA' : (
+              `${stack.autoscaler.type}: ${stack.autoscaler.desiredReplicas ?? stack.autoscaler.currentReplicas ?? (
+                stack.autoscaler.minReplicas !== undefined ? `${stack.autoscaler.minReplicas}-${stack.autoscaler.maxReplicas}` : '?'
+              )}`
+            )}
           </span>
         )}
 
@@ -296,11 +305,7 @@ export function StackSelector() {
       >
         {selectedStack ? (
           <>
-            {isLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin text-slate-400" />
-            ) : (
-              <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[selectedStack.status]}`} />
-            )}
+            <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[selectedStack.status]}`} />
             <span className="text-sm font-medium text-white max-w-[160px] truncate">
               {selectedStack.name}
             </span>
@@ -308,11 +313,6 @@ export function StackSelector() {
             {isDemoMode && (
               <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">Demo</span>
             )}
-          </>
-        ) : isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-            <span className="text-sm text-slate-400">Loading stacks...</span>
           </>
         ) : (
           <>

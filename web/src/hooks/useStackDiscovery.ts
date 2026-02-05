@@ -292,8 +292,15 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             vpaByNamespace.set(vpa.metadata.namespace, vpa)
           }
 
+          // Collect all namespaces that have either pods OR InferencePools
+          const allStackNamespaces = new Set<string>([
+            ...podsByNamespace.keys(),
+            ...poolsByNamespace.keys(),
+          ])
+
           // Build stacks from namespaces
-          for (const [namespace, nsPods] of podsByNamespace) {
+          for (const namespace of allStackNamespaces) {
+            const nsPods = podsByNamespace.get(namespace) || []
             const prefillPods: PodResource[] = []
             const decodePods: PodResource[] = []
             const bothPods: PodResource[] = []
