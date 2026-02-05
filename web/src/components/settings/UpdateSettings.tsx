@@ -73,7 +73,7 @@ export function UpdateSettings() {
   const brewCommand = 'brew upgrade kubestellar/tap/kc-agent'
 
   return (
-    <div className="glass rounded-xl p-6">
+    <div id="system-updates-settings" className="glass rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div

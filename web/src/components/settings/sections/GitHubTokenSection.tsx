@@ -48,30 +48,19 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       // Wait for component to render and page to settle
       const timer = setTimeout(() => {
         const section = document.getElementById('github-token-settings')
+        const nextSection = document.getElementById('system-updates-settings')
         const input = document.getElementById('github-token') as HTMLInputElement | null
 
+        // Scroll to the NEXT section so GitHub token is at top of viewport
+        if (nextSection) {
+          nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else if (section) {
+          // Fallback: scroll to section itself
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+
+        // Flash highlight effect on GitHub section
         if (section) {
-          // Find the scrollable main container
-          const main = document.querySelector('main')
-          if (main) {
-            // Get section position relative to main's scroll area
-            const sectionRect = section.getBoundingClientRect()
-            const mainRect = main.getBoundingClientRect()
-
-            // Current scroll position plus element's position relative to viewport
-            // minus half the viewport to center it
-            const elementTop = sectionRect.top - mainRect.top + main.scrollTop
-            const viewportCenter = main.clientHeight / 2
-            const elementCenter = sectionRect.height / 2
-            const targetScroll = elementTop - viewportCenter + elementCenter
-
-            main.scrollTo({
-              top: Math.max(0, targetScroll),
-              behavior: 'smooth'
-            })
-          }
-
-          // Flash highlight effect
           setTimeout(() => {
             section.classList.add('ring-2', 'ring-purple-500/50')
             setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
@@ -86,7 +75,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         if (hash || params.get('focus')) {
           window.history.replaceState({}, '', window.location.pathname)
         }
-      }, 500) // Longer delay to ensure page is fully loaded
+      }, 300)
 
       return () => clearTimeout(timer)
     }
