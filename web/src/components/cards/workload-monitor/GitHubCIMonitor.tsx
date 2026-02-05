@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, ExternalLink,
+  Clock, RefreshCw, Loader2, ExternalLink, Key,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
@@ -16,6 +16,10 @@ import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMon
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
+}
+
+export interface GitHubCIMonitorRef {
+  refresh: () => void
 }
 
 interface GitHubCIConfig {
@@ -94,12 +98,14 @@ function formatTimeAgo(iso: string): string {
   return `${days}d ago`
 }
 
-export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
+export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
   const ghConfig = config as GitHubCIConfig | undefined
   const [workflows, setWorkflows] = useState<WorkflowRun[]>(DEMO_WORKFLOWS)
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isUsingDemoData, setIsUsingDemoData] = useState(true)
+  const [lastFetched, setLastFetched] = useState<Date | null>(null)
 
   const repos = ghConfig?.repos || ['kubestellar/kubestellar', 'kubestellar/console']
 
@@ -108,6 +114,7 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
     if (!token) {
       // Use demo data
       setWorkflows(DEMO_WORKFLOWS)
+      setIsUsingDemoData(true)
       return
     }
 
@@ -138,16 +145,29 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         }))
         allRuns.push(...runs)
       }
-      setWorkflows(allRuns.length > 0 ? allRuns : DEMO_WORKFLOWS)
+      if (allRuns.length > 0) {
+        setWorkflows(allRuns)
+        setIsUsingDemoData(false)
+        setLastFetched(new Date())
+      } else {
+        setWorkflows(DEMO_WORKFLOWS)
+        setIsUsingDemoData(true)
+      }
     } catch (err) {
       console.error('[GitHubCIMonitor] fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch workflows')
+      setIsUsingDemoData(true)
       // Keep demo data on error
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }, [repos, ghConfig?.token])
+
+  // Expose refresh method via ref for CardWrapper
+  useImperativeHandle(ref, () => ({
+    refresh: () => fetchWorkflows(true)
+  }), [fetchWorkflows])
 
   useEffect(() => {
     fetchWorkflows()
@@ -272,6 +292,11 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         <GitBranch className="w-4 h-4 text-purple-400 shrink-0" />
         <span className="text-sm font-medium text-foreground">GitHub CI</span>
         <span className="text-xs text-muted-foreground">{repos.length} repos</span>
+        {!isUsingDemoData && lastFetched && (
+          <span className="text-[10px] text-muted-foreground/60">
+            Updated {formatTimeAgo(lastFetched.toISOString())}
+          </span>
+        )}
         <span className={cn(
           'text-xs px-1.5 py-0.5 rounded ml-auto',
           overallHealth === 'healthy' ? 'bg-green-500/20 text-green-400' :
@@ -283,20 +308,39 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         <button
           onClick={() => fetchWorkflows(true)}
           disabled={isRefreshing}
-          className="p-1 rounded hover:bg-secondary transition-colors"
+          className={cn(
+            "p-1 rounded hover:bg-secondary transition-colors",
+            isRefreshing && "bg-purple-500/10"
+          )}
           title="Refresh"
         >
           {isRefreshing
             ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
+            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground hover:text-purple-400 transition-colors" />}
         </button>
       </div>
 
+      {/* Demo data indicator - no token configured */}
+      {isUsingDemoData && !error && (
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-2 flex items-center gap-2 mb-2">
+          <Key className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+          <p className="text-xs text-yellow-400/70 flex-1">
+            No GitHub token configured — showing sample data.
+          </p>
+          <a
+            href="/settings"
+            className="text-xs px-2 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors whitespace-nowrap"
+          >
+            Add Token
+          </a>
+        </div>
+      )}
+
       {/* Error */}
       {error && (
-        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-2 flex items-start gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-yellow-400/70">{error}</p>
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2 flex items-start gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-red-400/70">{error}</p>
         </div>
       )}
 
@@ -428,4 +472,4 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
       />
     </div>
   )
-}
+})
