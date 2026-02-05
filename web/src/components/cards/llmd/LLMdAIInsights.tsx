@@ -1,13 +1,16 @@
 /**
  * LLM-d AI Insights Panel
  *
- * Claude-powered analysis of the LLM-d stack with
- * recommendations, anomaly detection, and optimization suggestions.
+ * Generates insights based on the selected llm-d stack's real state.
+ * Shows optimization suggestions, warnings, and anomaly detection.
  */
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, RefreshCw, ChevronRight } from 'lucide-react'
+import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, ChevronRight, Sparkles, Settings2, Zap } from 'lucide-react'
+import { useOptionalStack } from '../../../contexts/StackContext'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
+import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 
 const INSIGHT_ICONS = {
   optimization: Lightbulb,
@@ -102,25 +105,238 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
   )
 }
 
+/**
+ * Generate real insights based on the selected stack's state
+ */
+function generateStackInsights(stack: LLMdStack): AIInsight[] {
+  const insights: AIInsight[] = []
+  const now = new Date()
+
+  // Check stack health status
+  if (stack.status === 'degraded') {
+    insights.push({
+      id: 'stack-degraded',
+      type: 'anomaly',
+      severity: 'warning',
+      title: 'Stack Health Degraded',
+      description: `The ${stack.name} stack is in a degraded state. Some components may not be functioning optimally.`,
+      recommendation: 'Check pod status and logs for failing components. Look for resource constraints or configuration issues.',
+      metrics: {
+        'Total Replicas': stack.totalReplicas,
+        'Ready': stack.readyReplicas,
+        'Status': stack.status,
+      },
+      timestamp: now,
+    })
+  } else if (stack.status === 'unhealthy') {
+    insights.push({
+      id: 'stack-unhealthy',
+      type: 'anomaly',
+      severity: 'critical',
+      title: 'Stack Unhealthy',
+      description: `The ${stack.name} stack is unhealthy. Critical components are not running.`,
+      recommendation: 'Immediate investigation required. Check pod events, resource quotas, and node availability.',
+      metrics: {
+        'Total Replicas': stack.totalReplicas,
+        'Ready': stack.readyReplicas,
+        'Status': stack.status,
+      },
+      timestamp: now,
+    })
+  }
+
+  // Check for missing gateway
+  if (!stack.components.gateway) {
+    insights.push({
+      id: 'missing-gateway',
+      type: 'capacity',
+      severity: 'warning',
+      title: 'No Gateway Configured',
+      description: 'This stack has no gateway component. External traffic routing may not be properly configured.',
+      recommendation: 'Deploy an Istio Gateway or Envoy ingress to handle external inference requests.',
+      timestamp: now,
+    })
+  }
+
+  // Check for no autoscaler
+  if (!stack.autoscaler) {
+    insights.push({
+      id: 'no-autoscaler',
+      type: 'optimization',
+      severity: 'info',
+      title: 'Manual Scaling Configured',
+      description: 'This stack does not have an autoscaler. Replicas must be scaled manually.',
+      recommendation: 'Consider enabling Variant Autoscaling (WVA) or HPA for automatic scaling based on load.',
+      metrics: {
+        'Current Replicas': stack.totalReplicas,
+        'Autoscaler': 'None',
+      },
+      timestamp: now,
+    })
+  } else {
+    // Check autoscaler headroom
+    const currentReplicas = stack.autoscaler.currentReplicas ?? 0
+    const maxReplicas = stack.autoscaler.maxReplicas ?? 0
+    if (maxReplicas > 0) {
+      const headroomPercent = ((maxReplicas - currentReplicas) / maxReplicas) * 100
+      if (headroomPercent < 20) {
+        insights.push({
+          id: 'low-autoscaler-headroom',
+          type: 'capacity',
+          severity: 'warning',
+          title: 'Limited Scaling Headroom',
+          description: `Autoscaler is at ${currentReplicas}/${maxReplicas} replicas. Limited capacity for traffic spikes.`,
+          recommendation: 'Consider increasing maxReplicas to allow for traffic bursts, or optimize resource usage.',
+          metrics: {
+            'Current': currentReplicas,
+            'Max': maxReplicas,
+            'Headroom': `${headroomPercent.toFixed(0)}%`,
+          },
+          timestamp: now,
+        })
+      }
+    }
+  }
+
+  // Check replica readiness
+  if (stack.totalReplicas > 0 && stack.readyReplicas < stack.totalReplicas) {
+    const readyPercent = (stack.readyReplicas / stack.totalReplicas) * 100
+    insights.push({
+      id: 'replica-not-ready',
+      type: 'anomaly',
+      severity: readyPercent < 50 ? 'critical' : 'warning',
+      title: 'Replicas Not Ready',
+      description: `Only ${stack.readyReplicas} of ${stack.totalReplicas} replicas are ready (${readyPercent.toFixed(0)}%).`,
+      recommendation: 'Check pod status for pending or failing replicas. Look for resource constraints or image pull issues.',
+      metrics: {
+        'Ready': stack.readyReplicas,
+        'Total': stack.totalReplicas,
+        'Health': `${readyPercent.toFixed(0)}%`,
+      },
+      timestamp: now,
+    })
+  }
+
+  // P/D disaggregation insights
+  if (stack.hasDisaggregation) {
+    const prefillCount = stack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
+    const decodeCount = stack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
+
+    if (prefillCount > 0 && decodeCount > 0) {
+      const ratio = prefillCount / decodeCount
+
+      if (ratio > 3) {
+        insights.push({
+          id: 'pd-ratio-high',
+          type: 'optimization',
+          severity: 'info',
+          title: 'High Prefill/Decode Ratio',
+          description: `Prefill to decode ratio is ${ratio.toFixed(1)}:1. This may indicate decode bottleneck potential.`,
+          recommendation: 'Consider adding more decode replicas if you observe high TPOT latency.',
+          metrics: {
+            'Prefill': prefillCount,
+            'Decode': decodeCount,
+            'Ratio': `${ratio.toFixed(1)}:1`,
+          },
+          timestamp: now,
+        })
+      } else if (ratio < 0.5) {
+        insights.push({
+          id: 'pd-ratio-low',
+          type: 'optimization',
+          severity: 'info',
+          title: 'Low Prefill/Decode Ratio',
+          description: `Prefill to decode ratio is ${ratio.toFixed(1)}:1. Prefill phase may be a bottleneck.`,
+          recommendation: 'Consider adding more prefill replicas if you observe high TTFT latency.',
+          metrics: {
+            'Prefill': prefillCount,
+            'Decode': decodeCount,
+            'Ratio': `${ratio.toFixed(1)}:1`,
+          },
+          timestamp: now,
+        })
+      } else {
+        insights.push({
+          id: 'pd-balanced',
+          type: 'performance',
+          severity: 'info',
+          title: 'Balanced P/D Configuration',
+          description: `Disaggregated serving with balanced ${ratio.toFixed(1)}:1 prefill-to-decode ratio.`,
+          recommendation: 'Configuration looks optimal. Monitor TTFT and TPOT metrics for fine-tuning.',
+          metrics: {
+            'Prefill': prefillCount,
+            'Decode': decodeCount,
+            'Ratio': `${ratio.toFixed(1)}:1`,
+          },
+          timestamp: now,
+        })
+      }
+    }
+  } else if (stack.components.both.length > 0) {
+    // Unified serving - suggest disaggregation
+    const totalReplicas = stack.components.both.reduce((sum, c) => sum + c.replicas, 0)
+    if (totalReplicas >= 4) {
+      insights.push({
+        id: 'suggest-disaggregation',
+        type: 'performance',
+        severity: 'info',
+        title: 'Disaggregation Opportunity',
+        description: `Running ${totalReplicas} unified replicas. Prefill/Decode disaggregation could improve TTFT by 30-50%.`,
+        recommendation: 'Consider enabling P/D disaggregation for large deployments to reduce time-to-first-token.',
+        metrics: {
+          'Current Mode': 'Unified',
+          'Replicas': totalReplicas,
+          'Potential TTFT': '-40%',
+        },
+        timestamp: now,
+      })
+    }
+  }
+
+  // If stack looks healthy with no issues, add a positive insight
+  if (insights.length === 0 && stack.status === 'healthy') {
+    insights.push({
+      id: 'stack-healthy',
+      type: 'performance',
+      severity: 'info',
+      title: 'Stack Operating Normally',
+      description: `The ${stack.name} stack is healthy with all ${stack.readyReplicas} replicas ready.`,
+      recommendation: 'Continue monitoring. Consider setting up alerts for latency thresholds.',
+      metrics: {
+        'Status': 'Healthy',
+        'Replicas': `${stack.readyReplicas}/${stack.totalReplicas}`,
+        'Model': stack.model || 'N/A',
+      },
+      timestamp: now,
+    })
+  }
+
+  return insights
+}
+
 export function LLMdAIInsights() {
-  const [insights, setInsights] = useState<AIInsight[]>([])
+  const stackContext = useOptionalStack()
+  const { shouldUseDemoData, reason } = useCardDemoState({ requires: 'stack' })
+
+  // Report demo state to CardWrapper so it can show demo badge and yellow outline
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
+
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [chatInput, setChatInput] = useState('')
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'ai'; message: string }>>([])
 
-  // Load initial insights
-  useEffect(() => {
-    setInsights(generateAIInsights())
-  }, [])
+  // Generate insights based on demo mode or real stack
+  const insights = useMemo(() => {
+    if (shouldUseDemoData) {
+      return generateAIInsights()
+    }
 
-  // Simulate AI analysis
-  const runAnalysis = async () => {
-    setIsAnalyzing(true)
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setInsights(generateAIInsights())
-    setIsAnalyzing(false)
-  }
+    if (stackContext?.selectedStack) {
+      return generateStackInsights(stackContext.selectedStack)
+    }
+
+    return []
+  }, [shouldUseDemoData, stackContext?.selectedStack])
 
   // Handle chat submission
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -131,18 +347,51 @@ export function LLMdAIInsights() {
     setChatHistory(prev => [...prev, { role: 'user', message: userMessage }])
     setChatInput('')
 
-    // Simulate AI response
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // Generate contextual responses based on stack state
+    await new Promise(resolve => setTimeout(resolve, 800))
 
-    const responses: Record<string, string> = {
-      'scale': 'Based on current load patterns, I recommend scaling up to 4 prefill replicas during peak hours (10am-2pm) and scaling down to 2 during off-peak. This would reduce P95 latency by ~30% while maintaining cost efficiency.',
-      'cache': 'KV cache utilization is averaging 72% with occasional spikes to 87%. Consider enabling prefix caching for repeated prompt patterns, which could improve hit rate by 15-20%.',
-      'performance': 'Current TTFT is 420ms, which is 50% better than baseline. To further optimize, consider enabling disaggregated serving - this could reduce TTFT to ~280ms.',
-      'default': 'I can help analyze your LLM-d stack. Try asking about scaling recommendations, cache optimization, performance tuning, or capacity planning.',
+    let response: string
+    const stack = stackContext?.selectedStack
+    const messageLower = userMessage.toLowerCase()
+
+    if (shouldUseDemoData) {
+      // Demo mode responses
+      const responses: Record<string, string> = {
+        'scale': 'Based on current load patterns, I recommend scaling up to 4 prefill replicas during peak hours (10am-2pm) and scaling down to 2 during off-peak.',
+        'cache': 'KV cache utilization is averaging 72% with occasional spikes to 87%. Consider enabling prefix caching for repeated prompt patterns.',
+        'performance': 'Current TTFT is 420ms. To optimize, consider enabling disaggregated serving - this could reduce TTFT to ~280ms.',
+        'default': 'I can help analyze your LLM-d stack. Try asking about scaling recommendations, cache optimization, or performance tuning.',
+      }
+      const keyword = Object.keys(responses).find(k => messageLower.includes(k)) || 'default'
+      response = responses[keyword]
+    } else if (stack) {
+      // Live mode responses based on actual stack
+      if (messageLower.includes('scale') || messageLower.includes('replica')) {
+        if (stack.autoscaler) {
+          const curReplicas = stack.autoscaler.currentReplicas ?? 0
+          const maxReplicas = stack.autoscaler.maxReplicas ?? 0
+          response = `Your stack "${stack.name}" is using ${stack.autoscaler.type} autoscaling with ${curReplicas}/${maxReplicas} replicas. ${maxReplicas > 0 && curReplicas >= maxReplicas * 0.8 ? 'Consider increasing maxReplicas for more headroom.' : 'Current scaling configuration looks healthy.'}`
+        } else {
+          response = `Stack "${stack.name}" has ${stack.totalReplicas} manual replicas. Consider enabling Variant Autoscaling (WVA) for automatic scaling based on queue depth and KV cache pressure.`
+        }
+      } else if (messageLower.includes('disaggregat') || messageLower.includes('prefill') || messageLower.includes('decode')) {
+        if (stack.hasDisaggregation) {
+          const pCount = stack.components.prefill.reduce((s, c) => s + c.replicas, 0)
+          const dCount = stack.components.decode.reduce((s, c) => s + c.replicas, 0)
+          response = `Stack "${stack.name}" uses P/D disaggregation with ${pCount} prefill and ${dCount} decode replicas. This optimizes TTFT by separating compute-intensive prefill from memory-bound decode.`
+        } else {
+          response = `Stack "${stack.name}" uses unified serving (${stack.totalReplicas} replicas). Disaggregation could reduce TTFT by 30-50% for large models by separating prefill and decode phases.`
+        }
+      } else if (messageLower.includes('health') || messageLower.includes('status')) {
+        response = `Stack "${stack.name}" is ${stack.status}. ${stack.readyReplicas}/${stack.totalReplicas} replicas ready. Model: ${stack.model || 'Unknown'}. ${stack.status !== 'healthy' ? 'Check pod logs for issues.' : 'All systems operational.'}`
+      } else {
+        response = `I can help with your "${stack.name}" stack (${stack.model || 'model'}). Ask about scaling, disaggregation, health status, or optimization opportunities.`
+      }
+    } else {
+      response = 'No stack selected. Select a stack from the stack selector to get contextual insights.'
     }
 
-    const keyword = Object.keys(responses).find(k => userMessage.toLowerCase().includes(k)) || 'default'
-    setChatHistory(prev => [...prev, { role: 'ai', message: responses[keyword] }])
+    setChatHistory(prev => [...prev, { role: 'ai', message: response }])
   }
 
   const insightCounts = {
@@ -150,6 +399,9 @@ export function LLMdAIInsights() {
     warning: insights.filter(i => i.severity === 'warning').length,
     critical: insights.filter(i => i.severity === 'critical').length,
   }
+
+  const showDemoBadge = shouldUseDemoData
+  const selectedStack = stackContext?.selectedStack
 
   return (
     <div className="p-4 h-full flex flex-col">
@@ -161,17 +413,17 @@ export function LLMdAIInsights() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={runAnalysis}
-            disabled={isAnalyzing}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30 disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw size={12} className={isAnalyzing ? 'animate-spin' : ''} />
-            {isAnalyzing ? 'Analyzing...' : 'Refresh'}
-          </button>
-          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
-            Demo
-          </span>
+          {selectedStack && !shouldUseDemoData && (
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded truncate max-w-[100px]" title={selectedStack.name}>
+              {selectedStack.name}
+            </span>
+          )}
+          {showDemoBadge && (
+            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded flex items-center gap-1">
+              <Sparkles size={10} />
+              Demo
+            </span>
+          )}
         </div>
       </div>
 
@@ -197,16 +449,14 @@ export function LLMdAIInsights() {
 
       {/* Insights list */}
       <div className="flex-1 overflow-auto space-y-2 mb-4">
-        {isAnalyzing ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <motion.div
-                className="w-12 h-12 mx-auto mb-3 rounded-full border-2 border-purple-500/30 border-t-purple-500"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              />
-              <p className="text-sm text-muted-foreground">Analyzing your LLM-d stack...</p>
-            </div>
+        {insights.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Settings2 size={32} className="text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {reason === 'stack-not-selected'
+                ? 'Select a stack to see insights'
+                : 'No insights available'}
+            </p>
           </div>
         ) : (
           insights.map(insight => (
@@ -257,7 +507,7 @@ export function LLMdAIInsights() {
             type="submit"
             className="px-3 py-2 bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30 transition-colors"
           >
-            Ask
+            <Zap size={16} />
           </button>
         </form>
       </div>

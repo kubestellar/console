@@ -13,7 +13,7 @@ import { Database, TrendingUp, TrendingDown, CircleDot, Grid3X3 } from 'lucide-r
 import { generateKVCacheStats, type KVCacheStats } from '../../../lib/llmd/mockData'
 import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import { useOptionalStack } from '../../../contexts/StackContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
@@ -253,9 +253,12 @@ export function KVCacheMonitor() {
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null)
   const gaugeRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  // Get stack context and demo mode
+  // Get stack context and centralized demo state
   const selectedStack = stackContext?.selectedStack
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+
+  // Report demo state to CardWrapper so it can show demo badge and yellow outline
+  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
 
   // Generate stats from stack data or demo
   const generateStats = useCallback((): KVCacheStats[] => {

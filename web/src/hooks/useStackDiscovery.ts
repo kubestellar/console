@@ -195,11 +195,16 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
         const clusterStacks: LLMdStack[] = []
 
         try {
-          // Fetch pods with llm-d.ai/role labels
-          const podsResponse = await kubectlProxy.exec(
-            ['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
-          )
+          // Run all kubectl calls in parallel for speed
+          const [podsResponse, poolsResponse, svcResponse, gwResponse, hpaResponse, wvaResponse, vpaResponse] = await Promise.all([
+            kubectlProxy.exec(['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'], { context: cluster, timeout: 15000 }),
+            kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+            kubectlProxy.exec(['get', 'services', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+            kubectlProxy.exec(['get', 'gateway', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+            kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+            kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+            kubectlProxy.exec(['get', 'vpa', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+          ])
 
           // Skip cluster entirely if it's unreachable (connection error or timeout)
           if (podsResponse.exitCode !== 0 &&
@@ -211,10 +216,9 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             continue
           }
 
+          // Parse pods
           const podsData = podsResponse.exitCode === 0 ? JSON.parse(podsResponse.output) : { items: [] }
           const pods = (podsData.items || []) as PodResource[]
-
-          // Group pods by namespace
           const podsByNamespace = new Map<string, PodResource[]>()
           for (const pod of pods) {
             const ns = pod.metadata.namespace
@@ -224,29 +228,17 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             podsByNamespace.get(ns)!.push(pod)
           }
 
-          // Fetch InferencePools
-          const poolsResponse = await kubectlProxy.exec(
-            ['get', 'inferencepools', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
-          )
+          // Parse InferencePools
           const poolsData = poolsResponse.exitCode === 0 ? JSON.parse(poolsResponse.output) : { items: [] }
           const pools = (poolsData.items || []) as InferencePoolResource[]
           const poolsByNamespace = new Map(pools.map(p => [p.metadata.namespace, p]))
 
-          // Skip cluster early if no pods AND no InferencePools (like offline platform-eval)
+          // Skip cluster early if no pods AND no InferencePools
           if (pods.length === 0 && pools.length === 0) {
             continue
           }
 
-          // NOTE: We no longer show "basic stacks" immediately because they lack P/D/WVA data
-          // and would overwrite cached stacks that have full data. Instead, we wait for the
-          // complete stack data below. The cache provides instant display on initial load.
-
-          // Fetch EPP services
-          const svcResponse = await kubectlProxy.exec(
-            ['get', 'services', '-A', '-o', 'json'],
-            { context: cluster, timeout: 30000 }
-          )
+          // Parse services for EPP
           let svcData = { items: [] as ServiceResource[] }
           try {
             if (svcResponse.exitCode === 0) {
@@ -263,20 +255,12 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             }
           }
 
-          // Fetch Gateways
-          const gwResponse = await kubectlProxy.exec(
-            ['get', 'gateway', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
-          )
+          // Parse Gateways
           const gwData = gwResponse.exitCode === 0 ? JSON.parse(gwResponse.output) : { items: [] }
           const gateways = (gwData.items || []) as GatewayResource[]
           const gatewayByNamespace = new Map(gateways.map(g => [g.metadata.namespace, g]))
 
-          // Fetch HPAs
-          const hpaResponse = await kubectlProxy.exec(
-            ['get', 'hpa', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
-          )
+          // Parse HPAs
           const hpaData = hpaResponse.exitCode === 0 ? JSON.parse(hpaResponse.output) : { items: [] }
           interface HPAResource {
             metadata: { name: string; namespace: string }
@@ -286,17 +270,12 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
           const hpas = (hpaData.items || []) as HPAResource[]
           const hpaByNamespace = new Map<string, HPAResource>()
           for (const hpa of hpas) {
-            // Associate HPA with namespace if it targets llm-d resources
             if (!hpaByNamespace.has(hpa.metadata.namespace)) {
               hpaByNamespace.set(hpa.metadata.namespace, hpa)
             }
           }
 
-          // Fetch WVA (VariantAutoscaling) - custom CRD
-          const wvaResponse = await kubectlProxy.exec(
-            ['get', 'variantautoscalings', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
-          )
+          // Parse WVA (VariantAutoscaling)
           const wvaData = wvaResponse.exitCode === 0 ? JSON.parse(wvaResponse.output) : { items: [] }
           interface WVAResource {
             metadata: { name: string; namespace: string }
@@ -304,7 +283,7 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               minReplicas?: number
               maxReplicas?: number
               scaleTargetRef?: {
-                namespace?: string  // Cross-namespace targeting
+                namespace?: string
               }
             }
             status?: {
@@ -316,24 +295,17 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             }
           }
           const wvas = (wvaData.items || []) as WVAResource[]
-          // Map WVA by its own namespace (same-namespace autoscaling)
           const wvaByNamespace = new Map<string, WVAResource>()
-          // Map WVA by target namespace (cross-namespace autoscaling)
           const wvaByTargetNamespace = new Map<string, WVAResource>()
           for (const wva of wvas) {
             wvaByNamespace.set(wva.metadata.namespace, wva)
-            // If WVA targets a different namespace, map it there too
             const targetNs = wva.spec?.scaleTargetRef?.namespace
             if (targetNs && targetNs !== wva.metadata.namespace) {
               wvaByTargetNamespace.set(targetNs, wva)
             }
           }
 
-          // Fetch VPA (VerticalPodAutoscaler)
-          const vpaResponse = await kubectlProxy.exec(
-            ['get', 'vpa', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
-          )
+          // Parse VPA
           const vpaData = vpaResponse.exitCode === 0 ? JSON.parse(vpaResponse.output) : { items: [] }
           interface VPAResource {
             metadata: { name: string; namespace: string }

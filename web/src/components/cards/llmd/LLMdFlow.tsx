@@ -12,7 +12,7 @@ import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 
 type ViewMode = 'default' | 'horseshoe'
 
@@ -571,9 +571,12 @@ export function LLMdFlow() {
   const [viewMode, setViewMode] = useState<ViewMode>('default')
   const uniqueId = useRef(`flow-${Math.random().toString(36).substr(2, 9)}`).current
 
-  // Get selected stack from context and demo mode from global hook
+  // Get selected stack from context and centralized demo state
   const selectedStack = stackContext?.selectedStack
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+
+  // Report demo state to CardWrapper so it can show demo badge and yellow outline
+  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
 
   // Build dynamic node positions based on actual stack topology
   const { nodePositions, connections, nodeLabels } = useMemo(() => {

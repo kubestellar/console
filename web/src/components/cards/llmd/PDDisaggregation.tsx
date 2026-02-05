@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Split, ArrowRight, Cpu, Zap, Clock, Activity, AlertCircle } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 
 interface ServerStats {
   id: string
@@ -175,7 +175,10 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
 export function PDDisaggregation() {
   const stackContext = useOptionalStack()
   const selectedStack = stackContext?.selectedStack
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+
+  // Report demo state to CardWrapper so it can show demo badge and yellow outline
+  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
 
   const [servers, setServers] = useState<ServerStats[]>([])
   const [packets, setPackets] = useState<TransferPacket[]>([])

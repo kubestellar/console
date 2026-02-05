@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, CheckCircle, Cpu, HardDrive, Wifi, Server, RefreshCw, XCircle, ChevronRight, List, AlertCircle } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { isAgentUnavailable } from '../../hooks/useLocalAgent'
-import { getDemoMode } from '../../hooks/useDemoMode'
 
 const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
 
@@ -165,7 +163,7 @@ export function HardwareHealthCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('alerts')
-  const [isUsingDemoData, setIsUsingDemoData] = useState(false)
+  const [endpointAvailable, setEndpointAvailable] = useState<boolean | undefined>(undefined)
   const { drillToNode } = useDrillDownActions()
 
   // Card controls state
@@ -179,31 +177,30 @@ export function HardwareHealthCard() {
 
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
-  // Report loading state to CardWrapper (note: using raw data here since dedup happens later)
+  // Centralized demo state decision (handles global demo mode, agent offline, endpoint 404)
+  const { shouldUseDemoData } = useCardDemoState({
+    requires: 'agent',
+    isLiveDataAvailable: endpointAvailable,
+  })
+
+  // Report loading state to CardWrapper
   useCardLoadingState({
     isLoading,
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
-    isDemoData: isUsingDemoData,
+    isDemoData: shouldUseDemoData,
   })
 
   // Fetch device alerts and inventory
   useEffect(() => {
-    const useDemoData = () => {
+    // If demo mode is active (global demo, agent offline), use demo data immediately
+    // shouldUseDemoData is checked here but not in deps to avoid infinite loops
+    if (shouldUseDemoData) {
       setAlerts(DEMO_ALERTS)
       setInventory(DEMO_INVENTORY)
       setNodeCount(DEMO_INVENTORY.length)
       setIsLoading(false)
       setLastUpdate(new Date())
-      setIsUsingDemoData(true)
-    }
-
-    if (getDemoMode()) {
-      useDemoData()
-      return
-    }
-
-    if (isAgentUnavailable()) {
-      useDemoData()
+      setEndpointAvailable(false) // Mark as unavailable so hook reports demo data
       return
     }
 
@@ -247,23 +244,23 @@ export function HardwareHealthCard() {
           gotData = true
         }
 
+        // Update endpoint availability (triggers demo badge via hook if false)
+        setEndpointAvailable(gotData)
+
         // Fall back to demo data if agent doesn't support device endpoints (404)
         if (!gotData) {
           setAlerts(DEMO_ALERTS)
           setInventory(DEMO_INVENTORY)
           setNodeCount(DEMO_INVENTORY.length)
           setLastUpdate(new Date())
-          setIsUsingDemoData(true)
-        } else {
-          setIsUsingDemoData(false)
         }
       } catch {
         // Fall back to demo data on any error
+        setEndpointAvailable(false)
         setAlerts(DEMO_ALERTS)
         setInventory(DEMO_INVENTORY)
         setNodeCount(DEMO_INVENTORY.length)
         setLastUpdate(new Date())
-        setIsUsingDemoData(true)
       } finally {
         setIsLoading(false)
       }
@@ -272,6 +269,7 @@ export function HardwareHealthCard() {
     fetchData()
     const interval = setInterval(fetchData, 30000) // Poll every 30 seconds
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- shouldUseDemoData checked inside but not in deps to avoid loops
   }, [])
 
   // Close cluster dropdown on outside click

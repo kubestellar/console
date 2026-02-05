@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -506,9 +506,12 @@ export function EPPRouting() {
   const [viewMode, setViewMode] = useState<ViewMode>('default')
   const uniqueId = useRef(`epp-${Math.random().toString(36).substr(2, 9)}`).current
 
-  // Get stack context and demo mode
+  // Get stack context and centralized demo state
   const selectedStack = stackContext?.selectedStack
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+
+  // Report demo state to CardWrapper so it can show demo badge and yellow outline
+  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
 
   // Build dynamic nodes from stack topology
   const dynamicNodes = useMemo((): FlowNode[] => {

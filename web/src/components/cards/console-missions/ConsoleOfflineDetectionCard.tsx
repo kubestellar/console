@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap, Layers, List, Stethoscope, Wrench } from 'lucide-react'
-import { getDemoMode } from '../../../hooks/useDemoMode'
+import { useCardDemoState } from '../CardDataContext'
 import { useMissions } from '../../../hooks/useMissions'
 import { useGPUNodes, usePodIssues, useClusters } from '../../../hooks/useMCP'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -219,6 +219,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
   // Prediction hooks
   const { settings: predictionSettings } = usePredictionSettings()
@@ -243,7 +244,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   // Subscribe to cache updates and fetch nodes
   useEffect(() => {
     // Skip agent requests in demo mode (no local agent on Netlify)
-    if (getDemoMode()) {
+    if (shouldUseDemoData) {
       setNodesLoading(false)
       return
     }
@@ -268,7 +269,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       nodesSubscribers.delete(handleUpdate)
       clearInterval(interval)
     }
-  }, [])
+  }, [shouldUseDemoData])
 
   // Filter nodes by global cluster filter
   const nodes = useMemo(() => {

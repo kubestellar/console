@@ -6,8 +6,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../li
 import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { getDemoMode } from '../../hooks/useDemoMode'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -1051,6 +1050,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
@@ -1061,7 +1061,7 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
   // Fetch clusters directly from agent as fallback (skip in demo mode)
   const [agentClusters, setAgentClusters] = useState<{ name: string; healthy?: boolean }[]>([])
   useEffect(() => {
-    if (getDemoMode()) return
+    if (shouldUseDemoData) return
     fetch('http://127.0.0.1:8585/clusters')
       .then(res => res.json())
       .then(data => {
@@ -1070,7 +1070,7 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
         }
       })
       .catch(() => { /* agent not available */ })
-  }, [])
+  }, [shouldUseDemoData])
 
   // Use agent clusters if shared state is empty - memoize for stability
   const effectiveClusters = useMemo(() => {
@@ -1190,7 +1190,7 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
     if (clusters.length === 0) return
 
     // In demo mode, kubectlProxy is unavailable — skip real checks
-    if (getDemoMode()) {
+    if (shouldUseDemoData) {
       setIsRefreshing(false)
       return
     }
@@ -1247,7 +1247,7 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
       isCheckingRef.current = false
       globalCheckInProgress = false
     }
-  }, [])
+  }, [shouldUseDemoData])
 
   // Wrapper for manual refresh - uses current effective clusters, force check to override guards
   const handleRefresh = useCallback(() => {

@@ -4,14 +4,13 @@ import { useMemo } from 'react'
 import type { SecurityIssue } from '../../hooks/useMCP'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { useCardData } from '../../lib/cards'
 import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 
 // Demo security issues data for demo mode
 function getDemoSecurityIssues(): SecurityIssue[] {
@@ -96,7 +95,7 @@ const getSeverityColor = (severity: string) => {
 export function SecurityIssues({ config }: SecurityIssuesProps) {
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
 
   // Fetch data with caching (stale-while-revalidate pattern)
   // Cache persists to IndexedDB so data shows immediately on navigation/reload
