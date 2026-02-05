@@ -10,7 +10,7 @@ Last Updated: 2026-02-05
 | Card Types | 143 |
 | Cards with Drill-Down | 37 (+ 3 planned) |
 | Drill-Down Views | 23 |
-| Modal Dialogs | 29 standalone + 8 inline |
+| Modal Dialogs | 32 standalone + 7 inline |
 | Stats Block Types | 93 (across 14 dashboard types) |
 | Cards with Demo Data | 42 (29%) |
 | Cards with Live Data Hooks | 101 (71%) |
@@ -519,7 +519,7 @@ Based on feature requests:
 
 ---
 
-## 7. Modal Dialogs (29 Standalone + 8 Inline)
+## 7. Modal Dialogs (32 Standalone + 7 Inline)
 
 ### Standalone Modal Files
 
@@ -536,79 +536,80 @@ Based on feature requests:
 | 8 | StatBlockFactoryModal | `dashboard/StatBlockFactoryModal.tsx` | Developer tools | Create custom stat blocks with builder or AI assistance |
 | 9 | CardConfigModal | `clusters/components/CardConfigModal.tsx` | Legacy card settings | Simple card configuration for cluster filtering |
 
-### Cluster Management Modals (6)
+### Cluster Management Modals (7)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 10 | ClusterDetailModal | `clusters/ClusterDetailModal.tsx` | Click cluster in list | Comprehensive cluster details: health, metrics, nodes, workloads, GPU inventory |
 | 11 | RenameModal | `clusters/components/RenameModal.tsx` | Pencil icon on cluster | Rename kubeconfig context display name |
-| 12 | GPUDetailModal | `clusters/components/GPUDetailModal.tsx` | GPU card in cluster detail | GPU resource details: inventory, specs, utilization, per-cluster breakdown |
-| 13 | CPUDetailModal | `clusters/ResourceDetailModals.tsx` | CPU stat click | CPU resource details per node with allocation and utilization |
-| 14 | MemoryDetailModal | `clusters/ResourceDetailModals.tsx` | Memory stat click | Memory resource details per node with allocation and utilization |
-| 15 | StorageDetailModal | `clusters/ResourceDetailModals.tsx` | Storage stat click | Storage resource details per node with capacity and usage |
+| 12 | GPUDetailModal | `clusters/components/GPUDetailModal.tsx` | GPU stat click (standalone) | Full-featured GPU resource details: inventory, specs, utilization, operator status, multi-cluster view |
+| 13 | CPUDetailModal | `clusters/ResourceDetailModals.tsx` | CPU stat click (in cluster detail) | CPU resource details per node with allocation and utilization |
+| 14 | MemoryDetailModal | `clusters/ResourceDetailModals.tsx` | Memory stat click (in cluster detail) | Memory resource details per node with allocation and utilization |
+| 15 | StorageDetailModal | `clusters/ResourceDetailModals.tsx` | Storage stat click (in cluster detail) | Storage resource details per node with capacity and usage |
+| 16 | GPUDetailModal (cluster view) | `clusters/ResourceDetailModals.tsx` | GPU stat in cluster detail modal | Simplified GPU details for single-cluster context within ClusterDetailModal |
 
 ### Navigation/Exploration Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 16 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
+| 17 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
 
 ### Feature/Feedback Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 17 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feature requests and track updates with GitHub integration |
-| 18 | FeedbackModal | `feedback/FeedbackModal.tsx` | Feedback button | Submit bugs or feature requests via GitHub Issues |
+| 18 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feature requests and track updates with GitHub integration |
+| 19 | FeedbackModal | `feedback/FeedbackModal.tsx` | Feedback button | Submit bugs or feature requests via GitHub Issues |
 
 ### Setup/Onboarding Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 19 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
-| 20 | SetupInstructionsDialog | `setup/SetupInstructionsDialog.tsx` | Help/Setup menu | Full setup instructions with copy-paste commands and OAuth configuration |
+| 20 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
+| 21 | SetupInstructionsDialog | `setup/SetupInstructionsDialog.tsx` | Help/Setup menu | Full setup instructions with copy-paste commands and OAuth configuration |
 
 ### Deployment Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 21 | DeployConfirmDialog | `deploy/DeployConfirmDialog.tsx` | Deploy workload action | Confirm deployment with dependency resolution and target cluster selection |
+| 22 | DeployConfirmDialog | `deploy/DeployConfirmDialog.tsx` | Deploy workload action | Confirm deployment with dependency resolution and target cluster selection |
 
 ### GitOps Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 22 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
+| 23 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
 
 ### Mission/Resolution Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 23 | SaveResolutionDialog | `missions/SaveResolutionDialog.tsx` | Save resolution action | Save successful mission resolution for future reference |
+| 24 | SaveResolutionDialog | `missions/SaveResolutionDialog.tsx` | Save resolution action | Save successful mission resolution for future reference |
 
 ### Alerts Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 24 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Create or edit alert rules with conditions, severity, and notification channels |
+| 25 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Create or edit alert rules with conditions, severity, and notification channels |
 
 ### Stats Configuration Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 25 | StatsConfigModal | `clusters/components/StatsConfig.tsx` | Stats settings icon | Configure visible stats and drag-drop reordering for stat blocks |
-| 26 | StatsConfigModal (UI) | `ui/StatsConfig.tsx` | Stats settings icon | Alternative stats configuration component |
+| 26 | StatsConfigModal | `clusters/components/StatsConfig.tsx` | Stats settings icon | Configure visible stats and drag-drop reordering for stat blocks |
+| 27 | StatsConfigModal (UI) | `ui/StatsConfig.tsx` | Stats settings icon | Alternative stats configuration component |
 
 ### API Key & Settings Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 27 | APIKeySettings | `agent/APIKeySettings.tsx` | Settings > API Keys | Configure AI provider API keys (Claude, OpenAI, Gemini) with validation and status |
-| 28 | ApiKeyPromptModal | `cards/console-missions/shared.tsx` | AI feature without key | Prompt to configure API key when AI features are used without credentials |
+| 28 | APIKeySettings | `agent/APIKeySettings.tsx` | Settings > API Keys | Configure AI provider API keys (Claude, OpenAI, Gemini) with validation and status |
+| 29 | ApiKeyPromptModal | `cards/console-missions/shared.tsx` | AI feature without key | Prompt to configure API key when AI features are used without credentials |
 
 ### Widget & Export Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 29 | WidgetExportModal | `widgets/WidgetExportModal.tsx` | Export menu | Export dashboard cards as standalone desktop widgets for Übersicht and other platforms |
+| 30 | WidgetExportModal | `widgets/WidgetExportModal.tsx` | Export menu | Export dashboard cards as standalone desktop widgets for Übersicht and other platforms |
 
 ### Utility Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 30 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
-| 31 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
+| 31 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
+| 32 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
 
 ---
 
-### Inline Modals (8 Total)
+### Inline Modals (7 Total)
 
 These modals are defined within card/page components rather than as standalone files:
 
@@ -618,10 +619,11 @@ These modals are defined within card/page components rather than as standalone f
 | 2 | ClusterOPAModal | `cards/OPAPolicies.tsx` | Click violations count | Full cluster OPA status with policies and violations management |
 | 3 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit namespace resource quotas with GPU presets |
 | 4 | ResourceDetailModal | `clusters/Clusters.tsx` | Click pod/event item | Generic resource details with tabs: Overview/Labels/Related/Describe/Logs/Events/YAML |
-| 5 | GPUDetailModal (alt) | `clusters/ResourceDetailModals.tsx` | GPU stat in cluster modal | Single-cluster GPU details (simpler version, in addition to standalone) |
-| 6 | InstallModal | `onboarding/DemoInstallGuide.tsx` | Demo mode banner | Installation guide with copy-paste commands and OAuth configuration |
-| 7 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
-| 8 | ViolationsModal | `cards/OPAPolicies.tsx` | Various OPA/policy actions | Shows policy violation details |
+| 5 | InstallModal | `onboarding/DemoInstallGuide.tsx` | Demo mode banner | Installation guide with copy-paste commands and OAuth configuration |
+| 6 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
+| 7 | Violations Display | `cards/OPAPolicies.tsx` | Policy violation actions | Shows policy violation details rendered in BaseModal (not a separate modal component) |
+
+**Note:** The GPUDetailModal exported from `ResourceDetailModals.tsx` is listed as standalone modal #16 above, not as an inline modal.
 
 ### Modal Features
 - All modals support ESC key to close
