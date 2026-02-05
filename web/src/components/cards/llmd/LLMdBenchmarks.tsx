@@ -160,7 +160,7 @@ export function LLMdBenchmarks() {
     : ['stacks', 'comparison', 'latency']
 
   return (
-    <div className="p-4 h-full flex flex-col">
+    <div className="p-4 h-full flex-1 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

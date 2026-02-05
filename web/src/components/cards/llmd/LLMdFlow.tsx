@@ -928,7 +928,7 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="relative w-full h-full min-h-[300px] bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden">
+    <div className="relative w-full h-full flex-1 min-h-[300px] bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden">
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm">
@@ -1023,12 +1023,12 @@ export function LLMdFlow() {
         </div>
       </div>
 
-      {/* SVG Flow Diagram */}
+      {/* SVG Flow Diagram - overflow visible allows labels to extend beyond viewBox */}
       <svg
-        viewBox="0 0 100 100"
-        className="w-full h-full"
+        viewBox="-5 -5 120 130"
+        className="w-full h-full overflow-visible"
         preserveAspectRatio="xMidYMid meet"
-        style={{ padding: '30px 5px 20px 5px' }}
+        style={{ overflow: 'visible' }}
       >
         {/* Connections - use dynamic connections */}
         {connections.map((conn, i) => (

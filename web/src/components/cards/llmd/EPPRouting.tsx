@@ -823,7 +823,7 @@ export function EPPRouting() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="p-4 h-full flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative">
+    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative">
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">
@@ -899,9 +899,10 @@ export function EPPRouting() {
       {/* Main visualization area */}
       <div className="flex-1 relative min-h-[200px]">
         <svg
-          viewBox="0 0 100 100"
-          className="w-full h-full"
+          viewBox="0 3 100 105"
+          className="w-full h-full overflow-visible"
           preserveAspectRatio="xMidYMid meet"
+          style={{ overflow: 'visible' }}
         >
           <defs>
             <linearGradient id={`${uniqueId}-prefillGrad`} x1="0%" y1="0%" x2="100%" y2="0%">

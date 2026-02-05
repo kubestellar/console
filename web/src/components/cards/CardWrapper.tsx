@@ -55,6 +55,13 @@ const LARGE_EXPANDED_CARDS = new Set([
   'cluster_comparison',
   'cluster_resource_tree',
   'match_game',
+  // AI-ML cards that need more space when expanded
+  'llmd_flow',
+  'epp_routing',
+  'kvcache_monitor',
+  'pd_disaggregation',
+  'llmd_benchmarks',
+  'llmd_ai_insights',
 ])
 
 // Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
@@ -1458,7 +1465,10 @@ export function CardWrapper({
               ? 'h-[calc(95vh-80px)]'
               : 'max-h-[calc(80vh-80px)]'
         )}>
-          {children}
+          {/* Wrapper ensures children fill available space in expanded mode */}
+          <div className="flex-1 min-h-0 flex flex-col">
+            {children}
+          </div>
         </BaseModal.Content>
       </BaseModal>
 
