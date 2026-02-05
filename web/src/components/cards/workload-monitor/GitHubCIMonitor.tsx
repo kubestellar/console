@@ -341,7 +341,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         >
           <RefreshCw
             className={cn(
-              "w-3.5 h-3.5 transition-transform duration-500 ease-in-out",
+              "w-3.5 h-3.5 transition-transform duration-1000 ease-in-out",
               isRefreshing ? "text-purple-400" : "text-muted-foreground hover:text-purple-400"
             )}
             style={{ transform: `rotate(${refreshCount * 360}deg)` }}
