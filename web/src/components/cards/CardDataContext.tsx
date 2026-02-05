@@ -3,20 +3,40 @@
  * state (isFailed, consecutiveFailures) up to the parent CardWrapper, which
  * renders the appropriate status badges (failure, demo fallback, etc.).
  *
- * Usage inside a card component:
+ * ## Demo Mode Architecture
  *
- *   const { isFailed, consecutiveFailures } = useCachedPodIssues()
- *   useReportCardDataState({ isFailed, consecutiveFailures })
+ * There are THREE ways a card can be marked as "demo":
  *
- * For cards that need to determine whether to use demo data:
+ * 1. **DEMO_DATA_CARDS set** (cardRegistry.ts) - Static list of cards that ALWAYS use demo data.
+ *    These get `isDemoData={true}` passed as a prop, which OVERRIDES child reports.
+ *    → When adding live data support, REMOVE the card from this set!
  *
- *   const { shouldUseDemoData, reason } = useCardDemoState({
- *     requires: 'agent',           // 'agent' | 'backend' | 'stack' | 'none'
- *     isLiveDataAvailable: true,   // Set to false if endpoint returned 404/error
- *   })
- *   if (shouldUseDemoData) {
- *     // Use local demo data
- *   }
+ * 2. **Global demo mode** (useDemoMode) - User/system-wide toggle (forced on Netlify).
+ *    Cards can opt-out by reporting `isDemoData: false` via useReportCardDataState.
+ *
+ * 3. **Child-reported state** - Cards call useReportCardDataState({ isDemoData: ... })
+ *    to dynamically report based on actual data source availability.
+ *
+ * ## Usage Examples
+ *
+ * ### Card with cached data hook:
+ * ```tsx
+ * const { isFailed, consecutiveFailures } = useCachedPodIssues()
+ * useReportCardDataState({ isFailed, consecutiveFailures })
+ * ```
+ *
+ * ### Card with stack-dependent data (llm-d cards):
+ * ```tsx
+ * const { shouldUseDemoData } = useCardDemoState({ requires: 'stack' })
+ * useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
+ * // Then use shouldUseDemoData to decide data source
+ * ```
+ *
+ * ### Card with agent-dependent data:
+ * ```tsx
+ * const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
+ * useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
+ * ```
  */
 
 import { createContext, useContext, useLayoutEffect, useMemo } from 'react'

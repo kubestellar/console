@@ -373,8 +373,20 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = Object.fromEntries
 )
 
 /**
- * Cards that use demo/mock data instead of real data.
- * Used to show a demo banner when these cards are present.
+ * Cards that ALWAYS use demo/mock data (no live data source exists).
+ *
+ * IMPORTANT: When adding live data support to a card, you MUST:
+ * 1. Remove the card type from this set
+ * 2. Have the card call useReportCardDataState({ isDemoData: shouldUseDemoData, ... })
+ *    to dynamically report its demo state based on actual data source
+ *
+ * Cards in this set get isDemoData={true} passed as a prop to CardWrapper,
+ * which OVERRIDES any child-reported state. This is why cards with live data
+ * must be removed from this set.
+ *
+ * For cards that use StackContext or other dynamic data sources, use
+ * useCardDemoState({ requires: 'stack' | 'agent' | 'backend' }) to determine
+ * if demo data should be used, then report via useReportCardDataState.
  */
 export const DEMO_DATA_CARDS = new Set([
   // MCS cards - demo until MCS is installed
@@ -415,10 +427,8 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
-  // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation) removed - they now use StackContext for live data
-  // These cards will show Demo badge only when global demo mode is enabled
-  'llmd_benchmarks',
-  'llmd_ai_insights',
+  // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation, llmd_benchmarks, llmd_ai_insights)
+  // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // Note: llmd_configurator NOT in demo list - shows real llm-d presets from the project
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
