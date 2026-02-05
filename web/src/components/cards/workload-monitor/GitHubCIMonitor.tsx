@@ -22,6 +22,15 @@ export interface GitHubCIMonitorRef {
   refresh: () => void
 }
 
+// Decode base64 encoded token from localStorage
+const decodeToken = (encoded: string): string => {
+  try {
+    return atob(encoded)
+  } catch {
+    return encoded // Return as-is if not encoded (backwards compatibility)
+  }
+}
+
 interface GitHubCIConfig {
   repos?: string[]
   token?: string
@@ -110,7 +119,8 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const repos = ghConfig?.repos || ['kubestellar/kubestellar', 'kubestellar/console']
 
   const fetchWorkflows = useCallback(async (isRefresh = false) => {
-    const token = ghConfig?.token || localStorage.getItem('github_token')
+    const storedToken = localStorage.getItem('github_token')
+    const token = ghConfig?.token || (storedToken ? decodeToken(storedToken) : null)
     if (!token) {
       // Use demo data
       setWorkflows(DEMO_WORKFLOWS)
@@ -173,6 +183,17 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
     fetchWorkflows()
     const interval = setInterval(() => fetchWorkflows(true), 60_000)
     return () => clearInterval(interval)
+  }, [fetchWorkflows])
+
+  // Listen for token changes in localStorage (e.g., when user adds token in Settings)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'github_token') {
+        fetchWorkflows(true)
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [fetchWorkflows])
 
   // Stats
