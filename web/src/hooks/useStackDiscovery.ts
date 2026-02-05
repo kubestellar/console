@@ -238,50 +238,9 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             continue
           }
 
-          // PROGRESSIVE: Build and display basic stacks immediately from pods + InferencePools
-          // Additional details (EPP, gateway, autoscalers) will be added in a second pass
-          const basicStackNamespaces = new Set<string>([
-            ...podsByNamespace.keys(),
-            ...poolsByNamespace.keys(),
-          ])
-
-          if (basicStackNamespaces.size > 0) {
-            const basicStacks: LLMdStack[] = []
-            for (const namespace of basicStackNamespaces) {
-              const pool = poolsByNamespace.get(namespace)
-              const nsPods = podsByNamespace.get(namespace) || []
-              const firstPod = nsPods[0]
-              const model = firstPod?.metadata.labels?.['llm-d.ai/model']
-
-              basicStacks.push({
-                id: `${namespace}@${cluster}`,
-                name: pool?.metadata.name || namespace,
-                namespace,
-                cluster,
-                inferencePool: pool?.metadata.name,
-                components: {
-                  prefill: [],
-                  decode: [],
-                  both: [],
-                  epp: null,
-                  gateway: null,
-                },
-                status: 'unknown', // Will be updated with full data
-                hasDisaggregation: false,
-                model,
-                totalReplicas: nsPods.length,
-                readyReplicas: 0,
-              })
-            }
-
-            // Show basic stacks immediately
-            setStacks(prev => {
-              const filtered = prev.filter(s => s.cluster !== cluster)
-              const merged = [...filtered, ...basicStacks]
-              merged.sort((a, b) => a.name.localeCompare(b.name))
-              return merged
-            })
-          }
+          // NOTE: We no longer show "basic stacks" immediately because they lack P/D/WVA data
+          // and would overwrite cached stacks that have full data. Instead, we wait for the
+          // complete stack data below. The cache provides instant display on initial load.
 
           // Fetch EPP services
           const svcResponse = await kubectlProxy.exec(

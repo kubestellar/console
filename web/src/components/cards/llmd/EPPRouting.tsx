@@ -30,6 +30,7 @@ interface FlowNode {
   type: 'source' | 'router' | 'prefill' | 'decode'
   color: string
   load?: number
+  isGhost?: boolean  // For scaled-to-0 autoscaler nodes
 }
 
 interface FlowLink {
@@ -111,8 +112,12 @@ interface PremiumNodeProps {
 }
 
 function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) {
-  const load = node.load || 0
-  const loadColors = getLoadColors(load)
+  const isGhost = node.isGhost || false
+  const load = isGhost ? 0 : (node.load || 0)
+  // Ghost nodes get dimmed gray colors
+  const loadColors = isGhost
+    ? { start: '#475569', end: '#64748b', glow: '#475569' }
+    : getLoadColors(load)
 
   // Arc calculation (270 degrees, bottom open)
   const startAngle = -225
@@ -204,14 +209,15 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         style={{ filter: `blur(0.5px)` }}
       />
 
-      {/* Track background (270 degree arc) */}
+      {/* Track background (270 degree arc) - dashed for ghost nodes */}
       <path
         d={createArc(NODE_RADIUS, startAngle, endAngle)}
         fill="none"
-        stroke="#1e293b"
+        stroke={isGhost ? '#475569' : '#1e293b'}
         strokeWidth={TRACK_WIDTH}
         strokeLinecap="round"
-        opacity={0.9}
+        strokeDasharray={isGhost ? '1 1' : undefined}
+        opacity={isGhost ? 0.5 : 0.9}
       />
 
       {/* Load arc with glow */}
@@ -245,8 +251,14 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         fill={`url(#${innerGlowId})`}
       />
 
-      {/* Load percentage inside gauge */}
-      {load > 0 && (
+      {/* Load percentage inside gauge - or pause icon for ghost */}
+      {isGhost ? (
+        /* Pause icon for ghost nodes */
+        <g transform={`translate(${node.x - 1.5}, ${node.y - 1.5})`}>
+          <rect x="0" y="0" width="1" height="3" fill="#64748b" rx="0.2" />
+          <rect x="2" y="0" width="1" height="3" fill="#64748b" rx="0.2" />
+        </g>
+      ) : load > 0 ? (
         <text
           x={node.x}
           y={node.y + 0.5}
@@ -259,7 +271,7 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
         >
           {load}%
         </text>
-      )}
+      ) : null}
 
       {/* Node label below */}
       <text
@@ -341,8 +353,10 @@ const getHorseshoeColor = (pct: number) => {
 }
 
 function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodeProps) {
-  const load = node.load || 0
-  const color = getHorseshoeColor(load)
+  const isGhost = node.isGhost || false
+  const load = isGhost ? 0 : (node.load || 0)
+  // Ghost nodes get dimmed gray color
+  const color = isGhost ? '#475569' : getHorseshoeColor(load)
   const filterId = `hs-glow-${uniqueId}-${node.id}`
 
   // Larger horseshoe for this view
@@ -408,17 +422,19 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
         />
       )}
 
-      {/* Track background arc */}
+      {/* Track background arc - dashed for ghost nodes */}
       <path
         d={createArc(radius, startAngle, endAngle, totalSweep)}
         fill="none"
-        stroke="#374151"
+        stroke={isGhost ? '#475569' : '#374151'}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
+        strokeDasharray={isGhost ? '2 2' : undefined}
+        opacity={isGhost ? 0.5 : 1}
       />
 
       {/* Value arc */}
-      {load > 0 && (
+      {load > 0 && !isGhost && (
         <motion.path
           d={createArc(radius, startAngle, valueEndAngle, valueSweep)}
           fill="none"
@@ -440,19 +456,27 @@ function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodePro
         fill="#0f172a"
       />
 
-      {/* Percentage text */}
-      <text
-        x={cx}
-        y={cy + 0.5}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill="#ffffff"
-        fontSize="4"
-        fontWeight="700"
-        style={{ textShadow: `0 0 4px ${color}` }}
-      >
-        {load}%
-      </text>
+      {/* Percentage text - or pause icon for ghost */}
+      {isGhost ? (
+        /* Pause icon for ghost nodes */
+        <g transform={`translate(${cx - 2}, ${cy - 2})`}>
+          <rect x="0" y="0" width="1.5" height="4" fill="#64748b" rx="0.3" />
+          <rect x="2.5" y="0" width="1.5" height="4" fill="#64748b" rx="0.3" />
+        </g>
+      ) : (
+        <text
+          x={cx}
+          y={cy + 0.5}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="#ffffff"
+          fontSize="4"
+          fontWeight="700"
+          style={{ textShadow: `0 0 4px ${color}` }}
+        >
+          {load}%
+        </text>
+      )}
 
       {/* Label below */}
       <text
@@ -596,6 +620,7 @@ export function EPPRouting() {
           type: 'prefill',
           color: '#475569', // Dimmed color for ghost
           load: 0,
+          isGhost: true,  // Mark as ghost node
         })
       }
     }
@@ -649,8 +674,10 @@ export function EPPRouting() {
     return () => clearInterval(interval)
   }, [dynamicNodes])
 
-  // Get current node with live metrics
+  // Get current node with live metrics (skip ghost nodes)
   const getNodeWithMetrics = useCallback((node: FlowNode): FlowNode => {
+    // Don't override ghost node metrics - they stay at 0
+    if (node.isGhost) return node
     const m = nodeMetrics[node.id]
     if (!m) return node
     return { ...node, load: m.load }
