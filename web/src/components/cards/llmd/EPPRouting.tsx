@@ -40,15 +40,15 @@ interface FlowLink {
   type: 'prefill' | 'decode' | 'kv-transfer'
 }
 
-// Node layout - spread across viewBox
+// Node layout - spread across viewBox (matching LLMdFlow spacing)
 const NODES: FlowNode[] = [
   { id: 'requests', label: 'Requests', x: 12, y: 50, type: 'source', color: '#3b82f6', load: 0 },
   { id: 'epp', label: 'EPP', x: 38, y: 50, type: 'router', color: '#f59e0b', load: 65 },
-  { id: 'prefill-0', label: 'Prefill-0', x: 65, y: 15, type: 'prefill', color: '#9333ea', load: 72 },
-  { id: 'prefill-1', label: 'Prefill-1', x: 65, y: 38, type: 'prefill', color: '#9333ea', load: 58 },
-  { id: 'prefill-2', label: 'Prefill-2', x: 65, y: 62, type: 'prefill', color: '#9333ea', load: 45 },
-  { id: 'decode-0', label: 'Decode-0', x: 65, y: 85, type: 'decode', color: '#22c55e', load: 80 },
-  { id: 'decode-1', label: 'Decode-1', x: 90, y: 50, type: 'decode', color: '#22c55e', load: 67 },
+  { id: 'prefill-0', label: 'Prefill-0', x: 65, y: 18, type: 'prefill', color: '#9333ea', load: 72 },
+  { id: 'prefill-1', label: 'Prefill-1', x: 65, y: 50, type: 'prefill', color: '#9333ea', load: 58 },
+  { id: 'prefill-2', label: 'Prefill-2', x: 65, y: 82, type: 'prefill', color: '#9333ea', load: 45 },
+  { id: 'decode-0', label: 'Decode-0', x: 90, y: 34, type: 'decode', color: '#22c55e', load: 80 },
+  { id: 'decode-1', label: 'Decode-1', x: 90, y: 66, type: 'decode', color: '#22c55e', load: 67 },
 ]
 
 // Get color based on load percentage
@@ -276,14 +276,15 @@ function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNodeProps) 
   )
 }
 
-// Flow particle component - follows quadratic bezier curve
+// Flow particle component - uses SVG animateMotion for guaranteed path following
 interface FlowParticleProps {
   link: FlowLink
   delay: number
   nodes: FlowNode[]
+  pathGenerator: (source: FlowNode, target: FlowNode) => string
 }
 
-function FlowParticle({ link, delay, nodes }: FlowParticleProps) {
+function FlowParticle({ link, delay, nodes, pathGenerator }: FlowParticleProps) {
   const sourceNode = nodes.find(n => n.id === link.source)
   const targetNode = nodes.find(n => n.id === link.target)
 
@@ -291,42 +292,34 @@ function FlowParticle({ link, delay, nodes }: FlowParticleProps) {
 
   const color = link.type === 'prefill' ? '#9333ea' : link.type === 'decode' ? '#22c55e' : '#06b6d4'
 
-  // Calculate control point for quadratic bezier (same as path)
-  const midX = (sourceNode.x + targetNode.x) / 2
-  const midY = (sourceNode.y + targetNode.y) / 2
-  const curve = Math.abs(sourceNode.y - targetNode.y) > 20 ? 8 : 3
-  const controlX = midX
-  const controlY = midY - curve
+  // Use the same path generator as the visible line
+  const path = pathGenerator(sourceNode, targetNode)
 
-  // Generate points along the quadratic bezier curve
-  const numPoints = 20
-  const curvePoints: { x: number; y: number }[] = []
-  for (let i = 0; i <= numPoints; i++) {
-    const t = i / numPoints
-    // Quadratic bezier: B(t) = (1-t)²P0 + 2(1-t)t*P1 + t²P2
-    const x = Math.pow(1 - t, 2) * sourceNode.x + 2 * (1 - t) * t * controlX + Math.pow(t, 2) * targetNode.x
-    const y = Math.pow(1 - t, 2) * sourceNode.y + 2 * (1 - t) * t * controlY + Math.pow(t, 2) * targetNode.y
-    curvePoints.push({ x, y })
-  }
+  // Speed varies by percentage: higher percentage = faster (shorter duration)
+  // Range: 1.5s for 100% to 4s for low percentages
+  const baseDuration = 4 - (link.percentage / 100) * 2.5
 
   return (
-    <motion.circle
+    <circle
       r={PARTICLE_RADIUS}
       fill={color}
-      initial={{ cx: curvePoints[0].x, cy: curvePoints[0].y, opacity: 0 }}
-      animate={{
-        cx: curvePoints.map(p => p.x),
-        cy: curvePoints.map(p => p.y),
-        opacity: [0, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0, 0],
-      }}
-      transition={{
-        duration: 2.5,
-        delay,
-        repeat: Infinity,
-        ease: 'linear',
-      }}
       style={{ filter: `drop-shadow(0 0 1.5px ${color})` }}
-    />
+    >
+      <animateMotion
+        dur={`${baseDuration}s`}
+        repeatCount="indefinite"
+        begin={`${delay}s`}
+        path={path}
+        calcMode="linear"
+      />
+      <animate
+        attributeName="opacity"
+        values="0;0.8;0.8;0.8;0.8;0.8;0.8;0.8;0.8;0"
+        dur={`${baseDuration}s`}
+        repeatCount="indefinite"
+        begin={`${delay}s`}
+      />
+    </circle>
   )
 }
 
@@ -507,53 +500,88 @@ export function EPPRouting() {
       { id: 'epp', label: 'EPP', x: 38, y: 50, type: 'router', color: '#f59e0b', load: 65 },
     ]
 
-    const prefillCount = selectedStack.components.prefill.length
-    const decodeCount = selectedStack.components.decode.length
-    const unifiedCount = selectedStack.components.both.length
+    // Count total replicas (not just component count) to match LLMdFlow
+    const prefillCount = selectedStack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
+    const decodeCount = selectedStack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
+    const unifiedCount = selectedStack.components.both.reduce((sum, c) => sum + c.replicas, 0)
     const hasDisaggregation = prefillCount > 0 && decodeCount > 0
 
     if (hasDisaggregation) {
-      // Disaggregated topology - spread prefill nodes vertically
-      const prefillSpacing = 70 / (prefillCount + 1)
-      selectedStack.components.prefill.slice(0, 4).forEach((comp, i) => {
+      // Disaggregated topology - spread prefill nodes from y=18 to y=82 (matching demo NODES)
+      const maxPrefill = Math.min(prefillCount, 3)
+      for (let i = 0; i < maxPrefill; i++) {
+        // For 1 node: y=50, for 2 nodes: y=18,82, for 3 nodes: y=18,50,82
+        const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
         nodes.push({
           id: `prefill-${i}`,
           label: `Prefill-${i}`,
           x: 65,
-          y: 15 + prefillSpacing * (i + 1),
+          y,
           type: 'prefill',
           color: '#9333ea',
-          load: comp.readyReplicas > 0 ? 50 + Math.random() * 30 : 0,
+          load: 50 + Math.random() * 30,
         })
-      })
+      }
 
-      // Decode nodes
-      const decodeSpacing = 40 / (decodeCount + 1)
-      selectedStack.components.decode.slice(0, 3).forEach((comp, i) => {
+      // Decode nodes - spread from y=34 to y=66 (matching demo NODES)
+      const maxDecode = Math.min(decodeCount, 2)
+      for (let i = 0; i < maxDecode; i++) {
+        const y = maxDecode === 1 ? 50 : 34 + (32 * i) / (maxDecode - 1)
         nodes.push({
           id: `decode-${i}`,
           label: `Decode-${i}`,
           x: 90,
-          y: 30 + decodeSpacing * (i + 1),
+          y,
           type: 'decode',
           color: '#22c55e',
-          load: comp.readyReplicas > 0 ? 50 + Math.random() * 35 : 0,
+          load: 50 + Math.random() * 35,
         })
-      })
+      }
+    } else if (decodeCount > 0) {
+      // Decode-only topology - spread from y=18 to y=82
+      const maxDecode = Math.min(decodeCount, 4)
+      for (let i = 0; i < maxDecode; i++) {
+        const y = maxDecode === 1 ? 50 : 18 + (64 * i) / (maxDecode - 1)
+        nodes.push({
+          id: `decode-${i}`,
+          label: `Decode-${i}`,
+          x: 75,
+          y,
+          type: 'decode',
+          color: '#22c55e',
+          load: 50 + Math.random() * 35,
+        })
+      }
+    } else if (prefillCount > 0) {
+      // Prefill-only topology - spread from y=18 to y=82
+      const maxPrefill = Math.min(prefillCount, 4)
+      for (let i = 0; i < maxPrefill; i++) {
+        const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
+        nodes.push({
+          id: `prefill-${i}`,
+          label: `Prefill-${i}`,
+          x: 75,
+          y,
+          type: 'prefill',
+          color: '#9333ea',
+          load: 50 + Math.random() * 30,
+        })
+      }
     } else if (unifiedCount > 0) {
-      // Unified topology
-      const spacing = 60 / (Math.min(unifiedCount, 4) + 1)
-      selectedStack.components.both.slice(0, 4).forEach((comp, i) => {
+      // Unified topology - spread from y=18 to y=82
+      const maxServers = Math.min(unifiedCount, 4)
+      for (let i = 0; i < maxServers; i++) {
+        const y = maxServers === 1 ? 50 : 18 + (64 * i) / (maxServers - 1)
         nodes.push({
           id: `server-${i}`,
           label: `Server-${i}`,
           x: 75,
-          y: 20 + spacing * (i + 1),
+          y,
           type: 'prefill', // Use prefill color for unified
           color: '#9333ea',
-          load: comp.readyReplicas > 0 ? 50 + Math.random() * 30 : 0,
+          load: 50 + Math.random() * 30,
         })
-      })
+      }
     }
 
     return nodes
@@ -674,8 +702,32 @@ export function EPPRouting() {
           type: 'prefill',
         })
       })
+    } else if (decodeNodes.length > 0) {
+      // Decode-only topology - EPP to decode nodes
+      const percent = Math.round(100 / decodeNodes.length)
+      decodeNodes.forEach((node, i) => {
+        flowLinks.push({
+          source: 'epp',
+          target: node.id,
+          value: Math.round(450 / decodeNodes.length),
+          percentage: percent - (i * 2),
+          type: 'decode',
+        })
+      })
+    } else if (prefillNodes.length > 0) {
+      // Prefill-only topology - EPP to prefill nodes
+      const percent = Math.round(100 / prefillNodes.length)
+      prefillNodes.forEach((node, i) => {
+        flowLinks.push({
+          source: 'epp',
+          target: node.id,
+          value: Math.round(450 / prefillNodes.length),
+          percentage: percent - (i * 2),
+          type: 'prefill',
+        })
+      })
     } else {
-      // Fallback to default links
+      // Fallback to default links (demo mode)
       return [
         { source: 'requests', target: 'epp', value: 450, percentage: 100, type: 'prefill' as const },
         { source: 'epp', target: 'prefill-0', value: 120, percentage: 27, type: 'prefill' as const },
@@ -710,11 +762,13 @@ export function EPPRouting() {
     }
   }, [links])
 
-  // Generate path between nodes
+  // Generate path between nodes - must match FlowParticle curve calculation exactly
   const generatePath = useCallback((source: FlowNode, target: FlowNode): string => {
     const midX = (source.x + target.x) / 2
+    const midY = (source.y + target.y) / 2
     const curve = Math.abs(source.y - target.y) > 20 ? 8 : 3
-    return `M ${source.x} ${source.y} Q ${midX} ${(source.y + target.y) / 2 - curve} ${target.x} ${target.y}`
+    const controlY = midY - curve
+    return `M ${source.x} ${source.y} Q ${midX} ${controlY} ${target.x} ${target.y}`
   }, [])
 
   // Show empty state when no stack selected in live mode
@@ -848,14 +902,15 @@ export function EPPRouting() {
                   transition={{ duration: 0.8, delay: i * 0.08 }}
                 />
 
-                {/* Percentage label for major routes */}
-                {link.percentage >= 20 && (
+                {/* Percentage label for routes from EPP */}
+                {link.source === 'epp' && link.percentage >= 5 && (
                   <text
                     x={(source.x + target.x) / 2}
                     y={(source.y + target.y) / 2 - 2}
                     textAnchor="middle"
-                    fill={isHovered ? '#fff' : '#71717a'}
+                    fill={isHovered ? '#fff' : '#a1a1aa'}
                     fontSize="2.5"
+                    fontWeight="500"
                   >
                     {link.percentage}%
                   </text>
@@ -871,6 +926,7 @@ export function EPPRouting() {
               link={link}
               delay={i * 0.2}
               nodes={dynamicNodes}
+              pathGenerator={generatePath}
             />
           ))}
 

@@ -258,7 +258,7 @@ function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqu
         y={pos.y + NODE_RADIUS + 3}
         textAnchor="middle"
         fill="#e5e5e5"
-        fontSize="3"
+        fontSize="2.5"
         fontWeight="600"
       >
         {label}
@@ -465,7 +465,7 @@ function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId, 
         y={cy + radius + 4}
         textAnchor="middle"
         fill="#e5e5e5"
-        fontSize="3"
+        fontSize="2.5"
         fontWeight="600"
       >
         {label}
@@ -613,15 +613,15 @@ export function LLMdFlow() {
     ]
 
     if (hasDisaggregation) {
-      // Disaggregated topology
+      // Disaggregated topology (both prefill AND decode)
       const maxPrefill = Math.min(prefillCount, 3) // Show up to 3 prefill
       const maxDecode = Math.min(decodeCount, 2)   // Show up to 2 decode
 
-      // Position prefill nodes
-      const prefillSpacing = 64 / (maxPrefill + 1)
+      // Position prefill nodes - spread from y=18 to y=82
       for (let i = 0; i < maxPrefill; i++) {
         const key = `prefill${i}`
-        positions[key] = { x: 70, y: 18 + prefillSpacing * (i + 1) }
+        const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
+        positions[key] = { x: 70, y }
         labels[key] = `Prefill-${i}`
         conns.push({
           from: 'epp',
@@ -631,11 +631,11 @@ export function LLMdFlow() {
         })
       }
 
-      // Position decode nodes
-      const decodeSpacing = 32 / (maxDecode + 1)
+      // Position decode nodes - spread from y=34 to y=66
       for (let i = 0; i < maxDecode; i++) {
         const key = `decode${i}`
-        positions[key] = { x: 92, y: 34 + decodeSpacing * (i + 1) }
+        const y = maxDecode === 1 ? 50 : 34 + (32 * i) / (maxDecode - 1)
+        positions[key] = { x: 92, y }
         labels[key] = `Decode-${i}`
         // Direct EPP to decode connections (for cached KV)
         conns.push({
@@ -654,13 +654,43 @@ export function LLMdFlow() {
           })
         }
       }
+    } else if (decodeCount > 0) {
+      // Decode-only topology - spread from y=18 to y=82
+      const maxDecode = Math.min(decodeCount, 4)
+      for (let i = 0; i < maxDecode; i++) {
+        const key = `decode${i}`
+        const y = maxDecode === 1 ? 50 : 18 + (64 * i) / (maxDecode - 1)
+        positions[key] = { x: 78, y }
+        labels[key] = `Decode-${i}`
+        conns.push({
+          from: 'epp',
+          to: key as keyof typeof NODE_POSITIONS,
+          type: 'decode',
+          trafficPercent: Math.round(100 / maxDecode),
+        })
+      }
+    } else if (prefillCount > 0) {
+      // Prefill-only topology - spread from y=18 to y=82
+      const maxPrefill = Math.min(prefillCount, 4)
+      for (let i = 0; i < maxPrefill; i++) {
+        const key = `prefill${i}`
+        const y = maxPrefill === 1 ? 50 : 18 + (64 * i) / (maxPrefill - 1)
+        positions[key] = { x: 78, y }
+        labels[key] = `Prefill-${i}`
+        conns.push({
+          from: 'epp',
+          to: key as keyof typeof NODE_POSITIONS,
+          type: 'prefill',
+          trafficPercent: Math.round(100 / maxPrefill),
+        })
+      }
     } else if (unifiedCount > 0) {
-      // Unified serving topology
+      // Unified serving topology - spread from y=18 to y=82
       const maxServers = Math.min(unifiedCount, 4)
-      const spacing = 64 / (maxServers + 1)
       for (let i = 0; i < maxServers; i++) {
         const key = `server${i}`
-        positions[key] = { x: 78, y: 18 + spacing * (i + 1) }
+        const y = maxServers === 1 ? 50 : 18 + (64 * i) / (maxServers - 1)
+        positions[key] = { x: 78, y }
         labels[key] = `Server-${i}`
         conns.push({
           from: 'epp',
@@ -883,7 +913,7 @@ export function LLMdFlow() {
               }`}>
                 {selectedStack.name}
               </span>
-              <span className="text-slate-500">@{selectedStack.cluster}</span>
+              <span className="text-slate-500">{selectedStack.cluster}</span>
               {isDemoMode && (
                 <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
               )}

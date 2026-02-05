@@ -10,12 +10,12 @@ export const aiMlDashboardConfig: UnifiedDashboardConfig = {
   route: '/ai-ml',
   statsType: 'ai-ml',
   cards: [
-    // Stunning LLM-d visualization cards (hero row)
-    { id: 'llmd-flow-1', cardType: 'llmd_flow', title: 'llm-d Request Flow', position: { w: 6, h: 5 } },
+    // Stunning LLM-d visualization cards (hero row - all 1/3 width)
+    { id: 'llmd-flow-1', cardType: 'llmd_flow', title: 'llm-d Request Flow', position: { w: 4, h: 5 } },
     { id: 'kvcache-monitor-1', cardType: 'kvcache_monitor', title: 'KV Cache Monitor', position: { w: 4, h: 5 } },
+    { id: 'epp-routing-1', cardType: 'epp_routing', title: 'EPP Routing', position: { w: 4, h: 5 } },
 
     // Architecture and routing visualizations
-    { id: 'epp-routing-1', cardType: 'epp_routing', title: 'EPP Routing', position: { w: 6, h: 4 } },
     { id: 'pd-disagg-1', cardType: 'pd_disaggregation', title: 'P/D Disaggregation', position: { w: 6, h: 4 } },
 
     // Performance and intelligence
