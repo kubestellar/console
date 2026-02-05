@@ -19,13 +19,28 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const triggerRef = useRef<HTMLSpanElement>(null)
 
+  // Update position on scroll/resize to keep tooltip attached
   useEffect(() => {
-    if (isVisible && triggerRef.current) {
+    if (!isVisible || !triggerRef.current) return
+
+    const updatePosition = () => {
+      if (!triggerRef.current) return
       const rect = triggerRef.current.getBoundingClientRect()
       setPosition({
         x: rect.left + rect.width / 2,
         y: rect.top - 8,
       })
+    }
+
+    updatePosition()
+
+    // Update on scroll (capture phase for nested scrolls)
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
     }
   }, [isVisible])
 

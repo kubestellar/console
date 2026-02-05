@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download,
   // Card icons
-  AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2,
+  AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
@@ -296,7 +296,7 @@ export const CARD_TITLES: Record<string, string> = {
   console_ai_issues: 'AI Issues',
   console_ai_kubeconfig_audit: 'AI Kubeconfig Audit',
   console_ai_health_check: 'AI Health Check',
-  console_ai_offline_detection: 'AI Node Offline Detection',
+  console_ai_offline_detection: 'Predictive Health Monitor',
 
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
@@ -458,16 +458,47 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   console_ai_issues: 'AI-detected issues and recommended fixes.',
   console_ai_kubeconfig_audit: 'AI audit of kubeconfig files for security and cleanup.',
   console_ai_health_check: 'AI-powered cluster health analysis.',
-  console_ai_offline_detection: 'AI detection of offline or unreachable clusters.',
+  console_ai_offline_detection: 'Monitors cluster health and predicts failures before they happen. Detects offline nodes, GPU exhaustion, resource pressure, and groups issues by root cause for efficient remediation.',
   stock_market_ticker: 'Live stock market ticker with tech company prices.',
   prow_jobs: 'Prow CI/CD job status and results.',
   prow_status: 'Overall Prow system health and queue depth.',
   prow_history: 'Historical Prow job runs and success rates.',
   llm_inference: 'llm-d inference endpoint status and request metrics.',
   llm_models: 'LLM models deployed via llm-d with version info.',
+  llmd_flow: 'Animated visualization of inference request flow through the llm-d stack: load balancer → EPP → prefill/decode pods.',
+  llmd_benchmarks: 'Performance benchmarks for llm-d inference: throughput, latency percentiles, and comparison across models.',
+  llmd_ai_insights: 'AI-generated insights about llm-d performance, bottlenecks, and optimization recommendations.',
+  llmd_configurator: 'Configure llm-d deployment parameters: replicas, autoscaling, model variants, and resource limits.',
+  kvcache_monitor: 'Real-time KV cache utilization across inference pods with hit rates and memory usage.',
+  epp_routing: 'Endpoint Picker Pod routing decisions: how requests are distributed based on KV cache affinity.',
+  pd_disaggregation: 'Prefill/Decode disaggregation architecture: separate pools for prompt processing and token generation.',
   ml_jobs: 'Machine learning training and batch job status.',
   ml_notebooks: 'Jupyter notebook server status and resource usage.',
   provider_health: 'Health and status of AI and cloud infrastructure providers.',
+
+  // Games
+  sudoku_game: 'Classic Sudoku puzzle game with multiple difficulty levels.',
+  match_game: 'Memory matching game with Kubernetes resource icons.',
+  solitaire: 'Classic Klondike solitaire card game.',
+  checkers: 'Play checkers against an AI opponent.',
+  game_2048: 'Slide and merge tiles to reach 2048.',
+  kubedle: 'Wordle-style game with Kubernetes terminology.',
+  pod_sweeper: 'Minesweeper clone with a Kubernetes pod theme.',
+  container_tetris: 'Classic Tetris with container-shaped blocks.',
+  flappy_pod: 'Navigate a pod through cluster obstacles.',
+  kube_man: 'Pac-Man style game collecting resources in a cluster maze.',
+  kube_kong: 'Donkey Kong inspired platformer with Kubernetes theme.',
+  pod_pitfall: 'Pitfall-style adventure game as a pod.',
+  node_invaders: 'Space Invaders clone defending your cluster.',
+  pod_crosser: 'Frogger-style game crossing cluster traffic.',
+  pod_brothers: 'Super Mario Bros inspired platformer.',
+  kube_kart: 'Racing game through Kubernetes infrastructure.',
+  kube_pong: 'Classic Pong game with cluster theming.',
+  kube_snake: 'Snake game collecting Kubernetes resources.',
+  kube_galaga: 'Galaga-style shooter defending against threats.',
+  kube_doom: 'First-person debugging adventure.',
+  kube_craft: 'Build and manage your cluster world.',
+  kube_chess: 'Chess game with Kubernetes-themed pieces.',
 }
 
 // Card icons with their colors - displayed in the card header next to the title
@@ -480,6 +511,8 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   cluster_costs: { icon: TrendingUp, color: 'text-emerald-400' },
   cluster_metrics: { icon: Activity, color: 'text-purple-400' },
   cluster_locations: { icon: Globe, color: 'text-blue-400' },
+  cluster_resource_tree: { icon: GitBranch, color: 'text-purple-400' },
+  cluster_groups: { icon: Layers, color: 'text-blue-400' },
 
   // Workload and deployment cards
   app_status: { icon: Box, color: 'text-purple-400' },
@@ -487,6 +520,13 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   deployment_progress: { icon: Clock, color: 'text-blue-400' },
   deployment_status: { icon: Box, color: 'text-purple-400' },
   deployment_issues: { icon: AlertTriangle, color: 'text-orange-400' },
+  statefulset_status: { icon: Database, color: 'text-purple-400' },
+  daemonset_status: { icon: Server, color: 'text-blue-400' },
+  replicaset_status: { icon: Box, color: 'text-cyan-400' },
+  job_status: { icon: Clock, color: 'text-green-400' },
+  cronjob_status: { icon: Clock, color: 'text-orange-400' },
+  hpa_status: { icon: TrendingUp, color: 'text-purple-400' },
+  resource_marshall: { icon: GitBranch, color: 'text-blue-400' },
 
   // Pod and resource cards
   pod_issues: { icon: AlertTriangle, color: 'text-orange-400' },
@@ -495,10 +535,14 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   resource_usage: { icon: Gauge, color: 'text-purple-400' },
   pod_health_trend: { icon: Box, color: 'text-purple-400' },
   resource_trend: { icon: TrendingUp, color: 'text-blue-400' },
+  node_status: { icon: Server, color: 'text-purple-400' },
 
   // Events
   event_stream: { icon: Activity, color: 'text-blue-400' },
   events_timeline: { icon: Clock, color: 'text-purple-400' },
+  event_summary: { icon: Activity, color: 'text-purple-400' },
+  warning_events: { icon: AlertTriangle, color: 'text-orange-400' },
+  recent_events: { icon: Clock, color: 'text-blue-400' },
 
   // Namespace cards
   namespace_overview: { icon: Layers, color: 'text-purple-400' },
@@ -511,7 +555,9 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   // Operator cards
   operator_status: { icon: Package, color: 'text-purple-400' },
   operator_subscriptions: { icon: Package, color: 'text-purple-400' },
+  operator_subscription_status: { icon: Package, color: 'text-blue-400' },
   crd_health: { icon: Database, color: 'text-teal-400' },
+  configmap_status: { icon: FileCode, color: 'text-blue-400' },
 
   // Helm/GitOps cards
   gitops_drift: { icon: GitBranch, color: 'text-purple-400' },
@@ -547,7 +593,9 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
 
   // Storage
   pvc_status: { icon: HardDrive, color: 'text-blue-400' },
+  pv_status: { icon: HardDrive, color: 'text-purple-400' },
   storage_overview: { icon: Database, color: 'text-purple-400' },
+  resource_quota_status: { icon: Gauge, color: 'text-orange-400' },
 
   // Network
   network_overview: { icon: Network, color: 'text-cyan-400' },
@@ -556,6 +604,8 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   service_exports: { icon: Server, color: 'text-green-400' },
   service_imports: { icon: Server, color: 'text-blue-400' },
   gateway_status: { icon: Network, color: 'text-purple-400' },
+  ingress_status: { icon: Network, color: 'text-blue-400' },
+  network_policy_status: { icon: Shield, color: 'text-cyan-400' },
 
   // Compute
   compute_overview: { icon: Cpu, color: 'text-purple-400' },
@@ -565,13 +615,19 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   user_management: { icon: Users, color: 'text-purple-400' },
   github_activity: { icon: Activity, color: 'text-purple-400' },
   kubectl: { icon: Terminal, color: 'text-green-400' },
-  weather: { icon: Globe, color: 'text-blue-400' },
+  weather: { icon: Cloudy, color: 'text-blue-400' },
   stock_market_ticker: { icon: TrendingUp, color: 'text-green-400' },
+  rss_feed: { icon: Rss, color: 'text-orange-400' },
+  iframe_embed: { icon: Frame, color: 'text-blue-400' },
+  network_utils: { icon: Wrench, color: 'text-cyan-400' },
+  mobile_browser: { icon: Phone, color: 'text-purple-400' },
+  hardware_health: { icon: MonitorCheck, color: 'text-green-400' },
 
   // AI cards
   console_ai_issues: { icon: Wand2, color: 'text-purple-400' },
   console_ai_kubeconfig_audit: { icon: Wand2, color: 'text-purple-400' },
   console_ai_health_check: { icon: Wand2, color: 'text-purple-400' },
+  console_ai_offline_detection: { icon: Stethoscope, color: 'text-emerald-400' },
 
   // Cost cards
   opencost_overview: { icon: TrendingUp, color: 'text-emerald-400' },
@@ -596,8 +652,15 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   // ML/AI workload cards
   llm_inference: { icon: Cpu, color: 'text-purple-400' },
   llm_models: { icon: Database, color: 'text-blue-400' },
+  llmd_flow: { icon: Workflow, color: 'text-cyan-400' },
+  llmd_benchmarks: { icon: Gauge, color: 'text-orange-400' },
+  llmd_ai_insights: { icon: Wand2, color: 'text-purple-400' },
+  llmd_configurator: { icon: Settings, color: 'text-blue-400' },
+  kvcache_monitor: { icon: Database, color: 'text-cyan-400' },
+  epp_routing: { icon: Router, color: 'text-green-400' },
+  pd_disaggregation: { icon: Split, color: 'text-purple-400' },
   ml_jobs: { icon: Activity, color: 'text-orange-400' },
-  ml_notebooks: { icon: FileCode, color: 'text-purple-400' },
+  ml_notebooks: { icon: BookOpen, color: 'text-purple-400' },
 
   // Workload deployment
   workload_deployment: { icon: Box, color: 'text-blue-400' },
@@ -627,18 +690,113 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   pod_pitfall: { icon: Rocket, color: 'text-green-400' },
   node_invaders: { icon: Rocket, color: 'text-purple-400' },
   pod_brothers: { icon: Gamepad2, color: 'text-red-400' },
+  pod_crosser: { icon: Gamepad2, color: 'text-green-400' },
   kube_kart: { icon: Gamepad2, color: 'text-green-400' },
   kube_pong: { icon: Gamepad2, color: 'text-cyan-400' },
   kube_snake: { icon: Gamepad2, color: 'text-green-400' },
   kube_galaga: { icon: Rocket, color: 'text-blue-400' },
+  kube_doom: { icon: Gamepad2, color: 'text-red-400' },
   kube_craft: { icon: Puzzle, color: 'text-brown-400' },
   kube_chess: { icon: Crown, color: 'text-amber-400' },
   kube_craft_3d: { icon: Puzzle, color: 'text-green-400' },
+}
 
-  // Utilities
-  iframe_embed: { icon: Globe, color: 'text-blue-400' },
-  network_utils: { icon: Network, color: 'text-cyan-400' },
-  mobile_browser: { icon: Globe, color: 'text-purple-400' },
+/**
+ * Info tooltip that renders via portal to escape overflow-hidden containers.
+ * Updates position on scroll to stay attached to the trigger element.
+ */
+function InfoTooltip({ text }: { text: string }) {
+  const [isVisible, setIsVisible] = useState(false)
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+
+  // Update position based on trigger element's current bounding rect
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current || !isVisible) return
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const tooltipWidth = 280 // max-w-[280px]
+    const tooltipHeight = tooltipRef.current?.offsetHeight || 80 // estimate
+
+    // Position below the icon by default
+    let top = rect.bottom + 8
+    let left = rect.left - (tooltipWidth / 2) + (rect.width / 2)
+
+    // Ensure tooltip stays within viewport
+    if (left < 8) left = 8
+    if (left + tooltipWidth > window.innerWidth - 8) {
+      left = window.innerWidth - tooltipWidth - 8
+    }
+
+    // If tooltip would go below viewport, position above
+    if (top + tooltipHeight > window.innerHeight - 8) {
+      top = rect.top - tooltipHeight - 8
+    }
+
+    setPosition({ top, left })
+  }, [isVisible])
+
+  // Update position on scroll and resize
+  useEffect(() => {
+    if (!isVisible) return
+
+    updatePosition()
+
+    // Update on scroll (any scrollable ancestor)
+    const handleScroll = () => updatePosition()
+    const handleResize = () => updatePosition()
+
+    window.addEventListener('scroll', handleScroll, true) // capture phase for nested scrolls
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isVisible, updatePosition])
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    if (!isVisible) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!triggerRef.current?.contains(target) && !tooltipRef.current?.contains(target)) {
+        setIsVisible(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isVisible])
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={() => setIsVisible(!isVisible)}
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        title="Card information"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {isVisible && position && createPortal(
+        <div
+          ref={tooltipRef}
+          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 shadow-xl animate-fade-in"
+          style={{ top: position.top, left: position.left }}
+          onMouseEnter={() => setIsVisible(true)}
+          onMouseLeave={() => setIsVisible(false)}
+        >
+          {text}
+        </div>,
+        document.body
+      )}
+    </>
+  )
 }
 
 export function CardWrapper({
@@ -1009,12 +1167,7 @@ export function CardWrapper({
             {dragHandle}
             {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4', resolvedIconColor)} />}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
-            <span className="relative group/info">
-              <Info className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-muted-foreground cursor-help transition-colors" />
-              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-56 px-2.5 py-1.5 rounded-md bg-zinc-900 border border-zinc-700 text-xs text-zinc-300 shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 group-hover/info:pointer-events-auto transition-opacity z-50 leading-relaxed">
-                {description || `${title} card. Description coming soon.`}
-              </span>
-            </span>
+            <InfoTooltip text={description || `${title} card. Description coming soon.`} />
             {/* Demo data indicator - shows if global demo mode is on OR card uses demo data */}
             {(isDemoMode || isDemoData) && (
               <span

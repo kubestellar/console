@@ -11,7 +11,7 @@ export const aiMlDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'ai-ml',
   cards: [
     // Stunning LLM-d visualization cards (hero row)
-    { id: 'llmd-flow-1', cardType: 'llmd_flow', title: 'llm-d Request Flow', position: { w: 8, h: 5 } },
+    { id: 'llmd-flow-1', cardType: 'llmd_flow', title: 'llm-d Request Flow', position: { w: 6, h: 5 } },
     { id: 'kvcache-monitor-1', cardType: 'kvcache_monitor', title: 'KV Cache Monitor', position: { w: 4, h: 5 } },
 
     // Architecture and routing visualizations

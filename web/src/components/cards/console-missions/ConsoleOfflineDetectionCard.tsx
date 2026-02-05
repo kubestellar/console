@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap, Layers, List, Stethoscope, Wrench } from 'lucide-react'
 import { getDemoMode } from '../../../hooks/useDemoMode'
 import { useMissions } from '../../../hooks/useMissions'
 import { useGPUNodes, usePodIssues, useClusters } from '../../../hooks/useMCP'
@@ -210,7 +210,7 @@ function generatePredictionId(type: string, name: string, cluster?: string): str
   return `heuristic-${type}-${name}-${cluster || 'unknown'}`
 }
 
-// Card 4: Offline Detection - Detect offline nodes and unavailable GPUs + Predictive Failures
+// Card 4: Predictive Health Monitor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
   const { nodes: gpuNodes, isLoading } = useGPUNodes()
@@ -541,6 +541,8 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(5)
+  const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list')
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
@@ -647,6 +649,89 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const filteredOfflineCount = sortedItems.filter(i => i.category === 'offline').length
   const filteredGpuCount = sortedItems.filter(i => i.category === 'gpu').length
   const filteredPredictionCount = sortedItems.filter(i => i.category === 'prediction').length
+
+  // ============================================================================
+  // Root Cause Grouping - shows which fixes solve multiple issues
+  // ============================================================================
+  type RootCauseGroup = {
+    cause: string
+    details: string
+    items: UnifiedItem[]
+    severity: 'critical' | 'warning' | 'info'
+    categories: Set<string>
+  }
+
+  const rootCauseGroups = useMemo(() => {
+    const groups = new Map<string, RootCauseGroup>()
+
+    sortedItems.forEach(item => {
+      // Determine the grouping key
+      let groupKey: string
+      let groupDetails: string
+
+      if (item.rootCause) {
+        groupKey = item.rootCause.cause
+        groupDetails = item.rootCause.details
+      } else if (item.category === 'gpu') {
+        groupKey = 'GPU exhaustion'
+        groupDetails = 'No GPUs available on these nodes'
+      } else if (item.category === 'prediction') {
+        // Group predictions by type
+        const risk = item.predictionData
+        if (risk?.type === 'pod-crash') {
+          groupKey = 'Pod crash risk'
+          groupDetails = 'Pods with high restart counts likely to crash again'
+        } else if (risk?.type === 'resource-exhaustion') {
+          groupKey = risk.metric === 'cpu' ? 'CPU pressure' : 'Memory pressure'
+          groupDetails = `Clusters approaching ${risk.metric?.toUpperCase()} limits`
+        } else if (risk?.type === 'gpu-exhaustion') {
+          groupKey = 'GPU capacity risk'
+          groupDetails = 'GPU nodes at full capacity with no headroom'
+        } else {
+          groupKey = 'AI-detected risk'
+          groupDetails = risk?.reason || 'Anomaly detected by AI analysis'
+        }
+      } else {
+        groupKey = item.reason || 'Unknown'
+        groupDetails = item.reasonDetailed || item.reason
+      }
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          cause: groupKey,
+          details: groupDetails,
+          items: [],
+          severity: item.severity,
+          categories: new Set(),
+        })
+      }
+
+      const group = groups.get(groupKey)!
+      group.items.push(item)
+      group.categories.add(item.category)
+      // Escalate severity if any item is more severe
+      if (item.severity === 'critical') group.severity = 'critical'
+      else if (item.severity === 'warning' && group.severity === 'info') group.severity = 'warning'
+    })
+
+    // Sort groups by item count (most impactful first), then by severity
+    return Array.from(groups.values()).sort((a, b) => {
+      // First by count (descending)
+      if (b.items.length !== a.items.length) return b.items.length - a.items.length
+      // Then by severity
+      const severityOrder = { critical: 0, warning: 1, info: 2 }
+      return severityOrder[a.severity] - severityOrder[b.severity]
+    })
+  }, [sortedItems])
+
+  const toggleGroupExpand = (cause: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(cause)) next.delete(cause)
+      else next.add(cause)
+      return next
+    })
+  }
   const filteredTotalIssues = filteredOfflineCount + filteredGpuCount
   const filteredTotalPredicted = filteredPredictionCount
   const filteredCriticalPredicted = sortedItems.filter(i => i.category === 'prediction' && i.predictionData?.severity === 'critical').length
@@ -654,7 +739,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const isFiltered = search.trim() !== '' || localClusterFilter.length > 0
 
   const runningMission = missions.find(m =>
-    m.title.includes('Offline') && m.status === 'running'
+    (m.title.includes('Analysis') || m.title.includes('Diagnose')) && m.status === 'running'
   )
 
   const doStartAnalysis = () => {
@@ -704,7 +789,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     const hasPredictions = filteredTotalPredicted > 0
 
     startMission({
-      title: hasPredictions && !hasCurrentIssues ? 'Predictive Failure Analysis' : 'Node & GPU Analysis',
+      title: hasPredictions && !hasCurrentIssues ? 'Predictive Health Analysis' : 'Health Issue Analysis',
       description: hasCurrentIssues
         ? `Analyzing ${filteredTotalIssues} issues${hasPredictions ? ` + ${filteredTotalPredicted} predicted risks` : ''}`
         : `Analyzing ${filteredTotalPredicted} predicted failure risks (${filteredAICount} AI, ${filteredHeuristicCount} heuristic)`,
@@ -866,15 +951,172 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
         }}
       />
 
-      <CardSearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search issues..."
-        className="mb-3"
-      />
+      {/* Search and View Mode Toggle */}
+      <div className="flex items-center gap-2 mb-3">
+        <CardSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search issues..."
+          className="flex-1"
+        />
+        {/* View mode toggle - only show if there are grouped items */}
+        {rootCauseGroups.length > 0 && rootCauseGroups.some(g => g.items.length > 1) && (
+          <div className="flex bg-secondary/50 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'p-1.5 rounded transition-colors',
+                viewMode === 'list' ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="List view"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode('grouped')}
+              className={cn(
+                'p-1.5 rounded transition-colors',
+                viewMode === 'grouped' ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Group by root cause - see which fixes solve multiple issues"
+            >
+              <Layers className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* Items List */}
+      {/* Items - List or Grouped View */}
       <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">
+        {viewMode === 'grouped' ? (
+          /* ============================================================================
+           * GROUPED VIEW - Shows root causes with item counts
+           * ============================================================================ */
+          <>
+            {rootCauseGroups.map((group) => {
+              const isExpanded = expandedGroups.has(group.cause)
+              const severityColor = group.severity === 'critical' ? 'red' : group.severity === 'warning' ? 'yellow' : 'blue'
+
+              return (
+                <div key={group.cause} className="space-y-1">
+                  {/* Group Header */}
+                  <div
+                    className={cn(
+                      'p-2 rounded text-xs cursor-pointer transition-colors flex items-center justify-between',
+                      `bg-${severityColor}-500/10 hover:bg-${severityColor}-500/20 border border-${severityColor}-500/20`
+                    )}
+                    style={{
+                      backgroundColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.1)`,
+                      borderColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.2)`,
+                    }}
+                    onClick={() => toggleGroupExpand(group.cause)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <ChevronRight
+                        className={cn(
+                          'w-3.5 h-3.5 flex-shrink-0 transition-transform',
+                          isExpanded && 'rotate-90'
+                        )}
+                        style={{ color: `rgb(${severityColor === 'red' ? '248,113,113' : severityColor === 'yellow' ? '250,204,21' : '96,165,250'})` }}
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground">{group.cause}</span>
+                          <span
+                            className="px-1.5 py-0.5 text-[10px] font-bold rounded"
+                            style={{
+                              backgroundColor: `rgba(${severityColor === 'red' ? '239,68,68' : severityColor === 'yellow' ? '234,179,8' : '59,130,246'}, 0.2)`,
+                              color: `rgb(${severityColor === 'red' ? '248,113,113' : severityColor === 'yellow' ? '250,204,21' : '96,165,250'})`,
+                            }}
+                          >
+                            {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                          </span>
+                          {group.items.length > 1 && (
+                            <span className="text-[10px] text-green-400 font-medium">
+                              ✓ Fix once, solve {group.items.length}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-muted-foreground truncate mt-0.5">{group.details}</div>
+                      </div>
+                    </div>
+                    <button
+                      className={cn(
+                        'px-2 py-1 text-[10px] rounded font-medium transition-colors flex-shrink-0 ml-2',
+                        'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Start analysis for this specific root cause group
+                        const groupItems = group.items
+                        const summary = groupItems.map(item => `- ${item.name} (${item.cluster}): ${item.reason}`).join('\n')
+                        startMission({
+                          title: `Diagnose: ${group.cause}`,
+                          description: `Diagnosing ${group.items.length} items with root cause: ${group.cause}`,
+                          type: 'troubleshoot',
+                          initialPrompt: `You are diagnosing a Kubernetes cluster issue.
+
+ROOT CAUSE: ${group.cause}
+DETAILS: ${group.details}
+
+AFFECTED ITEMS (${group.items.length}):
+${summary}
+
+TASK:
+1. Explain why this root cause is affecting all these items
+2. Provide a single fix that will resolve all ${group.items.length} items
+3. List the specific commands or steps to remediate
+4. Explain any risks and how to verify the fix worked`,
+                          context: { rootCause: group.cause, affectedCount: group.items.length },
+                        })
+                      }}
+                      title={`Diagnose all ${group.items.length} items with this root cause`}
+                    >
+                      Diagnose {group.items.length}
+                    </button>
+                  </div>
+
+                  {/* Expanded Items */}
+                  {isExpanded && (
+                    <div className="ml-4 space-y-1 border-l-2 border-border/50 pl-2">
+                      {group.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-1.5 rounded bg-secondary/30 text-xs cursor-pointer hover:bg-secondary/50 transition-colors flex items-center justify-between"
+                          onClick={() => {
+                            if (item.category === 'offline' && item.nodeData?.cluster) {
+                              drillToNode(item.nodeData.cluster, item.name, {})
+                            } else if (item.cluster) {
+                              drillToCluster(item.cluster)
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-foreground truncate">{item.name}</span>
+                            <ClusterBadge cluster={item.cluster} size="sm" />
+                          </div>
+                          <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Empty state for grouped view */}
+            {rootCauseGroups.length === 0 && (
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-4">
+                <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+                {search || localClusterFilter.length > 0 ? 'No matching items' : 'All nodes & GPUs healthy'}
+              </div>
+            )}
+          </>
+        ) : (
+          /* ============================================================================
+           * LIST VIEW - Original flat list
+           * ============================================================================ */
+          <>
         {paginatedItems.map((item) => {
           // Render based on category
           if (item.category === 'offline' && item.nodeData) {
@@ -907,7 +1149,66 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                     {rootCause?.details || (node.unschedulable ? 'Cordoned' : node.status)}
                   </div>
                 </div>
-                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                {/* Item action buttons */}
+                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startMission({
+                        title: `Diagnose: ${node.name}`,
+                        description: `Diagnosing node ${node.name}`,
+                        type: 'troubleshoot',
+                        initialPrompt: `Diagnose this Kubernetes node issue:
+
+NODE: ${node.name}
+CLUSTER: ${node.cluster || 'unknown'}
+STATUS: ${node.unschedulable ? 'Cordoned' : node.status}
+ROOT CAUSE: ${rootCause?.cause || 'Unknown'}
+DETAILS: ${rootCause?.details || 'No details available'}
+
+Please:
+1. Explain what this issue means
+2. Identify the root cause
+3. List diagnostic commands to gather more info
+4. Provide the steps to fix this issue`,
+                        context: { node: node.name, cluster: node.cluster },
+                      })
+                    }}
+                    className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title={`Diagnose ${node.name}`}
+                  >
+                    <Stethoscope className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startMission({
+                        title: `Repair: ${node.name}`,
+                        description: `Repairing node ${node.name}`,
+                        type: 'troubleshoot',
+                        initialPrompt: `Repair this Kubernetes node:
+
+NODE: ${node.name}
+CLUSTER: ${node.cluster || 'unknown'}
+STATUS: ${node.unschedulable ? 'Cordoned' : node.status}
+ROOT CAUSE: ${rootCause?.cause || 'Unknown'}
+DETAILS: ${rootCause?.details || 'No details available'}
+
+Please provide:
+1. The exact commands to fix this issue
+2. Any prerequisites or safety checks
+3. How to verify the repair was successful
+4. Any follow-up actions needed`,
+                        context: { node: node.name, cluster: node.cluster },
+                      })
+                    }}
+                    className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title={`Repair ${node.name}`}
+                  >
+                    <Wrench className="w-3 h-3" />
+                  </button>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                </div>
               </div>
             )
           }
@@ -931,7 +1232,64 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                   </div>
                   <div className="text-yellow-400 truncate mt-0.5">0 GPUs available</div>
                 </div>
-                <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                {/* Item action buttons */}
+                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startMission({
+                        title: `Diagnose GPU: ${issue.nodeName}`,
+                        description: `Diagnosing GPU issue on ${issue.nodeName}`,
+                        type: 'troubleshoot',
+                        initialPrompt: `Diagnose this GPU issue:
+
+NODE: ${issue.nodeName}
+CLUSTER: ${issue.cluster}
+ISSUE: ${issue.reason}
+EXPECTED GPUs: ${issue.expected > 0 ? issue.expected : 'Unknown'}
+AVAILABLE GPUs: ${issue.available}
+
+Please:
+1. Explain what could cause GPUs to show as unavailable
+2. List diagnostic commands to check GPU status
+3. Check for driver issues, nvidia-smi output, device plugin status
+4. Identify the root cause`,
+                        context: { node: issue.nodeName, cluster: issue.cluster },
+                      })
+                    }}
+                    className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title={`Diagnose GPU on ${issue.nodeName}`}
+                  >
+                    <Stethoscope className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      startMission({
+                        title: `Repair GPU: ${issue.nodeName}`,
+                        description: `Repairing GPU on ${issue.nodeName}`,
+                        type: 'troubleshoot',
+                        initialPrompt: `Repair the GPU issue on this node:
+
+NODE: ${issue.nodeName}
+CLUSTER: ${issue.cluster}
+ISSUE: ${issue.reason}
+
+Please provide:
+1. Steps to restore GPU availability
+2. How to restart NVIDIA device plugin
+3. Driver-related fixes if applicable
+4. How to verify GPUs are working again`,
+                        context: { node: issue.nodeName, cluster: issue.cluster },
+                      })
+                    }}
+                    className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title={`Repair GPU on ${issue.nodeName}`}
+                  >
+                    <Wrench className="w-3 h-3" />
+                  </button>
+                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                </div>
               </div>
             )
           }
@@ -1000,8 +1358,74 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                     </div>
                   </div>
 
-                  {/* Feedback Buttons + Chevron */}
+                  {/* Action Buttons + Feedback + Chevron */}
                   <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    {/* Diagnose & Repair buttons */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startMission({
+                          title: `Diagnose: ${risk.name}`,
+                          description: `Diagnosing predicted risk for ${risk.name}`,
+                          type: 'troubleshoot',
+                          initialPrompt: `Diagnose this predicted failure risk:
+
+RESOURCE: ${risk.name}
+CLUSTER: ${risk.cluster || 'unknown'}
+${risk.namespace ? `NAMESPACE: ${risk.namespace}` : ''}
+TYPE: ${risk.type}
+SEVERITY: ${risk.severity}
+PREDICTION SOURCE: ${risk.source === 'ai' ? `AI (${risk.confidence || 0}% confidence)` : 'Heuristic threshold'}
+${risk.trend ? `TREND: ${risk.trend}` : ''}
+
+SUMMARY: ${risk.reason}
+${risk.reasonDetailed ? `DETAILS: ${risk.reasonDetailed}` : ''}
+
+Please:
+1. Explain what this prediction means
+2. Assess the likelihood of this failure occurring
+3. List diagnostic commands to verify the risk
+4. Identify contributing factors`,
+                          context: { name: risk.name, cluster: risk.cluster, type: risk.type },
+                        })
+                      }}
+                      className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title={`Diagnose ${risk.name}`}
+                    >
+                      <Stethoscope className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startMission({
+                          title: `Prevent: ${risk.name}`,
+                          description: `Preventing predicted failure for ${risk.name}`,
+                          type: 'troubleshoot',
+                          initialPrompt: `Prevent this predicted failure:
+
+RESOURCE: ${risk.name}
+CLUSTER: ${risk.cluster || 'unknown'}
+${risk.namespace ? `NAMESPACE: ${risk.namespace}` : ''}
+TYPE: ${risk.type}
+SEVERITY: ${risk.severity}
+
+SUMMARY: ${risk.reason}
+${risk.reasonDetailed ? `DETAILS: ${risk.reasonDetailed}` : ''}
+
+Please provide:
+1. Preventive actions to avoid this failure
+2. Specific commands or configuration changes
+3. How to verify the risk has been mitigated
+4. Monitoring recommendations to catch this earlier`,
+                          context: { name: risk.name, cluster: risk.cluster, type: risk.type },
+                        })
+                      }}
+                      className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title={`Prevent failure for ${risk.name}`}
+                    >
+                      <Wrench className="w-3 h-3" />
+                    </button>
+                    {/* AI feedback buttons */}
                     {risk.source === 'ai' && risk.id && (
                       <>
                         <button
@@ -1013,7 +1437,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                             'p-1 rounded transition-colors',
                             feedback === 'accurate'
                               ? 'bg-green-500/20 text-green-400'
-                              : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/10'
+                              : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/10 opacity-0 group-hover:opacity-100'
                           )}
                           title="Mark as accurate"
                         >
@@ -1028,7 +1452,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
                             'p-1 rounded transition-colors',
                             feedback === 'inaccurate'
                               ? 'bg-red-500/20 text-red-400'
-                              : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/10'
+                              : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100'
                           )}
                           title="Mark as inaccurate"
                         >
@@ -1049,12 +1473,14 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
           return null
         })}
 
-        {/* Empty state */}
+        {/* Empty state for list view */}
         {sortedItems.length === 0 && (
           <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-4" title="All nodes and GPUs healthy">
             <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
             {search || localClusterFilter.length > 0 ? 'No matching items' : 'All nodes & GPUs healthy'}
           </div>
+        )}
+          </>
         )}
       </div>
 

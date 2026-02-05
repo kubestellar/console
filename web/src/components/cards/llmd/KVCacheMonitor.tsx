@@ -271,6 +271,21 @@ export function KVCacheMonitor() {
     })
   }
 
+  // Close panel on scroll to prevent floating away
+  useEffect(() => {
+    if (!selectedPod || !panelPosition) return
+
+    const handleScroll = () => {
+      // Close the panel when user scrolls
+      setSelectedPod(null)
+      setPanelPosition(null)
+    }
+
+    // Listen for scroll on any ancestor (capture phase)
+    window.addEventListener('scroll', handleScroll, true)
+    return () => window.removeEventListener('scroll', handleScroll, true)
+  }, [selectedPod, panelPosition])
+
   // Update stats periodically
   useEffect(() => {
     const updateStats = () => {
