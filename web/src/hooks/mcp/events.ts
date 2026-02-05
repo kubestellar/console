@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
+import { isDemoModeForced } from '../useDemoMode'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
 
@@ -35,6 +36,16 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip fetching entirely in forced demo mode (Netlify) — no backend or agent
+    if (isDemoModeForced) {
+      if (!eventsCache) {
+        setEvents(getDemoEvents())
+      }
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
+
     // Skip backend fetch in demo mode - use cached or demo data
     const token = localStorage.getItem('token')
     if (!token || token === 'demo-token') {

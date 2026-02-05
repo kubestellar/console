@@ -691,6 +691,9 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 async function fetchProwJobs(prowCluster: string, namespace: string): Promise<ProwJob[]> {
+  // Skip fetching in demo mode — no agent available
+  if (isDemoModeForced) return []
+
   const response = await kubectlProxy.exec(
     ['get', 'prowjobs', '-n', namespace, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
     { context: prowCluster, timeout: 30000 }
@@ -881,6 +884,9 @@ function extractGPUInfo(deployment: DeploymentResource): { gpu?: string; gpuCoun
 }
 
 async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
+  // Skip fetching in demo mode — no agent available
+  if (isDemoModeForced) return []
+
   const allServers: LLMdServer[] = []
   const keyNamespaces = ['b2', 'e2e-helm', 'e2e-solution', 'e2e-pd', 'effi', 'effi2', 'guygir',
     'llm-d', 'aibrix-system', 'hc4ai-operator', 'hc4ai-operator-dev', 'e2e-solution-platform-eval', 'inference-router-test']
@@ -1027,6 +1033,9 @@ export function useCachedLLMdServers(
 }
 
 async function fetchLLMdModels(clusters: string[]): Promise<LLMdModel[]> {
+  // Skip fetching in demo mode — no agent available
+  if (isDemoModeForced) return []
+
   const allModels: LLMdModel[] = []
   for (const cluster of clusters) {
     try {
