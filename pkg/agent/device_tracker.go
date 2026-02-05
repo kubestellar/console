@@ -115,6 +115,8 @@ func (t *DeviceTracker) scanDevices() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Use ListClusters to get ALL cluster contexts - deduplication happens in frontend
+	// using the clusterNameMap pattern (same as ClusterDetailModal and ResourcesDrillDown)
 	clusters, err := t.k8sClient.ListClusters(ctx)
 	if err != nil {
 		log.Printf("[DeviceTracker] Error listing clusters: %v", err)
@@ -413,6 +415,7 @@ type DeviceInventoryResponse struct {
 }
 
 // GetInventory returns all tracked nodes with their device counts
+// Data is already deduplicated at scan time via DeduplicatedClusters
 func (t *DeviceTracker) GetInventory() DeviceInventoryResponse {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

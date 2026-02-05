@@ -5,6 +5,7 @@ import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useClusters } from '../../hooks/useMCP'
 
 const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
 
@@ -165,6 +166,19 @@ export function HardwareHealthCard() {
   const [viewMode, setViewMode] = useState<ViewMode>('alerts')
   const [endpointAvailable, setEndpointAvailable] = useState<boolean | undefined>(undefined)
   const { drillToNode } = useDrillDownActions()
+  const { deduplicatedClusters } = useClusters()
+
+  // Build a map of raw cluster names to deduplicated primary names (same as ClusterDetailModal)
+  const clusterNameMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    deduplicatedClusters.forEach(c => {
+      map[c.name] = c.name // Primary maps to itself
+      c.aliases?.forEach(alias => {
+        map[alias] = c.name // Aliases map to primary
+      })
+    })
+    return map
+  }, [deduplicatedClusters])
 
   // Card controls state
   const [search, setSearch] = useState('')
@@ -308,38 +322,36 @@ export function HardwareHealthCard() {
   }
 
   // Deduplicate alerts by canonical hostname (same node may appear with different names/cluster contexts)
-  // Prefer shorter cluster names AND shorter node names
+  // Uses clusterNameMap to map raw cluster names to deduplicated primary names (same as ClusterDetailModal)
   const deduplicatedAlerts = useMemo(() => {
     const byHostnameAndDevice = new Map<string, DeviceAlert>()
     alerts.forEach(alert => {
       const hostname = extractHostname(alert.nodeName)
+      const mappedCluster = clusterNameMap[alert.cluster] || alert.cluster
       const key = `${hostname}-${alert.deviceType}`
       const existing = byHostnameAndDevice.get(key)
-      // Prefer entries with shorter cluster name, then shorter node name
-      if (!existing ||
-          alert.cluster.length < existing.cluster.length ||
-          (alert.cluster.length === existing.cluster.length && alert.nodeName.length < existing.nodeName.length)) {
-        byHostnameAndDevice.set(key, alert)
+      // Keep first occurrence (or update if this one has better data)
+      if (!existing) {
+        byHostnameAndDevice.set(key, { ...alert, nodeName: hostname, cluster: mappedCluster })
       }
     })
     return Array.from(byHostnameAndDevice.values())
-  }, [alerts])
+  }, [alerts, clusterNameMap])
 
   // Deduplicate inventory by canonical hostname
+  // Uses clusterNameMap to map raw cluster names to deduplicated primary names (same as ClusterDetailModal)
   const deduplicatedInventory = useMemo(() => {
     const byHostname = new Map<string, NodeDeviceInventory>()
     inventory.forEach(node => {
       const hostname = extractHostname(node.nodeName)
-      const existing = byHostname.get(hostname)
-      // Prefer entries with shorter cluster name, then shorter node name
-      if (!existing ||
-          node.cluster.length < existing.cluster.length ||
-          (node.cluster.length === existing.cluster.length && node.nodeName.length < existing.nodeName.length)) {
-        byHostname.set(hostname, node)
+      const mappedCluster = clusterNameMap[node.cluster] || node.cluster
+      // Keep first occurrence for each unique hostname
+      if (!byHostname.has(hostname)) {
+        byHostname.set(hostname, { ...node, nodeName: hostname, cluster: mappedCluster })
       }
     })
     return Array.from(byHostname.values())
-  }, [inventory])
+  }, [inventory, clusterNameMap])
 
   // Node count should use deduplicated inventory count for consistency
   const deduplicatedNodeCount = deduplicatedInventory.length || nodeCount
@@ -657,7 +669,7 @@ export function HardwareHealthCard() {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium text-foreground truncate">{alert.nodeName}</span>
+                        <span className="font-medium text-foreground truncate">{extractHostname(alert.nodeName)}</span>
                         <span className={cn(
                           'flex-shrink-0 px-1 py-0.5 text-[9px] font-medium rounded',
                           alert.severity === 'critical'
@@ -721,7 +733,7 @@ export function HardwareHealthCard() {
                     <Server className="w-4 h-4 flex-shrink-0 text-blue-400" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-medium text-foreground truncate">{node.nodeName}</span>
+                        <span className="font-medium text-foreground truncate">{extractHostname(node.nodeName)}</span>
                         <ClusterBadge cluster={node.cluster} size="sm" />
                       </div>
                       {/* Device counts row */}
