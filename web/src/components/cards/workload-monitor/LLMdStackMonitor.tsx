@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
-  RefreshCw, Loader2, ChevronDown, ChevronRight,
+  RefreshCw, Loader2, ChevronDown, ChevronRight, Filter, Search
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
@@ -10,6 +11,7 @@ import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import { LLMD_CLUSTERS } from '../workload-detection/shared'
+import { useClusters } from '../../../hooks/useMCP'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 
 interface LLMdStackMonitorProps {
@@ -51,6 +53,67 @@ const STATUS_BADGE: Record<string, string> = {
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, refetch: refetchServers } = useCachedLLMdServers(LLMD_CLUSTERS)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Model Serving', 'EPP', 'Gateway']))
+  const [search, setSearch] = useState('')
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
+  const { deduplicatedClusters } = useClusters()
+
+  // Compute dropdown position
+  useEffect(() => {
+    if (showClusterFilter && clusterFilterBtnRef.current) {
+      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - 192),
+      })
+    } else {
+      setDropdownStyle(null)
+    }
+  }, [showClusterFilter])
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Filter servers by search and cluster
+  const filteredServers = useMemo(() => {
+    let result = servers
+    if (localClusterFilter.length > 0) {
+      result = result.filter(s => localClusterFilter.includes(s.cluster))
+    }
+    if (search.trim()) {
+      const query = search.toLowerCase()
+      result = result.filter(s =>
+        s.name.toLowerCase().includes(query) ||
+        s.namespace.toLowerCase().includes(query) ||
+        s.cluster.toLowerCase().includes(query) ||
+        (s.model && s.model.toLowerCase().includes(query))
+      )
+    }
+    return result
+  }, [servers, localClusterFilter, search])
+
+  const availableClusters = useMemo(() => {
+    return deduplicatedClusters.filter(c => c.reachable !== false)
+  }, [deduplicatedClusters])
+
+  const toggleClusterFilter = (cluster: string) => {
+    if (localClusterFilter.includes(cluster)) {
+      setLocalClusterFilter(localClusterFilter.filter(c => c !== cluster))
+    } else {
+      setLocalClusterFilter([...localClusterFilter, cluster])
+    }
+  }
 
   // Use workload monitor for the primary llm-d namespace
   const llmdCluster = LLMD_CLUSTERS[0] || ''
@@ -68,13 +131,13 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const isLoading = serversLoading || monitorLoading
   const isRefreshing = serversRefreshing || monitorRefreshing
 
-  // Build component sections from llm-d server data
+  // Build component sections from llm-d server data (using filtered servers)
   const sections = useMemo<ComponentSection[]>(() => {
-    const modelServers = servers.filter(s => s.componentType === 'model')
-    const eppServers = servers.filter(s => s.componentType === 'epp')
-    const gateways = servers.filter(s => s.componentType === 'gateway')
-    const prometheus = servers.filter(s => s.componentType === 'prometheus')
-    const autoscalers = servers.filter(s => s.componentType === 'autoscaler')
+    const modelServers = filteredServers.filter(s => s.componentType === 'model')
+    const eppServers = filteredServers.filter(s => s.componentType === 'epp')
+    const gateways = filteredServers.filter(s => s.componentType === 'gateway')
+    const prometheus = filteredServers.filter(s => s.componentType === 'prometheus')
+    const autoscalers = filteredServers.filter(s => s.componentType === 'autoscaler')
 
     const mapStatus = (s: string): ComponentItem['status'] => {
       if (s === 'running') return 'healthy'
@@ -140,7 +203,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         })),
       },
     ].filter(s => s.items.length > 0)
-  }, [servers])
+  }, [filteredServers])
 
   // Combine issues from monitor and synthesized from llm-d
   const allIssues = useMemo<MonitorIssue[]>(() => {
@@ -260,6 +323,60 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         <span className={cn('text-xs px-1.5 py-0.5 rounded ml-auto', STATUS_BADGE[stackHealth] || STATUS_BADGE.unknown)}>
           {stackHealth}
         </span>
+        {/* Cluster filter */}
+        {availableClusters.length >= 1 && (
+          <div ref={clusterFilterRef} className="relative">
+            <button
+              ref={clusterFilterBtnRef}
+              onClick={() => setShowClusterFilter(!showClusterFilter)}
+              className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                localClusterFilter.length > 0
+                  ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Filter by cluster"
+            >
+              <Filter className="w-3 h-3" />
+              {localClusterFilter.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <Server className="w-3 h-3" />
+                  {localClusterFilter.length}/{availableClusters.length}
+                </span>
+              )}
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showClusterFilter && dropdownStyle && createPortal(
+              <div
+                className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
+                style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
+                onMouseDown={e => e.stopPropagation()}
+              >
+                <div className="p-1">
+                  <button
+                    onClick={() => setLocalClusterFilter([])}
+                    className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                      localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                    }`}
+                  >
+                    All clusters
+                  </button>
+                  {availableClusters.map(cluster => (
+                    <button
+                      key={cluster.name}
+                      onClick={() => toggleClusterFilter(cluster.name)}
+                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
+                        localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                      }`}
+                    >
+                      {cluster.name}
+                    </button>
+                  ))}
+                </div>
+              </div>,
+              document.body
+            )}
+          </div>
+        )}
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
@@ -270,6 +387,18 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
             ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
             : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-3">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search components..."
+          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+        />
       </div>
 
       {/* Component sections */}

@@ -4,13 +4,21 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { createPortal } from 'react-dom'
-import { CardControls } from '../../ui/CardControls'
 import { Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { DEMO_ML_JOBS } from './shared'
 import { useDemoData } from './shared'
 
 type MLJob = typeof DEMO_ML_JOBS[number]
+type SortByOption = 'name' | 'status' | 'framework' | 'gpus'
+
+const SORT_OPTIONS = [
+  { value: 'name' as const, label: 'Name' },
+  { value: 'status' as const, label: 'Status' },
+  { value: 'framework' as const, label: 'Framework' },
+  { value: 'gpus' as const, label: 'GPUs' },
+]
 
 interface MLJobsProps {
   config?: Record<string, unknown>
@@ -19,17 +27,22 @@ interface MLJobsProps {
 export function MLJobs({ config: _config }: MLJobsProps) {
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters } = useCardData<MLJob, 'name'>(jobs, {
+  const statusOrder: Record<string, number> = { running: 0, queued: 1, completed: 2, failed: 3 }
+
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<MLJob, SortByOption>(jobs, {
     filter: {
       searchFields: ['name', 'framework', 'status', 'cluster'] as (keyof MLJob)[],
       clusterField: 'cluster' as keyof MLJob,
       storageKey: 'ml-jobs',
     },
     sort: {
-      defaultField: 'name',
+      defaultField: 'status',
       defaultDirection: 'asc',
       comparators: {
         name: (a, b) => a.name.localeCompare(b.name),
+        status: (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99),
+        framework: (a, b) => a.framework.localeCompare(b.framework),
+        gpus: (a, b) => a.gpus - b.gpus,
       },
     },
     defaultLimit: 5,
@@ -106,7 +119,15 @@ export function MLJobs({ config: _config }: MLJobsProps) {
               )}
             </div>
           )}
-          <CardControls limit={itemsPerPage} onLimitChange={setItemsPerPage} />
+          <CardControls
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={(v) => sorting.setSortBy(v as SortByOption)}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
+          />
         </div>
       </div>
 

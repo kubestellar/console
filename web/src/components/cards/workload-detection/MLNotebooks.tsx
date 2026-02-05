@@ -1,11 +1,17 @@
 import { ExternalLink, AlertCircle } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
-import { CardControls } from '../../ui/CardControls'
 import { useCardData } from '../../../lib/cards/cardHooks'
-import { CardPaginationFooter } from '../../../lib/cards/CardComponents'
+import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { DEMO_NOTEBOOKS, useDemoData } from './shared'
 
 type Notebook = typeof DEMO_NOTEBOOKS[number]
+type SortByOption = 'name' | 'user' | 'status'
+
+const SORT_OPTIONS = [
+  { value: 'name' as const, label: 'Name' },
+  { value: 'user' as const, label: 'User' },
+  { value: 'status' as const, label: 'Status' },
+]
 
 interface MLNotebooksProps {
   config?: Record<string, unknown>
@@ -14,15 +20,20 @@ interface MLNotebooksProps {
 export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage } = useCardData<Notebook, 'name'>(notebooks, {
+  const statusOrder: Record<string, number> = { running: 0, idle: 1, stopped: 2 }
+
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<Notebook, SortByOption>(notebooks, {
     filter: {
       searchFields: ['name', 'user', 'status'] as (keyof Notebook)[],
+      storageKey: 'ml-notebooks',
     },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
       comparators: {
         name: (a, b) => a.name.localeCompare(b.name),
+        user: (a, b) => a.user.localeCompare(b.user),
+        status: (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99),
       },
     },
     defaultLimit: 5,
@@ -54,12 +65,31 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
           {notebooks.filter(n => n.status === 'running').length} active
         </span>
-        <CardControls limit={itemsPerPage} onLimitChange={setItemsPerPage} />
+        <CardControlsRow
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+          className="mb-0"
+        />
       </div>
+
+      {/* Search */}
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search notebooks..."
+        className="mb-3"
+      />
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs mb-4">
