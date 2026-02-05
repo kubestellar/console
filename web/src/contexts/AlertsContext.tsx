@@ -49,6 +49,8 @@ interface AlertsContextValue {
   stats: AlertStats
   rules: AlertRule[]
   isEvaluating: boolean
+  isLoadingData: boolean
+  dataError: string | null
   acknowledgeAlert: (alertId: string, acknowledgedBy?: string) => void
   acknowledgeAlerts: (alertIds: string[], acknowledgedBy?: string) => void
   resolveAlert: (alertId: string) => void
@@ -87,9 +89,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   )
   const [isEvaluating, setIsEvaluating] = useState(false)
 
-  const { nodes: gpuNodes } = useGPUNodes()
-  const { issues: podIssues } = usePodIssues()
-  const { clusters } = useClusters()
+  const { nodes: gpuNodes, isLoading: isGPULoading, error: gpuError } = useGPUNodes()
+  const { issues: podIssues, isLoading: isPodIssuesLoading, error: podIssuesError } = usePodIssues()
+  const { clusters, isLoading: isClustersLoading, error: clustersError } = useClusters()
   const { startMission } = useMissions()
   const { isDemoMode } = useDemoMode()
   const previousDemoMode = useRef(isDemoMode)
@@ -104,6 +106,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   clustersRef.current = clusters
   const rulesRef = useRef(rules)
   rulesRef.current = rules
+
+  // Aggregate loading and error states from dependencies
+  const isLoadingData = isGPULoading || isPodIssuesLoading || isClustersLoading
+  const dataError = gpuError || podIssuesError || clustersError
 
   // Save rules whenever they change
   useEffect(() => {
@@ -642,6 +648,8 @@ Please provide:
     stats,
     rules,
     isEvaluating,
+    isLoadingData,
+    dataError,
     acknowledgeAlert,
     acknowledgeAlerts,
     resolveAlert,

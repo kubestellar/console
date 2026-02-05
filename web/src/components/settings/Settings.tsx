@@ -78,7 +78,7 @@ const SETTINGS_NAV = [
 export function Settings() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, refreshUser } = useAuth()
+  const { user, refreshUser, isLoading: isUserLoading } = useAuth()
   const { themeId, setTheme, themes, currentTheme } = useTheme()
   const { usage, updateSettings, resetUsage } = useTokenUsage()
   const { mode, setMode, description } = useAIMode()
@@ -228,6 +228,7 @@ export function Settings() {
               initialEmail={user?.email || ''}
               initialSlackId={user?.slackId || ''}
               refreshUser={refreshUser}
+              isLoading={isUserLoading}
             />
             <NotificationSettingsSection />
           </div>

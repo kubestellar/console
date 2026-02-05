@@ -5,9 +5,10 @@ interface ProfileSectionProps {
   initialEmail: string
   initialSlackId: string
   refreshUser: () => Promise<void>
+  isLoading?: boolean
 }
 
-export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: ProfileSectionProps) {
+export function ProfileSection({ initialEmail, initialSlackId, refreshUser, isLoading }: ProfileSectionProps) {
   const [email, setEmail] = useState(initialEmail)
   const [slackId, setSlackId] = useState(initialSlackId)
   const [profileSaved, setProfileSaved] = useState(false)
@@ -68,56 +69,70 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
           <p className="text-sm text-muted-foreground">Update your contact information</p>
         </div>
       </div>
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="profile-email" className="block text-sm text-muted-foreground mb-1">Email</label>
-          <input
-            id="profile-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="profile-slack" className="block text-sm text-muted-foreground mb-1">Slack ID</label>
-          <input
-            id="profile-slack"
-            type="text"
-            value={slackId}
-            onChange={(e) => setSlackId(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
-          />
-        </div>
-        {error && (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-4 h-4" />
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={handleSaveProfile}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Retry Save
-            </button>
+      {isLoading ? (
+        <div className="space-y-4 animate-pulse">
+          <div>
+            <div className="h-4 bg-secondary rounded w-12 mb-1"></div>
+            <div className="h-9 bg-secondary rounded"></div>
           </div>
-        )}
-        <button
-          onClick={handleSaveProfile}
-          disabled={isSaving || isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSaving || isRefreshing ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
+          <div>
+            <div className="h-4 bg-secondary rounded w-16 mb-1"></div>
+            <div className="h-9 bg-secondary rounded"></div>
+          </div>
+          <div className="h-9 bg-secondary rounded w-32"></div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="profile-email" className="block text-sm text-muted-foreground mb-1">Email</label>
+            <input
+              id="profile-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-slack" className="block text-sm text-muted-foreground mb-1">Slack ID</label>
+            <input
+              id="profile-slack"
+              type="text"
+              value={slackId}
+              onChange={(e) => setSlackId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+            />
+          </div>
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{error}</span>
+              </div>
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry Save
+              </button>
+            </div>
           )}
-          {isRefreshing ? 'Refreshing...' : isSaving ? 'Saving...' : profileSaved ? 'Saved!' : 'Save Profile'}
-        </button>
-      </div>
+          <button
+            onClick={handleSaveProfile}
+            disabled={isSaving || isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving || isRefreshing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isRefreshing ? 'Refreshing...' : isSaving ? 'Saving...' : profileSaved ? 'Saved!' : 'Save Profile'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
