@@ -48,6 +48,7 @@ interface AlertsContextValue {
   acknowledgedAlerts: Alert[]
   stats: AlertStats
   rules: AlertRule[]
+  isEvaluating: boolean
   acknowledgeAlert: (alertId: string, acknowledgedBy?: string) => void
   acknowledgeAlerts: (alertIds: string[], acknowledgedBy?: string) => void
   resolveAlert: (alertId: string) => void
@@ -619,6 +620,7 @@ Please provide:
     acknowledgedAlerts,
     stats,
     rules,
+    isEvaluating,
     acknowledgeAlert,
     acknowledgeAlerts,
     resolveAlert,

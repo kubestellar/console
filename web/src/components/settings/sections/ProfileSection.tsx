@@ -12,6 +12,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
   const [slackId, setSlackId] = useState(initialSlackId)
   const [profileSaved, setProfileSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSaveProfile = async () => {
@@ -31,13 +32,16 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
         throw new Error('Failed to save profile')
       }
       // Refresh user data to update the dropdown
+      setIsRefreshing(true)
       await refreshUser()
+      setIsRefreshing(false)
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 2000)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save profile'
       setError(message)
       console.error('Failed to save profile:', error)
+      setIsRefreshing(false)
     } finally {
       setIsSaving(false)
     }
@@ -93,15 +97,15 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
         )}
         <button
           onClick={handleSaveProfile}
-          disabled={isSaving}
+          disabled={isSaving || isRefreshing}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSaving ? (
+          {isSaving || isRefreshing ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Save className="w-4 h-4" />
           )}
-          {isSaving ? 'Saving...' : profileSaved ? 'Saved!' : 'Save Profile'}
+          {isRefreshing ? 'Refreshing...' : isSaving ? 'Saving...' : profileSaved ? 'Saved!' : 'Save Profile'}
         </button>
       </div>
     </div>

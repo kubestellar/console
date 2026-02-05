@@ -90,6 +90,7 @@ export function RemediationConsole({
   const [isExecuting, setIsExecuting] = useState(false)
   const [shellError, setShellError] = useState<string | null>(null)
   const [lastFailedCommand, setLastFailedCommand] = useState<string>('')
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const shellInputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef(false)
@@ -112,6 +113,7 @@ export function RemediationConsole({
     setIsRunning(true)
     setIsComplete(false)
     setLogs([])
+    setIsLoadingInitialData(true)
     abortRef.current = false
 
     // Initial log
@@ -120,6 +122,10 @@ export function RemediationConsole({
       message: `Starting AI remediation for ${resourceType} "${resourceName}"`,
       details: `Cluster: ${cluster}, Namespace: ${namespace}`,
     })
+    
+    // Simulate brief loading for gathering initial data
+    await new Promise(resolve => setTimeout(resolve, 300))
+    setIsLoadingInitialData(false)
 
     // Get the remediation flow based on issues
     const primaryIssue = issues[0] || 'default'
@@ -389,9 +395,18 @@ Labels:       app=${resourceName.split('-')[0]}
             // AI Tab Content
             logs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Click "Start Remediation" to begin AI analysis</p>
-                <p className="text-xs mt-2">Claude will analyze the issue and suggest fixes</p>
+                {isLoadingInitialData ? (
+                  <>
+                    <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin opacity-50" />
+                    <p>Gathering diagnostic data...</p>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Click "Start Remediation" to begin AI analysis</p>
+                    <p className="text-xs mt-2">Claude will analyze the issue and suggest fixes</p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-2">

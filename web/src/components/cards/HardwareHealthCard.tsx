@@ -162,6 +162,7 @@ export function HardwareHealthCard() {
   const [inventory, setInventory] = useState<NodeDeviceInventory[]>([])
   const [nodeCount, setNodeCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('alerts')
   const [endpointAvailable, setEndpointAvailable] = useState<boolean | undefined>(undefined)
@@ -213,12 +214,14 @@ export function HardwareHealthCard() {
       setInventory(DEMO_INVENTORY)
       setNodeCount(DEMO_INVENTORY.length)
       setIsLoading(false)
+      setFetchError(null)
       setLastUpdate(new Date())
       setEndpointAvailable(false) // Mark as unavailable so hook reports demo data
       return
     }
 
     const fetchData = async () => {
+      setFetchError(null)
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 5000)
@@ -268,13 +271,16 @@ export function HardwareHealthCard() {
           setNodeCount(DEMO_INVENTORY.length)
           setLastUpdate(new Date())
         }
-      } catch {
+      } catch (error) {
         // Fall back to demo data on any error
         setEndpointAvailable(false)
         setAlerts(DEMO_ALERTS)
         setInventory(DEMO_INVENTORY)
         setNodeCount(DEMO_INVENTORY.length)
         setLastUpdate(new Date())
+        // Also set error message for user visibility
+        const message = error instanceof Error ? error.message : 'Connection failed'
+        setFetchError(message === 'The user aborted a request.' ? 'Request timeout' : message)
       } finally {
         setIsLoading(false)
       }
@@ -637,6 +643,25 @@ export function HardwareHealthCard() {
         placeholder="Search devices..."
         className="mb-3"
       />
+
+      {/* Error display with retry */}
+      {fetchError && (
+        <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{fetchError}</span>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content based on view mode */}
       <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">

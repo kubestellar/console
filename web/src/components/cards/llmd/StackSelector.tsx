@@ -197,6 +197,7 @@ export function StackSelector() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -280,6 +281,16 @@ export function StackSelector() {
 
     return result
   }, [stacks, searchQuery, sortField, sortDirection])
+
+  // Handle refetch with error tracking
+  const handleRefetch = async () => {
+    setFetchError(null)
+    try {
+      await refetch()
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to refresh stacks')
+    }
+  }
 
   // Group stacks by cluster
   const stacksByCluster = filteredAndSortedStacks.reduce((acc, stack) => {
@@ -389,7 +400,7 @@ export function StackSelector() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    refetch()
+                    handleRefetch()
                   }}
                   className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
                   title="Refresh stacks"
@@ -397,6 +408,21 @@ export function StackSelector() {
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
+
+              {/* Error message */}
+              {fetchError && (
+                <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 text-red-400 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex-1">{fetchError}</span>
+                    <button
+                      onClick={handleRefetch}
+                      className="px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Search input */}
               <div className="px-3 pb-2">
