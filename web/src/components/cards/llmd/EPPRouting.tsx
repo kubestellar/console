@@ -12,6 +12,7 @@ import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCardExpanded } from '../CardWrapper'
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -506,6 +507,9 @@ export function EPPRouting() {
   const [viewMode, setViewMode] = useState<ViewMode>('default')
   const uniqueId = useRef(`epp-${Math.random().toString(36).substr(2, 9)}`).current
 
+  // Detect if card is in expanded/fullscreen mode
+  const { isExpanded } = useCardExpanded()
+
   // Get stack context and centralized demo state
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
@@ -897,7 +901,7 @@ export function EPPRouting() {
       </div>
 
       {/* Main visualization area */}
-      <div className="flex-1 relative min-h-[200px]">
+      <div className={`flex-1 relative ${isExpanded ? 'min-h-[500px]' : 'min-h-[200px]'}`}>
         <svg
           viewBox="0 3 100 105"
           className="w-full h-full overflow-visible"

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, XCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle } from 'lucide-react'
+import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMobile } from '../../hooks/useMobile'
@@ -8,7 +8,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
-import { isClusterUnreachable } from '../clusters/utils'
+import { isClusterUnreachable, isClusterTokenExpired } from '../clusters/utils'
 import { useCardLoadingState } from './CardDataContext'
 
 // Console URL generation for cloud providers
@@ -179,6 +179,10 @@ export function ClusterHealth() {
   // Stats: EXACT same logic as Clusters.tsx lines 1714-1720
   // Unreachable = reachable explicitly false or connection errors or no nodes
   const unreachableClusters = filteredForStats.filter(c => isClusterUnreachable(c)).length
+  // Token expired = unreachable due to auth error
+  const tokenExpiredClusters = filteredForStats.filter(c => isClusterTokenExpired(c)).length
+  // Network offline = unreachable but NOT due to auth error
+  const networkOfflineClusters = unreachableClusters - tokenExpiredClusters
   // Healthy = not unreachable and (has nodes OR healthy flag)
   const healthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && isHealthy(c)).length
   // Unhealthy = not unreachable and not healthy
@@ -272,7 +276,7 @@ export function ClusterHealth() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20" title={`${healthyClusters} clusters are healthy and responding`}>
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle className="w-4 h-4 text-green-400" />
@@ -282,17 +286,24 @@ export function ClusterHealth() {
         </div>
         <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20" title={`${unhealthyClusters} clusters are reachable but have issues`}>
           <div className="flex items-center gap-2 mb-1">
-            <XCircle className="w-4 h-4 text-orange-400" />
+            <AlertTriangle className="w-4 h-4 text-orange-400" />
             <span className="text-xs text-orange-400">Unhealthy</span>
           </div>
           <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
         </div>
-        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={`${unreachableClusters} clusters cannot be contacted - check network connection`}>
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20" title={`${tokenExpiredClusters} clusters have expired/invalid credentials - re-authenticate`}>
+          <div className="flex items-center gap-2 mb-1">
+            <KeyRound className="w-4 h-4 text-red-400" />
+            <span className="text-xs text-red-400">Auth Error</span>
+          </div>
+          <span className="text-2xl font-bold text-foreground">{tokenExpiredClusters}</span>
+        </div>
+        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20" title={`${networkOfflineClusters} clusters cannot be contacted - check network/VPN`}>
           <div className="flex items-center gap-2 mb-1">
             <WifiOff className="w-4 h-4 text-yellow-400" />
             <span className="text-xs text-yellow-400">Offline</span>
           </div>
-          <span className="text-2xl font-bold text-foreground">{unreachableClusters}</span>
+          <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
         </div>
       </div>
 
@@ -300,6 +311,7 @@ export function ClusterHealth() {
       <div className="flex-1 space-y-2 overflow-y-auto">
         {clusters.map((cluster, idx) => {
           const clusterUnreachable = isClusterUnreachable(cluster)
+          const clusterTokenExpired = isClusterTokenExpired(cluster)
           const clusterHealthy = !clusterUnreachable && isHealthy(cluster)
           // Only show loading spinner for initial load (no cached data)
           // During refresh with cached data, show the cached data
@@ -313,9 +325,11 @@ export function ClusterHealth() {
             ? 'Checking cluster health...'
             : cluster.healthy
               ? `Cluster is healthy with ${cluster.nodeCount || 0} nodes and ${cluster.podCount || 0} pods`
-              : clusterUnreachable
-                ? 'Offline - check network connection'
-                : cluster.errorMessage || 'Cluster has issues - click to view details'
+              : clusterTokenExpired
+                ? 'Token expired - re-authenticate to access cluster'
+                : clusterUnreachable
+                  ? 'Offline - check network connection'
+                  : cluster.errorMessage || 'Cluster has issues - click to view details'
           return (
             <div
               key={cluster.name}
@@ -325,9 +339,11 @@ export function ClusterHealth() {
               title={`Click to view details for ${cluster.name}`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1" title={statusTooltip}>
-                {/* Status icon: green check for healthy, yellow wifi-off for offline, orange triangle for degraded */}
+                {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, orange triangle for degraded */}
                 {clusterLoading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
+                ) : clusterTokenExpired ? (
+                  <KeyRound className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 ) : clusterUnreachable ? (
                   <WifiOff className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
                 ) : clusterHealthy ? (
@@ -405,12 +421,22 @@ export function ClusterHealth() {
         </div>
       )}
 
-      {/* Show offline clusters summary if any */}
-      {!error && unreachableClusters > 0 && (
+      {/* Show token expired clusters summary if any */}
+      {!error && tokenExpiredClusters > 0 && (
+        <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20" title="Re-authenticate to restore access to these clusters">
+          <div className="flex items-center gap-1.5 text-xs text-red-400">
+            <KeyRound className="w-3 h-3" />
+            {tokenExpiredClusters} cluster(s) have expired credentials - re-authenticate
+          </div>
+        </div>
+      )}
+
+      {/* Show network offline clusters summary if any */}
+      {!error && networkOfflineClusters > 0 && (
         <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20" title="Check network connectivity and VPN status">
           <div className="flex items-center gap-1.5 text-xs text-yellow-400">
             <WifiOff className="w-3 h-3" />
-            {unreachableClusters} cluster(s) offline - check network connection
+            {networkOfflineClusters} cluster(s) offline - check network connection
           </div>
         </div>
       )}

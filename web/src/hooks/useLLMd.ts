@@ -225,31 +225,23 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
         try {
           console.log(`[useLLMdServers] Fetching from ${cluster}`)
 
-          // Fetch deployments from key llm-d namespaces only
-          const keyNamespaces = [
-            'b2', 'e2e-helm', 'e2e-solution', 'e2e-pd', 'effi', 'effi2', 'guygir',
-            'llm-d', 'aibrix-system', 'hc4ai-operator', 'hc4ai-operator-dev',
-            'e2e-solution-platform-eval', 'inference-router-test'
-          ]
+          // Fetch deployments from all namespaces to discover llm-d workloads
           const allDeployments: DeploymentResource[] = []
 
-          // Fetch sequentially to avoid queue issues
-          for (const ns of keyNamespaces) {
-            try {
-              console.log(`[useLLMdServers] Fetching deployments from ${cluster}/${ns}`)
-              const resp = await kubectlProxy.exec(
-                ['get', 'deployments', '-n', ns, '-o', 'json'],
-                { context: cluster, timeout: 10000 }
-              )
-              if (resp.exitCode === 0 && resp.output) {
-                const data = JSON.parse(resp.output)
-                const items = data.items || []
-                console.log(`[useLLMdServers] Got ${items.length} deployments from ${cluster}/${ns}`)
-                allDeployments.push(...items)
-              }
-            } catch (err) {
-              console.error(`[useLLMdServers] Namespace ${ns} not found or error:`, err)
+          try {
+            console.log(`[useLLMdServers] Fetching all deployments from ${cluster}`)
+            const resp = await kubectlProxy.exec(
+              ['get', 'deployments', '-A', '-o', 'json'],
+              { context: cluster, timeout: 15000 }
+            )
+            if (resp.exitCode === 0 && resp.output) {
+              const data = JSON.parse(resp.output)
+              const items = data.items || []
+              console.log(`[useLLMdServers] Got ${items.length} deployments from ${cluster}`)
+              allDeployments.push(...items)
             }
+          } catch (err) {
+            console.error(`[useLLMdServers] Error fetching deployments from ${cluster}:`, err)
           }
 
           console.log(`[useLLMdServers] Found ${allDeployments.length} deployments from ${cluster}`)
@@ -297,16 +289,21 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             const ns = d.metadata.namespace.toLowerCase()
 
             // Include llm-d/inference-related namespaces
-            // - llm-d, vllm, e2e: standard llm namespaces
-            // - b2: known llm namespace on vllm-d
+            // - llm-d, llmd, vllm, e2e: standard llm namespaces
+            // - b2, effi, guygir: known llm namespaces on vllm-d
             // - inf, gaie, sched: inference namespaces on pok-prod clusters
-            const isLlmdNamespace = ns.includes('llm-d') || ns.includes('e2e') || ns.includes('vllm') ||
-              ns === 'b2' || ns.includes('inf') || ns.includes('gaie') || ns.includes('sched')
+            // - serving, model, ai-, -ai, ml-: generic ML/AI namespaces
+            const isLlmdNamespace = ns.includes('llm-d') || ns.includes('llmd') || ns.includes('e2e') || ns.includes('vllm') ||
+              ns === 'b2' || ns.includes('effi') || ns.includes('guygir') || ns.includes('aibrix') ||
+              ns.includes('hc4ai') || ns.includes('inf') || ns.includes('gaie') || ns.includes('sched') ||
+              ns.includes('inference') || ns.includes('serving') || ns.includes('model') ||
+              ns.includes('ai-') || ns.includes('-ai') || ns.includes('ml-')
 
             return (
               // Model serving
               name.includes('vllm') ||
               name.includes('llm-d') ||
+              name.includes('llmd') ||
               name.includes('tgi') ||
               name.includes('triton') ||
               name.includes('llama') ||
@@ -318,6 +315,8 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               name.includes('modelservice') ||
               labels['llmd.org/inferenceServing'] === 'true' ||
               labels['llmd.org/model'] ||
+              labels['llm-d.ai/role'] ||
+              labels['app'] === 'llm-inference' ||
               labels['app.kubernetes.io/name'] === 'vllm' ||
               labels['app.kubernetes.io/name'] === 'tgi' ||
               labels['app.kubernetes.io/part-of'] === 'inference' ||
@@ -325,6 +324,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               name.includes('-epp') ||
               name.endsWith('epp') ||
               name.includes('scheduling') ||
+              name.includes('inference-pool') ||
               // Gateway (in llm-d namespaces)
               (isLlmdNamespace && (name.includes('gateway') || name.includes('ingress'))) ||
               // Prometheus (in llm-d namespaces)

@@ -93,8 +93,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     )
   }
 
-  // Determine if the dropdown should be greyed out
-  const isGreyedOut = isDemoMode || (!hasAvailableAgents && visibleAgents.length === 0)
+  // Only gray out in demo mode - allow interaction during loading/reconnection
+  const isGreyedOut = isDemoMode
 
   // If only one agent and it's available, just show it (no selector needed)
   if (visibleAgents.length === 1 && hasAvailableAgents && !isDemoMode) {

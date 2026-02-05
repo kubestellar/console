@@ -888,20 +888,17 @@ async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
   if (isDemoModeForced) return []
 
   const allServers: LLMdServer[] = []
-  const keyNamespaces = ['b2', 'e2e-helm', 'e2e-solution', 'e2e-pd', 'effi', 'effi2', 'guygir',
-    'llm-d', 'aibrix-system', 'hc4ai-operator', 'hc4ai-operator-dev', 'e2e-solution-platform-eval', 'inference-router-test']
 
   for (const cluster of clusters) {
     try {
+      // Query all namespaces to discover llm-d workloads regardless of namespace naming
       const allDeployments: DeploymentResource[] = []
-      for (const ns of keyNamespaces) {
-        try {
-          const resp = await kubectlProxy.exec(['get', 'deployments', '-n', ns, '-o', 'json'], { context: cluster, timeout: 10000 })
-          if (resp.exitCode === 0 && resp.output) {
-            allDeployments.push(...(JSON.parse(resp.output).items || []))
-          }
-        } catch { /* namespace not found */ }
-      }
+      try {
+        const resp = await kubectlProxy.exec(['get', 'deployments', '-A', '-o', 'json'], { context: cluster, timeout: 15000 })
+        if (resp.exitCode === 0 && resp.output) {
+          allDeployments.push(...(JSON.parse(resp.output).items || []))
+        }
+      } catch { /* cluster not reachable */ }
       if (allDeployments.length === 0) continue
 
       const autoscalerMap = new Map<string, 'hpa' | 'va' | 'both'>()
@@ -932,12 +929,17 @@ async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
         const name = d.metadata.name.toLowerCase()
         const labels = d.spec.template?.metadata?.labels || {}
         const ns = d.metadata.namespace.toLowerCase()
-        const isLlmdNs = ns.includes('llm-d') || ns.includes('e2e') || ns.includes('vllm') || ns === 'b2'
-        return name.includes('vllm') || name.includes('llm-d') || name.includes('tgi') || name.includes('triton') ||
+        // Expanded namespace patterns to catch more llm-d related namespaces
+        const isLlmdNs = ns.includes('llm-d') || ns.includes('llmd') || ns.includes('e2e') || ns.includes('vllm') ||
+          ns.includes('inference') || ns.includes('ai-') || ns.includes('-ai') || ns.includes('ml-') ||
+          ns === 'b2' || ns.includes('effi') || ns.includes('guygir') || ns.includes('aibrix') ||
+          ns.includes('hc4ai') || ns.includes('serving') || ns.includes('model')
+        return name.includes('vllm') || name.includes('llm-d') || name.includes('llmd') || name.includes('tgi') || name.includes('triton') ||
           name.includes('llama') || name.includes('granite') || name.includes('qwen') || name.includes('mistral') || name.includes('mixtral') ||
           labels['llmd.org/inferenceServing'] === 'true' || labels['llmd.org/model'] ||
           labels['app.kubernetes.io/name'] === 'vllm' || labels['app.kubernetes.io/name'] === 'tgi' ||
-          name.includes('-epp') || name.endsWith('epp') ||
+          labels['llm-d.ai/role'] || labels['app'] === 'llm-inference' ||
+          name.includes('-epp') || name.endsWith('epp') || name.includes('inference-pool') ||
           (isLlmdNs && (name.includes('gateway') || name.includes('ingress') || name === 'prometheus'))
       })
 

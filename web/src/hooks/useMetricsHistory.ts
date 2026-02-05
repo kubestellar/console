@@ -31,14 +31,60 @@ function notifySubscribers() {
   subscribers.forEach(fn => fn(snapshots))
 }
 
-// Persist to localStorage
+// Persist to localStorage with quota exceeded handling
 function persistSnapshots() {
   // Keep only last MAX_SNAPSHOTS
   if (snapshots.length > MAX_SNAPSHOTS) {
     snapshots = snapshots.slice(-MAX_SNAPSHOTS)
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
-  window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
+    window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
+  } catch (e) {
+    // QuotaExceededError - try to free up space
+    if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)) {
+      console.warn('[MetricsHistory] Storage quota exceeded, cleaning up old data...')
+
+      // Strategy 1: Reduce snapshots to half
+      const reducedCount = Math.max(Math.floor(snapshots.length / 2), 10)
+      snapshots = snapshots.slice(-reducedCount)
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
+        window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
+        console.log(`[MetricsHistory] Reduced snapshots to ${reducedCount} to fit quota`)
+        return
+      } catch {
+        // Strategy 2: Clear other large keys that might be stale
+        const keysToClean = [
+          'github_activity_cache_v2_',
+          'kubestellar-clusters-cards',
+        ]
+        keysToClean.forEach(prefix => {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key?.startsWith(prefix)) {
+              localStorage.removeItem(key)
+            }
+          }
+        })
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
+          window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
+          console.log('[MetricsHistory] Cleaned up stale cache, persisted snapshots')
+          return
+        } catch {
+          // Strategy 3: Just keep in memory, don't persist
+          console.warn('[MetricsHistory] Cannot persist to localStorage, keeping in memory only')
+        }
+      }
+    } else {
+      // Non-quota error, log and continue
+      console.error('[MetricsHistory] Failed to persist snapshots:', e)
+    }
+  }
 }
 
 // Add a new snapshot

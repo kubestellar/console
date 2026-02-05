@@ -13,6 +13,7 @@ import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/moc
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCardExpanded } from '../CardWrapper'
 
 type ViewMode = 'default' | 'horseshoe'
 
@@ -571,6 +572,9 @@ export function LLMdFlow() {
   const [viewMode, setViewMode] = useState<ViewMode>('default')
   const uniqueId = useRef(`flow-${Math.random().toString(36).substr(2, 9)}`).current
 
+  // Detect if card is in expanded/fullscreen mode
+  const { isExpanded } = useCardExpanded()
+
   // Get selected stack from context and centralized demo state
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
@@ -928,7 +932,7 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="relative w-full h-full flex-1 min-h-[300px] bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden">
+    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-[600px]' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm">

@@ -5,7 +5,7 @@
  * Shows stack health, component counts, namespace, and GPU usage.
  * Includes search, sort, and filter capabilities.
  */
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptionalStack } from '../../../contexts/StackContext'
@@ -82,10 +82,14 @@ function getStatusPriority(status: LLMdStack['status']): number {
 interface StackOptionProps {
   stack: LLMdStack
   isSelected: boolean
-  onSelect: () => void
+  onSelect: (stackId: string) => void
 }
 
-function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
+// Memoize StackOption to prevent re-renders when scrolling through large lists
+const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
+  const handleClick = useCallback(() => {
+    onSelect(stack.id)
+  }, [onSelect, stack.id])
   const prefillCount = stack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
   const decodeCount = stack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
   const unifiedCount = stack.components.both.reduce((sum, c) => sum + c.replicas, 0)
@@ -93,7 +97,7 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
 
   return (
     <button
-      onClick={onSelect}
+      onClick={handleClick}
       className={`w-full px-3 py-2.5 text-left hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 last:border-0 ${
         isSelected ? 'bg-slate-700/70' : ''
       }`}
@@ -189,7 +193,7 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
       </div>
     </button>
   )
-}
+})
 
 export function StackSelector() {
   const stackContext = useOptionalStack()
@@ -298,6 +302,12 @@ export function StackSelector() {
       setSortDirection('asc')
     }
   }
+
+  // Memoize stack selection handler to prevent re-renders
+  const handleSelectStack = useCallback((stackId: string) => {
+    setSelectedStackId(stackId)
+    setIsOpen(false)
+  }, [setSelectedStackId])
 
   const totalAccelerators = stacks.reduce((sum, s) => sum + estimateAccelerators(s).count, 0)
 
@@ -460,10 +470,7 @@ export function StackSelector() {
                       key={stack.id}
                       stack={stack}
                       isSelected={stack.id === selectedStackId}
-                      onSelect={() => {
-                        setSelectedStackId(stack.id)
-                        setIsOpen(false)
-                      }}
+                      onSelect={handleSelectStack}
                     />
                   ))}
                 </div>

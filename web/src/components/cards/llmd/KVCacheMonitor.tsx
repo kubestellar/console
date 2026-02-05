@@ -14,6 +14,7 @@ import { generateKVCacheStats, type KVCacheStats } from '../../../lib/llmd/mockD
 import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCardExpanded } from '../CardWrapper'
 
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
@@ -252,6 +253,9 @@ export function KVCacheMonitor() {
   const [aggregationMode, setAggregationMode] = useState<AggregationMode>('aggregated')
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null)
   const gaugeRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // Detect if card is in expanded/fullscreen mode
+  const { isExpanded } = useCardExpanded()
 
   // Get stack context and centralized demo state
   const selectedStack = stackContext?.selectedStack
@@ -501,7 +505,7 @@ export function KVCacheMonitor() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative">
+    <div className={`p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative ${isExpanded ? 'min-h-[500px]' : ''}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">

@@ -188,7 +188,7 @@ export const CARD_TITLES: Record<string, string> = {
   resource_marshall: 'Resource Marshall',
   workload_monitor: 'Workload Monitor',
   llmd_stack_monitor: 'llm-d Stack Monitor',
-  prow_ci_monitor: 'Prow CI Monitor',
+  prow_ci_monitor: 'PROW CI Monitor',
   github_ci_monitor: 'GitHub CI Monitor',
   cluster_health_monitor: 'Cluster Health Monitor',
 
@@ -308,10 +308,10 @@ export const CARD_TITLES: Record<string, string> = {
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
 
-  // Prow CI/CD cards
-  prow_jobs: 'Prow Jobs',
-  prow_status: 'Prow Status',
-  prow_history: 'Prow History',
+  // PROW CI/CD cards
+  prow_jobs: 'PROW Jobs',
+  prow_status: 'PROW Status',
+  prow_history: 'PROW History',
 
   // ML/AI workload cards
   llm_inference: 'llm-d Inference',
@@ -380,7 +380,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   resource_marshall: 'Explore resource dependency trees and ownership chains.',
   workload_monitor: 'Monitor all resources for a workload with health status, alerts, and AI diagnose/repair.',
   llmd_stack_monitor: 'Monitor the llm-d inference stack: model serving, EPP, gateways, and autoscalers.',
-  prow_ci_monitor: 'Monitor Prow CI jobs with success rates, failure analysis, and AI repair.',
+  prow_ci_monitor: 'Monitor PROW CI jobs with success rates, failure analysis, and AI repair.',
   github_ci_monitor: 'Monitor GitHub Actions workflows across repos with pass rates and alerts.',
   cluster_health_monitor: 'Monitor cluster health across all connected clusters with pod and deployment issues.',
   pod_issues: 'Pods with errors, restarts, or scheduling problems.',
@@ -467,9 +467,9 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   console_ai_health_check: 'AI-powered cluster health analysis.',
   console_ai_offline_detection: 'Monitors cluster health and predicts failures before they happen. Detects offline nodes, GPU exhaustion, resource pressure, and groups issues by root cause for efficient remediation.',
   stock_market_ticker: 'Live stock market ticker with tech company prices.',
-  prow_jobs: 'Prow CI/CD job status and results.',
-  prow_status: 'Overall Prow system health and queue depth.',
-  prow_history: 'Historical Prow job runs and success rates.',
+  prow_jobs: 'PROW CI/CD job status and results.',
+  prow_status: 'Overall PROW system health and queue depth.',
+  prow_history: 'Historical PROW job runs and success rates.',
   llm_inference: 'llm-d inference endpoint status and request metrics.',
   llm_models: 'LLM models deployed via llm-d with version info.',
   llmd_flow: 'Animated visualization of inference request flow through the llm-d stack: load balancer → EPP → prefill/decode pods.',

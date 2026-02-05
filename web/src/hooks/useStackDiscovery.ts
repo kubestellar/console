@@ -488,6 +488,7 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
           }
 
           // Progressive update: add this cluster's stacks immediately
+          // Only update if we got results - preserve cached data when cluster is unreachable
           if (clusterStacks.length > 0) {
             setStacks(prev => {
               // Remove any existing stacks from this cluster (in case of refresh)
@@ -503,6 +504,9 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               return merged
             })
           }
+          // Note: If clusterStacks is empty but we had cached data for this cluster,
+          // we intentionally preserve the cached data to avoid losing P/D/WVA details
+          // when the cluster is temporarily unreachable
 
         } catch (err) {
           console.error(`[useStackDiscovery] Error fetching from ${cluster}:`, err)

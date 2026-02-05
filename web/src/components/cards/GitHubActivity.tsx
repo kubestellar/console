@@ -400,7 +400,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   }
 }
 
-// Sort comparators for GitHub items - keyed by viewMode-aware logic
+// Sort comparators for GitHub items (open-first sorting applied separately after)
 const SORT_COMPARATORS: Record<SortByOption, (a: GitHubItem, b: GitHubItem) => number> = {
   date: (a, b) => {
     const aDate = new Date(a.updated_at || a.published_at || 0).getTime()
@@ -408,7 +408,6 @@ const SORT_COMPARATORS: Record<SortByOption, (a: GitHubItem, b: GitHubItem) => n
     return aDate - bDate
   },
   activity: (a, b) => {
-    // For issues: sort by comment count; for contributors: sort by contributions
     const aActivity = a.comments ?? a.contributions ?? 0
     const bActivity = b.comments ?? b.contributions ?? 0
     return aActivity - bActivity
@@ -550,7 +549,7 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
-    items: paginatedItems,
+    items: rawPaginatedItems,
     totalItems,
     currentPage,
     totalPages,
@@ -576,6 +575,19 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
     },
     defaultLimit: 10,
   })
+
+  // Always show open items first (regardless of sort direction)
+  // This is a stable sort that preserves the relative order within each group
+  const paginatedItems = useMemo(() => {
+    if (viewMode === 'contributors' || viewMode === 'releases') {
+      return rawPaginatedItems // No open/closed concept for these
+    }
+    return [...rawPaginatedItems].sort((a, b) => {
+      const aOpen = a.state === 'open' ? 0 : 1
+      const bOpen = b.state === 'open' ? 0 : 1
+      return aOpen - bOpen // Open (0) comes before closed (1)
+    })
+  }, [rawPaginatedItems, viewMode])
 
   // Calculate stats - use accurate counts from fetched data
   const stats = useMemo(() => {
@@ -997,15 +1009,25 @@ function PRItem({ pr }: { pr: GitHubPR }) {
   const isMerged = pr.merged_at != null
   const isStaleItem = isOpen && isStale(pr.updated_at)
 
+  const statusText = isMerged ? 'Merged' : isOpen ? 'Open' : 'Closed'
+  const statusTitle = isMerged ? 'Merged pull request' : isOpen ? 'Open pull request' : 'Closed pull request (not merged)'
+
   return (
     <a
       href={pr.html_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"
+      className={cn(
+        "block p-3 rounded-lg hover:bg-secondary/40 border transition-colors",
+        isOpen
+          ? "bg-green-500/5 border-green-500/20 hover:border-green-500/30"
+          : isMerged
+            ? "bg-purple-500/5 border-purple-500/20 hover:border-purple-500/30"
+            : "bg-secondary/20 border-border/50"
+      )}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
+        <div className="mt-0.5" title={statusTitle}>
           {isMerged ? (
             <GitMerge className="w-4 h-4 text-purple-400" />
           ) : isOpen ? (
@@ -1017,11 +1039,22 @@ function PRItem({ pr }: { pr: GitHubPR }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium truncate">#{pr.number} {pr.title}</span>
+            {/* Status badge */}
+            <span className={cn(
+              "text-xs px-2 py-0.5 rounded shrink-0",
+              isMerged
+                ? "bg-purple-500/20 text-purple-400"
+                : isOpen
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"
+            )}>
+              {statusText}
+            </span>
             {pr.draft && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">Draft</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 shrink-0">Draft</span>
             )}
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Stale</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">Stale</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1029,7 +1062,7 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" />
               {pr.user.login}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at)}`}>
               <Clock className="w-3 h-3" />
               {formatTimeAgo(pr.updated_at)}
             </span>
@@ -1049,10 +1082,15 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
       href={issue.html_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"
+      className={cn(
+        "block p-3 rounded-lg hover:bg-secondary/40 border transition-colors",
+        isOpen
+          ? "bg-orange-500/5 border-orange-500/20 hover:border-orange-500/30"
+          : "bg-secondary/20 border-border/50"
+      )}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
+        <div className="mt-0.5" title={isOpen ? "Open issue" : "Closed issue"}>
           {isOpen ? (
             <AlertCircle className="w-4 h-4 text-orange-400" />
           ) : (
@@ -1062,8 +1100,17 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium truncate">#{issue.number} {issue.title}</span>
+            {/* Status badge - show Open or Closed */}
+            <span className={cn(
+              "text-xs px-2 py-0.5 rounded shrink-0",
+              isOpen
+                ? "bg-orange-500/20 text-orange-400"
+                : "bg-green-500/20 text-green-400"
+            )}>
+              {isOpen ? 'Open' : 'Closed'}
+            </span>
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Stale</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">Stale</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1071,12 +1118,12 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" />
               {issue.user.login}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at)}`}>
               <Clock className="w-3 h-3" />
               {formatTimeAgo(issue.updated_at)}
             </span>
             {issue.comments > 0 && (
-              <span>{issue.comments} comments</span>
+              <span title={`${issue.comments} comments`}>{issue.comments} comments</span>
             )}
           </div>
         </div>

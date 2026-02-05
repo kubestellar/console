@@ -273,11 +273,15 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         localClusterFilter.includes(issue.resource.cluster)
       )
     }
-    // Add synthetic issues from unhealthy llm-d servers (already filtered)
-    filteredServers.forEach((s) => {
+    // Add synthetic issues from unhealthy llm-d servers
+    // Use full servers list and apply cluster filter explicitly to avoid any caching issues
+    const serversToCheck = localClusterFilter.length > 0
+      ? servers.filter(s => localClusterFilter.includes(s.cluster))
+      : servers
+    serversToCheck.forEach((s) => {
       if (s.status === 'error' || s.status === 'stopped') {
         monitorIssues.push({
-          id: `llmd-${s.name}-${s.status}`,
+          id: `llmd-${s.cluster}-${s.namespace}-${s.name}-${s.status}`,
           resource: {
             id: `${'Deployment'}/${s.namespace}/${s.name}`,
             kind: 'Deployment',
@@ -298,7 +302,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       }
     })
     return monitorIssues
-  }, [issues, filteredServers, localClusterFilter])
+  }, [issues, servers, localClusterFilter])
 
   // Combine resources
   const allResources = useMemo<MonitoredResource[]>(() => {

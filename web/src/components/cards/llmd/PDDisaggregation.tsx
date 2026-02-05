@@ -12,6 +12,7 @@ import { Split, ArrowRight, Cpu, Zap, Clock, Activity, AlertCircle } from 'lucid
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCardExpanded } from '../CardWrapper'
 
 interface ServerStats {
   id: string
@@ -177,6 +178,9 @@ export function PDDisaggregation() {
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
 
+  // Detect if card is in expanded/fullscreen mode
+  const { isExpanded } = useCardExpanded()
+
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
 
@@ -315,7 +319,7 @@ export function PDDisaggregation() {
   }, [prefillServers, decodeServers, packets])
 
   return (
-    <div className="p-4 h-full flex-1 flex flex-col">
+    <div className={`p-4 h-full flex-1 flex flex-col ${isExpanded ? 'min-h-[500px]' : ''}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
