@@ -40,23 +40,25 @@ function subscribe(listener: () => void): () => void {
 }
 
 const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
+  // Priority dashboards at the top
   { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
   { id: 'clusters', name: 'Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
-  { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 2 },
+  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 2 },
   { id: 'ai-ml', name: 'AI/ML', icon: 'Sparkles', href: '/ai-ml', type: 'link', order: 3 },
-  { id: 'gpu-reservations', name: 'GPU Reservations', icon: 'Cpu', href: '/gpu-reservations', type: 'link', order: 4 },
-  { id: 'ci-cd', name: 'CI/CD', icon: 'GitMerge', href: '/ci-cd', type: 'link', order: 5 },
-  { id: 'compute', name: 'Compute', icon: 'Monitor', href: '/compute', type: 'link', order: 6 },
-  { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 7 },
-  { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 8 },
-  { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 9 },
-  { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 10 },
-  { id: 'security-posture', name: 'Security Posture', icon: 'ShieldCheck', href: '/security-posture', type: 'link', order: 11 },
-  { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 12 },
-  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 13 },
-  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 14 },
-  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 15 },
-  { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 16 },
+  { id: 'ci-cd', name: 'CI/CD', icon: 'GitMerge', href: '/ci-cd', type: 'link', order: 4 },
+  // All other dashboards
+  { id: 'gpu-reservations', name: 'GPU Reservations', icon: 'Cpu', href: '/gpu-reservations', type: 'link', order: 5 },
+  { id: 'workloads', name: 'Workloads', icon: 'Box', href: '/workloads', type: 'link', order: 6 },
+  { id: 'compute', name: 'Compute', icon: 'Monitor', href: '/compute', type: 'link', order: 7 },
+  { id: 'storage', name: 'Storage', icon: 'HardDrive', href: '/storage', type: 'link', order: 8 },
+  { id: 'network', name: 'Network', icon: 'Globe', href: '/network', type: 'link', order: 9 },
+  { id: 'events', name: 'Events', icon: 'Activity', href: '/events', type: 'link', order: 10 },
+  { id: 'security', name: 'Security', icon: 'Shield', href: '/security', type: 'link', order: 11 },
+  { id: 'security-posture', name: 'Security Posture', icon: 'ShieldCheck', href: '/security-posture', type: 'link', order: 12 },
+  { id: 'data-compliance', name: 'Data Compliance', icon: 'Database', href: '/data-compliance', type: 'link', order: 13 },
+  { id: 'gitops', name: 'GitOps', icon: 'GitBranch', href: '/gitops', type: 'link', order: 14 },
+  { id: 'alerts', name: 'Alerts', icon: 'Bell', href: '/alerts', type: 'link', order: 15 },
+  { id: 'arcade', name: 'Arcade', icon: 'Gamepad2', href: '/arcade', type: 'link', order: 16 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
@@ -75,8 +77,8 @@ const DEFAULT_CONFIG: SidebarConfig = {
   isMobileOpen: false,
 }
 
-const STORAGE_KEY = 'kubestellar-sidebar-config-v6'
-const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v5'
+const STORAGE_KEY = 'kubestellar-sidebar-config-v7'
+const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v6'
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']
