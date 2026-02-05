@@ -521,9 +521,25 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
     }[timeRange]
 
     if (viewMode === 'prs') {
-      return prs.filter(pr => now - new Date(pr.updated_at).getTime() <= rangeMs)
+      // Sort PRs: open first, then by date within each group
+      const filtered = prs.filter(pr => now - new Date(pr.updated_at).getTime() <= rangeMs)
+      return filtered.sort((a, b) => {
+        // Open PRs first
+        if (a.state === 'open' && b.state !== 'open') return -1
+        if (a.state !== 'open' && b.state === 'open') return 1
+        // Then by date (most recent first)
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
     } else if (viewMode === 'issues') {
-      return issues.filter(issue => now - new Date(issue.updated_at).getTime() <= rangeMs)
+      // Sort issues: open first, then by date within each group
+      const filtered = issues.filter(issue => now - new Date(issue.updated_at).getTime() <= rangeMs)
+      return filtered.sort((a, b) => {
+        // Open issues first
+        if (a.state === 'open' && b.state !== 'open') return -1
+        if (a.state !== 'open' && b.state === 'open') return 1
+        // Then by date (most recent first)
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
     } else if (viewMode === 'releases') {
       return releases.filter(release => now - new Date(release.published_at).getTime() <= rangeMs)
     } else if (viewMode === 'contributors') {
