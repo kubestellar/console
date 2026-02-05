@@ -223,8 +223,8 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           <div className="flex-1 space-y-2 overflow-y-auto">
             {subscriptions.map((sub) => (
               <div
-                key={`${sub.cluster || 'default'}-${sub.namespace}-${sub.name}`}
-                onClick={() => drillToOperator(sub.cluster || 'default', sub.namespace, sub.name, {
+                key={`${sub.cluster || 'unknown'}-${sub.namespace}-${sub.name}`}
+                onClick={() => sub.cluster && drillToOperator(sub.cluster, sub.namespace, sub.name, {
                   channel: sub.channel,
                   currentCSV: sub.currentCSV,
                   installPlanApproval: sub.installPlanApproval,

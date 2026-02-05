@@ -78,7 +78,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all', onSe
             {filteredPVCs.map((pvc, idx) => (
               <div
                 key={`${pvc.cluster}-${pvc.namespace}-${pvc.name}-${idx}`}
-                onClick={() => onSelectPVC(pvc.cluster || 'default', pvc.namespace, pvc.name)}
+                onClick={() => pvc.cluster && onSelectPVC(pvc.cluster, pvc.namespace, pvc.name)}
                 className="glass p-3 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors"
               >
                 <div className="flex items-center justify-between">

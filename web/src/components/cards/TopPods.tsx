@@ -262,7 +262,7 @@ export function TopPods({ config }: TopPodsProps) {
             <div
               key={`${pod.cluster}-${pod.namespace}-${pod.name}`}
               className="group p-2 rounded-lg bg-secondary/30 border border-border/50 hover:border-border transition-colors cursor-pointer"
-              onClick={() => drillToPod(pod.cluster || 'default', pod.namespace, pod.name, {
+              onClick={() => pod.cluster && drillToPod(pod.cluster, pod.namespace, pod.name, {
                 status: pod.status,
                 restarts: pod.restarts,
               })}
@@ -377,7 +377,7 @@ export function TopPods({ config }: TopPodsProps) {
 
               {/* Cluster and namespace - prominent */}
               <div className="flex items-center gap-2 mt-1 mb-1">
-                <ClusterBadge cluster={pod.cluster || 'default'} />
+                <ClusterBadge cluster={pod.cluster || 'unknown'} />
                 <span className="text-xs text-muted-foreground truncate">{pod.namespace}</span>
               </div>
 

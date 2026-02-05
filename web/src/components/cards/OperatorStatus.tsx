@@ -248,8 +248,8 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
 
               return (
                 <div
-                  key={`${op.cluster || 'default'}-${op.namespace}-${op.name}`}
-                  onClick={() => drillToOperator(op.cluster || '', op.namespace, op.name, {
+                  key={`${op.cluster || 'unknown'}-${op.namespace}-${op.name}`}
+                  onClick={() => op.cluster && drillToOperator(op.cluster, op.namespace, op.name, {
                     status: op.status,
                     version: op.version,
                     upgradeAvailable: op.upgradeAvailable,

@@ -37,20 +37,29 @@ export function Network() {
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const drillToFirstService = () => {
       if (filteredServices.length > 0 && filteredServices[0]) {
-        drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
+        const svc = filteredServices[0]
+        if (svc.cluster && svc.namespace) {
+          drillToService(svc.cluster, svc.namespace, svc.name)
+        }
       }
     }
     const drillToLoadBalancer = () => {
       const svc = filteredServices.find(s => s.type === 'LoadBalancer')
-      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+      if (svc?.cluster && svc?.namespace) {
+        drillToService(svc.cluster, svc.namespace, svc.name)
+      }
     }
     const drillToNodePort = () => {
       const svc = filteredServices.find(s => s.type === 'NodePort')
-      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+      if (svc?.cluster && svc?.namespace) {
+        drillToService(svc.cluster, svc.namespace, svc.name)
+      }
     }
     const drillToClusterIP = () => {
       const svc = filteredServices.find(s => s.type === 'ClusterIP')
-      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+      if (svc?.cluster && svc?.namespace) {
+        drillToService(svc.cluster, svc.namespace, svc.name)
+      }
     }
 
     switch (blockId) {

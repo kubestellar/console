@@ -198,8 +198,8 @@ export function StorageOverview() {
         <div
           className={`p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.totalPVCs > 0 ? 'cursor-pointer hover:bg-blue-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
-            if (filteredPVCs.length > 0 && filteredPVCs[0]) {
-              drillToPVC(filteredPVCs[0].cluster || 'default', filteredPVCs[0].namespace, filteredPVCs[0].name)
+            if (filteredPVCs.length > 0 && filteredPVCs[0]?.cluster) {
+              drillToPVC(filteredPVCs[0].cluster, filteredPVCs[0].namespace, filteredPVCs[0].name)
             }
           }}
           title={stats.totalPVCs > 0 ? `${stats.totalPVCs} Persistent Volume Claims - Click to view details` : 'No PVCs found'}
@@ -221,7 +221,9 @@ export function StorageOverview() {
           className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.boundPVCs > 0 ? 'cursor-pointer hover:bg-green-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const boundPVC = filteredPVCs.find(p => p.status === 'Bound')
-            if (boundPVC) drillToPVC(boundPVC.cluster || 'default', boundPVC.namespace, boundPVC.name)
+            if (boundPVC?.cluster) {
+              drillToPVC(boundPVC.cluster, boundPVC.namespace, boundPVC.name)
+            }
           }}
           title={stats.boundPVCs > 0 ? `${stats.boundPVCs} PVC${stats.boundPVCs !== 1 ? 's' : ''} successfully bound - Click to view` : 'No bound PVCs'}
         >
@@ -235,7 +237,9 @@ export function StorageOverview() {
           className={`p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 ${stats.pendingPVCs > 0 ? 'cursor-pointer hover:bg-yellow-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const pendingPVC = filteredPVCs.find(p => p.status === 'Pending')
-            if (pendingPVC) drillToPVC(pendingPVC.cluster || 'default', pendingPVC.namespace, pendingPVC.name)
+            if (pendingPVC?.cluster) {
+              drillToPVC(pendingPVC.cluster, pendingPVC.namespace, pendingPVC.name)
+            }
           }}
           title={stats.pendingPVCs > 0 ? `${stats.pendingPVCs} PVC${stats.pendingPVCs !== 1 ? 's' : ''} pending - Click to view` : 'No pending PVCs'}
         >
@@ -249,7 +253,9 @@ export function StorageOverview() {
           className={`p-2 rounded-lg bg-red-500/10 border border-red-500/20 ${stats.failedPVCs > 0 ? 'cursor-pointer hover:bg-red-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const failedPVC = filteredPVCs.find(p => p.status !== 'Bound' && p.status !== 'Pending')
-            if (failedPVC) drillToPVC(failedPVC.cluster || 'default', failedPVC.namespace, failedPVC.name)
+            if (failedPVC?.cluster) {
+              drillToPVC(failedPVC.cluster, failedPVC.namespace, failedPVC.name)
+            }
           }}
           title={stats.failedPVCs > 0 ? `${stats.failedPVCs} PVC${stats.failedPVCs !== 1 ? 's' : ''} in failed/lost state - Click to view` : 'No failed PVCs'}
         >

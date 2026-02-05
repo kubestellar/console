@@ -213,7 +213,10 @@ export function NetworkOverview() {
         className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20' : 'cursor-default'} transition-colors`}
         onClick={() => {
           if (stats.totalServices > 0 && filteredServices[0]) {
-            drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
+            const svc = filteredServices[0]
+            if (svc.cluster && svc.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }
         }}
         title={stats.totalServices > 0 ? `${stats.totalServices} total services across ${stats.clustersWithServices} cluster${stats.clustersWithServices !== 1 ? 's' : ''} - Click to view details` : 'No services found'}
@@ -234,7 +237,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'LoadBalancer')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.loadBalancers > 0 ? `${stats.loadBalancers} LoadBalancer service${stats.loadBalancers !== 1 ? 's' : ''} - Click to view` : 'No LoadBalancer services'}
         >
@@ -248,7 +253,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'NodePort')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.nodePort > 0 ? `${stats.nodePort} NodePort service${stats.nodePort !== 1 ? 's' : ''} - Click to view` : 'No NodePort services'}
         >
@@ -262,7 +269,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'ClusterIP')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.clusterIP > 0 ? `${stats.clusterIP} ClusterIP service${stats.clusterIP !== 1 ? 's' : ''} - Click to view` : 'No ClusterIP services'}
         >
@@ -276,7 +285,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'ExternalName')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.externalName > 0 ? `${stats.externalName} ExternalName service${stats.externalName !== 1 ? 's' : ''} - Click to view` : 'No ExternalName services'}
         >
@@ -299,7 +310,7 @@ export function NetworkOverview() {
                 <div
                   key={name}
                   className={`flex items-center justify-between gap-2 p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => svc && drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)}
+                  onClick={() => svc?.cluster && svc?.namespace && drillToService(svc.cluster, svc.namespace, svc.name)}
                   title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${svc ? ' - Click to view' : ''}`}
                 >
                   <span className="text-sm text-foreground truncate min-w-0 flex-1">{name}</span>

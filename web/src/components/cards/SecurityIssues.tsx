@@ -171,7 +171,11 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   })
 
   const handleIssueClick = (issue: SecurityIssue) => {
-    drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
+    if (!issue.cluster) {
+      // Can't drill down without a cluster
+      return
+    }
+    drillToPod(issue.cluster, issue.namespace, issue.name, {
       securityIssue: issue.issue,
       severity: issue.severity,
     })
@@ -344,7 +348,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <ClusterBadge cluster={issue.cluster || 'default'} />
+                    <ClusterBadge cluster={issue.cluster || 'unknown'} />
                     <span className="text-xs text-muted-foreground" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
                   </div>
                   <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>

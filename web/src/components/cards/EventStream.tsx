@@ -87,7 +87,12 @@ export function EventStream() {
   const handleEventClick = (event: ClusterEvent) => {
     // Parse object to get resource type and name
     const [resourceType, resourceName] = event.object.split('/')
-    const cluster = event.cluster || 'default'
+    const cluster = event.cluster
+
+    if (!cluster) {
+      // Can't drill down without a cluster
+      return
+    }
 
     if (resourceType.toLowerCase() === 'pod') {
       drillToPod(cluster, event.namespace, resourceName, { fromEvent: true })
@@ -185,7 +190,7 @@ export function EventStream() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 min-w-0">
-                    <ClusterBadge cluster={event.cluster || 'default'} />
+                    <ClusterBadge cluster={event.cluster || 'unknown'} />
                     <span className="text-xs text-muted-foreground truncate min-w-0" title={`Namespace: ${event.namespace}`}>{event.namespace}</span>
                   </div>
                   <p className="text-sm text-foreground truncate" title={event.message}>{event.message}</p>

@@ -139,7 +139,7 @@ Please:
             "p-3 rounded-lg bg-orange-500/10 border border-orange-500/20",
             podIssues.length > 0 && "cursor-pointer hover:bg-orange-500/20 transition-colors"
           )}
-          onClick={() => podIssues.length > 0 && podIssues[0] && drillToPod(podIssues[0].cluster || 'default', podIssues[0].namespace, podIssues[0].name)}
+          onClick={() => podIssues.length > 0 && podIssues[0]?.cluster && drillToPod(podIssues[0].cluster, podIssues[0].namespace, podIssues[0].name)}
           title={podIssues.length > 0 ? `${podIssues.length} pod${podIssues.length !== 1 ? 's' : ''} with issues - Click to view first issue` : 'No pod issues'}
         >
           <div className="text-2xl font-bold text-foreground">{podIssues.length}</div>
@@ -150,7 +150,7 @@ Please:
             "p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20",
             deploymentIssues.length > 0 && "cursor-pointer hover:bg-yellow-500/20 transition-colors"
           )}
-          onClick={() => deploymentIssues.length > 0 && deploymentIssues[0] && drillToDeployment(deploymentIssues[0].cluster || 'default', deploymentIssues[0].namespace, deploymentIssues[0].name)}
+          onClick={() => deploymentIssues.length > 0 && deploymentIssues[0]?.cluster && drillToDeployment(deploymentIssues[0].cluster, deploymentIssues[0].namespace, deploymentIssues[0].name)}
           title={deploymentIssues.length > 0 ? `${deploymentIssues.length} deployment${deploymentIssues.length !== 1 ? 's' : ''} with issues - Click to view first issue` : 'No deployment issues'}
         >
           <div className="text-2xl font-bold text-foreground">{deploymentIssues.length}</div>
@@ -164,7 +164,7 @@ Please:
           <div
             key={`pod-${i}`}
             className="p-2 rounded bg-orange-500/10 text-xs cursor-pointer hover:bg-orange-500/20 transition-colors group flex items-center justify-between"
-            onClick={() => drillToPod(issue.cluster || 'default', issue.namespace, issue.name, { status: issue.status, restarts: issue.restarts, issues: issue.issues })}
+            onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, { status: issue.status, restarts: issue.restarts, issues: issue.issues })}
             title={`Click to view details for pod ${issue.name}`}
           >
             <div className="min-w-0">
