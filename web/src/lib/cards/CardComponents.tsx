@@ -5,7 +5,7 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
 import { ClusterStatusDot, getClusterState, type ClusterState } from '../../components/ui/ClusterStatusBadge'
-import type { ClusterErrorType } from '../errorClassifier'
+import type { ClusterWithHealth } from './cardHooks'
 
 // ============================================================================
 // CardSkeleton - Loading state for cards
@@ -249,17 +249,9 @@ export function CardSearchInput({
 // CardClusterFilter - Reusable cluster filter dropdown
 // ============================================================================
 
-export interface ClusterFilterItem {
-  name: string
-  healthy?: boolean
-  reachable?: boolean
-  nodeCount?: number
-  errorType?: ClusterErrorType
-}
-
 export interface CardClusterFilterProps {
-  /** Available clusters to filter */
-  availableClusters: ClusterFilterItem[]
+  /** Available clusters to filter (includes health info for status indicators) */
+  availableClusters: ClusterWithHealth[]
   /** Currently selected clusters */
   selectedClusters: string[]
   /** Toggle cluster selection */
