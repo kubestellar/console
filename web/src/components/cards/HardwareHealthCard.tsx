@@ -178,11 +178,18 @@ export function HardwareHealthCard() {
 
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
-  // Report loading state to CardWrapper
+  // Report loading state to CardWrapper (note: using raw data here since dedup happens later)
   useCardLoadingState({
     isLoading,
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
   })
+
+  // Node count should use deduplicated inventory
+  const deduplicatedNodeCount = useMemo(() => {
+    const uniqueNodes = new Set<string>()
+    inventory.forEach(node => uniqueNodes.add(node.nodeName))
+    return uniqueNodes.size || nodeCount
+  }, [inventory, nodeCount])
 
   // Fetch device alerts and inventory
   useEffect(() => {
@@ -259,17 +266,43 @@ export function HardwareHealthCard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Available clusters for filtering (from both alerts and inventory)
+  // Deduplicate alerts by node name (same node may appear with different cluster context names)
+  // Prefer shorter cluster names (e.g., 'vllm-d' over 'api-vllm-d.example.com/user@email.com')
+  const deduplicatedAlerts = useMemo(() => {
+    const byNodeAndDevice = new Map<string, DeviceAlert>()
+    alerts.forEach(alert => {
+      const key = `${alert.nodeName}-${alert.deviceType}`
+      const existing = byNodeAndDevice.get(key)
+      if (!existing || (alert.cluster.length < existing.cluster.length)) {
+        byNodeAndDevice.set(key, alert)
+      }
+    })
+    return Array.from(byNodeAndDevice.values())
+  }, [alerts])
+
+  // Deduplicate inventory by node name
+  const deduplicatedInventory = useMemo(() => {
+    const byNode = new Map<string, NodeDeviceInventory>()
+    inventory.forEach(node => {
+      const existing = byNode.get(node.nodeName)
+      if (!existing || (node.cluster.length < existing.cluster.length)) {
+        byNode.set(node.nodeName, node)
+      }
+    })
+    return Array.from(byNode.values())
+  }, [inventory])
+
+  // Available clusters for filtering (from deduplicated data)
   const availableClustersForFilter = useMemo(() => {
     const clusterSet = new Set<string>()
-    alerts.forEach(alert => clusterSet.add(alert.cluster))
-    inventory.forEach(node => clusterSet.add(node.cluster))
+    deduplicatedAlerts.forEach(alert => clusterSet.add(alert.cluster))
+    deduplicatedInventory.forEach(node => clusterSet.add(node.cluster))
     return Array.from(clusterSet).sort()
-  }, [alerts, inventory])
+  }, [deduplicatedAlerts, deduplicatedInventory])
 
-  // Filter alerts
+  // Filter alerts (using deduplicated data)
   const filteredAlerts = useMemo(() => {
-    let result = alerts
+    let result = deduplicatedAlerts
 
     // Apply search
     if (search.trim()) {
@@ -287,7 +320,7 @@ export function HardwareHealthCard() {
     }
 
     return result
-  }, [alerts, search, localClusterFilter])
+  }, [deduplicatedAlerts, search, localClusterFilter])
 
   // Sort alerts
   const sortedAlerts = useMemo(() => {
@@ -361,9 +394,9 @@ export function HardwareHealthCard() {
     }
   }
 
-  // Filter inventory
+  // Filter inventory (using deduplicated data)
   const filteredInventory = useMemo(() => {
-    let result = inventory
+    let result = deduplicatedInventory
 
     // Apply search
     if (search.trim()) {
@@ -380,7 +413,7 @@ export function HardwareHealthCard() {
     }
 
     return result
-  }, [inventory, search, localClusterFilter])
+  }, [deduplicatedInventory, search, localClusterFilter])
 
   // Get total devices for a node (defined before sortedInventory which uses it)
   const getTotalDevices = (devices: DeviceCounts): number => {
@@ -422,8 +455,8 @@ export function HardwareHealthCard() {
     return sortedInventory.slice(start, start + effectivePerPage)
   }, [sortedInventory, currentPage, effectivePerPage, itemsPerPage])
 
-  const criticalCount = alerts.filter(a => a.severity === 'critical').length
-  const warningCount = alerts.filter(a => a.severity === 'warning').length
+  const criticalCount = deduplicatedAlerts.filter(a => a.severity === 'critical').length
+  const warningCount = deduplicatedAlerts.filter(a => a.severity === 'warning').length
 
   // Current view data
   const currentTotalPages = viewMode === 'alerts' ? totalPages : inventoryTotalPages
@@ -457,7 +490,7 @@ export function HardwareHealthCard() {
           </div>
         </div>
         <div className="p-2 rounded-lg border bg-muted/20 border-muted/30">
-          <div className="text-xl font-bold text-foreground">{nodeCount}</div>
+          <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
           <div className="text-[10px] text-muted-foreground">
             Nodes Tracked
           </div>
@@ -477,14 +510,14 @@ export function HardwareHealthCard() {
         >
           <AlertCircle className="w-3.5 h-3.5" />
           Alerts
-          {alerts.length > 0 && (
+          {deduplicatedAlerts.length > 0 && (
             <span className={cn(
               'ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
-              alerts.some(a => a.severity === 'critical')
+              deduplicatedAlerts.some(a => a.severity === 'critical')
                 ? 'bg-red-500/20 text-red-400'
                 : 'bg-yellow-500/20 text-yellow-400'
             )}>
-              {alerts.length}
+              {deduplicatedAlerts.length}
             </span>
           )}
         </button>
@@ -499,9 +532,9 @@ export function HardwareHealthCard() {
         >
           <List className="w-3.5 h-3.5" />
           Inventory
-          {inventory.length > 0 && (
+          {deduplicatedInventory.length > 0 && (
             <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-muted text-muted-foreground">
-              {inventory.length}
+              {deduplicatedInventory.length}
             </span>
           )}
         </button>
