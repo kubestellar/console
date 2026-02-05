@@ -13,6 +13,12 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
 
+// Event-related constants
+const EVENT_LIMIT = 100 // Maximum number of events to fetch
+const HOURS_IN_DAY = 24 // Number of hours to display in timeline
+const MAX_PREVIEW_EVENTS = 10 // Maximum events shown in preview before "View more"
+const MILLISECONDS_PER_HOUR = 60 * 60 * 1000 // Milliseconds in an hour
+
 const EVENTS_CARDS_KEY = 'kubestellar-events-cards'
 
 // Default cards for the events dashboard
@@ -66,7 +72,6 @@ export function Events() {
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Get events
-  const EVENT_LIMIT = 100
   const { events: allEvents, isLoading, isRefreshing: refreshingAll, lastRefresh: allUpdated, refetch: refetchAll } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
   const warningEvents = useMemo(() => allEvents.filter(e => e.type === 'Warning'), [allEvents])
   const lastUpdated = allUpdated ? new Date(allUpdated) : null
@@ -155,14 +160,14 @@ export function Events() {
     }))
     const now = new Date()
     const hourlyData: { name: string; value: number; color?: string }[] = []
-    for (let i = 23; i >= 0; i--) {
-      const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000)
-      const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
+    for (let i = HOURS_IN_DAY - 1; i >= 0; i--) {
+      const hourStart = new Date(now.getTime() - i * MILLISECONDS_PER_HOUR)
+      const hourEnd = new Date(hourStart.getTime() + MILLISECONDS_PER_HOUR)
       const hourTotal = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= hourStart && new Date(e.lastSeen) < hourEnd).length
       const hourWarnings = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= hourStart && new Date(e.lastSeen) < hourEnd && e.type === 'Warning').length
       hourlyData.push({ name: hourStart.getHours().toString().padStart(2, '0') + ':00', value: hourTotal, color: hourWarnings > hourTotal / 2 ? '#f59e0b' : '#9333ea' })
     }
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const recentCount = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= oneHourAgo).length
     return {
       total: globalFilteredAllEvents.length, warnings, normal, recentCount, topReasons, clusterData, hourlyData,
@@ -381,7 +386,7 @@ export function Events() {
                             </div>
                           </div>
                         ))}
-                        {groupEvents.length > 10 && <button onClick={() => setActiveTab('list')} className="text-sm text-purple-400 hover:text-purple-300 ml-4">View {groupEvents.length - 10} more events...</button>}
+                        {groupEvents.length > MAX_PREVIEW_EVENTS && <button onClick={() => setActiveTab('list')} className="text-sm text-purple-400 hover:text-purple-300 ml-4">View {groupEvents.length - MAX_PREVIEW_EVENTS} more events...</button>}
                       </div>
                     </div>
                   )

@@ -17,6 +17,9 @@ import { COLOR_CLASSES } from '../../lib/stats/types'
 import { AiGenerationPanel } from './AiGenerationPanel'
 import { STAT_BLOCK_SYSTEM_PROMPT } from '../../lib/ai/prompts'
 
+// Demo/preview constants
+const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
+
 interface StatBlockFactoryModalProps {
   isOpen: boolean
   onClose: () => void
@@ -105,7 +108,7 @@ function StatsPreview({ title, blocks }: { title: string; blocks: BlockEditorIte
                 <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
                 <span className="text-sm text-muted-foreground truncate">{block.label}</span>
               </div>
-              <div className="text-3xl font-bold text-foreground">42</div>
+              <div className="text-3xl font-bold text-foreground">{DEMO_STAT_VALUE}</div>
               {block.field && (
                 <div className="text-xs text-muted-foreground">{block.field}</div>
               )}

@@ -23,6 +23,10 @@ import { BarChart } from '../charts/BarChart'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
 
+// GPU utilization thresholds for visual indicators
+const UTILIZATION_HIGH_THRESHOLD = 80 // Red indicator above this percentage
+const UTILIZATION_MEDIUM_THRESHOLD = 50 // Yellow indicator above this percentage
+
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'requests'
 
 // Mock reservation data
@@ -370,8 +374,8 @@ export function GPUReservations() {
                       strokeLinecap="round"
                       strokeDasharray={`${stats.utilizationPercent * 3.52} 352`}
                       className={cn(
-                        stats.utilizationPercent > 80 ? 'text-red-500' :
-                        stats.utilizationPercent > 50 ? 'text-yellow-500' :
+                        stats.utilizationPercent > UTILIZATION_HIGH_THRESHOLD ? 'text-red-500' :
+                        stats.utilizationPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'text-yellow-500' :
                         'text-green-500'
                       )}
                     />
@@ -640,7 +644,7 @@ export function GPUReservations() {
                         <div
                           className={cn(
                             'h-full rounded-full transition-all',
-                            gpuPercent > 80 ? 'bg-red-500' : gpuPercent > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                            gpuPercent > UTILIZATION_HIGH_THRESHOLD ? 'bg-red-500' : gpuPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'bg-yellow-500' : 'bg-green-500'
                           )}
                           style={{ width: `${gpuPercent}%` }}
                         />
@@ -657,7 +661,7 @@ export function GPUReservations() {
                         <div
                           className={cn(
                             'h-full rounded-full transition-all',
-                            cpuPercent > 80 ? 'bg-red-500' : cpuPercent > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                            cpuPercent > UTILIZATION_HIGH_THRESHOLD ? 'bg-red-500' : cpuPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'bg-yellow-500' : 'bg-green-500'
                           )}
                           style={{ width: `${cpuPercent}%` }}
                         />

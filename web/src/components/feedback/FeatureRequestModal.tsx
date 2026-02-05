@@ -14,6 +14,11 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 
+// Time thresholds for relative time formatting
+const MINUTES_PER_HOUR = 60 // Minutes in an hour
+const HOURS_PER_DAY = 24 // Hours in a day
+const DAYS_PER_WEEK = 7 // Days in a week
+
 interface FeatureRequestModalProps {
   isOpen: boolean
   onClose: () => void
@@ -33,9 +38,9 @@ function formatRelativeTime(dateString: string | undefined): string {
   const diffDays = Math.floor(diffHours / 24)
 
   if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffMins < MINUTES_PER_HOUR) return `${diffMins}m ago`
+  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`
+  if (diffDays < DAYS_PER_WEEK) return `${diffDays}d ago`
   return date.toLocaleDateString()
 }
 

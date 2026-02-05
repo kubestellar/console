@@ -10,6 +10,15 @@ import type {
   AlertConditionType,
 } from '../../types/alerts'
 
+// Validation thresholds for alert conditions
+const PERCENTAGE_MIN = 1 // Minimum percentage threshold
+const PERCENTAGE_MAX = 100 // Maximum percentage threshold
+const RESTART_COUNT_MIN = 1 // Minimum restart count for pod crashes
+const TEMPERATURE_MIN = -50 // Minimum temperature in Fahrenheit
+const TEMPERATURE_MAX = 150 // Maximum temperature in Fahrenheit
+const WIND_SPEED_MIN = 1 // Minimum wind speed in mph
+const WIND_SPEED_MAX = 200 // Maximum wind speed in mph
+
 interface AlertRuleEditorProps {
   isOpen?: boolean
   rule?: AlertRule // If editing existing rule
@@ -77,23 +86,23 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
     }
 
     if (conditionType === 'gpu_usage' || conditionType === 'memory_pressure') {
-      if (threshold < 1 || threshold > 100) {
-        newErrors.threshold = 'Threshold must be between 1 and 100'
+      if (threshold < PERCENTAGE_MIN || threshold > PERCENTAGE_MAX) {
+        newErrors.threshold = `Threshold must be between ${PERCENTAGE_MIN} and ${PERCENTAGE_MAX}`
       }
     }
 
     if (conditionType === 'pod_crash') {
-      if (threshold < 1) {
-        newErrors.threshold = 'Restart count must be at least 1'
+      if (threshold < RESTART_COUNT_MIN) {
+        newErrors.threshold = `Restart count must be at least ${RESTART_COUNT_MIN}`
       }
     }
 
     if (conditionType === 'weather_alerts') {
-      if (weatherCondition === 'extreme_heat' && (temperatureThreshold < -50 || temperatureThreshold > 150)) {
-        newErrors.temperatureThreshold = 'Temperature must be between -50 and 150'
+      if (weatherCondition === 'extreme_heat' && (temperatureThreshold < TEMPERATURE_MIN || temperatureThreshold > TEMPERATURE_MAX)) {
+        newErrors.temperatureThreshold = `Temperature must be between ${TEMPERATURE_MIN} and ${TEMPERATURE_MAX}`
       }
-      if (weatherCondition === 'high_wind' && (windSpeedThreshold < 1 || windSpeedThreshold > 200)) {
-        newErrors.windSpeedThreshold = 'Wind speed must be between 1 and 200'
+      if (weatherCondition === 'high_wind' && (windSpeedThreshold < WIND_SPEED_MIN || windSpeedThreshold > WIND_SPEED_MAX)) {
+        newErrors.windSpeedThreshold = `Wind speed must be between ${WIND_SPEED_MIN} and ${WIND_SPEED_MAX}`
       }
     }
 

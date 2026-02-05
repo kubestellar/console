@@ -1,6 +1,9 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { RefreshCw } from 'lucide-react'
 
+// Reload throttle interval in milliseconds to prevent infinite reload loops
+const RELOAD_THROTTLE_MS = 30_000 // 30 seconds
+
 interface Props {
   children: ReactNode
 }
@@ -42,7 +45,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     const key = 'chunk-reload-ts'
     const lastReload = sessionStorage.getItem(key)
     const now = Date.now()
-    if (!lastReload || now - parseInt(lastReload) > 30_000) {
+    if (!lastReload || now - parseInt(lastReload) > RELOAD_THROTTLE_MS) {
       sessionStorage.setItem(key, String(now))
       window.location.reload()
     }

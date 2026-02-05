@@ -17,6 +17,10 @@ import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
 
+// Time thresholds for relative time formatting
+const MINUTES_PER_HOUR = 60 // Minutes in an hour
+const HOURS_PER_DAY = 24 // Hours in a day
+
 interface AlertDetailProps {
   alert: Alert
   onClose?: () => void
@@ -32,8 +36,8 @@ function formatRelativeTime(dateString: string): string {
   const diffDays = Math.floor(diffHours / 24)
 
   if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} minutes ago`
-  if (diffHours < 24) return `${diffHours} hours ago`
+  if (diffMins < MINUTES_PER_HOUR) return `${diffMins} minutes ago`
+  if (diffHours < HOURS_PER_DAY) return `${diffHours} hours ago`
   return `${diffDays} days ago`
 }
 
