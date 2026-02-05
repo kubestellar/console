@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { AlertTriangle, CheckCircle, Cpu, HardDrive, Wifi, Server, RefreshCw, XCircle, ChevronRight, List, AlertCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Cpu, HardDrive, Wifi, Server, RefreshCw, XCircle, ChevronRight, List, AlertCircle, BellOff, Clock, MoreVertical } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
+import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 
 const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
 
@@ -165,8 +166,14 @@ export function HardwareHealthCard() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('alerts')
   const [endpointAvailable, setEndpointAvailable] = useState<boolean | undefined>(undefined)
+  const [showSnoozed, setShowSnoozed] = useState(false)
+  const [snoozeMenuOpen, setSnoozeMenuOpen] = useState<string | null>(null)
+  const [snoozeAllMenuOpen, setSnoozeAllMenuOpen] = useState(false)
   const { drillToNode } = useDrillDownActions()
   const { deduplicatedClusters } = useClusters()
+  const { snoozeAlert, snoozeMultiple, unsnoozeAlert, isSnoozed, getSnoozeRemaining, clearAllSnoozed } = useSnoozedAlerts()
+  const snoozeMenuRef = useRef<HTMLDivElement>(null)
+  const snoozeAllMenuRef = useRef<HTMLDivElement>(null)
 
   // Build a map of raw cluster names to deduplicated primary names (same as ClusterDetailModal)
   const clusterNameMap = useMemo(() => {
@@ -286,12 +293,18 @@ export function HardwareHealthCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- shouldUseDemoData checked inside but not in deps to avoid loops
   }, [])
 
-  // Close cluster dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node
       if (clusterFilterRef.current && !clusterFilterRef.current.contains(target)) {
         setShowClusterFilter(false)
+      }
+      if (snoozeMenuRef.current && !snoozeMenuRef.current.contains(target)) {
+        setSnoozeMenuOpen(null)
+      }
+      if (snoozeAllMenuRef.current && !snoozeAllMenuRef.current.contains(target)) {
+        setSnoozeAllMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -368,6 +381,11 @@ export function HardwareHealthCard() {
   const filteredAlerts = useMemo(() => {
     let result = deduplicatedAlerts
 
+    // Filter out snoozed alerts unless showSnoozed is true
+    if (!showSnoozed) {
+      result = result.filter(alert => !isSnoozed(alert.id))
+    }
+
     // Apply search
     if (search.trim()) {
       const query = search.toLowerCase()
@@ -384,7 +402,17 @@ export function HardwareHealthCard() {
     }
 
     return result
-  }, [deduplicatedAlerts, search, localClusterFilter])
+  }, [deduplicatedAlerts, search, localClusterFilter, showSnoozed, isSnoozed])
+
+  // Count of active (non-snoozed) alerts
+  const activeAlertCount = useMemo(() => {
+    return deduplicatedAlerts.filter(alert => !isSnoozed(alert.id)).length
+  }, [deduplicatedAlerts, isSnoozed])
+
+  // Get IDs of visible alerts for "Snooze All"
+  const visibleAlertIds = useMemo(() => {
+    return filteredAlerts.filter(a => !isSnoozed(a.id)).map(a => a.id)
+  }, [filteredAlerts, isSnoozed])
 
   // Sort alerts
   const sortedAlerts = useMemo(() => {
@@ -512,8 +540,10 @@ export function HardwareHealthCard() {
     return sortedInventory.slice(start, start + effectivePerPage)
   }, [sortedInventory, currentPage, effectivePerPage, itemsPerPage])
 
-  const criticalCount = deduplicatedAlerts.filter(a => a.severity === 'critical').length
-  const warningCount = deduplicatedAlerts.filter(a => a.severity === 'warning').length
+  // Count active (non-snoozed) alerts by severity
+  const criticalCount = deduplicatedAlerts.filter(a => a.severity === 'critical' && !isSnoozed(a.id)).length
+  const warningCount = deduplicatedAlerts.filter(a => a.severity === 'warning' && !isSnoozed(a.id)).length
+  const snoozedAlertCount = deduplicatedAlerts.filter(a => isSnoozed(a.id)).length
 
   // Current view data
   const currentTotalPages = viewMode === 'alerts' ? totalPages : inventoryTotalPages
@@ -562,46 +592,117 @@ export function HardwareHealthCard() {
       </div>
 
       {/* View Mode Toggle */}
-      <div className="flex mb-3 bg-muted/30 rounded-lg p-0.5">
-        <button
-          onClick={() => setViewMode('alerts')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
-            viewMode === 'alerts'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <AlertCircle className="w-3.5 h-3.5" />
-          Alerts
-          {deduplicatedAlerts.length > 0 && (
-            <span className={cn(
-              'ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
-              deduplicatedAlerts.some(a => a.severity === 'critical')
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-yellow-500/20 text-yellow-400'
-            )}>
-              {deduplicatedAlerts.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setViewMode('inventory')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
-            viewMode === 'inventory'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <List className="w-3.5 h-3.5" />
-          Inventory
-          {deduplicatedInventory.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-muted text-muted-foreground">
-              {deduplicatedInventory.length}
-            </span>
-          )}
-        </button>
+      <div className="flex gap-2 mb-3">
+        <div className="flex flex-1 bg-muted/30 rounded-lg p-0.5">
+          <button
+            onClick={() => setViewMode('alerts')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
+              viewMode === 'alerts'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            Alerts
+            {activeAlertCount > 0 && (
+              <span className={cn(
+                'ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
+                criticalCount > 0
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-yellow-500/20 text-yellow-400'
+              )}>
+                {activeAlertCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setViewMode('inventory')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
+              viewMode === 'inventory'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <List className="w-3.5 h-3.5" />
+            Inventory
+            {deduplicatedInventory.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-muted text-muted-foreground">
+                {deduplicatedInventory.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Snooze controls - only show in alerts view */}
+        {viewMode === 'alerts' && (
+          <div className="flex items-center gap-1">
+            {/* Show snoozed toggle */}
+            {snoozedAlertCount > 0 && (
+              <button
+                onClick={() => setShowSnoozed(!showSnoozed)}
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1.5 text-xs rounded-md transition-colors',
+                  showSnoozed
+                    ? 'bg-amber-500/20 text-amber-400'
+                    : 'bg-muted/30 text-muted-foreground hover:text-foreground'
+                )}
+                title={showSnoozed ? 'Hide snoozed alerts' : 'Show snoozed alerts'}
+              >
+                <BellOff className="w-3.5 h-3.5" />
+                <span className="font-medium">{snoozedAlertCount}</span>
+              </button>
+            )}
+
+            {/* Snooze All dropdown */}
+            {visibleAlertIds.length > 0 && (
+              <div className="relative" ref={snoozeAllMenuRef}>
+                <button
+                  onClick={() => setSnoozeAllMenuOpen(!snoozeAllMenuOpen)}
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
+                  title="Snooze all visible alerts"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+                {snoozeAllMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b border-border mb-1">
+                      Snooze All ({visibleAlertIds.length})
+                    </div>
+                    {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
+                      <button
+                        key={duration}
+                        onClick={() => {
+                          snoozeMultiple(visibleAlertIds, duration)
+                          setSnoozeAllMenuOpen(false)
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors flex items-center gap-2"
+                      >
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        {duration}
+                      </button>
+                    ))}
+                    {snoozedAlertCount > 0 && (
+                      <>
+                        <div className="border-t border-border my-1" />
+                        <button
+                          onClick={() => {
+                            clearAllSnoozed()
+                            setSnoozeAllMenuOpen(false)
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-left text-amber-400 hover:bg-muted/50 transition-colors"
+                        >
+                          Clear all snoozes
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Card Controls */}
@@ -691,6 +792,52 @@ export function HardwareHealthCard() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    {/* Snooze indicator or snooze button */}
+                    {isSnoozed(alert.id) ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          unsnoozeAlert(alert.id)
+                        }}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-amber-400 bg-amber-500/20 hover:bg-amber-500/30 transition-colors"
+                        title="Click to unsnooze"
+                      >
+                        <BellOff className="w-3 h-3" />
+                        <span className="text-[10px] font-medium">
+                          {formatSnoozeRemaining(getSnoozeRemaining(alert.id) || 0)}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="relative" ref={snoozeMenuOpen === alert.id ? snoozeMenuRef : undefined}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSnoozeMenuOpen(snoozeMenuOpen === alert.id ? null : alert.id)
+                          }}
+                          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                          title="Snooze alert"
+                        >
+                          <BellOff className="w-3 h-3" />
+                        </button>
+                        {snoozeMenuOpen === alert.id && (
+                          <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[100px]">
+                            {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
+                              <button
+                                key={duration}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  snoozeAlert(alert.id, duration)
+                                  setSnoozeMenuOpen(null)
+                                }}
+                                className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors"
+                              >
+                                {duration}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
