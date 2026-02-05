@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, ChevronRight, ChevronDown, Server } from 'lucide-react'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { ClusterStatusDot, getClusterState } from '../ui/ClusterStatusBadge'
 import { Pagination } from '../ui/Pagination'
 import { CardControls } from '../ui/CardControls'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -239,17 +240,35 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
                     >
                       All clusters
                     </button>
-                    {filters.availableClusters.map(c => (
-                      <button
-                        key={c.name}
-                        onClick={() => filters.toggleClusterFilter(c.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          filters.localClusterFilter.includes(c.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {c.name}
-                      </button>
-                    ))}
+                    {filters.availableClusters.map(cluster => {
+                      const clusterState = getClusterState(
+                        cluster.healthy ?? true,
+                        cluster.reachable,
+                        cluster.nodeCount,
+                        undefined,
+                        cluster.errorType
+                      )
+                      const stateLabel = clusterState === 'healthy' ? '' :
+                        clusterState === 'degraded' ? 'degraded' :
+                        clusterState === 'unreachable-auth' ? 'needs auth' :
+                        clusterState.startsWith('unreachable') ? 'offline' : ''
+                      return (
+                        <button
+                          key={cluster.name}
+                          onClick={() => filters.toggleClusterFilter(cluster.name)}
+                          className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
+                            filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                          }`}
+                          title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
+                        >
+                          <ClusterStatusDot state={clusterState} size="sm" />
+                          <span className="flex-1 truncate">{cluster.name}</span>
+                          {stateLabel && (
+                            <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>,
               document.body

@@ -13,6 +13,7 @@ import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
 import { LLMD_CLUSTERS } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
+import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
 
 interface LLMInferenceProps {
   config?: Record<string, unknown>
@@ -236,9 +237,35 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
                   onMouseDown={e => e.stopPropagation()}>
                   <div className="p-1">
                     <button onClick={filters.clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
-                    {filters.availableClusters.map(cluster => (
-                      <button key={cluster.name} onClick={() => filters.toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
-                    ))}
+                    {filters.availableClusters.map(cluster => {
+                      const clusterState = getClusterState(
+                        cluster.healthy ?? true,
+                        cluster.reachable,
+                        cluster.nodeCount,
+                        undefined,
+                        cluster.errorType
+                      )
+                      const stateLabel = clusterState === 'healthy' ? '' :
+                        clusterState === 'degraded' ? 'degraded' :
+                        clusterState === 'unreachable-auth' ? 'needs auth' :
+                        clusterState.startsWith('unreachable') ? 'offline' : ''
+                      return (
+                        <button
+                          key={cluster.name}
+                          onClick={() => filters.toggleClusterFilter(cluster.name)}
+                          className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
+                            filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                          }`}
+                          title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
+                        >
+                          <ClusterStatusDot state={clusterState} size="sm" />
+                          <span className="flex-1 truncate">{cluster.name}</span>
+                          {stateLabel && (
+                            <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>,
               document.body
