@@ -173,8 +173,15 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached ? new Date(cached.timestamp) : null)
   const initialLoadDone = useRef(isCacheValid || false)
+  const isRefetching = useRef(false) // Guard against concurrent refetches
 
   const refetch = useCallback(async (silent = false) => {
+    // Prevent concurrent refetches
+    if (isRefetching.current) {
+      return
+    }
+    isRefetching.current = true
+
     if (!silent) {
       setIsLoading(true)
       if (!initialLoadDone.current) {
@@ -183,19 +190,28 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
     }
 
     try {
-      const discoveredStacks: LLMdStack[] = []
-
+      // Progressive discovery: process clusters sequentially, update UI after each completes
       for (const cluster of clusters) {
+        const clusterStacks: LLMdStack[] = []
+
         try {
           // Fetch pods with llm-d.ai/role labels
           const podsResponse = await kubectlProxy.exec(
             ['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'],
-            { context: cluster, timeout: 30000 }
+            { context: cluster, timeout: 15000 }
           )
 
-          if (podsResponse.exitCode !== 0) continue
+          // Skip cluster entirely if it's unreachable (connection error or timeout)
+          if (podsResponse.exitCode !== 0 &&
+              (podsResponse.output.includes('Unable to connect') ||
+               podsResponse.output.includes('connection refused') ||
+               podsResponse.output.includes('timeout') ||
+               podsResponse.output.includes('no such host') ||
+               podsResponse.output.includes('context deadline exceeded'))) {
+            continue
+          }
 
-          const podsData = JSON.parse(podsResponse.output)
+          const podsData = podsResponse.exitCode === 0 ? JSON.parse(podsResponse.output) : { items: [] }
           const pods = (podsData.items || []) as PodResource[]
 
           // Group pods by namespace
@@ -217,12 +233,69 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
           const pools = (poolsData.items || []) as InferencePoolResource[]
           const poolsByNamespace = new Map(pools.map(p => [p.metadata.namespace, p]))
 
+          // Skip cluster early if no pods AND no InferencePools (like offline platform-eval)
+          if (pods.length === 0 && pools.length === 0) {
+            continue
+          }
+
+          // PROGRESSIVE: Build and display basic stacks immediately from pods + InferencePools
+          // Additional details (EPP, gateway, autoscalers) will be added in a second pass
+          const basicStackNamespaces = new Set<string>([
+            ...podsByNamespace.keys(),
+            ...poolsByNamespace.keys(),
+          ])
+
+          if (basicStackNamespaces.size > 0) {
+            const basicStacks: LLMdStack[] = []
+            for (const namespace of basicStackNamespaces) {
+              const pool = poolsByNamespace.get(namespace)
+              const nsPods = podsByNamespace.get(namespace) || []
+              const firstPod = nsPods[0]
+              const model = firstPod?.metadata.labels?.['llm-d.ai/model']
+
+              basicStacks.push({
+                id: `${namespace}@${cluster}`,
+                name: pool?.metadata.name || namespace,
+                namespace,
+                cluster,
+                inferencePool: pool?.metadata.name,
+                components: {
+                  prefill: [],
+                  decode: [],
+                  both: [],
+                  epp: null,
+                  gateway: null,
+                },
+                status: 'unknown', // Will be updated with full data
+                hasDisaggregation: false,
+                model,
+                totalReplicas: nsPods.length,
+                readyReplicas: 0,
+              })
+            }
+
+            // Show basic stacks immediately
+            setStacks(prev => {
+              const filtered = prev.filter(s => s.cluster !== cluster)
+              const merged = [...filtered, ...basicStacks]
+              merged.sort((a, b) => a.name.localeCompare(b.name))
+              return merged
+            })
+          }
+
           // Fetch EPP services
           const svcResponse = await kubectlProxy.exec(
             ['get', 'services', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
+            { context: cluster, timeout: 30000 }
           )
-          const svcData = svcResponse.exitCode === 0 ? JSON.parse(svcResponse.output) : { items: [] }
+          let svcData = { items: [] as ServiceResource[] }
+          try {
+            if (svcResponse.exitCode === 0) {
+              svcData = JSON.parse(svcResponse.output)
+            }
+          } catch (e) {
+            console.error(`[useStackDiscovery] Error parsing services on ${cluster}:`, e)
+          }
           const services = (svcData.items || []) as ServiceResource[]
           const eppByNamespace = new Map<string, ServiceResource>()
           for (const svc of services) {
@@ -268,13 +341,33 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
           const wvaData = wvaResponse.exitCode === 0 ? JSON.parse(wvaResponse.output) : { items: [] }
           interface WVAResource {
             metadata: { name: string; namespace: string }
-            spec?: { minReplicas?: number; maxReplicas?: number }
-            status?: { currentReplicas?: number; desiredReplicas?: number }
+            spec?: {
+              minReplicas?: number
+              maxReplicas?: number
+              scaleTargetRef?: {
+                namespace?: string  // Cross-namespace targeting
+              }
+            }
+            status?: {
+              currentReplicas?: number
+              desiredReplicas?: number
+              desiredOptimizedAlloc?: {
+                numReplicas?: number
+              }
+            }
           }
           const wvas = (wvaData.items || []) as WVAResource[]
+          // Map WVA by its own namespace (same-namespace autoscaling)
           const wvaByNamespace = new Map<string, WVAResource>()
+          // Map WVA by target namespace (cross-namespace autoscaling)
+          const wvaByTargetNamespace = new Map<string, WVAResource>()
           for (const wva of wvas) {
             wvaByNamespace.set(wva.metadata.namespace, wva)
+            // If WVA targets a different namespace, map it there too
+            const targetNs = wva.spec?.scaleTargetRef?.namespace
+            if (targetNs && targetNs !== wva.metadata.namespace) {
+              wvaByTargetNamespace.set(targetNs, wva)
+            }
           }
 
           // Fetch VPA (VerticalPodAutoscaler)
@@ -308,9 +401,6 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             for (const pod of nsPods) {
               const role = pod.metadata.labels?.['llm-d.ai/role']?.toLowerCase()
               const podName = pod.metadata.name.toLowerCase()
-
-              // Debug: log role detection
-              console.log('[useStackDiscovery] Pod role:', { pod: podName, role, namespace })
 
               // Match by explicit role label first
               if (role === 'prefill' || role === 'prefill-server') {
@@ -417,19 +507,22 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               bothComponents.reduce((sum, c) => sum + c.readyReplicas, 0)
 
             // Detect autoscaler - WVA takes precedence, then HPA, then VPA
+            // Check both same-namespace and cross-namespace WVA targeting
             let autoscaler: AutoscalerInfo | undefined
-            const wva = wvaByNamespace.get(namespace)
+            const wva = wvaByNamespace.get(namespace) || wvaByTargetNamespace.get(namespace)
             const hpa = hpaByNamespace.get(namespace)
             const vpa = vpaByNamespace.get(namespace)
 
             if (wva) {
+              // Use desiredOptimizedAlloc.numReplicas if available (WVA status field)
+              const desiredReplicas = wva.status?.desiredOptimizedAlloc?.numReplicas ?? wva.status?.desiredReplicas
               autoscaler = {
                 type: 'WVA',
                 name: wva.metadata.name,
                 minReplicas: wva.spec?.minReplicas,
                 maxReplicas: wva.spec?.maxReplicas,
                 currentReplicas: wva.status?.currentReplicas,
-                desiredReplicas: wva.status?.desiredReplicas,
+                desiredReplicas,
               }
             } else if (hpa) {
               autoscaler = {
@@ -447,7 +540,7 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               }
             }
 
-            discoveredStacks.push({
+            clusterStacks.push({
               id: `${namespace}@${cluster}`,
               name: pool?.metadata.name || namespace,
               namespace,
@@ -462,20 +555,29 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
               autoscaler,
             })
           }
+
+          // Progressive update: add this cluster's stacks immediately
+          if (clusterStacks.length > 0) {
+            setStacks(prev => {
+              // Remove any existing stacks from this cluster (in case of refresh)
+              const filtered = prev.filter(s => s.cluster !== cluster)
+              const merged = [...filtered, ...clusterStacks]
+              // Sort: healthy first, then by name
+              merged.sort((a, b) => {
+                if (a.status === 'healthy' && b.status !== 'healthy') return -1
+                if (a.status !== 'healthy' && b.status === 'healthy') return 1
+                return a.name.localeCompare(b.name)
+              })
+              saveCachedStacks(merged) // Cache progressively too
+              return merged
+            })
+          }
+
         } catch (err) {
           console.error(`[useStackDiscovery] Error fetching from ${cluster}:`, err)
         }
       }
 
-      // Sort stacks: healthy first, then by name
-      discoveredStacks.sort((a, b) => {
-        if (a.status === 'healthy' && b.status !== 'healthy') return -1
-        if (a.status !== 'healthy' && b.status === 'healthy') return 1
-        return a.name.localeCompare(b.name)
-      })
-
-      setStacks(discoveredStacks)
-      saveCachedStacks(discoveredStacks) // Cache for instant display next time
       setError(null)
       setLastRefresh(new Date())
       initialLoadDone.current = true
@@ -484,6 +586,7 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
       setError(err instanceof Error ? err.message : 'Failed to discover stacks')
     } finally {
       setIsLoading(false)
+      isRefetching.current = false
     }
   }, [clusters.join(',')])
 

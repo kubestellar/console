@@ -84,13 +84,14 @@ interface PremiumNodeProps {
   onClick?: () => void
   uniqueId: string
   nodePositions: Record<string, { x: number; y: number }>
+  isGhost?: boolean  // For scaled-to-0 autoscaler nodes
 }
 
-function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqueId, nodePositions }: PremiumNodeProps) {
+function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqueId, nodePositions, isGhost }: PremiumNodeProps) {
   const pos = nodePositions[id]
   if (!pos) return null
-  const load = metrics?.load || 0
-  const loadColors = getLoadColors(load)
+  const load = isGhost ? 0 : (metrics?.load || 0)
+  const loadColors = isGhost ? { start: '#475569', end: '#64748b', glow: '#475569' } : getLoadColors(load)
 
   // Arc calculation (270 degrees, bottom open)
   const startAngle = -225
@@ -182,14 +183,15 @@ function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqu
         />
       )}
 
-      {/* Track background (270 degree arc) */}
+      {/* Track background (270 degree arc) - dashed for ghost nodes */}
       <path
         d={createArc(NODE_RADIUS, startAngle, endAngle)}
         fill="none"
-        stroke="#1e293b"
+        stroke={isGhost ? '#475569' : '#1e293b'}
         strokeWidth={TRACK_WIDTH}
         strokeLinecap="round"
-        opacity={0.9}
+        strokeDasharray={isGhost ? '1 1' : undefined}
+        opacity={isGhost ? 0.5 : 0.9}
       />
 
       {/* Load arc with glow */}
@@ -212,19 +214,39 @@ function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqu
         cx={pos.x}
         cy={pos.y}
         r={NODE_RADIUS - 1.8}
-        fill={`url(#${centerGradientId})`}
+        fill={isGhost ? 'transparent' : `url(#${centerGradientId})`}
+        stroke={isGhost ? '#475569' : undefined}
+        strokeWidth={isGhost ? 0.5 : undefined}
+        strokeDasharray={isGhost ? '1 1' : undefined}
+        opacity={isGhost ? 0.4 : 1}
       />
 
       {/* Inner ambient glow overlay */}
-      <circle
-        cx={pos.x}
-        cy={pos.y}
-        r={NODE_RADIUS - 1.8}
-        fill={`url(#${innerGlowId})`}
-      />
+      {!isGhost && (
+        <circle
+          cx={pos.x}
+          cy={pos.y}
+          r={NODE_RADIUS - 1.8}
+          fill={`url(#${innerGlowId})`}
+        />
+      )}
 
       {/* Load percentage inside gauge - primary metric */}
-      {metrics && (
+      {isGhost ? (
+        <>
+          {/* Pause icon for ghost nodes */}
+          <text
+            x={pos.x}
+            y={pos.y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="#64748b"
+            fontSize="3"
+          >
+            ⏸
+          </text>
+        </>
+      ) : metrics && (
         <>
           <text
             x={pos.x}
@@ -257,9 +279,10 @@ function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqu
         x={pos.x}
         y={pos.y + NODE_RADIUS + 3}
         textAnchor="middle"
-        fill="#e5e5e5"
-        fontSize="2.5"
+        fill={isGhost ? '#64748b' : '#e5e5e5'}
+        fontSize={isGhost ? '2' : '2.5'}
         fontWeight="600"
+        fontStyle={isGhost ? 'italic' : undefined}
       >
         {label}
       </text>
@@ -343,13 +366,14 @@ interface HorseshoeFlowNodeProps {
   onClick?: () => void
   uniqueId: string
   nodePositions: Record<string, { x: number; y: number }>
+  isGhost?: boolean
 }
 
-function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId, nodePositions }: HorseshoeFlowNodeProps) {
+function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId, nodePositions, isGhost }: HorseshoeFlowNodeProps) {
   const pos = nodePositions[id]
   if (!pos) return null
-  const load = metrics?.load || 0
-  const color = getHorseshoeColor(load)
+  const load = isGhost ? 0 : (metrics?.load || 0)
+  const color = isGhost ? '#475569' : getHorseshoeColor(load)
   const filterId = `hsf-glow-${uniqueId}-${id}`
 
   const radius = 8
@@ -699,6 +723,23 @@ export function LLMdFlow() {
           trafficPercent: Math.round(100 / maxServers),
         })
       }
+    } else if (selectedStack.autoscaler) {
+      // Scaled to 0 but has autoscaler - show ghost nodes
+      const maxReplicas = selectedStack.autoscaler.maxReplicas || 3
+      const ghostCount = Math.min(maxReplicas, 3) // Show up to 3 ghost nodes
+      for (let i = 0; i < ghostCount; i++) {
+        const key = `ghost${i}`
+        const y = ghostCount === 1 ? 50 : 18 + (64 * i) / (ghostCount - 1)
+        positions[key] = { x: 78, y }
+        labels[key] = `(scaled to 0)`
+        // Dashed connection to ghost node
+        conns.push({
+          from: 'epp',
+          to: key as keyof typeof NODE_POSITIONS,
+          type: 'prefill',
+          trafficPercent: 0, // No traffic when scaled to 0
+        })
+      }
     }
 
     return { nodePositions: positions, connections: conns, nodeLabels: labels }
@@ -914,6 +955,22 @@ export function LLMdFlow() {
                 {selectedStack.name}
               </span>
               <span className="text-slate-500">{selectedStack.cluster}</span>
+              {/* Autoscaler indicator */}
+              {selectedStack.autoscaler && (
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  selectedStack.autoscaler.type === 'WVA' ? 'bg-purple-500/20 text-purple-400' :
+                  selectedStack.autoscaler.type === 'HPA' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-green-500/20 text-green-400'
+                }`}>
+                  {selectedStack.autoscaler.type}: {selectedStack.autoscaler.currentReplicas ?? 0}→{selectedStack.autoscaler.desiredReplicas ?? '?'}
+                </span>
+              )}
+              {/* Scaled to 0 indicator */}
+              {selectedStack.autoscaler && selectedStack.totalReplicas === 0 && (
+                <span className="px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 text-[10px] italic">
+                  ⏸ Scaled to 0
+                </span>
+              )}
               {isDemoMode && (
                 <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
               )}
@@ -1002,6 +1059,7 @@ export function LLMdFlow() {
                 onClick={() => setSelectedNode(selectedNode === nodeId ? null : nodeId)}
                 uniqueId={uniqueId}
                 nodePositions={nodePositions}
+                isGhost={nodeId.startsWith('ghost')}
               />
             ))}
           </>
@@ -1018,6 +1076,7 @@ export function LLMdFlow() {
                 onClick={() => setSelectedNode(selectedNode === nodeId ? null : nodeId)}
                 uniqueId={uniqueId}
                 nodePositions={nodePositions}
+                isGhost={nodeId.startsWith('ghost')}
               />
             ))}
           </>

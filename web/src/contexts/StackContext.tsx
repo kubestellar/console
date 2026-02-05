@@ -33,7 +33,7 @@ function createDemoStacks(): LLMdStack[] {
   })
 
   return [
-    // Demo disaggregated stack
+    // Demo disaggregated stack with WVA autoscaler (active replicas)
     {
       id: 'llm-inference@demo-cluster-1',
       name: 'llm-inference',
@@ -44,7 +44,6 @@ function createDemoStacks(): LLMdStack[] {
         prefill: [
           createComponent('prefill-server-0', 'llm-inference', 'demo-cluster-1', 'prefill', 2),
           createComponent('prefill-server-1', 'llm-inference', 'demo-cluster-1', 'prefill', 2),
-          createComponent('prefill-server-2', 'llm-inference', 'demo-cluster-1', 'prefill', 2),
         ],
         decode: [
           createComponent('decode-server-0', 'llm-inference', 'demo-cluster-1', 'decode', 3),
@@ -57,10 +56,46 @@ function createDemoStacks(): LLMdStack[] {
       status: 'healthy',
       hasDisaggregation: true,
       model: 'Llama-3-70B',
-      totalReplicas: 14,
-      readyReplicas: 14,
+      totalReplicas: 12,
+      readyReplicas: 12,
+      autoscaler: {
+        type: 'WVA',
+        name: 'llm-inference-wva',
+        minReplicas: 4,
+        maxReplicas: 16,
+        currentReplicas: 12,
+        desiredReplicas: 12,
+      },
     },
-    // Demo unified stack
+    // Demo WVA-managed stack scaled to 0 (shows ghost nodes)
+    {
+      id: 'llm-idle@demo-cluster-1',
+      name: 'llm-idle',
+      namespace: 'llm-idle',
+      cluster: 'demo-cluster-1',
+      inferencePool: 'llm-idle-pool',
+      components: {
+        prefill: [],
+        decode: [],
+        both: [],
+        epp: createComponent('idle-epp', 'llm-idle', 'demo-cluster-1', 'epp', 1),
+        gateway: createComponent('idle-gateway', 'llm-idle', 'demo-cluster-1', 'gateway', 1),
+      },
+      status: 'degraded',
+      hasDisaggregation: false,
+      model: 'Mistral-7B',
+      totalReplicas: 0,
+      readyReplicas: 0,
+      autoscaler: {
+        type: 'WVA',
+        name: 'llm-idle-wva',
+        minReplicas: 0,
+        maxReplicas: 8,
+        currentReplicas: 0,
+        desiredReplicas: 0,
+      },
+    },
+    // Demo unified stack with HPA autoscaler
     {
       id: 'vllm-prod@demo-cluster-2',
       name: 'vllm-prod',
@@ -83,8 +118,16 @@ function createDemoStacks(): LLMdStack[] {
       model: 'Granite-13B',
       totalReplicas: 14,
       readyReplicas: 14,
+      autoscaler: {
+        type: 'HPA',
+        name: 'vllm-prod-hpa',
+        minReplicas: 6,
+        maxReplicas: 24,
+        currentReplicas: 14,
+        desiredReplicas: 14,
+      },
     },
-    // Demo degraded stack
+    // Demo degraded stack (no autoscaler - manual scaling)
     {
       id: 'inference-staging@demo-cluster-1',
       name: 'inference-staging',
@@ -106,6 +149,7 @@ function createDemoStacks(): LLMdStack[] {
       model: 'Qwen-32B',
       totalReplicas: 3,
       readyReplicas: 2,
+      // No autoscaler - manually scaled
     },
   ]
 }

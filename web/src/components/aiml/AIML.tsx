@@ -78,8 +78,11 @@ export function AIML() {
     [getDashboardStatValue, getUniversalStatValue]
   )
 
+  // Only pass clusters if we have some, otherwise let StackProvider use defaults
+  const stackClusters = llmdClusters.length > 0 ? llmdClusters : undefined
+
   return (
-    <StackProvider clusters={llmdClusters}>
+    <StackProvider clusters={stackClusters}>
       <DashboardPage
         title="AI/ML"
         subtitle="Monitor AI and Machine Learning workloads"

@@ -9,7 +9,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Database, TrendingUp, TrendingDown } from 'lucide-react'
+import { Database, TrendingUp, TrendingDown, CircleDot, Grid3X3 } from 'lucide-react'
 import { generateKVCacheStats, type KVCacheStats } from '../../../lib/llmd/mockData'
 import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import { useOptionalStack } from '../../../contexts/StackContext'
@@ -196,6 +196,7 @@ function HeatCell({ stat, delay }: HeatCellProps) {
 }
 
 type MetricType = 'util' | 'hitRate'
+type AggregationMode = 'aggregated' | 'disaggregated'
 
 // Sparkline for time-series in info panel
 function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number[]; color: string; width?: number; height?: number }) {
@@ -246,6 +247,7 @@ export function KVCacheMonitor() {
   const [selectedPod, setSelectedPod] = useState<string | null>(null)
   const [podHistory, setPodHistory] = useState<Record<string, { util: number[]; hitRate: number[] }>>({})
   const [selectedMetrics, setSelectedMetrics] = useState<MetricType[]>(['util'])
+  const [aggregationMode, setAggregationMode] = useState<AggregationMode>('aggregated')
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null)
   const gaugeRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -269,59 +271,133 @@ export function KVCacheMonitor() {
     const wave = Math.sin(now / 10000)
     const stackStats: KVCacheStats[] = []
 
-    // Prefill servers (higher cache utilization)
-    selectedStack.components.prefill.forEach((comp, i) => {
-      const baseUtil = 55 + Math.random() * 25 + wave * 10
-      const capacity = 80 // H100 GPU memory
-      stackStats.push({
-        podName: `prefill-${comp.name}-${i}`,
-        cluster: selectedStack.cluster,
-        namespace: selectedStack.namespace,
-        utilizationPercent: Math.round(Math.min(baseUtil, 95)),
-        totalCapacityGB: capacity,
-        usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
-        hitRate: 0.88 + Math.random() * 0.08,
-        evictionRate: Math.random() * 0.03,
-        lastUpdated: new Date(),
-      })
-    })
+    if (aggregationMode === 'aggregated') {
+      // Aggregated mode: one gauge per role (prefill, decode, unified)
+      const prefillComps = selectedStack.components.prefill
+      const decodeComps = selectedStack.components.decode
+      const unifiedComps = selectedStack.components.both
 
-    // Decode servers (moderate cache utilization)
-    selectedStack.components.decode.forEach((comp, i) => {
-      const baseUtil = 45 + Math.random() * 20 + wave * 8
-      const capacity = 80
-      stackStats.push({
-        podName: `decode-${comp.name}-${i}`,
-        cluster: selectedStack.cluster,
-        namespace: selectedStack.namespace,
-        utilizationPercent: Math.round(Math.min(baseUtil, 90)),
-        totalCapacityGB: capacity,
-        usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
-        hitRate: 0.92 + Math.random() * 0.06,
-        evictionRate: Math.random() * 0.02,
-        lastUpdated: new Date(),
-      })
-    })
+      // Aggregate prefill (if any)
+      if (prefillComps.length > 0) {
+        const totalReplicas = prefillComps.reduce((sum, c) => sum + Math.max(c.replicas || 1, c.readyReplicas || 0, 1), 0)
+        const totalCapacity = totalReplicas * 80 // H100
+        const baseUtil = 55 + Math.random() * 25 + wave * 10
+        const util = Math.round(Math.min(baseUtil, 95))
+        stackStats.push({
+          podName: `Prefill (${totalReplicas})`,
+          cluster: selectedStack.cluster,
+          namespace: selectedStack.namespace,
+          utilizationPercent: util,
+          totalCapacityGB: totalCapacity,
+          usedGB: Math.round((util / 100) * totalCapacity * 10) / 10,
+          hitRate: 0.88 + Math.random() * 0.08,
+          evictionRate: Math.random() * 0.03,
+          lastUpdated: new Date(),
+        })
+      }
 
-    // Unified servers
-    selectedStack.components.both.forEach((comp, i) => {
-      const baseUtil = 50 + Math.random() * 25 + wave * 10
-      const capacity = 48
-      stackStats.push({
-        podName: `server-${comp.name}-${i}`,
-        cluster: selectedStack.cluster,
-        namespace: selectedStack.namespace,
-        utilizationPercent: Math.round(Math.min(baseUtil, 92)),
-        totalCapacityGB: capacity,
-        usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
-        hitRate: 0.85 + Math.random() * 0.10,
-        evictionRate: Math.random() * 0.04,
-        lastUpdated: new Date(),
+      // Aggregate decode (if any)
+      if (decodeComps.length > 0) {
+        const totalReplicas = decodeComps.reduce((sum, c) => sum + Math.max(c.replicas || 1, c.readyReplicas || 0, 1), 0)
+        const totalCapacity = totalReplicas * 80
+        const baseUtil = 45 + Math.random() * 20 + wave * 8
+        const util = Math.round(Math.min(baseUtil, 90))
+        stackStats.push({
+          podName: `Decode (${totalReplicas})`,
+          cluster: selectedStack.cluster,
+          namespace: selectedStack.namespace,
+          utilizationPercent: util,
+          totalCapacityGB: totalCapacity,
+          usedGB: Math.round((util / 100) * totalCapacity * 10) / 10,
+          hitRate: 0.92 + Math.random() * 0.06,
+          evictionRate: Math.random() * 0.02,
+          lastUpdated: new Date(),
+        })
+      }
+
+      // Aggregate unified (if any)
+      if (unifiedComps.length > 0) {
+        const totalReplicas = unifiedComps.reduce((sum, c) => sum + Math.max(c.replicas || 1, c.readyReplicas || 0, 1), 0)
+        const totalCapacity = totalReplicas * 48
+        const baseUtil = 50 + Math.random() * 25 + wave * 10
+        const util = Math.round(Math.min(baseUtil, 92))
+        stackStats.push({
+          podName: `Unified (${totalReplicas})`,
+          cluster: selectedStack.cluster,
+          namespace: selectedStack.namespace,
+          utilizationPercent: util,
+          totalCapacityGB: totalCapacity,
+          usedGB: Math.round((util / 100) * totalCapacity * 10) / 10,
+          hitRate: 0.85 + Math.random() * 0.10,
+          evictionRate: Math.random() * 0.04,
+          lastUpdated: new Date(),
+        })
+      }
+    } else {
+      // Disaggregated mode: one gauge per replica
+      // Prefill servers (higher cache utilization)
+      selectedStack.components.prefill.forEach((comp) => {
+        const replicaCount = Math.max(comp.replicas || 1, comp.readyReplicas || 0, 1)
+        for (let r = 0; r < replicaCount; r++) {
+          const baseUtil = 55 + Math.random() * 25 + wave * 10
+          const capacity = 80 // H100 GPU memory
+          stackStats.push({
+            podName: `P-${comp.name.slice(0, 6)}-${r}`,
+            cluster: selectedStack.cluster,
+            namespace: selectedStack.namespace,
+            utilizationPercent: Math.round(Math.min(baseUtil, 95)),
+            totalCapacityGB: capacity,
+            usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
+            hitRate: 0.88 + Math.random() * 0.08,
+            evictionRate: Math.random() * 0.03,
+            lastUpdated: new Date(),
+          })
+        }
       })
-    })
+
+      // Decode servers (moderate cache utilization)
+      selectedStack.components.decode.forEach((comp) => {
+        const replicaCount = Math.max(comp.replicas || 1, comp.readyReplicas || 0, 1)
+        for (let r = 0; r < replicaCount; r++) {
+          const baseUtil = 45 + Math.random() * 20 + wave * 8
+          const capacity = 80
+          stackStats.push({
+            podName: `D-${comp.name.slice(0, 6)}-${r}`,
+            cluster: selectedStack.cluster,
+            namespace: selectedStack.namespace,
+            utilizationPercent: Math.round(Math.min(baseUtil, 90)),
+            totalCapacityGB: capacity,
+            usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
+            hitRate: 0.92 + Math.random() * 0.06,
+            evictionRate: Math.random() * 0.02,
+            lastUpdated: new Date(),
+          })
+        }
+      })
+
+      // Unified servers
+      selectedStack.components.both.forEach((comp) => {
+        const replicaCount = Math.max(comp.replicas || 1, comp.readyReplicas || 0, 1)
+        for (let r = 0; r < replicaCount; r++) {
+          const baseUtil = 50 + Math.random() * 25 + wave * 10
+          const capacity = 48
+          stackStats.push({
+            podName: `U-${comp.name.slice(0, 6)}-${r}`,
+            cluster: selectedStack.cluster,
+            namespace: selectedStack.namespace,
+            utilizationPercent: Math.round(Math.min(baseUtil, 92)),
+            totalCapacityGB: capacity,
+            usedGB: Math.round((baseUtil / 100) * capacity * 10) / 10,
+            hitRate: 0.85 + Math.random() * 0.10,
+            evictionRate: Math.random() * 0.04,
+            lastUpdated: new Date(),
+          })
+        }
+      })
+    }
 
     return stackStats
-  }, [selectedStack, isDemoMode])
+  }, [selectedStack, isDemoMode, aggregationMode])
 
   // Handle gauge click - calculate portal position
   const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {
@@ -451,37 +527,60 @@ export function KVCacheMonitor() {
             </div>
           )}
 
-          {/* View mode toggle */}
+          {/* Aggregation toggle */}
           <div className="flex bg-slate-800/80 rounded-lg p-0.5 backdrop-blur-sm">
             <button
-              onClick={() => setViewMode('gauges')}
+              onClick={() => setAggregationMode('aggregated')}
               className={`px-2 py-1 text-xs rounded transition-all ${
-                viewMode === 'gauges'
-                  ? 'bg-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                aggregationMode === 'aggregated'
+                  ? 'bg-purple-500/30 text-purple-400 shadow-lg shadow-purple-500/20'
                   : 'text-muted-foreground hover:text-white'
               }`}
+              title="Show one gauge per role (Prefill, Decode, Unified)"
             >
-              Gauges
+              Agg
             </button>
             <button
-              onClick={() => setViewMode('horseshoe')}
+              onClick={() => setAggregationMode('disaggregated')}
               className={`px-2 py-1 text-xs rounded transition-all ${
-                viewMode === 'horseshoe'
-                  ? 'bg-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                aggregationMode === 'disaggregated'
+                  ? 'bg-purple-500/30 text-purple-400 shadow-lg shadow-purple-500/20'
                   : 'text-muted-foreground hover:text-white'
               }`}
+              title="Show one gauge per replica"
             >
-              Horseshoe
+              Per-Pod
             </button>
+          </div>
+
+          {/* View mode toggle - icon buttons */}
+          <div className="flex items-center gap-1">
+            {/* Horseshoe toggle (for gauges/horseshoe views) */}
+            {viewMode !== 'heatmap' && (
+              <button
+                onClick={() => setViewMode(viewMode === 'gauges' ? 'horseshoe' : 'gauges')}
+                className={`px-2 py-1 text-xs rounded font-medium transition-all flex items-center gap-1 ${
+                  viewMode === 'horseshoe'
+                    ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                    : 'bg-slate-700/50 text-slate-400'
+                }`}
+                title="Toggle horseshoe gauge view"
+              >
+                <CircleDot size={12} />
+              </button>
+            )}
+
+            {/* Heatmap toggle */}
             <button
-              onClick={() => setViewMode('heatmap')}
-              className={`px-2 py-1 text-xs rounded transition-all ${
+              onClick={() => setViewMode(viewMode === 'heatmap' ? 'gauges' : 'heatmap')}
+              className={`px-2 py-1 text-xs rounded font-medium transition-all flex items-center gap-1 ${
                 viewMode === 'heatmap'
-                  ? 'bg-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                  : 'text-muted-foreground hover:text-white'
+                  ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-700/50 text-slate-400'
               }`}
+              title="Toggle heatmap view"
             >
-              Heatmap
+              <Grid3X3 size={12} />
             </button>
           </div>
         </div>
@@ -628,54 +727,70 @@ export function KVCacheMonitor() {
           {viewMode === 'gauges' ? (
             <motion.div
               key="gauges"
-              className="grid grid-cols-3 gap-4 h-full place-items-center"
+              className={`grid h-full place-items-center overflow-auto ${
+                stats.length <= 3 ? 'grid-cols-3 gap-4' :
+                stats.length <= 6 ? 'grid-cols-3 gap-3' :
+                stats.length <= 9 ? 'grid-cols-3 gap-2' :
+                'grid-cols-4 gap-2'
+              }`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {stats.slice(0, 6).map((stat) => (
-                <div
-                  key={stat.podName}
-                  ref={(el) => { gaugeRefs.current[stat.podName] = el }}
-                  className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-full' : ''}`}
-                  onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
-                >
-                  <PremiumGauge
-                    value={stat.utilizationPercent}
-                    maxValue={100}
-                    label={stat.podName.replace('vllm-', '').slice(0, 12)}
-                    sublabel={`${stat.usedGB}/${stat.totalCapacityGB}GB`}
-                    size={130}
-                  />
-                </div>
-              ))}
+              {stats.slice(0, 12).map((stat) => {
+                const gaugeSize = stats.length <= 3 ? 130 : stats.length <= 6 ? 110 : stats.length <= 9 ? 100 : 85
+                return (
+                  <div
+                    key={stat.podName}
+                    ref={(el) => { gaugeRefs.current[stat.podName] = el }}
+                    className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-full' : ''}`}
+                    onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
+                  >
+                    <PremiumGauge
+                      value={stat.utilizationPercent}
+                      maxValue={100}
+                      label={stat.podName.replace('vllm-', '').slice(0, gaugeSize < 100 ? 8 : 12)}
+                      sublabel={gaugeSize >= 100 ? `${stat.usedGB}/${stat.totalCapacityGB}GB` : undefined}
+                      size={gaugeSize}
+                    />
+                  </div>
+                )
+              })}
             </motion.div>
           ) : viewMode === 'horseshoe' ? (
             <motion.div
               key="horseshoe"
-              className="grid grid-cols-3 gap-1 h-full place-items-center"
+              className={`grid h-full place-items-center overflow-auto ${
+                stats.length <= 2 ? 'grid-cols-2 gap-2' :
+                stats.length <= 3 ? 'grid-cols-3 gap-1' :
+                stats.length <= 6 ? 'grid-cols-3 gap-1' :
+                'grid-cols-4 gap-1'
+              }`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {stats.slice(0, 6).map((stat) => (
-                <div
-                  key={stat.podName}
-                  ref={(el) => { gaugeRefs.current[stat.podName] = el }}
-                  className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-lg' : ''}`}
-                  onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
-                >
-                  <HorseshoeGauge
-                    value={stat.utilizationPercent}
-                    maxValue={100}
-                    label={stat.podName.replace('vllm-', '').slice(0, 12)}
-                    sublabel={`${stat.totalCapacityGB}GB`}
-                    secondaryLeft={{ value: `${stat.usedGB.toFixed(1)}`, label: 'IN USE' }}
-                    secondaryRight={{ value: `${(stat.totalCapacityGB - stat.usedGB).toFixed(1)}`, label: 'FREE' }}
-                    size={180}
-                  />
-                </div>
-              ))}
+              {stats.slice(0, 8).map((stat) => {
+                const gaugeSize = stats.length <= 2 ? 180 : stats.length <= 3 ? 160 : stats.length <= 6 ? 140 : 120
+                return (
+                  <div
+                    key={stat.podName}
+                    ref={(el) => { gaugeRefs.current[stat.podName] = el }}
+                    className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-lg' : ''}`}
+                    onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
+                  >
+                    <HorseshoeGauge
+                      value={stat.utilizationPercent}
+                      maxValue={100}
+                      label={stat.podName.replace('vllm-', '').slice(0, gaugeSize < 140 ? 8 : 12)}
+                      sublabel={gaugeSize >= 140 ? `${stat.totalCapacityGB}GB` : undefined}
+                      secondaryLeft={gaugeSize >= 140 ? { value: `${stat.usedGB.toFixed(1)}`, label: 'IN USE' } : undefined}
+                      secondaryRight={gaugeSize >= 140 ? { value: `${(stat.totalCapacityGB - stat.usedGB).toFixed(1)}`, label: 'FREE' } : undefined}
+                      size={gaugeSize}
+                    />
+                  </div>
+                )
+              })}
             </motion.div>
           ) : (
             <motion.div

@@ -582,6 +582,22 @@ export function EPPRouting() {
           load: 50 + Math.random() * 30,
         })
       }
+    } else if (selectedStack.autoscaler) {
+      // Scaled to 0 but has autoscaler - show ghost nodes
+      const maxReplicas = selectedStack.autoscaler.maxReplicas || 3
+      const ghostCount = Math.min(maxReplicas, 3)
+      for (let i = 0; i < ghostCount; i++) {
+        const y = ghostCount === 1 ? 50 : 18 + (64 * i) / (ghostCount - 1)
+        nodes.push({
+          id: `ghost-${i}`,
+          label: '(scaled to 0)',
+          x: 75,
+          y,
+          type: 'prefill',
+          color: '#475569', // Dimmed color for ghost
+          load: 0,
+        })
+      }
     }
 
     return nodes

@@ -182,7 +182,7 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
 
         {/* Model name */}
         {stack.model && (
-          <span className="text-slate-500 truncate max-w-[120px] ml-auto" title={stack.model}>
+          <span className="text-slate-500 truncate max-w-[120px] ml-auto" title={`model: ${stack.model}`}>
             {stack.model}
           </span>
         )}
@@ -249,7 +249,7 @@ export function StackSelector() {
       })
     }
 
-    // Sort stacks
+    // Sort stacks with stable secondary sort by name
     result = [...result].sort((a, b) => {
       let comparison = 0
       switch (sortField) {
@@ -266,7 +266,16 @@ export function StackSelector() {
           comparison = a.totalReplicas - b.totalReplicas
           break
       }
-      return sortDirection === 'asc' ? comparison : -comparison
+      // Apply sort direction
+      comparison = sortDirection === 'asc' ? comparison : -comparison
+      // Stable secondary sort by name, then by id
+      if (comparison === 0) {
+        comparison = a.name.localeCompare(b.name)
+      }
+      if (comparison === 0) {
+        comparison = a.id.localeCompare(b.id)
+      }
+      return comparison
     })
 
     return result
@@ -306,10 +315,38 @@ export function StackSelector() {
         {selectedStack ? (
           <>
             <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[selectedStack.status]}`} />
-            <span className="text-sm font-medium text-white max-w-[160px] truncate">
+            <span className="text-sm font-medium text-white max-w-[140px] truncate">
               {selectedStack.name}
             </span>
             <span className="text-[10px] text-slate-500">ns:{selectedStack.namespace}</span>
+
+            {/* P/D replica counts */}
+            {(() => {
+              const pCount = selectedStack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
+              const dCount = selectedStack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
+              const hasDisagg = pCount > 0 || dCount > 0
+              return hasDisagg ? (
+                <span className="flex items-center gap-1 text-[10px]">
+                  <span className="text-purple-400">P:{pCount}</span>
+                  <span className="text-green-400">D:{dCount}</span>
+                </span>
+              ) : null
+            })()}
+
+            {/* Autoscaler indicator */}
+            {selectedStack.autoscaler && (
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                  selectedStack.autoscaler.type === 'WVA' ? 'bg-purple-500/20 text-purple-400' :
+                  selectedStack.autoscaler.type === 'HPA' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-green-500/20 text-green-400'
+                }`}
+                title={`${selectedStack.autoscaler.name}: min=${selectedStack.autoscaler.minReplicas}, max=${selectedStack.autoscaler.maxReplicas}`}
+              >
+                {selectedStack.autoscaler.type}:{selectedStack.autoscaler.currentReplicas ?? 0}→{selectedStack.autoscaler.desiredReplicas ?? '?'}
+              </span>
+            )}
+
             {isDemoMode && (
               <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">Demo</span>
             )}
@@ -331,7 +368,7 @@ export function StackSelector() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 mt-1 w-[28rem] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
+            className="absolute top-full left-0 mt-1 w-[36rem] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
           >
             {/* Header with search */}
             <div className="border-b border-slate-700">
@@ -408,7 +445,7 @@ export function StackSelector() {
 
             {/* Stack list - contains scroll to prevent page scroll */}
             <div className="max-h-80 overflow-y-auto overscroll-contain">
-              {Object.entries(stacksByCluster).map(([cluster, clusterStacks]) => (
+              {Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                 <div key={cluster}>
                   {/* Cluster header */}
                   <div className="px-3 py-1.5 bg-slate-900/50 border-b border-slate-700 sticky top-0">
