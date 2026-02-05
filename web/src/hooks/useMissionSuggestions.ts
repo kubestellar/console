@@ -66,7 +66,8 @@ export function useMissionSuggestions() {
       p.restarts && p.restarts > THRESHOLDS.restartCount
     )
     if (highRestartPods.length > 0) {
-      const topPods = highRestartPods.slice(0, 3)
+      const topPods = highRestartPods.slice(0, 5)
+      const podDetails = topPods.map(p => `- ${p.name} in ${p.namespace} (${p.restarts} restarts, status: ${p.status})`).join('\n')
       newSuggestions.push({
         id: 'mission-restart-pods',
         type: 'restart',
@@ -75,12 +76,12 @@ export function useMissionSuggestions() {
         priority: highRestartPods.length > 5 ? 'high' : 'medium',
         action: {
           type: 'ai',
-          target: `Diagnose why pods are restarting frequently: ${topPods.map(p => p.name).join(', ')}`,
+          target: `Diagnose why these ${highRestartPods.length} pods are restarting frequently:\n\n${podDetails}\n\nCheck container logs, resource limits, liveness/readiness probes, and OOM kills. Provide specific remediation steps.`,
           label: 'Diagnose',
         },
         context: {
           count: highRestartPods.length,
-          details: topPods.map(p => `${p.name} (${p.restarts} restarts)`),
+          details: topPods.map(p => `${p.name} in ${p.namespace} (${p.restarts} restarts)`),
         },
         detectedAt: now,
       })
@@ -91,6 +92,8 @@ export function useMissionSuggestions() {
       d.replicas > d.readyReplicas
     )
     if (unavailableDeployments.length > 0) {
+      const topDeployments = unavailableDeployments.slice(0, 5)
+      const deploymentDetails = topDeployments.map(d => `- ${d.name} in ${d.namespace}: ${d.readyReplicas}/${d.replicas} ready`).join('\n')
       newSuggestions.push({
         id: 'mission-unavailable-deployments',
         type: 'unavailable',
@@ -99,12 +102,12 @@ export function useMissionSuggestions() {
         priority: 'high',
         action: {
           type: 'ai',
-          target: `Diagnose why deployments have unavailable replicas: ${unavailableDeployments.slice(0, 3).map(d => d.name).join(', ')}`,
+          target: `Diagnose why these ${unavailableDeployments.length} deployments have unavailable replicas:\n\n${deploymentDetails}\n\nCheck pod status, events, resource availability, and image pull issues. Provide specific remediation steps.`,
           label: 'Diagnose',
         },
         context: {
           count: unavailableDeployments.length,
-          details: unavailableDeployments.slice(0, 5).map(d => `${d.name}: ${d.replicas - d.readyReplicas}/${d.replicas} unavailable`),
+          details: topDeployments.map(d => `${d.name} in ${d.namespace}: ${d.replicas - d.readyReplicas}/${d.replicas} unavailable`),
         },
         detectedAt: now,
       })
@@ -113,6 +116,7 @@ export function useMissionSuggestions() {
     // 3. Check for high severity security issues
     const highSeverityIssues = securityIssues.filter(i => i.severity === 'high')
     if (highSeverityIssues.length > 0) {
+      const issueDetails = highSeverityIssues.slice(0, 5).map(i => `- ${i.issue} (${i.cluster || 'unknown cluster'})`).join('\n')
       newSuggestions.push({
         id: 'mission-security-high',
         type: 'security',
@@ -120,13 +124,13 @@ export function useMissionSuggestions() {
         description: `${highSeverityIssues.length} high severity security issue${highSeverityIssues.length > 1 ? 's' : ''} found`,
         priority: 'critical',
         action: {
-          type: 'navigate',
-          target: '/security',
-          label: 'View Security Dashboard',
+          type: 'ai',
+          target: `Analyze and help remediate ${highSeverityIssues.length} high severity security issues:\n\n${issueDetails}\n\nProvide specific remediation steps for each issue.`,
+          label: 'Analyze Security',
         },
         context: {
           count: highSeverityIssues.length,
-          details: highSeverityIssues.slice(0, 3).map(i => i.issue),
+          details: highSeverityIssues.slice(0, 5).map(i => `${i.issue} (${i.cluster || 'unknown'})`),
         },
         detectedAt: now,
       })
@@ -135,6 +139,7 @@ export function useMissionSuggestions() {
     // 4. Check for unhealthy clusters
     const unhealthyClusters = clusters.filter(c => c.reachable === false || !c.healthy)
     if (unhealthyClusters.length > 0) {
+      const clusterDetails = unhealthyClusters.map(c => `- ${c.name}: ${c.reachable === false ? 'unreachable' : 'unhealthy'}${c.errorMessage ? ` (${c.errorMessage})` : ''}`).join('\n')
       newSuggestions.push({
         id: 'mission-unhealthy-clusters',
         type: 'health',
@@ -143,7 +148,7 @@ export function useMissionSuggestions() {
         priority: 'critical',
         action: {
           type: 'ai',
-          target: `Diagnose cluster health issues for: ${unhealthyClusters.map(c => c.name).join(', ')}`,
+          target: `Diagnose health issues for ${unhealthyClusters.length} cluster(s):\n\n${clusterDetails}\n\nCheck API server connectivity, control plane health, node status, and certificate expiration. Provide troubleshooting steps.`,
           label: 'Diagnose',
         },
         context: {
@@ -161,6 +166,7 @@ export function useMissionSuggestions() {
     })
     // Only suggest if we have many pods without limits
     if (podsWithoutLimits.length > 10) {
+      const samplePods = podsWithoutLimits.slice(0, 5).map(p => `- ${p.name} in ${p.namespace}`).join('\n')
       newSuggestions.push({
         id: 'mission-resource-limits',
         type: 'limits',
@@ -169,11 +175,12 @@ export function useMissionSuggestions() {
         priority: 'low',
         action: {
           type: 'ai',
-          target: 'Find pods without resource limits and suggest appropriate values based on usage',
+          target: `Analyze ${podsWithoutLimits.length} pods that may be missing resource limits:\n\nSample pods:\n${samplePods}\n\nRecommend appropriate CPU/memory requests and limits based on workload type. Explain the risks of missing limits (OOM kills, noisy neighbors, scheduling issues).`,
           label: 'Analyze with AI',
         },
         context: {
           count: podsWithoutLimits.length,
+          details: podsWithoutLimits.slice(0, 10).map(p => `${p.name} in ${p.namespace}`),
         },
         detectedAt: now,
       })
@@ -181,11 +188,16 @@ export function useMissionSuggestions() {
 
     // 6. Check for nodes under resource pressure
     const pressuredNodes = nodes.filter(n => {
-      const cpuPressure = n.conditions?.some(c => c.type === 'MemoryPressure' && c.status === 'True')
-      const memPressure = n.conditions?.some(c => c.type === 'DiskPressure' && c.status === 'True')
-      return cpuPressure || memPressure
+      const memPressure = n.conditions?.some(c => c.type === 'MemoryPressure' && c.status === 'True')
+      const diskPressure = n.conditions?.some(c => c.type === 'DiskPressure' && c.status === 'True')
+      return memPressure || diskPressure
     })
     if (pressuredNodes.length > 0) {
+      const nodeDetails = pressuredNodes.map(n => {
+        const conditions = n.conditions?.filter(c => (c.type === 'MemoryPressure' || c.type === 'DiskPressure') && c.status === 'True')
+          .map(c => c.type).join(', ') || 'unknown pressure'
+        return `- ${n.name}: ${conditions}`
+      }).join('\n')
       newSuggestions.push({
         id: 'mission-node-pressure',
         type: 'resource',
@@ -194,7 +206,7 @@ export function useMissionSuggestions() {
         priority: 'high',
         action: {
           type: 'ai',
-          target: `Diagnose resource pressure on nodes: ${pressuredNodes.map(n => n.name).join(', ')}`,
+          target: `Diagnose resource pressure on ${pressuredNodes.length} node(s):\n\n${nodeDetails}\n\nIdentify resource-hungry workloads, check for memory leaks, and recommend remediation (eviction, scaling, adding nodes).`,
           label: 'Diagnose',
         },
         context: {

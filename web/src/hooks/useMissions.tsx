@@ -599,6 +599,8 @@ The AI missions feature requires the local agent to be running.
           prompt: params.initialPrompt,
           sessionId: missionId,
           agent: selectedAgent || undefined,
+          // Include mission context for the agent to use
+          context: params.context,
         }
       }))
 
