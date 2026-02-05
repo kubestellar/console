@@ -38,6 +38,39 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     loadToken()
   }, [])
 
+  // Handle deep link focus from hash or search param
+  useEffect(() => {
+    const hash = window.location.hash
+    const params = new URLSearchParams(window.location.search)
+    const shouldFocus = hash === '#github-token' || params.get('focus') === 'github-token'
+
+    if (shouldFocus) {
+      // Wait for component to render, then scroll and focus
+      const timer = setTimeout(() => {
+        const section = document.getElementById('github-token-settings')
+        const input = document.getElementById('github-token') as HTMLInputElement | null
+
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Flash highlight effect
+          section.classList.add('ring-2', 'ring-purple-500/50')
+          setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+        }
+
+        if (input) {
+          setTimeout(() => input.focus(), 500) // Focus after scroll completes
+        }
+
+        // Clean up URL
+        if (hash || params.get('focus')) {
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      }, 300)
+
+      return () => clearTimeout(timer)
+    }
+  }, [isInitializing])
+
   const testGithubToken = async (token: string) => {
     setGithubTokenTesting(true)
     setGithubTokenError(null)

@@ -328,7 +328,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
             No GitHub token configured — showing sample data.
           </p>
           <a
-            href="/settings"
+            href="/settings#github-token"
             className="text-xs px-2 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors whitespace-nowrap"
           >
             Add Token
