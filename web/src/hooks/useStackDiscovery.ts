@@ -6,12 +6,14 @@
  * - InferencePool CRDs
  * - EPP and Gateway services
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { LLMdServer } from './useLLMd'
 
 // Refresh interval (2 minutes)
 const REFRESH_INTERVAL_MS = 120000
+const CACHE_KEY = 'kubestellar-stack-cache'
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
 export interface LLMdStackComponent {
   name: string
@@ -117,15 +119,48 @@ function getStackStatus(components: LLMdStack['components']): LLMdStack['status'
   return 'unhealthy'
 }
 
+// Load cached stacks from localStorage
+function loadCachedStacks(): { stacks: LLMdStack[]; timestamp: number } | null {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (!cached) return null
+    const parsed = JSON.parse(cached)
+    if (parsed.timestamp && parsed.stacks) {
+      return parsed
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null
+}
+
+// Save stacks to localStorage cache
+function saveCachedStacks(stacks: LLMdStack[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      stacks,
+      timestamp: Date.now(),
+    }))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 /**
  * Hook to discover llm-d stacks from clusters
+ *
+ * Uses localStorage caching for instant initial display.
  */
 export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d']) {
-  const [stacks, setStacks] = useState<LLMdStack[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  // Initialize from cache for instant display
+  const cached = useMemo(() => loadCachedStacks(), [])
+  const isCacheValid = cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)
+
+  const [stacks, setStacks] = useState<LLMdStack[]>(cached?.stacks || [])
+  const [isLoading, setIsLoading] = useState(!isCacheValid)
   const [error, setError] = useState<string | null>(null)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-  const initialLoadDone = useRef(false)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(cached ? new Date(cached.timestamp) : null)
+  const initialLoadDone = useRef(isCacheValid || false)
 
   const refetch = useCallback(async (silent = false) => {
     if (!silent) {
@@ -317,6 +352,7 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
       })
 
       setStacks(discoveredStacks)
+      saveCachedStacks(discoveredStacks) // Cache for instant display next time
       setError(null)
       setLastRefresh(new Date())
       initialLoadDone.current = true
@@ -329,9 +365,12 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
   }, [clusters.join(',')])
 
   useEffect(() => {
-    refetch(false)
+    // If we have valid cache, do a silent refresh in background
+    // Otherwise do a full fetch with loading state
+    refetch(Boolean(isCacheValid))
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetch])
 
   return {

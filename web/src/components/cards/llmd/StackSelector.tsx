@@ -2,10 +2,11 @@
  * Stack Selector Component
  *
  * Dropdown for selecting an llm-d stack to focus visualizations on.
- * Shows stack health, component counts, and cluster info.
+ * Shows stack health, component counts, namespace, and GPU usage.
+ * Includes search, sort, and filter capabilities.
  */
-import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Server, Layers, RefreshCw, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Loader2, Cpu, Search, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
@@ -15,6 +16,67 @@ const STATUS_COLORS = {
   degraded: 'bg-amber-500',
   unhealthy: 'bg-red-500',
   unknown: 'bg-slate-500',
+}
+
+type SortField = 'name' | 'accelerators' | 'status' | 'replicas'
+type SortDirection = 'asc' | 'desc'
+
+type AcceleratorType = 'GPU' | 'TPU' | 'AIU' | 'XPU'
+
+interface AcceleratorInfo {
+  count: number
+  type: string
+  category: AcceleratorType
+}
+
+// Estimate accelerator count and type from replicas and cluster/model info
+// Uses 1 accelerator per replica as conservative estimate
+function estimateAccelerators(stack: LLMdStack): AcceleratorInfo {
+  const prefillCount = stack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
+  const decodeCount = stack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
+  const unifiedCount = stack.components.both.reduce((sum, c) => sum + c.replicas, 0)
+  const total = prefillCount + decodeCount + unifiedCount
+
+  // Infer accelerator type from cluster name, namespace, or model
+  const cluster = stack.cluster.toLowerCase()
+  const namespace = stack.namespace.toLowerCase()
+  const model = stack.model?.toLowerCase() || ''
+
+  // Check for TPU clusters (Google Cloud)
+  if (cluster.includes('tpu') || namespace.includes('tpu')) {
+    return { count: total, type: 'Google TPU v5p', category: 'TPU' }
+  }
+
+  // Check for AIU clusters (IBM)
+  if (cluster.includes('aiu') || namespace.includes('aiu') || cluster.includes('ibm')) {
+    return { count: total, type: 'IBM AIU', category: 'AIU' }
+  }
+
+  // Check for Intel XPU
+  if (cluster.includes('intel') || cluster.includes('xpu')) {
+    return { count: total, type: 'Intel Gaudi2', category: 'XPU' }
+  }
+
+  // Default: NVIDIA GPU - infer specific type from model size
+  let gpuType = 'NVIDIA H100'
+  if (model.includes('70b') || model.includes('65b')) {
+    gpuType = 'NVIDIA H100 80GB'
+  } else if (model.includes('13b') || model.includes('7b')) {
+    gpuType = 'NVIDIA A100 40GB'
+  } else if (model.includes('granite')) {
+    gpuType = 'NVIDIA A100 80GB'
+  }
+
+  return { count: total, type: gpuType, category: 'GPU' }
+}
+
+function getStatusPriority(status: LLMdStack['status']): number {
+  switch (status) {
+    case 'healthy': return 0
+    case 'degraded': return 1
+    case 'unhealthy': return 2
+    default: return 3
+  }
 }
 
 interface StackOptionProps {
@@ -27,27 +89,29 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
   const prefillCount = stack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
   const decodeCount = stack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
   const unifiedCount = stack.components.both.reduce((sum, c) => sum + c.replicas, 0)
+  const gpuInfo = estimateAccelerators(stack)
 
   return (
     <button
       onClick={onSelect}
-      className={`w-full px-3 py-2 text-left hover:bg-slate-700/50 transition-colors ${
+      className={`w-full px-3 py-2.5 text-left hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 last:border-0 ${
         isSelected ? 'bg-slate-700/70' : ''
       }`}
     >
-      <div className="flex items-center justify-between">
+      {/* Row 1: Name and replica counts */}
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           {/* Status indicator */}
-          <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[stack.status]}`} />
+          <div className={`w-2 h-2 rounded-full shrink-0 ${STATUS_COLORS[stack.status]}`} />
 
           {/* Stack name */}
-          <span className="text-sm font-medium text-white truncate max-w-[150px]">
+          <span className="text-sm font-medium text-white truncate max-w-[200px]">
             {stack.name}
           </span>
         </div>
 
         {/* Replica counts */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
           {stack.hasDisaggregation ? (
             <>
               <span className="text-purple-400" title="Prefill replicas">
@@ -66,13 +130,33 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
         </div>
       </div>
 
-      {/* Cluster badge */}
-      <div className="mt-1 flex items-center gap-2">
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">
+      {/* Row 2: Namespace and metadata */}
+      <div className="flex items-center gap-2 text-[10px]">
+        {/* Namespace (primary context) */}
+        <span className="px-1.5 py-0.5 rounded bg-slate-700/80 text-slate-300 font-medium">
+          ns:{stack.namespace}
+        </span>
+
+        {/* Cluster */}
+        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">
           {stack.cluster}
         </span>
+
+        {/* GPU count and type */}
+        {gpuInfo.count > 0 && (
+          <span
+            className="flex items-center gap-1 text-cyan-400"
+            title={`${gpuInfo.count}× ${gpuInfo.type}`}
+          >
+            <Cpu className="w-3 h-3" />
+            <span>{gpuInfo.count}×</span>
+            <span className="text-cyan-400/70 truncate max-w-[80px]">{gpuInfo.type.replace('NVIDIA ', '')}</span>
+          </span>
+        )}
+
+        {/* Model name */}
         {stack.model && (
-          <span className="text-[10px] text-slate-500 truncate max-w-[120px]">
+          <span className="text-slate-500 truncate max-w-[120px] ml-auto" title={stack.model}>
             {stack.model}
           </span>
         )}
@@ -84,7 +168,11 @@ function StackOption({ stack, isSelected, onSelect }: StackOptionProps) {
 export function StackSelector() {
   const stackContext = useOptionalStack()
   const [isOpen, setIsOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortField, setSortField] = useState<SortField>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -97,6 +185,13 @@ export function StackSelector() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [isOpen])
+
   // If no context, show placeholder
   if (!stackContext) {
     return (
@@ -107,16 +202,69 @@ export function StackSelector() {
     )
   }
 
-  const { stacks, isLoading, selectedStack, selectedStackId, setSelectedStackId, refetch } = stackContext
+  const { stacks, isLoading, selectedStack, selectedStackId, setSelectedStackId, refetch, isDemoMode } = stackContext
+
+  // Filter and sort stacks
+  const filteredAndSortedStacks = useMemo(() => {
+    let result = stacks
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(stack => {
+        const gpuInfo = estimateAccelerators(stack)
+        return (
+          stack.name.toLowerCase().includes(query) ||
+          stack.namespace.toLowerCase().includes(query) ||
+          stack.cluster.toLowerCase().includes(query) ||
+          stack.model?.toLowerCase().includes(query) ||
+          gpuInfo.type.toLowerCase().includes(query)
+        )
+      })
+    }
+
+    // Sort stacks
+    result = [...result].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name)
+          break
+        case 'accelerators':
+          comparison = estimateAccelerators(a).count - estimateAccelerators(b).count
+          break
+        case 'status':
+          comparison = getStatusPriority(a.status) - getStatusPriority(b.status)
+          break
+        case 'replicas':
+          comparison = a.totalReplicas - b.totalReplicas
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+
+    return result
+  }, [stacks, searchQuery, sortField, sortDirection])
 
   // Group stacks by cluster
-  const stacksByCluster = stacks.reduce((acc, stack) => {
+  const stacksByCluster = filteredAndSortedStacks.reduce((acc, stack) => {
     if (!acc[stack.cluster]) {
       acc[stack.cluster] = []
     }
     acc[stack.cluster].push(stack)
     return acc
   }, {} as Record<string, LLMdStack[]>)
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const totalAccelerators = stacks.reduce((sum, s) => sum + estimateAccelerators(s).count, 0)
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -134,10 +282,13 @@ export function StackSelector() {
         ) : selectedStack ? (
           <>
             <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[selectedStack.status]}`} />
-            <span className="text-sm font-medium text-white max-w-[140px] truncate">
+            <span className="text-sm font-medium text-white max-w-[160px] truncate">
               {selectedStack.name}
             </span>
-            <span className="text-xs text-slate-500">@{selectedStack.cluster}</span>
+            <span className="text-[10px] text-slate-500">ns:{selectedStack.namespace}</span>
+            {isDemoMode && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400">Demo</span>
+            )}
           </>
         ) : (
           <>
@@ -156,31 +307,87 @@ export function StackSelector() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 mt-1 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
+            className="absolute top-full left-0 mt-1 w-[28rem] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
-              <span className="text-xs font-medium text-slate-400">
-                LLM-d Stacks ({stacks.length})
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  refetch()
-                }}
-                className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                title="Refresh stacks"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
+            {/* Header with search */}
+            <div className="border-b border-slate-700">
+              {/* Title */}
+              <div className="px-3 pt-2 pb-1">
+                <span className="text-sm font-medium text-white">
+                  🎯 Focus on a Stack
+                </span>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Select an inference stack to visualize its metrics
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs font-medium text-slate-400">
+                  {filteredAndSortedStacks.length} stack{filteredAndSortedStacks.length !== 1 ? 's' : ''}{searchQuery ? ` of ${stacks.length}` : ''}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    refetch()
+                  }}
+                  className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                  title="Refresh stacks"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="px-3 pb-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search stacks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-8 py-1.5 text-sm bg-slate-900/50 border border-slate-700 rounded focus:outline-none focus:border-slate-600 text-white placeholder-slate-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-700 text-slate-500 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Sort options */}
+              <div className="px-3 pb-2 flex items-center gap-1">
+                <span className="text-[10px] text-slate-500 mr-1">Sort:</span>
+                {(['status', 'name', 'accelerators', 'replicas'] as SortField[]).map(field => (
+                  <button
+                    key={field}
+                    onClick={() => toggleSort(field)}
+                    className={`px-2 py-0.5 text-[10px] rounded flex items-center gap-0.5 transition-colors ${
+                      sortField === field
+                        ? 'bg-slate-600 text-white'
+                        : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white'
+                    }`}
+                  >
+                    {field === 'status' ? 'Health' : field === 'accelerators' ? 'GPUs/TPUs' : field.charAt(0).toUpperCase() + field.slice(1)}
+                    {sortField === field && (
+                      sortDirection === 'asc' ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Stack list */}
-            <div className="max-h-80 overflow-y-auto">
+            {/* Stack list - contains scroll to prevent page scroll */}
+            <div className="max-h-80 overflow-y-auto overscroll-contain">
               {Object.entries(stacksByCluster).map(([cluster, clusterStacks]) => (
                 <div key={cluster}>
                   {/* Cluster header */}
-                  <div className="px-3 py-1.5 bg-slate-900/50 border-b border-slate-700">
+                  <div className="px-3 py-1.5 bg-slate-900/50 border-b border-slate-700 sticky top-0">
                     <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                       {cluster}
                     </span>
@@ -201,26 +408,32 @@ export function StackSelector() {
                 </div>
               ))}
 
-              {stacks.length === 0 && !isLoading && (
+              {filteredAndSortedStacks.length === 0 && !isLoading && (
                 <div className="px-3 py-4 text-center text-slate-500 text-sm">
-                  No llm-d stacks found
+                  {searchQuery ? 'No stacks match your search' : 'No llm-d stacks found'}
                 </div>
               )}
             </div>
 
             {/* Footer stats */}
-            <div className="px-3 py-2 border-t border-slate-700 bg-slate-900/50 flex items-center gap-3 text-[10px]">
-              <span className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                <span className="text-slate-400">
-                  {stacks.filter(s => s.status === 'healthy').length} healthy
+            <div className="px-3 py-2 border-t border-slate-700 bg-slate-900/50 flex items-center justify-between text-[10px]">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <span className="text-slate-400">
+                    {stacks.filter(s => s.status === 'healthy').length} healthy
+                  </span>
                 </span>
-              </span>
-              <span className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                <span className="text-slate-400">
-                  {stacks.filter(s => s.hasDisaggregation).length} disaggregated
+                <span className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  <span className="text-slate-400">
+                    {stacks.filter(s => s.hasDisaggregation).length} disaggregated
+                  </span>
                 </span>
+              </div>
+              <span className="flex items-center gap-1 text-cyan-400" title="Estimated total accelerators (GPUs/TPUs/AIUs)">
+                <Cpu className="w-3 h-3" />
+                <span>~{totalAccelerators} accelerators</span>
               </span>
             </div>
           </motion.div>

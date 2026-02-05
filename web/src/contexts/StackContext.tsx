@@ -3,11 +3,112 @@
  *
  * Provides llm-d stack selection and discovery state to the AI/ML dashboard.
  * Persists selection to localStorage for session continuity.
+ *
+ * When demo mode is enabled, provides fake demo stacks instead of live data.
  */
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
-import { useStackDiscovery, type LLMdStack } from '../hooks/useStackDiscovery'
+import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../hooks/useStackDiscovery'
+import { useDemoMode } from '../hooks/useDemoMode'
 
 const STORAGE_KEY = 'kubestellar-llmd-stack'
+
+// Demo stacks for when console is in demo mode
+function createDemoStacks(): LLMdStack[] {
+  const createComponent = (
+    name: string,
+    namespace: string,
+    cluster: string,
+    type: LLMdStackComponent['type'],
+    replicas: number,
+    status: LLMdStackComponent['status'] = 'running'
+  ): LLMdStackComponent => ({
+    name,
+    namespace,
+    cluster,
+    type,
+    status,
+    replicas,
+    readyReplicas: status === 'running' ? replicas : 0,
+    model: 'Llama-3-70B',
+  })
+
+  return [
+    // Demo disaggregated stack
+    {
+      id: 'llm-inference@demo-cluster-1',
+      name: 'llm-inference',
+      namespace: 'llm-inference',
+      cluster: 'demo-cluster-1',
+      inferencePool: 'llm-inference-pool',
+      components: {
+        prefill: [
+          createComponent('prefill-server-0', 'llm-inference', 'demo-cluster-1', 'prefill', 2),
+          createComponent('prefill-server-1', 'llm-inference', 'demo-cluster-1', 'prefill', 2),
+          createComponent('prefill-server-2', 'llm-inference', 'demo-cluster-1', 'prefill', 2),
+        ],
+        decode: [
+          createComponent('decode-server-0', 'llm-inference', 'demo-cluster-1', 'decode', 3),
+          createComponent('decode-server-1', 'llm-inference', 'demo-cluster-1', 'decode', 3),
+        ],
+        both: [],
+        epp: createComponent('inference-epp', 'llm-inference', 'demo-cluster-1', 'epp', 2),
+        gateway: createComponent('inference-gateway', 'llm-inference', 'demo-cluster-1', 'gateway', 1),
+      },
+      status: 'healthy',
+      hasDisaggregation: true,
+      model: 'Llama-3-70B',
+      totalReplicas: 14,
+      readyReplicas: 14,
+    },
+    // Demo unified stack
+    {
+      id: 'vllm-prod@demo-cluster-2',
+      name: 'vllm-prod',
+      namespace: 'vllm-prod',
+      cluster: 'demo-cluster-2',
+      inferencePool: 'vllm-prod-pool',
+      components: {
+        prefill: [],
+        decode: [],
+        both: [
+          createComponent('vllm-server-0', 'vllm-prod', 'demo-cluster-2', 'both', 4),
+          createComponent('vllm-server-1', 'vllm-prod', 'demo-cluster-2', 'both', 4),
+          createComponent('vllm-server-2', 'vllm-prod', 'demo-cluster-2', 'both', 4),
+        ],
+        epp: createComponent('vllm-epp', 'vllm-prod', 'demo-cluster-2', 'epp', 1),
+        gateway: createComponent('vllm-gateway', 'vllm-prod', 'demo-cluster-2', 'gateway', 1),
+      },
+      status: 'healthy',
+      hasDisaggregation: false,
+      model: 'Granite-13B',
+      totalReplicas: 14,
+      readyReplicas: 14,
+    },
+    // Demo degraded stack
+    {
+      id: 'inference-staging@demo-cluster-1',
+      name: 'inference-staging',
+      namespace: 'inference-staging',
+      cluster: 'demo-cluster-1',
+      components: {
+        prefill: [
+          createComponent('staging-prefill-0', 'inference-staging', 'demo-cluster-1', 'prefill', 1),
+        ],
+        decode: [
+          createComponent('staging-decode-0', 'inference-staging', 'demo-cluster-1', 'decode', 1, 'pending'),
+        ],
+        both: [],
+        epp: createComponent('staging-epp', 'inference-staging', 'demo-cluster-1', 'epp', 1),
+        gateway: null,
+      },
+      status: 'degraded',
+      hasDisaggregation: true,
+      model: 'Qwen-32B',
+      totalReplicas: 3,
+      readyReplicas: 2,
+    },
+  ]
+}
 
 interface StackContextType {
   // Discovery
@@ -21,6 +122,9 @@ interface StackContextType {
   selectedStack: LLMdStack | null
   selectedStackId: string | null
   setSelectedStackId: (id: string | null) => void
+
+  // Demo mode
+  isDemoMode: boolean
 
   // Helpers
   getStackById: (id: string) => LLMdStack | undefined
@@ -36,7 +140,17 @@ interface StackProviderProps {
 }
 
 export function StackProvider({ children, clusters = ['pok-prod-001', 'vllm-d'] }: StackProviderProps) {
-  const { stacks, isLoading, error, refetch, lastRefresh } = useStackDiscovery(clusters)
+  const { isDemoMode } = useDemoMode()
+  const { stacks: liveStacks, isLoading: liveLoading, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(clusters)
+
+  // Use demo stacks when in demo mode, otherwise live stacks
+  const demoStacks = useMemo(() => createDemoStacks(), [])
+  const stacks = isDemoMode ? demoStacks : liveStacks
+  const isLoading = isDemoMode ? false : liveLoading
+  const error = isDemoMode ? null : liveError
+  const refetch = isDemoMode ? (() => {}) : liveRefetch
+  const lastRefresh = isDemoMode ? new Date() : liveLastRefresh
+
   const [selectedStackId, setSelectedStackIdState] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(STORAGE_KEY)
@@ -102,6 +216,7 @@ export function StackProvider({ children, clusters = ['pok-prod-001', 'vllm-d'] 
     selectedStack,
     selectedStackId,
     setSelectedStackId,
+    isDemoMode,
     getStackById,
     healthyStacks,
     disaggregatedStacks,

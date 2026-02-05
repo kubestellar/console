@@ -8,13 +8,13 @@
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CircleDot, Radio } from 'lucide-react'
+import { CircleDot } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
 import { Acronym } from './shared/PortalTooltip'
 import { useOptionalStack } from '../../../contexts/StackContext'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 type ViewMode = 'default' | 'horseshoe'
-type DataMode = 'live' | 'demo'
 
 // Node positions for the flow diagram (coordinates in viewBox units)
 const NODE_POSITIONS = {
@@ -543,16 +543,16 @@ export function LLMdFlow() {
   const [metricsHistory, setMetricsHistory] = useState<Record<string, MetricsHistoryData>>({})
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['rps'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
-  const [dataMode, setDataMode] = useState<DataMode>('live')
   const uniqueId = useRef(`flow-${Math.random().toString(36).substr(2, 9)}`).current
 
-  // Get selected stack from context
+  // Get selected stack from context and demo mode from global hook
   const selectedStack = stackContext?.selectedStack
+  const { isDemoMode } = useDemoMode()
 
   // Build dynamic node positions based on actual stack topology
   const { nodePositions, connections, nodeLabels } = useMemo(() => {
-    if (!selectedStack || dataMode === 'demo') {
-      // Default demo topology
+    if (!selectedStack) {
+      // Default topology when no stack selected
       return {
         nodePositions: NODE_POSITIONS,
         connections: CONNECTIONS,
@@ -652,7 +652,7 @@ export function LLMdFlow() {
     }
 
     return { nodePositions: positions, connections: conns, nodeLabels: labels }
-  }, [selectedStack, dataMode])
+  }, [selectedStack])
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -666,9 +666,9 @@ export function LLMdFlow() {
     })
   }
 
-  // Generate metrics based on stack data or demo
+  // Generate metrics based on stack data
   const generateLiveMetrics = useCallback((): ServerMetrics[] => {
-    if (!selectedStack || dataMode === 'demo') {
+    if (!selectedStack) {
       return generateServerMetrics()
     }
 
@@ -745,7 +745,7 @@ export function LLMdFlow() {
     })
 
     return metrics
-  }, [selectedStack, dataMode])
+  }, [selectedStack])
 
   // Update metrics periodically and track history for all metric types
   useEffect(() => {
@@ -839,13 +839,18 @@ export function LLMdFlow() {
       {/* Header */}
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
-          {/* Stack info when live */}
-          {dataMode === 'live' && selectedStack && (
+          {/* Stack info */}
+          {selectedStack && (
             <div className="flex items-center gap-1.5 text-xs">
-              <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium truncate max-w-[100px]">
+              <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[100px] ${
+                isDemoMode ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+              }`}>
                 {selectedStack.name}
               </span>
               <span className="text-slate-500">@{selectedStack.cluster}</span>
+              {isDemoMode && (
+                <span className="px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">Demo</span>
+              )}
             </div>
           )}
           <div className="flex items-center gap-1.5 text-xs">
@@ -861,19 +866,6 @@ export function LLMdFlow() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Live/Demo toggle */}
-          <button
-            onClick={() => setDataMode(dataMode === 'live' ? 'demo' : 'live')}
-            className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
-              dataMode === 'live' && selectedStack
-                ? 'bg-green-500/20 text-green-400 shadow-lg shadow-green-500/20'
-                : 'bg-slate-700/50 text-slate-400'
-            }`}
-            title={dataMode === 'live' ? 'Using live stack data' : 'Using demo data'}
-          >
-            <Radio size={12} className={dataMode === 'live' && selectedStack ? 'animate-pulse' : ''} />
-            {dataMode === 'live' ? 'Live' : 'Demo'}
-          </button>
           <button
             onClick={() => setViewMode(viewMode === 'default' ? 'horseshoe' : 'default')}
             className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
