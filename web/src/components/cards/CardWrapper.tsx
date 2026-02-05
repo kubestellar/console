@@ -171,6 +171,12 @@ export const CARD_TITLES: Record<string, string> = {
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
   deployment_issues: 'Deployment Issues',
+  statefulset_status: 'StatefulSet Status',
+  daemonset_status: 'DaemonSet Status',
+  replicaset_status: 'ReplicaSet Status',
+  job_status: 'Job Status',
+  cronjob_status: 'CronJob Status',
+  hpa_status: 'HPA Status',
   cluster_groups: 'Cluster Groups',
   resource_marshall: 'Resource Marshall',
   workload_monitor: 'Workload Monitor',
@@ -185,6 +191,7 @@ export const CARD_TITLES: Record<string, string> = {
   resource_capacity: 'Resource Capacity',
   resource_usage: 'Resource Allocation',
   compute_overview: 'Compute Overview',
+  node_status: 'Node Status',
 
   // Events
   event_stream: 'Event Stream',
@@ -200,8 +207,12 @@ export const CARD_TITLES: Record<string, string> = {
   // Storage and network
   storage_overview: 'Storage Overview',
   pvc_status: 'PVC Status',
+  pv_status: 'PV Status',
+  resource_quota_status: 'Resource Quota Status',
   network_overview: 'Network Overview',
   service_status: 'Service Status',
+  ingress_status: 'Ingress Status',
+  network_policy_status: 'Network Policy Status',
 
   // Namespace cards
   namespace_overview: 'Namespace Overview',
@@ -214,7 +225,9 @@ export const CARD_TITLES: Record<string, string> = {
   // Operator cards
   operator_status: 'Operator Status',
   operator_subscriptions: 'Operator Subscriptions',
+  operator_subscription_status: 'Operator Subscription Status',
   crd_health: 'CRD Health',
+  configmap_status: 'ConfigMap Status',
 
   // Helm/GitOps cards
   gitops_drift: 'GitOps Drift',
@@ -231,13 +244,14 @@ export const CARD_TITLES: Record<string, string> = {
   argocd_sync_status: 'ArgoCD Sync Status',
   argocd_health: 'ArgoCD Health',
 
-  // GPU cards
+  // GPU and hardware cards
   gpu_overview: 'GPU Overview',
   gpu_status: 'GPU Status',
   gpu_inventory: 'GPU Inventory',
   gpu_workloads: 'GPU Workloads',
   gpu_utilization: 'GPU Utilization',
   gpu_usage_trend: 'GPU Usage Trend',
+  hardware_health: 'Hardware Health',
 
   // Security, RBAC, and compliance
   security_issues: 'Security Issues',
@@ -349,6 +363,12 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   deployment_progress: 'Real-time deployment rollout progress and status.',
   deployment_status: 'Detailed status of deployments including replicas and conditions.',
   deployment_issues: 'Active deployment problems such as failed rollouts or image pull errors.',
+  statefulset_status: 'Status of StatefulSets including replicas and volume claims.',
+  daemonset_status: 'Status of DaemonSets including node coverage and update progress.',
+  replicaset_status: 'Status of ReplicaSets including replica counts and conditions.',
+  job_status: 'Status of Jobs including completion, duration, and failures.',
+  cronjob_status: 'Status of CronJobs including schedules and recent runs.',
+  hpa_status: 'Status of Horizontal Pod Autoscalers and scaling metrics.',
   cluster_groups: 'Organize clusters into logical groups for targeted deployments.',
   resource_marshall: 'Explore resource dependency trees and ownership chains.',
   workload_monitor: 'Monitor all resources for a workload with health status, alerts, and AI diagnose/repair.',
@@ -360,6 +380,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   top_pods: 'Top resource-consuming pods ranked by CPU or memory usage.',
   resource_capacity: 'Cluster resource capacity vs. current allocation.',
   resource_usage: 'CPU and memory allocation breakdown across clusters.',
+  node_status: 'Status of Kubernetes nodes including conditions and capacity.',
   compute_overview: 'Summary of compute resources: nodes, CPUs, and memory.',
   event_stream: 'Live stream of Kubernetes events from all clusters.',
   event_summary: 'Aggregated event counts grouped by type and reason.',
@@ -370,8 +391,12 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   resource_trend: 'Resource usage trends showing CPU and memory over time.',
   storage_overview: 'Persistent volume and storage class overview.',
   pvc_status: 'Status of Persistent Volume Claims across clusters.',
+  pv_status: 'Status of Persistent Volumes including capacity and binding.',
+  resource_quota_status: 'Resource quota utilization and limits across namespaces.',
   network_overview: 'Network policies, services, and ingress summary.',
   service_status: 'Status of Kubernetes services and their endpoints.',
+  ingress_status: 'Status of Ingress resources including hosts and backends.',
+  network_policy_status: 'Status of Network Policies and affected pods.',
   namespace_overview: 'Summary of resources within a namespace.',
   namespace_analysis: 'Detailed analysis of namespace health and resource usage.',
   namespace_rbac: 'RBAC roles and bindings within a namespace.',
@@ -380,7 +405,9 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   namespace_monitor: 'Real-time monitoring of namespace resource trends.',
   operator_status: 'Status of installed Kubernetes operators.',
   operator_subscriptions: 'Operator subscriptions and update channels.',
+  operator_subscription_status: 'Detailed status of Operator Lifecycle Manager subscriptions.',
   crd_health: 'Health and status of Custom Resource Definitions.',
+  configmap_status: 'Status of ConfigMaps including size and update times.',
   gitops_drift: 'Drift detection between Git source and live cluster state.',
   helm_release_status: 'Status of Helm releases across clusters.',
   helm_releases: 'List of all deployed Helm releases.',
@@ -398,6 +425,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   gpu_workloads: 'Workloads running on GPU-enabled nodes.',
   gpu_utilization: 'Real-time GPU utilization percentage and temperature.',
   gpu_usage_trend: 'Historical GPU usage trends over time.',
+  hardware_health: 'Hardware device health including GPUs, NICs, NVMe, and InfiniBand.',
   security_issues: 'Security vulnerabilities and misconfigurations detected.',
   rbac_overview: 'Overview of RBAC roles, bindings, and permissions.',
   policy_violations: 'Active policy violations from OPA, Kyverno, or other engines.',
