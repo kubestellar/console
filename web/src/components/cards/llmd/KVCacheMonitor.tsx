@@ -255,9 +255,13 @@ export function KVCacheMonitor() {
 
   // Generate stats from stack data or demo
   const generateStats = useCallback((): KVCacheStats[] => {
-    // If no stack selected, use demo data
-    if (!selectedStack) {
+    // Only show demo data if demo mode is ON
+    if (!selectedStack && isDemoMode) {
       return generateKVCacheStats()
+    }
+    // In live mode with no stack, return empty
+    if (!selectedStack) {
+      return []
     }
 
     // Generate stats from stack components (model servers)
@@ -316,8 +320,8 @@ export function KVCacheMonitor() {
       })
     })
 
-    return stackStats.length > 0 ? stackStats : generateKVCacheStats()
-  }, [selectedStack])
+    return stackStats
+  }, [selectedStack, isDemoMode])
 
   // Handle gauge click - calculate portal position
   const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {
@@ -410,8 +414,19 @@ export function KVCacheMonitor() {
     return history[history.length - 1] - history[history.length - 2]
   }, [history])
 
+  // Show empty state when no stack selected in live mode
+  const showEmptyState = !selectedStack && !isDemoMode
+
   return (
-    <div className="p-4 h-full flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30">
+    <div className="p-4 h-full flex flex-col bg-gradient-to-br from-slate-900/50 to-slate-800/30 relative">
+      {/* Empty state overlay */}
+      {showEmptyState && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm rounded-lg">
+          <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-cyan-500 animate-spin mb-4" />
+          <span className="text-slate-400 text-sm">Select a stack to monitor</span>
+          <span className="text-slate-500 text-xs mt-1">Use the stack selector above</span>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

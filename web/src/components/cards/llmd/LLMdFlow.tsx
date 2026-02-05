@@ -551,8 +551,8 @@ export function LLMdFlow() {
 
   // Build dynamic node positions based on actual stack topology
   const { nodePositions, connections, nodeLabels } = useMemo(() => {
-    if (!selectedStack) {
-      // Default topology when no stack selected
+    // Only show demo topology if demo mode is ON
+    if (!selectedStack && isDemoMode) {
       return {
         nodePositions: NODE_POSITIONS,
         connections: CONNECTIONS,
@@ -566,6 +566,15 @@ export function LLMdFlow() {
           decode0: 'Decode-0',
           decode1: 'Decode-1',
         } as Record<string, string>,
+      }
+    }
+
+    // In live mode with no stack selected, return empty state
+    if (!selectedStack) {
+      return {
+        nodePositions: {} as Record<string, { x: number; y: number }>,
+        connections: [] as Connection[],
+        nodeLabels: {} as Record<string, string>,
       }
     }
 
@@ -652,7 +661,7 @@ export function LLMdFlow() {
     }
 
     return { nodePositions: positions, connections: conns, nodeLabels: labels }
-  }, [selectedStack])
+  }, [selectedStack, isDemoMode])
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -668,8 +677,13 @@ export function LLMdFlow() {
 
   // Generate metrics based on stack data
   const generateLiveMetrics = useCallback((): ServerMetrics[] => {
-    if (!selectedStack) {
+    // Only show demo metrics if demo mode is ON
+    if (!selectedStack && isDemoMode) {
       return generateServerMetrics()
+    }
+    // In live mode with no stack, return empty
+    if (!selectedStack) {
+      return []
     }
 
     const now = Date.now()
@@ -745,7 +759,7 @@ export function LLMdFlow() {
     })
 
     return metrics
-  }, [selectedStack])
+  }, [selectedStack, isDemoMode])
 
   // Update metrics periodically and track history for all metric types
   useEffect(() => {
@@ -834,8 +848,19 @@ export function LLMdFlow() {
     rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' },
   }
 
+  // Show empty state when no stack selected in live mode
+  const showEmptyState = !selectedStack && !isDemoMode
+
   return (
     <div className="relative w-full h-full min-h-[300px] bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden">
+      {/* Empty state overlay */}
+      {showEmptyState && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-purple-500 animate-spin mb-4" />
+          <span className="text-slate-400 text-sm">Select a stack to visualize</span>
+          <span className="text-slate-500 text-xs mt-1">Use the stack selector above</span>
+        </div>
+      )}
       {/* Header */}
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
