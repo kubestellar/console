@@ -4,7 +4,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardControlsRow } from '../../lib/cards/CardComponents'
+import { CardControlsRow, CardSearchInput } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 import { Activity } from 'lucide-react'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
@@ -181,7 +181,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-end mb-3">
         <CardControlsRow
           clusterIndicator={
             filters.localClusterFilter.length > 0
@@ -214,6 +214,14 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           className="mb-0"
         />
       </div>
+
+      {/* Search */}
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search GPU types..."
+        className="mb-3"
+      />
 
       {/* GPU Type Filter */}
       {allGpuTypes.length > 1 && (

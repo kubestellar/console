@@ -1,18 +1,48 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
-  RefreshCw, Loader2, ChevronDown, ChevronRight, Filter, Search
+  RefreshCw, Loader2, ChevronDown, ChevronRight, Filter, Search,
+  Stethoscope, Wrench
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
+import { Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
+import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
+import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
-import { LLMD_CLUSTERS } from '../workload-detection/shared'
-import { useClusters } from '../../../hooks/useMCP'
+import { useLLMdClusters } from '../workload-detection/shared'
+import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
+import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+
+type SortField = 'name' | 'status' | 'type' | 'cluster'
+type StatusFilter = 'all' | 'healthy' | 'degraded' | 'unhealthy'
+
+const SORT_OPTIONS = [
+  { value: 'name', label: 'Name' },
+  { value: 'status', label: 'Status' },
+  { value: 'type', label: 'Type' },
+  { value: 'cluster', label: 'Cluster' },
+]
+
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'healthy', label: 'Healthy' },
+  { value: 'degraded', label: 'Degraded' },
+  { value: 'unhealthy', label: 'Unhealthy' },
+]
+
+const STATUS_ORDER: Record<string, number> = {
+  unhealthy: 0,
+  degraded: 1,
+  healthy: 2,
+  unknown: 3,
+}
 
 interface LLMdStackMonitorProps {
   config?: Record<string, unknown>
@@ -28,6 +58,8 @@ interface ComponentSection {
 interface ComponentItem {
   name: string
   status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown'
+  type?: string
+  namespace?: string
   detail?: string
   cluster?: string
 }
@@ -51,7 +83,14 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
-  const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, refetch: refetchServers } = useCachedLLMdServers(LLMD_CLUSTERS)
+  const { deduplicatedClusters } = useClusters()
+  const { nodes: gpuNodes } = useGPUNodes()
+
+  // Dynamically discover clusters that likely have llm-d stacks
+  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+  const discoveredClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
+
+  const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, refetch: refetchServers } = useCachedLLMdServers(discoveredClusters)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Model Serving', 'EPP', 'Gateway']))
   const [search, setSearch] = useState('')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
@@ -59,7 +98,13 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const clusterFilterRef = useRef<HTMLDivElement>(null)
   const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
   const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
-  const { deduplicatedClusters } = useClusters()
+
+  // Unified controls state
+  const [sortBy, setSortBy] = useState<SortField>('status')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(10)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Compute dropdown position
   useEffect(() => {
@@ -116,7 +161,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   }
 
   // Use workload monitor for the primary llm-d namespace
-  const llmdCluster = LLMD_CLUSTERS[0] || ''
+  const llmdCluster = discoveredClusters[0] || ''
   const {
     resources,
     issues,
@@ -131,85 +176,104 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const isLoading = serversLoading || monitorLoading
   const isRefreshing = serversRefreshing || monitorRefreshing
 
-  // Build component sections from llm-d server data (using filtered servers)
-  const sections = useMemo<ComponentSection[]>(() => {
-    const modelServers = filteredServers.filter(s => s.componentType === 'model')
-    const eppServers = filteredServers.filter(s => s.componentType === 'epp')
-    const gateways = filteredServers.filter(s => s.componentType === 'gateway')
-    const prometheus = filteredServers.filter(s => s.componentType === 'prometheus')
-    const autoscalers = filteredServers.filter(s => s.componentType === 'autoscaler')
+  // Map server status to component status
+  const mapStatus = (s: string): ComponentItem['status'] => {
+    if (s === 'running') return 'healthy'
+    if (s === 'scaling') return 'degraded'
+    if (s === 'stopped' || s === 'error') return 'unhealthy'
+    return 'unknown'
+  }
 
-    const mapStatus = (s: string): ComponentItem['status'] => {
-      if (s === 'running') return 'healthy'
-      if (s === 'scaling') return 'degraded'
-      if (s === 'stopped' || s === 'error') return 'unhealthy'
-      return 'unknown'
-    }
-
-    return [
-      {
-        label: 'Model Serving',
-        icon: Cpu,
-        color: 'text-purple-400',
-        items: modelServers.map(s => ({
-          name: s.name,
-          status: mapStatus(s.status),
-          detail: `${s.type || 'vLLM'} · ${s.model || 'unknown'} · ${s.readyReplicas ?? 0}/${s.replicas ?? 0} replicas`,
-          cluster: s.cluster,
-        })),
-      },
-      {
-        label: 'EPP',
-        icon: Layers,
-        color: 'text-blue-400',
-        items: eppServers.map(s => ({
-          name: s.name,
-          status: mapStatus(s.status),
-          detail: `${s.readyReplicas ?? 0}/${s.replicas ?? 0} replicas`,
-          cluster: s.cluster,
-        })),
-      },
-      {
-        label: 'Gateway',
-        icon: Network,
-        color: 'text-cyan-400',
-        items: gateways.map(s => ({
-          name: s.name,
-          status: mapStatus(s.status),
-          detail: s.namespace,
-          cluster: s.cluster,
-        })),
-      },
-      {
-        label: 'Prometheus',
-        icon: Activity,
-        color: 'text-orange-400',
-        items: prometheus.map(s => ({
-          name: s.name,
-          status: mapStatus(s.status),
-          detail: s.namespace,
-          cluster: s.cluster,
-        })),
-      },
-      {
-        label: 'Autoscaler',
-        icon: Server,
-        color: 'text-green-400',
-        items: autoscalers.map(s => ({
-          name: s.name,
-          status: mapStatus(s.status),
-          detail: s.autoscalerType || 'HPA',
-          cluster: s.cluster,
-        })),
-      },
-    ].filter(s => s.items.length > 0)
+  // Build flat list of all items for sorting/filtering/pagination
+  const allItems = useMemo(() => {
+    return filteredServers.map(s => ({
+      name: s.name,
+      status: mapStatus(s.status),
+      type: s.componentType,
+      namespace: s.namespace,
+      detail: s.componentType === 'model'
+        ? `${s.type || 'vLLM'} · ${s.model || 'unknown'} · ${s.readyReplicas ?? 0}/${s.replicas ?? 0} replicas`
+        : s.componentType === 'epp'
+        ? `${s.readyReplicas ?? 0}/${s.replicas ?? 0} replicas`
+        : s.componentType === 'autoscaler'
+        ? (s.autoscalerType || 'HPA')
+        : undefined,
+      cluster: s.cluster,
+    }))
   }, [filteredServers])
 
-  // Combine issues from monitor and synthesized from llm-d
+  // Apply status filter
+  const statusFilteredItems = useMemo(() => {
+    if (statusFilter === 'all') return allItems
+    return allItems.filter(item => item.status === statusFilter)
+  }, [allItems, statusFilter])
+
+  // Apply sorting
+  const sortedItems = useMemo(() => {
+    const sorted = [...statusFilteredItems]
+    sorted.sort((a, b) => {
+      let compare = 0
+      switch (sortBy) {
+        case 'name':
+          compare = a.name.localeCompare(b.name)
+          break
+        case 'status':
+          compare = (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5)
+          break
+        case 'type':
+          compare = (a.type || '').localeCompare(b.type || '')
+          break
+        case 'cluster':
+          compare = (a.cluster || '').localeCompare(b.cluster || '')
+          break
+      }
+      return sortDirection === 'asc' ? compare : -compare
+    })
+    return sorted
+  }, [statusFilteredItems, sortBy, sortDirection])
+
+  // Apply pagination
+  const totalItems = sortedItems.length
+  const limit = itemsPerPage === 'unlimited' ? totalItems : itemsPerPage
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedItems = useMemo(() => {
+    if (itemsPerPage === 'unlimited') return sortedItems
+    const start = (safeCurrentPage - 1) * limit
+    return sortedItems.slice(start, start + limit)
+  }, [sortedItems, safeCurrentPage, limit, itemsPerPage])
+
+  const needsPagination = itemsPerPage !== 'unlimited' && totalItems > limit
+
+  // Build component sections from paginated items (for hierarchical view)
+  const sections = useMemo<ComponentSection[]>(() => {
+    const SECTION_CONFIG: Array<{ type: string; label: string; icon: typeof Cpu; color: string }> = [
+      { type: 'model', label: 'Model Serving', icon: Cpu, color: 'text-purple-400' },
+      { type: 'epp', label: 'EPP', icon: Layers, color: 'text-blue-400' },
+      { type: 'gateway', label: 'Gateway', icon: Network, color: 'text-cyan-400' },
+      { type: 'prometheus', label: 'Prometheus', icon: Activity, color: 'text-orange-400' },
+      { type: 'autoscaler', label: 'Autoscaler', icon: Server, color: 'text-green-400' },
+    ]
+
+    return SECTION_CONFIG.map(cfg => ({
+      label: cfg.label,
+      icon: cfg.icon,
+      color: cfg.color,
+      items: paginatedItems.filter(item => item.type === cfg.type),
+    })).filter(s => s.items.length > 0)
+  }, [paginatedItems])
+
+  // Combine issues from monitor and synthesized from llm-d (respects cluster filter)
   const allIssues = useMemo<MonitorIssue[]>(() => {
-    const monitorIssues = [...issues]
-    // Add synthetic issues from unhealthy llm-d servers
-    servers.forEach((s) => {
+    // Filter monitor issues by cluster if filter is active
+    let monitorIssues = [...issues]
+    if (localClusterFilter.length > 0) {
+      monitorIssues = monitorIssues.filter(issue =>
+        localClusterFilter.includes(issue.resource.cluster)
+      )
+    }
+    // Add synthetic issues from unhealthy llm-d servers (already filtered)
+    filteredServers.forEach((s) => {
       if (s.status === 'error' || s.status === 'stopped') {
         monitorIssues.push({
           id: `llmd-${s.name}-${s.status}`,
@@ -233,7 +297,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       }
     })
     return monitorIssues
-  }, [issues, servers])
+  }, [issues, filteredServers, localClusterFilter])
 
   // Combine resources
   const allResources = useMemo<MonitoredResource[]>(() => {
@@ -279,6 +343,46 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     refetchMonitor()
   }
 
+  // Individual item diagnosis
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const {
+    startDiagnose,
+  } = useDiagnoseRepairLoop({
+    monitorType: 'llmd',
+    repairable: false,
+  })
+
+  // Handle diagnose for a specific item
+  const handleItemDiagnose = useCallback((item: ComponentItem) => {
+    checkKeyAndRun(() => {
+      // Create filtered resource for this specific item
+      const itemResource: MonitoredResource = {
+        id: `Deployment/${item.namespace}/${item.name}`,
+        kind: 'Deployment',
+        name: item.name,
+        namespace: item.namespace || 'unknown',
+        cluster: item.cluster || discoveredClusters[0] || '',
+        status: item.status,
+        category: 'workload',
+        lastChecked: new Date().toISOString(),
+        optional: false,
+        order: 0,
+      }
+      // Create filtered issues for this item
+      const itemIssues = allIssues.filter(issue =>
+        issue.resource.name === item.name &&
+        issue.resource.namespace === item.namespace
+      )
+      const workloadContext = {
+        clusters: [item.cluster || discoveredClusters[0]],
+        componentType: item.type,
+        componentName: item.name,
+        namespace: item.namespace,
+      }
+      startDiagnose([itemResource], itemIssues, workloadContext)
+    })
+  }, [checkKeyAndRun, startDiagnose, allIssues, discoveredClusters])
+
   if (isLoading && servers.length === 0) {
     return (
       <div className="space-y-3">
@@ -299,17 +403,15 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           No llm-d stack detected. Deploy llm-d to see monitoring data.
         </p>
         <p className="text-xs text-muted-foreground/70 mt-1">
-          Looking in clusters: {LLMD_CLUSTERS.join(', ')}
+          Looking in clusters: {discoveredClusters.join(', ')}
         </p>
       </div>
     )
   }
 
-  const totalComponents = sections.reduce((acc, s) => acc + s.items.length, 0)
-  const healthyComponents = sections.reduce(
-    (acc, s) => acc + s.items.filter(i => i.status === 'healthy').length,
-    0,
-  )
+  // Calculate from full data set (before pagination), respecting status filter
+  const totalComponents = statusFilteredItems.length
+  const healthyComponents = statusFilteredItems.filter(i => i.status === 'healthy').length
 
   return (
     <div className="h-full flex flex-col min-h-card">
@@ -317,7 +419,10 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       <div className="rounded-lg bg-card/50 border border-border p-2.5 mb-3 flex items-center gap-2">
         <Cpu className="w-4 h-4 text-purple-400 shrink-0" />
         <span className="text-sm font-medium text-foreground">llm-d Stack</span>
-        <span className="text-xs text-muted-foreground">
+        <span
+          className="text-xs text-muted-foreground cursor-default"
+          title={`${healthyComponents} healthy components out of ${totalComponents} total`}
+        >
           {healthyComponents}/{totalComponents} components
         </span>
         <span className={cn('text-xs px-1.5 py-0.5 rounded ml-auto', STATUS_BADGE[stackHealth] || STATUS_BADGE.unknown)}>
@@ -360,17 +465,36 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                   >
                     All clusters
                   </button>
-                  {availableClusters.map(cluster => (
-                    <button
-                      key={cluster.name}
-                      onClick={() => toggleClusterFilter(cluster.name)}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      {cluster.name}
-                    </button>
-                  ))}
+                  {availableClusters.map(cluster => {
+                    const clusterState = getClusterState(
+                      cluster.healthy,
+                      cluster.reachable,
+                      cluster.nodeCount,
+                      undefined,
+                      cluster.errorType
+                    )
+                    const stateLabel = clusterState === 'healthy' ? '' :
+                      clusterState === 'degraded' ? 'degraded' :
+                      clusterState === 'unreachable-auth' ? 'needs auth' :
+                      clusterState === 'unreachable-timeout' ? 'offline' :
+                      'offline'
+                    return (
+                      <button
+                        key={cluster.name}
+                        onClick={() => toggleClusterFilter(cluster.name)}
+                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
+                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
+                        }`}
+                        title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
+                      >
+                        <ClusterStatusDot state={clusterState} size="sm" />
+                        <span className="flex-1 truncate">{cluster.name}</span>
+                        {stateLabel && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>,
               document.body
@@ -389,13 +513,37 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         </button>
       </div>
 
+      {/* Controls row */}
+      <div className="flex items-center gap-2 mb-2">
+        {/* Status filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setCurrentPage(1) }}
+          className="px-2 py-1 text-xs rounded-md bg-secondary border border-border text-foreground"
+        >
+          {STATUS_FILTER_OPTIONS.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <div className="flex-1" />
+        <CardControls
+          limit={itemsPerPage}
+          onLimitChange={(v) => { setItemsPerPage(v); setCurrentPage(1) }}
+          sortBy={sortBy}
+          sortOptions={SORT_OPTIONS}
+          onSortChange={(v) => setSortBy(v as SortField)}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+        />
+      </div>
+
       {/* Search */}
       <div className="relative mb-3">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
           placeholder="Search components..."
           className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
         />
@@ -420,21 +568,29 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                   : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
                 <SectionIcon className={cn('w-3.5 h-3.5 shrink-0', section.color)} />
                 <span className="text-sm text-foreground flex-1">{section.label}</span>
-                <span className={cn(
-                  'text-xs px-1.5 py-0.5 rounded',
-                  allHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400',
-                )}>
+                <span
+                  className={cn(
+                    'text-xs px-1.5 py-0.5 rounded cursor-default',
+                    allHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400',
+                  )}
+                  title={`${sectionHealthy} healthy out of ${section.items.length} total ${section.label} components`}
+                >
                   {sectionHealthy}/{section.items.length}
                 </span>
               </button>
               {isExpanded && (
                 <div className="ml-8 mb-1.5 space-y-0.5">
                   {section.items.map((item, idx) => (
-                    <div key={`${section.label}-${idx}-${item.name}`} className="flex items-center gap-2 py-0.5 px-1 rounded hover:bg-card/30 transition-colors">
+                    <div key={`${section.label}-${idx}-${item.name}`} className="flex items-center gap-2 py-0.5 px-1 rounded hover:bg-card/30 transition-colors group">
                       <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT[item.status] || 'bg-gray-400')} />
                       <span className="text-xs text-foreground truncate flex-1">{item.name}</span>
+                      {item.namespace && (
+                        <span className="text-[10px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">
+                          {item.namespace}
+                        </span>
+                      )}
                       {item.detail && (
-                        <span className="text-[10px] text-muted-foreground shrink-0 truncate max-w-[200px]">
+                        <span className="text-[10px] text-muted-foreground shrink-0 truncate max-w-[150px]">
                           {item.detail}
                         </span>
                       )}
@@ -442,6 +598,25 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                         <span className="text-[10px] px-1 py-0.5 rounded bg-secondary text-muted-foreground shrink-0">
                           {item.cluster}
                         </span>
+                      )}
+                      {/* Diag/Repair icons - show always for non-healthy items */}
+                      {item.status !== 'healthy' && (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            className="p-0.5 rounded hover:bg-blue-500/20 text-blue-400/70 hover:text-blue-400 transition-colors"
+                            title={`Diagnose ${item.name}`}
+                            onClick={(e) => { e.stopPropagation(); handleItemDiagnose(item) }}
+                          >
+                            <Stethoscope className="w-3 h-3" />
+                          </button>
+                          <button
+                            className="p-0.5 rounded hover:bg-orange-500/20 text-orange-400/70 hover:text-orange-400 transition-colors"
+                            title={`Repair ${item.name}`}
+                            onClick={(e) => { e.stopPropagation(); handleItemDiagnose(item) }}
+                          >
+                            <Wrench className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -451,6 +626,19 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           )
         })}
       </div>
+
+      {/* Pagination */}
+      {needsPagination && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
 
       {/* Alerts */}
       <WorkloadMonitorAlerts issues={allIssues} />
@@ -463,7 +651,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
         diagnosable={true}
         repairable={false}
         workloadContext={{
-          clusters: LLMD_CLUSTERS,
+          clusters: discoveredClusters,
           stackHealth,
           totalComponents,
           healthyComponents,
@@ -473,6 +661,13 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
             healthy: s.items.filter(i => i.status === 'healthy').length,
           })),
         }}
+      />
+
+      {/* API Key prompt for per-item diagnose */}
+      <ApiKeyPromptModal
+        isOpen={showKeyPrompt}
+        onDismiss={dismissPrompt}
+        onGoToSettings={goToSettings}
       />
     </div>
   )

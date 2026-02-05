@@ -14,6 +14,22 @@ interface ProwHistoryProps {
   config?: Record<string, unknown>
 }
 
+type SortField = 'started' | 'name' | 'state' | 'duration'
+
+const SORT_OPTIONS = [
+  { value: 'started', label: 'Time' },
+  { value: 'name', label: 'Name' },
+  { value: 'state', label: 'State' },
+  { value: 'duration', label: 'Duration' },
+]
+
+const STATE_ORDER: Record<string, number> = {
+  failure: 0,
+  error: 1,
+  aborted: 2,
+  success: 3,
+}
+
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
   const { jobs, isLoading, formatTimeAgo } = useCachedProwJobs('prow', 'prow')
 
@@ -29,7 +45,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     [jobs]
   )
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters } = useCardData(completedJobs, {
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<ProwJob, SortField>(completedJobs, {
     filter: {
       searchFields: ['name', 'state', 'type', 'duration'] as (keyof ProwJob)[],
     },
@@ -38,6 +54,9 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       defaultDirection: 'desc',
       comparators: {
         started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        name: (a, b) => a.name.localeCompare(b.name),
+        state: (a, b) => (STATE_ORDER[a.state] ?? 5) - (STATE_ORDER[b.state] ?? 5),
+        duration: (a, b) => a.duration.localeCompare(b.duration),
       },
     },
     defaultLimit: 5,
@@ -64,6 +83,11 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
           <CardControls
             limit={itemsPerPage}
             onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={(v) => sorting.setSortBy(v as SortField)}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>

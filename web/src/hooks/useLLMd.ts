@@ -296,8 +296,12 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             const labels = d.spec.template?.metadata?.labels || {}
             const ns = d.metadata.namespace.toLowerCase()
 
-            // Include llm-d namespaces (b2 is also an llm-d namespace on vllm-d)
-            const isLlmdNamespace = ns.includes('llm-d') || ns.includes('e2e') || ns.includes('vllm') || ns === 'b2'
+            // Include llm-d/inference-related namespaces
+            // - llm-d, vllm, e2e: standard llm namespaces
+            // - b2: known llm namespace on vllm-d
+            // - inf, gaie, sched: inference namespaces on pok-prod clusters
+            const isLlmdNamespace = ns.includes('llm-d') || ns.includes('e2e') || ns.includes('vllm') ||
+              ns === 'b2' || ns.includes('inf') || ns.includes('gaie') || ns.includes('sched')
 
             return (
               // Model serving
@@ -310,13 +314,17 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               name.includes('qwen') ||
               name.includes('mistral') ||
               name.includes('mixtral') ||
+              name.includes('inference') ||
+              name.includes('modelservice') ||
               labels['llmd.org/inferenceServing'] === 'true' ||
               labels['llmd.org/model'] ||
               labels['app.kubernetes.io/name'] === 'vllm' ||
               labels['app.kubernetes.io/name'] === 'tgi' ||
-              // EPP
+              labels['app.kubernetes.io/part-of'] === 'inference' ||
+              // EPP / scheduling
               name.includes('-epp') ||
               name.endsWith('epp') ||
+              name.includes('scheduling') ||
               // Gateway (in llm-d namespaces)
               (isLlmdNamespace && (name.includes('gateway') || name.includes('ingress'))) ||
               // Prometheus (in llm-d namespaces)

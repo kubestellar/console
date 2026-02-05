@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, ExternalLink,
+  Clock, RefreshCw, Loader2, ExternalLink, Search,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
@@ -61,6 +62,13 @@ const CONCLUSION_ORDER: Record<string, number> = {
   skipped: 4,
   success: 5,
 }
+
+const SORT_OPTIONS = [
+  { value: 'status', label: 'Status' },
+  { value: 'name', label: 'Name' },
+  { value: 'repo', label: 'Repo' },
+  { value: 'branch', label: 'Branch' },
+]
 
 // Demo data for when GitHub API is not available
 const DEMO_WORKFLOWS: WorkflowRun[] = [
@@ -170,7 +178,9 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
+    setItemsPerPage,
     filters,
+    sorting,
   } = useCardData(workflows, {
     filter: {
       searchFields: ['name', 'repo', 'branch', 'event'] as (keyof WorkflowRun)[],
@@ -309,15 +319,31 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         </div>
       </div>
 
+      {/* Controls row */}
+      <div className="flex items-center justify-end mb-2">
+        <CardControls
+          limit={itemsPerPage}
+          onLimitChange={setItemsPerPage}
+          sortBy={sorting.sortBy}
+          sortOptions={SORT_OPTIONS}
+          onSortChange={(v) => sorting.setSortBy(v as SortField)}
+          sortDirection={sorting.sortDirection}
+          onSortDirectionChange={sorting.setSortDirection}
+        />
+      </div>
+
       {/* Search */}
       <div className="mb-2">
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search workflows..."
-          className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            value={filters.search}
+            onChange={(e) => filters.setSearch(e.target.value)}
+            placeholder="Search workflows..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+          />
+        </div>
       </div>
 
       {/* Workflow runs */}
