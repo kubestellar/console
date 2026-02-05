@@ -266,30 +266,61 @@ export function HardwareHealthCard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Deduplicate alerts by node name (same node may appear with different cluster context names)
-  // Prefer shorter cluster names (e.g., 'vllm-d' over 'api-vllm-d.example.com/user@email.com')
+  // Extract canonical hostname from node name
+  // Handles both short names (fmaas-vllm-d-wv25b-worker-h100-3-89pkb) and
+  // long API/SA paths (api-fmaas-...:6443/system:serviceaccount:.../fmaas-vllm-d-wv25b-...)
+  const extractHostname = (nodeName: string): string => {
+    // If name contains API path indicators, try to extract the actual hostname
+    if (nodeName.includes(':6443/') || nodeName.includes('/system:serviceaccount:')) {
+      // Try to extract hostname from end of path (after last /)
+      const parts = nodeName.split('/')
+      const lastPart = parts[parts.length - 1]
+      // If the last part looks like a hostname (not a path component), use it
+      if (lastPart && !lastPart.includes(':') && lastPart.length > 5) {
+        return lastPart
+      }
+      // Otherwise try to find a worker/gpu/compute node pattern anywhere in the string
+      const nodePattern = /([a-z0-9-]+-worker-[a-z0-9-]+|[a-z0-9-]+-gpu-[a-z0-9-]+|[a-z0-9-]+-compute-[a-z0-9-]+)/i
+      const match = nodeName.match(nodePattern)
+      if (match) {
+        return match[1]
+      }
+    }
+    return nodeName
+  }
+
+  // Deduplicate alerts by canonical hostname (same node may appear with different names/cluster contexts)
+  // Prefer shorter cluster names AND shorter node names
   const deduplicatedAlerts = useMemo(() => {
-    const byNodeAndDevice = new Map<string, DeviceAlert>()
+    const byHostnameAndDevice = new Map<string, DeviceAlert>()
     alerts.forEach(alert => {
-      const key = `${alert.nodeName}-${alert.deviceType}`
-      const existing = byNodeAndDevice.get(key)
-      if (!existing || (alert.cluster.length < existing.cluster.length)) {
-        byNodeAndDevice.set(key, alert)
+      const hostname = extractHostname(alert.nodeName)
+      const key = `${hostname}-${alert.deviceType}`
+      const existing = byHostnameAndDevice.get(key)
+      // Prefer entries with shorter cluster name, then shorter node name
+      if (!existing ||
+          alert.cluster.length < existing.cluster.length ||
+          (alert.cluster.length === existing.cluster.length && alert.nodeName.length < existing.nodeName.length)) {
+        byHostnameAndDevice.set(key, alert)
       }
     })
-    return Array.from(byNodeAndDevice.values())
+    return Array.from(byHostnameAndDevice.values())
   }, [alerts])
 
-  // Deduplicate inventory by node name
+  // Deduplicate inventory by canonical hostname
   const deduplicatedInventory = useMemo(() => {
-    const byNode = new Map<string, NodeDeviceInventory>()
+    const byHostname = new Map<string, NodeDeviceInventory>()
     inventory.forEach(node => {
-      const existing = byNode.get(node.nodeName)
-      if (!existing || (node.cluster.length < existing.cluster.length)) {
-        byNode.set(node.nodeName, node)
+      const hostname = extractHostname(node.nodeName)
+      const existing = byHostname.get(hostname)
+      // Prefer entries with shorter cluster name, then shorter node name
+      if (!existing ||
+          node.cluster.length < existing.cluster.length ||
+          (node.cluster.length === existing.cluster.length && node.nodeName.length < existing.nodeName.length)) {
+        byHostname.set(hostname, node)
       }
     })
-    return Array.from(byNode.values())
+    return Array.from(byHostname.values())
   }, [inventory])
 
   // Available clusters for filtering (from deduplicated data)
