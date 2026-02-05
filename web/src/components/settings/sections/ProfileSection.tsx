@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Save, User, Loader2, AlertCircle } from 'lucide-react'
+import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -76,9 +76,19 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
           />
         </div>
         {error && (
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            {error}
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4" />
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={handleSaveProfile}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry Save
+            </button>
           </div>
         )}
         <button

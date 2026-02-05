@@ -16,6 +16,8 @@ export interface CardDataState {
   isFailed: boolean
   /** Number of consecutive fetch failures */
   consecutiveFailures: number
+  /** Error message from the last failed fetch (optional) */
+  errorMessage?: string
   /** Whether data is currently being fetched (initial load, no cache) */
   isLoading?: boolean
   /** Whether data is being refreshed (has cache, fetching update) */
@@ -38,13 +40,13 @@ export const CardDataReportContext = createContext<CardDataReportContextValue>(N
  * your cached data hook (e.g. useCachedPodIssues, useCachedDeployments).
  */
 export function useReportCardDataState(state: CardDataState) {
-  const { isFailed, consecutiveFailures, isLoading, isRefreshing, hasData } = state
+  const { isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData } = state
   const ctx = useContext(CardDataReportContext)
   // useLayoutEffect runs synchronously before paint, ensuring cached data
   // is reported before CardWrapper decides to show skeleton
   useLayoutEffect(() => {
-    ctx.report({ isFailed, consecutiveFailures, isLoading, isRefreshing, hasData })
-  }, [ctx, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData])
+    ctx.report({ isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData })
+  }, [ctx, isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData])
 }
 
 /**
@@ -59,6 +61,8 @@ export interface CardLoadingStateOptions {
   isFailed?: boolean
   /** Number of consecutive fetch failures (default: 0) */
   consecutiveFailures?: number
+  /** Error message from the last failed fetch (optional) */
+  errorMessage?: string
 }
 
 /**
@@ -93,6 +97,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     hasAnyData,
     isFailed = false,
     consecutiveFailures = 0,
+    errorMessage,
   } = options
 
   // hasData is true once loading completes (even with empty data) OR if we have cached data
@@ -103,6 +108,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
   useReportCardDataState({
     isFailed,
     consecutiveFailures,
+    errorMessage,
     isLoading: isLoading && !hasData,
     isRefreshing: isLoading && hasData,
     hasData,
