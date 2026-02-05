@@ -115,6 +115,7 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const [error, setError] = useState<string | null>(null)
   const [isUsingDemoData, setIsUsingDemoData] = useState(true)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   const repos = ghConfig?.repos || ['kubestellar/kubestellar', 'kubestellar/console']
 
@@ -327,7 +328,10 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
           {overallHealth}
         </span>
         <button
-          onClick={() => fetchWorkflows(true)}
+          onClick={() => {
+            setRefreshCount(c => c + 1)
+            fetchWorkflows(true)
+          }}
           disabled={isRefreshing}
           className={cn(
             "p-1 rounded hover:bg-secondary transition-colors",
@@ -335,9 +339,13 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
           )}
           title="Refresh"
         >
-          {isRefreshing
-            ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground hover:text-purple-400 transition-colors" />}
+          <RefreshCw
+            className={cn(
+              "w-3.5 h-3.5 transition-transform duration-500 ease-in-out",
+              isRefreshing ? "text-purple-400" : "text-muted-foreground hover:text-purple-400"
+            )}
+            style={{ transform: `rotate(${refreshCount * 360}deg)` }}
+          />
         </button>
       </div>
 
