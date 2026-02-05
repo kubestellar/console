@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Globe, Server, Layers, ExternalLink, Filter, ChevronDown } from 'lucide-react'
+import { Globe, Server, Layers, ExternalLink, Filter, ChevronDown, Activity } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedServices } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { useChartFilters } from '../../lib/cards'
+import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 
 export function NetworkOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -80,6 +81,11 @@ export function NetworkOverview() {
       namespaces.set(ns, (namespaces.get(ns) || 0) + 1)
     })
 
+    // Calculate cluster health stats
+    const healthyClusters = filteredClusters.filter(c => c.healthy && c.reachable !== false).length
+    const degradedClusters = filteredClusters.filter(c => !c.healthy && c.reachable !== false).length
+    const offlineClusters = filteredClusters.filter(c => c.reachable === false).length
+
     return {
       totalServices,
       loadBalancers,
@@ -88,8 +94,11 @@ export function NetworkOverview() {
       externalName,
       namespaces: Array.from(namespaces.entries()).sort((a, b) => b[1] - a[1]),
       clustersWithServices: new Set(filteredServices.map(s => s.cluster)).size,
+      healthyClusters,
+      degradedClusters,
+      offlineClusters,
     }
-  }, [filteredServices])
+  }, [filteredServices, filteredClusters])
 
   if (showSkeleton) {
     return (
@@ -110,6 +119,32 @@ export function NetworkOverview() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Health Indicator */}
+      {filteredClusters.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
+          <Activity className="w-3 h-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          {stats.healthyClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="healthy" size="sm" />
+              <span className="text-green-400">{stats.healthyClusters} healthy</span>
+            </span>
+          )}
+          {stats.degradedClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="degraded" size="sm" />
+              <span className="text-orange-400">{stats.degradedClusters} degraded</span>
+            </span>
+          )}
+          {stats.offlineClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="unreachable-timeout" size="sm" />
+              <span className="text-yellow-400">{stats.offlineClusters} offline</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
         <div />

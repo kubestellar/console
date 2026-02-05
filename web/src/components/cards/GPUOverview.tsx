@@ -6,6 +6,8 @@ import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { Activity } from 'lucide-react'
+import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 
 interface GPUOverviewProps {
   config?: Record<string, unknown>
@@ -146,8 +148,38 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
 
   const clusterCount = new Set(nodes.map(n => n.cluster)).size
 
+  // Calculate cluster health stats
+  const healthyClusters = filteredClusters.filter(c => c.healthy && c.reachable !== false).length
+  const degradedClusters = filteredClusters.filter(c => !c.healthy && c.reachable !== false).length
+  const offlineClusters = filteredClusters.filter(c => c.reachable === false).length
+
   return (
     <div className="h-full flex flex-col content-loaded">
+      {/* Health Indicator */}
+      {filteredClusters.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
+          <Activity className="w-3 h-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          {healthyClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="healthy" size="sm" />
+              <span className="text-green-400">{healthyClusters} healthy</span>
+            </span>
+          )}
+          {degradedClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="degraded" size="sm" />
+              <span className="text-orange-400">{degradedClusters} degraded</span>
+            </span>
+          )}
+          {offlineClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="unreachable-timeout" size="sm" />
+              <span className="text-yellow-400">{offlineClusters} offline</span>
+            </span>
+          )}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-end mb-4">
         <CardControlsRow
