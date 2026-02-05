@@ -429,7 +429,8 @@ export const DEMO_DATA_CARDS = new Set([
   'ml_notebooks',
   // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation, llmd_benchmarks, llmd_ai_insights)
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
-  // Note: llmd_configurator NOT in demo list - shows real llm-d presets from the project
+  // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
+  'llmd_configurator',
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
 ])
