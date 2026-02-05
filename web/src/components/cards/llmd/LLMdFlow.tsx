@@ -500,14 +500,16 @@ function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId, 
 
 // Mini sparkline for time-series data
 function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
-  if (data.length < 2) return null
+  // Filter out NaN/undefined values and ensure we have enough data points
+  const validData = data.filter(v => Number.isFinite(v))
+  if (validData.length < 2) return null
 
-  const max = Math.max(...data, 1)
-  const min = Math.min(...data, 0)
+  const max = Math.max(...validData, 1)
+  const min = Math.min(...validData, 0)
   const range = max - min || 1
 
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width
+  const points = validData.map((v, i) => {
+    const x = (i / (validData.length - 1)) * width
     const y = height - ((v - min) / range) * (height - 4) - 2
     return `${x},${y}`
   }).join(' ')
@@ -541,7 +543,7 @@ function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; c
       />
       <circle
         cx={width}
-        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
+        cy={height - ((validData[validData.length - 1] - min) / range) * (height - 4) - 2}
         r="2"
         fill={color}
         filter="url(#sparkline-glow-line)"
@@ -607,17 +609,6 @@ export function LLMdFlow() {
     const decodeCount = selectedStack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
     const unifiedCount = selectedStack.components.both.reduce((sum, c) => sum + c.replicas, 0)
     const hasDisaggregation = prefillCount > 0 && decodeCount > 0
-
-    // Debug: log component counts
-    console.log('[LLMdFlow] Stack topology:', {
-      stack: selectedStack.name,
-      prefillCount,
-      decodeCount,
-      unifiedCount,
-      hasDisaggregation,
-      prefillComponents: selectedStack.components.prefill.length,
-      decodeComponents: selectedStack.components.decode.length,
-    })
 
     const positions: Record<string, { x: number; y: number }> = {
       client: { x: 10, y: 50 },

@@ -200,14 +200,16 @@ type AggregationMode = 'aggregated' | 'disaggregated'
 
 // Sparkline for time-series in info panel
 function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number[]; color: string; width?: number; height?: number }) {
-  if (data.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
+  // Filter out NaN/undefined values and ensure we have enough data points
+  const validData = data.filter(v => Number.isFinite(v))
+  if (validData.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
 
-  const max = Math.max(...data, 1)
-  const min = Math.min(...data, 0)
+  const max = Math.max(...validData, 1)
+  const min = Math.min(...validData, 0)
   const range = max - min || 1
 
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width
+  const points = validData.map((v, i) => {
+    const x = (i / (validData.length - 1)) * width
     const y = height - ((v - min) / range) * (height - 4) - 2
     return `${x},${y}`
   }).join(' ')
@@ -231,7 +233,7 @@ function InfoSparkline({ data, color, width = 100, height = 30 }: { data: number
       />
       <circle
         cx={width}
-        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
+        cy={height - ((validData[validData.length - 1] - min) / range) * (height - 4) - 2}
         r="2.5"
         fill={color}
       />
@@ -447,9 +449,11 @@ export function KVCacheMonitor() {
       const newStats = generateStats()
       setStats(newStats)
 
-      // Track average utilization history
-      const avg = newStats.reduce((sum, s) => sum + s.utilizationPercent, 0) / newStats.length
-      setHistory(prev => [...prev.slice(-20), avg])
+      // Track average utilization history (guard against empty stats to avoid NaN)
+      if (newStats.length > 0) {
+        const avg = newStats.reduce((sum, s) => sum + s.utilizationPercent, 0) / newStats.length
+        setHistory(prev => [...prev.slice(-20), avg])
+      }
 
       // Track per-pod history
       setPodHistory(prev => {
@@ -848,12 +852,12 @@ export function KVCacheMonitor() {
             </filter>
           </defs>
 
-          {history.length > 1 && (
+          {history.length > 1 && history.every(v => Number.isFinite(v)) && (
             <>
               {/* Area fill */}
               <path
                 d={`M 0 24 ${history.map((v, i) =>
-                  `L ${(i / (history.length - 1)) * 100} ${24 - (v / 100) * 22}`
+                  `L ${(i / (history.length - 1)) * 100} ${24 - ((v || 0) / 100) * 22}`
                 ).join(' ')} L 100 24 Z`}
                 fill="url(#sparklineGradient)"
               />
@@ -861,7 +865,7 @@ export function KVCacheMonitor() {
               {/* Glowing line */}
               <path
                 d={`M ${history.map((v, i) =>
-                  `${(i / (history.length - 1)) * 100} ${24 - (v / 100) * 22}`
+                  `${(i / (history.length - 1)) * 100} ${24 - ((v || 0) / 100) * 22}`
                 ).join(' L ')}`}
                 fill="none"
                 stroke="#06b6d4"
@@ -872,7 +876,7 @@ export function KVCacheMonitor() {
               {/* End dot */}
               <circle
                 cx={100}
-                cy={24 - (history[history.length - 1] / 100) * 22}
+                cy={24 - ((history[history.length - 1] || 0) / 100) * 22}
                 r="2"
                 fill="#06b6d4"
                 filter="url(#sparkline-glow)"

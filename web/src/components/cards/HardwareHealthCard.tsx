@@ -165,6 +165,7 @@ export function HardwareHealthCard() {
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('alerts')
+  const [isUsingDemoData, setIsUsingDemoData] = useState(false)
   const { drillToNode } = useDrillDownActions()
 
   // Card controls state
@@ -182,21 +183,27 @@ export function HardwareHealthCard() {
   useCardLoadingState({
     isLoading,
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
+    isDemoData: isUsingDemoData,
   })
 
   // Fetch device alerts and inventory
   useEffect(() => {
-    if (getDemoMode()) {
+    const useDemoData = () => {
       setAlerts(DEMO_ALERTS)
       setInventory(DEMO_INVENTORY)
       setNodeCount(DEMO_INVENTORY.length)
       setIsLoading(false)
       setLastUpdate(new Date())
+      setIsUsingDemoData(true)
+    }
+
+    if (getDemoMode()) {
+      useDemoData()
       return
     }
 
     if (isAgentUnavailable()) {
-      setIsLoading(false)
+      useDemoData()
       return
     }
 
@@ -211,32 +218,52 @@ export function HardwareHealthCard() {
             method: 'GET',
             headers: { 'Accept': 'application/json' },
             signal: controller.signal,
-          }),
+          }).catch(() => null),
           fetch(`${AGENT_HTTP_URL}/devices/inventory`, {
             method: 'GET',
             headers: { 'Accept': 'application/json' },
             signal: controller.signal,
-          }),
+          }).catch(() => null),
         ])
         clearTimeout(timeoutId)
 
-        if (alertsRes.ok) {
+        let gotData = false
+
+        if (alertsRes?.ok) {
           const data: DeviceAlertsResponse = await alertsRes.json()
           setAlerts(data.alerts || [])
           setNodeCount(data.nodeCount)
           setLastUpdate(new Date(data.timestamp))
+          gotData = true
         }
 
-        if (inventoryRes.ok) {
+        if (inventoryRes?.ok) {
           const data: DeviceInventoryResponse = await inventoryRes.json()
           setInventory(data.nodes || [])
           // Update nodeCount from inventory if alerts returned 0
           if (data.nodes && data.nodes.length > 0) {
             setNodeCount(data.nodes.length)
           }
+          gotData = true
+        }
+
+        // Fall back to demo data if agent doesn't support device endpoints (404)
+        if (!gotData) {
+          setAlerts(DEMO_ALERTS)
+          setInventory(DEMO_INVENTORY)
+          setNodeCount(DEMO_INVENTORY.length)
+          setLastUpdate(new Date())
+          setIsUsingDemoData(true)
+        } else {
+          setIsUsingDemoData(false)
         }
       } catch {
-        // Silently fail - agent might not be running
+        // Fall back to demo data on any error
+        setAlerts(DEMO_ALERTS)
+        setInventory(DEMO_INVENTORY)
+        setNodeCount(DEMO_INVENTORY.length)
+        setLastUpdate(new Date())
+        setIsUsingDemoData(true)
       } finally {
         setIsLoading(false)
       }

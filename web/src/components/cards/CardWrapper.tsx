@@ -990,19 +990,22 @@ export function CardWrapper({
       : (childDataState?.isLoading ? false : true)
   )
 
+  // Merge isDemoData from child-reported state with prop
+  const effectiveIsDemoData = isDemoData || childDataState?.isDemoData || false
+
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
   // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
   // This fixes the race condition where demo data briefly shows before skeleton
-  // Cards with isDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
-  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !isDemoData && !isDemoMode
+  // Cards with effectiveIsDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
+  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !effectiveIsDemoData && !isDemoMode
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
   // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
   // This includes both explicitly marked isDemoData cards AND cards in global demo mode
   // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
-  const wantsToShowSkeleton = !(isDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
+  const wantsToShowSkeleton = !(effectiveIsDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
   const shouldShowSkeleton = wantsToShowSkeleton && skeletonDelayPassed
 
   // Mark initial load as complete when data is ready or various timeouts pass
@@ -1011,12 +1014,12 @@ export function CardWrapper({
   // - effectiveHasData: card reported it has data
   // - initialRenderTimedOut: 150ms passed, assume static card has content
   // - skeletonTimedOut: 5s passed, fallback for slow loading cards
-  // - isDemoData/isDemoMode: demo cards always have content immediately
+  // - effectiveIsDemoData/isDemoMode: demo cards always have content immediately
   useEffect(() => {
-    if (!hasCompletedInitialLoad && (effectiveHasData || initialRenderTimedOut || skeletonTimedOut || isDemoData || isDemoMode)) {
+    if (!hasCompletedInitialLoad && (effectiveHasData || initialRenderTimedOut || skeletonTimedOut || effectiveIsDemoData || isDemoMode)) {
       setHasCompletedInitialLoad(true)
     }
-  }, [hasCompletedInitialLoad, effectiveHasData, initialRenderTimedOut, skeletonTimedOut, isDemoData, isDemoMode])
+  }, [hasCompletedInitialLoad, effectiveHasData, initialRenderTimedOut, skeletonTimedOut, effectiveIsDemoData, isDemoMode])
 
   // Add a small delay before allowing collapse to ensure content is visible
   // This prevents immediate collapse for demo cards and ensures smooth UX
@@ -1153,7 +1156,7 @@ export function CardWrapper({
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',
             isCollapsed ? 'h-auto' : 'h-full',
-            (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
+            (isDemoMode || effectiveIsDemoData) && '!border-2 !border-yellow-500/50',
             // Only animate for actual loading, not offline state (prevents flicker when agent status changes)
             (isVisuallySpinning || effectiveIsLoading) && !forceSkeletonForOffline && 'animate-card-refresh-pulse',
             getFlashClass()
@@ -1169,7 +1172,7 @@ export function CardWrapper({
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
             <InfoTooltip text={description || `${title} card. Description coming soon.`} />
             {/* Demo data indicator - shows if global demo mode is on OR card uses demo data */}
-            {(isDemoMode || isDemoData) && (
+            {(isDemoMode || effectiveIsDemoData) && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
                 title={isDemoMode ? "Demo mode enabled - showing sample data" : "This card displays demo data"}
@@ -1178,7 +1181,7 @@ export function CardWrapper({
               </span>
             )}
             {/* Live data indicator - for time-series/trend cards with real data */}
-            {isLive && !isDemoMode && !isDemoData && (
+            {isLive && !isDemoMode && !effectiveIsDemoData && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
                 title="Showing live data"

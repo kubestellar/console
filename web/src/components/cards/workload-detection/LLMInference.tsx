@@ -38,7 +38,7 @@ const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label
 ]
 
 export function LLMInference({ config: _config }: LLMInferenceProps) {
-  const { servers, isLoading, isRefreshing, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(LLMD_CLUSTERS)
+  const { servers, isLoading, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(LLMD_CLUSTERS)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
@@ -47,9 +47,6 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
     isFailed,
     consecutiveFailures,
   })
-
-  // Debug logging
-  console.log('[LLMInference] render:', { serversCount: servers.length, isLoading, isRefreshing, isFailed, error })
 
   // Card-specific component filter (not handled by useCardData)
   const [componentFilter, setComponentFilter] = useState<LLMdComponentType | 'all' | 'autoscale'>('all')

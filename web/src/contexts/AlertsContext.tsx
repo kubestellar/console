@@ -253,13 +253,13 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           isDemo: isDemoMode, // Mark alert as demo if created during demo mode
         }
 
-        // Send notification to configured channels (async, non-blocking)
+        // Send notification to configured channels (async, non-blocking, silent failures)
         if (rule.channels && rule.channels.length > 0) {
           const enabledChannels = rule.channels.filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
             // Send notifications asynchronously without blocking alert creation
-            sendNotifications(alert, enabledChannels).catch(err => {
-              console.error('Failed to send alert notifications:', err)
+            sendNotifications(alert, enabledChannels).catch(() => {
+              // Silent failure - notifications are best-effort
             })
           }
         }
@@ -270,30 +270,37 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     [isDemoMode]
   )
 
-  // Send notifications for an alert
+  // Send notifications for an alert (best-effort, silent on auth failures)
   const sendNotifications = async (alert: Alert, channels: AlertChannel[]) => {
     try {
       const token = localStorage.getItem('auth_token')
+      // Skip notification if not authenticated - notifications require login
+      if (!token) return
+
       const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
       const response = await fetch(`${API_BASE}/api/notifications/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ alert, channels }),
       })
 
+      // Silently ignore auth errors - user may not be logged in
+      if (response.status === 401 || response.status === 403) return
+
       if (!response.ok) {
-        const data = await response.json()
+        const data = await response.json().catch(() => ({}))
         throw new Error(data.message || 'Failed to send notifications')
       }
-
-      console.log('Alert notifications sent successfully')
     } catch (error) {
-      console.error('Error sending alert notifications:', error)
-      // Don't throw - notifications are best-effort
+      // Silent failure - notifications are best-effort
+      // Only log unexpected errors (not network issues)
+      if (error instanceof Error && !error.message.includes('fetch')) {
+        console.warn('Notification send failed:', error.message)
+      }
     }
   }
 

@@ -24,6 +24,8 @@ export interface CardDataState {
   isRefreshing?: boolean
   /** Whether the card has cached data to display */
   hasData?: boolean
+  /** Whether the card is displaying demo/mock data instead of real data */
+  isDemoData?: boolean
 }
 
 interface CardDataReportContextValue {
@@ -40,13 +42,13 @@ export const CardDataReportContext = createContext<CardDataReportContextValue>(N
  * your cached data hook (e.g. useCachedPodIssues, useCachedDeployments).
  */
 export function useReportCardDataState(state: CardDataState) {
-  const { isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData } = state
+  const { isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData } = state
   const ctx = useContext(CardDataReportContext)
   // useLayoutEffect runs synchronously before paint, ensuring cached data
   // is reported before CardWrapper decides to show skeleton
   useLayoutEffect(() => {
-    ctx.report({ isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData })
-  }, [ctx, isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData])
+    ctx.report({ isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData })
+  }, [ctx, isFailed, consecutiveFailures, errorMessage, isLoading, isRefreshing, hasData, isDemoData])
 }
 
 /**
@@ -63,6 +65,8 @@ export interface CardLoadingStateOptions {
   consecutiveFailures?: number
   /** Error message from the last failed fetch (optional) */
   errorMessage?: string
+  /** Whether the card is displaying demo/mock data instead of real data (default: false) */
+  isDemoData?: boolean
 }
 
 /**
@@ -98,6 +102,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     isFailed = false,
     consecutiveFailures = 0,
     errorMessage,
+    isDemoData = false,
   } = options
 
   // hasData is true once loading completes (even with empty data) OR if we have cached data
@@ -112,6 +117,7 @@ export function useCardLoadingState(options: CardLoadingStateOptions) {
     isLoading: isLoading && !hasData,
     isRefreshing: isLoading && hasData,
     hasData,
+    isDemoData,
   })
 
   return {

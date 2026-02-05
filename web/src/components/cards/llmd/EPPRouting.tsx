@@ -62,14 +62,16 @@ const getLoadColors = (load: number) => {
 
 // Mini sparkline for time-series data
 function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
-  if (data.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
+  // Filter out NaN/undefined values and ensure we have enough data points
+  const validData = data.filter(v => Number.isFinite(v))
+  if (validData.length < 2) return <div style={{ width, height }} className="bg-slate-800/30 rounded" />
 
-  const max = Math.max(...data, 1)
-  const min = Math.min(...data, 0)
+  const max = Math.max(...validData, 1)
+  const min = Math.min(...validData, 0)
   const range = max - min || 1
 
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width
+  const points = validData.map((v, i) => {
+    const x = (i / (validData.length - 1)) * width
     const y = height - ((v - min) / range) * (height - 4) - 2
     return `${x},${y}`
   }).join(' ')
@@ -94,7 +96,7 @@ function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; c
       />
       <circle
         cx={width}
-        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
+        cy={height - ((validData[validData.length - 1] - min) / range) * (height - 4) - 2}
         r="2"
         fill={color}
         style={{ filter: `drop-shadow(0 0 2px ${color})` }}
