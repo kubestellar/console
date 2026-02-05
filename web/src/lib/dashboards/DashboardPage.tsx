@@ -59,6 +59,8 @@ export interface DashboardPageProps {
   children?: ReactNode
   /** Content rendered between stats and cards section (e.g., tabs, filters) */
   beforeCards?: ReactNode
+  /** Extra content to render in header row (e.g., selectors, filters) */
+  headerExtra?: ReactNode
   /** Empty state configuration for no cards */
   emptyState?: {
     title: string
@@ -92,6 +94,7 @@ export function DashboardPage({
   hasData = true,
   children,
   beforeCards,
+  headerExtra,
   emptyState,
   isDemoData = false,
 }: DashboardPageProps) {
@@ -219,6 +222,13 @@ export function DashboardPage({
         autoRefreshId={`${storageKey}-auto-refresh`}
         lastUpdated={lastUpdated}
       />
+
+      {/* Extra header content (e.g., stack selector) */}
+      {headerExtra && (
+        <div className="flex items-center gap-3 px-6 py-2 border-b border-border/50 bg-card/30">
+          {headerExtra}
+        </div>
+      )}
 
       {/* Stats Overview */}
       <StatsOverview

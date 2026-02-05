@@ -300,8 +300,8 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
               </button>
               {isExpanded && (
                 <div className="ml-8 mb-1.5 space-y-0.5">
-                  {section.items.map(item => (
-                    <div key={item.name} className="flex items-center gap-2 py-0.5 px-1 rounded hover:bg-card/30 transition-colors">
+                  {section.items.map((item, idx) => (
+                    <div key={`${section.label}-${idx}-${item.name}`} className="flex items-center gap-2 py-0.5 px-1 rounded hover:bg-card/30 transition-colors">
                       <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT[item.status] || 'bg-gray-400')} />
                       <span className="text-xs text-foreground truncate flex-1">{item.name}</span>
                       {item.detail && (

@@ -3,14 +3,18 @@
  *
  * Premium animated request flow diagram with Home Assistant-style
  * glowing gauges, time-series sparklines, and interactive elements.
+ *
+ * Now supports live data from selected llm-d stack via StackContext.
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CircleDot } from 'lucide-react'
+import { CircleDot, Radio } from 'lucide-react'
 import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
 import { Acronym } from './shared/PortalTooltip'
+import { useOptionalStack } from '../../../contexts/StackContext'
 
 type ViewMode = 'default' | 'horseshoe'
+type DataMode = 'live' | 'demo'
 
 // Node positions for the flow diagram (coordinates in viewBox units)
 const NODE_POSITIONS = {
@@ -72,17 +76,19 @@ const getLoadColors = (load: number) => {
 
 // Premium gauge node with glowing arc
 interface PremiumNodeProps {
-  id: keyof typeof NODE_POSITIONS
+  id: string
   label: string
   metrics?: ServerMetrics
   nodeColor: string
   isSelected?: boolean
   onClick?: () => void
   uniqueId: string
+  nodePositions: Record<string, { x: number; y: number }>
 }
 
-function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqueId }: PremiumNodeProps) {
-  const pos = NODE_POSITIONS[id]
+function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqueId, nodePositions }: PremiumNodeProps) {
+  const pos = nodePositions[id]
+  if (!pos) return null
   const load = metrics?.load || 0
   const loadColors = getLoadColors(load)
 
@@ -262,9 +268,18 @@ function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqu
 }
 
 // Connection line with animated flow - sleek design
-function FlowConnection({ connection, isAnimating }: { connection: Connection; isAnimating: boolean }) {
-  const from = NODE_POSITIONS[connection.from]
-  const to = NODE_POSITIONS[connection.to]
+function FlowConnection({
+  connection,
+  isAnimating,
+  nodePositions,
+}: {
+  connection: Connection
+  isAnimating: boolean
+  nodePositions: Record<string, { x: number; y: number }>
+}) {
+  const from = nodePositions[connection.from]
+  const to = nodePositions[connection.to]
+  if (!from || !to) return null
   const color = COLORS[connection.type]
   // Thinner lines - max 0.8px
   const strokeWidth = Math.max(0.2, connection.trafficPercent / 150)
@@ -321,16 +336,18 @@ const getHorseshoeColor = (pct: number) => {
 
 // Horseshoe node for alternative view
 interface HorseshoeFlowNodeProps {
-  id: keyof typeof NODE_POSITIONS
+  id: string
   label: string
   metrics?: ServerMetrics
   isSelected?: boolean
   onClick?: () => void
   uniqueId: string
+  nodePositions: Record<string, { x: number; y: number }>
 }
 
-function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId }: HorseshoeFlowNodeProps) {
-  const pos = NODE_POSITIONS[id]
+function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId, nodePositions }: HorseshoeFlowNodeProps) {
+  const pos = nodePositions[id]
+  if (!pos) return null
   const load = metrics?.load || 0
   const color = getHorseshoeColor(load)
   const filterId = `hsf-glow-${uniqueId}-${id}`
@@ -519,13 +536,123 @@ interface MetricsHistoryData {
 }
 
 export function LLMdFlow() {
+  const stackContext = useOptionalStack()
   const [serverMetrics, setServerMetrics] = useState<ServerMetrics[]>([])
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [isAnimating, setIsAnimating] = useState(true)
   const [metricsHistory, setMetricsHistory] = useState<Record<string, MetricsHistoryData>>({})
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['rps'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
+  const [dataMode, setDataMode] = useState<DataMode>('live')
   const uniqueId = useRef(`flow-${Math.random().toString(36).substr(2, 9)}`).current
+
+  // Get selected stack from context
+  const selectedStack = stackContext?.selectedStack
+
+  // Build dynamic node positions based on actual stack topology
+  const { nodePositions, connections, nodeLabels } = useMemo(() => {
+    if (!selectedStack || dataMode === 'demo') {
+      // Default demo topology
+      return {
+        nodePositions: NODE_POSITIONS,
+        connections: CONNECTIONS,
+        nodeLabels: {
+          client: 'Clients',
+          gateway: 'Gateway',
+          epp: 'EPP',
+          prefill0: 'Prefill-0',
+          prefill1: 'Prefill-1',
+          prefill2: 'Prefill-2',
+          decode0: 'Decode-0',
+          decode1: 'Decode-1',
+        } as Record<string, string>,
+      }
+    }
+
+    // Live topology from stack
+    const prefillCount = selectedStack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
+    const decodeCount = selectedStack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
+    const unifiedCount = selectedStack.components.both.reduce((sum, c) => sum + c.replicas, 0)
+    const hasDisaggregation = prefillCount > 0 && decodeCount > 0
+
+    const positions: Record<string, { x: number; y: number }> = {
+      client: { x: 10, y: 50 },
+      gateway: { x: 28, y: 50 },
+      epp: { x: 48, y: 50 },
+    }
+
+    const labels: Record<string, string> = {
+      client: 'Clients',
+      gateway: 'Gateway',
+      epp: 'EPP',
+    }
+
+    const conns: Connection[] = [
+      { from: 'client', to: 'gateway', type: 'prefill', trafficPercent: 100 },
+      { from: 'gateway', to: 'epp', type: 'prefill', trafficPercent: 100 },
+    ]
+
+    if (hasDisaggregation) {
+      // Disaggregated topology
+      const maxPrefill = Math.min(prefillCount, 3) // Show up to 3 prefill
+      const maxDecode = Math.min(decodeCount, 2)   // Show up to 2 decode
+
+      // Position prefill nodes
+      const prefillSpacing = 64 / (maxPrefill + 1)
+      for (let i = 0; i < maxPrefill; i++) {
+        const key = `prefill${i}`
+        positions[key] = { x: 70, y: 18 + prefillSpacing * (i + 1) }
+        labels[key] = `Prefill-${i}`
+        conns.push({
+          from: 'epp',
+          to: key as keyof typeof NODE_POSITIONS,
+          type: 'prefill',
+          trafficPercent: Math.round(100 / maxPrefill),
+        })
+      }
+
+      // Position decode nodes
+      const decodeSpacing = 32 / (maxDecode + 1)
+      for (let i = 0; i < maxDecode; i++) {
+        const key = `decode${i}`
+        positions[key] = { x: 92, y: 34 + decodeSpacing * (i + 1) }
+        labels[key] = `Decode-${i}`
+        // Direct EPP to decode connections (for cached KV)
+        conns.push({
+          from: 'epp',
+          to: key as keyof typeof NODE_POSITIONS,
+          type: 'decode',
+          trafficPercent: Math.round(20 / maxDecode),
+        })
+        // Prefill to decode connections
+        for (let j = 0; j < maxPrefill; j++) {
+          conns.push({
+            from: `prefill${j}` as keyof typeof NODE_POSITIONS,
+            to: key as keyof typeof NODE_POSITIONS,
+            type: 'decode',
+            trafficPercent: Math.round(100 / maxDecode),
+          })
+        }
+      }
+    } else if (unifiedCount > 0) {
+      // Unified serving topology
+      const maxServers = Math.min(unifiedCount, 4)
+      const spacing = 64 / (maxServers + 1)
+      for (let i = 0; i < maxServers; i++) {
+        const key = `server${i}`
+        positions[key] = { x: 78, y: 18 + spacing * (i + 1) }
+        labels[key] = `Server-${i}`
+        conns.push({
+          from: 'epp',
+          to: key as keyof typeof NODE_POSITIONS,
+          type: 'prefill',
+          trafficPercent: Math.round(100 / maxServers),
+        })
+      }
+    }
+
+    return { nodePositions: positions, connections: conns, nodeLabels: labels }
+  }, [selectedStack, dataMode])
 
   // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
@@ -539,10 +666,91 @@ export function LLMdFlow() {
     })
   }
 
+  // Generate metrics based on stack data or demo
+  const generateLiveMetrics = useCallback((): ServerMetrics[] => {
+    if (!selectedStack || dataMode === 'demo') {
+      return generateServerMetrics()
+    }
+
+    const now = Date.now()
+    const wave = Math.sin(now / 5000)
+    const metrics: ServerMetrics[] = []
+
+    // Gateway metrics
+    if (selectedStack.components.gateway) {
+      metrics.push({
+        name: 'Istio Gateway',
+        type: 'gateway',
+        status: selectedStack.components.gateway.status === 'running' ? 'healthy' : 'unhealthy',
+        load: Math.round(35 + wave * 10),
+        queueDepth: Math.round(5 + Math.random() * 10),
+        activeConnections: Math.round(120 + Math.random() * 30),
+        throughputRps: Math.round(450 + wave * 50),
+      })
+    }
+
+    // EPP metrics
+    if (selectedStack.components.epp) {
+      metrics.push({
+        name: 'EPP Scheduler',
+        type: 'epp',
+        status: selectedStack.components.epp.status === 'running' ? 'healthy' : 'unhealthy',
+        load: Math.round(45 + wave * 15),
+        queueDepth: Math.round(8 + Math.random() * 12),
+        activeConnections: Math.round(450 + Math.random() * 50),
+        throughputRps: Math.round(448 + wave * 48),
+      })
+    }
+
+    // Prefill metrics
+    selectedStack.components.prefill.forEach((comp, i) => {
+      const isHealthy = comp.readyReplicas > 0
+      metrics.push({
+        name: `Prefill-${i}`,
+        type: 'prefill',
+        status: isHealthy ? (wave > 0.3 ? 'healthy' : 'degraded') : 'unhealthy',
+        load: Math.round((isHealthy ? 60 : 10) + wave * 20 + Math.random() * 10),
+        queueDepth: Math.round(2 + Math.random() * 6),
+        activeConnections: Math.round(100 + Math.random() * 20),
+        throughputRps: Math.round((isHealthy ? 100 : 10) + wave * 15),
+      })
+    })
+
+    // Decode metrics
+    selectedStack.components.decode.forEach((comp, i) => {
+      const isHealthy = comp.readyReplicas > 0
+      metrics.push({
+        name: `Decode-${i}`,
+        type: 'decode',
+        status: isHealthy ? 'healthy' : 'unhealthy',
+        load: Math.round((isHealthy ? 50 : 5) + wave * 15),
+        queueDepth: Math.round(1 + Math.random() * 3),
+        activeConnections: Math.round(180 + Math.random() * 30),
+        throughputRps: Math.round((isHealthy ? 180 : 10) + wave * 20),
+      })
+    })
+
+    // Unified server metrics
+    selectedStack.components.both.forEach((comp, i) => {
+      const isHealthy = comp.readyReplicas > 0
+      metrics.push({
+        name: `Server-${i}`,
+        type: 'prefill', // Unified servers do both
+        status: isHealthy ? 'healthy' : 'unhealthy',
+        load: Math.round((isHealthy ? 55 : 5) + wave * 18),
+        queueDepth: Math.round(2 + Math.random() * 5),
+        activeConnections: Math.round(150 + Math.random() * 25),
+        throughputRps: Math.round((isHealthy ? 150 : 10) + wave * 18),
+      })
+    })
+
+    return metrics
+  }, [selectedStack, dataMode])
+
   // Update metrics periodically and track history for all metric types
   useEffect(() => {
     const updateMetrics = () => {
-      const newMetrics = generateServerMetrics()
+      const newMetrics = generateLiveMetrics()
       setServerMetrics(newMetrics)
 
       // Update history for each node and each metric type
@@ -566,35 +774,32 @@ export function LLMdFlow() {
     updateMetrics()
     const interval = setInterval(updateMetrics, 2000)
     return () => clearInterval(interval)
-  }, [])
+  }, [generateLiveMetrics])
 
   const getMetricsForNode = useCallback((nodeId: string): ServerMetrics | undefined => {
-    const nameMap: Record<string, string> = {
-      gateway: 'Istio Gateway',
-      epp: 'EPP Scheduler',
-      prefill0: 'Prefill-0',
-      prefill1: 'Prefill-1',
-      prefill2: 'Prefill-2',
-      decode0: 'Decode-0',
-      decode1: 'Decode-1',
-    }
-    return serverMetrics.find(m => m.name === nameMap[nodeId])
-  }, [serverMetrics])
+    // Dynamic name mapping based on node labels
+    const name = nodeLabels[nodeId]
+    if (!name) return undefined
+
+    // Map node labels to metric names
+    if (name === 'Gateway') return serverMetrics.find(m => m.name === 'Istio Gateway')
+    if (name === 'EPP') return serverMetrics.find(m => m.name === 'EPP Scheduler')
+    return serverMetrics.find(m => m.name === name)
+  }, [serverMetrics, nodeLabels])
 
   const getHistoryForNode = useCallback((nodeId: string, metricType: MetricType): number[] => {
-    const nameMap: Record<string, string> = {
-      gateway: 'Istio Gateway',
-      epp: 'EPP Scheduler',
-      prefill0: 'Prefill-0',
-      prefill1: 'Prefill-1',
-      prefill2: 'Prefill-2',
-      decode0: 'Decode-0',
-      decode1: 'Decode-1',
-    }
-    const history = metricsHistory[nameMap[nodeId]]
+    const name = nodeLabels[nodeId]
+    if (!name) return []
+
+    // Map node labels to history keys
+    let historyKey = name
+    if (name === 'Gateway') historyKey = 'Istio Gateway'
+    if (name === 'EPP') historyKey = 'EPP Scheduler'
+
+    const history = metricsHistory[historyKey]
     if (!history) return []
     return history[metricType] || []
-  }, [metricsHistory])
+  }, [metricsHistory, nodeLabels])
 
   const totalThroughput = useMemo(() =>
     serverMetrics
@@ -612,12 +817,14 @@ export function LLMdFlow() {
 
   const selectedMetrics = selectedNode ? getMetricsForNode(selectedNode) : undefined
 
-  // Get color for the selected node
+  // Get color for any node
   const getNodeColor = (nodeId: string | null) => {
     if (!nodeId) return COLORS.gateway
     if (nodeId.startsWith('prefill')) return COLORS.prefill
     if (nodeId.startsWith('decode')) return COLORS.decode
+    if (nodeId.startsWith('server')) return COLORS.prefill  // Unified servers use prefill color
     if (nodeId === 'epp') return COLORS.epp
+    if (nodeId === 'client' || nodeId === 'gateway') return COLORS.gateway
     return COLORS.gateway
   }
 
@@ -632,6 +839,15 @@ export function LLMdFlow() {
       {/* Header */}
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
+          {/* Stack info when live */}
+          {dataMode === 'live' && selectedStack && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-medium truncate max-w-[100px]">
+                {selectedStack.name}
+              </span>
+              <span className="text-slate-500">@{selectedStack.cluster}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 text-xs">
             <span className="text-muted-foreground">Throughput:</span>
             <span className="text-white font-mono font-medium">{totalThroughput} <Acronym term="RPS" /></span>
@@ -645,6 +861,19 @@ export function LLMdFlow() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Live/Demo toggle */}
+          <button
+            onClick={() => setDataMode(dataMode === 'live' ? 'demo' : 'live')}
+            className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+              dataMode === 'live' && selectedStack
+                ? 'bg-green-500/20 text-green-400 shadow-lg shadow-green-500/20'
+                : 'bg-slate-700/50 text-slate-400'
+            }`}
+            title={dataMode === 'live' ? 'Using live stack data' : 'Using demo data'}
+          >
+            <Radio size={12} className={dataMode === 'live' && selectedStack ? 'animate-pulse' : ''} />
+            {dataMode === 'live' ? 'Live' : 'Demo'}
+          </button>
           <button
             onClick={() => setViewMode(viewMode === 'default' ? 'horseshoe' : 'default')}
             className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
@@ -692,155 +921,47 @@ export function LLMdFlow() {
         preserveAspectRatio="xMidYMid meet"
         style={{ padding: '30px 5px 20px 5px' }}
       >
-        {/* Connections */}
-        {CONNECTIONS.map((conn, i) => (
+        {/* Connections - use dynamic connections */}
+        {connections.map((conn, i) => (
           <FlowConnection
             key={`${conn.from}-${conn.to}-${i}`}
             connection={conn}
             isAnimating={isAnimating}
+            nodePositions={nodePositions}
           />
         ))}
 
-        {/* Nodes - render either default or horseshoe style */}
+        {/* Nodes - render dynamically based on topology */}
         {viewMode === 'horseshoe' ? (
           <>
-            <HorseshoeFlowNode
-              id="client"
-              label="Clients"
-              isSelected={selectedNode === 'client'}
-              onClick={() => setSelectedNode(selectedNode === 'client' ? null : 'client')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="gateway"
-              label="Gateway"
-              metrics={getMetricsForNode('gateway')}
-              isSelected={selectedNode === 'gateway'}
-              onClick={() => setSelectedNode(selectedNode === 'gateway' ? null : 'gateway')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="epp"
-              label="EPP"
-              metrics={getMetricsForNode('epp')}
-              isSelected={selectedNode === 'epp'}
-              onClick={() => setSelectedNode(selectedNode === 'epp' ? null : 'epp')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="prefill0"
-              label="Prefill-0"
-              metrics={getMetricsForNode('prefill0')}
-              isSelected={selectedNode === 'prefill0'}
-              onClick={() => setSelectedNode(selectedNode === 'prefill0' ? null : 'prefill0')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="prefill1"
-              label="Prefill-1"
-              metrics={getMetricsForNode('prefill1')}
-              isSelected={selectedNode === 'prefill1'}
-              onClick={() => setSelectedNode(selectedNode === 'prefill1' ? null : 'prefill1')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="prefill2"
-              label="Prefill-2"
-              metrics={getMetricsForNode('prefill2')}
-              isSelected={selectedNode === 'prefill2'}
-              onClick={() => setSelectedNode(selectedNode === 'prefill2' ? null : 'prefill2')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="decode0"
-              label="Decode-0"
-              metrics={getMetricsForNode('decode0')}
-              isSelected={selectedNode === 'decode0'}
-              onClick={() => setSelectedNode(selectedNode === 'decode0' ? null : 'decode0')}
-              uniqueId={uniqueId}
-            />
-            <HorseshoeFlowNode
-              id="decode1"
-              label="Decode-1"
-              metrics={getMetricsForNode('decode1')}
-              isSelected={selectedNode === 'decode1'}
-              onClick={() => setSelectedNode(selectedNode === 'decode1' ? null : 'decode1')}
-              uniqueId={uniqueId}
-            />
+            {Object.keys(nodePositions).map(nodeId => (
+              <HorseshoeFlowNode
+                key={nodeId}
+                id={nodeId}
+                label={nodeLabels[nodeId] || nodeId}
+                metrics={nodeId !== 'client' ? getMetricsForNode(nodeId) : undefined}
+                isSelected={selectedNode === nodeId}
+                onClick={() => setSelectedNode(selectedNode === nodeId ? null : nodeId)}
+                uniqueId={uniqueId}
+                nodePositions={nodePositions}
+              />
+            ))}
           </>
         ) : (
           <>
-            <PremiumNode
-              id="client"
-              label="Clients"
-              nodeColor={COLORS.gateway}
-              isSelected={selectedNode === 'client'}
-              onClick={() => setSelectedNode(selectedNode === 'client' ? null : 'client')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="gateway"
-              label="Gateway"
-              metrics={getMetricsForNode('gateway')}
-              nodeColor={COLORS.gateway}
-              isSelected={selectedNode === 'gateway'}
-              onClick={() => setSelectedNode(selectedNode === 'gateway' ? null : 'gateway')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="epp"
-              label="EPP"
-              metrics={getMetricsForNode('epp')}
-              nodeColor={COLORS.epp}
-              isSelected={selectedNode === 'epp'}
-              onClick={() => setSelectedNode(selectedNode === 'epp' ? null : 'epp')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="prefill0"
-              label="Prefill-0"
-              metrics={getMetricsForNode('prefill0')}
-              nodeColor={COLORS.prefill}
-              isSelected={selectedNode === 'prefill0'}
-              onClick={() => setSelectedNode(selectedNode === 'prefill0' ? null : 'prefill0')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="prefill1"
-              label="Prefill-1"
-              metrics={getMetricsForNode('prefill1')}
-              nodeColor={COLORS.prefill}
-              isSelected={selectedNode === 'prefill1'}
-              onClick={() => setSelectedNode(selectedNode === 'prefill1' ? null : 'prefill1')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="prefill2"
-              label="Prefill-2"
-              metrics={getMetricsForNode('prefill2')}
-              nodeColor={COLORS.prefill}
-              isSelected={selectedNode === 'prefill2'}
-              onClick={() => setSelectedNode(selectedNode === 'prefill2' ? null : 'prefill2')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="decode0"
-              label="Decode-0"
-              metrics={getMetricsForNode('decode0')}
-              nodeColor={COLORS.decode}
-              isSelected={selectedNode === 'decode0'}
-              onClick={() => setSelectedNode(selectedNode === 'decode0' ? null : 'decode0')}
-              uniqueId={uniqueId}
-            />
-            <PremiumNode
-              id="decode1"
-              label="Decode-1"
-              metrics={getMetricsForNode('decode1')}
-              nodeColor={COLORS.decode}
-              isSelected={selectedNode === 'decode1'}
-              onClick={() => setSelectedNode(selectedNode === 'decode1' ? null : 'decode1')}
-              uniqueId={uniqueId}
-            />
+            {Object.keys(nodePositions).map(nodeId => (
+              <PremiumNode
+                key={nodeId}
+                id={nodeId}
+                label={nodeLabels[nodeId] || nodeId}
+                metrics={nodeId !== 'client' ? getMetricsForNode(nodeId) : undefined}
+                nodeColor={getNodeColor(nodeId)}
+                isSelected={selectedNode === nodeId}
+                onClick={() => setSelectedNode(selectedNode === nodeId ? null : nodeId)}
+                uniqueId={uniqueId}
+                nodePositions={nodePositions}
+              />
+            ))}
           </>
         )}
       </svg>

@@ -6,6 +6,8 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
 import { useLLMdClusters } from '../cards/workload-detection/shared'
+import { StackProvider } from '../../contexts/StackContext'
+import { StackSelector } from '../cards/llmd/StackSelector'
 
 const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
 
@@ -77,31 +79,34 @@ export function AIML() {
   )
 
   return (
-    <DashboardPage
-      title="AI/ML"
-      subtitle="Monitor AI and Machine Learning workloads"
-      icon="Brain"
-      storageKey={AIML_CARDS_KEY}
-      defaultCards={DEFAULT_AIML_CARDS}
-      statsType="compute"
-      getStatValue={getStatValue}
-      onRefresh={refetch}
-      isLoading={isLoading || gpuLoading || llmLoading}
-      isRefreshing={dataRefreshing}
-      lastUpdated={lastUpdated}
-      hasData={reachableClusters.length > 0 || hasRealData}
-      isDemoData={isDemoData}
-      emptyState={{
-        title: 'AI/ML Dashboard',
-        description: 'Add cards to monitor GPU utilization, ML workloads, and model training across your clusters.',
-      }}
-    >
-      {error && (
-        <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="font-medium">Error loading cluster data</div>
-          <div className="text-sm text-muted-foreground">{error}</div>
-        </div>
-      )}
-    </DashboardPage>
+    <StackProvider clusters={llmdClusters}>
+      <DashboardPage
+        title="AI/ML"
+        subtitle="Monitor AI and Machine Learning workloads"
+        icon="Brain"
+        storageKey={AIML_CARDS_KEY}
+        defaultCards={DEFAULT_AIML_CARDS}
+        statsType="compute"
+        getStatValue={getStatValue}
+        onRefresh={refetch}
+        isLoading={isLoading || gpuLoading || llmLoading}
+        isRefreshing={dataRefreshing}
+        lastUpdated={lastUpdated}
+        hasData={reachableClusters.length > 0 || hasRealData}
+        isDemoData={isDemoData}
+        emptyState={{
+          title: 'AI/ML Dashboard',
+          description: 'Add cards to monitor GPU utilization, ML workloads, and model training across your clusters.',
+        }}
+        headerExtra={<StackSelector />}
+      >
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+            <div className="font-medium">Error loading cluster data</div>
+            <div className="text-sm text-muted-foreground">{error}</div>
+          </div>
+        )}
+      </DashboardPage>
+    </StackProvider>
   )
 }
