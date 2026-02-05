@@ -175,6 +175,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
+  // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
+  const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
+  const STREAM_GAP_THRESHOLD_MS = 2000 // If >2s gap, create new message bubble
 
   // Save missions whenever they change
   useEffect(() => {
@@ -430,22 +433,36 @@ The AI missions feature requires the local agent to be running.
         // Streaming response from agent
         const payload = message.payload as ChatStreamPayload
         const lastMsg = m.messages[m.messages.length - 1]
+        const now = Date.now()
+        const lastTs = lastStreamTimestamp.current.get(missionId)
 
-        if (lastMsg?.role === 'assistant' && !payload.done && m.status === 'running') {
-          // Append to existing assistant message mid-stream, preserve agent
+        // Check if there's been a gap (indicating tool use happened)
+        // If so, start a new message bubble instead of appending
+        const hasGap = lastTs && (now - lastTs > STREAM_GAP_THRESHOLD_MS)
+
+        // Update timestamp for next check
+        if (!payload.done) {
+          lastStreamTimestamp.current.set(missionId, now)
+        } else {
+          // Clean up on stream complete
+          lastStreamTimestamp.current.delete(missionId)
+        }
+
+        if (lastMsg?.role === 'assistant' && !payload.done && m.status === 'running' && !hasGap) {
+          // Append to existing assistant message mid-stream (no gap detected)
           return {
             ...m,
             status: 'running' as MissionStatus,
             currentStep: 'Generating response...',
             updatedAt: new Date(),
-            agent: payload.agent || m.agent, // Update mission agent if provided
+            agent: payload.agent || m.agent,
             messages: [
               ...m.messages.slice(0, -1),
               { ...lastMsg, content: lastMsg.content + (payload.content || ''), agent: payload.agent || lastMsg.agent }
             ]
           }
         } else if (!payload.done && payload.content) {
-          // First chunk - create new assistant message with agent
+          // First chunk OR gap detected - create new assistant message
           return {
             ...m,
             status: 'running' as MissionStatus,
