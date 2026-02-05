@@ -45,41 +45,48 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     const shouldFocus = hash === '#github-token' || params.get('focus') === 'github-token'
 
     if (shouldFocus) {
-      // Wait for component to render, then scroll and focus
+      // Wait for component to render and page to settle
       const timer = setTimeout(() => {
         const section = document.getElementById('github-token-settings')
         const input = document.getElementById('github-token') as HTMLInputElement | null
 
         if (section) {
-          // Find the scrollable container (main element in Layout)
-          const scrollContainer = section.closest('main') || document.documentElement
-          const sectionRect = section.getBoundingClientRect()
-          const containerRect = scrollContainer.getBoundingClientRect()
+          // Find the scrollable main container
+          const main = document.querySelector('main')
+          if (main) {
+            // Get section position relative to main's scroll area
+            const sectionRect = section.getBoundingClientRect()
+            const mainRect = main.getBoundingClientRect()
 
-          // Calculate scroll position to center the section
-          const sectionTop = sectionRect.top - containerRect.top + scrollContainer.scrollTop
-          const centerOffset = (window.innerHeight - sectionRect.height) / 2
-          const targetScroll = Math.max(0, sectionTop - centerOffset)
+            // Current scroll position plus element's position relative to viewport
+            // minus half the viewport to center it
+            const elementTop = sectionRect.top - mainRect.top + main.scrollTop
+            const viewportCenter = main.clientHeight / 2
+            const elementCenter = sectionRect.height / 2
+            const targetScroll = elementTop - viewportCenter + elementCenter
 
-          scrollContainer.scrollTo({
-            top: targetScroll,
-            behavior: 'smooth'
-          })
+            main.scrollTo({
+              top: Math.max(0, targetScroll),
+              behavior: 'smooth'
+            })
+          }
 
           // Flash highlight effect
-          section.classList.add('ring-2', 'ring-purple-500/50')
-          setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+          setTimeout(() => {
+            section.classList.add('ring-2', 'ring-purple-500/50')
+            setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+          }, 400)
         }
 
         if (input) {
-          setTimeout(() => input.focus(), 500) // Focus after scroll completes
+          setTimeout(() => input.focus(), 600) // Focus after scroll completes
         }
 
         // Clean up URL
         if (hash || params.get('focus')) {
           window.history.replaceState({}, '', window.location.pathname)
         }
-      }, 300)
+      }, 500) // Longer delay to ensure page is fully loaded
 
       return () => clearTimeout(timer)
     }
