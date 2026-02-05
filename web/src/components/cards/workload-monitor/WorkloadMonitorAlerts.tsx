@@ -1,9 +1,11 @@
-import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight, Stethoscope } from 'lucide-react'
 import { useState } from 'react'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
+import { useMissions } from '../../../hooks/useMissions'
 
 interface AlertsProps {
   issues: MonitorIssue[]
+  monitorType?: string
 }
 
 const SEVERITY_CONFIG = {
@@ -12,8 +14,18 @@ const SEVERITY_CONFIG = {
   info: { icon: Info, bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400' },
 }
 
-export function WorkloadMonitorAlerts({ issues }: AlertsProps) {
+export function WorkloadMonitorAlerts({ issues, monitorType }: AlertsProps) {
   const [expanded, setExpanded] = useState(true)
+  const { startMission } = useMissions()
+
+  const handleDiagnose = (issue: MonitorIssue) => {
+    startMission({
+      title: `Diagnose: ${issue.title}`,
+      description: issue.description || `${issue.severity} issue`,
+      type: 'troubleshoot',
+      initialPrompt: `Diagnose this ${monitorType || 'workflow'} issue:\n\n**Issue:** ${issue.title}\n**Severity:** ${issue.severity}\n**Details:** ${issue.description || 'No additional details'}\n**Resource:** ${issue.resource?.name || 'Unknown'} (${issue.resource?.kind || 'Unknown'})\n\nPlease analyze the root cause and suggest fixes.`,
+    })
+  }
 
   if (issues.length === 0) return null
 
@@ -61,6 +73,13 @@ export function WorkloadMonitorAlerts({ issues }: AlertsProps) {
                     <p className={`text-[10px] ${config.text} opacity-70 mt-0.5`}>{issue.description}</p>
                   )}
                 </div>
+                <button
+                  onClick={() => handleDiagnose(issue)}
+                  className="shrink-0 p-1 rounded hover:bg-purple-500/20 transition-colors"
+                  title="Diagnose with AI"
+                >
+                  <Stethoscope className="w-3.5 h-3.5 text-purple-400" />
+                </button>
               </div>
             )
           })}

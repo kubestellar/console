@@ -12,8 +12,7 @@ import { CardSearchInput } from '../../../lib/cards'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
-import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
-import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import type { MonitorIssue } from '../../../types/workloadMonitor'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -324,23 +323,6 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       }))
   }, [workflows])
 
-  const monitorResources = useMemo<MonitoredResource[]>(() => {
-    return workflows.slice(0, 20).map((w, idx) => ({
-      id: `WorkflowRun/${w.repo}/${w.id}`,
-      kind: 'WorkflowRun',
-      name: w.name,
-      namespace: w.repo,
-      cluster: 'github',
-      status: w.conclusion === 'success' ? 'healthy' as const :
-              (w.conclusion === 'failure' || w.conclusion === 'timed_out') ? 'unhealthy' as const :
-              w.status === 'in_progress' ? 'degraded' as const : 'unknown' as const,
-      category: 'workload' as const,
-      lastChecked: w.updatedAt,
-      optional: false,
-      order: idx,
-    }))
-  }, [workflows])
-
   const overallHealth = useMemo(() => {
     if (stats.failed > 0) return 'degraded'
     if (stats.total === 0) return 'unknown'
@@ -592,24 +574,8 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         </div>
       )}
 
-      {/* Alerts */}
-      <WorkloadMonitorAlerts issues={issues} />
-
-      {/* AI Diagnose (no repair for GitHub) */}
-      <WorkloadMonitorDiagnose
-        resources={monitorResources}
-        issues={issues}
-        monitorType="github"
-        diagnosable={true}
-        repairable={false}
-        workloadContext={{
-          repos,
-          totalWorkflows: stats.total,
-          failedWorkflows: stats.failed,
-          successRate: stats.successRate,
-          inProgress: stats.inProgress,
-        }}
-      />
+      {/* Alerts with inline diagnose buttons */}
+      <WorkloadMonitorAlerts issues={issues} monitorType="GitHub CI" />
     </div>
   )
 })
