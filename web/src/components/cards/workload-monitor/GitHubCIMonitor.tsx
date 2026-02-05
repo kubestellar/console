@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, Loader2, ExternalLink, Key,
+  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
@@ -107,6 +107,28 @@ function formatTimeAgo(iso: string): string {
   return `${days}d ago`
 }
 
+const REPOS_STORAGE_KEY = 'github_ci_repos'
+const DEFAULT_REPOS = ['kubestellar/kubestellar', 'kubestellar/console']
+
+function loadRepos(): string[] {
+  try {
+    const stored = localStorage.getItem(REPOS_STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return DEFAULT_REPOS
+}
+
+function saveRepos(repos: string[]) {
+  localStorage.setItem(REPOS_STORAGE_KEY, JSON.stringify(repos))
+}
+
 export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
   const ghConfig = config as GitHubCIConfig | undefined
   const [workflows, setWorkflows] = useState<WorkflowRun[]>(DEMO_WORKFLOWS)
@@ -115,7 +137,10 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const [isUsingDemoData, setIsUsingDemoData] = useState(true)
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
 
-  const repos = ghConfig?.repos || ['kubestellar/kubestellar', 'kubestellar/console']
+  // Repo configuration
+  const [repos, setRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
+  const [isEditingRepos, setIsEditingRepos] = useState(false)
+  const [newRepoInput, setNewRepoInput] = useState('')
 
   const fetchWorkflows = useCallback(async (isRefresh = false) => {
     const storedToken = localStorage.getItem('github_token')
@@ -175,6 +200,35 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   useImperativeHandle(ref, () => ({
     refresh: () => fetchWorkflows(true)
   }), [fetchWorkflows])
+
+  // Repo management handlers
+  const handleAddRepo = useCallback(() => {
+    const repo = newRepoInput.trim()
+    if (!repo) return
+    // Validate format: owner/repo
+    if (!repo.match(/^[\w-]+\/[\w.-]+$/)) {
+      return // Invalid format
+    }
+    if (repos.includes(repo)) {
+      setNewRepoInput('')
+      return // Already exists
+    }
+    const updatedRepos = [...repos, repo]
+    setRepos(updatedRepos)
+    saveRepos(updatedRepos)
+    setNewRepoInput('')
+    // Refresh to fetch new repo data
+    setTimeout(() => fetchWorkflows(true), 100)
+  }, [newRepoInput, repos, fetchWorkflows])
+
+  const handleRemoveRepo = useCallback((repo: string) => {
+    const updatedRepos = repos.filter(r => r !== repo)
+    if (updatedRepos.length === 0) return // Keep at least one repo
+    setRepos(updatedRepos)
+    saveRepos(updatedRepos)
+    // Refresh to update data
+    setTimeout(() => fetchWorkflows(true), 100)
+  }, [repos, fetchWorkflows])
 
   useEffect(() => {
     fetchWorkflows()
@@ -309,7 +363,17 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
       <div className="rounded-lg bg-card/50 border border-border p-2.5 mb-3 flex items-center gap-2">
         <GitBranch className="w-4 h-4 text-purple-400 shrink-0" />
         <span className="text-sm font-medium text-foreground">GitHub CI</span>
-        <span className="text-xs text-muted-foreground">{repos.length} repos</span>
+        <button
+          onClick={() => setIsEditingRepos(!isEditingRepos)}
+          className={cn(
+            "text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1",
+            isEditingRepos && "text-purple-400"
+          )}
+          title="Configure repos"
+        >
+          {repos.length} repos
+          <Settings className="w-3 h-3" />
+        </button>
         {!isUsingDemoData && lastFetched && (
           <span className="text-[10px] text-muted-foreground/60">
             Updated {formatTimeAgo(lastFetched.toISOString())}
@@ -324,6 +388,56 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
           {overallHealth}
         </span>
       </div>
+
+      {/* Repo editor */}
+      {isEditingRepos && (
+        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newRepoInput}
+              onChange={(e) => setNewRepoInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddRepo()}
+              placeholder="owner/repo (e.g., facebook/react)"
+              className="flex-1 px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground"
+            />
+            <button
+              onClick={handleAddRepo}
+              disabled={!newRepoInput.trim()}
+              className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Add repo"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setIsEditingRepos(false)}
+              className="p-1 rounded hover:bg-secondary text-muted-foreground"
+              title="Done"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {repos.map((repo) => (
+              <span
+                key={repo}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-xs"
+              >
+                {repo}
+                {repos.length > 1 && (
+                  <button
+                    onClick={() => handleRemoveRepo(repo)}
+                    className="hover:text-red-400 transition-colors"
+                    title="Remove repo"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Demo data indicator - no token configured */}
       {isUsingDemoData && !error && (
