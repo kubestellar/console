@@ -97,6 +97,19 @@ export interface SlackWebhook {
   createdAt: string
 }
 
+// Notification configuration (stored client-side)
+export interface NotificationConfig {
+  slackWebhookUrl?: string
+  slackChannel?: string
+  emailSMTPHost?: string
+  emailSMTPPort?: number
+  emailFrom?: string
+  emailTo?: string
+  emailUsername?: string
+  emailPassword?: string
+  webhookUrl?: string
+}
+
 // Alert statistics
 export interface AlertStats {
   total: number

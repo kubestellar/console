@@ -17,8 +17,9 @@ import {
   ThemeSection,
   AccessibilitySection,
   PermissionsSection,
-  PredictionSettingsSection,
+PredictionSettingsSection,
   WidgetSettingsSection,
+  NotificationSettingsSection,
 } from './sections'
 
 export function Settings() {
@@ -70,6 +71,9 @@ export function Settings() {
 
         {/* API Keys */}
         <APIKeysSection />
+
+        {/* Alert Notifications */}
+        <NotificationSettingsSection />
 
         {/* Token Usage */}
         <TokenUsageSection usage={usage} updateSettings={updateSettings} resetUsage={resetUsage} />

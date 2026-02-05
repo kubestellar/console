@@ -7,6 +7,7 @@ import type {
   Alert,
   AlertRule,
   AlertStats,
+  AlertChannel,
 } from '../types/alerts'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 
@@ -252,11 +253,49 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           isDemo: isDemoMode, // Mark alert as demo if created during demo mode
         }
 
+        // Send notification to configured channels (async, non-blocking)
+        if (rule.channels && rule.channels.length > 0) {
+          const enabledChannels = rule.channels.filter(ch => ch.enabled)
+          if (enabledChannels.length > 0) {
+            // Send notifications asynchronously without blocking alert creation
+            sendNotifications(alert, enabledChannels).catch(err => {
+              console.error('Failed to send alert notifications:', err)
+            })
+          }
+        }
+
         return [alert, ...prev]
       })
     },
     [isDemoMode]
   )
+
+  // Send notifications for an alert
+  const sendNotifications = async (alert: Alert, channels: AlertChannel[]) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
+      const response = await fetch(`${API_BASE}/api/notifications/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ alert, channels }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Failed to send notifications')
+      }
+
+      console.log('Alert notifications sent successfully')
+    } catch (error) {
+      console.error('Error sending alert notifications:', error)
+      // Don't throw - notifications are best-effort
+    }
+  }
 
   // Run AI diagnosis on an alert
   const runAIDiagnosis = useCallback(
