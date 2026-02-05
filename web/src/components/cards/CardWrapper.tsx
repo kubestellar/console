@@ -993,6 +993,15 @@ export function CardWrapper({
   // Merge isDemoData from child-reported state with prop
   const effectiveIsDemoData = isDemoData || childDataState?.isDemoData || false
 
+  // Child can explicitly opt-out of demo indicator by reporting isDemoData: false
+  // This is used by stack-dependent cards that use stack data even in global demo mode
+  const childExplicitlyNotDemo = childDataState?.isDemoData === false
+
+  // Show demo indicator if:
+  // 1. Child reports demo data (isDemoData: true via prop or report), OR
+  // 2. Global demo mode is on AND child hasn't explicitly opted out
+  const showDemoIndicator = effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo)
+
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
   // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
@@ -1156,7 +1165,7 @@ export function CardWrapper({
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',
             isCollapsed ? 'h-auto' : 'h-full',
-            (isDemoMode || effectiveIsDemoData) && '!border-2 !border-yellow-500/50',
+            showDemoIndicator && '!border-2 !border-yellow-500/50',
             // Only animate for actual loading, not offline state (prevents flicker when agent status changes)
             (isVisuallySpinning || effectiveIsLoading) && !forceSkeletonForOffline && 'animate-card-refresh-pulse',
             getFlashClass()
@@ -1171,17 +1180,17 @@ export function CardWrapper({
             {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4', resolvedIconColor)} />}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
             <InfoTooltip text={description || `${title} card. Description coming soon.`} />
-            {/* Demo data indicator - shows if global demo mode is on OR card uses demo data */}
-            {(isDemoMode || effectiveIsDemoData) && (
+            {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
+            {showDemoIndicator && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
-                title={isDemoMode ? "Demo mode enabled - showing sample data" : "This card displays demo data"}
+                title={effectiveIsDemoData ? "This card displays demo data" : "Demo mode enabled - showing sample data"}
               >
                 Demo
               </span>
             )}
             {/* Live data indicator - for time-series/trend cards with real data */}
-            {isLive && !isDemoMode && !effectiveIsDemoData && (
+            {isLive && !showDemoIndicator && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
                 title="Showing live data"
