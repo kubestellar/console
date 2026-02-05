@@ -8,7 +8,7 @@ Last Updated: 2026-02-05
 |----------|-------|
 | Dashboard Pages | 21 (1 main + 20 dedicated) |
 | Card Types | 143 |
-| Cards with Drill-Down | 40 |
+| Cards with Drill-Down | 37 (+ 3 planned) |
 | Drill-Down Views | 23 |
 | Modal Dialogs | 29 standalone + 8 inline |
 | Stats Block Types | 93 (across 14 dashboard types) |
@@ -661,51 +661,53 @@ Drill-down views are displayed within `DrillDownModal` when clicking items in ca
 
 ---
 
-## 9. Cards with Drill-Down (40 Total)
+## 9. Cards with Drill-Down (37 with actual views + 3 planned)
 
 Cards that have `useDrillDownActions` hook for clickable items:
 
-| # | Card | Drill Action | Target View |
-|---|------|--------------|-------------|
-| 1 | AppStatus | drillToDeployment | DeploymentDrillDown |
-| 2 | ArgoCDApplications | drillToArgoApp | ArgoAppDrillDown |
-| 3 | ClusterComparison | drillToCluster | ClusterDrillDown |
-| 4 | ClusterCosts | drillToCost | CostDrillDown |
-| 5 | ClusterFocus | drillToCluster | ClusterDrillDown |
-| 6 | ClusterResourceTree | drillToNamespace/Pod | NamespaceDrillDown/PodDrillDown |
-| 7 | ComputeOverview | drillToNode | NodeDrillDown |
-| 8 | DeploymentIssues | drillToDeployment | DeploymentDrillDown |
-| 9 | DeploymentProgress | drillToDeployment | DeploymentDrillDown |
-| 10 | DeploymentStatus | drillToDeployment | DeploymentDrillDown |
-| 11 | EventStream | drillToEvents | EventsDrillDown |
-| 12 | GitOpsDrift | drillToDrift | DriftDrillDown |
-| 13 | GPUInventory | drillToGPUNode | GPUNodeDrillDown |
-| 14 | GPUOverview | drillToGPUNode | GPUNodeDrillDown |
-| 15 | GPUStatus | drillToCluster | ClusterDrillDown |
-| 16 | GPUWorkloads | drillToPod | PodDrillDown |
-| 17 | HelmHistory | drillToHelm | HelmReleaseDrillDown |
-| 18 | HelmReleaseStatus | drillToHelm | HelmReleaseDrillDown |
-| 19 | HelmValuesDiff | drillToHelm | HelmReleaseDrillDown |
-| 21 | KubecostOverview | drillToCost | CostDrillDown |
-| 22 | KustomizationStatus | drillToKustomization | KustomizationDrillDown |
-| 23 | NamespaceEvents | drillToEvents | EventsDrillDown |
-| 24 | NamespaceOverview | drillToNamespace | NamespaceDrillDown |
-| 25 | NamespaceRBAC | drillToRBAC | ServiceAccountDrillDown |
-| 26 | NetworkOverview | drillToService | ServiceDrillDown |
-| 27 | OpenCostOverview | drillToCost | CostDrillDown |
-| 28 | OperatorStatus | drillToOperator | OperatorDrillDown |
-| 29 | OperatorSubscriptions | drillToOperator | OperatorDrillDown |
-| 30 | OverlayComparison | drillToKustomization | KustomizationDrillDown |
-| 31 | PodIssues | drillToPod | PodDrillDown |
-| 32 | PVCStatus | drillToPVC | PVCDrillDown |
-| 33 | ResourceCapacity | drillToNode | NodeDrillDown |
-| 34 | ResourceUsage | drillToNode | NodeDrillDown |
-| 35 | SecurityIssues | drillToPod | PodDrillDown |
-| 36 | ServiceStatus | drillToService | ServiceDrillDown |
-| 37 | StorageOverview | drillToPVC | PVCDrillDown |
-| 38 | TopPods | drillToPod | PodDrillDown |
-| 39 | UpgradeStatus | drillToCluster | ClusterDrillDown |
-| 40 | UserManagement | drillToRBAC | ServiceAccountDrillDown |
+| # | Card | Drill Action | Target View | Status |
+|---|------|--------------|-------------|--------|
+| 1 | AppStatus | drillToDeployment | DeploymentDrillDown | ✓ |
+| 2 | ArgoCDApplications | drillToArgoApp | ArgoAppDrillDown | ✓ |
+| 3 | ClusterComparison | drillToCluster | ClusterDrillDown | ✓ |
+| 4 | ClusterCosts | drillToCost | CostDrillDown | **Planned** |
+| 5 | ClusterFocus | drillToCluster | ClusterDrillDown | ✓ |
+| 6 | ClusterResourceTree | drillToNamespace/Pod | NamespaceDrillDown/PodDrillDown | ✓ |
+| 7 | ComputeOverview | drillToNode | NodeDrillDown | ✓ |
+| 8 | DeploymentIssues | drillToDeployment | DeploymentDrillDown | ✓ |
+| 9 | DeploymentProgress | drillToDeployment | DeploymentDrillDown | ✓ |
+| 10 | DeploymentStatus | drillToDeployment | DeploymentDrillDown | ✓ |
+| 11 | EventStream | drillToEvents | EventsDrillDown | ✓ |
+| 12 | GitOpsDrift | drillToDrift | DriftDrillDown | ✓ |
+| 13 | GPUInventory | drillToGPUNode | GPUNodeDrillDown | ✓ |
+| 14 | GPUOverview | drillToGPUNode | GPUNodeDrillDown | ✓ |
+| 15 | GPUStatus | drillToCluster | ClusterDrillDown | ✓ |
+| 16 | GPUWorkloads | drillToPod | PodDrillDown | ✓ |
+| 17 | HelmHistory | drillToHelm | HelmReleaseDrillDown | ✓ |
+| 18 | HelmReleaseStatus | drillToHelm | HelmReleaseDrillDown | ✓ |
+| 19 | HelmValuesDiff | drillToHelm | HelmReleaseDrillDown | ✓ |
+| 20 | KubecostOverview | drillToCost | CostDrillDown | **Planned** |
+| 21 | KustomizationStatus | drillToKustomization | KustomizationDrillDown | ✓ |
+| 22 | NamespaceEvents | drillToEvents | EventsDrillDown | ✓ |
+| 23 | NamespaceOverview | drillToNamespace | NamespaceDrillDown | ✓ |
+| 24 | NamespaceRBAC | drillToRBAC | ServiceAccountDrillDown | ✓ |
+| 25 | NetworkOverview | drillToService | ServiceDrillDown | **Planned** |
+| 26 | OpenCostOverview | drillToCost | CostDrillDown | **Planned** |
+| 27 | OperatorStatus | drillToOperator | OperatorDrillDown | ✓ |
+| 28 | OperatorSubscriptions | drillToOperator | OperatorDrillDown | ✓ |
+| 29 | OverlayComparison | drillToKustomization | KustomizationDrillDown | ✓ |
+| 30 | PodIssues | drillToPod | PodDrillDown | ✓ |
+| 31 | PVCStatus | drillToPVC | PVCDrillDown | **Planned** |
+| 32 | ResourceCapacity | drillToNode | NodeDrillDown | ✓ |
+| 33 | ResourceUsage | drillToNode | NodeDrillDown | ✓ |
+| 34 | SecurityIssues | drillToPod | PodDrillDown | ✓ |
+| 35 | ServiceStatus | drillToService | ServiceDrillDown | **Planned** |
+| 36 | StorageOverview | drillToPVC | PVCDrillDown | **Planned** |
+| 37 | TopPods | drillToPod | PodDrillDown | ✓ |
+| 38 | UpgradeStatus | drillToCluster | ClusterDrillDown | ✓ |
+| 39 | UserManagement | drillToRBAC | ServiceAccountDrillDown | ✓ |
+
+**Note**: Cards marked as "Planned" reference drill-down views that don't yet exist as separate files. They may use generic ResourcesDrillDown or open inline views until dedicated drill-down components are implemented.
 
 ### Cards WITHOUT Drill-Down (25 Total)
 
