@@ -11,6 +11,8 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
+import { TechnicalAcronym, STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
+import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 
 const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 
@@ -164,10 +166,19 @@ export function Pods() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <StatusIndicator
-                    status={issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning'}
-                    size="lg"
-                  />
+                  {(() => {
+                    const status = issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning';
+                    return (
+                      <PortalTooltip content={STATUS_TOOLTIPS[status]}>
+                        <span>
+                          <StatusIndicator
+                            status={status}
+                            size="lg"
+                          />
+                        </span>
+                      </PortalTooltip>
+                    );
+                  })()}
                   <div>
                     <h3 className="font-semibold text-foreground">{issue.name}</h3>
                     <div className="flex items-center gap-2">
@@ -179,7 +190,13 @@ export function Pods() {
 
                 <div className="flex items-center gap-6">
                   <div className="text-right">
-                    <div className="text-sm font-medium text-orange-400">{issue.reason || 'Unknown'}</div>
+                    <div className="text-sm font-medium text-orange-400">
+                      {issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? (
+                        <TechnicalAcronym term={issue.reason}>{issue.reason}</TechnicalAcronym>
+                      ) : (
+                        issue.reason || 'Unknown'
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">{issue.status || 'Unknown status'}</div>
                   </div>
                   {(issue.restarts || 0) > 0 && (

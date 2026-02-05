@@ -22,6 +22,7 @@ import { DonutChart } from '../charts/PieChart'
 import { BarChart } from '../charts/BarChart'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // GPU utilization thresholds for visual indicators
 const UTILIZATION_HIGH_THRESHOLD = 80 // Red indicator above this percentage
@@ -637,7 +638,7 @@ export function GPUReservations() {
                     {/* GPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">GPU</span>
+                        <span className="text-muted-foreground"><TechnicalAcronym term="GPU">GPU</TechnicalAcronym></span>
                         <span className="text-foreground">{quota.gpuUsed}/{quota.gpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -654,7 +655,7 @@ export function GPUReservations() {
                     {/* CPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">CPU (cores)</span>
+                        <span className="text-muted-foreground"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym> (cores)</span>
                         <span className="text-foreground">{quota.cpuUsed}/{quota.cpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">

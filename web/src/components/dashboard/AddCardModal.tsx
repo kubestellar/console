@@ -4,6 +4,49 @@ import { BaseModal } from '../../lib/modals'
 import { CardFactoryModal } from './CardFactoryModal'
 import { StatBlockFactoryModal } from './StatBlockFactoryModal'
 import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { ReactNode } from 'react'
+
+// Helper function to wrap technical abbreviations in text with tooltips
+function wrapAbbreviations(text: string): ReactNode {
+  // List of abbreviations to wrap (order matters - longer ones first to avoid partial matches)
+  const abbreviations = [
+    'ConfigMaps', 'ConfigMap', 'CrashLoopBackOff', 'OOMKilled', 
+    'RBAC', 'CRD', 'PVC', 'GPU', 'CPU', 'OLM', 'MCS', 'Secrets', 'Secret'
+  ]
+  
+  // Build a regex pattern to match any of the abbreviations as whole words
+  const pattern = new RegExp(`\\b(${abbreviations.join('|')})\\b`, 'g')
+  
+  const parts: ReactNode[] = []
+  let lastIndex = 0
+  
+  // Find all matches and split the text
+  for (const match of text.matchAll(pattern)) {
+    // Add text before the match
+    if (match.index !== undefined && match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index))
+    }
+    
+    // Add the wrapped abbreviation
+    if (match.index !== undefined) {
+      parts.push(
+        <TechnicalAcronym key={`${match.index}-${match[0]}`} term={match[0]}>
+          {match[0]}
+        </TechnicalAcronym>
+      )
+      
+      lastIndex = match.index + match[0].length
+    }
+  }
+  
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+  
+  return parts.length > 0 ? parts : text
+}
 
 // Card catalog - all available cards organized by category
 const CARD_CATALOG = {
@@ -1106,7 +1149,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                                   </span>
                                 </div>
                                 <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {card.description}
+                                  {wrapAbbreviations(card.description)}
                                 </p>
                                 {isAlreadyAdded && (
                                   <span className="text-xs text-muted-foreground">(Added)</span>
@@ -1167,7 +1210,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                           {hoveredCard.title}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {hoveredCard.description}
+                          {wrapAbbreviations(hoveredCard.description)}
                         </p>
                       </div>
 
@@ -1283,7 +1326,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {card.description}
+                        {wrapAbbreviations(card.description)}
                       </p>
                       <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground capitalize">
                         {card.visualization}
