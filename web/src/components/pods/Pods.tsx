@@ -155,7 +155,7 @@ export function Pods() {
           {filteredPodIssues.map((issue, i) => (
             <div
               key={i}
-              onClick={() => drillToPod(issue.cluster || '', issue.namespace, issue.name)}
+              onClick={() => drillToPod(issue.cluster || 'default', issue.namespace, issue.name)}
               className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${
                 issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'border-l-red-500' :
                 issue.reason === 'Pending' || issue.reason === 'ContainerCreating' ? 'border-l-yellow-500' :
