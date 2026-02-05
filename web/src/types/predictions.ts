@@ -164,7 +164,7 @@ export interface MetricsSnapshot {
 export interface PredictionSettings {
   /** Enable/disable AI predictions */
   aiEnabled: boolean
-  /** Minutes between AI analysis runs (5-30) */
+  /** Minutes between AI analysis runs (15-120) */
   interval: number
   /** Minimum confidence threshold (50-90) */
   minConfidence: number
@@ -210,7 +210,7 @@ export interface PredictionSettingsMessage {
  */
 export const DEFAULT_PREDICTION_SETTINGS: PredictionSettings = {
   aiEnabled: true,
-  interval: 10,
+  interval: 60,
   minConfidence: 60,
   maxPredictions: 10,
   consensusMode: false,

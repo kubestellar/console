@@ -35,7 +35,7 @@ export function PredictionSettingsSection({
   }
 
   const handleIntervalChange = (value: number) => {
-    updateSettings({ interval: Math.min(Math.max(value, 5), 30) })
+    updateSettings({ interval: Math.min(Math.max(value, 15), 120) })
   }
 
   const handleConfidenceChange = (value: number) => {
@@ -119,8 +119,9 @@ export function PredictionSettingsSection({
               </div>
               <input
                 type="range"
-                min="5"
-                max="30"
+                min="15"
+                max="120"
+                step="15"
                 value={settings.interval}
                 onChange={(e) => handleIntervalChange(parseInt(e.target.value))}
                 className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer
@@ -132,8 +133,8 @@ export function PredictionSettingsSection({
                   [&::-webkit-slider-thumb]:cursor-pointer"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>5 min (more updates)</span>
-                <span>30 min (fewer API calls)</span>
+                <span>15 min</span>
+                <span>2 hours</span>
               </div>
             </div>
 
