@@ -38,7 +38,7 @@ export function Network() {
     const drillToFirstService = () => {
       if (filteredServices.length > 0 && filteredServices[0]) {
         const svc = filteredServices[0]
-        if (svc.cluster && svc.namespace) {
+        if (svc?.cluster && svc?.namespace) {
           drillToService(svc.cluster, svc.namespace, svc.name)
         }
       }
