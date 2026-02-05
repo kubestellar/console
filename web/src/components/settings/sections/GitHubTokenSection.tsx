@@ -51,7 +51,21 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         const input = document.getElementById('github-token') as HTMLInputElement | null
 
         if (section) {
-          section.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Find the scrollable container (main element in Layout)
+          const scrollContainer = section.closest('main') || document.documentElement
+          const sectionRect = section.getBoundingClientRect()
+          const containerRect = scrollContainer.getBoundingClientRect()
+
+          // Calculate scroll position to center the section
+          const sectionTop = sectionRect.top - containerRect.top + scrollContainer.scrollTop
+          const centerOffset = (window.innerHeight - sectionRect.height) / 2
+          const targetScroll = Math.max(0, sectionTop - centerOffset)
+
+          scrollContainer.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth'
+          })
+
           // Flash highlight effect
           section.classList.add('ring-2', 'ring-purple-500/50')
           setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
