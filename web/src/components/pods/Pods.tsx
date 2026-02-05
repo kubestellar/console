@@ -34,6 +34,7 @@ export function Pods() {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
     customFilter,
+    filterByCluster,
   } = useGlobalFilters()
 
   // Combined loading/refreshing states
@@ -43,14 +44,10 @@ export function Pods() {
 
   // Filter pod issues by global cluster selection
   const filteredPodIssues = useMemo(() => {
-    let filtered = podIssues
+    // Apply cluster filtering using the built-in helper
+    let filtered = filterByCluster(podIssues)
 
-    if (!isAllClustersSelected) {
-      filtered = filtered.filter(issue =>
-        issue.cluster && globalSelectedClusters.includes(issue.cluster)
-      )
-    }
-
+    // Apply custom text filtering
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
       filtered = filtered.filter(issue =>
@@ -62,7 +59,7 @@ export function Pods() {
     }
 
     return filtered
-  }, [podIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [podIssues, filterByCluster, customFilter])
 
   // Calculate stats
   const stats = useMemo(() => {
