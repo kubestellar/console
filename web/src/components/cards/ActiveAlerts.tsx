@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  Search,
 } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
@@ -19,7 +18,7 @@ import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
-import { useCardData, CardClusterFilter } from '../../lib/cards'
+import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 
 // Format relative time
@@ -261,16 +260,11 @@ export function ActiveAlerts() {
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search alerts..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={localSearch}
+        onChange={setLocalSearch}
+        placeholder="Search alerts..."
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-2 mb-3">

@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import {
-  CheckCircle, XCircle, AlertTriangle, ExternalLink, Search
+  CheckCircle, XCircle, AlertTriangle, ExternalLink
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { CardSearchInput } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { useCardData } from '../../../lib/cards/cardHooks'
@@ -93,16 +94,12 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       </div>
 
       {/* Search input */}
-      <div className="relative mb-2">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search history..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search history..."
+        className="mb-2"
+      />
 
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto relative">

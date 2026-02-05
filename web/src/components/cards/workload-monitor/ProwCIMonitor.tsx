@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import {
   Activity, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, Play, Pause, Search,
+  Clock, RefreshCw, Loader2, Play, Pause,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import { CardSearchInput } from '../../../lib/cards'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { cn } from '../../../lib/cn'
@@ -244,18 +245,12 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
       </div>
 
       {/* Search */}
-      <div className="mb-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(e) => filters.setSearch(e.target.value)}
-            placeholder="Search jobs..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-          />
-        </div>
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search jobs..."
+        className="mb-2"
+      />
 
       {/* Job list */}
       <div className="flex-1 overflow-y-auto space-y-0.5">

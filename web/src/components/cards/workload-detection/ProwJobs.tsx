@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import {
   CheckCircle, XCircle, Clock, AlertTriangle, ExternalLink,
-  Play, Search
+  Play
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { CardSearchInput } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
@@ -174,16 +175,12 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
       </div>
 
       {/* Search input */}
-      <div className="relative mb-2">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search jobs..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search jobs..."
+        className="mb-2"
+      />
 
       {/* Jobs list */}
       <div className="flex-1 overflow-y-auto space-y-2">

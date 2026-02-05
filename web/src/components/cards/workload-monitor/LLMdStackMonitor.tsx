@@ -2,12 +2,13 @@ import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
-  RefreshCw, Loader2, ChevronDown, ChevronRight, Filter, Search,
+  RefreshCw, Loader2, ChevronDown, ChevronRight, Filter,
   Stethoscope, Wrench
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
+import { CardSearchInput } from '../../../lib/cards'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
@@ -538,16 +539,12 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       </div>
 
       {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
-          placeholder="Search components..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={search}
+        onChange={(v) => { setSearch(v); setCurrentPage(1) }}
+        placeholder="Search components..."
+        className="mb-3"
+      />
 
       {/* Component sections */}
       <div className="flex-1 overflow-y-auto space-y-0.5">

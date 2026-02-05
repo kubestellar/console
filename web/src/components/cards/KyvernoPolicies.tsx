@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck, Search } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck } from 'lucide-react'
+import { CardSearchInput } from '../../lib/cards'
 
 interface KyvernoPoliciesProps {
   config?: Record<string, unknown>
@@ -144,16 +145,11 @@ export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
       </div>
 
       {/* Local Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={localSearch}
-          onChange={(e) => setLocalSearch(e.target.value)}
-          placeholder="Search policies..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={localSearch}
+        onChange={setLocalSearch}
+        placeholder="Search policies..."
+      />
 
       {/* Policies list */}
       <div className="flex-1 overflow-y-auto space-y-2">

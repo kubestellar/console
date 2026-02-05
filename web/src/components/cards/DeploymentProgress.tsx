@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { CheckCircle, Clock, XCircle, Loader2, Search, Filter, ChevronRight, ChevronDown, Server } from 'lucide-react'
+import { CheckCircle, Clock, XCircle, Loader2, Filter, ChevronRight, Server } from 'lucide-react'
 import { useCachedDeployments } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { ClusterStatusDot, getClusterState } from '../ui/ClusterStatusBadge'
+import { CardClusterFilter, CardSearchInput } from '../../lib/cards'
 import { Pagination } from '../ui/Pagination'
 import { CardControls } from '../ui/CardControls'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -211,70 +210,16 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
         </div>
         <div className="flex items-center gap-2">
           {/* Cluster Filter */}
-          {filters.availableClusters.length >= 1 && (
-            <div ref={filters.clusterFilterRef} className="relative">
-              <button
-                ref={filters.clusterFilterBtnRef}
-                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  filters.localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {filters.showClusterFilter && filters.dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: filters.dropdownStyle.top, left: filters.dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button
-                      onClick={filters.clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {filters.availableClusters.map(cluster => {
-                      const clusterState = getClusterState(
-                        cluster.healthy ?? true,
-                        cluster.reachable,
-                        cluster.nodeCount,
-                        undefined,
-                        cluster.errorType
-                      )
-                      const stateLabel = clusterState === 'healthy' ? '' :
-                        clusterState === 'degraded' ? 'degraded' :
-                        clusterState === 'unreachable-auth' ? 'needs auth' :
-                        clusterState.startsWith('unreachable') ? 'offline' : ''
-                      return (
-                        <button
-                          key={cluster.name}
-                          onClick={() => filters.toggleClusterFilter(cluster.name)}
-                          className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
-                            filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                          }`}
-                          title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
-                        >
-                          <ClusterStatusDot state={clusterState} size="sm" />
-                          <span className="flex-1 truncate">{cluster.name}</span>
-                          {stateLabel && (
-                            <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
+          <CardClusterFilter
+            availableClusters={filters.availableClusters}
+            selectedClusters={filters.localClusterFilter}
+            onToggle={filters.toggleClusterFilter}
+            onClear={filters.clearClusterFilter}
+            isOpen={filters.showClusterFilter}
+            setIsOpen={filters.setShowClusterFilter}
+            containerRef={filters.clusterFilterRef}
+            minClusters={1}
+          />
           <CardControls
             limit={itemsPerPage}
             onLimitChange={setItemsPerPage}
@@ -289,16 +234,11 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
 
       {/* Search and Status Filter Pills */}
       <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search deployments..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-          />
-        </div>
+        <CardSearchInput
+          value={filters.search}
+          onChange={handleSearchChange}
+          placeholder="Search deployments..."
+        />
 
         <div className="flex items-center gap-1 flex-wrap">
           <Filter className="w-3.5 h-3.5 text-muted-foreground mr-1" />

@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Filter, ChevronDown, Server } from 'lucide-react'
+import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Server } from 'lucide-react'
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
-import { useChartFilters } from '../../lib/cards'
+import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 
 export function StorageOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -33,10 +32,6 @@ export function StorageOverview() {
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
-
-    clusterFilterBtnRef,
-
-    dropdownStyle,
   } = useChartFilters({
     storageKey: 'storage-overview',
   })
@@ -127,52 +122,16 @@ export function StorageOverview() {
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                ref={clusterFilterBtnRef}
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
+          <CardClusterFilter
+            availableClusters={availableClusters}
+            selectedClusters={localClusterFilter}
+            onToggle={toggleClusterFilter}
+            onClear={clearClusterFilter}
+            isOpen={showClusterFilter}
+            setIsOpen={setShowClusterFilter}
+            containerRef={clusterFilterRef}
+            minClusters={1}
+          />
 
         </div>
       </div>

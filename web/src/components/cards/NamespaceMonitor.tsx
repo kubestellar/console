@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Layers, ChevronRight, ChevronDown, Server, Box, Network, HardDrive,
-  FileText, FileKey, Clock, Container, Search, RefreshCw, Plus, Minus,
+  FileText, FileKey, Clock, Container, RefreshCw, Plus, Minus,
   AlertTriangle, Eye, X, Activity
 } from 'lucide-react'
+import { CardSearchInput } from '../../lib/cards'
 import {
   useClusters, useNamespaces, useDeployments, useServices, usePVCs,
   usePods, useConfigMaps, useSecrets, useJobs
@@ -601,16 +602,12 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       <ChangesPanel />
 
       {/* Search */}
-      <div className="relative mb-3 flex-shrink-0">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          type="text"
-          value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder="Search clusters, namespaces..."
-          className="w-full pl-10 pr-4 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={searchFilter}
+        onChange={setSearchFilter}
+        placeholder="Search clusters, namespaces..."
+        className="mb-3 flex-shrink-0"
+      />
 
       {/* Resource type filters */}
       <div className="flex flex-wrap gap-1.5 mb-3 flex-shrink-0">
