@@ -109,10 +109,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
   // Aggregate loading and error states from dependencies
   const isLoadingData = isGPULoading || isPodIssuesLoading || isClustersLoading
-  // Combine errors from multiple sources for better debugging
-  const dataError = [gpuError, podIssuesError, clustersError]
-    .filter(Boolean)
-    .join('; ') || null
+  // Combine errors from multiple sources for better debugging (separated by "; ")
+  const errors = [gpuError, podIssuesError, clustersError].filter(Boolean)
+  const dataError = errors.length > 0 ? errors.join('; ') : null
 
   // Save rules whenever they change
   useEffect(() => {
