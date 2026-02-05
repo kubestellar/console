@@ -584,6 +584,17 @@ export function LLMdFlow() {
     const unifiedCount = selectedStack.components.both.reduce((sum, c) => sum + c.replicas, 0)
     const hasDisaggregation = prefillCount > 0 && decodeCount > 0
 
+    // Debug: log component counts
+    console.log('[LLMdFlow] Stack topology:', {
+      stack: selectedStack.name,
+      prefillCount,
+      decodeCount,
+      unifiedCount,
+      hasDisaggregation,
+      prefillComponents: selectedStack.components.prefill.length,
+      decodeComponents: selectedStack.components.decode.length,
+    })
+
     const positions: Record<string, { x: number; y: number }> = {
       client: { x: 10, y: 50 },
       gateway: { x: 28, y: 50 },

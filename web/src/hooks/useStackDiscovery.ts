@@ -235,10 +235,30 @@ export function useStackDiscovery(clusters: string[] = ['pok-prod-001', 'vllm-d'
             const bothPods: PodResource[] = []
 
             for (const pod of nsPods) {
-              const role = pod.metadata.labels?.['llm-d.ai/role']
-              if (role === 'prefill') prefillPods.push(pod)
-              else if (role === 'decode') decodePods.push(pod)
-              else if (role === 'both') bothPods.push(pod)
+              const role = pod.metadata.labels?.['llm-d.ai/role']?.toLowerCase()
+              const podName = pod.metadata.name.toLowerCase()
+
+              // Debug: log role detection
+              console.log('[useStackDiscovery] Pod role:', { pod: podName, role, namespace })
+
+              // Match by explicit role label first
+              if (role === 'prefill' || role === 'prefill-server') {
+                prefillPods.push(pod)
+              } else if (role === 'decode' || role === 'decode-server') {
+                decodePods.push(pod)
+              } else if (role === 'both' || role === 'unified' || role === 'model' || role === 'server' || role === 'vllm') {
+                bothPods.push(pod)
+              }
+              // Infer from pod name patterns if role is unrecognized
+              else if (podName.includes('prefill')) {
+                prefillPods.push(pod)
+              } else if (podName.includes('decode')) {
+                decodePods.push(pod)
+              }
+              // Default: treat as unified server
+              else {
+                bothPods.push(pod)
+              }
             }
 
             // Get model name from first pod
