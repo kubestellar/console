@@ -6,7 +6,7 @@ Last Updated: 2026-02-05
 
 | Category | Count |
 |----------|-------|
-| Dashboard Pages | 21 (1 main + 20 dedicated) |
+| Dashboard Pages | 22 (1 main + 21 dedicated) |
 | Card Types | 143 |
 | Cards with Drill-Down | 37 (+ 3 planned) |
 | Drill-Down Views | 23 |
@@ -17,14 +17,14 @@ Last Updated: 2026-02-05
 
 ---
 
-## 1. Dashboard Pages (20 Total)
+## 1. Dashboard Pages (22 Total)
 
 ### Main Dashboard
 | # | Name | Route | Component |
 |---|------|-------|-----------|
 | 1 | Main Dashboard | `/` | `Dashboard.tsx` |
 
-### Dedicated Dashboards (19)
+### Dedicated Dashboards (21)
 | # | Name | Route | Component |
 |---|------|-------|-----------|
 | 2 | Clusters | `/clusters` | `Clusters.tsx` |
@@ -41,11 +41,13 @@ Last Updated: 2026-02-05
 | 13 | Network | `/network` | `Network.tsx` |
 | 14 | Events | `/events` | `Events.tsx` |
 | 15 | Security | `/security` | `Security.tsx` |
-| 16 | GitOps | `/gitops` | `GitOps.tsx` |
-| 17 | Alerts | `/alerts` | `Alerts.tsx` |
-| 18 | Cost | `/cost` | `Cost.tsx` |
-| 19 | Compliance | `/compliance` | `Compliance.tsx` |
-| 20 | GPU Reservations | `/gpu-reservations` | `GPUReservations.tsx` |
+| 16 | Security Posture | `/security-posture` | `Compliance.tsx` |
+| 17 | Data Compliance | `/data-compliance` | `DataCompliance.tsx` |
+| 18 | GitOps | `/gitops` | `GitOps.tsx` |
+| 19 | Alerts | `/alerts` | `Alerts.tsx` |
+| 20 | Cost | `/cost` | `Cost.tsx` |
+| 21 | Compliance | `/compliance` | `Compliance.tsx` |
+| 22 | GPU Reservations | `/gpu-reservations` | `GPUReservations.tsx` |
 
 ### Utility Pages (Not counted as dashboards)
 | Name | Route | Component |
