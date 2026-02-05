@@ -223,31 +223,31 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
   return useMemo(() => {
     // Priority order for demo reasons:
 
-    // 1. Global demo mode is ON - always use demo data
-    if (isDemoMode) {
-      return { shouldUseDemoData: true, reason: 'global-demo-mode' as DemoReason }
-    }
-
-    // 2. Demo-only card (requires: 'none')
+    // 1. Demo-only card (requires: 'none')
     if (requires === 'none') {
       return { shouldUseDemoData: true, reason: 'demo-only-card' as DemoReason }
     }
 
-    // 3. Agent-dependent card but agent is offline
-    if (requires === 'agent' && isAgentUnavailable()) {
-      return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason }
+    // 2. Stack-dependent cards: use stack data if a stack is selected
+    //    This works even in global demo mode (uses demo stack data)
+    if (requires === 'stack') {
+      // Check if we're in a StackProvider and have a selected stack
+      // If a stack is selected (real or demo), use its data - not generic demo data
+      if (stackContext?.selectedStack) {
+        return { shouldUseDemoData: false, reason: null }
+      }
+      // No stack selected - use demo data
+      return { shouldUseDemoData: true, reason: 'stack-not-selected' as DemoReason }
     }
 
-    // 4. Stack-dependent card but no stack selected
-    if (requires === 'stack') {
-      // Stack cards also need agent, check that first
-      if (isAgentUnavailable()) {
-        return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason }
-      }
-      // Check if we're in a StackProvider and have a selected stack
-      if (!stackContext?.selectedStack) {
-        return { shouldUseDemoData: true, reason: 'stack-not-selected' as DemoReason }
-      }
+    // 3. Global demo mode is ON - use demo data for non-stack cards
+    if (isDemoMode) {
+      return { shouldUseDemoData: true, reason: 'global-demo-mode' as DemoReason }
+    }
+
+    // 4. Agent-dependent card but agent is offline
+    if (requires === 'agent' && isAgentUnavailable()) {
+      return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason }
     }
 
     // 5. Specific endpoint returned 404/error
