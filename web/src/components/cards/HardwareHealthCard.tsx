@@ -184,11 +184,12 @@ export function HardwareHealthCard() {
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
   })
 
-  // Node count should use deduplicated inventory
+  // Node count should use deduplicated inventory (same logic as deduplicatedInventory)
+  // This is computed before deduplicatedInventory but uses the same extractHostname logic
   const deduplicatedNodeCount = useMemo(() => {
-    const uniqueNodes = new Set<string>()
-    inventory.forEach(node => uniqueNodes.add(node.nodeName))
-    return uniqueNodes.size || nodeCount
+    const uniqueHostnames = new Set<string>()
+    inventory.forEach(node => uniqueHostnames.add(extractHostname(node.nodeName)))
+    return uniqueHostnames.size || nodeCount
   }, [inventory, nodeCount])
 
   // Fetch device alerts and inventory
@@ -389,17 +390,10 @@ export function HardwareHealthCard() {
     return sortedAlerts.slice(start, start + effectivePerPage)
   }, [sortedAlerts, currentPage, effectivePerPage, itemsPerPage])
 
-  // Reset page when filters change
+  // Reset page when filters or view mode change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, localClusterFilter, sortField])
-
-  // Ensure current page is valid
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(Math.max(1, totalPages))
-    }
-  }, [currentPage, totalPages])
+  }, [search, localClusterFilter, sortField, viewMode])
 
   const toggleClusterFilter = (cluster: string) => {
     setLocalClusterFilter(prev =>
@@ -493,6 +487,13 @@ export function HardwareHealthCard() {
   const currentTotalPages = viewMode === 'alerts' ? totalPages : inventoryTotalPages
   const currentNeedsPagination = viewMode === 'alerts' ? needsPagination : inventoryNeedsPagination
   const currentTotalItems = viewMode === 'alerts' ? sortedAlerts.length : sortedInventory.length
+
+  // Ensure current page is valid for current view
+  useEffect(() => {
+    if (currentPage > currentTotalPages) {
+      setCurrentPage(Math.max(1, currentTotalPages))
+    }
+  }, [currentPage, currentTotalPages])
 
   return (
     <div className="h-full flex flex-col">
