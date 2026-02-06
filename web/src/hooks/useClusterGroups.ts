@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { usePersistence } from './usePersistence'
+import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
 
 // ============================================================================
 // Types
@@ -35,7 +37,7 @@ export interface AIQueryResult {
 }
 
 // ============================================================================
-// Storage
+// Storage (localStorage fallback)
 // ============================================================================
 
 const STORAGE_KEY = 'kubestellar-cluster-groups'
@@ -71,74 +73,154 @@ function authHeaders(): Record<string, string> {
 }
 
 // ============================================================================
+// CR <-> LocalGroup conversion helpers
+// ============================================================================
+
+function crToLocalGroup(cr: CRClusterGroup): ClusterGroup {
+  const isDynamic = (cr.spec.dynamicFilters?.length ?? 0) > 0
+  return {
+    name: cr.metadata.name,
+    kind: isDynamic ? 'dynamic' : 'static',
+    clusters: cr.status?.matchedClusters ?? cr.spec.staticMembers ?? [],
+    color: cr.spec.color,
+    icon: cr.spec.icon,
+    query: isDynamic ? {
+      filters: cr.spec.dynamicFilters,
+    } : undefined,
+    lastEvaluated: cr.status?.lastEvaluated,
+  }
+}
+
+function localGroupToCR(group: ClusterGroup): Omit<CRClusterGroup, 'apiVersion' | 'kind'> {
+  return {
+    metadata: { name: group.name },
+    spec: {
+      color: group.color,
+      icon: group.icon,
+      staticMembers: group.kind === 'static' ? group.clusters : undefined,
+      dynamicFilters: group.kind === 'dynamic' && group.query?.filters ? group.query.filters : undefined,
+    },
+    status: {
+      matchedClusters: group.clusters,
+      lastEvaluated: group.lastEvaluated,
+    },
+  }
+}
+
+// ============================================================================
 // Hook
 // ============================================================================
 
 /**
  * Hook for managing user-defined cluster groups (static and dynamic).
- * Groups are persisted in localStorage and synced to the backend
- * for cluster labeling (kubestellar.io/group=<name>).
+ *
+ * When persistence is enabled, groups are stored as ClusterGroup CRs.
+ * Otherwise, falls back to localStorage with best-effort backend sync.
  */
 export function useClusterGroups() {
-  const [groups, setGroups] = useState<ClusterGroup[]>(loadGroups)
+  const { isEnabled, isActive } = usePersistence()
+  const shouldUseCRs = isEnabled && isActive
 
-  // Persist on change
+  // CR-backed state
+  const {
+    items: crGroups,
+    createItem: createCRGroup,
+    updateItem: updateCRGroup,
+    deleteItem: deleteCRGroup,
+    refresh: refreshCRGroups,
+    loading: crLoading,
+  } = useCRClusterGroups()
+
+  // localStorage-backed state (fallback)
+  const [localGroups, setLocalGroups] = useState<ClusterGroup[]>(loadGroups)
+
+  // Persist localStorage groups on change
   useEffect(() => {
-    saveGroups(groups)
-  }, [groups])
+    if (!shouldUseCRs) {
+      saveGroups(localGroups)
+    }
+  }, [localGroups, shouldUseCRs])
+
+  // Convert CR groups to local format
+  const groups: ClusterGroup[] = useMemo(() => {
+    if (shouldUseCRs) {
+      return crGroups.map(crToLocalGroup)
+    }
+    return localGroups
+  }, [shouldUseCRs, crGroups, localGroups])
 
   const createGroup = useCallback(async (group: ClusterGroup) => {
-    setGroups(prev => {
-      if (prev.some(g => g.name === group.name)) {
-        return prev.map(g => g.name === group.name ? group : g)
-      }
-      return [...prev, group]
-    })
-
-    // Sync to backend for cluster labeling
-    try {
-      await fetch('/api/cluster-groups', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(group),
+    if (shouldUseCRs) {
+      // Create via CR
+      await createCRGroup(localGroupToCR(group) as CRClusterGroup)
+    } else {
+      // localStorage mode
+      setLocalGroups(prev => {
+        if (prev.some(g => g.name === group.name)) {
+          return prev.map(g => g.name === group.name ? group : g)
+        }
+        return [...prev, group]
       })
-    } catch {
-      // Backend sync is best-effort; localStorage is primary
+
+      // Best-effort sync to backend for cluster labeling
+      try {
+        await fetch('/api/cluster-groups', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(group),
+        })
+      } catch {
+        // Backend sync is best-effort; localStorage is primary
+      }
     }
-  }, [])
+  }, [shouldUseCRs, createCRGroup])
 
   const updateGroup = useCallback(async (name: string, updates: Partial<ClusterGroup>) => {
-    setGroups(prev => prev.map(g => {
-      if (g.name !== name) return g
-      return { ...g, ...updates, name: g.name }
-    }))
+    if (shouldUseCRs) {
+      // Find current CR and update
+      const current = crGroups.find(g => g.metadata.name === name)
+      if (current) {
+        const localGroup = crToLocalGroup(current)
+        const merged = { ...localGroup, ...updates, name: localGroup.name }
+        await updateCRGroup(name, localGroupToCR(merged) as CRClusterGroup)
+      }
+    } else {
+      setLocalGroups(prev => prev.map(g => {
+        if (g.name !== name) return g
+        return { ...g, ...updates, name: g.name }
+      }))
 
-    const group = groups.find(g => g.name === name)
-    if (group) {
+      const group = localGroups.find(g => g.name === name)
+      if (group) {
+        try {
+          await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ ...group, ...updates }),
+          })
+        } catch {
+          // best-effort
+        }
+      }
+    }
+  }, [shouldUseCRs, crGroups, updateCRGroup, localGroups])
+
+  const deleteGroup = useCallback(async (name: string) => {
+    if (shouldUseCRs) {
+      await deleteCRGroup(name)
+    } else {
+      setLocalGroups(prev => prev.filter(g => g.name !== name))
+
       try {
         await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
-          method: 'PUT',
+          method: 'DELETE',
           headers: authHeaders(),
-          body: JSON.stringify({ ...group, ...updates }),
         })
       } catch {
         // best-effort
       }
     }
-  }, [groups])
-
-  const deleteGroup = useCallback(async (name: string) => {
-    setGroups(prev => prev.filter(g => g.name !== name))
-
-    try {
-      await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      })
-    } catch {
-      // best-effort
-    }
-  }, [])
+  }, [shouldUseCRs, deleteCRGroup])
 
   const getGroupClusters = useCallback((name: string): string[] => {
     return groups.find(g => g.name === name)?.clusters ?? []
@@ -164,15 +246,13 @@ export function useClusterGroups() {
       const lastEvaluated = data.evaluatedAt ?? new Date().toISOString()
 
       // Update group with fresh results
-      setGroups(prev => prev.map(g =>
-        g.name === name ? { ...g, clusters, lastEvaluated } : g
-      ))
+      await updateGroup(name, { clusters, lastEvaluated })
 
       return clusters
     } catch {
       return group.clusters
     }
-  }, [groups])
+  }, [groups, updateGroup])
 
   /** Preview which clusters match a query without saving */
   const previewQuery = useCallback(async (query: ClusterGroupQuery): Promise<{ clusters: string[]; count: number }> => {
@@ -226,5 +306,9 @@ export function useClusterGroups() {
     evaluateGroup,
     previewQuery,
     generateAIQuery,
+    // Persistence info
+    isPersisted: shouldUseCRs,
+    isLoading: shouldUseCRs ? crLoading : false,
+    refresh: shouldUseCRs ? refreshCRGroups : undefined,
   }
 }
