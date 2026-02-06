@@ -66,6 +66,9 @@ type Server struct {
 
 	// Hardware device tracking
 	deviceTracker *DeviceTracker
+
+	// Local cluster management
+	localClusters *LocalClusterManager
 }
 
 // NewServer creates a new agent server
@@ -130,6 +133,9 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize prediction system
 	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
 	server.metricsHistory = NewMetricsHistory(k8sClient)
+
+	// Initialize local cluster manager
+	server.localClusters = NewLocalClusterManager()
 
 	// Initialize device tracker with notification callback
 	server.deviceTracker = NewDeviceTracker(k8sClient, func(msgType string, payload interface{}) {
@@ -244,6 +250,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/devices/alerts/clear", s.handleDeviceAlertsClear)
 	mux.HandleFunc("/devices/inventory", s.handleDeviceInventory)
 	mux.HandleFunc("/metrics/history", s.handleMetricsHistory)
+
+	// Local cluster management endpoints
+	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
+	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
 
 	// Prometheus metrics endpoint
 	mux.Handle("/metrics", GetMetricsHandler())
@@ -2658,4 +2668,129 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 			log.Printf("[DeviceTracker] Failed to send notification: %v", err)
 		}
 	}()
+}
+
+// handleLocalClusterTools returns detected local cluster tools
+func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tools := s.localClusters.DetectTools()
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"tools": tools,
+	})
+}
+
+// handleLocalClusters handles local cluster operations (list, create, delete)
+func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		// List all local clusters
+		clusters := s.localClusters.ListClusters()
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"clusters": clusters,
+		})
+
+	case "POST":
+		// Create a new cluster
+		var req struct {
+			Tool string `json:"tool"`
+			Name string `json:"name"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		if req.Tool == "" || req.Name == "" {
+			http.Error(w, "tool and name are required", http.StatusBadRequest)
+			return
+		}
+
+		// Create cluster in background and return immediately
+		go func() {
+			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
+				log.Printf("[LocalClusters] Failed to create cluster %s with %s: %v", req.Name, req.Tool, err)
+				s.BroadcastToClients("local_cluster_error", map[string]string{
+					"tool":  req.Tool,
+					"name":  req.Name,
+					"error": err.Error(),
+				})
+			} else {
+				log.Printf("[LocalClusters] Created cluster %s with %s", req.Name, req.Tool)
+				s.BroadcastToClients("local_cluster_created", map[string]string{
+					"tool": req.Tool,
+					"name": req.Name,
+				})
+				// Kubeconfig watcher will automatically pick up the new cluster
+			}
+		}()
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "creating",
+			"tool":    req.Tool,
+			"name":    req.Name,
+			"message": "Cluster creation started. You will be notified when it completes.",
+		})
+
+	case "DELETE":
+		// Delete a cluster
+		tool := r.URL.Query().Get("tool")
+		name := r.URL.Query().Get("name")
+		if tool == "" || name == "" {
+			http.Error(w, "tool and name query parameters are required", http.StatusBadRequest)
+			return
+		}
+
+		// Delete cluster in background
+		go func() {
+			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
+				log.Printf("[LocalClusters] Failed to delete cluster %s: %v", name, err)
+				s.BroadcastToClients("local_cluster_error", map[string]string{
+					"tool":  tool,
+					"name":  name,
+					"error": err.Error(),
+				})
+			} else {
+				log.Printf("[LocalClusters] Deleted cluster %s", name)
+				s.BroadcastToClients("local_cluster_deleted", map[string]string{
+					"tool": tool,
+					"name": name,
+				})
+				// Kubeconfig watcher will automatically pick up the change
+			}
+		}()
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "deleting",
+			"tool":    tool,
+			"name":    name,
+			"message": "Cluster deletion started. You will be notified when it completes.",
+		})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }

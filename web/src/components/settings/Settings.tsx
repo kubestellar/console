@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
-  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database
+  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
@@ -27,6 +27,7 @@ import {
   WidgetSettingsSection,
   NotificationSettingsSection,
   PersistenceSection,
+  LocalClustersSection,
 } from './sections'
 import { cn } from '../../lib/cn'
 
@@ -67,6 +68,7 @@ const SETTINGS_NAV = [
   {
     group: 'Utilities',
     items: [
+      { id: 'local-clusters-settings', label: 'Local Clusters', icon: Container },
       { id: 'permissions-settings', label: 'Permissions', icon: Shield },
       { id: 'system-updates-settings', label: 'Updates', icon: Download },
     ],
@@ -228,7 +230,6 @@ export function Settings() {
               refreshUser={refreshUser}
             />
             <NotificationSettingsSection />
-            <PermissionsSection />
           </div>
         </div>
 
@@ -255,12 +256,14 @@ export function Settings() {
           </div>
         </div>
 
-        {/* System Group */}
+        {/* Utilities Group */}
         <div className="mb-8">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3 px-1">
-            System
+            Utilities
           </h2>
           <div className="space-y-6">
+            <LocalClustersSection />
+            <PermissionsSection />
             <UpdateSettings />
           </div>
         </div>
