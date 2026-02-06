@@ -253,7 +253,7 @@ export function FlappyPod(_props: CardComponentProps) {
 
       {/* Game area - relative container for overlays */}
       <div
-        className="flex-1 flex items-center justify-center relative"
+        className={`flex-1 flex items-center justify-center relative ${isExpanded ? 'min-h-0' : ''}`}
         onClick={handleClick}
       >
         <canvas
@@ -261,6 +261,7 @@ export function FlappyPod(_props: CardComponentProps) {
           width={gameWidth}
           height={gameHeight}
           className="border border-border rounded cursor-pointer"
+          style={isExpanded ? { width: '100%', height: '100%', objectFit: 'contain' } : undefined}
         />
 
         {/* Start overlay - only covers game area */}

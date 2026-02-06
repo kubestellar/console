@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Play, RotateCcw, Pause, Trophy, Apple, Zap } from 'lucide-react'
+import { useCardExpanded } from './CardWrapper'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -29,6 +30,7 @@ interface Point {
 type Direction = 'up' | 'down' | 'left' | 'right'
 
 export function KubeSnake() {
+  const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover'>('idle')
   const [score, setScore] = useState(0)
@@ -298,7 +300,7 @@ export function KubeSnake() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex flex-col items-center gap-3">
+      <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
         <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
           <div className="flex items-center gap-2">
@@ -316,12 +318,13 @@ export function KubeSnake() {
         </div>
 
         {/* Game canvas */}
-        <div className="relative">
+        <div className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
             className="border border-border rounded"
+            style={isExpanded ? { width: '100%', height: '100%', objectFit: 'contain' } : undefined}
             tabIndex={0}
           />
 

@@ -901,7 +901,7 @@ export function EPPRouting() {
       </div>
 
       {/* Main visualization area */}
-      <div className={`flex-1 relative ${isExpanded ? 'min-h-[500px]' : 'min-h-[200px]'}`}>
+      <div className={`flex-1 relative ${isExpanded ? 'min-h-0' : 'min-h-[200px]'}`}>
         <svg
           viewBox="-5 -5 120 120"
           className="w-full h-full overflow-visible"

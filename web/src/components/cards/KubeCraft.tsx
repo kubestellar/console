@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Save, Download, Trash2, Grid, Sun, Moon } from 'lucide-react'
 
+import { useCardExpanded } from './CardWrapper'
+
 // Game constants
 const CANVAS_WIDTH = 400
 const CANVAS_HEIGHT = 400
@@ -32,6 +34,7 @@ const BLOCKS: Record<BlockType, { color: string; secondary?: string; transparent
 const BLOCK_TYPES: BlockType[] = ['dirt', 'grass', 'stone', 'wood', 'leaves', 'water', 'sand', 'brick', 'glass']
 
 export function KubeCraft() {
+  const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedBlock, setSelectedBlock] = useState<BlockType>('grass')
   const [isErasing, setIsErasing] = useState(false)
@@ -326,7 +329,7 @@ export function KubeCraft() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex flex-col items-center gap-3">
+      <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Block palette */}
         <div className="flex flex-wrap gap-1 justify-center">
           {BLOCK_TYPES.map(type => (
@@ -359,12 +362,13 @@ export function KubeCraft() {
         </div>
 
         {/* Canvas */}
-        <div className="relative">
+        <div className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
             className="border border-border rounded cursor-crosshair"
+            style={isExpanded ? { width: '100%', height: '100%', objectFit: 'contain' } : undefined}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}

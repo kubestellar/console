@@ -54,10 +54,7 @@ const WIDTH_OPTIONS = [
 const LARGE_EXPANDED_CARDS = new Set([
   'cluster_comparison',
   'cluster_resource_tree',
-  'match_game',
   // AI-ML cards that need more space when expanded
-  'llmd_flow',
-  'epp_routing',
   'kvcache_monitor',
   'pd_disaggregation',
   'llmd_benchmarks',
@@ -67,8 +64,15 @@ const LARGE_EXPANDED_CARDS = new Set([
 // Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
 const FULLSCREEN_EXPANDED_CARDS = new Set([
   'cluster_locations',
-  'sudoku_game', // Games need fullscreen for the grid to fill properly
   'mobile_browser', // Shows iPad view when expanded
+  // AI-ML visualization cards benefit from full viewport
+  'llmd_flow', 'epp_routing',
+  // All arcade games need fullscreen to fill the entire screen
+  'sudoku_game', 'container_tetris', 'node_invaders', 'kube_snake',
+  'flappy_pod', 'kube_pong', 'kube_kong', 'game_2048', 'kube_man',
+  'kube_galaga', 'kube_chess', 'checkers', 'pod_crosser', 'pod_brothers',
+  'pod_pitfall', 'match_game', 'solitaire', 'kubedle', 'pod_sweeper',
+  'kube_craft', 'kube_doom', 'kube_kart',
 ])
 
 // Context to expose card expanded state to children

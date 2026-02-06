@@ -5,6 +5,7 @@ import {
   Play, Pause, RotateCcw, Trophy, Clock, Hash
 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
+import { useCardExpanded } from './CardWrapper'
 
 // Kubernetes/Cloud themed icons for matching
 const CARD_ICONS = [
@@ -44,6 +45,7 @@ const DIFFICULTY_CONFIG = {
 }
 
 export function MatchGame(_props: CardComponentProps) {
+  const { isExpanded } = useCardExpanded()
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [cards, setCards] = useState<GameCard[]>([])
   const [flippedCards, setFlippedCards] = useState<string[]>([])
@@ -272,7 +274,7 @@ export function MatchGame(_props: CardComponentProps) {
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty]
 
   return (
-    <div className="flex flex-col gap-2 h-full relative">
+    <div className={`flex flex-col gap-2 h-full relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
       {/* Canvas for confetti */}
       <canvas
         ref={canvasRef}

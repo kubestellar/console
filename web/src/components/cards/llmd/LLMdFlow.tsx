@@ -932,7 +932,7 @@ export function LLMdFlow() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-[600px]' : 'min-h-[300px]'}`}>
+    <div className={`relative w-full h-full flex-1 bg-gradient-to-br from-slate-900/50 to-slate-800/30 rounded-lg overflow-hidden ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-900/60 backdrop-blur-sm">

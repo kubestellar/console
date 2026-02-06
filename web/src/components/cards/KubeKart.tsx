@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react'
 
+import { useCardExpanded } from './CardWrapper'
+
 // Game constants
 const CANVAS_WIDTH = 400
 const CANVAS_HEIGHT = 500
@@ -58,6 +60,7 @@ const COLORS = {
 const KART_NAMES = ['Pod Racer', 'Node Runner', 'Cluster Cruiser', 'Service Sprinter']
 
 export function KubeKart() {
+  const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [gameState, setGameState] = useState<'idle' | 'countdown' | 'playing' | 'paused' | 'finished'>('idle')
   const [countdown, setCountdown] = useState(3)
@@ -533,7 +536,7 @@ export function KubeKart() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex flex-col items-center gap-3">
+      <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
         <div className="flex items-center justify-between w-full max-w-[400px] text-sm">
           <div className="flex items-center gap-4">
@@ -561,13 +564,14 @@ export function KubeKart() {
         </div>
 
         {/* Game canvas */}
-        <div className="relative">
+        <div className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
             className="border border-border rounded"
             tabIndex={0}
+            style={isExpanded ? { width: '100%', height: '100%', objectFit: 'contain' } : undefined}
           />
 
           {/* Overlays */}
