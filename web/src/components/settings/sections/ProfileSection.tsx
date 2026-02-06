@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Save, User, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface ProfileSectionProps {
@@ -14,6 +14,16 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const timeoutRef = useRef<number>()
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleSaveProfile = async () => {
     setIsSaving(true)
@@ -36,7 +46,7 @@ export function ProfileSection({ initialEmail, initialSlackId, refreshUser }: Pr
       await refreshUser()
       setIsRefreshing(false)
       setProfileSaved(true)
-      setTimeout(() => setProfileSaved(false), 2000)
+      timeoutRef.current = setTimeout(() => setProfileSaved(false), 2000)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save profile'
       setError(message)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Key, Check, AlertCircle, Loader2, Trash2, Eye, EyeOff, ExternalLink, Copy, Plug } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AgentIcon } from './AgentIcon'
@@ -53,12 +53,22 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<number>()
 
   const copyInstallCommand = async () => {
     await navigator.clipboard.writeText(INSTALL_COMMAND)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    timeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   const fetchKeysStatus = useCallback(async () => {
     try {
