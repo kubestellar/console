@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
 
+export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
+
+export interface TokenUsageByCategory {
+  missions: number
+  diagnose: number
+  insights: number
+  predictions: number
+  other: number
+}
+
 export interface TokenUsage {
   used: number
   limit: number
@@ -9,6 +19,7 @@ export interface TokenUsage {
   criticalThreshold: number
   stopThreshold: number
   resetDate: string
+  byCategory: TokenUsageByCategory
 }
 
 export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
@@ -25,14 +36,30 @@ const DEFAULT_SETTINGS = {
   stopThreshold: 1.0, // 100%
 }
 
+const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
+  missions: 0,
+  diagnose: 0,
+  insights: 0,
+  predictions: 0,
+  other: 0,
+}
+
 // Demo mode token usage - simulate realistic usage
 const DEMO_TOKEN_USAGE = 1247832 // ~25% of 5M limit
+const DEMO_BY_CATEGORY: TokenUsageByCategory = {
+  missions: 523000,
+  diagnose: 312000,
+  insights: 245832,
+  predictions: 167000,
+  other: 0,
+}
 
 // Singleton state - shared across all hook instances
 let sharedUsage: TokenUsage = {
   used: 0,
   ...DEFAULT_SETTINGS,
   resetDate: getNextResetDate(),
+  byCategory: { ...DEFAULT_BY_CATEGORY },
 }
 let pollStarted = false
 const subscribers = new Set<(usage: TokenUsage) => void>()
@@ -47,6 +74,7 @@ if (typeof window !== 'undefined') {
   // Set demo usage if in demo mode
   if (getDemoMode()) {
     sharedUsage.used = DEMO_TOKEN_USAGE
+    sharedUsage.byCategory = { ...DEMO_BY_CATEGORY }
   }
 }
 
@@ -176,9 +204,14 @@ export function useTokenUsage() {
     return 'normal'
   }, [usage])
 
-  // Add tokens used
-  const addTokens = useCallback((tokens: number) => {
-    updateSharedUsage({ used: sharedUsage.used + tokens })
+  // Add tokens used (optionally with category)
+  const addTokens = useCallback((tokens: number, category: TokenCategory = 'other') => {
+    const newByCategory = { ...sharedUsage.byCategory }
+    newByCategory[category] += tokens
+    updateSharedUsage({
+      used: sharedUsage.used + tokens,
+      byCategory: newByCategory,
+    })
   }, [])
 
   // Update settings
@@ -202,6 +235,7 @@ export function useTokenUsage() {
     updateSharedUsage({
       used: 0,
       resetDate: getNextResetDate(),
+      byCategory: { ...DEFAULT_BY_CATEGORY },
     })
   }, [])
 

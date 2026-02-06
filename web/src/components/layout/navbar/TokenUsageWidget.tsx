@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Coins } from 'lucide-react'
-import { useTokenUsage } from '../../../hooks/useTokenUsage'
+import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
+import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
 import { cn } from '../../../lib/cn'
+
+const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.ElementType; color: string }> = {
+  missions: { label: 'AI Missions', icon: Rocket, color: 'bg-purple-500' },
+  diagnose: { label: 'Diagnose', icon: Stethoscope, color: 'bg-blue-500' },
+  insights: { label: 'Insights', icon: Lightbulb, color: 'bg-yellow-500' },
+  predictions: { label: 'Predictions', icon: TrendingUp, color: 'bg-green-500' },
+  other: { label: 'Other', icon: MoreHorizontal, color: 'bg-gray-500' },
+}
 
 export function TokenUsageWidget() {
   const navigate = useNavigate()
@@ -118,9 +126,61 @@ export function TokenUsageWidget() {
               </span>
             </div>
           </div>
+          {/* Category breakdown - always show all features */}
+          {usage.byCategory && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="text-xs text-muted-foreground mb-2">Breakdown by Feature</div>
+              {/* Category list with token counts */}
+              <div className="space-y-1.5">
+                {(['missions', 'diagnose', 'insights', 'predictions', 'other'] as TokenCategory[])
+                  .map((category) => {
+                    const tokens = usage.byCategory[category] || 0
+                    const config = CATEGORY_CONFIG[category]
+                    const Icon = config.icon
+                    // Format tokens: 1.2M, 523k, or exact number
+                    const formatTokens = (n: number) => {
+                      if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+                      if (n >= 1000) return `${(n / 1000).toFixed(0)}k`
+                      return n.toString()
+                    }
+                    return (
+                      <div key={category} className="flex items-center gap-2 text-xs">
+                        <div className={`w-2 h-2 rounded-full ${tokens > 0 ? config.color : 'bg-secondary'}`} />
+                        <Icon className={`w-3 h-3 ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`} />
+                        <span className={`flex-1 ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                          {config.label}
+                        </span>
+                        <span className={`font-mono ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                          {formatTokens(tokens)}
+                        </span>
+                      </div>
+                    )
+                  })}
+              </div>
+              {/* Stacked bar if there's category usage */}
+              {Object.values(usage.byCategory).some(v => v > 0) && (
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden flex mt-2">
+                  {(Object.entries(usage.byCategory) as [TokenCategory, number][])
+                    .filter(([, tokens]) => tokens > 0)
+                    .map(([category, tokens]) => {
+                      const totalCategoryUsage = Object.values(usage.byCategory).reduce((a, b) => a + b, 0)
+                      const pct = totalCategoryUsage > 0 ? (tokens / totalCategoryUsage) * 100 : 0
+                      const config = CATEGORY_CONFIG[category]
+                      return (
+                        <div
+                          key={category}
+                          className={`h-full ${config.color}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-3 pt-3 border-t border-border">
             <button
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/settings#token-usage-settings')}
               className="w-full text-xs text-purple-400 hover:text-purple-300 text-center"
             >
               Configure limits in Settings
