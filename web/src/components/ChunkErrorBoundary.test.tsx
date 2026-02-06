@@ -3,7 +3,7 @@
  * Basic tests for the error boundary component
  */
 
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChunkErrorBoundary } from './ChunkErrorBoundary'
 
