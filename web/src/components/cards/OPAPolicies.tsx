@@ -594,12 +594,10 @@ What would you like to modify about this policy?`,
 
     // Fetch the current YAML in background
     const cmd = ['get', policy.kind.toLowerCase(), policy.name, '-o', 'yaml']
-    console.log('[OPA] Fetching YAML with command:', cmd.join(' '), 'context:', clusterName)
 
     try {
       // Use priority: true to bypass the queue for immediate execution (interactive user action)
       const result = await kubectlProxy.exec(cmd, { context: clusterName, timeout: 30000, priority: true })
-      console.log('[OPA] YAML fetch result:', { hasOutput: !!result.output, outputLength: result.output?.length, error: result.error })
 
       if (result.output && result.output.trim()) {
         setYamlContent(result.output)
@@ -1087,7 +1085,6 @@ export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
         const cacheTime = localStorage.getItem('opa-statuses-cache-time')
         const cacheAge = cacheTime ? Date.now() - parseInt(cacheTime, 10) : Infinity
         if (cacheAge < 10 * 60 * 1000) { // 10 minutes
-          console.log('[OPA] Loaded cached statuses for', Object.keys(parsed).length, 'clusters')
           return parsed
         }
       }

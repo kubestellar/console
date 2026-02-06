@@ -84,7 +84,6 @@ class KubectlProxy {
         this.ws = new WebSocket(KC_AGENT_WS_URL)
 
         this.ws.onopen = () => {
-          console.log('[KubectlProxy] Connected to local agent')
           this.isConnecting = false
           resolve()
         }
@@ -110,7 +109,6 @@ class KubectlProxy {
         }
 
         this.ws.onclose = () => {
-          console.log('[KubectlProxy] Connection closed')
           this.ws = null
           this.connectPromise = null
           this.isConnecting = false
@@ -255,9 +253,6 @@ class KubectlProxy {
       const readyCondition = node.status?.conditions?.find((c: NodeCondition) => c.type === 'Ready')
       const isReady = readyCondition?.status === 'True'
 
-      // Debug: log node ready status
-      console.log(`[NodeReady] ${context}/${node.metadata.name}: status=${readyCondition?.status}, ready=${isReady}`)
-
       return {
         name: node.metadata.name,
         ready: isReady,
@@ -304,9 +299,6 @@ class KubectlProxy {
         }
       }
     }
-
-    // Debug log
-    console.log(`[PodMetrics] ${context}: ${pods.length} pods, ${podsWithRequests} with CPU requests, cpuMillicores=${cpuRequestsMillicores}, memBytes=${memoryRequestsBytes}`)
 
     return { count: pods.length, cpuRequestsMillicores, memoryRequestsBytes }
   }
@@ -380,7 +372,6 @@ class KubectlProxy {
       const response = await this.exec(['top', 'nodes', '--no-headers'], { context, timeout: 5000 })
       if (response.exitCode !== 0) {
         // Metrics server not available
-        console.log(`[ClusterUsage] ${context}: metrics-server not available`)
         return { cpuUsageMillicores: 0, memoryUsageBytes: 0, metricsAvailable: false }
       }
 
@@ -407,7 +398,6 @@ class KubectlProxy {
         }
       }
 
-      console.log(`[ClusterUsage] ${context}: cpuMillicores=${totalCpuMillicores}, memBytes=${totalMemoryBytes}`)
       return { cpuUsageMillicores: totalCpuMillicores, memoryUsageBytes: totalMemoryBytes, metricsAvailable: true }
     } catch (err) {
       console.error(`[ClusterUsage] ${context}: error getting usage -`, err)
@@ -452,9 +442,6 @@ class KubectlProxy {
       const healthyThreshold = Math.max(1, Math.ceil(nodes.length * 0.5))
       const isHealthy = readyNodes >= healthyThreshold && nodes.length > 0
 
-      // Debug log to understand health status
-      console.log(`[ClusterHealth] ${context}: ${readyNodes}/${nodes.length} ready, threshold=${healthyThreshold}, healthy=${isHealthy}`)
-
       const result = {
         cluster: context,
         healthy: isHealthy,
@@ -480,9 +467,6 @@ class KubectlProxy {
         storageGB: Math.round(totalStorageBytes / (1024 * 1024 * 1024)),
         lastSeen: new Date().toISOString(),
       }
-
-      // Debug log
-      console.log(`[ClusterHealth] ${context}: cpuCores=${result.cpuCores}, cpuUsage=${result.cpuUsageCores?.toFixed(1)}, cpuRequests=${result.cpuRequestsCores?.toFixed(1)}, memGB=${result.memoryGB}, memUsage=${result.memoryUsageGB?.toFixed(1)}, memRequests=${result.memoryRequestsGB?.toFixed(1)}, metricsAvailable=${result.metricsAvailable}`)
 
       return result
     } catch (err) {

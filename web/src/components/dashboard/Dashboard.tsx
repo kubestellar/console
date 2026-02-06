@@ -551,13 +551,6 @@ export function Dashboard() {
     const newCards: Card[] = suggestions.map((s, index) => {
       const cardType = mapVisualizationToCardType(s.visualization, s.type)
       const size = getDefaultCardSize(cardType)
-      // Debug: log card dimensions when adding
-      console.log('[AddCard Debug]', {
-        originalType: s.type,
-        visualization: s.visualization,
-        resolvedType: cardType,
-        size,
-      })
       return {
         id: `new-${Date.now()}-${index}`,
         card_type: cardType,

@@ -1254,7 +1254,7 @@ export function CardWrapper({
             )}
             <button
               data-tour="card-chat"
-              onClick={() => console.log('Open chat for card:', cardType)}
+              onClick={() => {}}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
               title="Ask AI about this card"
             >

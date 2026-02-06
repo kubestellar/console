@@ -468,7 +468,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
       {(mission.status === 'abort' || mission.status === 'partial') && (
         <div className="px-3 pb-2 flex items-center gap-2">
           <button
-            onClick={() => console.log('AI Diagnose:', mission.id)}
+            onClick={() => {}}
             className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/20 transition-colors"
             title="AI will analyze pod events, logs, and resource limits to diagnose the failure"
           >
@@ -476,7 +476,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
             Diagnose
           </button>
           <button
-            onClick={() => console.log('AI Repair:', mission.id)}
+            onClick={() => {}}
             className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/20 transition-colors"
             title="AI will attempt to fix the issue (restart pods, adjust resources, etc.)"
           >

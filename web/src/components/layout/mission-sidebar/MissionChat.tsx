@@ -659,7 +659,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       onClose={() => setShowSaveDialog(false)}
       onSaved={() => {
         // Could show a toast notification here
-        console.log('[Missions] Resolution saved successfully')
       }}
     />
     </>
