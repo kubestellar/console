@@ -226,8 +226,13 @@ export function useActiveUsers() {
     subscribers.add(handleUpdate)
     stateSubscribers.add(handleStateUpdate)
 
-    // Set initial state
+    // Sync initial state — if data was already fetched by another
+    // hook instance, clear loading immediately so we don't get stuck
     setInfo(sharedInfo)
+    if (hasFetchedOnce) {
+      setIsLoading(false)
+      setHasError(false)
+    }
 
     // Re-render + refetch when demo mode toggles (viewerCount switches metric)
     const handleDemoChange = () => {
