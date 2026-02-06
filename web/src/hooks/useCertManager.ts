@@ -318,7 +318,11 @@ export function useCertManager() {
             }
           }
         } catch (err) {
-          console.error(`[useCertManager] Error fetching from ${cluster}:`, err)
+          // Silence expected errors in demo mode (agent unavailable)
+          const isDemoError = err instanceof Error && err.message.includes('demo mode')
+          if (!isDemoError) {
+            console.error(`[useCertManager] Error fetching from ${cluster}:`, err)
+          }
         }
       }
 

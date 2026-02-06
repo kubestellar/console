@@ -20,7 +20,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { api } from '../../lib/api'
+import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { useDashboards, Dashboard } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -256,8 +256,12 @@ export function CustomDashboard() {
       }
       setLastUpdated(new Date())
     } catch (error) {
-      console.error('Failed to load dashboard:', error)
-      if (!isRefresh) {
+      const isExpectedFailure = error instanceof BackendUnavailableError ||
+        error instanceof UnauthenticatedError
+      if (!isExpectedFailure) {
+        console.error('Failed to load dashboard:', error)
+      }
+      if (!isRefresh && !isExpectedFailure) {
         showToast('Failed to load dashboard', 'error')
       }
     } finally {

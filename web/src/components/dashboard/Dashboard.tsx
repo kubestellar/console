@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
-import { api, BackendUnavailableError } from '../../lib/api'
+import { api, BackendUnavailableError, UnauthenticatedError } from '../../lib/api'
 import { useDashboards } from '../../hooks/useDashboards'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardHistory } from '../../hooks/useCardHistory'
@@ -521,6 +521,7 @@ export function Dashboard() {
     } catch (error) {
       // Don't log expected failures (backend unavailable or timeout)
       const isExpectedFailure = error instanceof BackendUnavailableError ||
+        error instanceof UnauthenticatedError ||
         (error instanceof Error && error.message.includes('Request timeout'))
       if (!isExpectedFailure) {
         console.error('Failed to load dashboard:', error)
