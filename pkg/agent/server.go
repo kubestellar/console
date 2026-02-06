@@ -251,6 +251,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/devices/inventory", s.handleDeviceInventory)
 	mux.HandleFunc("/metrics/history", s.handleMetricsHistory)
 
+	// Kagenti AI agent platform endpoints
+	mux.HandleFunc("/kagenti/agents", s.handleKagentiAgents)
+	mux.HandleFunc("/kagenti/builds", s.handleKagentiBuilds)
+	mux.HandleFunc("/kagenti/cards", s.handleKagentiCards)
+	mux.HandleFunc("/kagenti/tools", s.handleKagentiTools)
+	mux.HandleFunc("/kagenti/summary", s.handleKagentiSummary)
+
 	// Local cluster management endpoints
 	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
 	mux.HandleFunc("/local-clusters", s.handleLocalClusters)

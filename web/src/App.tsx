@@ -50,6 +50,7 @@ const Arcade = lazy(() => import('./components/arcade/Arcade').then(m => ({ defa
 const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ default: m.Deploy })))
 const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
+const Kagenti = lazy(() => import('./components/kagenti/Kagenti').then(m => ({ default: m.Kagenti })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
 
 // Prefetch all lazy route chunks after initial page load.
@@ -85,6 +86,7 @@ if (typeof window !== 'undefined') {
       () => import('./components/deploy/Deploy'),
       () => import('./components/aiml/AIML'),
       () => import('./components/cicd/CICD'),
+      () => import('./components/kagenti/Kagenti'),
     ]
     // Stagger imports to avoid blocking the main thread
     chunks.forEach((load, i) => {
@@ -584,6 +586,18 @@ function App() {
               <OnboardedRoute>
                 <Layout>
                   <CICD />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-agents"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <Kagenti />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>

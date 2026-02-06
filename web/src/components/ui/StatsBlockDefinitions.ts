@@ -34,6 +34,7 @@ export type DashboardStatsType =
   | 'dashboard'
   | 'operators'
   | 'deploy'
+  | 'kagenti'
 
 /**
  * Default stat blocks for the Clusters dashboard
@@ -272,6 +273,17 @@ export const DEPLOY_STAT_BLOCKS: StatBlockConfig[] = [
 ]
 
 /**
+ * Default stat blocks for the Kagenti AI Agents dashboard
+ */
+export const KAGENTI_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'agents', name: 'Agents', icon: 'Bot', visible: true, color: 'violet' },
+  { id: 'ready_agents', name: 'Ready', icon: 'CheckCircle2', visible: true, color: 'green' },
+  { id: 'active_builds', name: 'Building', icon: 'Hammer', visible: true, color: 'blue' },
+  { id: 'tools', name: 'MCP Tools', icon: 'Wrench', visible: true, color: 'cyan' },
+  { id: 'clusters_with_kagenti', name: 'Clusters', icon: 'Server', visible: true, color: 'purple' },
+]
+
+/**
  * Get all stat blocks across all dashboard types
  */
 export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
@@ -292,6 +304,7 @@ export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
     ...DASHBOARD_STAT_BLOCKS,
     ...OPERATORS_STAT_BLOCKS,
     ...DEPLOY_STAT_BLOCKS,
+    ...KAGENTI_STAT_BLOCKS,
   ]
 
   // Deduplicate by ID
@@ -342,6 +355,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return OPERATORS_STAT_BLOCKS
     case 'deploy':
       return DEPLOY_STAT_BLOCKS
+    case 'kagenti':
+      return KAGENTI_STAT_BLOCKS
     default:
       return []
   }

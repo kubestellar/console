@@ -74,6 +74,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   alerts: 'Alerts',
   operators: 'Operators',
   deploy: 'Deploy',
+  kagenti: 'AI Agents',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -93,12 +94,13 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   alerts: '/alerts',
   operators: '/operators',
   deploy: '/deploy',
+  kagenti: '/ai-agents',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
   'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
   'network', 'security', 'compliance', 'data-compliance', 'compute',
-  'events', 'cost', 'alerts', 'operators', 'deploy',
+  'events', 'cost', 'alerts', 'operators', 'deploy', 'kagenti',
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---
@@ -126,6 +128,7 @@ const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
   { key: 'kubestellar-helm-cards', route: '/helm', name: 'Helm' },
   { key: 'kubestellar-logs-cards', route: '/logs', name: 'Logs' },
   { key: 'kubestellar-arcade-cards', route: '/arcade', name: 'Arcade' },
+  { key: 'kubestellar-kagenti-cards', route: '/ai-agents', name: 'AI Agents' },
 ]
 
 interface StoredCard {
@@ -266,6 +269,7 @@ const PAGE_ITEMS: SearchItem[] = [
   { id: 'page-cost', name: 'Cost', description: 'Infrastructure cost analysis', category: 'page', href: '/cost', keywords: ['opencost', 'kubecost', 'billing'] },
   { id: 'page-gpu-reservations', name: 'GPU Reservations', description: 'GPU resource reservations', category: 'page', href: '/gpu-reservations', keywords: ['nvidia', 'cuda', 'gpu'] },
   { id: 'page-cluster-compare', name: 'Cluster Comparison', description: 'Compare clusters side by side', category: 'page', href: '/compute/compare', keywords: ['diff', 'compare'] },
+  { id: 'page-ai-agents', name: 'AI Agents', description: 'Kagenti agent deployment, builds, and MCP tools', category: 'page', href: '/ai-agents', keywords: ['kagenti', 'agent', 'mcp', 'llm', 'a2a'] },
 ]
 
 const SETTING_ITEMS: SearchItem[] = [
