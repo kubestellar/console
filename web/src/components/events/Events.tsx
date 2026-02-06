@@ -12,6 +12,7 @@ import { formatStat } from '../../lib/formatStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { getDefaultCards } from '../../config/dashboards'
+import { getChartColor, getChartColorByName } from '../../lib/chartColors'
 
 // Event-related constants
 const EVENT_LIMIT = 100 // Maximum number of events to fetch
@@ -149,14 +150,14 @@ export function Events() {
     const normal = globalFilteredAllEvents.filter(e => e.type === 'Normal').length
     const reasonCounts = globalFilteredAllEvents.reduce((acc, e) => { acc[e.reason] = (acc[e.reason] || 0) + 1; return acc }, {} as Record<string, number>)
     const topReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value], i) => ({
-      name, value, color: ['#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][i % 6]
+      name, value, color: getChartColor((i % 6) + 1)
     }))
     const clusterCounts = globalFilteredAllEvents.reduce((acc, e) => {
       if (e.cluster) { const name = e.cluster.split('/').pop() || e.cluster; acc[name] = (acc[name] || 0) + 1 }
       return acc
     }, {} as Record<string, number>)
     const clusterData = Object.entries(clusterCounts).sort((a, b) => b[1] - a[1]).map(([name, value], i) => ({
-      name, value, color: ['#9333ea', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][i % 6]
+      name, value, color: getChartColor((i % 6) + 1)
     }))
     const now = new Date()
     const hourlyData: { name: string; value: number; color?: string }[] = []
@@ -165,13 +166,13 @@ export function Events() {
       const hourEnd = new Date(hourStart.getTime() + MILLISECONDS_PER_HOUR)
       const hourTotal = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= hourStart && new Date(e.lastSeen) < hourEnd).length
       const hourWarnings = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= hourStart && new Date(e.lastSeen) < hourEnd && e.type === 'Warning').length
-      hourlyData.push({ name: hourStart.getHours().toString().padStart(2, '0') + ':00', value: hourTotal, color: hourWarnings > hourTotal / 2 ? '#f59e0b' : '#9333ea' })
+      hourlyData.push({ name: hourStart.getHours().toString().padStart(2, '0') + ':00', value: hourTotal, color: hourWarnings > hourTotal / 2 ? getChartColorByName('warning') : getChartColorByName('primary') })
     }
     const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const recentCount = globalFilteredAllEvents.filter(e => e.lastSeen && new Date(e.lastSeen) >= oneHourAgo).length
     return {
       total: globalFilteredAllEvents.length, warnings, normal, recentCount, topReasons, clusterData, hourlyData,
-      typeChartData: [{ name: 'Warnings', value: warnings, color: '#f59e0b' }, { name: 'Normal', value: normal, color: '#10b981' }].filter(d => d.value > 0)
+      typeChartData: [{ name: 'Warnings', value: warnings, color: getChartColorByName('warning') }, { name: 'Normal', value: normal, color: getChartColorByName('success') }].filter(d => d.value > 0)
     }
   }, [globalFilteredAllEvents, globalFilteredWarningEvents])
 
@@ -315,7 +316,7 @@ export function Events() {
 
           <div className="glass p-4 rounded-lg">
             <h3 className="text-sm font-medium text-muted-foreground mb-4">Event Activity (Last 24 Hours)</h3>
-            <BarChart data={stats.hourlyData} height={200} color="#9333ea" showGrid={true} />
+            <BarChart data={stats.hourlyData} height={200} color={getChartColorByName('primary')} showGrid={true} />
           </div>
 
           <div className="glass p-4 rounded-lg">

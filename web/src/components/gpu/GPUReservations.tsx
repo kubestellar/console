@@ -23,6 +23,7 @@ import { BarChart } from '../charts/BarChart'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { getChartColor, getChartColorByName } from '../../lib/chartColors'
 
 // GPU utilization thresholds for visual indicators
 const UTILIZATION_HIGH_THRESHOLD = 80 // Red indicator above this percentage
@@ -169,14 +170,14 @@ export function GPUReservations() {
     const typeChartData = Object.entries(gpuTypes).map(([name, data], i) => ({
       name,
       value: data.total,
-      color: ['#9333ea', '#3b82f6', '#10b981', '#f59e0b'][i % 4],
+      color: getChartColor((i % 4) + 1),
     }))
 
     // Team usage
     const teamUsage = quotas.map((q, i) => ({
       name: q.team,
       value: q.gpuUsed,
-      color: ['#9333ea', '#3b82f6', '#10b981', '#f59e0b'][i % 4],
+      color: getChartColor((i % 4) + 1),
     }))
 
     // Weekly usage trend (mock)
@@ -433,7 +434,7 @@ export function GPUReservations() {
             <BarChart
               data={stats.weeklyUsage}
               height={200}
-              color="#9333ea"
+              color={getChartColorByName('primary')}
               showGrid={true}
             />
           </div>
