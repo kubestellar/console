@@ -61,6 +61,13 @@ interface CRDInfo {
   description?: string
 }
 
+interface CRDRaw {
+  name: string
+  kind: string
+  version: string
+  description?: string
+}
+
 export function OperatorDrillDown({ data }: Props) {
   const cluster = data.cluster as string
   const namespace = data.namespace as string
@@ -198,7 +205,7 @@ export function OperatorDrillDown({ data }: Props) {
       if (output) {
         const csv = JSON.parse(output)
         const crds = csv.spec?.customresourcedefinitions?.owned || []
-        setOperatorCRDs(crds.map((crd: any) => ({
+        setOperatorCRDs(crds.map((crd: CRDRaw) => ({
           name: crd.name,
           kind: crd.kind,
           version: crd.version,

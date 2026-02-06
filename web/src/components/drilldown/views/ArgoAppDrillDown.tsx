@@ -68,11 +68,27 @@ interface ArgoResource {
   syncWave?: number
 }
 
+interface ArgoResourceRaw {
+  kind: string
+  name: string
+  namespace?: string
+  status: string
+  health?: { status?: string }
+  syncWave?: number
+}
+
 interface SyncHistory {
   revision: string
   deployedAt: string
   status: string
   message?: string
+}
+
+interface SyncHistoryRaw {
+  revision?: string
+  deployedAt: string
+  deployStartedAt?: string
+  source?: { repoURL?: string }
 }
 
 export function ArgoAppDrillDown({ data }: Props) {
@@ -179,7 +195,7 @@ export function ArgoAppDrillDown({ data }: Props) {
       if (output) {
         const app = JSON.parse(output)
         const resources = app.status?.resources || []
-        setAppResources(resources.map((r: any) => ({
+        setAppResources(resources.map((r: ArgoResourceRaw) => ({
           kind: r.kind,
           name: r.name,
           namespace: r.namespace || namespace,
@@ -205,7 +221,7 @@ export function ArgoAppDrillDown({ data }: Props) {
       if (output) {
         const app = JSON.parse(output)
         const history = app.status?.history || []
-        setSyncHistory(history.map((h: any) => ({
+        setSyncHistory(history.map((h: SyncHistoryRaw) => ({
           revision: h.revision?.substring(0, 7) || 'Unknown',
           deployedAt: h.deployedAt,
           status: h.deployStartedAt ? 'Deployed' : 'Unknown',

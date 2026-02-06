@@ -82,8 +82,12 @@ interface GitHubActivityConfig {
 type ViewMode = 'prs' | 'issues' | 'stars' | 'contributors' | 'releases'
 type SortByOption = 'date' | 'activity' | 'status'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GitHubItem = any
+// Union type for all GitHub items that can be displayed
+type GitHubItem = GitHubPR | GitHubIssue | GitHubRelease | GitHubContributor
+
+// Helper type for accessing properties on heterogeneous GitHub items
+// Used when we need to dynamically access properties across different item types
+type GitHubItemUnknown = Record<string, unknown>
 
 const SORT_OPTIONS = [
   { value: 'date' as const, label: 'Date' },
@@ -309,7 +313,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           calculatedOpenIssueCount = match ? parseInt(match[1], 10) : 1
         } else {
           const openIssues = await openIssuesResponse.json()
-          calculatedOpenIssueCount = openIssues.filter((i: any) => !i.pull_request).length
+          calculatedOpenIssueCount = openIssues.filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
         }
         setOpenIssueCount(calculatedOpenIssueCount)
       }
@@ -403,32 +407,39 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 // Sort comparators for GitHub items (open-first sorting applied separately after)
 const SORT_COMPARATORS: Record<SortByOption, (a: GitHubItem, b: GitHubItem) => number> = {
   date: (a, b) => {
-    const aDate = new Date(a.updated_at || a.published_at || 0).getTime()
-    const bDate = new Date(b.updated_at || b.published_at || 0).getTime()
+    const aUnknown = a as unknown as GitHubItemUnknown
+    const bUnknown = b as unknown as GitHubItemUnknown
+    const aDate = new Date((aUnknown.updated_at as string) || (aUnknown.published_at as string) || 0).getTime()
+    const bDate = new Date((bUnknown.updated_at as string) || (bUnknown.published_at as string) || 0).getTime()
     return aDate - bDate
   },
   activity: (a, b) => {
-    const aActivity = a.comments ?? a.contributions ?? 0
-    const bActivity = b.comments ?? b.contributions ?? 0
+    const aUnknown = a as unknown as GitHubItemUnknown
+    const bUnknown = b as unknown as GitHubItemUnknown
+    const aActivity = (aUnknown.comments as number) ?? (aUnknown.contributions as number) ?? 0
+    const bActivity = (bUnknown.comments as number) ?? (bUnknown.contributions as number) ?? 0
     return aActivity - bActivity
   },
   status: (a, b) => {
+    const aUnknown = a as unknown as GitHubItemUnknown
+    const bUnknown = b as unknown as GitHubItemUnknown
     const statusOrder: Record<string, number> = { open: 0, merged: 1, closed: 2 }
-    const aStatus = a.merged_at ? 'merged' : (a.state || '')
-    const bStatus = b.merged_at ? 'merged' : (b.state || '')
+    const aStatus = aUnknown.merged_at ? 'merged' : ((aUnknown.state as string) || '')
+    const bStatus = bUnknown.merged_at ? 'merged' : ((bUnknown.state as string) || '')
     return (statusOrder[aStatus] ?? 999) - (statusOrder[bStatus] ?? 999)
   },
 }
 
 // Custom search predicate for GitHub items (handles heterogeneous item types)
 function githubSearchPredicate(item: GitHubItem, query: string): boolean {
+  const itemUnknown = item as unknown as GitHubItemUnknown
   return (
-    item.title?.toLowerCase().includes(query) ||
-    item.name?.toLowerCase().includes(query) ||
-    item.tag_name?.toLowerCase().includes(query) ||
-    item.login?.toLowerCase().includes(query) ||
-    item.user?.login?.toLowerCase().includes(query) ||
-    item.author?.login?.toLowerCase().includes(query) ||
+    (itemUnknown.title as string)?.toLowerCase().includes(query) ||
+    (itemUnknown.name as string)?.toLowerCase().includes(query) ||
+    (itemUnknown.tag_name as string)?.toLowerCase().includes(query) ||
+    (itemUnknown.login as string)?.toLowerCase().includes(query) ||
+    ((itemUnknown.user as { login?: string })?.login)?.toLowerCase().includes(query) ||
+    ((itemUnknown.author as { login?: string })?.login)?.toLowerCase().includes(query) ||
     false
   )
 }
@@ -583,8 +594,10 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
       return rawPaginatedItems // No open/closed concept for these
     }
     return [...rawPaginatedItems].sort((a, b) => {
-      const aOpen = a.state === 'open' ? 0 : 1
-      const bOpen = b.state === 'open' ? 0 : 1
+      const aUnknown = a as unknown as GitHubItemUnknown
+      const bUnknown = b as unknown as GitHubItemUnknown
+      const aOpen = aUnknown.state === 'open' ? 0 : 1
+      const bOpen = bUnknown.state === 'open' ? 0 : 1
       return aOpen - bOpen // Open (0) comes before closed (1)
     })
   }, [rawPaginatedItems, viewMode])
@@ -975,15 +988,16 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
             No {viewMode} found{searchQuery ? ' matching search' : ' for this time range'}
           </div>
         ) : (
-          paginatedItems.map((item: any) => {
+          paginatedItems.map((item) => {
+            const itemUnknown = item as unknown as GitHubItemUnknown
             if (viewMode === 'prs') {
-              return <PRItem key={item.number} pr={item} />
+              return <PRItem key={itemUnknown.number as number} pr={item as GitHubPR} />
             } else if (viewMode === 'issues') {
-              return <IssueItem key={item.number} issue={item} />
+              return <IssueItem key={itemUnknown.number as number} issue={item as GitHubIssue} />
             } else if (viewMode === 'releases') {
-              return <ReleaseItem key={item.id} release={item} />
+              return <ReleaseItem key={itemUnknown.id as number} release={item as GitHubRelease} />
             } else if (viewMode === 'contributors') {
-              return <ContributorItem key={item.login} contributor={item} />
+              return <ContributorItem key={itemUnknown.login as string} contributor={item as GitHubContributor} />
             }
             return null
           })

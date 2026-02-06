@@ -46,6 +46,13 @@ interface Violation {
   timestamp?: string
 }
 
+interface ViolationRaw {
+  name?: string
+  kind?: string
+  namespace?: string
+  message?: string
+}
+
 interface PolicySpec {
   match?: Record<string, unknown>
   parameters?: Record<string, unknown>
@@ -187,7 +194,7 @@ export function PolicyDrillDown({ data }: Props) {
         if (output) {
           const constraint = JSON.parse(output)
           const statusViolations = constraint.status?.violations || []
-          setViolations(statusViolations.map((v: any) => ({
+          setViolations(statusViolations.map((v: ViolationRaw) => ({
             resource: v.name || 'Unknown',
             kind: v.kind || 'Unknown',
             namespace: v.namespace,

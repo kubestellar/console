@@ -45,3 +45,19 @@ export interface RSSFeedProps {
     feedName?: string
   }
 }
+
+// Raw RSS item from external API (rss2json)
+export interface RSSItemRaw {
+  guid?: string
+  link?: string
+  title?: string
+  description?: string
+  content?: string
+  pubDate?: string
+  author?: string
+  thumbnail?: string
+  enclosure?: {
+    thumbnail?: string
+    link?: string
+  }
+}

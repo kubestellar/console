@@ -327,7 +327,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   </label>
                   <select
                     value={weatherCondition}
-                    onChange={e => setWeatherCondition(e.target.value as any)}
+                    onChange={e => setWeatherCondition(e.target.value as typeof weatherCondition)}
                     className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="severe_storm">Severe Storm</option>

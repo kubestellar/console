@@ -6,7 +6,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
-import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps } from './types'
+import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps, RSSItemRaw } from './types'
 import { PRESET_FEEDS, CORS_PROXIES } from './constants'
 import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import {
@@ -219,15 +219,18 @@ export function RSSFeed({ config }: RSSFeedProps) {
         if (proxy.type === 'json-rss2json') {
           const data = await response.json()
           if (data.status === 'ok' && data.items) {
-            items = data.items.map((item: any, idx: number) => {
+            items = data.items.map((item: RSSItemRaw, idx: number) => {
               // Get thumbnail, validating it's not a placeholder
               let thumb = item.thumbnail || item.enclosure?.thumbnail || item.enclosure?.link || ''
               if (!isValidThumbnail(thumb)) thumb = ''
               // Try to extract from description if no valid thumbnail
               if (!thumb && (item.description || item.content)) {
-                const imgMatch = (item.description || item.content).match(/<img[^>]+src=["']([^"']+)["']/)
-                if (imgMatch && isValidThumbnail(imgMatch[1])) {
-                  thumb = imgMatch[1]
+                const descOrContent = item.description || item.content
+                if (descOrContent) {
+                  const imgMatch = descOrContent.match(/<img[^>]+src=["']([^"']+)["']/)
+                  if (imgMatch && isValidThumbnail(imgMatch[1])) {
+                    thumb = imgMatch[1]
+                  }
                 }
               }
               return {

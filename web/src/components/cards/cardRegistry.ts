@@ -155,7 +155,8 @@ function withSuspense(LazyComponent: ComponentType<CardComponentProps>): CardCom
   function SuspenseWrapped(props: CardComponentProps) {
     return createElement(Suspense, { fallback: null }, createElement(LazyComponent, props))
   }
-  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as any).displayName || 'Card'})`
+  // Access displayName property that may exist on lazy component
+  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as ComponentType<CardComponentProps> & { displayName?: string }).displayName || 'Card'})`
   return SuspenseWrapped
 }
 

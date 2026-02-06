@@ -42,13 +42,38 @@ interface CRDVersion {
   deprecationWarning?: string
 }
 
+interface CRDVersionRaw {
+  name: string
+  served: boolean
+  storage: boolean
+  deprecated?: boolean
+  deprecationWarning?: string
+  schema?: { openAPIV3Schema?: Record<string, unknown> }
+}
+
 interface CRDInstance {
   name: string
   namespace?: string
   creationTimestamp?: string
 }
 
+interface CRDInstanceRaw {
+  metadata?: {
+    name?: string
+    namespace?: string
+    creationTimestamp?: string
+  }
+}
+
 interface CRDCondition {
+  type: string
+  status: string
+  reason?: string
+  message?: string
+  lastTransitionTime?: string
+}
+
+interface CRDConditionRaw {
   type: string
   status: string
   reason?: string
@@ -156,7 +181,7 @@ export function CRDDrillDown({ data }: Props) {
         const crd = JSON.parse(output)
         // Get versions
         const vers = crd.spec?.versions || []
-        setVersions(vers.map((v: any) => ({
+        setVersions(vers.map((v: CRDVersionRaw) => ({
           name: v.name,
           served: v.served,
           storage: v.storage,
@@ -166,7 +191,7 @@ export function CRDDrillDown({ data }: Props) {
 
         // Get conditions
         const conds = crd.status?.conditions || []
-        setConditions(conds.map((c: any) => ({
+        setConditions(conds.map((c: CRDConditionRaw) => ({
           type: c.type,
           status: c.status,
           reason: c.reason,
@@ -175,7 +200,7 @@ export function CRDDrillDown({ data }: Props) {
         })))
 
         // Get schema (from first served version)
-        const servedVersion = vers.find((v: any) => v.served)
+        const servedVersion = vers.find((v: CRDVersionRaw) => v.served)
         if (servedVersion?.schema?.openAPIV3Schema) {
           setSchema(servedVersion.schema.openAPIV3Schema)
         }
@@ -200,7 +225,7 @@ export function CRDDrillDown({ data }: Props) {
       if (output) {
         const data = JSON.parse(output)
         const items = data.items || []
-        setInstances(items.slice(0, 50).map((item: any) => ({
+        setInstances(items.slice(0, 50).map((item: CRDInstanceRaw) => ({
           name: item.metadata?.name || 'Unknown',
           namespace: item.metadata?.namespace,
           creationTimestamp: item.metadata?.creationTimestamp,
@@ -223,7 +248,7 @@ export function CRDDrillDown({ data }: Props) {
       if (output) {
         const crd = JSON.parse(output)
         const vers = crd.spec?.versions || []
-        const servedVersion = vers.find((v: any) => v.served)
+        const servedVersion = vers.find((v: CRDVersionRaw) => v.served)
         if (servedVersion?.schema?.openAPIV3Schema) {
           setSchema(servedVersion.schema.openAPIV3Schema)
         }
