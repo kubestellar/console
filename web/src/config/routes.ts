@@ -13,7 +13,6 @@ export const ROUTES = {
   
   // Main routes
   HOME: '/',
-  DASHBOARD: '/',
   CUSTOM_DASHBOARD: '/custom-dashboard/:id',
   
   // Settings & Management

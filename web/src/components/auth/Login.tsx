@@ -99,7 +99,7 @@ export function Login() {
           {/* Footer */}
           <p className="text-center text-sm text-muted-foreground mt-8">
             By signing in, you agree to our{' '}
-            <a href="#" className="text-purple-400 hover:text-purple-300" target="_blank" rel="noopener noreferrer">
+            <a href="#" className="text-purple-400 hover:text-purple-300">
               Terms of Service
             </a>
           </p>
