@@ -65,29 +65,80 @@ export function SaveResolutionDialog({
       setIssueType(autoDetectedSignature.type || '')
       setResourceKind(autoDetectedSignature.resourceKind || '')
 
-      // Try to extract summary from last assistant message
-      const lastAssistant = [...mission.messages].reverse().find(m => m.role === 'assistant')
-      if (lastAssistant) {
-        // Look for a summary section or use first paragraph
-        const summaryMatch = lastAssistant.content.match(/(?:summary|solution|fix)[:\s]*([^\n]+)/i)
-        if (summaryMatch) {
-          setSummary(summaryMatch[1].trim())
-        } else {
-          // Use first non-empty paragraph
-          const firstPara = lastAssistant.content.split('\n\n')[0]?.trim() || ''
-          setSummary(firstPara.length > 200 ? firstPara.substring(0, 197) + '...' : firstPara)
+      // Combine all assistant messages (resolution often spans multiple messages)
+      const assistantMessages = mission.messages
+        .filter(m => m.role === 'assistant')
+        .map(m => m.content)
+        .join('\n\n')
+
+      if (assistantMessages) {
+        // Extract summary - try multiple patterns
+        let extractedSummary = ''
+
+        // Try markdown headers like "## Summary" or "**Summary:**"
+        const headerPatterns = [
+          /(?:^|\n)#+\s*(?:summary|solution|fix|resolution)[:\s]*\n*([^\n#]+)/im,
+          /\*\*(?:summary|solution|fix|resolution)[:\*]*\*\*[:\s]*([^\n]+)/im,
+          /(?:summary|solution|fix|here's what|the issue is)[:\s]*([^\n]{20,})/im,
+        ]
+
+        for (const pattern of headerPatterns) {
+          const match = assistantMessages.match(pattern)
+          if (match && match[1]) {
+            extractedSummary = match[1].trim()
+            break
+          }
         }
 
-        // Try to extract steps from numbered lists
-        const numberedSteps = lastAssistant.content.match(/^\d+\.\s+.+$/gm) || []
+        // Fallback: use first meaningful paragraph (skip short intro lines)
+        if (!extractedSummary) {
+          const paragraphs = assistantMessages.split(/\n\n+/)
+          for (const para of paragraphs) {
+            const cleaned = para.replace(/^[#*-\s]+/, '').trim()
+            if (cleaned.length > 30 && !cleaned.startsWith('```')) {
+              extractedSummary = cleaned.length > 200 ? cleaned.substring(0, 197) + '...' : cleaned
+              break
+            }
+          }
+        }
+        setSummary(extractedSummary)
+
+        // Extract steps - try numbered lists, then bullet points
+        let extractedSteps: string[] = []
+
+        // Numbered lists: "1. Step" or "1) Step"
+        const numberedSteps = assistantMessages.match(/^\s*\d+[\.\)]\s+.+$/gm) || []
         if (numberedSteps.length > 0) {
-          setSteps(numberedSteps.map(s => s.replace(/^\d+\.\s+/, '')))
+          extractedSteps = numberedSteps.map(s => s.replace(/^\s*\d+[\.\)]\s+/, '').trim())
         }
 
-        // Extract YAML code blocks
-        const yamlBlocks = lastAssistant.content.match(/```ya?ml\n([\s\S]*?)```/g) || []
-        if (yamlBlocks.length > 0) {
-          setYaml(yamlBlocks.map(b => b.replace(/```ya?ml\n|```/g, '')).join('\n---\n'))
+        // Bullet points: "- Step" or "* Step" (if no numbered steps)
+        if (extractedSteps.length === 0) {
+          const bulletSteps = assistantMessages.match(/^\s*[-*]\s+.+$/gm) || []
+          if (bulletSteps.length > 0) {
+            extractedSteps = bulletSteps
+              .map(s => s.replace(/^\s*[-*]\s+/, '').trim())
+              .filter(s => s.length > 10 && !s.startsWith('**')) // Skip short items and bold headers
+          }
+        }
+
+        // Also extract inline code commands as potential steps
+        const codeCommands = assistantMessages.match(/`(kubectl|oc|helm|docker|podman|crictl|systemctl|journalctl)[^`]+`/g) || []
+        if (codeCommands.length > 0 && extractedSteps.length < 3) {
+          const commandSteps = codeCommands.map(c => `Run: ${c.replace(/`/g, '')}`)
+          extractedSteps = [...extractedSteps, ...commandSteps].slice(0, 10)
+        }
+
+        setSteps(extractedSteps.length > 0 ? extractedSteps : [''])
+
+        // Extract code blocks - YAML, bash, shell, or generic
+        const codeBlocks = assistantMessages.match(/```(?:ya?ml|bash|sh|shell)?\n([\s\S]*?)```/g) || []
+        if (codeBlocks.length > 0) {
+          const yamlContent = codeBlocks
+            .map(b => b.replace(/```(?:ya?ml|bash|sh|shell)?\n|```/g, '').trim())
+            .filter(b => b.length > 0)
+            .join('\n---\n')
+          setYaml(yamlContent)
         }
       }
 
