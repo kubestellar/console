@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, User, Cast, Menu, X, MoreVertical } from 'lucide-react'
+import { Sun, Moon, Monitor, User, Menu, X, MoreVertical } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
@@ -15,7 +15,6 @@ import { AgentSelector } from '../../agent/AgentSelector'
 import { SearchDropdown } from './SearchDropdown'
 import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
-import { LanguageSelector } from './LanguageSelector'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
 
@@ -86,23 +85,8 @@ export function Navbar() {
           <AgentStatusIndicator />
           <AgentSelector compact />
 
-          {/* Language Selector */}
-          <LanguageSelector />
-
           {/* Token Usage */}
           <TokenUsageWidget />
-
-          {/* Presentation Mode toggle */}
-          <button
-            onClick={togglePresentationMode}
-            className={isPresentationMode
-              ? 'p-2 rounded-lg transition-colors bg-blue-500/20 text-blue-400'
-              : 'p-2 rounded-lg transition-colors hover:bg-secondary text-muted-foreground'
-            }
-            title={isPresentationMode ? 'Presentation Mode ON (click to disable)' : 'Enable Presentation Mode (reduces animations for screen sharing)'}
-          >
-            <Cast className="w-5 h-5" />
-          </button>
 
           {/* Tour trigger */}
           <TourTrigger />
@@ -175,11 +159,6 @@ export function Navbar() {
                     <AgentStatusIndicator />
                   </div>
                   <div className="px-3 py-2 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Language</span>
-                    <LanguageSelector />
-                  </div>
-                  <div className="border-t border-border my-2" />
-                  <div className="px-3 py-2 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Viewers</span>
                     <div
                       className="flex items-center gap-1 text-muted-foreground"
@@ -205,6 +184,8 @@ export function Navbar() {
           onLogout={logout}
           onPreferences={() => navigate('/settings')}
           onFeedback={() => setShowFeedback(true)}
+          isPresentationMode={isPresentationMode}
+          onTogglePresentationMode={togglePresentationMode}
         />
       </div>
 

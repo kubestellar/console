@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Cast } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
+import { languages } from '../../lib/i18n'
 
 interface UserProfileDropdownProps {
   user: {
@@ -13,12 +15,23 @@ interface UserProfileDropdownProps {
   onLogout: () => void
   onPreferences?: () => void
   onFeedback?: () => void
+  isPresentationMode?: boolean
+  onTogglePresentationMode?: () => void
 }
 
-export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback, isPresentationMode, onTogglePresentationMode }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { totalCoins, awardCoins } = useRewards()
+  const { i18n } = useTranslation()
+
+  const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
+
+  const handleLanguageChange = (langCode: string) => {
+    i18n.changeLanguage(langCode)
+    setShowLanguageSubmenu(false)
+  }
 
   const handleLinkedInShare = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
@@ -129,6 +142,66 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback 
               <span className="text-muted-foreground">Coins:</span>
               <span className="text-yellow-400 font-medium">{totalCoins.toLocaleString()}</span>
             </div>
+            {/* Language selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowLanguageSubmenu(!showLanguageSubmenu)}
+                className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
+              >
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Language:</span>
+                <span className="text-foreground flex items-center gap-1.5">
+                  <span>{currentLanguage.flag}</span>
+                  <span>{currentLanguage.name}</span>
+                </span>
+                <ChevronDown className={`w-3 h-3 ml-auto text-muted-foreground transition-transform ${showLanguageSubmenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showLanguageSubmenu && (
+                <div className="mt-1 ml-6 space-y-0.5 border-l-2 border-border pl-3">
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleLanguageChange(lang.code)}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors ${
+                        i18n.language === lang.code
+                          ? 'bg-purple-500/20 text-foreground'
+                          : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <span>{lang.flag}</span>
+                      <span>{lang.name}</span>
+                      {i18n.language === lang.code && (
+                        <Check className="w-3 h-3 ml-auto text-purple-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Presentation Mode toggle */}
+            {onTogglePresentationMode && (
+              <button
+                onClick={onTogglePresentationMode}
+                className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
+              >
+                <Cast className={`w-4 h-4 ${isPresentationMode ? 'text-blue-400' : 'text-muted-foreground'}`} />
+                <span className="text-muted-foreground">Presentation:</span>
+                <span className={isPresentationMode ? 'text-blue-400' : 'text-foreground'}>
+                  {isPresentationMode ? 'On' : 'Off'}
+                </span>
+                <div
+                  className={`ml-auto w-8 h-4 rounded-full transition-colors ${
+                    isPresentationMode ? 'bg-blue-500' : 'bg-secondary'
+                  }`}
+                >
+                  <div
+                    className={`w-3 h-3 rounded-full bg-white mt-0.5 transition-transform ${
+                      isPresentationMode ? 'ml-4' : 'ml-0.5'
+                    }`}
+                  />
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Actions */}
