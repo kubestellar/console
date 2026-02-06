@@ -231,8 +231,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
     const type = statsType.trim() || `custom_${Date.now()}`
     if (blocks.filter(b => b.label.trim()).length === 0) {
       setSaveMessage('Add at least one stat block.')
-      const timeoutId = setTimeout(() => setSaveMessage(null), 3000)
-      timeoutsRef.current.push(timeoutId)
+      const validationTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+      timeoutsRef.current.push(validationTimeoutId)
       return
     }
 
@@ -264,8 +264,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
     setSaveMessage(`Stats "${definition.title}" created!`)
     onStatsCreated?.(type)
 
-    const timeoutId2 = setTimeout(() => setSaveMessage(null), 3000)
-    timeoutsRef.current.push(timeoutId2)
+    const saveSuccessTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+    timeoutsRef.current.push(saveSuccessTimeoutId)
   }, [statsType, blocks, title, gridCols, onStatsCreated])
 
   const handleDelete = useCallback((type: string) => {
@@ -559,8 +559,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               saveDynamicStatsDefinition(definition)
               setSaveMessage(`Stats "${definition.title}" created with AI!`)
               onStatsCreated?.(type)
-              const timeoutId3 = setTimeout(() => setSaveMessage(null), 3000)
-              timeoutsRef.current.push(timeoutId3)
+              const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+              timeoutsRef.current.push(aiCreateTimeoutId)
             }}
             saveLabel="Create Stat Block"
           />

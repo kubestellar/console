@@ -152,8 +152,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
     onCardCreated?.(id)
 
     // Reset
-    const timeoutId = setTimeout(() => setSaveMessage(null), 3000)
-    timeoutsRef.current.push(timeoutId)
+    const saveMessageTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+    timeoutsRef.current.push(saveMessageTimeoutId)
   }, [t1Title, t1Description, t1DataJson, t1Columns, t1Layout, t1Width, onCardCreated])
 
   // Save Tier 2 card
@@ -191,8 +191,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
     setSaveMessage(`Card "${def.title}" created!`)
     onCardCreated?.(id)
 
-    const timeoutId2 = setTimeout(() => setSaveMessage(null), 3000)
-    timeoutsRef.current.push(timeoutId2)
+    const tier2SaveTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+    timeoutsRef.current.push(tier2SaveTimeoutId)
   }, [t2Title, t2Description, t2Source, t2Width, onCardCreated])
 
   // Delete a card
@@ -510,8 +510,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
               onCardCreated={(id) => {
                 setSaveMessage('Card created with AI!')
                 onCardCreated?.(id)
-                const timeoutId3 = setTimeout(() => setSaveMessage(null), 3000)
-                timeoutsRef.current.push(timeoutId3)
+                const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+                timeoutsRef.current.push(aiCreateTimeoutId)
               }}
             />
           )}

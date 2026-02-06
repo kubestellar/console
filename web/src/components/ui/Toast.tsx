@@ -35,7 +35,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     // Auto-remove after 3 seconds
     const timeoutId = setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
-      timeoutsRef.current.delete(id)
+      // Only delete if still in map (component may have unmounted)
+      if (timeoutsRef.current.has(id)) {
+        timeoutsRef.current.delete(id)
+      }
     }, 3000)
     timeoutsRef.current.set(id, timeoutId)
   }, [])
