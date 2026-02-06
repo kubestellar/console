@@ -12,32 +12,32 @@ interface TemplatesModalProps {
 
 // Card type to color mapping for visual preview
 const CARD_COLORS: Record<string, string> = {
-  cluster_health: 'bg-green-500/40',
-  resource_usage: 'bg-blue-500/40',
-  cluster_metrics: 'bg-purple-500/40',
-  pod_issues: 'bg-red-500/40',
-  deployment_issues: 'bg-orange-500/40',
-  cluster_comparison: 'bg-cyan-500/40',
-  cluster_costs: 'bg-yellow-500/40',
-  resource_capacity: 'bg-indigo-500/40',
-  cluster_network: 'bg-pink-500/40',
-  cluster_focus: 'bg-teal-500/40',
-  event_stream: 'bg-amber-500/40',
-  deployment_status: 'bg-lime-500/40',
-  upgrade_status: 'bg-emerald-500/40',
-  namespace_overview: 'bg-violet-500/40',
-  namespace_quotas: 'bg-fuchsia-500/40',
-  namespace_rbac: 'bg-rose-500/40',
-  namespace_events: 'bg-sky-500/40',
-  gitops_releases: 'bg-blue-400/40',
-  gitops_drift: 'bg-orange-400/40',
-  argocd_health: 'bg-cyan-400/40',
-  security_issues: 'bg-red-400/40',
-  security_compliance: 'bg-yellow-400/40',
-  security_rbac: 'bg-amber-400/40',
-  gpu_overview: 'bg-green-400/40',
-  gpu_status: 'bg-lime-400/40',
-  gpu_inventory: 'bg-emerald-400/40',
+  cluster_health: 'bg-green-500/40 dark:bg-green-900/40',
+  resource_usage: 'bg-blue-500/40 dark:bg-blue-900/40',
+  cluster_metrics: 'bg-purple-500/40 dark:bg-purple-900/40',
+  pod_issues: 'bg-red-500/40 dark:bg-red-900/40',
+  deployment_issues: 'bg-orange-500/40 dark:bg-orange-900/40',
+  cluster_comparison: 'bg-cyan-500/40 dark:bg-cyan-900/40',
+  cluster_costs: 'bg-yellow-500/40 dark:bg-yellow-900/40',
+  resource_capacity: 'bg-indigo-500/40 dark:bg-indigo-900/40',
+  cluster_network: 'bg-pink-500/40 dark:bg-pink-900/40',
+  cluster_focus: 'bg-teal-500/40 dark:bg-teal-900/40',
+  event_stream: 'bg-amber-500/40 dark:bg-amber-900/40',
+  deployment_status: 'bg-lime-500/40 dark:bg-lime-900/40',
+  upgrade_status: 'bg-emerald-500/40 dark:bg-emerald-900/40',
+  namespace_overview: 'bg-violet-500/40 dark:bg-violet-900/40',
+  namespace_quotas: 'bg-fuchsia-500/40 dark:bg-fuchsia-900/40',
+  namespace_rbac: 'bg-rose-500/40 dark:bg-rose-900/40',
+  namespace_events: 'bg-sky-500/40 dark:bg-sky-900/40',
+  gitops_releases: 'bg-blue-400/40 dark:bg-blue-900/40',
+  gitops_drift: 'bg-orange-400/40 dark:bg-orange-900/40',
+  argocd_health: 'bg-cyan-400/40 dark:bg-cyan-900/40',
+  security_issues: 'bg-red-400/40 dark:bg-red-900/40',
+  security_compliance: 'bg-yellow-400/40 dark:bg-yellow-900/40',
+  security_rbac: 'bg-amber-400/40 dark:bg-amber-900/40',
+  gpu_overview: 'bg-green-400/40 dark:bg-green-900/40',
+  gpu_status: 'bg-lime-400/40 dark:bg-lime-900/40',
+  gpu_inventory: 'bg-emerald-400/40 dark:bg-emerald-900/40',
 }
 
 export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesModalProps) {
@@ -166,7 +166,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                       return (
                         <div
                           key={idx}
-                          className={`rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40'} flex items-center justify-center p-1`}
+                          className={`rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40 dark:bg-gray-900/40'} flex items-center justify-center p-1`}
                           style={{
                             gridColumn: `span ${colSpan}`,
                             minHeight: `${card.position.h * 24}px`
@@ -186,7 +186,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
                   <div className="text-xs text-muted-foreground mb-1">Cards included:</div>
                   {hoveredTemplate.cards.map((card, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-xs">
-                      <div className={`w-2 h-2 rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40'}`} />
+                      <div className={`w-2 h-2 rounded ${CARD_COLORS[card.card_type] || 'bg-gray-500/40 dark:bg-gray-900/40'}`} />
                       <span className="text-foreground/80">{formatCardTitle(card.card_type)}</span>
                     </div>
                   ))}
