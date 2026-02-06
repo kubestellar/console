@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getDemoMode } from './useDemoMode'
+import { isDemoModeForced } from './useDemoMode'
 
 export interface AgentHealth {
   status: string
@@ -66,7 +66,7 @@ interface AgentState {
 type Listener = (state: AgentState) => void
 
 class AgentManager {
-  private state: AgentState = getDemoMode() ? {
+  private state: AgentState = isDemoModeForced ? {
     status: 'disconnected',
     health: DEMO_DATA,
     error: 'Demo mode - agent connection skipped',
@@ -99,8 +99,8 @@ class AgentManager {
     if (this.isStarted) return
     this.isStarted = true
 
-    // In demo mode, skip agent connection entirely to avoid console errors
-    if (getDemoMode()) {
+    // On Netlify deployments, skip agent connection entirely (no local agent available)
+    if (isDemoModeForced) {
       this.setState({
         status: 'disconnected',
         health: DEMO_DATA,
