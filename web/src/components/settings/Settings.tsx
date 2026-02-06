@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
-  Palette, Eye, Plug, Github, Key, LayoutGrid, Download
+  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
@@ -26,6 +26,7 @@ import {
   PredictionSettingsSection,
   WidgetSettingsSection,
   NotificationSettingsSection,
+  PersistenceSection,
 } from './sections'
 import { cn } from '../../lib/cn'
 
@@ -46,6 +47,7 @@ const SETTINGS_NAV = [
     items: [
       { id: 'github-token-settings', label: 'GitHub', icon: Github },
       { id: 'widget-settings', label: 'Desktop Widget', icon: LayoutGrid },
+      { id: 'persistence-settings', label: 'Deploy Persistence', icon: Database },
     ],
   },
   {
@@ -210,6 +212,7 @@ export function Settings() {
           <div className="space-y-6">
             <GitHubTokenSection forceVersionCheck={forceVersionCheck} />
             <WidgetSettingsSection />
+            <PersistenceSection />
           </div>
         </div>
 
