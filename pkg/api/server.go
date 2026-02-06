@@ -247,9 +247,39 @@ func (s *Server) setupRoutes() {
 
 	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
 	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {
+		wsUsers := s.hub.GetActiveUsersCount()
+		demoSessions := s.hub.GetDemoSessionCount()
+		wsTotalConns := s.hub.GetTotalConnectionsCount()
+
+		// Return whichever is higher (WebSocket users or demo sessions)
+		activeUsers := wsUsers
+		if demoSessions > wsUsers {
+			activeUsers = demoSessions
+		}
+		totalConnections := wsTotalConns
+		if demoSessions > wsTotalConns {
+			totalConnections = demoSessions
+		}
+
 		return c.JSON(fiber.Map{
-			"activeUsers":      s.hub.GetActiveUsersCount(),
-			"totalConnections": s.hub.GetTotalConnectionsCount(),
+			"activeUsers":      activeUsers,
+			"totalConnections": totalConnections,
+		})
+	})
+
+	// Active users heartbeat endpoint (for demo mode session tracking)
+	s.app.Post("/api/active-users", func(c *fiber.Ctx) error {
+		var body struct {
+			SessionID string `json:"sessionId"`
+		}
+		if err := c.BodyParser(&body); err != nil || body.SessionID == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "sessionId required"})
+		}
+		s.hub.RecordDemoSession(body.SessionID)
+		demoCount := s.hub.GetDemoSessionCount()
+		return c.JSON(fiber.Map{
+			"activeUsers":      demoCount,
+			"totalConnections": demoCount,
 		})
 	})
 

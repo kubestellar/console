@@ -26,14 +26,15 @@ type Client struct {
 
 // Hub maintains active WebSocket connections
 type Hub struct {
-	clients    map[*Client]bool
-	userIndex  map[uuid.UUID][]*Client
-	broadcast  chan broadcastMessage
-	register   chan *Client
-	unregister chan *Client
-	mu         sync.RWMutex
-	done       chan struct{}
-	jwtSecret  string // JWT secret for WebSocket auth
+	clients      map[*Client]bool
+	userIndex    map[uuid.UUID][]*Client
+	demoSessions map[string]time.Time // sessionId -> lastSeen (for demo mode heartbeats)
+	broadcast    chan broadcastMessage
+	register     chan *Client
+	unregister   chan *Client
+	mu           sync.RWMutex
+	done         chan struct{}
+	jwtSecret    string // JWT secret for WebSocket auth
 }
 
 type broadcastMessage struct {
@@ -44,12 +45,13 @@ type broadcastMessage struct {
 // NewHub creates a new Hub
 func NewHub() *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		userIndex:  make(map[uuid.UUID][]*Client),
-		broadcast:  make(chan broadcastMessage, 256),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		done:       make(chan struct{}),
+		clients:      make(map[*Client]bool),
+		userIndex:    make(map[uuid.UUID][]*Client),
+		demoSessions: make(map[string]time.Time),
+		broadcast:    make(chan broadcastMessage, 256),
+		register:     make(chan *Client),
+		unregister:   make(chan *Client),
+		done:         make(chan struct{}),
 	}
 }
 
@@ -136,6 +138,30 @@ func (h *Hub) GetTotalConnectionsCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.clients)
+}
+
+// RecordDemoSession records a heartbeat from a demo mode session
+func (h *Hub) RecordDemoSession(sessionID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.demoSessions[sessionID] = time.Now()
+}
+
+// GetDemoSessionCount returns the number of active demo sessions (seen in last 60 seconds)
+func (h *Hub) GetDemoSessionCount() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	cutoff := time.Now().Add(-60 * time.Second)
+	count := 0
+	for id, lastSeen := range h.demoSessions {
+		if lastSeen.After(cutoff) {
+			count++
+		} else {
+			delete(h.demoSessions, id) // cleanup stale sessions
+		}
+	}
+	return count
 }
 
 // BroadcastAll sends a message to all connected clients
