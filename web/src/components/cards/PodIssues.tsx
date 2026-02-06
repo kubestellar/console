@@ -180,7 +180,7 @@ export function PodIssues() {
               borderClass={colors.border}
               title={`Click to view details for ${issue.name}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 group">
                 <div className={`p-2 rounded-lg ${colors.iconBg} flex-shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
@@ -205,20 +205,19 @@ export function PodIssues() {
                       {issue.issues.join(', ')}
                     </p>
                   )}
-                  {/* AI Diagnose, Repair & Ask actions */}
-                  <CardAIActions
-                    className="mt-2"
-                    resource={{
-                      kind: 'Pod',
-                      name: issue.name,
-                      namespace: issue.namespace,
-                      cluster: issue.cluster || 'default',
-                      status: issue.status,
-                    }}
-                    issues={issue.issues.map(msg => ({ name: issue.status, message: msg }))}
-                    additionalContext={{ restarts: issue.restarts }}
-                  />
                 </div>
+                {/* AI Diagnose, Repair & Ask actions */}
+                <CardAIActions
+                  resource={{
+                    kind: 'Pod',
+                    name: issue.name,
+                    namespace: issue.namespace,
+                    cluster: issue.cluster || 'default',
+                    status: issue.status,
+                  }}
+                  issues={issue.issues.map(msg => ({ name: issue.status, message: msg }))}
+                  additionalContext={{ restarts: issue.restarts }}
+                />
               </div>
             </CardListItem>
           )

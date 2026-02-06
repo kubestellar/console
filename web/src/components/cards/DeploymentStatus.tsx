@@ -325,6 +325,20 @@ export function DeploymentStatus() {
                         {deployment.readyReplicas}/{deployment.replicas} ready
                       </span>
                     </div>
+                    {/* AI Diagnose, Repair & Ask for failed deployments */}
+                    {deployment.status === 'failed' && (
+                      <CardAIActions
+                        resource={{
+                          kind: 'Deployment',
+                          name: deployment.name,
+                          namespace: deployment.namespace,
+                          cluster: clusterName,
+                          status: deployment.status,
+                        }}
+                        issues={[{ name: 'Failed', message: `${deployment.readyReplicas}/${deployment.replicas} replicas ready` }]}
+                        additionalContext={{ image: deployment.image, progress: deployment.progress }}
+                      />
+                    )}
                     <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
@@ -336,22 +350,6 @@ export function DeploymentStatus() {
                     style={{ width: `${deployment.progress}%` }}
                   />
                 </div>
-
-                {/* AI Diagnose, Repair & Ask for failed deployments */}
-                {deployment.status === 'failed' && (
-                  <CardAIActions
-                    className="mt-2"
-                    resource={{
-                      kind: 'Deployment',
-                      name: deployment.name,
-                      namespace: deployment.namespace,
-                      cluster: clusterName,
-                      status: deployment.status,
-                    }}
-                    issues={[{ name: 'Failed', message: `${deployment.readyReplicas}/${deployment.replicas} replicas ready` }]}
-                    additionalContext={{ image: deployment.image, progress: deployment.progress }}
-                  />
-                )}
               </div>
             )
           })

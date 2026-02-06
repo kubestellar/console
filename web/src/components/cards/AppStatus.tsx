@@ -254,6 +254,23 @@ export function AppStatus(_props: AppStatusProps) {
                 <span className="text-xs text-muted-foreground" title={`Deployed to ${total} cluster${total !== 1 ? 's' : ''}`}>
                   {total} cluster{total !== 1 ? 's' : ''}
                 </span>
+                {/* AI Diagnose, Repair & Ask for apps with issues */}
+                {(app.status.warning > 0 || app.status.pending > 0) && (
+                  <CardAIActions
+                    resource={{
+                      kind: 'Deployment',
+                      name: app.name,
+                      namespace: app.namespace,
+                      cluster: app.clusters[0],
+                      status: app.status.warning > 0 ? 'Warning' : 'Pending',
+                    }}
+                    issues={[
+                      ...(app.status.warning > 0 ? [{ name: 'Warning', message: `${app.status.warning} instance(s) with warnings across ${app.clusters.length} cluster(s)` }] : []),
+                      ...(app.status.pending > 0 ? [{ name: 'Pending', message: `${app.status.pending} instance(s) pending` }] : []),
+                    ]}
+                    additionalContext={{ clusters: app.clusters, healthy: app.status.healthy }}
+                  />
+                )}
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
@@ -286,25 +303,6 @@ export function AppStatus(_props: AppStatusProps) {
                 <ClusterBadge key={cluster} cluster={cluster} showIcon={false} />
               ))}
             </div>
-
-            {/* AI Diagnose, Repair & Ask for apps with issues */}
-            {(app.status.warning > 0 || app.status.pending > 0) && (
-              <CardAIActions
-                className="mt-2"
-                resource={{
-                  kind: 'Deployment',
-                  name: app.name,
-                  namespace: app.namespace,
-                  cluster: app.clusters[0],
-                  status: app.status.warning > 0 ? 'Warning' : 'Pending',
-                }}
-                issues={[
-                  ...(app.status.warning > 0 ? [{ name: 'Warning', message: `${app.status.warning} instance(s) with warnings across ${app.clusters.length} cluster(s)` }] : []),
-                  ...(app.status.pending > 0 ? [{ name: 'Pending', message: `${app.status.pending} instance(s) pending` }] : []),
-                ]}
-                additionalContext={{ clusters: app.clusters, healthy: app.status.healthy }}
-              />
-            )}
           </div>
         )
       })}

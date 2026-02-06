@@ -191,7 +191,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
               borderClass="border-orange-500/20"
               title={`Click to view details for ${issue.name}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 group">
                 <div className="p-2 rounded-lg bg-orange-500/20 flex-shrink-0" title={iconTooltip}>
                   <Icon className="w-4 h-4 text-orange-400" />
                 </div>
@@ -214,20 +214,19 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
                       {issue.message}
                     </p>
                   )}
-                  {/* AI Diagnose, Repair & Ask actions */}
-                  <CardAIActions
-                    className="mt-2"
-                    resource={{
-                      kind: 'Deployment',
-                      name: issue.name,
-                      namespace: issue.namespace,
-                      cluster: issue.cluster || 'default',
-                      status: issue.reason || 'Issue',
-                    }}
-                    issues={[{ name: issue.reason || 'Unknown', message: issue.message || 'Deployment issue' }]}
-                    additionalContext={{ replicas: issue.replicas, readyReplicas: issue.readyReplicas }}
-                  />
                 </div>
+                {/* AI Diagnose, Repair & Ask actions */}
+                <CardAIActions
+                  resource={{
+                    kind: 'Deployment',
+                    name: issue.name,
+                    namespace: issue.namespace,
+                    cluster: issue.cluster || 'default',
+                    status: issue.reason || 'Issue',
+                  }}
+                  issues={[{ name: issue.reason || 'Unknown', message: issue.message || 'Deployment issue' }]}
+                  additionalContext={{ replicas: issue.replicas, readyReplicas: issue.readyReplicas }}
+                />
               </div>
             </CardListItem>
           )

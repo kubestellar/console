@@ -296,7 +296,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
               onClick={() => handleIssueClick(issue)}
               title={`Click to view pod ${issue.name} with security issue: ${issue.issue}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 group">
                 <div className={`p-2 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
@@ -319,20 +319,19 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
                       {issue.details}
                     </p>
                   )}
-                  {/* AI Diagnose, Repair & Ask actions */}
-                  <CardAIActions
-                    className="mt-2"
-                    resource={{
-                      kind: 'Pod',
-                      name: issue.name,
-                      namespace: issue.namespace,
-                      cluster: issue.cluster || 'default',
-                      status: issue.severity,
-                    }}
-                    issues={[{ name: issue.issue, message: issue.details || issue.issue }]}
-                    additionalContext={{ severity: issue.severity, securityIssue: issue.issue }}
-                  />
                 </div>
+                {/* AI Diagnose, Repair & Ask actions */}
+                <CardAIActions
+                  resource={{
+                    kind: 'Pod',
+                    name: issue.name,
+                    namespace: issue.namespace,
+                    cluster: issue.cluster || 'default',
+                    status: issue.severity,
+                  }}
+                  issues={[{ name: issue.issue, message: issue.details || issue.issue }]}
+                  additionalContext={{ severity: issue.severity, securityIssue: issue.issue }}
+                />
                 <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
               </div>
             </div>
