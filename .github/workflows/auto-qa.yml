@@ -1,11 +1,11 @@
 name: Auto-QA Agent
 # Hourly quality checks with rotating focus areas.
 # Layer 1 (always): Build, lint, Go build, bundle size, npm audit
-# Layer 2 (always): Resilience/error handling, Inventory consistency
+# Layer 2 (always): Resilience/error handling, Inventory consistency, UI design principles
 # Layer 3 (8-day rotation via day-of-year % 8):
 #   0=Performance, 1=Security, 2=Navigation/A11y,
 #   3=Operator Usefulness, 4=SRE/Multi-Cluster,
-#   5=Feature Recommendations, 6=(reserved), 7=(reserved)
+#   5=Feature Recommendations, 6=Resilience, 7=Consistency
 #
 # Issues auto-assign Copilot and feed into the automation pipeline.
 #
@@ -688,6 +688,223 @@ jobs:
             echo "No missing loading/error states detected"
           fi
 
+      # === UI DESIGN PRINCIPLES (every run) ===
+      - name: "Check: Hardcoded colors instead of design tokens"
+        id: focus_hardcoded_colors
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Scanning for hardcoded color values..."
+          ISSUES=""
+
+          # Find hex colors not in CSS variable definitions or Tailwind config
+          HEX_COLORS=$(grep -rn "#[0-9a-fA-F]\{3,6\}\b" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
+            grep -v "node_modules" | \
+            grep -v "\.test\." | \
+            grep -v "tailwind\|Tailwind" | \
+            grep -v "// eslint" | \
+            grep -v "className=" | \
+            head -25 || true)
+
+          if [ -n "$HEX_COLORS" ]; then
+            COUNT=$(echo "$HEX_COLORS" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 5 ]; then
+              ISSUES="${ISSUES}### Hardcoded hex colors (${COUNT} found)\nThese should use CSS variables or Tailwind classes:\n\`\`\`\n${HEX_COLORS}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find rgb/rgba colors in inline styles
+          RGB_COLORS=$(grep -rn "rgb\(a\)\?(" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | \
+            grep -v "\.test\." | \
+            grep -v "var(--" | \
+            head -15 || true)
+
+          if [ -n "$RGB_COLORS" ]; then
+            ISSUES="${ISSUES}### Inline RGB colors (should use design tokens)\n\`\`\`\n${RGB_COLORS}\n\`\`\`\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-hardcoded-colors.txt
+            echo "Hardcoded colors found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No hardcoded colors detected"
+          fi
+
+      - name: "Check: Inconsistent spacing values"
+        id: focus_spacing
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for inconsistent spacing patterns..."
+          ISSUES=""
+
+          # Find inline style px values that should use spacing scale
+          INLINE_PX=$(grep -rn "style={{" src/ --include="*.tsx" 2>/dev/null | \
+            grep -oE "['\"]?[0-9]+px['\"]?" | \
+            sort | uniq -c | sort -rn | head -15 || true)
+
+          if [ -n "$INLINE_PX" ]; then
+            # Count unique non-standard values (not 0, 4, 8, 12, 16, 20, 24, 32, 40, 48)
+            NONSTANDARD=$(echo "$INLINE_PX" | grep -vE "(^[^0-9]*[048]px|12px|16px|20px|24px|32px|40px|48px)" | head -10 || true)
+            if [ -n "$NONSTANDARD" ]; then
+              ISSUES="${ISSUES}### Non-standard spacing values in inline styles\nConsider using Tailwind spacing classes (p-1, m-2, gap-4, etc.):\n\`\`\`\n${NONSTANDARD}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find margin/padding with magic numbers
+          MAGIC_SPACING=$(grep -rn "margin\|padding" src/ --include="*.tsx" 2>/dev/null | \
+            grep -E ":\s*[0-9]+(px|rem|em)" | \
+            grep -v "node_modules" | \
+            grep -v "0px\|0rem" | \
+            head -15 || true)
+
+          if [ -n "$MAGIC_SPACING" ]; then
+            COUNT=$(echo "$MAGIC_SPACING" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 5 ]; then
+              ISSUES="${ISSUES}### Inline margin/padding values (${COUNT} found)\nConsider using Tailwind or CSS variables:\n\`\`\`\n${MAGIC_SPACING}\n\`\`\`\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-spacing.txt
+            echo "Spacing inconsistencies found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No spacing issues detected"
+          fi
+
+      - name: "Check: Missing dark mode support"
+        id: focus_dark_mode
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for components missing dark mode support..."
+          ISSUES=""
+
+          # Find components with hardcoded light colors that don't have dark variants
+          LIGHT_ONLY=$(grep -rn "bg-white\|bg-gray-50\|bg-gray-100\|text-gray-900\|text-black\|border-gray-200\|border-gray-300" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "dark:" | \
+            grep -v "node_modules" | \
+            grep -v "\.test\." | \
+            head -20 || true)
+
+          if [ -n "$LIGHT_ONLY" ]; then
+            COUNT=$(echo "$LIGHT_ONLY" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 3 ]; then
+              ISSUES="${ISSUES}### Light-only color classes without dark mode variants (${COUNT} found)\nAdd \`dark:\` variants for dark mode support:\n\`\`\`\n${LIGHT_ONLY}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Check for inline color styles
+          INLINE_COLORS=$(grep -rn "style={{" src/ --include="*.tsx" 2>/dev/null | \
+            grep -iE "background|color" | \
+            grep -v "backgroundColor: 'transparent'" | \
+            grep -v "var(--" | \
+            grep -v "node_modules" | \
+            head -10 || true)
+
+          if [ -n "$INLINE_COLORS" ]; then
+            ISSUES="${ISSUES}### Inline color styles (won't adapt to dark mode)\n\`\`\`\n${INLINE_COLORS}\n\`\`\`\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-dark-mode.txt
+            echo "Dark mode gaps found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No dark mode issues detected"
+          fi
+
+      - name: "Check: Touch target sizes"
+        id: focus_touch_targets
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for small touch targets..."
+          ISSUES=""
+
+          # Find small explicit sizes on interactive elements
+          SMALL_BUTTONS=$(grep -rn "<button\|<a \|onClick" src/ --include="*.tsx" 2>/dev/null | \
+            grep -E "w-[1-6]\b|h-[1-6]\b|size-[1-6]\b|p-0\b|p-1\b" | \
+            grep -v "node_modules" | \
+            grep -v "\.test\." | \
+            head -15 || true)
+
+          if [ -n "$SMALL_BUTTONS" ]; then
+            ISSUES="${ISSUES}### Potentially small touch targets (< 44px recommended)\n\`\`\`\n${SMALL_BUTTONS}\n\`\`\`\n\n"
+          fi
+
+          # Find icon-only buttons that might be too small
+          ICON_BUTTONS=$(grep -rn "Icon.*onClick\|onClick.*Icon" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "p-[2-9]\|p-1[0-9]\|size-[8-9]\|size-1[0-9]\|w-[8-9]\|w-1[0-9]\|h-[8-9]\|h-1[0-9]" | \
+            grep -v "node_modules" | \
+            head -10 || true)
+
+          if [ -n "$ICON_BUTTONS" ]; then
+            ISSUES="${ISSUES}### Icon buttons that may need larger click areas\n\`\`\`\n${ICON_BUTTONS}\n\`\`\`\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-touch-targets.txt
+            echo "Small touch targets found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Touch targets look adequate"
+          fi
+
+      - name: "Check: Inconsistent component patterns"
+        id: focus_component_patterns
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for inconsistent UI patterns..."
+          ISSUES=""
+
+          # Check for mixed button patterns (some with Button component, some with raw button)
+          BUTTON_COMPONENT=$(grep -rl "<Button" src/components --include="*.tsx" 2>/dev/null | wc -l || echo "0")
+          RAW_BUTTON=$(grep -rl "<button" src/components --include="*.tsx" 2>/dev/null | wc -l || echo "0")
+
+          if [ "$BUTTON_COMPONENT" -gt 0 ] && [ "$RAW_BUTTON" -gt 5 ]; then
+            RAW_EXAMPLES=$(grep -rn "<button" src/components --include="*.tsx" 2>/dev/null | \
+              grep -v "Button\|node_modules" | head -8 || true)
+            if [ -n "$RAW_EXAMPLES" ]; then
+              ISSUES="${ISSUES}### Mixed button patterns: ${BUTTON_COMPONENT} use <Button>, ${RAW_BUTTON} use raw <button>\nConsider using the Button component consistently:\n\`\`\`\n${RAW_EXAMPLES}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Check for inconsistent modal implementations
+          MODAL_PATTERNS=$(grep -rn "isOpen\|isVisible\|showModal\|show=\|visible=" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | \
+            cut -d: -f1 | sort -u | wc -l || echo "0")
+
+          if [ "$MODAL_PATTERNS" -gt 10 ]; then
+            MODAL_EXAMPLES=$(grep -rn "isOpen\|isVisible\|showModal\|show=\|visible=" src/ --include="*.tsx" 2>/dev/null | \
+              grep -v "node_modules" | head -8 || true)
+            ISSUES="${ISSUES}### Multiple modal visibility patterns detected\nConsider standardizing on one pattern (e.g., \`isOpen\`):\n\`\`\`\n${MODAL_EXAMPLES}\n\`\`\`\n\n"
+          fi
+
+          # Check for inline styles that could use Tailwind
+          INLINE_STYLES=$(grep -c "style={{" src/components/**/*.tsx 2>/dev/null || echo "0")
+          if [ "$INLINE_STYLES" -gt 50 ]; then
+            INLINE_EXAMPLES=$(grep -rn "style={{" src/components --include="*.tsx" 2>/dev/null | head -10 || true)
+            ISSUES="${ISSUES}### High use of inline styles (${INLINE_STYLES} occurrences)\nConsider using Tailwind classes for consistency:\n\`\`\`\n${INLINE_EXAMPLES}\n\`\`\`\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-component-patterns.txt
+            echo "Inconsistent patterns found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No pattern inconsistencies detected"
+          fi
+
       # === INVENTORY CONSISTENCY (every run) ===
       - name: "Check: Missing component files"
         id: focus_missing_files
@@ -904,6 +1121,7 @@ jobs:
             "auto-qa:features:8B5CF6:Feature recommendation"
             "auto-qa:resilience:F97316:Resilience/error handling improvement"
             "auto-qa:consistency:6B7280:Inventory/documentation consistency"
+            "auto-qa:ui-design:EC4899:UI design principle violation"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -960,6 +1178,12 @@ jobs:
           FOCUS_CARD_REGISTRY: ${{ steps.focus_card_registry.outputs.found }}
           FOCUS_ROUTES: ${{ steps.focus_routes.outputs.found }}
           FOCUS_MODAL_CONSISTENCY: ${{ steps.focus_modal_consistency.outputs.found }}
+          # UI Design
+          FOCUS_HARDCODED_COLORS: ${{ steps.focus_hardcoded_colors.outputs.found }}
+          FOCUS_SPACING: ${{ steps.focus_spacing.outputs.found }}
+          FOCUS_DARK_MODE: ${{ steps.focus_dark_mode.outputs.found }}
+          FOCUS_TOUCH_TARGETS: ${{ steps.focus_touch_targets.outputs.found }}
+          FOCUS_COMPONENT_PATTERNS: ${{ steps.focus_component_patterns.outputs.found }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -1380,6 +1604,68 @@ jobs:
                    'Add new drill-down views to the inventory',
                    'Remove references to deleted modals/dialogs'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:consistency'],
+              });
+            }
+
+            // UI Design (every run)
+            if (process.env.FOCUS_HARDCODED_COLORS === 'true') {
+              checks.push({
+                title: `${prefix} Hardcoded colors instead of design tokens`,
+                body: buildFocusBody('UI Design', 'Hardcoded Colors',
+                  readOutput('/tmp/focus-hardcoded-colors.txt'),
+                  ['Replace hex colors with Tailwind color classes (e.g., `text-blue-500`)',
+                   'Use CSS variables for custom colors (e.g., `var(--primary)`)',
+                   'Define custom colors in tailwind.config.js for consistency',
+                   'Check that colors adapt properly to dark mode'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:ui-design'],
+              });
+            }
+            if (process.env.FOCUS_SPACING === 'true') {
+              checks.push({
+                title: `${prefix} Inconsistent spacing values in styles`,
+                body: buildFocusBody('UI Design', 'Inconsistent Spacing',
+                  readOutput('/tmp/focus-spacing.txt'),
+                  ['Replace inline px values with Tailwind spacing classes (p-2, m-4, gap-6)',
+                   'Use the 4px/8px grid system for consistency',
+                   'Define custom spacing in tailwind.config.js if needed',
+                   'Avoid magic numbers - use semantic spacing tokens'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:ui-design'],
+              });
+            }
+            if (process.env.FOCUS_DARK_MODE === 'true') {
+              checks.push({
+                title: `${prefix} Components missing dark mode support`,
+                body: buildFocusBody('UI Design', 'Missing Dark Mode',
+                  readOutput('/tmp/focus-dark-mode.txt'),
+                  ['Add `dark:` variants to Tailwind classes (e.g., `bg-white dark:bg-gray-900`)',
+                   'Replace inline color styles with Tailwind or CSS variables',
+                   'Test components in both light and dark modes',
+                   'Use semantic color tokens that auto-switch (e.g., `bg-background`)'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:ui-design'],
+              });
+            }
+            if (process.env.FOCUS_TOUCH_TARGETS === 'true') {
+              checks.push({
+                title: `${prefix} Touch targets may be too small for mobile`,
+                body: buildFocusBody('UI Design', 'Small Touch Targets',
+                  readOutput('/tmp/focus-touch-targets.txt'),
+                  ['Minimum touch target size should be 44x44px (WCAG 2.5.5)',
+                   'Add padding to small buttons: `p-2` or `p-3` instead of `p-0/p-1`',
+                   'Icon-only buttons need adequate hit area around the icon',
+                   'Consider adding `min-h-11 min-w-11` (44px) to interactive elements'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:ui-design'],
+              });
+            }
+            if (process.env.FOCUS_COMPONENT_PATTERNS === 'true') {
+              checks.push({
+                title: `${prefix} Inconsistent component patterns detected`,
+                body: buildFocusBody('UI Design', 'Inconsistent Patterns',
+                  readOutput('/tmp/focus-component-patterns.txt'),
+                  ['Use the shared Button component instead of raw <button> elements',
+                   'Standardize modal visibility props (prefer `isOpen` pattern)',
+                   'Replace inline styles with Tailwind classes where possible',
+                   'Follow established patterns in existing components'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:ui-design'],
               });
             }
 
