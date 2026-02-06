@@ -232,6 +232,11 @@ export function useLastRoute() {
 
     if (location.pathname !== '/') return
 
+    // Don't redirect away from '/' when deep link params are present —
+    // let useDeepLink handle them on the current route.
+    const params = new URLSearchParams(location.search)
+    if (params.has('card') || params.has('drilldown') || params.has('action')) return
+
     try {
       const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
       const firstSidebarRoute = getFirstDashboardRoute()

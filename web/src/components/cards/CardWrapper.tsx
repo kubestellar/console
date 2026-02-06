@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
   // Card icons
   AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
@@ -1291,6 +1291,18 @@ export function CardWrapper({
                   >
                     <Settings className="w-4 h-4" />
                     Configure
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false)
+                      const url = `${window.location.origin}${window.location.pathname}?card=${cardType}`
+                      navigator.clipboard.writeText(url)
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                    title="Copy a direct URL to this card"
+                  >
+                    <Link2 className="w-4 h-4" />
+                    Copy Link
                   </button>
                   {/* Resize submenu */}
                   {onWidthChange && (

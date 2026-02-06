@@ -1,11 +1,13 @@
 import { useEffect, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useDrillDownActions } from './useDrillDown'
+import { scrollToCard } from '../lib/scrollToCard'
 
 /**
  * Deep linking support for notifications and external links.
  *
  * URL params supported:
+ * - ?card=cluster_health - Scrolls to and highlights a card by type
  * - ?drilldown=node&cluster=xyz&node=abc - Opens node drilldown
  * - ?drilldown=pod&cluster=xyz&namespace=abc&pod=def - Opens pod drilldown
  * - ?drilldown=cluster&cluster=xyz - Opens cluster drilldown
@@ -30,6 +32,7 @@ export type DeepLinkDrilldown =
 interface DeepLinkParams {
   drilldown?: DeepLinkDrilldown
   action?: DeepLinkAction
+  card?: string
   cluster?: string
   namespace?: string
   node?: string
@@ -48,6 +51,7 @@ export function buildDeepLinkURL(params: DeepLinkParams): string {
 
   if (params.drilldown) searchParams.set('drilldown', params.drilldown)
   if (params.action) searchParams.set('action', params.action)
+  if (params.card) searchParams.set('card', params.card)
   if (params.cluster) searchParams.set('cluster', params.cluster)
   if (params.namespace) searchParams.set('namespace', params.namespace)
   if (params.node) searchParams.set('node', params.node)
@@ -116,6 +120,7 @@ export function useDeepLink() {
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('drilldown')
       newParams.delete('action')
+      newParams.delete('card')
       newParams.delete('cluster')
       newParams.delete('namespace')
       newParams.delete('node')
@@ -182,6 +187,13 @@ export function useDeepLink() {
       }, 500) // Wait for app to initialize
 
       return () => clearTimeout(timer)
+    }
+
+    // Handle card anchor - scroll to and highlight a specific card
+    const card = searchParams.get('card')
+    if (card) {
+      clearParams()
+      scrollToCard(card)
     }
   }, [searchParams, setSearchParams, navigate, drillToNode, drillToPod, drillToCluster, drillToDeployment, drillToNamespace])
 
