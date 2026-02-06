@@ -8,6 +8,7 @@ import { useMobile } from '../../hooks/useMobile'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
+import { ROUTES } from '../../config/routes'
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
@@ -492,7 +493,7 @@ export function AlertBadge() {
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  navigate('/alerts')
+                  navigate(ROUTES.ALERTS)
                 }}
                 className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
               >

@@ -16,6 +16,7 @@ import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
+import { ROUTES } from '../../config/routes'
 
 export function Sidebar() {
   const { config, toggleCollapsed, reorderItems, updateItem, closeMobileSidebar } = useSidebarConfig()
@@ -61,7 +62,7 @@ export function Sidebar() {
 
     if (cardDashboards.includes(currentPath) || isCustomDashboard) {
       // Current page has cards - use query param to trigger modal
-      if (currentPath === '/') {
+      if (currentPath === ROUTES.HOME) {
         dashboardContext?.openAddCardModal()
       } else {
         // Navigate to same page with addCard param to trigger modal
@@ -70,7 +71,7 @@ export function Sidebar() {
     } else {
       // On a non-card page, navigate to main dashboard
       dashboardContext?.setPendingOpenAddCardModal(true)
-      navigate('/')
+      navigate(ROUTES.HOME)
     }
   }
 
@@ -94,25 +95,25 @@ export function Sidebar() {
 
   // Navigate to clusters page with status filter
   const handleClusterStatusClick = (status: 'healthy' | 'unhealthy' | 'unreachable') => {
-    navigate(`/clusters?status=${status}`)
+    navigate(`${ROUTES.CLUSTERS}?status=${status}`)
   }
 
   // Handle snoozed card swap restore - navigate to dashboard
   const handleApplySwap = (_swap: SnoozedSwap) => {
     // Navigate to main dashboard where the swap can be applied
-    navigate('/')
+    navigate(ROUTES.HOME)
   }
 
   // Handle snoozed recommendation restore - navigate to dashboard
   const handleApplyRecommendation = (_rec: SnoozedRecommendation) => {
     // Navigate to main dashboard to apply the recommendation
-    navigate('/')
+    navigate(ROUTES.HOME)
   }
 
   // Handle snoozed mission restore - navigate to dashboard
   const handleApplyMission = (_mission: SnoozedMission) => {
     // Navigate to main dashboard where missions are displayed
-    navigate('/')
+    navigate(ROUTES.HOME)
   }
 
   // Drag handlers

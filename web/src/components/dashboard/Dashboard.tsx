@@ -28,6 +28,7 @@ import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
+import { ROUTES } from '../../config/routes'
 import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
@@ -160,7 +161,7 @@ export function Dashboard() {
       case 'errors':
         return { value: unhealthyClusters, sublabel: 'unhealthy', onClick: () => drillToAllClusters('unhealthy'), isClickable: unhealthyClusters > 0 }
       case 'namespaces':
-        return { value: totalNamespaces, sublabel: 'namespaces', onClick: () => navigate('/namespaces'), isClickable: totalNamespaces > 0 }
+        return { value: totalNamespaces, sublabel: 'namespaces', onClick: () => navigate(ROUTES.NAMESPACES), isClickable: totalNamespaces > 0 }
       case 'pods':
         return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       default:

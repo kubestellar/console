@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { getLastRoute } from '../../hooks/useLastRoute'
+import { ROUTES, getLoginWithError } from '../../config/routes'
 
 export function AuthCallback() {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ export function AuthCallback() {
 
     if (error) {
       console.error('Auth error:', error)
-      navigate('/login?error=' + error)
+      navigate(getLoginWithError(error))
       return
     }
 
@@ -33,7 +34,7 @@ export function AuthCallback() {
 
       // Navigate directly to the last visited dashboard route instead of '/'
       // to avoid a flash of the default dashboard before useLastRoute redirects.
-      const destination = onboarded ? (getLastRoute() || '/') : '/onboarding'
+      const destination = onboarded ? (getLastRoute() || ROUTES.HOME) : ROUTES.ONBOARDING
 
       // Add timeout to prevent hanging forever
       const timeoutId = setTimeout(() => {
@@ -55,7 +56,7 @@ export function AuthCallback() {
       })
     } else {
       console.warn('[AuthCallback] No token in URL')
-      navigate('/login')
+      navigate(ROUTES.LOGIN)
     }
   }, [searchParams, setToken, refreshUser, navigate])
 

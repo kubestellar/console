@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
 import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
 import { cn } from '../../../lib/cn'
+import { getSettingsWithHash } from '../../../config/routes'
 
 const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.ElementType; color: string }> = {
   missions: { label: 'AI Missions', icon: Rocket, color: 'bg-purple-500' },
@@ -180,7 +181,7 @@ export function TokenUsageWidget() {
           )}
           <div className="mt-3 pt-3 border-t border-border">
             <button
-              onClick={() => navigate('/settings#token-usage-settings')}
+              onClick={() => navigate(getSettingsWithHash('token-usage-settings'))}
               className="w-full text-xs text-purple-400 hover:text-purple-300 text-center"
             >
               Configure limits in Settings

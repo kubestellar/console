@@ -7,6 +7,7 @@ import { CloudProviderIcon } from '../ui/CloudProviderIcon'
 import type { CloudProvider } from '../ui/CloudProviderIcon'
 import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
+import { ROUTES } from '../../config/routes'
 
 const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   operational: 'bg-green-500',
@@ -91,7 +92,7 @@ export function ProviderHealth() {
     hasAnyData: aiProviders.length > 0 || cloudProviders.length > 0,
   })
 
-  const goToSettings = () => navigate('/settings')
+  const goToSettings = () => navigate(ROUTES.SETTINGS)
 
   if (isLoading) {
     return <SkeletonList items={5} />

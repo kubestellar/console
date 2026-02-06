@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Server, Cpu, MemoryStick, Box, Activity, AlertCircle, GitBranch } from 'lucide-react'
 import { useClusters, ClusterInfo } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
+import { ROUTES } from '../../config/routes'
 
 interface ClusterMetrics {
   cluster: ClusterInfo
@@ -59,7 +60,7 @@ export function ClusterComparisonPage() {
   }
 
   const handleBack = () => {
-    navigate('/compute')
+    navigate(ROUTES.COMPUTE)
   }
 
   if (isLoading && clusters.length === 0) {

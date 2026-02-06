@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download } from 'lucide-react'
 import { useVersionCheck } from '../../../hooks/useVersionCheck'
+import { ROUTES } from '../../../config/routes'
 
 export function UpdateIndicator() {
   const navigate = useNavigate()
@@ -53,7 +54,7 @@ export function UpdateIndicator() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  navigate('/settings')
+                  navigate(ROUTES.SETTINGS)
                   setShowUpdateDropdown(false)
                 }}
                 className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors"

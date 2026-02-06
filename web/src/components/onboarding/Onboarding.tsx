@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronLeft, Check, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { ROUTES } from '../../config/routes'
 
 interface Question {
   key: string
@@ -131,7 +132,7 @@ export function Onboarding() {
       // Refresh user to get updated onboarded status
       await refreshUser()
 
-      navigate('/')
+      navigate(ROUTES.HOME)
     } catch (error) {
       console.error('Failed to complete onboarding:', error)
       // For demo mode, still allow navigation even if there's an error
@@ -139,7 +140,7 @@ export function Onboarding() {
       if (token === 'demo-token') {
         localStorage.setItem('demo-user-onboarded', 'true')
         await refreshUser()
-        navigate('/')
+        navigate(ROUTES.HOME)
       }
     } finally {
       setIsSubmitting(false)

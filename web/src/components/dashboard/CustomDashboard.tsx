@@ -29,6 +29,7 @@ import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS } from '../cards/cardRegistry'
 import { safeGetJSON, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
+import { ROUTES } from '../../config/routes'
 import { AddCardModal } from './AddCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
@@ -396,7 +397,7 @@ export function CustomDashboard() {
 
     const displayName = sidebarItem?.name || dashboard?.name || 'this dashboard'
     showToast(`Deleted "${displayName}"`, 'success')
-    navigate('/')
+    navigate(ROUTES.HOME)
 
     // Try to delete from backend in the background (may fail offline)
     deleteDashboard(id).catch(() => {
