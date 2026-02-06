@@ -3,7 +3,7 @@ import { useClusters, useDeployments } from '../../hooks/useMCP'
 import { useCachedProwJobs } from '../../hooks/useCachedData'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 
 const CICD_CARDS_KEY = 'kubestellar-cicd-cards'

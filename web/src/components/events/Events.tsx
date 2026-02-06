@@ -10,7 +10,7 @@ import { BarChart } from '../charts/BarChart'
 import { cn } from '../../lib/cn'
 import { formatStat } from '../../lib/formatStats'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 
 // Event-related constants
