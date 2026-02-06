@@ -9,6 +9,7 @@ export interface ActiveUsersInfo {
 const POLL_INTERVAL = 10000 // Poll every 10 seconds
 const HEARTBEAT_INTERVAL = 30000 // Heartbeat every 30 seconds
 const WS_RECONNECT_DELAY = 5000
+const RECOVERY_DELAY = 30000 // Retry after circuit breaker trips
 
 // Singleton state to share across all hook instances
 let sharedInfo: ActiveUsersInfo = {
@@ -18,6 +19,7 @@ let sharedInfo: ActiveUsersInfo = {
 let pollStarted = false
 let pollInterval: ReturnType<typeof setInterval> | null = null
 let consecutiveFailures = 0
+let hasFetchedOnce = false
 const MAX_FAILURES = 3
 const subscribers = new Set<(info: ActiveUsersInfo) => void>()
 const stateSubscribers = new Set<(state: { loading?: boolean; error?: boolean }) => void>()
@@ -89,8 +91,9 @@ function startPresenceConnection() {
     }
 
     presenceWs.onopen = () => {
-      // Authenticate with the hub
-      presenceWs?.send(JSON.stringify({ type: 'auth', token }))
+      // Read token fresh to avoid stale closure on reconnects
+      const currentToken = localStorage.getItem('token')
+      presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
       // Keep-alive ping every 30 seconds
       presencePingInterval = setInterval(() => {
         if (presenceWs?.readyState === WebSocket.OPEN) {
@@ -137,7 +140,7 @@ function notifySubscribers(state?: { loading?: boolean; error?: boolean }) {
 
 // Fetch active users from API
 async function fetchActiveUsers() {
-  // Stop trying after too many consecutive failures
+  // Stop polling after too many consecutive failures, but schedule recovery
   if (consecutiveFailures >= MAX_FAILURES) {
     if (pollInterval) {
       clearInterval(pollInterval)
@@ -145,6 +148,11 @@ async function fetchActiveUsers() {
       pollStarted = false
     }
     notifySubscribers({ error: true })
+    // Schedule a recovery attempt instead of dying permanently
+    setTimeout(() => {
+      consecutiveFailures = 0
+      startPolling()
+    }, RECOVERY_DELAY)
     return
   }
 
@@ -153,9 +161,14 @@ async function fetchActiveUsers() {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const data: ActiveUsersInfo = await resp.json()
     consecutiveFailures = 0 // Reset on success
-    if (data.activeUsers !== sharedInfo.activeUsers ||
-        data.totalConnections !== sharedInfo.totalConnections) {
+    const dataChanged = data.activeUsers !== sharedInfo.activeUsers ||
+        data.totalConnections !== sharedInfo.totalConnections
+    if (dataChanged) {
       sharedInfo = data
+    }
+    // Always notify on first success (clears loading state) or when data changes
+    if (!hasFetchedOnce || dataChanged) {
+      hasFetchedOnce = true
       notifySubscribers({ loading: false, error: false })
     }
   } catch {
@@ -223,15 +236,29 @@ export function useActiveUsers() {
     }
     window.addEventListener('kc-demo-mode-change', handleDemoChange)
 
+    // Recover polling when tab becomes visible again
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        consecutiveFailures = 0
+        if (!pollStarted) startPolling()
+        else fetchActiveUsers()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     return () => {
       subscribers.delete(handleUpdate)
       stateSubscribers.delete(handleStateUpdate)
       window.removeEventListener('kc-demo-mode-change', handleDemoChange)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [])
 
   const refetch = useCallback(() => {
-    fetchActiveUsers()
+    // Reset circuit breaker so manual refetch always works
+    consecutiveFailures = 0
+    if (!pollStarted) startPolling()
+    else fetchActiveUsers()
   }, [])
 
   // Demo mode: show total connections (sessions). OAuth mode: show unique users.
