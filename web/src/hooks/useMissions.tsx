@@ -494,6 +494,16 @@ The AI missions feature requires the local agent to be running.
           // Stream complete - mark as unread
           pendingRequests.current.delete(message.id)
           markMissionAsUnread(missionId)
+
+          // Track token delta for category usage when stream completes with usage data
+          if (payload.usage?.totalTokens) {
+            const previousTotal = m.tokenUsage?.total ?? 0
+            const delta = payload.usage.totalTokens - previousTotal
+            if (delta > 0) {
+              addCategoryTokens(delta, 'missions')
+            }
+          }
+
           // Clear active token tracking
           setActiveTokenCategory(null)
           return {
@@ -516,6 +526,15 @@ The AI missions feature requires the local agent to be running.
           output: chatPayload.usage.outputTokens,
           total: chatPayload.usage.totalTokens,
         } : m.tokenUsage
+
+        // Track token delta for category usage
+        if (chatPayload.usage?.totalTokens) {
+          const previousTotal = m.tokenUsage?.total ?? 0
+          const delta = chatPayload.usage.totalTokens - previousTotal
+          if (delta > 0) {
+            addCategoryTokens(delta, 'missions')
+          }
+        }
 
         return {
           ...m,
