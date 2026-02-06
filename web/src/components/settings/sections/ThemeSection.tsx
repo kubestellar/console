@@ -14,7 +14,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false)
 
   return (
-    <div className="glass rounded-xl p-6 overflow-visible relative z-30" style={{ isolation: 'isolate' }}>
+    <div id="theme-settings" className="glass rounded-xl p-6 overflow-visible relative z-30" style={{ isolation: 'isolate' }}>
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20">
           <Palette className="w-5 h-5 text-purple-400" />

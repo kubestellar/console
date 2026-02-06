@@ -87,7 +87,7 @@ export function NotificationSettingsSection() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
+    <div id="notifications-settings" className="rounded-lg border border-border bg-card p-6">
       <div className="flex items-center gap-3 mb-4">
         <Bell className="w-5 h-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Alert Notifications</h2>

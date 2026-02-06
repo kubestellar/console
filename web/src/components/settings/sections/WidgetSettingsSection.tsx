@@ -321,7 +321,7 @@ export function WidgetSettingsSection() {
   const widgetPath = '~/Library/Application Support/Übersicht/widgets/'
 
   return (
-    <div className="glass rounded-xl p-6">
+    <div id="widget-settings" className="glass rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-cyan-500/20">
           <Monitor className="w-5 h-5 text-cyan-400" />

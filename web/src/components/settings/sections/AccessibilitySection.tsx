@@ -18,7 +18,7 @@ export function AccessibilitySection({
   setHighContrast,
 }: AccessibilitySectionProps) {
   return (
-    <div className="glass rounded-xl p-6 relative z-0">
+    <div id="accessibility-settings" className="glass rounded-xl p-6 relative z-0">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-teal-500/20">
           <Eye className="w-5 h-5 text-teal-400" />

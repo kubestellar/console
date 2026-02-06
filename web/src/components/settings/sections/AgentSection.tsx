@@ -20,7 +20,7 @@ export function AgentSection({ isConnected, health, refresh }: AgentSectionProps
   }
 
   return (
-    <div className="glass rounded-xl p-6">
+    <div id="agent-settings" className="glass rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isConnected ? 'bg-green-500/20' : 'bg-orange-500/20'}`}>

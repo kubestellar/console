@@ -3,7 +3,7 @@ import { CanIChecker } from '../../rbac/CanIChecker'
 
 export function PermissionsSection() {
   return (
-    <div className="glass rounded-xl p-6 relative z-0">
+    <div id="permissions-settings" className="glass rounded-xl p-6 relative z-0">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-emerald-500/20">
           <ShieldCheck className="w-5 h-5 text-emerald-400" />

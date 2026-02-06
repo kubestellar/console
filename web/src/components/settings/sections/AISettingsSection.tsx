@@ -9,7 +9,7 @@ interface AISettingsSectionProps {
 
 export function AISettingsSection({ mode, setMode, description }: AISettingsSectionProps) {
   return (
-    <div className="glass rounded-xl p-6">
+    <div id="ai-mode-settings" className="glass rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-purple-500/20">
           <Cpu className="w-5 h-5 text-purple-400" />

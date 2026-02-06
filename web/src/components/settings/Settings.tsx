@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
@@ -23,6 +25,7 @@ PredictionSettingsSection,
 } from './sections'
 
 export function Settings() {
+  const location = useLocation()
   const { user, refreshUser } = useAuth()
   const { themeId, setTheme, themes, currentTheme } = useTheme()
   const { usage, updateSettings, resetUsage } = useTokenUsage()
@@ -31,6 +34,27 @@ export function Settings() {
   const { colorBlindMode, setColorBlindMode, reduceMotion, setReduceMotion, highContrast, setHighContrast } = useAccessibility()
   const { forceCheck: forceVersionCheck } = useVersionCheck()
   const { settings: predictionSettings, updateSettings: updatePredictionSettings, resetSettings: resetPredictionSettings } = usePredictionSettings()
+
+  // Handle deep linking - scroll to section based on URL hash
+  useEffect(() => {
+    const hash = location.hash.replace('#', '')
+    if (hash) {
+      // Small delay to ensure sections are rendered
+      const scrollToElement = () => {
+        const element = document.getElementById(hash)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Add a brief highlight effect
+          element.classList.add('ring-2', 'ring-purple-500/50')
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-purple-500/50')
+          }, 2000)
+        }
+      }
+      // Wait for render
+      setTimeout(scrollToElement, 100)
+    }
+  }, [location.hash])
 
   return (
     <div data-testid="settings-page" className="pt-16 max-w-4xl mx-auto">
