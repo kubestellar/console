@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CheckCircle, Clock, XCircle, ChevronRight, Filter, Server, RotateCw, ArrowUpCircle, FileText } from 'lucide-react'
+import { CheckCircle, Clock, XCircle, ChevronRight, Filter, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
@@ -15,7 +15,7 @@ import {
   commonComparators,
   CardClusterFilter,
   CardSearchInput,
-  CardActionButtons,
+  CardAIActions,
   type SortDirection,
 } from '../../lib/cards'
 
@@ -75,7 +75,7 @@ const FILTER_CONFIG = {
 }
 
 export function DeploymentStatus() {
-  const { drillToDeployment, drillToEvents, drillToLogs } = useDrillDownActions()
+  const { drillToDeployment } = useDrillDownActions()
   const {
     deployments: allDeployments,
     isLoading: hookLoading,
@@ -337,37 +337,19 @@ export function DeploymentStatus() {
                   />
                 </div>
 
-                {/* Diagnose & Repair for failed deployments */}
+                {/* AI Diagnose, Repair & Ask for failed deployments */}
                 {deployment.status === 'failed' && (
-                  <CardActionButtons
+                  <CardAIActions
                     className="mt-2"
-                    onDiagnose={() => drillToEvents(clusterName, deployment.namespace, deployment.name)}
-                    repairOptions={[
-                      {
-                        label: 'Rollout Restart',
-                        icon: RotateCw,
-                        description: 'Restart all pods in this deployment',
-                        onClick: () => drillToDeployment(clusterName, deployment.namespace, deployment.name, {
-                          status: deployment.status,
-                          action: 'rollout-restart',
-                        }),
-                      },
-                      {
-                        label: 'Scale Up Replicas',
-                        icon: ArrowUpCircle,
-                        description: 'Increase replica count',
-                        onClick: () => drillToDeployment(clusterName, deployment.namespace, deployment.name, {
-                          status: deployment.status,
-                          action: 'scale',
-                        }),
-                      },
-                      {
-                        label: 'View Logs',
-                        icon: FileText,
-                        description: 'Check container logs for errors',
-                        onClick: () => drillToLogs(clusterName, deployment.namespace, deployment.name),
-                      },
-                    ]}
+                    resource={{
+                      kind: 'Deployment',
+                      name: deployment.name,
+                      namespace: deployment.namespace,
+                      cluster: clusterName,
+                      status: deployment.status,
+                    }}
+                    issues={[{ name: 'Failed', message: `${deployment.readyReplicas}/${deployment.replicas} replicas ready` }]}
+                    additionalContext={{ image: deployment.image, progress: deployment.progress }}
                   />
                 )}
               </div>

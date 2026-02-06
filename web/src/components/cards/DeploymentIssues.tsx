@@ -1,4 +1,4 @@
-import { AlertTriangle, AlertCircle, Clock, Scale, CheckCircle, RotateCw, ArrowUpCircle, FileText } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Clock, Scale, CheckCircle } from 'lucide-react'
 import { useCachedDeploymentIssues } from '../../hooks/useCachedData'
 import type { DeploymentIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -9,7 +9,7 @@ import {
   useCardData, commonComparators,
   CardSkeleton, CardEmptyState, CardSearchInput,
   CardControlsRow, CardListItem, CardPaginationFooter,
-  CardActionButtons,
+  CardAIActions,
 } from '../../lib/cards'
 
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -42,7 +42,7 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
     error
   } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
-  const { drillToDeployment, drillToEvents, drillToLogs } = useDrillDownActions()
+  const { drillToDeployment } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -214,36 +214,18 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
                       {issue.message}
                     </p>
                   )}
-                  {/* Diagnose & Repair actions */}
-                  <CardActionButtons
+                  {/* AI Diagnose, Repair & Ask actions */}
+                  <CardAIActions
                     className="mt-2"
-                    onDiagnose={() => drillToEvents(issue.cluster || 'default', issue.namespace, issue.name)}
-                    repairOptions={[
-                      {
-                        label: 'Rollout Restart',
-                        icon: RotateCw,
-                        description: 'Restart all pods in this deployment',
-                        onClick: () => drillToDeployment(issue.cluster || 'default', issue.namespace, issue.name, {
-                          reason: issue.reason,
-                          action: 'rollout-restart',
-                        }),
-                      },
-                      {
-                        label: 'Scale Up Replicas',
-                        icon: ArrowUpCircle,
-                        description: 'Increase replica count',
-                        onClick: () => drillToDeployment(issue.cluster || 'default', issue.namespace, issue.name, {
-                          reason: issue.reason,
-                          action: 'scale',
-                        }),
-                      },
-                      {
-                        label: 'View Logs',
-                        icon: FileText,
-                        description: 'Check container logs for errors',
-                        onClick: () => drillToLogs(issue.cluster || 'default', issue.namespace, issue.name),
-                      },
-                    ]}
+                    resource={{
+                      kind: 'Deployment',
+                      name: issue.name,
+                      namespace: issue.namespace,
+                      cluster: issue.cluster || 'default',
+                      status: issue.reason || 'Issue',
+                    }}
+                    issues={[{ name: issue.reason || 'Unknown', message: issue.message || 'Deployment issue' }]}
+                    additionalContext={{ replicas: issue.replicas, readyReplicas: issue.readyReplicas }}
                   />
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle, RotateCw, FileText, Calendar } from 'lucide-react'
+import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle } from 'lucide-react'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -9,7 +9,7 @@ import {
   useCardData, commonComparators, getStatusColors,
   CardSkeleton, CardEmptyState, CardSearchInput,
   CardControlsRow, CardListItem, CardPaginationFooter,
-  CardActionButtons,
+  CardAIActions,
 } from '../../lib/cards'
 
 type SortByOption = 'status' | 'name' | 'restarts' | 'cluster'
@@ -44,7 +44,7 @@ export function PodIssues() {
     isFailed,
     consecutiveFailures,
   })
-  const { drillToPod, drillToEvents, drillToLogs } = useDrillDownActions()
+  const { drillToPod } = useDrillDownActions()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -205,33 +205,18 @@ export function PodIssues() {
                       {issue.issues.join(', ')}
                     </p>
                   )}
-                  {/* Diagnose & Repair actions */}
-                  <CardActionButtons
+                  {/* AI Diagnose, Repair & Ask actions */}
+                  <CardAIActions
                     className="mt-2"
-                    onDiagnose={() => drillToEvents(issue.cluster || 'default', issue.namespace, issue.name)}
-                    repairOptions={[
-                      {
-                        label: 'Restart Pod',
-                        icon: RotateCw,
-                        description: 'Delete pod to let controller recreate it',
-                        onClick: () => drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
-                          status: issue.status,
-                          action: 'restart',
-                        }),
-                      },
-                      {
-                        label: 'View Logs',
-                        icon: FileText,
-                        description: 'Check container logs for errors',
-                        onClick: () => drillToLogs(issue.cluster || 'default', issue.namespace, issue.name),
-                      },
-                      {
-                        label: 'View Events',
-                        icon: Calendar,
-                        description: 'See recent events for this pod',
-                        onClick: () => drillToEvents(issue.cluster || 'default', issue.namespace, issue.name),
-                      },
-                    ]}
+                    resource={{
+                      kind: 'Pod',
+                      name: issue.name,
+                      namespace: issue.namespace,
+                      cluster: issue.cluster || 'default',
+                      status: issue.status,
+                    }}
+                    issues={issue.issues.map(msg => ({ name: issue.status, message: msg }))}
+                    additionalContext={{ restarts: issue.restarts }}
                   />
                 </div>
               </div>

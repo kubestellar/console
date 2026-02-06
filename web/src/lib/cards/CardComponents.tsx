@@ -1,6 +1,8 @@
 import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server, Stethoscope, Wrench } from 'lucide-react'
+import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server, Stethoscope, Wrench, Wand2 } from 'lucide-react'
+import { useMissions } from '../../hooks/useMissions'
+import { useApiKeyCheck, ApiKeyPromptModal } from '../../components/cards/console-missions/shared'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
@@ -884,6 +886,152 @@ export function CardActionButtons({
           document.body
         )}
       </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// CardAIActions - Unified Diagnose, Repair, and Ask buttons that open the AI
+// missions sidebar. Use this instead of CardActionButtons for AI-powered actions.
+// ============================================================================
+
+export interface CardAIResource {
+  kind: string
+  name: string
+  namespace?: string
+  cluster?: string
+  status?: string
+}
+
+export interface CardAIActionsProps {
+  /** Resource context for prompt generation */
+  resource: CardAIResource
+  /** Specific issues to include in AI prompts */
+  issues?: Array<{ name: string; message: string }>
+  /** Additional context passed to the AI agent */
+  additionalContext?: Record<string, unknown>
+  /** CSS class for the container */
+  className?: string
+}
+
+/**
+ * Unified AI action buttons for cards. Renders compact Diagnose, Repair, and Ask
+ * buttons that open the AI missions sidebar with contextual prompts.
+ *
+ * Replaces CardActionButtons for AI-powered diagnostics.
+ * Stops event propagation so parent onClick (drill-down) is not triggered.
+ */
+export function CardAIActions({
+  resource,
+  issues = [],
+  additionalContext,
+  className = '',
+}: CardAIActionsProps) {
+  const { startMission } = useMissions()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+
+  const { kind, name, namespace, cluster, status } = resource
+  const loc = namespace ? ` in namespace "${namespace}"` : ''
+  const on = cluster ? ` on cluster "${cluster}"` : ''
+  const issuesList = issues.map(i => `- ${i.name}: ${i.message}`).join('\n')
+  const hasIssues = issues.length > 0
+
+  const handleDiagnose = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    checkKeyAndRun(() => {
+      startMission({
+        title: `Diagnose ${name}`,
+        description: `Analyze ${kind} health and identify issues`,
+        type: 'troubleshoot',
+        cluster,
+        initialPrompt: `Analyze the health of ${kind} "${name}"${loc}${on}.
+
+Current status: ${status || 'Unknown'}${hasIssues ? `\n\nKnown issues:\n${issuesList}` : ''}
+
+Please provide:
+1. Health assessment summary
+2. Root cause analysis for any issues
+3. Recommended actions to resolve`,
+        context: { kind, name, namespace, cluster, status, issues, ...additionalContext },
+      })
+    })
+  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, issues, hasIssues, issuesList, loc, on, additionalContext])
+
+  const handleRepair = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    checkKeyAndRun(() => {
+      startMission({
+        title: `Repair ${name}`,
+        description: `Fix issues with ${kind}`,
+        type: 'repair',
+        cluster,
+        initialPrompt: `I need help repairing issues with ${kind} "${name}"${loc}${on}.
+
+Issues to fix:
+${hasIssues ? issuesList : 'No specific issues identified - please diagnose first'}
+
+For each issue, please:
+1. Diagnose the root cause
+2. Suggest a fix with the exact kubectl commands
+3. Explain potential side effects
+4. Apply fixes step by step with my confirmation`,
+        context: { kind, name, namespace, cluster, status, issues, ...additionalContext },
+      })
+    })
+  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, issues, hasIssues, issuesList, loc, on, additionalContext])
+
+  const handleAsk = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    checkKeyAndRun(() => {
+      startMission({
+        title: `Ask about ${name}`,
+        description: `Question about ${kind}`,
+        type: 'custom',
+        cluster,
+        initialPrompt: `I have a question about ${kind} "${name}"${loc}${on}.${status ? ` Current status: ${status}.` : ''}`,
+        context: { kind, name, namespace, cluster, status, ...additionalContext },
+      })
+    })
+  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, loc, on, additionalContext])
+
+  return (
+    <div
+      className={`relative flex items-center gap-1.5 ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={handleDiagnose}
+        className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/20 transition-colors"
+        title="Diagnose with AI - Analyze health and identify issues"
+      >
+        <Stethoscope className="w-3 h-3" />
+        <span>Diagnose</span>
+      </button>
+
+      <button
+        onClick={handleRepair}
+        disabled={!hasIssues}
+        className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-orange-500/15 text-orange-400 hover:bg-orange-500/25 border border-orange-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        title={hasIssues ? 'Repair with AI - Fix identified issues' : 'No issues to repair'}
+      >
+        <Wrench className="w-3 h-3" />
+        <span>Repair</span>
+      </button>
+
+      <button
+        onClick={handleAsk}
+        className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 border border-purple-500/20 transition-colors"
+        title="Ask AI - Ask a question about this resource"
+      >
+        <Wand2 className="w-3 h-3" />
+        <span>Ask</span>
+      </button>
+
+      <ApiKeyPromptModal
+        isOpen={showKeyPrompt}
+        onDismiss={dismissPrompt}
+        onGoToSettings={goToSettings}
+      />
     </div>
   )
 }

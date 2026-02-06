@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2, RotateCw, Calendar, FileText } from 'lucide-react'
+import { Box, CheckCircle, AlertTriangle, Clock, ChevronRight, Loader2 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedDeployments } from '../../hooks/useCachedData'
@@ -11,7 +11,7 @@ import {
   CardSearchInput,
   CardControlsRow,
   CardPaginationFooter,
-  CardActionButtons,
+  CardAIActions,
 } from '../../lib/cards'
 
 type SortByOption = 'status' | 'name' | 'clusters'
@@ -50,7 +50,7 @@ interface AppData {
 }
 
 export function AppStatus(_props: AppStatusProps) {
-  const { drillToDeployment, drillToEvents, drillToLogs } = useDrillDownActions()
+  const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isFailed, consecutiveFailures } = useCachedDeployments()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -287,33 +287,22 @@ export function AppStatus(_props: AppStatusProps) {
               ))}
             </div>
 
-            {/* Diagnose & Repair for apps with issues */}
+            {/* AI Diagnose, Repair & Ask for apps with issues */}
             {(app.status.warning > 0 || app.status.pending > 0) && (
-              <CardActionButtons
+              <CardAIActions
                 className="mt-2"
-                onDiagnose={() => drillToEvents(app.clusters[0], app.namespace, app.name)}
-                repairOptions={[
-                  {
-                    label: 'Rollout Restart',
-                    icon: RotateCw,
-                    description: 'Restart deployment across clusters',
-                    onClick: () => drillToDeployment(app.clusters[0], app.namespace, app.name, {
-                      action: 'rollout-restart',
-                    }),
-                  },
-                  {
-                    label: 'View Logs',
-                    icon: FileText,
-                    description: 'Check container logs for errors',
-                    onClick: () => drillToLogs(app.clusters[0], app.namespace, app.name),
-                  },
-                  {
-                    label: 'View Events',
-                    icon: Calendar,
-                    description: 'See recent events',
-                    onClick: () => drillToEvents(app.clusters[0], app.namespace, app.name),
-                  },
+                resource={{
+                  kind: 'Deployment',
+                  name: app.name,
+                  namespace: app.namespace,
+                  cluster: app.clusters[0],
+                  status: app.status.warning > 0 ? 'Warning' : 'Pending',
+                }}
+                issues={[
+                  ...(app.status.warning > 0 ? [{ name: 'Warning', message: `${app.status.warning} instance(s) with warnings across ${app.clusters.length} cluster(s)` }] : []),
+                  ...(app.status.pending > 0 ? [{ name: 'Pending', message: `${app.status.pending} instance(s) pending` }] : []),
                 ]}
+                additionalContext={{ clusters: app.clusters, healthy: app.status.healthy }}
               />
             )}
           </div>
