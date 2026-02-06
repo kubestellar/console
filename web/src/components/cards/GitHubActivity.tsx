@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { cn } from '../../lib/cn'
 import {
@@ -15,7 +15,7 @@ interface GitHubPR {
   number: number
   title: string
   state: 'open' | 'closed'
-  merged: boolean
+  merged_at: string | null  // timestamp if merged, null otherwise (from GitHub API)
   created_at: string
   updated_at: string
   closed_at?: string
@@ -82,8 +82,12 @@ interface GitHubActivityConfig {
 type ViewMode = 'prs' | 'issues' | 'stars' | 'contributors' | 'releases'
 type SortByOption = 'date' | 'activity' | 'status'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GitHubItem = any
+// Union type for all GitHub items that can be displayed
+type GitHubItem = GitHubPR | GitHubIssue | GitHubRelease | GitHubContributor
+
+// Helper type for accessing properties on heterogeneous GitHub items
+// Used when we need to dynamically access properties across different item types
+type GitHubItemUnknown = Record<string, unknown>
 
 const SORT_OPTIONS = [
   { value: 'date' as const, label: 'Date' },
@@ -119,26 +123,23 @@ function isStale(date: string, days: number = 30): boolean {
   return ageInDays > days
 }
 
+// Decode base64 encoded token from localStorage (Settings stores it encoded)
+const decodeToken = (encoded: string): string => {
+  try {
+    return atob(encoded)
+  } catch {
+    return encoded // Return as-is if not encoded (migration from old format)
+  }
+}
+
 // Default repository to show if none configured
 const DEFAULT_REPO = 'kubestellar/kubestellar'
-
-// Preset popular repos for quick selection
-const PRESET_REPOS = [
-  'kubestellar/kubestellar',
-  'kubernetes/kubernetes',
-  'facebook/react',
-  'microsoft/vscode',
-  'golang/go',
-  'rust-lang/rust',
-  'vercel/next.js',
-  'openai/openai-python',
-]
 
 // LocalStorage key for saved repos
 const SAVED_REPOS_KEY = 'github_activity_saved_repos'
 const CURRENT_REPO_KEY = 'github_activity_repo'
-const CACHE_KEY_PREFIX = 'github_activity_cache_'
-const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes cache TTL
+const CACHE_KEY_PREFIX = 'github_activity_cache_v2_' // v2: fixed PR fetching
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache TTL - shorter for fresher data
 
 // Cache data structure
 interface CachedGitHubData {
@@ -214,8 +215,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   // Use configured repos or default to kubestellar/kubestellar
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
   const org = config?.org
-  // Note: Token stored in localStorage - consider using sessionStorage or encrypted storage for production
-  const token = config?.token || localStorage.getItem('github_token') || ''
+  // Note: Token stored in localStorage base64 encoded - decode before use
+  const encodedToken = config?.token || localStorage.getItem('github_token') || ''
+  const token = encodedToken ? decodeToken(encodedToken) : ''
   const reposKey = useMemo(() => repos.join(','), [repos.join(',')])
 
   const fetchGitHubData = async (isManualRefresh = false) => {
@@ -237,8 +239,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
     // Check cache first (unless manual refresh)
     if (!isManualRefresh) {
       const cached = getCachedData(targetRepo)
-      if (cached) {
-        // Use cached data
+      // Use cached data only if it has valid PR data (not empty from old buggy cache)
+      if (cached && cached.prs && cached.prs.length > 0) {
         setRepoInfo(cached.repoInfo)
         setPRs(cached.prs)
         setIssues(cached.issues)
@@ -275,29 +277,26 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const repoData = await repoResponse.json()
       setRepoInfo(repoData)
 
-      // Fetch open PRs count and recent PRs
-      const [openPRsResponse, recentPRsResponse] = await Promise.all([
-        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=open&per_page=1`, { headers }),
-        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=all&per_page=50&sort=updated`, { headers })
+      // Fetch open PRs and closed/merged PRs separately to ensure we get merged PRs
+      // For active repos, all "recently updated" PRs might be open ones
+      const [openPRsResponse, closedPRsResponse] = await Promise.all([
+        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { headers }),
+        fetch(`https://api.github.com/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { headers })
       ])
 
-      // Get open PR count from Link header or response body
-      let calculatedOpenPRCount = 0
-      if (openPRsResponse.ok) {
-        const linkHeader = openPRsResponse.headers.get('Link')
-        if (linkHeader) {
-          const match = linkHeader.match(/page=(\d+)>; rel="last"/)
-          calculatedOpenPRCount = match ? parseInt(match[1], 10) : 1
-        } else {
-          const openPRs = await openPRsResponse.json()
-          calculatedOpenPRCount = openPRs.length
-        }
-        setOpenPRCount(calculatedOpenPRCount)
-      }
+      if (!openPRsResponse.ok) throw new Error(`Failed to fetch open PRs: ${openPRsResponse.statusText}`)
+      if (!closedPRsResponse.ok) throw new Error(`Failed to fetch closed PRs: ${closedPRsResponse.statusText}`)
 
-      if (!recentPRsResponse.ok) throw new Error(`Failed to fetch PRs: ${recentPRsResponse.statusText}`)
-      const prsData = await recentPRsResponse.json()
-      setPRs(prsData)
+      const openPRsData = await openPRsResponse.json()
+      const closedPRsData = await closedPRsResponse.json()
+
+      // Combine and sort by updated_at (most recent first)
+      const allPRs = [...openPRsData, ...closedPRsData]
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 100) // Keep top 100 for display
+
+      setPRs(allPRs)
+      setOpenPRCount(openPRsData.length)
 
       // Fetch open Issues count and recent issues
       const [openIssuesResponse, recentIssuesResponse] = await Promise.all([
@@ -314,7 +313,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           calculatedOpenIssueCount = match ? parseInt(match[1], 10) : 1
         } else {
           const openIssues = await openIssuesResponse.json()
-          calculatedOpenIssueCount = openIssues.filter((i: any) => !i.pull_request).length
+          calculatedOpenIssueCount = openIssues.filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
         }
         setOpenIssueCount(calculatedOpenIssueCount)
       }
@@ -340,11 +339,11 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       // Cache the fetched data using the calculated counts
       setCachedData(targetRepo, {
         repoInfo: repoData,
-        prs: prsData,
+        prs: allPRs,
         issues: filteredIssues,
         releases: releasesData,
         contributors: contributorsData,
-        openPRCount: calculatedOpenPRCount,
+        openPRCount: openPRsData.length,
         openIssueCount: calculatedOpenIssueCount,
       })
 
@@ -383,6 +382,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
   useEffect(() => {
     fetchGitHubData()
+    // Auto-refresh every 60 seconds (bypasses cache for fresh data)
+    const interval = setInterval(() => fetchGitHubData(true), 60_000)
+    return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reposKey, org])
 
@@ -402,71 +404,67 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   }
 }
 
-// Sort comparators for GitHub items - keyed by viewMode-aware logic
+// Sort comparators for GitHub items (open-first sorting applied separately after)
 const SORT_COMPARATORS: Record<SortByOption, (a: GitHubItem, b: GitHubItem) => number> = {
   date: (a, b) => {
-    const aDate = new Date(a.updated_at || a.published_at || 0).getTime()
-    const bDate = new Date(b.updated_at || b.published_at || 0).getTime()
+    const aUnknown = a as unknown as GitHubItemUnknown
+    const bUnknown = b as unknown as GitHubItemUnknown
+    const aDate = new Date((aUnknown.updated_at as string) || (aUnknown.published_at as string) || 0).getTime()
+    const bDate = new Date((bUnknown.updated_at as string) || (bUnknown.published_at as string) || 0).getTime()
     return aDate - bDate
   },
   activity: (a, b) => {
-    // For issues: sort by comment count; for contributors: sort by contributions
-    const aActivity = a.comments ?? a.contributions ?? 0
-    const bActivity = b.comments ?? b.contributions ?? 0
+    const aUnknown = a as unknown as GitHubItemUnknown
+    const bUnknown = b as unknown as GitHubItemUnknown
+    const aActivity = (aUnknown.comments as number) ?? (aUnknown.contributions as number) ?? 0
+    const bActivity = (bUnknown.comments as number) ?? (bUnknown.contributions as number) ?? 0
     return aActivity - bActivity
   },
   status: (a, b) => {
+    const aUnknown = a as unknown as GitHubItemUnknown
+    const bUnknown = b as unknown as GitHubItemUnknown
     const statusOrder: Record<string, number> = { open: 0, merged: 1, closed: 2 }
-    const aStatus = a.merged ? 'merged' : (a.state || '')
-    const bStatus = b.merged ? 'merged' : (b.state || '')
+    const aStatus = aUnknown.merged_at ? 'merged' : ((aUnknown.state as string) || '')
+    const bStatus = bUnknown.merged_at ? 'merged' : ((bUnknown.state as string) || '')
     return (statusOrder[aStatus] ?? 999) - (statusOrder[bStatus] ?? 999)
   },
 }
 
 // Custom search predicate for GitHub items (handles heterogeneous item types)
 function githubSearchPredicate(item: GitHubItem, query: string): boolean {
+  const itemUnknown = item as unknown as GitHubItemUnknown
   return (
-    item.title?.toLowerCase().includes(query) ||
-    item.name?.toLowerCase().includes(query) ||
-    item.tag_name?.toLowerCase().includes(query) ||
-    item.login?.toLowerCase().includes(query) ||
-    item.user?.login?.toLowerCase().includes(query) ||
-    item.author?.login?.toLowerCase().includes(query) ||
+    (itemUnknown.title as string)?.toLowerCase().includes(query) ||
+    (itemUnknown.name as string)?.toLowerCase().includes(query) ||
+    (itemUnknown.tag_name as string)?.toLowerCase().includes(query) ||
+    (itemUnknown.login as string)?.toLowerCase().includes(query) ||
+    ((itemUnknown.user as { login?: string })?.login)?.toLowerCase().includes(query) ||
+    ((itemUnknown.author as { login?: string })?.login)?.toLowerCase().includes(query) ||
     false
   )
 }
 
-export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
+// Expose refresh method for CardWrapper
+export interface GitHubActivityRef {
+  refresh: () => void
+}
+
+export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubActivityConfig }>(function GitHubActivity({ config }, ref) {
   const [viewMode, setViewMode] = useState<ViewMode>('prs')
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>(config?.timeRange || '30d')
 
-  // Multi-repo state
+  // Multi-repo state - inline CRUD pattern (matching GitHubCIMonitor)
   const [savedRepos, setSavedRepos] = useState<string[]>(() => getSavedRepos())
   const [currentRepo, setCurrentRepo] = useState<string>(() => {
     return localStorage.getItem(CURRENT_REPO_KEY) || savedRepos[0] || DEFAULT_REPO
   })
   const [repoInput, setRepoInput] = useState('')
-  const [showSettings, setShowSettings] = useState(false)
-  const [showRepoDropdown, setShowRepoDropdown] = useState(false)
+  const [isEditingRepos, setIsEditingRepos] = useState(false)
 
   // Use current repo for data fetching
   const effectiveConfig = useMemo(() => {
     return { ...config, repos: [currentRepo] }
   }, [config, currentRepo])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!showRepoDropdown) return
-    const handleClickOutside = () => setShowRepoDropdown(false)
-    // Add small delay to avoid immediate close on open click
-    const timer = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside)
-    }, 10)
-    return () => {
-      clearTimeout(timer)
-      document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showRepoDropdown])
 
   const {
     prs,
@@ -481,31 +479,39 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
     refetch,
   } = useGitHubActivity(effectiveConfig)
 
+  // Expose refresh method via ref for CardWrapper refresh button
+  useImperativeHandle(ref, () => ({
+    refresh: () => refetch()
+  }), [refetch])
+
   // Select a repo from the list
   const handleSelectRepo = useCallback((repo: string) => {
     setCurrentRepo(repo)
     localStorage.setItem(CURRENT_REPO_KEY, repo)
-    setShowRepoDropdown(false)
   }, [])
 
-  // Add a new repo to saved list
+  // Add a new repo to saved list (inline CRUD)
   const handleAddRepo = useCallback(() => {
     const repo = repoInput.trim()
-    if (repo && repo.includes('/') && !savedRepos.includes(repo)) {
-      const newRepos = [...savedRepos, repo]
-      setSavedRepos(newRepos)
-      saveRepos(newRepos)
-      setCurrentRepo(repo)
-      localStorage.setItem(CURRENT_REPO_KEY, repo)
+    if (!repo) return
+    // Validate format: owner/repo
+    if (!repo.match(/^[\w-]+\/[\w.-]+$/)) return
+    if (savedRepos.includes(repo)) {
       setRepoInput('')
-      setShowSettings(false)
+      return
     }
+    const newRepos = [...savedRepos, repo]
+    setSavedRepos(newRepos)
+    saveRepos(newRepos)
+    setCurrentRepo(repo)
+    localStorage.setItem(CURRENT_REPO_KEY, repo)
+    setRepoInput('')
   }, [repoInput, savedRepos])
 
   // Remove a repo from saved list
   const handleRemoveRepo = useCallback((repo: string) => {
     const newRepos = savedRepos.filter(r => r !== repo)
-    if (newRepos.length === 0) newRepos.push(DEFAULT_REPO)
+    if (newRepos.length === 0) return // Keep at least one repo
     setSavedRepos(newRepos)
     saveRepos(newRepos)
     if (currentRepo === repo) {
@@ -513,18 +519,6 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       localStorage.setItem(CURRENT_REPO_KEY, newRepos[0])
     }
   }, [savedRepos, currentRepo])
-
-  // Add preset repo
-  const handleAddPreset = useCallback((repo: string) => {
-    if (!savedRepos.includes(repo)) {
-      const newRepos = [...savedRepos, repo]
-      setSavedRepos(newRepos)
-      saveRepos(newRepos)
-    }
-    setCurrentRepo(repo)
-    localStorage.setItem(CURRENT_REPO_KEY, repo)
-    setShowSettings(false)
-  }, [savedRepos])
 
   // Pre-filter data by viewMode and timeRange before passing to useCardData
   const preFilteredData = useMemo(() => {
@@ -537,9 +531,25 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
     }[timeRange]
 
     if (viewMode === 'prs') {
-      return prs.filter(pr => now - new Date(pr.updated_at).getTime() <= rangeMs)
+      // Sort PRs: open first, then by date within each group
+      const filtered = prs.filter(pr => now - new Date(pr.updated_at).getTime() <= rangeMs)
+      return filtered.sort((a, b) => {
+        // Open PRs first
+        if (a.state === 'open' && b.state !== 'open') return -1
+        if (a.state !== 'open' && b.state === 'open') return 1
+        // Then by date (most recent first)
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
     } else if (viewMode === 'issues') {
-      return issues.filter(issue => now - new Date(issue.updated_at).getTime() <= rangeMs)
+      // Sort issues: open first, then by date within each group
+      const filtered = issues.filter(issue => now - new Date(issue.updated_at).getTime() <= rangeMs)
+      return filtered.sort((a, b) => {
+        // Open issues first
+        if (a.state === 'open' && b.state !== 'open') return -1
+        if (a.state !== 'open' && b.state === 'open') return 1
+        // Then by date (most recent first)
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      })
     } else if (viewMode === 'releases') {
       return releases.filter(release => now - new Date(release.published_at).getTime() <= rangeMs)
     } else if (viewMode === 'contributors') {
@@ -550,7 +560,7 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
-    items: paginatedItems,
+    items: rawPaginatedItems,
     totalItems,
     currentPage,
     totalPages,
@@ -577,15 +587,27 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
     defaultLimit: 10,
   })
 
-  // Calculate stats - use accurate counts from API when available
+  // Always show open items first (regardless of sort direction)
+  // This is a stable sort that preserves the relative order within each group
+  const paginatedItems = useMemo(() => {
+    if (viewMode === 'contributors' || viewMode === 'releases') {
+      return rawPaginatedItems // No open/closed concept for these
+    }
+    return [...rawPaginatedItems].sort((a, b) => {
+      const aUnknown = a as unknown as GitHubItemUnknown
+      const bUnknown = b as unknown as GitHubItemUnknown
+      const aOpen = aUnknown.state === 'open' ? 0 : 1
+      const bOpen = bUnknown.state === 'open' ? 0 : 1
+      return aOpen - bOpen // Open (0) comes before closed (1)
+    })
+  }, [rawPaginatedItems, viewMode])
+
+  // Calculate stats - use accurate counts from fetched data
   const stats = useMemo(() => {
-    // Use accurate counts from dedicated API calls
-    const openPRs = openPRCount || prs.filter(pr => pr.state === 'open').length
-    const mergedPRs = prs.filter(pr => pr.merged).length
-    // For issues, use the repo's open_issues_count minus open PRs as it's more accurate
-    const openIssues = repoInfo?.open_issues_count
-      ? Math.max(0, repoInfo.open_issues_count - openPRs)
-      : openIssueCount || issues.filter(issue => issue.state === 'open').length
+    const openPRs = prs.filter(pr => pr.state === 'open').length
+    const mergedPRs = prs.filter(pr => pr.merged_at != null).length
+    // Count open issues directly from fetched issues (already filtered to exclude PRs)
+    const openIssues = issues.filter(issue => issue.state === 'open').length
     const stalePRs = prs.filter(pr => pr.state === 'open' && isStale(pr.updated_at)).length
     const staleIssues = issues.filter(issue => issue.state === 'open' && isStale(issue.updated_at)).length
 
@@ -625,26 +647,82 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
   if (error) {
     return (
       <div className="h-full flex flex-col content-loaded">
-        {/* Header with settings */}
+        {/* Header with inline repo editor */}
         <div className="flex items-center justify-between mb-3">
           <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
             Error
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className={cn(
-                'p-1.5 rounded transition-colors',
-                showSettings ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
-              )}
-              title="Add repositories"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => setIsEditingRepos(!isEditingRepos)}
+            className={cn(
+              "text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1",
+              isEditingRepos && "text-purple-400"
+            )}
+            title="Configure repos"
+          >
+            {currentRepo}
+            <Settings className="w-3 h-3" />
+          </button>
         </div>
 
-        {/* Placeholder Stats Grid - shows even in error state */}
+        {/* Inline repo editor */}
+        {isEditingRepos && (
+          <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={repoInput}
+                onChange={(e) => setRepoInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddRepo()}
+                placeholder="owner/repo (e.g., facebook/react)"
+                className="flex-1 px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground"
+              />
+              <button
+                onClick={handleAddRepo}
+                disabled={!repoInput.trim()}
+                className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Add repo"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setIsEditingRepos(false)}
+                className="p-1 rounded hover:bg-secondary text-muted-foreground"
+                title="Done"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {savedRepos.map((repo) => (
+                <span
+                  key={repo}
+                  onClick={() => handleSelectRepo(repo)}
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors",
+                    repo === currentRepo
+                      ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/50"
+                      : "bg-purple-500/10 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/20"
+                  )}
+                >
+                  {repo === currentRepo && <AlertCircle className="w-3 h-3" />}
+                  {repo}
+                  {savedRepos.length > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveRepo(repo) }}
+                      className="hover:text-red-400 transition-colors"
+                      title="Remove repo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Placeholder Stats Grid */}
         <div className="grid grid-cols-4 gap-2 mb-4">
           <div className="bg-secondary/30 rounded-lg p-3 border border-border/50 opacity-50">
             <div className="flex items-center gap-2 mb-1">
@@ -676,89 +754,6 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
           </div>
         </div>
 
-        {/* Repository selector */}
-        <div className="mb-3">
-          <span className="text-xs text-muted-foreground block mb-2">Your repositories:</span>
-          <div className="flex flex-wrap gap-1">
-            {savedRepos.map(repo => (
-              <span
-                key={repo}
-                className={cn(
-                  'inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border cursor-pointer transition-colors',
-                  repo === currentRepo
-                    ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
-                    : 'bg-secondary/50 border-border text-muted-foreground hover:bg-secondary hover:text-foreground'
-                )}
-                onClick={() => handleSelectRepo(repo)}
-                title={repo === currentRepo ? 'Currently selected (error)' : `Switch to ${repo}`}
-              >
-                {repo === currentRepo && <AlertCircle className="w-3 h-3" />}
-                {repo}
-                {savedRepos.length > 1 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleRemoveRepo(repo) }}
-                    className="hover:text-red-400 ml-0.5"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Settings Panel for adding repos */}
-        {showSettings && (
-          <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium">Add Repository</span>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="p-1 rounded hover:bg-secondary text-muted-foreground"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Add custom repo */}
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={repoInput}
-                onChange={(e) => setRepoInput(e.target.value)}
-                placeholder="owner/repo (e.g., facebook/react)"
-                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddRepo()}
-              />
-              <button
-                onClick={handleAddRepo}
-                disabled={!repoInput.trim() || !repoInput.includes('/')}
-                className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add
-              </button>
-            </div>
-
-            {/* Preset repos */}
-            {PRESET_REPOS.filter(r => !savedRepos.includes(r)).length > 0 && (
-              <div>
-                <span className="text-xs text-muted-foreground block mb-2">Popular repositories:</span>
-                <div className="flex flex-wrap gap-1">
-                  {PRESET_REPOS.filter(r => !savedRepos.includes(r)).slice(0, 4).map(repo => (
-                    <button
-                      key={repo}
-                      onClick={() => handleAddPreset(repo)}
-                      className="px-2 py-1 text-xs rounded-full bg-secondary/50 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                    >
-                      + {repo}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Prominent error message */}
         <div className="flex-1 flex flex-col items-center justify-center text-center p-4 rounded-lg bg-red-500/5 border border-red-500/20">
           <AlertCircle className="w-8 h-8 text-red-400 mb-3" />
@@ -782,85 +777,92 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
 
   return (
     <div className="h-full flex flex-col content-loaded">
-      {/* Row 1: Header with count badge, repo picker, and controls */}
+      {/* Row 1: Header with repo selector and controls - inline CRUD style */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <div className="flex items-center gap-2 relative">
+        <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} items
           </span>
           <button
-            onClick={() => setShowRepoDropdown(!showRepoDropdown)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {repoInfo?.full_name || currentRepo || 'Select Repo'}
-            <ChevronDown className={cn('w-3 h-3 transition-transform', showRepoDropdown && 'rotate-180')} />
-          </button>
-          {/* Repo Dropdown */}
-          {showRepoDropdown && (
-            <div className="absolute top-full left-0 mt-1 z-50 w-64 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
-              <div className="max-h-48 overflow-y-auto">
-                {savedRepos.map(repo => (
-                  <div
-                    key={repo}
-                    className={cn(
-                      'flex items-center justify-between px-3 py-2 text-sm cursor-pointer hover:bg-secondary/50',
-                      repo === currentRepo && 'bg-primary/10 text-primary'
-                    )}
-                  >
-                    <span
-                      onClick={() => handleSelectRepo(repo)}
-                      className="flex-1 truncate"
-                    >
-                      {repo}
-                    </span>
-                    {savedRepos.length > 1 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveRepo(repo) }}
-                        className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400"
-                        title="Remove from list"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-border p-2">
-                <button
-                  onClick={() => { setShowRepoDropdown(false); setShowSettings(true) }}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded"
-                >
-                  <Plus className="w-3 h-3" />
-                  Add repository...
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <CardControlsRow
-            cardControls={{
-              limit: itemsPerPage,
-              onLimitChange: setItemsPerPage,
-              sortBy: sorting.sortBy,
-              sortOptions: SORT_OPTIONS,
-              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
-              sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection,
-            }}
-          />
-          <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => setIsEditingRepos(!isEditingRepos)}
             className={cn(
-              'p-1.5 rounded transition-colors',
-              showSettings ? 'bg-primary/20 text-primary' : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
+              "text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1",
+              isEditingRepos && "text-purple-400"
             )}
-            title="Configure repositories"
+            title="Configure repos"
           >
-            <Settings className="w-4 h-4" />
+            {repoInfo?.full_name || currentRepo}
+            <Settings className="w-3 h-3" />
           </button>
         </div>
+        <CardControlsRow
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy: sorting.sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => sorting.setSortBy(v as SortByOption),
+            sortDirection: sorting.sortDirection,
+            onSortDirectionChange: sorting.setSortDirection,
+          }}
+        />
       </div>
+
+      {/* Inline repo editor (matching GitHubCIMonitor pattern) */}
+      {isEditingRepos && (
+        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={repoInput}
+              onChange={(e) => setRepoInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddRepo()}
+              placeholder="owner/repo (e.g., facebook/react)"
+              className="flex-1 px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground"
+            />
+            <button
+              onClick={handleAddRepo}
+              disabled={!repoInput.trim()}
+              className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Add repo"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setIsEditingRepos(false)}
+              className="p-1 rounded hover:bg-secondary text-muted-foreground"
+              title="Done"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {savedRepos.map((repo) => (
+              <span
+                key={repo}
+                onClick={() => handleSelectRepo(repo)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors",
+                  repo === currentRepo
+                    ? "bg-purple-500/30 text-purple-400 border border-purple-500/50"
+                    : "bg-purple-500/10 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/20"
+                )}
+              >
+                {repo}
+                {savedRepos.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRemoveRepo(repo) }}
+                    className="hover:text-red-400 transition-colors"
+                    title="Remove repo"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Row 2: Search input */}
       <CardSearchInput
@@ -921,93 +923,6 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
           Contributors
         </button>
       </div>
-
-      {/* Settings Panel */}
-      {showSettings && (
-        <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50 flex-shrink-0">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium">Manage Repositories</span>
-            <button
-              onClick={() => setShowSettings(false)}
-              className="p-1 rounded hover:bg-secondary text-muted-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Add custom repo */}
-          <div className="flex gap-2 mb-3">
-            <input
-              type="text"
-              value={repoInput}
-              onChange={(e) => setRepoInput(e.target.value)}
-              placeholder="owner/repo (e.g., facebook/react)"
-              className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddRepo()}
-            />
-            <button
-              onClick={handleAddRepo}
-              disabled={!repoInput.trim() || !repoInput.includes('/')}
-              className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Add
-            </button>
-          </div>
-
-          {/* Saved repos */}
-          <div className="mb-3">
-            <span className="text-xs text-muted-foreground block mb-2">Your saved repositories:</span>
-            <div className="flex flex-wrap gap-1">
-              {savedRepos.map(repo => (
-                <span
-                  key={repo}
-                  className={cn(
-                    'inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full border',
-                    repo === currentRepo
-                      ? 'bg-primary/20 border-primary/50 text-primary'
-                      : 'bg-secondary/50 border-border text-muted-foreground'
-                  )}
-                >
-                  <button
-                    onClick={() => handleSelectRepo(repo)}
-                    className="hover:underline"
-                  >
-                    {repo}
-                  </button>
-                  {savedRepos.length > 1 && (
-                    <button
-                      onClick={() => handleRemoveRepo(repo)}
-                      className="hover:text-red-400"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Preset repos */}
-          <div className="mb-3">
-            <span className="text-xs text-muted-foreground block mb-2">Popular repositories:</span>
-            <div className="flex flex-wrap gap-1">
-              {PRESET_REPOS.filter(r => !savedRepos.includes(r)).slice(0, 6).map(repo => (
-                <button
-                  key={repo}
-                  onClick={() => handleAddPreset(repo)}
-                  className="px-2 py-1 text-xs rounded-full bg-secondary/50 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                >
-                  + {repo}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Tip: Add a GitHub token via <code className="px-1 bg-secondary rounded">localStorage.setItem('github_token', 'ghp_...')</code> for higher rate limits.
-          </p>
-        </div>
-      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-4 gap-2 mb-3 flex-shrink-0">
@@ -1073,15 +988,16 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
             No {viewMode} found{searchQuery ? ' matching search' : ' for this time range'}
           </div>
         ) : (
-          paginatedItems.map((item: any) => {
+          paginatedItems.map((item) => {
+            const itemUnknown = item as unknown as GitHubItemUnknown
             if (viewMode === 'prs') {
-              return <PRItem key={item.number} pr={item} />
+              return <PRItem key={itemUnknown.number as number} pr={item as GitHubPR} />
             } else if (viewMode === 'issues') {
-              return <IssueItem key={item.number} issue={item} />
+              return <IssueItem key={itemUnknown.number as number} issue={item as GitHubIssue} />
             } else if (viewMode === 'releases') {
-              return <ReleaseItem key={item.id} release={item} />
+              return <ReleaseItem key={itemUnknown.id as number} release={item as GitHubRelease} />
             } else if (viewMode === 'contributors') {
-              return <ContributorItem key={item.login} contributor={item} />
+              return <ContributorItem key={itemUnknown.login as string} contributor={item as GitHubContributor} />
             }
             return null
           })
@@ -1099,23 +1015,33 @@ export function GitHubActivity({ config }: { config?: GitHubActivityConfig }) {
       />
     </div>
   )
-}
+})
 
 // Sub-components for rendering different item types
 function PRItem({ pr }: { pr: GitHubPR }) {
   const isOpen = pr.state === 'open'
-  const isMerged = pr.merged
+  const isMerged = pr.merged_at != null
   const isStaleItem = isOpen && isStale(pr.updated_at)
+
+  const statusText = isMerged ? 'Merged' : isOpen ? 'Open' : 'Closed'
+  const statusTitle = isMerged ? 'Merged pull request' : isOpen ? 'Open pull request' : 'Closed pull request (not merged)'
 
   return (
     <a
       href={pr.html_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"
+      className={cn(
+        "block p-3 rounded-lg hover:bg-secondary/40 border transition-colors",
+        isOpen
+          ? "bg-green-500/5 border-green-500/20 hover:border-green-500/30"
+          : isMerged
+            ? "bg-purple-500/5 border-purple-500/20 hover:border-purple-500/30"
+            : "bg-secondary/20 border-border/50"
+      )}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
+        <div className="mt-0.5" title={statusTitle}>
           {isMerged ? (
             <GitMerge className="w-4 h-4 text-purple-400" />
           ) : isOpen ? (
@@ -1127,11 +1053,22 @@ function PRItem({ pr }: { pr: GitHubPR }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium truncate">#{pr.number} {pr.title}</span>
+            {/* Status badge */}
+            <span className={cn(
+              "text-xs px-2 py-0.5 rounded shrink-0",
+              isMerged
+                ? "bg-purple-500/20 text-purple-400"
+                : isOpen
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"
+            )}>
+              {statusText}
+            </span>
             {pr.draft && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">Draft</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 shrink-0">Draft</span>
             )}
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Stale</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">Stale</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1139,7 +1076,7 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" />
               {pr.user.login}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at)}`}>
               <Clock className="w-3 h-3" />
               {formatTimeAgo(pr.updated_at)}
             </span>
@@ -1159,10 +1096,15 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
       href={issue.html_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"
+      className={cn(
+        "block p-3 rounded-lg hover:bg-secondary/40 border transition-colors",
+        isOpen
+          ? "bg-orange-500/5 border-orange-500/20 hover:border-orange-500/30"
+          : "bg-secondary/20 border-border/50"
+      )}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
+        <div className="mt-0.5" title={isOpen ? "Open issue" : "Closed issue"}>
           {isOpen ? (
             <AlertCircle className="w-4 h-4 text-orange-400" />
           ) : (
@@ -1172,8 +1114,17 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium truncate">#{issue.number} {issue.title}</span>
+            {/* Status badge - show Open or Closed */}
+            <span className={cn(
+              "text-xs px-2 py-0.5 rounded shrink-0",
+              isOpen
+                ? "bg-orange-500/20 text-orange-400"
+                : "bg-green-500/20 text-green-400"
+            )}>
+              {isOpen ? 'Open' : 'Closed'}
+            </span>
             {isStaleItem && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Stale</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0">Stale</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1181,12 +1132,12 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" />
               {issue.user.login}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at)}`}>
               <Clock className="w-3 h-3" />
               {formatTimeAgo(issue.updated_at)}
             </span>
             {issue.comments > 0 && (
-              <span>{issue.comments} comments</span>
+              <span title={`${issue.comments} comments`}>{issue.comments} comments</span>
             )}
           </div>
         </div>

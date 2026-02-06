@@ -61,6 +61,7 @@ const ConsoleIssuesCard = lazy(() => import('./console-missions/ConsoleIssuesCar
 const ConsoleKubeconfigAuditCard = lazy(() => import('./console-missions/ConsoleKubeconfigAuditCard').then(m => ({ default: m.ConsoleKubeconfigAuditCard })))
 const ConsoleHealthCheckCard = lazy(() => import('./console-missions/ConsoleHealthCheckCard').then(m => ({ default: m.ConsoleHealthCheckCard })))
 const ConsoleOfflineDetectionCard = lazy(() => import('./console-missions/ConsoleOfflineDetectionCard').then(m => ({ default: m.ConsoleOfflineDetectionCard })))
+const HardwareHealthCard = lazy(() => import('./HardwareHealthCard').then(m => ({ default: m.HardwareHealthCard })))
 const ActiveAlerts = lazy(() => import('./ActiveAlerts').then(m => ({ default: m.ActiveAlerts })))
 const AlertRulesCard = lazy(() => import('./AlertRules').then(m => ({ default: m.AlertRulesCard })))
 const OpenCostOverview = lazy(() => import('./OpenCostOverview').then(m => ({ default: m.OpenCostOverview })))
@@ -126,6 +127,15 @@ const WorkloadMonitor = lazy(() => import('./workload-monitor/WorkloadMonitor').
 const DynamicCard = lazy(() => import('./DynamicCard').then(m => ({ default: m.DynamicCard })))
 const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor').then(m => ({ default: m.LLMdStackMonitor })))
 const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
+
+// LLM-d stunning visualization cards
+const LLMdFlow = lazy(() => import('./llmd/LLMdFlow').then(m => ({ default: m.LLMdFlow })))
+const KVCacheMonitor = lazy(() => import('./llmd/KVCacheMonitor').then(m => ({ default: m.KVCacheMonitor })))
+const EPPRouting = lazy(() => import('./llmd/EPPRouting').then(m => ({ default: m.EPPRouting })))
+const PDDisaggregation = lazy(() => import('./llmd/PDDisaggregation').then(m => ({ default: m.PDDisaggregation })))
+const LLMdBenchmarks = lazy(() => import('./llmd/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
+const LLMdAIInsights = lazy(() => import('./llmd/LLMdAIInsights').then(m => ({ default: m.LLMdAIInsights })))
+const LLMdConfigurator = lazy(() => import('./llmd/LLMdConfigurator').then(m => ({ default: m.LLMdConfigurator })))
 const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
 const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
 const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
@@ -145,7 +155,8 @@ function withSuspense(LazyComponent: ComponentType<CardComponentProps>): CardCom
   function SuspenseWrapped(props: CardComponentProps) {
     return createElement(Suspense, { fallback: null }, createElement(LazyComponent, props))
   }
-  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as any).displayName || 'Card'})`
+  // Access displayName property that may exist on lazy component
+  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as ComponentType<CardComponentProps> & { displayName?: string }).displayName || 'Card'})`
   return SuspenseWrapped
 }
 
@@ -225,6 +236,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   console_ai_kubeconfig_audit: ConsoleKubeconfigAuditCard,
   console_ai_health_check: ConsoleHealthCheckCard,
   console_ai_offline_detection: ConsoleOfflineDetectionCard,
+  hardware_health: HardwareHealthCard,
   // Alerting cards
   active_alerts: ActiveAlerts,
   alert_rules: AlertRulesCard,
@@ -329,6 +341,15 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Provider Health card (AI + Cloud provider status)
   provider_health: ProviderHealth,
 
+  // LLM-d stunning visualization cards
+  llmd_flow: LLMdFlow,
+  kvcache_monitor: KVCacheMonitor,
+  epp_routing: EPPRouting,
+  pd_disaggregation: PDDisaggregation,
+  llmd_benchmarks: LLMdBenchmarks,
+  llmd_ai_insights: LLMdAIInsights,
+  llmd_configurator: LLMdConfigurator,
+
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
 
@@ -353,8 +374,20 @@ export const CARD_COMPONENTS: Record<string, CardComponent> = Object.fromEntries
 )
 
 /**
- * Cards that use demo/mock data instead of real data.
- * Used to show a demo banner when these cards are present.
+ * Cards that ALWAYS use demo/mock data (no live data source exists).
+ *
+ * IMPORTANT: When adding live data support to a card, you MUST:
+ * 1. Remove the card type from this set
+ * 2. Have the card call useReportCardDataState({ isDemoData: shouldUseDemoData, ... })
+ *    to dynamically report its demo state based on actual data source
+ *
+ * Cards in this set get isDemoData={true} passed as a prop to CardWrapper,
+ * which OVERRIDES any child-reported state. This is why cards with live data
+ * must be removed from this set.
+ *
+ * For cards that use StackContext or other dynamic data sources, use
+ * useCardDemoState({ requires: 'stack' | 'agent' | 'backend' }) to determine
+ * if demo data should be used, then report via useReportCardDataState.
  */
 export const DEMO_DATA_CARDS = new Set([
   // MCS cards - demo until MCS is installed
@@ -395,6 +428,10 @@ export const DEMO_DATA_CARDS = new Set([
   // Note: llm_inference, llm_models now use real data via useLLMd hook
   'ml_jobs',
   'ml_notebooks',
+  // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation, llmd_benchmarks, llmd_ai_insights)
+  // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
+  // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
+  'llmd_configurator',
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
 ])
@@ -517,6 +554,15 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // Provider Health card
   provider_health: 6,
 
+  // LLM-d stunning visualization cards
+  llmd_flow: 8,           // Hero animated flow diagram
+  kvcache_monitor: 4,     // KV cache gauges
+  epp_routing: 6,         // EPP Sankey diagram
+  pd_disaggregation: 6,   // Prefill/Decode split view
+  llmd_benchmarks: 6,     // Benchmark charts
+  llmd_ai_insights: 6,    // AI insights panel
+  llmd_configurator: 4,   // Configurator showcase
+
   // Event dashboard cards
   event_summary: 6,
   warning_events: 6,
@@ -570,6 +616,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   console_ai_kubeconfig_audit: 6,
   console_ai_health_check: 6,
   console_ai_offline_detection: 6,
+  hardware_health: 6,
   user_management: 6,
   // Weather card
   weather: 6,

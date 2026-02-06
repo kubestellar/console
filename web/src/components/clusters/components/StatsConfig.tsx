@@ -38,6 +38,9 @@ export const DEFAULT_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'memory', name: 'Memory', icon: 'MemoryStick', visible: true, color: 'green' },
   { id: 'storage', name: 'Storage', icon: 'HardDrive', visible: true, color: 'purple' },
   { id: 'gpus', name: 'GPUs', icon: 'Zap', visible: true, color: 'yellow' },
+  { id: 'tpus', name: 'TPUs', icon: 'Zap', visible: false, color: 'cyan' },
+  { id: 'aius', name: 'AIUs', icon: 'Zap', visible: false, color: 'blue' },
+  { id: 'xpus', name: 'XPUs', icon: 'Zap', visible: false, color: 'green' },
   { id: 'pods', name: 'Pods', icon: 'Layers', visible: true, color: 'purple' },
 ]
 
@@ -169,15 +172,39 @@ export function StatsConfigModal({ isOpen, onClose, blocks, onSave }: StatsConfi
         showBack={false}
       />
 
-      <BaseModal.Content className="max-h-[50vh]">
+      <BaseModal.Content className="max-h-[60vh]">
         <div className="space-y-2">
+          {/* Section header for active stats */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <Eye className="w-3 h-3 text-green-400" />
+            <span>Active ({localBlocks.filter(b => b.visible).length})</span>
+            <span className="flex-1 border-t border-border" />
+          </div>
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={localBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-              {localBlocks.map(block => (
+              {localBlocks.filter(b => b.visible).map(block => (
+                <SortableItem
+                  key={block.id}
+                  block={block}
+                  onToggleVisibility={toggleVisibility}
+                />
+              ))}
+
+              {/* Section header for available stats */}
+              {localBlocks.filter(b => !b.visible).length > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4 mb-1">
+                  <EyeOff className="w-3 h-3" />
+                  <span>Available ({localBlocks.filter(b => !b.visible).length})</span>
+                  <span className="flex-1 border-t border-border" />
+                </div>
+              )}
+
+              {localBlocks.filter(b => !b.visible).map(block => (
                 <SortableItem
                   key={block.id}
                   block={block}

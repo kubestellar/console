@@ -56,6 +56,7 @@ import { gpuStatusConfig } from './gpu-status'
 import { gpuUsageTrendConfig } from './gpu-usage-trend'
 import { gpuUtilizationConfig } from './gpu-utilization'
 import { gpuWorkloadsConfig } from './gpu-workloads'
+import { hardwareHealthConfig } from './hardware-health'
 import { helmHistoryConfig } from './helm-history'
 import { helmReleaseStatusConfig } from './helm-release-status'
 import { helmValuesDiffConfig } from './helm-values-diff'
@@ -201,6 +202,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   gpu_usage_trend: gpuUsageTrendConfig,
   gpu_utilization: gpuUtilizationConfig,
   gpu_workloads: gpuWorkloadsConfig,
+  hardware_health: hardwareHealthConfig,
   helm_history: helmHistoryConfig,
   helm_release_status: helmReleaseStatusConfig,
   helm_values_diff: helmValuesDiffConfig,

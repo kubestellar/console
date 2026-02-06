@@ -160,12 +160,16 @@ export interface Deployment {
   annotations?: Record<string, string>
 }
 
+// AcceleratorType represents the category of accelerator
+export type AcceleratorType = 'GPU' | 'TPU' | 'AIU' | 'XPU'
+
 export interface GPUNode {
   name: string
   cluster: string
-  gpuType: string
-  gpuCount: number
-  gpuAllocated: number
+  gpuType: string           // Display name of accelerator (e.g., "NVIDIA A100", "Intel Gaudi2", "IBM AIU")
+  gpuCount: number          // Number of accelerators
+  gpuAllocated: number      // Number of allocated accelerators
+  acceleratorType?: AcceleratorType  // GPU, TPU, AIU, or XPU
   // Enhanced GPU info from NVIDIA GPU Feature Discovery
   gpuMemoryMB?: number
   gpuFamily?: string
@@ -173,7 +177,7 @@ export interface GPUNode {
   cudaRuntimeVersion?: string
   migCapable?: boolean
   migStrategy?: string
-  manufacturer?: string
+  manufacturer?: string     // Manufacturer (NVIDIA, AMD, Intel, Google, IBM)
 }
 
 // NVIDIA Operator Status types

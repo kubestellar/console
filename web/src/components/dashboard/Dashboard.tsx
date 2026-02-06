@@ -28,6 +28,7 @@ import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
+import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
@@ -60,17 +61,8 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 // Storage key and default cards for the main dashboard
 const DASHBOARD_STORAGE_KEY = 'kubestellar-main-dashboard-cards'
 
-// Default cards for the main dashboard - balanced multi-cluster overview
-const DEFAULT_DASHBOARD_CARDS: Card[] = [
-  { id: 'default-1', card_type: 'cluster_health', config: {}, position: { x: 0, y: 0, w: 4, h: 3 } },
-  { id: 'default-2', card_type: 'resource_usage', config: {}, position: { x: 4, y: 0, w: 4, h: 3 } },
-  { id: 'default-3', card_type: 'active_alerts', config: {}, position: { x: 8, y: 0, w: 4, h: 3 } },
-  { id: 'default-4', card_type: 'cluster_metrics', config: {}, position: { x: 0, y: 3, w: 6, h: 3 } },
-  { id: 'default-5', card_type: 'event_stream', config: {}, position: { x: 6, y: 3, w: 6, h: 4 } },
-  { id: 'default-6', card_type: 'deployment_status', config: {}, position: { x: 0, y: 6, w: 6, h: 3 } },
-  { id: 'default-7', card_type: 'pod_issues', config: {}, position: { x: 6, y: 7, w: 6, h: 3 } },
-  { id: 'default-8', card_type: 'provider_health', config: {}, position: { x: 0, y: 10, w: 6, h: 3 } },
-]
+// Default cards loaded from centralized config
+const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')
 
 
 export function Dashboard() {
@@ -83,7 +75,7 @@ export function Dashboard() {
   const [isConfigureCardOpen, setIsConfigureCardOpen] = useState(false)
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [localCards, setLocalCards] = useState<Card[]>(() => {
-    // Priority: cache > localStorage > empty
+    // Priority: cache > localStorage > default cards
     if (dashboardCache?.cards?.length) return dashboardCache.cards
     try {
       const stored = localStorage.getItem(DASHBOARD_STORAGE_KEY)
@@ -94,7 +86,7 @@ export function Dashboard() {
     } catch {
       // Ignore parse errors
     }
-    return []
+    return DEFAULT_DASHBOARD_CARDS
   })
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -485,6 +477,7 @@ export function Dashboard() {
            cardId.startsWith('restored-') ||
            cardId.startsWith('ai-') ||
            cardId.startsWith('rec-') ||
+           cardId.startsWith('default-') ||
            cardId.startsWith('demo-')
   }
 
@@ -558,13 +551,6 @@ export function Dashboard() {
     const newCards: Card[] = suggestions.map((s, index) => {
       const cardType = mapVisualizationToCardType(s.visualization, s.type)
       const size = getDefaultCardSize(cardType)
-      // Debug: log card dimensions when adding
-      console.log('[AddCard Debug]', {
-        originalType: s.type,
-        visualization: s.visualization,
-        resolvedType: cardType,
-        size,
-      })
       return {
         id: `new-${Date.now()}-${index}`,
         card_type: cardType,

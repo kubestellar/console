@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,6 +19,36 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// oauthStateStore stores OAuth state tokens server-side (Safari blocks cookies in OAuth flows)
+var oauthStateStore = struct {
+	sync.RWMutex
+	states map[string]time.Time
+}{states: make(map[string]time.Time)}
+
+func storeOAuthState(state string) {
+	oauthStateStore.Lock()
+	defer oauthStateStore.Unlock()
+	// Clean up expired states (older than 10 minutes)
+	now := time.Now()
+	for s, t := range oauthStateStore.states {
+		if now.Sub(t) > 10*time.Minute {
+			delete(oauthStateStore.states, s)
+		}
+	}
+	oauthStateStore.states[state] = now
+}
+
+func validateAndConsumeOAuthState(state string) bool {
+	oauthStateStore.Lock()
+	defer oauthStateStore.Unlock()
+	if t, ok := oauthStateStore.states[state]; ok {
+		delete(oauthStateStore.states, state)
+		// Valid if less than 10 minutes old
+		return time.Since(t) < 10*time.Minute
+	}
+	return false
+}
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
@@ -98,16 +129,8 @@ func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 	// Generate cryptographically secure state for CSRF protection
 	state := uuid.New().String()
 
-	// Store state in a secure httpOnly cookie for CSRF validation on callback
-	c.Cookie(&fiber.Cookie{
-		Name:     oauthStateCookieName,
-		Value:    state,
-		Path:     "/",
-		MaxAge:   oauthStateCookieMaxAge,
-		HTTPOnly: true,
-		Secure:   !h.devMode, // Secure in production (requires HTTPS)
-		SameSite: "Lax",      // Lax allows the cookie to be sent on OAuth redirects
-	})
+	// Store state server-side (Safari blocks cookies in OAuth redirect flows)
+	storeOAuthState(state)
 
 	url := h.oauthConfig.AuthCodeURL(state)
 	return c.Redirect(url, fiber.StatusTemporaryRedirect)
@@ -203,21 +226,11 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL+"/login?error=missing_code", fiber.StatusTemporaryRedirect)
 	}
 
-	// CSRF validation: verify state parameter matches stored cookie
+	// CSRF validation: verify state parameter matches server-side store
+	// (Safari blocks cookies in OAuth redirect flows, so we use server-side state)
 	state := c.Query("state")
-	storedState := c.Cookies(oauthStateCookieName)
-
-	// Clear the state cookie immediately (one-time use)
-	c.Cookie(&fiber.Cookie{
-		Name:     oauthStateCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1, // Delete cookie
-		HTTPOnly: true,
-	})
-
-	if state == "" || storedState == "" || state != storedState {
-		log.Printf("[Auth] CSRF validation failed: state mismatch (received=%s, stored=%s)", state, storedState)
+	if state == "" || !validateAndConsumeOAuthState(state) {
+		log.Printf("[Auth] CSRF validation failed: invalid or expired state token")
 		return c.Redirect(h.frontendURL+"/login?error=csrf_validation_failed", fiber.StatusTemporaryRedirect)
 	}
 

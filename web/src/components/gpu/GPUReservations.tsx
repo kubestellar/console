@@ -22,6 +22,11 @@ import { DonutChart } from '../charts/PieChart'
 import { BarChart } from '../charts/BarChart'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+
+// GPU utilization thresholds for visual indicators
+const UTILIZATION_HIGH_THRESHOLD = 80 // Red indicator above this percentage
+const UTILIZATION_MEDIUM_THRESHOLD = 50 // Yellow indicator above this percentage
 
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'requests'
 
@@ -230,7 +235,7 @@ export function GPUReservations() {
   if (isLoading && nodes.length === 0) {
     return (
       <div className="pt-16 flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
       </div>
     )
   }
@@ -370,8 +375,8 @@ export function GPUReservations() {
                       strokeLinecap="round"
                       strokeDasharray={`${stats.utilizationPercent * 3.52} 352`}
                       className={cn(
-                        stats.utilizationPercent > 80 ? 'text-red-500' :
-                        stats.utilizationPercent > 50 ? 'text-yellow-500' :
+                        stats.utilizationPercent > UTILIZATION_HIGH_THRESHOLD ? 'text-red-500' :
+                        stats.utilizationPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'text-yellow-500' :
                         'text-green-500'
                       )}
                     />
@@ -633,14 +638,14 @@ export function GPUReservations() {
                     {/* GPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">GPU</span>
+                        <span className="text-muted-foreground"><TechnicalAcronym term="GPU">GPU</TechnicalAcronym></span>
                         <span className="text-foreground">{quota.gpuUsed}/{quota.gpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           className={cn(
                             'h-full rounded-full transition-all',
-                            gpuPercent > 80 ? 'bg-red-500' : gpuPercent > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                            gpuPercent > UTILIZATION_HIGH_THRESHOLD ? 'bg-red-500' : gpuPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'bg-yellow-500' : 'bg-green-500'
                           )}
                           style={{ width: `${gpuPercent}%` }}
                         />
@@ -650,14 +655,14 @@ export function GPUReservations() {
                     {/* CPU Quota */}
                     <div>
                       <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-muted-foreground">CPU (cores)</span>
+                        <span className="text-muted-foreground"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym> (cores)</span>
                         <span className="text-foreground">{quota.cpuUsed}/{quota.cpuLimit}</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">
                         <div
                           className={cn(
                             'h-full rounded-full transition-all',
-                            cpuPercent > 80 ? 'bg-red-500' : cpuPercent > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                            cpuPercent > UTILIZATION_HIGH_THRESHOLD ? 'bg-red-500' : cpuPercent > UTILIZATION_MEDIUM_THRESHOLD ? 'bg-yellow-500' : 'bg-green-500'
                           )}
                           style={{ width: `${cpuPercent}%` }}
                         />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { isDemoModeForced } from '../useDemoMode'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
@@ -93,6 +94,14 @@ export function useHelmReleases(cluster?: string) {
   }, [])
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip fetching entirely in forced demo mode (Netlify) — no backend
+    if (isDemoModeForced) {
+      setIsLoading(false)
+      setIsRefreshing(false)
+      notifyListeners(false)
+      return
+    }
+
     if (!silent) {
       setIsLoading(true)
     } else {

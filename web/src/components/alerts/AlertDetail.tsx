@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   AlertTriangle,
   CheckCircle,
@@ -17,6 +17,10 @@ import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
 
+// Time thresholds for relative time formatting
+const MINUTES_PER_HOUR = 60 // Minutes in an hour
+const HOURS_PER_DAY = 24 // Hours in a day
+
 interface AlertDetailProps {
   alert: Alert
   onClose?: () => void
@@ -32,8 +36,8 @@ function formatRelativeTime(dateString: string): string {
   const diffDays = Math.floor(diffHours / 24)
 
   if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} minutes ago`
-  if (diffHours < 24) return `${diffHours} hours ago`
+  if (diffMins < MINUTES_PER_HOUR) return `${diffMins} minutes ago`
+  if (diffHours < HOURS_PER_DAY) return `${diffHours} hours ago`
   return `${diffDays} days ago`
 }
 
@@ -48,12 +52,22 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   const [slackSent, setSlackSent] = useState(false)
   const [isRunningDiagnosis, setIsRunningDiagnosis] = useState(false)
 
+  const timeoutsRef = useRef<number[]>([])
+
   const severityColor = getSeverityColor(alert.severity)
 
   // Find the associated mission if AI diagnosis was run
   const associatedMission = alert.aiDiagnosis?.missionId
     ? missions.find(m => m.id === alert.aiDiagnosis?.missionId)
     : null
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout)
+      timeoutsRef.current = []
+    }
+  }, [])
 
   const handleAcknowledge = () => {
     acknowledgeAlert(alert.id, 'Current User')
@@ -68,7 +82,8 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     setIsRunningDiagnosis(true)
     runAIDiagnosis(alert.id)
     // The diagnosis runs async via missions
-    setTimeout(() => setIsRunningDiagnosis(false), 1000)
+    const timeoutId = setTimeout(() => setIsRunningDiagnosis(false), 1000)
+    timeoutsRef.current.push(timeoutId)
   }
 
   const handleSendSlack = async (webhookId: string) => {
@@ -76,7 +91,8 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
     try {
       await sendNotification(alert, webhookId)
       setSlackSent(true)
-      setTimeout(() => setSlackSent(false), 3000)
+      const timeoutId = setTimeout(() => setSlackSent(false), 3000)
+      timeoutsRef.current.push(timeoutId)
     } catch (error) {
       console.error('Failed to send Slack notification:', error)
     } finally {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
 import { X, Check, AlertTriangle, Info } from 'lucide-react'
 import { cn } from '../../lib/cn'
 
@@ -26,19 +26,39 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const timeoutsRef = useRef<Map<string, number>>(new Map())
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = `toast-${Date.now()}`
     setToasts((prev) => [...prev, { id, message, type }])
 
     // Auto-remove after 3 seconds
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
+      // Only delete if still in map (component may have unmounted)
+      if (timeoutsRef.current.has(id)) {
+        timeoutsRef.current.delete(id)
+      }
     }, 3000)
+    timeoutsRef.current.set(id, timeoutId)
   }, [])
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
+    // Clear timeout if manually removed
+    const timeoutId = timeoutsRef.current.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      timeoutsRef.current.delete(id)
+    }
+  }, [])
+
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId))
+      timeoutsRef.current.clear()
+    }
   }, [])
 
   return (

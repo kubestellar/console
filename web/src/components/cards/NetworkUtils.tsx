@@ -26,6 +26,19 @@ interface NetworkInfo {
   rtt?: number
 }
 
+// Extend Navigator type for Network Information API
+interface NetworkInformation extends EventTarget {
+  effectiveType?: string
+  downlink?: number
+  rtt?: number
+  addEventListener(type: 'change', listener: EventListener): void
+  removeEventListener(type: 'change', listener: EventListener): void
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation
+}
+
 const STORAGE_KEY = 'network_utils_hosts'
 const PING_INTERVAL_KEY = 'network_utils_ping_interval'
 const PING_TIMEOUT = 5000
@@ -81,7 +94,7 @@ export function NetworkUtils() {
   // Update network info and mark as initialized
   useEffect(() => {
     const updateNetworkInfo = () => {
-      const connection = (navigator as any).connection
+      const connection = (navigator as NavigatorWithConnection).connection
       setNetworkInfo({
         online: navigator.onLine,
         effectiveType: connection?.effectiveType,
@@ -95,7 +108,7 @@ export function NetworkUtils() {
     window.addEventListener('online', updateNetworkInfo)
     window.addEventListener('offline', updateNetworkInfo)
 
-    const connection = (navigator as any).connection
+    const connection = (navigator as NavigatorWithConnection).connection
     if (connection) {
       connection.addEventListener('change', updateNetworkInfo)
     }

@@ -13,6 +13,17 @@ export const isClusterUnreachable = (c: ClusterInfo): boolean => {
   return false
 }
 
+// Helper to check if cluster has token/auth expired error
+export const isClusterTokenExpired = (c: ClusterInfo): boolean => {
+  return c.errorType === 'auth'
+}
+
+// Helper to check if cluster is network offline (not auth issue)
+export const isClusterNetworkOffline = (c: ClusterInfo): boolean => {
+  if (!isClusterUnreachable(c)) return false
+  return c.errorType !== 'auth'
+}
+
 // Helper to determine if cluster health is still loading
 // Returns true only when actively refreshing - keeps left/right indicators in sync
 export const isClusterLoading = (c: ClusterInfo): boolean => {

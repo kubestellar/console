@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react'
-import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle } from 'lucide-react'
+import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 
@@ -89,6 +89,8 @@ export function RemediationConsole({
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isExecuting, setIsExecuting] = useState(false)
   const [shellError, setShellError] = useState<string | null>(null)
+  const [lastFailedCommand, setLastFailedCommand] = useState<string>('')
+  const [isLoadingInitialData, setIsLoadingInitialData] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const shellInputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef(false)
@@ -111,6 +113,7 @@ export function RemediationConsole({
     setIsRunning(true)
     setIsComplete(false)
     setLogs([])
+    setIsLoadingInitialData(true)
     abortRef.current = false
 
     // Initial log
@@ -119,6 +122,10 @@ export function RemediationConsole({
       message: `Starting AI remediation for ${resourceType} "${resourceName}"`,
       details: `Cluster: ${cluster}, Namespace: ${namespace}`,
     })
+    
+    // Simulate brief loading for gathering initial data
+    await new Promise(resolve => setTimeout(resolve, 300))
+    setIsLoadingInitialData(false)
 
     // Get the remediation flow based on issues
     const primaryIssue = issues[0] || 'default'
@@ -231,6 +238,7 @@ export function RemediationConsole({
       // Simulate output for demo purposes when backend is not available
       const message = error instanceof Error ? error.message : 'Connection failed'
       setShellError(`Shell API unavailable: ${message}`)
+      setLastFailedCommand(cmd)
       addLog({
         type: 'output',
         message: simulateCommandOutput(cmd),
@@ -387,9 +395,18 @@ Labels:       app=${resourceName.split('-')[0]}
             // AI Tab Content
             logs.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Click "Start Remediation" to begin AI analysis</p>
-                <p className="text-xs mt-2">Claude will analyze the issue and suggest fixes</p>
+                {isLoadingInitialData ? (
+                  <>
+                    <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin opacity-50" />
+                    <p>Gathering diagnostic data...</p>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Click "Start Remediation" to begin AI analysis</p>
+                    <p className="text-xs mt-2">Claude will analyze the issue and suggest fixes</p>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
@@ -495,9 +512,24 @@ Labels:       app=${resourceName.split('-')[0]}
         {activeTab === 'shell' && (
           <div className="p-3 border-t border-border bg-[#0d0d0d]">
             {shellError && (
-              <div className="mb-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                <span>{shellError}</span>
+              <div className="mb-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  <span>{shellError}</span>
+                </div>
+                {lastFailedCommand && (
+                  <button
+                    onClick={() => {
+                      setShellError(null)
+                      executeCommand(lastFailedCommand)
+                    }}
+                    disabled={isExecuting}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Retry Command</span>
+                  </button>
+                )}
               </div>
             )}
             <div className="flex items-center gap-2">

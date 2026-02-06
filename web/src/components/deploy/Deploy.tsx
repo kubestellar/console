@@ -32,6 +32,8 @@ import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { DeployConfirmDialog } from './DeployConfirmDialog'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
+import { usePersistence } from '../../hooks/usePersistence'
+import { useWorkloadDeployments, useManagedWorkloads } from '../../hooks/useConsoleCRs'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -198,6 +200,12 @@ export function Deploy() {
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
 
+  // Persistence hooks for CR-backed state
+  const { isEnabled: persistenceEnabled, isActive: persistenceActive } = usePersistence()
+  const shouldPersist = persistenceEnabled && persistenceActive
+  const { createItem: createWorkloadDeployment } = useWorkloadDeployments()
+  const { createItem: createManagedWorkload } = useManagedWorkloads()
+
   const isRefreshing = deploymentsRefreshing || showIndicator
   const isFetching = deploymentsLoading || isRefreshing || showIndicator
 
@@ -301,6 +309,42 @@ export function Deploy() {
       },
     })
 
+    // Create CRs when persistence is enabled
+    if (shouldPersist) {
+      try {
+        // Create ManagedWorkload CR to track the workload
+        const workloadCRName = `${workloadName}-${namespace}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+        await createManagedWorkload({
+          metadata: { name: workloadCRName },
+          spec: {
+            sourceCluster,
+            sourceNamespace: namespace,
+            workloadRef: {
+              kind: 'Deployment',
+              name: workloadName,
+            },
+            targetClusters,
+            targetGroups: groupName ? [groupName] : undefined,
+          },
+        })
+
+        // Create WorkloadDeployment CR to track the deployment action
+        const deploymentCRName = `${workloadName}-to-${groupName || 'clusters'}-${Date.now()}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 63)
+        await createWorkloadDeployment({
+          metadata: { name: deploymentCRName },
+          spec: {
+            workloadRef: { name: workloadCRName },
+            targetGroupRef: groupName ? { name: groupName } : undefined,
+            targetClusters: groupName ? undefined : targetClusters,
+            strategy: 'RollingUpdate',
+          },
+        })
+      } catch (err) {
+        console.warn('Failed to create persistence CRs:', err)
+        // Continue with deploy even if CR creation fails
+      }
+    }
+
     try {
       await deployWorkload({
         workloadName,
@@ -336,7 +380,7 @@ export function Deploy() {
     } catch (err) {
       console.error('Deploy failed:', err)
     }
-  }, [pendingDeploy, publishCardEvent, deployWorkload])
+  }, [pendingDeploy, publishCardEvent, deployWorkload, shouldPersist, createManagedWorkload, createWorkloadDeployment])
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {

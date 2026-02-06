@@ -7,6 +7,11 @@
   command = "npm ci && npm run build"
   publish = "dist"
 
+[functions]
+  # Netlify Functions directory (relative to base)
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 [build.environment]
   # Enable demo mode with mock data for Netlify previews
   VITE_DEMO_MODE = "true"

@@ -1,6 +1,19 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/useMCP'
+import type { ClusterErrorType } from '../errorClassifier'
+
+// ============================================================================
+// Cluster with health info for filter dropdowns
+// ============================================================================
+
+export interface ClusterWithHealth {
+  name: string
+  healthy?: boolean
+  reachable?: boolean
+  nodeCount?: number
+  errorType?: ClusterErrorType
+}
 
 // ============================================================================
 // Types
@@ -59,8 +72,8 @@ export interface UseCardFiltersResult<T> {
   toggleClusterFilter: (cluster: string) => void
   /** Clear local cluster filter */
   clearClusterFilter: () => void
-  /** Available clusters for filtering (respects global filter) */
-  availableClusters: { name: string }[]
+  /** Available clusters for filtering (respects global filter, includes health info) */
+  availableClusters: ClusterWithHealth[]
   /** Whether cluster filter dropdown is showing */
   showClusterFilter: boolean
   /** Set cluster filter dropdown visibility */
@@ -848,8 +861,8 @@ export interface UseChartFiltersResult {
   toggleClusterFilter: (cluster: string) => void
   /** Clear local cluster filter */
   clearClusterFilter: () => void
-  /** Available clusters for filtering (respects global filter) */
-  availableClusters: { name: string }[]
+  /** Available clusters for filtering (respects global filter, includes health info) */
+  availableClusters: ClusterWithHealth[]
   /** Filtered cluster list based on global + local filters */
   filteredClusters: { name: string; reachable?: boolean; cpuCores?: number; cpuRequestsCores?: number; memoryGB?: number; memoryRequestsGB?: number; podCount?: number; nodeCount?: number }[]
   /** Whether cluster filter dropdown is showing */

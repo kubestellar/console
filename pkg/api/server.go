@@ -18,6 +18,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -50,12 +51,13 @@ type Config struct {
 
 // Server represents the API server
 type Server struct {
-	app       *fiber.App
-	store     store.Store
-	config    Config
-	hub       *handlers.Hub
-	bridge    *mcp.Bridge
-	k8sClient *k8s.MultiClusterClient
+	app                *fiber.App
+	store              store.Store
+	config             Config
+	hub                *handlers.Hub
+	bridge             *mcp.Bridge
+	k8sClient          *k8s.MultiClusterClient
+	notificationService *notifications.Service
 }
 
 // NewServer creates a new API server
@@ -179,13 +181,18 @@ func NewServer(cfg Config) (*Server, error) {
 		}()
 	}
 
+	// Initialize notification service
+	notificationService := notifications.NewService()
+	log.Println("Notification service initialized")
+
 	server := &Server{
-		app:       app,
-		store:     db,
-		config:    cfg,
-		hub:       hub,
-		bridge:    bridge,
-		k8sClient: k8sClient,
+		app:                 app,
+		store:               db,
+		config:              cfg,
+		hub:                 hub,
+		bridge:              bridge,
+		k8sClient:           k8sClient,
+		notificationService: notificationService,
 	}
 
 	server.setupMiddleware()
@@ -240,9 +247,39 @@ func (s *Server) setupRoutes() {
 
 	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
 	s.app.Get("/api/active-users", func(c *fiber.Ctx) error {
+		wsUsers := s.hub.GetActiveUsersCount()
+		demoSessions := s.hub.GetDemoSessionCount()
+		wsTotalConns := s.hub.GetTotalConnectionsCount()
+
+		// Return whichever is higher (WebSocket users or demo sessions)
+		activeUsers := wsUsers
+		if demoSessions > wsUsers {
+			activeUsers = demoSessions
+		}
+		totalConnections := wsTotalConns
+		if demoSessions > wsTotalConns {
+			totalConnections = demoSessions
+		}
+
 		return c.JSON(fiber.Map{
-			"activeUsers":      s.hub.GetActiveUsersCount(),
-			"totalConnections": s.hub.GetTotalConnectionsCount(),
+			"activeUsers":      activeUsers,
+			"totalConnections": totalConnections,
+		})
+	})
+
+	// Active users heartbeat endpoint (for demo mode session tracking)
+	s.app.Post("/api/active-users", func(c *fiber.Ctx) error {
+		var body struct {
+			SessionID string `json:"sessionId"`
+		}
+		if err := c.BodyParser(&body); err != nil || body.SessionID == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "sessionId required"})
+		}
+		s.hub.RecordDemoSession(body.SessionID)
+		demoCount := s.hub.GetDemoSessionCount()
+		return c.JSON(fiber.Map{
+			"activeUsers":      demoCount,
+			"totalConnections": demoCount,
 		})
 	})
 
@@ -433,6 +470,13 @@ func (s *Server) setupRoutes() {
 	api.Get("/notifications/unread-count", feedback.GetUnreadCount)
 	api.Post("/notifications/:id/read", feedback.MarkNotificationRead)
 	api.Post("/notifications/read-all", feedback.MarkAllNotificationsRead)
+
+	// Alert notification routes
+	notificationHandler := handlers.NewNotificationHandler(s.store, s.notificationService)
+	api.Post("/notifications/test", notificationHandler.TestNotification)
+	api.Post("/notifications/send", notificationHandler.SendAlertNotification)
+	api.Get("/notifications/config", notificationHandler.GetNotificationConfig)
+	api.Post("/notifications/config", notificationHandler.SaveNotificationConfig)
 
 	// GitHub webhook (public endpoint, uses signature verification)
 	s.app.Post("/webhooks/github", feedback.HandleGitHubWebhook)

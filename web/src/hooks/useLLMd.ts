@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { getDemoMode } from './useDemoMode'
 
 // Refresh interval for automatic polling (2 minutes)
 const REFRESH_INTERVAL_MS = 120000
@@ -22,7 +23,7 @@ export interface LLMdServer {
   gpu?: string
   gpuCount?: number
   hasAutoscaler?: boolean
-  autoscalerType?: 'hpa' | 'va' | 'both'
+  autoscalerType?: 'hpa' | 'va' | 'vpa' | 'both'
   // Related component status
   gatewayStatus?: 'running' | 'stopped' | 'unknown'
   gatewayType?: 'istio' | 'kgateway' | 'envoy'
@@ -208,6 +209,12 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
   const initialLoadDone = useRef(false)
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip fetching in demo mode — no agent available
+    if (getDemoMode()) {
+      setIsLoading(false)
+      return
+    }
+
     console.log(`[useLLMdServers] refetch called, silent=${silent}`)
 
     // Progressive loading: reset state
@@ -225,30 +232,26 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
         try {
           console.log(`[useLLMdServers] Fetching from ${cluster}`)
 
-          // Fetch deployments from key llm-d namespaces only
-          const keyNamespaces = [
-            'b2', 'e2e-helm', 'e2e-solution', 'e2e-pd', 'effi', 'effi2', 'guygir',
-            'llm-d', 'aibrix-system', 'hc4ai-operator', 'hc4ai-operator-dev',
-            'e2e-solution-platform-eval', 'inference-router-test'
-          ]
+          // Fetch deployments from all namespaces to discover llm-d workloads
           const allDeployments: DeploymentResource[] = []
 
-          // Fetch sequentially to avoid queue issues
-          for (const ns of keyNamespaces) {
-            try {
-              console.log(`[useLLMdServers] Fetching deployments from ${cluster}/${ns}`)
-              const resp = await kubectlProxy.exec(
-                ['get', 'deployments', '-n', ns, '-o', 'json'],
-                { context: cluster, timeout: 10000 }
-              )
-              if (resp.exitCode === 0 && resp.output) {
-                const data = JSON.parse(resp.output)
-                const items = data.items || []
-                console.log(`[useLLMdServers] Got ${items.length} deployments from ${cluster}/${ns}`)
-                allDeployments.push(...items)
-              }
-            } catch (err) {
-              console.error(`[useLLMdServers] Namespace ${ns} not found or error:`, err)
+          try {
+            console.log(`[useLLMdServers] Fetching all deployments from ${cluster}`)
+            const resp = await kubectlProxy.exec(
+              ['get', 'deployments', '-A', '-o', 'json'],
+              { context: cluster, timeout: 15000 }
+            )
+            if (resp.exitCode === 0 && resp.output) {
+              const data = JSON.parse(resp.output)
+              const items = data.items || []
+              console.log(`[useLLMdServers] Got ${items.length} deployments from ${cluster}`)
+              allDeployments.push(...items)
+            }
+          } catch (err) {
+            // Suppress demo mode errors - they're expected when agent is unavailable
+            const errMsg = err instanceof Error ? err.message : String(err)
+            if (!errMsg.includes('demo mode')) {
+              console.error(`[useLLMdServers] Error fetching deployments from ${cluster}:`, err)
             }
           }
 
@@ -296,13 +299,22 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             const labels = d.spec.template?.metadata?.labels || {}
             const ns = d.metadata.namespace.toLowerCase()
 
-            // Include llm-d namespaces (b2 is also an llm-d namespace on vllm-d)
-            const isLlmdNamespace = ns.includes('llm-d') || ns.includes('e2e') || ns.includes('vllm') || ns === 'b2'
+            // Include llm-d/inference-related namespaces
+            // - llm-d, llmd, vllm, e2e: standard llm namespaces
+            // - b2, effi, guygir: known llm namespaces on vllm-d
+            // - inf, gaie, sched: inference namespaces on pok-prod clusters
+            // - serving, model, ai-, -ai, ml-: generic ML/AI namespaces
+            const isLlmdNamespace = ns.includes('llm-d') || ns.includes('llmd') || ns.includes('e2e') || ns.includes('vllm') ||
+              ns === 'b2' || ns.includes('effi') || ns.includes('guygir') || ns.includes('aibrix') ||
+              ns.includes('hc4ai') || ns.includes('inf') || ns.includes('gaie') || ns.includes('sched') ||
+              ns.includes('inference') || ns.includes('serving') || ns.includes('model') ||
+              ns.includes('ai-') || ns.includes('-ai') || ns.includes('ml-')
 
             return (
               // Model serving
               name.includes('vllm') ||
               name.includes('llm-d') ||
+              name.includes('llmd') ||
               name.includes('tgi') ||
               name.includes('triton') ||
               name.includes('llama') ||
@@ -310,13 +322,20 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               name.includes('qwen') ||
               name.includes('mistral') ||
               name.includes('mixtral') ||
+              name.includes('inference') ||
+              name.includes('modelservice') ||
               labels['llmd.org/inferenceServing'] === 'true' ||
               labels['llmd.org/model'] ||
+              labels['llm-d.ai/role'] ||
+              labels['app'] === 'llm-inference' ||
               labels['app.kubernetes.io/name'] === 'vllm' ||
               labels['app.kubernetes.io/name'] === 'tgi' ||
-              // EPP
+              labels['app.kubernetes.io/part-of'] === 'inference' ||
+              // EPP / scheduling
               name.includes('-epp') ||
               name.endsWith('epp') ||
+              name.includes('scheduling') ||
+              name.includes('inference-pool') ||
               // Gateway (in llm-d namespaces)
               (isLlmdNamespace && (name.includes('gateway') || name.includes('ingress'))) ||
               // Prometheus (in llm-d namespaces)
@@ -391,7 +410,11 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
             }
           }
         } catch (err) {
-          console.error(`Error fetching from cluster ${cluster}:`, err)
+          // Suppress demo mode errors - they're expected when agent is unavailable
+          const errMsg = err instanceof Error ? err.message : String(err)
+          if (!errMsg.includes('demo mode')) {
+            console.error(`Error fetching from cluster ${cluster}:`, err)
+          }
         }
       }
 
@@ -400,7 +423,11 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       setLastRefresh(new Date())
       initialLoadDone.current = true
     } catch (err) {
-      console.error('[useLLMdServers] Error in refetch:', err)
+      // Suppress demo mode errors
+      const errMsg = err instanceof Error ? err.message : String(err)
+      if (!errMsg.includes('demo mode')) {
+        console.error('[useLLMdServers] Error in refetch:', err)
+      }
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
@@ -468,6 +495,12 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
   const initialLoadDone = useRef(false)
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip fetching in demo mode — no agent available
+    if (getDemoMode()) {
+      setIsLoading(false)
+      return
+    }
+
     console.log(`[useLLMdModels] refetch called, silent=${silent}, clusters=${clusters.join(',')}`)
 
     // Progressive loading: reset state
@@ -524,7 +557,11 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
             }
           }
         } catch (err) {
-          console.error(`Error fetching InferencePools from cluster ${cluster}:`, err)
+          // Suppress demo mode errors - they're expected when agent is unavailable
+          const errMsg = err instanceof Error ? err.message : String(err)
+          if (!errMsg.includes('demo mode')) {
+            console.error(`Error fetching InferencePools from cluster ${cluster}:`, err)
+          }
         }
       }
 

@@ -32,19 +32,13 @@ import { isClusterUnreachable } from './utils'
 import { formatK8sMemory } from '../../lib/formatters'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { getDefaultCards } from '../../config/dashboards'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 
-// Default cards for the clusters dashboard
-const DEFAULT_CLUSTERS_CARDS = [
-  { type: 'cluster_health', title: 'Cluster Health', position: { w: 4, h: 3 } },
-  { type: 'resource_usage', title: 'Resource Usage', position: { w: 4, h: 3 } },
-  { type: 'upgrade_status', title: 'Upgrade Status', position: { w: 4, h: 3 } },
-  { type: 'pod_issues', title: 'Pod Issues', position: { w: 6, h: 3 } },
-  { type: 'events_timeline', title: 'Events Timeline', position: { w: 6, h: 3 } },
-  { type: 'cluster_locations', title: 'Cluster Locations', position: { w: 8, h: 4 } },
-]
+// Default cards loaded from centralized config
+const DEFAULT_CLUSTERS_CARDS = getDefaultCards('clusters')
 
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -885,7 +879,7 @@ export function _ClusterDetail({ clusterName, onClose, onRename }: _ClusterDetai
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="glass p-8 rounded-lg">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
         </div>
       </div>
     )
@@ -1620,9 +1614,13 @@ export function Clusters() {
 
   const stats = useMemo(() => {
     // Calculate total GPUs from GPU nodes that match filtered clusters
+    // Only include GPUs from reachable clusters
     let totalGPUs = 0
     let allocatedGPUs = 0
     globalFilteredClusters.forEach(cluster => {
+      // Skip offline clusters - don't count their GPUs
+      if (isClusterUnreachable(cluster)) return
+
       const clusterKey = cluster.name.split('/')[0]
       const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
       if (gpuInfo) {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { WifiOff, HardDrive, Server, CheckCircle2, XCircle, Cpu, MemoryStick, Layers, Zap, Box, Settings } from 'lucide-react'
+import { WifiOff, HardDrive, Server, CheckCircle2, XCircle, Cpu, MemoryStick, Layers, Zap, Box, Settings, Sparkles } from 'lucide-react'
 import { formatStat, formatMemoryStat } from '../../../lib/formatStats'
-import { StatsConfigModal, useStatsConfig } from './StatsConfig'
+import { StatsConfigModal, useStatsConfig } from '../../ui/StatsConfig'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
@@ -19,6 +19,13 @@ export interface ClusterStats {
   totalPods: number
   totalGPUs: number
   allocatedGPUs: number
+  // Additional accelerator types
+  totalTPUs?: number
+  allocatedTPUs?: number
+  totalAIUs?: number
+  allocatedAIUs?: number
+  totalXPUs?: number
+  allocatedXPUs?: number
   /** Whether there are any reachable clusters with resource data */
   hasResourceData?: boolean
 }
@@ -35,11 +42,19 @@ interface StatsOverviewProps {
   onStorageClick?: () => void
   /** Open GPU detail modal */
   onGPUClick?: () => void
+  /** Open TPU detail modal */
+  onTPUClick?: () => void
+  /** Open AIU detail modal */
+  onAIUClick?: () => void
+  /** Open XPU detail modal */
+  onXPUClick?: () => void
   /** Navigate to nodes view */
   onNodesClick?: () => void
   /** Navigate to pods view */
   onPodsClick?: () => void
-  /** Storage key for persisting config */
+  /** Dashboard type for stats config (default: 'clusters') */
+  dashboardType?: 'clusters' | 'compute' | 'workloads' | 'pods' | 'gitops' | 'storage' | 'network' | 'security' | 'compliance' | 'data-compliance' | 'events' | 'cost' | 'alerts' | 'dashboard' | 'operators' | 'deploy'
+  /** Storage key for persisting config (optional override) */
   configKey?: string
   /** Whether to show the configure button */
   showConfigButton?: boolean
@@ -47,7 +62,7 @@ interface StatsOverviewProps {
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  Server, CheckCircle2, XCircle, WifiOff, Box, Cpu, MemoryStick, HardDrive, Zap, Layers,
+  Server, CheckCircle2, XCircle, WifiOff, Box, Cpu, MemoryStick, HardDrive, Zap, Layers, Sparkles,
 }
 
 // Color mapping for dynamic rendering
@@ -134,6 +149,24 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
       sublabel = hasData && stats.allocatedGPUs > 0 ? `${formatStat(stats.allocatedGPUs)} allocated` : 'total'
       isClickable = isClickable && hasData && stats.totalGPUs > 0
       break
+    case 'tpus':
+      value = hasData ? formatStat(stats.totalTPUs ?? 0) : '-'
+      label = 'TPUs'
+      sublabel = hasData && (stats.allocatedTPUs ?? 0) > 0 ? `${formatStat(stats.allocatedTPUs ?? 0)} allocated` : 'total'
+      isClickable = isClickable && hasData && (stats.totalTPUs ?? 0) > 0
+      break
+    case 'aius':
+      value = hasData ? formatStat(stats.totalAIUs ?? 0) : '-'
+      label = 'AIUs'
+      sublabel = hasData && (stats.allocatedAIUs ?? 0) > 0 ? `${formatStat(stats.allocatedAIUs ?? 0)} allocated` : 'total'
+      isClickable = isClickable && hasData && (stats.totalAIUs ?? 0) > 0
+      break
+    case 'xpus':
+      value = hasData ? formatStat(stats.totalXPUs ?? 0) : '-'
+      label = 'XPUs'
+      sublabel = hasData && (stats.allocatedXPUs ?? 0) > 0 ? `${formatStat(stats.allocatedXPUs ?? 0)} allocated` : 'total'
+      isClickable = isClickable && hasData && (stats.totalXPUs ?? 0) > 0
+      break
     case 'pods':
       value = hasData ? formatStat(stats.totalPods) : '-'
       label = 'Pods'
@@ -169,12 +202,16 @@ export function StatsOverview({
   onMemoryClick,
   onStorageClick,
   onGPUClick,
+  onTPUClick,
+  onAIUClick,
+  onXPUClick,
   onNodesClick,
   onPodsClick,
-  configKey = 'cluster-stats-config',
+  dashboardType = 'clusters',
+  configKey,
   showConfigButton = true,
 }: StatsOverviewProps) {
-  const { blocks, saveBlocks, visibleBlocks } = useStatsConfig(configKey)
+  const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType, configKey)
   const [showConfig, setShowConfig] = useState(false)
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
@@ -207,6 +244,12 @@ export function StatsOverview({
         return onStorageClick
       case 'gpus':
         return onGPUClick
+      case 'tpus':
+        return onTPUClick
+      case 'aius':
+        return onAIUClick
+      case 'xpus':
+        return onXPUClick
       case 'pods':
         return onPodsClick
       default:
@@ -268,6 +311,8 @@ export function StatsOverview({
         onClose={() => setShowConfig(false)}
         blocks={blocks}
         onSave={saveBlocks}
+        defaultBlocks={defaultBlocks}
+        title="Configure Stats Overview"
       />
     </div>
   )

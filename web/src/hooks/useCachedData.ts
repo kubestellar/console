@@ -154,8 +154,8 @@ async function fetchFromAllClusters<T>(
 
 /** Get reachable cluster names from the shared cluster cache (deduplicated) */
 function getAgentClusters(): Array<{ name: string; context?: string }> {
-  // No local agent on Netlify — return empty to skip all agent requests
-  if (isDemoModeForced) return []
+  // No local agent in demo mode — return empty to skip all agent requests
+  if (isDemoMode()) return []
   // Skip long context-path names (contain '/') — these are duplicates of short-named aliases
   // e.g. "default/api-fmaas-vllm-d-...:6443/..." duplicates "vllm-d"
   return clusterCacheRef.clusters
@@ -691,6 +691,9 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 async function fetchProwJobs(prowCluster: string, namespace: string): Promise<ProwJob[]> {
+  // Skip fetching in demo mode — no agent available
+  if (isDemoMode()) return []
+
   const response = await kubectlProxy.exec(
     ['get', 'prowjobs', '-n', namespace, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
     { context: prowCluster, timeout: 30000 }
@@ -881,30 +884,45 @@ function extractGPUInfo(deployment: DeploymentResource): { gpu?: string; gpuCoun
 }
 
 async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
+  // Skip fetching in demo mode — no agent available
+  if (isDemoMode()) return []
+
   const allServers: LLMdServer[] = []
-  const keyNamespaces = ['b2', 'e2e-helm', 'e2e-solution', 'e2e-pd', 'effi', 'effi2', 'guygir',
-    'llm-d', 'aibrix-system', 'hc4ai-operator', 'hc4ai-operator-dev', 'e2e-solution-platform-eval', 'inference-router-test']
 
   for (const cluster of clusters) {
     try {
+      // Query all namespaces to discover llm-d workloads regardless of namespace naming
       const allDeployments: DeploymentResource[] = []
-      for (const ns of keyNamespaces) {
-        try {
-          const resp = await kubectlProxy.exec(['get', 'deployments', '-n', ns, '-o', 'json'], { context: cluster, timeout: 10000 })
-          if (resp.exitCode === 0 && resp.output) {
-            allDeployments.push(...(JSON.parse(resp.output).items || []))
-          }
-        } catch { /* namespace not found */ }
-      }
+      try {
+        const resp = await kubectlProxy.exec(['get', 'deployments', '-A', '-o', 'json'], { context: cluster, timeout: 15000 })
+        if (resp.exitCode === 0 && resp.output) {
+          allDeployments.push(...(JSON.parse(resp.output).items || []))
+        }
+      } catch { /* cluster not reachable */ }
       if (allDeployments.length === 0) continue
 
       const autoscalerMap = new Map<string, 'hpa' | 'va' | 'both'>()
+      const autoscalerItems: LLMdServer[] = []
       try {
         const hpaResp = await kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: 10000 })
         if (hpaResp.exitCode === 0) {
           for (const hpa of (JSON.parse(hpaResp.output).items || []) as HPAResource[]) {
             if (hpa.spec.scaleTargetRef.kind === 'Deployment') {
               autoscalerMap.set(`${hpa.metadata.namespace}/${hpa.spec.scaleTargetRef.name}`, 'hpa')
+              // Add HPA as a separate item for the Autoscaler section
+              autoscalerItems.push({
+                id: `${cluster}-${hpa.metadata.namespace}-${hpa.metadata.name}-hpa`,
+                name: hpa.metadata.name,
+                namespace: hpa.metadata.namespace,
+                cluster,
+                model: `→ ${hpa.spec.scaleTargetRef.name}`,
+                type: 'unknown',
+                componentType: 'autoscaler',
+                autoscalerType: 'hpa',
+                status: 'running',
+                replicas: 1,
+                readyReplicas: 1,
+              })
             }
           }
         }
@@ -917,7 +935,45 @@ async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
             if (va.spec.targetRef?.name) {
               const key = `${va.metadata.namespace}/${va.spec.targetRef.name}`
               autoscalerMap.set(key, autoscalerMap.has(key) ? 'both' : 'va')
+              // Add WVA/VariantAutoscaling as a separate item
+              autoscalerItems.push({
+                id: `${cluster}-${va.metadata.namespace}-${va.metadata.name}-wva`,
+                name: va.metadata.name,
+                namespace: va.metadata.namespace,
+                cluster,
+                model: `→ ${va.spec.targetRef.name}`,
+                type: 'unknown',
+                componentType: 'autoscaler',
+                autoscalerType: 'va',
+                status: 'running',
+                replicas: 1,
+                readyReplicas: 1,
+              })
             }
+          }
+        }
+      } catch { /* ignore */ }
+
+      // Also fetch VPA
+      try {
+        const vpaResp = await kubectlProxy.exec(['get', 'vpa', '-A', '-o', 'json'], { context: cluster, timeout: 10000 })
+        if (vpaResp.exitCode === 0) {
+          const vpaData = JSON.parse(vpaResp.output)
+          for (const vpa of (vpaData.items || []) as Array<{ metadata: { name: string; namespace: string }; spec?: { targetRef?: { name?: string } } }>) {
+            const targetName = vpa.spec?.targetRef?.name || 'unknown'
+            autoscalerItems.push({
+              id: `${cluster}-${vpa.metadata.namespace}-${vpa.metadata.name}-vpa`,
+              name: vpa.metadata.name,
+              namespace: vpa.metadata.namespace,
+              cluster,
+              model: `→ ${targetName}`,
+              type: 'unknown',
+              componentType: 'autoscaler',
+              autoscalerType: 'vpa',
+              status: 'running',
+              replicas: 1,
+              readyReplicas: 1,
+            })
           }
         }
       } catch { /* ignore */ }
@@ -926,12 +982,17 @@ async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
         const name = d.metadata.name.toLowerCase()
         const labels = d.spec.template?.metadata?.labels || {}
         const ns = d.metadata.namespace.toLowerCase()
-        const isLlmdNs = ns.includes('llm-d') || ns.includes('e2e') || ns.includes('vllm') || ns === 'b2'
-        return name.includes('vllm') || name.includes('llm-d') || name.includes('tgi') || name.includes('triton') ||
+        // Expanded namespace patterns to catch more llm-d related namespaces
+        const isLlmdNs = ns.includes('llm-d') || ns.includes('llmd') || ns.includes('e2e') || ns.includes('vllm') ||
+          ns.includes('inference') || ns.includes('ai-') || ns.includes('-ai') || ns.includes('ml-') ||
+          ns === 'b2' || ns.includes('effi') || ns.includes('guygir') || ns.includes('aibrix') ||
+          ns.includes('hc4ai') || ns.includes('serving') || ns.includes('model')
+        return name.includes('vllm') || name.includes('llm-d') || name.includes('llmd') || name.includes('tgi') || name.includes('triton') ||
           name.includes('llama') || name.includes('granite') || name.includes('qwen') || name.includes('mistral') || name.includes('mixtral') ||
           labels['llmd.org/inferenceServing'] === 'true' || labels['llmd.org/model'] ||
           labels['app.kubernetes.io/name'] === 'vllm' || labels['app.kubernetes.io/name'] === 'tgi' ||
-          name.includes('-epp') || name.endsWith('epp') ||
+          labels['llm-d.ai/role'] || labels['app'] === 'llm-inference' ||
+          name.includes('-epp') || name.endsWith('epp') || name.includes('inference-pool') ||
           (isLlmdNs && (name.includes('gateway') || name.includes('ingress') || name === 'prometheus'))
       })
 
@@ -976,8 +1037,15 @@ async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
           ...gpuInfo,
         })
       }
+
+      // Add autoscaler items as separate section entries
+      allServers.push(...autoscalerItems)
     } catch (err) {
-      console.error(`Error fetching from cluster ${cluster}:`, err)
+      // Suppress demo mode errors - they're expected when agent is unavailable
+      const errMsg = err instanceof Error ? err.message : String(err)
+      if (!errMsg.includes('demo mode')) {
+        console.error(`Error fetching from cluster ${cluster}:`, err)
+      }
     }
   }
   return allServers
@@ -1027,6 +1095,9 @@ export function useCachedLLMdServers(
 }
 
 async function fetchLLMdModels(clusters: string[]): Promise<LLMdModel[]> {
+  // Skip fetching in demo mode — no agent available
+  if (isDemoMode()) return []
+
   const allModels: LLMdModel[] = []
   for (const cluster of clusters) {
     try {
@@ -1045,7 +1116,11 @@ async function fetchLLMdModels(clusters: string[]): Promise<LLMdModel[]> {
         })
       }
     } catch (err) {
-      console.error(`Error fetching InferencePools from cluster ${cluster}:`, err)
+      // Suppress demo mode errors - they're expected when agent is unavailable
+      const errMsg = err instanceof Error ? err.message : String(err)
+      if (!errMsg.includes('demo mode')) {
+        console.error(`Error fetching InferencePools from cluster ${cluster}:`, err)
+      }
     }
   }
   return allModels
@@ -1197,7 +1272,7 @@ export function useCachedSecurityIssues(
           const issues = await fetchSecurityIssuesViaKubectl(cluster, namespace)
           if (issues.length > 0) return issues
         } catch (err) {
-          console.warn('[useCachedSecurityIssues] kubectl fetch failed:', err)
+          console.error('[useCachedSecurityIssues] kubectl fetch failed:', err)
         }
       }
 
@@ -1221,7 +1296,7 @@ export function useCachedSecurityIssues(
             if (data.issues && data.issues.length > 0) return data.issues
           }
         } catch (err) {
-          console.warn('[useCachedSecurityIssues] API fetch failed:', err)
+          console.error('[useCachedSecurityIssues] API fetch failed:', err)
         }
       }
 

@@ -105,7 +105,7 @@ const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
 
 const DASHBOARD_STORAGE: { key: string; route: string; name: string }[] = [
   { key: 'kubestellar-main-dashboard-cards', route: '/', name: 'Main' },
-  { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'Clusters' },
+  { key: 'kubestellar-clusters-cards', route: '/clusters', name: 'My Clusters' },
   { key: 'kubestellar-workloads-cards', route: '/workloads', name: 'Workloads' },
   { key: 'kubestellar-deployments-cards', route: '/deployments', name: 'Deployments' },
   { key: 'kubestellar-pods-cards', route: '/pods', name: 'Pods' },
@@ -240,7 +240,7 @@ function scanPlacedStats(): SearchItem[] {
 
 const PAGE_ITEMS: SearchItem[] = [
   { id: 'page-dashboard', name: 'Dashboard', description: 'Main dashboard with overview cards', category: 'page', href: '/', keywords: ['home', 'overview', 'main'] },
-  { id: 'page-clusters', name: 'Clusters', description: 'Manage Kubernetes clusters', category: 'page', href: '/clusters', keywords: ['kubernetes', 'k8s'] },
+  { id: 'page-clusters', name: 'My Clusters', description: 'Manage Kubernetes clusters', category: 'page', href: '/clusters', keywords: ['kubernetes', 'k8s', 'clusters'] },
   { id: 'page-workloads', name: 'Workloads', description: 'View deployments, pods, and workloads', category: 'page', href: '/workloads', keywords: ['deployment', 'pod', 'replica'] },
   { id: 'page-compute', name: 'Compute', description: 'Nodes, CPUs, GPUs, and compute resources', category: 'page', href: '/compute', keywords: ['node', 'cpu', 'gpu', 'tpu'] },
   { id: 'page-storage', name: 'Storage', description: 'Persistent volumes and storage classes', category: 'page', href: '/storage', keywords: ['pvc', 'volume', 'disk'] },

@@ -64,13 +64,27 @@ function saveDistributionCache(cache: DistributionCache) {
 }
 
 // Apply cached distributions to cluster list
+// Falls back to URL-based detection for unreachable clusters
 function applyDistributionCache(clusters: ClusterInfo[]): ClusterInfo[] {
   const distCache = loadDistributionCache()
   return clusters.map(cluster => {
+    // If cluster already has distribution, keep it
+    if (cluster.distribution) {
+      return cluster
+    }
+
+    // Try cached distribution first
     const cached = distCache[cluster.name]
-    if (cached && !cluster.distribution) {
+    if (cached) {
       return { ...cluster, distribution: cached.distribution, namespaces: cached.namespaces }
     }
+
+    // Fallback: detect from server URL (works for unreachable clusters)
+    const urlDistribution = detectDistributionFromServer(cluster.server)
+    if (urlDistribution) {
+      return { ...cluster, distribution: urlDistribution }
+    }
+
     return cluster
   })
 }
@@ -589,10 +603,12 @@ export function connectSharedWebSocket() {
           wsBackendUnavailable = false // Backend is available
         } else if (msg.type === 'error') {
           ws.close()
-        } else if (msg.type === 'kubeconfig_changed') {
+        } else if (msg.type === 'kubeconfig_changed' || msg.type === 'clusters_updated') {
           // Reset failure tracking on fresh kubeconfig
           clusterCache.consecutiveFailures = 0
           clusterCache.isFailed = false
+          // If clusters_updated includes cluster data, we could use it directly
+          // For now, just trigger a full refresh to get health data too
           fullFetchClusters()
         }
       } catch {
@@ -803,6 +819,50 @@ function detectDistributionFromNamespaces(namespaces: string[]): string | undefi
   return undefined
 }
 
+// Helper to detect distribution from server URL (fallback when cluster is unreachable)
+// This allows identifying cluster type even without namespace access
+function detectDistributionFromServer(server?: string): string | undefined {
+  if (!server) return undefined
+  const lower = server.toLowerCase()
+
+  // OpenShift patterns
+  if (lower.includes('.openshiftapps.com') ||
+      lower.includes('.openshift.com') ||
+      // IBM FMAAS OpenShift clusters (api.fmaas-*.fmaas.res.ibm.com:6443)
+      (lower.includes('.fmaas.') && lower.includes(':6443')) ||
+      // Generic OpenShift API pattern (api.*.example.com:6443)
+      (lower.match(/^https?:\/\/api\.[^/]+:6443/) && !lower.includes('.eks.') && !lower.includes('.azmk8s.'))) {
+    return 'openshift'
+  }
+
+  // EKS pattern
+  if (lower.includes('.eks.amazonaws.com')) {
+    return 'eks'
+  }
+
+  // GKE pattern
+  if (lower.includes('.gke.io') || lower.includes('.container.googleapis.com')) {
+    return 'gke'
+  }
+
+  // AKS pattern
+  if (lower.includes('.azmk8s.io') || lower.includes('.hcp.')) {
+    return 'aks'
+  }
+
+  // OCI OKE pattern
+  if (lower.includes('.oraclecloud.com') || lower.includes('.oci.')) {
+    return 'oci'
+  }
+
+  // DigitalOcean pattern
+  if (lower.includes('.digitalocean.com') || lower.includes('.k8s.ondigitalocean.')) {
+    return 'digitalocean'
+  }
+
+  return undefined
+}
+
 // Track backend API failures for distribution detection separately
 let distributionDetectionFailures = 0
 const MAX_DISTRIBUTION_FAILURES = 2
@@ -916,14 +976,16 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
     const health = await fetchSingleClusterHealth(cluster.name, cluster.context)
 
     if (health) {
-      // If we got a health response (HTTP 200), the agent/backend is reachable
-      // This is the key fix: receiving ANY response means connectivity is restored,
-      // even if the response contains cached error data from a previous failure
-      clearClusterFailure(cluster.name)
-      
-      // Now check if the cluster itself is reachable based on the response data
+      // Check if the cluster itself is reachable based on the response data
+      // A cluster is reachable if it has valid node data OR no error message
       const hasValidData = health.nodeCount !== undefined && health.nodeCount > 0
       const isReachable = hasValidData || !health.errorMessage
+
+      // Only clear failure tracking if the cluster is actually reachable
+      // Don't clear just because we got a response - the response might say "unreachable"
+      if (isReachable) {
+        clearClusterFailure(cluster.name)
+      }
 
       if (isReachable) {
         // Cluster is reachable - update with fresh data
@@ -962,11 +1024,17 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           refreshing: false,
         })
       } else {
-        // Cluster reported as unreachable - check error type to decide handling
+        // Cluster reported as unreachable by the agent
+        // Trust the agent's reachable: false immediately - the agent has direct
+        // access to the cluster and knows best. The 5-minute grace period is for
+        // cases where we get no response at all (backend/agent unavailable).
         recordClusterFailure(cluster.name)
 
-        // Connection refused/reset errors are definitive - mark offline immediately
-        // Timeout errors might be transient - use the 5-minute grace period
+        // If agent explicitly says reachable: false, mark offline immediately
+        // This is more reliable than trying to parse error messages
+        const agentSaysUnreachable = health.reachable === false
+
+        // Also check for definitive network errors as a fallback
         const errorMsg = health.errorMessage?.toLowerCase() || ''
         const isDefinitiveError = errorMsg.includes('connection refused') ||
           errorMsg.includes('connection reset') ||
@@ -974,8 +1042,8 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
           errorMsg.includes('network is unreachable') ||
           health.errorType === 'network'
 
-        if (isDefinitiveError || shouldMarkOffline(cluster.name)) {
-          // Definitive error or 5+ minutes of failures - mark as unreachable
+        if (agentSaysUnreachable || isDefinitiveError || shouldMarkOffline(cluster.name)) {
+          // Agent says unreachable, definitive error, or 5+ minutes of failures - mark as unreachable
           updateSingleClusterInCache(cluster.name, {
             healthy: false,
             reachable: false,
@@ -1111,9 +1179,9 @@ export async function fullFetchClusters() {
           // Preserve existing health data and detected distribution during refresh
           return {
             ...newCluster,
-            // Always preserve detected distribution and namespaces
-            distribution: existing.distribution,
-            namespaces: existing.namespaces,
+            // Preserve detected distribution and namespaces (use existing if available, else keep new)
+            distribution: existing.distribution || newCluster.distribution,
+            namespaces: existing.namespaces?.length ? existing.namespaces : newCluster.namespaces,
             // Preserve health data if available
             ...(existing.nodeCount !== undefined ? {
               nodeCount: existing.nodeCount,
@@ -1130,9 +1198,9 @@ export async function fullFetchClusters() {
         }
         return newCluster
       })
-      // Filter out long context-path duplicates (names containing '/')
-      // e.g. 'default/api-fmaas-vllm-d-...:6443/...' duplicates the short-named 'vllm-d'
-      const dedupedClusters = mergedClusters.filter(c => !c.name.includes('/'))
+      // Deduplicate clusters by server URL - prefers short names when available
+      // but keeps long names (e.g., '/api-pokprod001...' or 'default/api-...') if no short alias exists
+      const dedupedClusters = deduplicateClustersByServer(mergedClusters)
 
       // Show clusters immediately with preserved health data
       await finishWithMinDuration({
@@ -1183,9 +1251,9 @@ export async function fullFetchClusters() {
       if (existing) {
         return {
           ...newCluster,
-          // Preserve detected distribution and namespaces
-          distribution: existing.distribution,
-          namespaces: existing.namespaces,
+          // Preserve detected distribution and namespaces (use existing if available, else keep new)
+          distribution: existing.distribution || newCluster.distribution,
+          namespaces: existing.namespaces?.length ? existing.namespaces : newCluster.namespaces,
           // Preserve health data if available
           ...(existing.nodeCount !== undefined ? {
             nodeCount: existing.nodeCount,

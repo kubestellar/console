@@ -1,16 +1,24 @@
 import {
   CheckCircle, XCircle, Clock, ExternalLink, Cpu,
-  AlertCircle, Play, Filter, ChevronDown, Server, Search
+  AlertCircle, Play, Server
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
-import { createPortal } from 'react-dom'
-import { CardControls } from '../../ui/CardControls'
+import { CardClusterFilter, CardSearchInput } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { DEMO_ML_JOBS } from './shared'
 import { useDemoData } from './shared'
 
 type MLJob = typeof DEMO_ML_JOBS[number]
+type SortByOption = 'name' | 'status' | 'framework' | 'gpus'
+
+const SORT_OPTIONS = [
+  { value: 'name' as const, label: 'Name' },
+  { value: 'status' as const, label: 'Status' },
+  { value: 'framework' as const, label: 'Framework' },
+  { value: 'gpus' as const, label: 'GPUs' },
+]
 
 interface MLJobsProps {
   config?: Record<string, unknown>
@@ -19,17 +27,22 @@ interface MLJobsProps {
 export function MLJobs({ config: _config }: MLJobsProps) {
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters } = useCardData<MLJob, 'name'>(jobs, {
+  const statusOrder: Record<string, number> = { running: 0, queued: 1, completed: 2, failed: 3 }
+
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<MLJob, SortByOption>(jobs, {
     filter: {
       searchFields: ['name', 'framework', 'status', 'cluster'] as (keyof MLJob)[],
       clusterField: 'cluster' as keyof MLJob,
       storageKey: 'ml-jobs',
     },
     sort: {
-      defaultField: 'name',
+      defaultField: 'status',
       defaultDirection: 'asc',
       comparators: {
         name: (a, b) => a.name.localeCompare(b.name),
+        status: (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99),
+        framework: (a, b) => a.framework.localeCompare(b.framework),
+        gpus: (a, b) => a.gpus - b.gpus,
       },
     },
     defaultLimit: 5,
@@ -76,51 +89,35 @@ export function MLJobs({ config: _config }: MLJobsProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {filters.availableClusters.length >= 1 && (
-            <div ref={filters.clusterFilterRef} className="relative">
-              <button
-                ref={filters.clusterFilterBtnRef}
-                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  filters.localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              {filters.showClusterFilter && filters.dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: filters.dropdownStyle.top, left: filters.dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button onClick={filters.clearClusterFilter} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>All clusters</button>
-                    {filters.availableClusters.map(cluster => (
-                      <button key={cluster.name} onClick={() => filters.toggleClusterFilter(cluster.name)} className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'}`}>{cluster.name}</button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
-          <CardControls limit={itemsPerPage} onLimitChange={setItemsPerPage} />
+          <CardClusterFilter
+            availableClusters={filters.availableClusters}
+            selectedClusters={filters.localClusterFilter}
+            onToggle={filters.toggleClusterFilter}
+            onClear={filters.clearClusterFilter}
+            isOpen={filters.showClusterFilter}
+            setIsOpen={filters.setShowClusterFilter}
+            containerRef={filters.clusterFilterRef}
+            minClusters={1}
+          />
+          <CardControls
+            limit={itemsPerPage}
+            onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={(v) => sorting.setSortBy(v as SortByOption)}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
+          />
         </div>
       </div>
 
       {/* Search input */}
-      <div className="relative mb-2">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search jobs..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search jobs..."
+        className="mb-2"
+      />
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs mb-4">

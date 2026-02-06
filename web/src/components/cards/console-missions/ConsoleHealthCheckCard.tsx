@@ -208,8 +208,8 @@ Please provide:
         <div
           className="mb-4 p-2 rounded bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
           onClick={() => {
-            if (podIssues.length > 0 && podIssues[0]) {
-              drillToPod(podIssues[0].cluster || 'default', podIssues[0].namespace, podIssues[0].name)
+            if (podIssues.length > 0 && podIssues[0]?.cluster) {
+              drillToPod(podIssues[0].cluster, podIssues[0].namespace, podIssues[0].name)
             }
           }}
           title={`${totalIssues} issue${totalIssues !== 1 ? 's' : ''} detected - Click to view first issue`}

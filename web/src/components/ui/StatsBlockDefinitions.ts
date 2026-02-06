@@ -48,6 +48,9 @@ export const CLUSTERS_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'memory', name: 'Memory', icon: 'MemoryStick', visible: true, color: 'green' },
   { id: 'storage', name: 'Storage', icon: 'HardDrive', visible: true, color: 'purple' },
   { id: 'gpus', name: 'GPUs', icon: 'Zap', visible: true, color: 'yellow' },
+  { id: 'tpus', name: 'TPUs', icon: 'Sparkles', visible: false, color: 'cyan' },
+  { id: 'aius', name: 'AIUs', icon: 'Cpu', visible: false, color: 'blue' },
+  { id: 'xpus', name: 'XPUs', icon: 'Zap', visible: false, color: 'green' },
   { id: 'pods', name: 'Pods', icon: 'Layers', visible: true, color: 'purple' },
 ]
 

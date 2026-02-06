@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plug, RefreshCw, Check, X, Copy, Cpu } from 'lucide-react'
 import type { AgentHealth } from '../../../hooks/useLocalAgent'
 
@@ -12,15 +12,25 @@ const INSTALL_COMMAND = 'brew install kubestellar/tap/kc-agent && kc-agent'
 
 export function AgentSection({ isConnected, health, refresh }: AgentSectionProps) {
   const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<number>()
 
   const copyInstallCommand = async () => {
     await navigator.clipboard.writeText(INSTALL_COMMAND)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    timeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
   return (
-    <div className="glass rounded-xl p-6">
+    <div id="agent-settings" className="glass rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isConnected ? 'bg-green-500/20' : 'bg-orange-500/20'}`}>

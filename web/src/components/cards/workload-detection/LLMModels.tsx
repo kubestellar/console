@@ -1,16 +1,19 @@
 import { Layers, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCardData } from '../../../lib/cards/cardHooks'
-import { CardPaginationFooter, CardControlsRow } from '../../../lib/cards/CardComponents'
+import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdModels } from '../../../hooks/useCachedData'
 import { LLMD_CLUSTERS } from './shared'
 import type { LLMdModel } from '../../../hooks/useLLMd'
 import { useCardLoadingState } from '../CardDataContext'
 
-type SortByOption = 'name'
+type SortByOption = 'name' | 'namespace' | 'cluster' | 'status'
 
 const SORT_OPTIONS = [
   { value: 'name' as const, label: 'Name' },
+  { value: 'namespace' as const, label: 'Namespace' },
+  { value: 'cluster' as const, label: 'Cluster' },
+  { value: 'status' as const, label: 'Status' },
 ]
 
 interface LLMModelsProps {
@@ -35,17 +38,22 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
     goToPage,
     needsPagination,
     setItemsPerPage,
+    filters,
     sorting,
   } = useCardData<LLMdModel, SortByOption>(models, {
     filter: {
       searchFields: ['name', 'namespace', 'cluster'] as (keyof LLMdModel)[],
       clusterField: 'cluster' as keyof LLMdModel,
+      storageKey: 'llm-models',
     },
     sort: {
       defaultField: 'name',
       defaultDirection: 'asc',
       comparators: {
         name: (a, b) => a.name.localeCompare(b.name),
+        namespace: (a, b) => a.namespace.localeCompare(b.namespace),
+        cluster: (a, b) => a.cluster.localeCompare(b.cluster),
+        status: (a, b) => a.status.localeCompare(b.status),
       },
     },
     defaultLimit: 5,
@@ -79,11 +87,30 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
           {models.filter(m => m.status === 'loaded').length} loaded
         </span>
         <CardControlsRow
+          clusterIndicator={
+            filters.localClusterFilter.length > 0
+              ? { selectedCount: filters.localClusterFilter.length, totalCount: filters.availableClusters.length }
+              : undefined
+          }
+          clusterFilter={
+            filters.availableClusters.length >= 1
+              ? {
+                  availableClusters: filters.availableClusters,
+                  selectedClusters: filters.localClusterFilter,
+                  onToggle: filters.toggleClusterFilter,
+                  onClear: filters.clearClusterFilter,
+                  isOpen: filters.showClusterFilter,
+                  setIsOpen: filters.setShowClusterFilter,
+                  containerRef: filters.clusterFilterRef,
+                  minClusters: 1,
+                }
+              : undefined
+          }
           cardControls={{
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
@@ -93,8 +120,17 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
             sortDirection: sorting.sortDirection,
             onSortDirectionChange: sorting.setSortDirection,
           }}
+          className="mb-0"
         />
       </div>
+
+      {/* Search */}
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search models..."
+        className="mb-3"
+      />
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs mb-4">

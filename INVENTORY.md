@@ -1,30 +1,31 @@
 # KubeStellar Console - Complete Inventory
 
-Last Updated: 2026-02-02
+Last Updated: 2026-02-05  
+Last Verified: 2026-02-05 (Auto-QA verification - all 23 drill-down views and 29+ modals confirmed present)
 
 ## Summary
 
 | Category | Count |
 |----------|-------|
-| Dashboard Pages | 21 (1 main + 20 dedicated) |
+| Dashboard Pages | 22 (1 main + 21 dedicated) |
 | Card Types | 143 |
-| Cards with Drill-Down | 40 |
-| Drill-Down Views | 22 |
-| Modal Dialogs | 19 |
+| Cards with Drill-Down | 37 (+ 3 planned) |
+| Drill-Down Views | 23 |
+| Modal Dialogs | 32 standalone + 7 inline |
 | Stats Block Types | 93 (across 14 dashboard types) |
 | Cards with Demo Data | 42 (29%) |
 | Cards with Live Data Hooks | 101 (71%) |
 
 ---
 
-## 1. Dashboard Pages (20 Total)
+## 1. Dashboard Pages (22 Total)
 
 ### Main Dashboard
 | # | Name | Route | Component |
 |---|------|-------|-----------|
 | 1 | Main Dashboard | `/` | `Dashboard.tsx` |
 
-### Dedicated Dashboards (19)
+### Dedicated Dashboards (21)
 | # | Name | Route | Component |
 |---|------|-------|-----------|
 | 2 | Clusters | `/clusters` | `Clusters.tsx` |
@@ -41,11 +42,13 @@ Last Updated: 2026-02-02
 | 13 | Network | `/network` | `Network.tsx` |
 | 14 | Events | `/events` | `Events.tsx` |
 | 15 | Security | `/security` | `Security.tsx` |
-| 16 | GitOps | `/gitops` | `GitOps.tsx` |
-| 17 | Alerts | `/alerts` | `Alerts.tsx` |
-| 18 | Cost | `/cost` | `Cost.tsx` |
-| 19 | Compliance | `/compliance` | `Compliance.tsx` |
-| 20 | GPU Reservations | `/gpu-reservations` | `GPUReservations.tsx` |
+| 16 | Security Posture | `/security-posture` | `Compliance.tsx` |
+| 17 | Data Compliance | `/data-compliance` | `DataCompliance.tsx` |
+| 18 | GitOps | `/gitops` | `GitOps.tsx` |
+| 19 | Alerts | `/alerts` | `Alerts.tsx` |
+| 20 | Cost | `/cost` | `Cost.tsx` |
+| 21 | Compliance | `/compliance` | `Compliance.tsx` |
+| 22 | GPU Reservations | `/gpu-reservations` | `GPUReservations.tsx` |
 
 ### Utility Pages (Not counted as dashboards)
 | Name | Route | Component |
@@ -483,7 +486,7 @@ Last Updated: 2026-02-02
 
 ### Hooks
 - Dashboard Cards: `web/src/hooks/useDashboardCards.ts`
-- Dashboard Context: `web/src/hooks/useDashboardContext.tsx`
+- useDashboardContext: `web/src/hooks/useDashboardContext` (hook with provider)
 - Card Recommendations: `web/src/hooks/useCardRecommendations.ts`
 - Multi-dashboard: `web/src/hooks/useDashboards.ts`
 
@@ -517,9 +520,11 @@ Based on feature requests:
 
 ---
 
-## 7. Modal Dialogs (19 Total)
+## 7. Modal Dialogs (32 Standalone + 7 Inline)
 
-### Dashboard-Related Modals (6)
+### Standalone Modal Files
+
+#### Dashboard-Related Modals (9)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
 | 1 | AddCardModal | `dashboard/AddCardModal.tsx` | "Add Card" button | AI-powered modal for adding dashboard cards with "Browse Cards" and "AI Suggestions" tabs |
@@ -527,52 +532,99 @@ Based on feature requests:
 | 3 | ReplaceCardModal | `dashboard/ReplaceCardModal.tsx` | Card replace action | Replace card with "Select" and "AI" tabs for choosing new card type |
 | 4 | ResetDialog | `dashboard/ResetDialog.tsx` | Dashboard reset action | Two-option dialog: "Add Missing Cards" or "Replace All Cards" |
 | 5 | TemplatesModal | `dashboard/TemplatesModal.tsx` | Templates selector | Dashboard template browser organized by category |
-| 6 | ResourceDetailModals | `clusters/ResourceDetailModals.tsx` | Click resource in card | Generic resource detail modal with Details, Actions, and AI tabs |
+| 6 | CreateDashboardModal | `dashboard/CreateDashboardModal.tsx` | Create dashboard button | Create new dashboard with optional template selection |
+| 7 | CardFactoryModal | `dashboard/CardFactoryModal.tsx` | Developer tools | Create custom cards with declarative, code, or AI-powered generation |
+| 8 | StatBlockFactoryModal | `dashboard/StatBlockFactoryModal.tsx` | Developer tools | Create custom stat blocks with builder or AI assistance |
+| 9 | CardConfigModal | `clusters/components/CardConfigModal.tsx` | Legacy card settings | Simple card configuration for cluster filtering |
 
-### Cluster Management Modals (3)
+### Cluster Management Modals (7)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 7 | ClusterDetailModal | `clusters/ClusterDetailModal.tsx` | Click cluster in list | Comprehensive cluster details: health, metrics, nodes, workloads, GPU inventory |
-| 8 | RenameModal | `clusters/components/RenameModal.tsx` | Pencil icon on cluster | Rename kubeconfig context display name |
-| 9 | GPUDetailModal | `clusters/components/GPUDetailModal.tsx` | GPU card in cluster detail | GPU resource details: inventory, specs, utilization, per-cluster breakdown |
+| 10 | ClusterDetailModal | `clusters/ClusterDetailModal.tsx` | Click cluster in list | Comprehensive cluster details: health, metrics, nodes, workloads, GPU inventory |
+| 11 | RenameModal | `clusters/components/RenameModal.tsx` | Pencil icon on cluster | Rename kubeconfig context display name |
+| 12 | GPUDetailModal | `clusters/components/GPUDetailModal.tsx` | GPU stat click (standalone) | Full-featured GPU resource details: inventory, specs, utilization, operator status, multi-cluster view |
+| 13 | CPUDetailModal | `clusters/ResourceDetailModals.tsx` | CPU stat click (in cluster detail) | CPU resource details per node with allocation and utilization |
+| 14 | MemoryDetailModal | `clusters/ResourceDetailModals.tsx` | Memory stat click (in cluster detail) | Memory resource details per node with allocation and utilization |
+| 15 | StorageDetailModal | `clusters/ResourceDetailModals.tsx` | Storage stat click (in cluster detail) | Storage resource details per node with capacity and usage |
+| 16 | GPUDetailModal (cluster view) | `clusters/ResourceDetailModals.tsx` | GPU stat in cluster detail modal | Simplified GPU details for single-cluster context within ClusterDetailModal |
 
 ### Navigation/Exploration Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 10 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
+| 17 | DrillDownModal | `drilldown/DrillDownModal.tsx` | Click resources in cards | Hierarchical navigation for Kubernetes resources with breadcrumbs |
 
-### Feature/Feedback Modals (1)
+### Feature/Feedback Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 11 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feedback/bugs and track request updates with GitHub integration |
+| 18 | FeatureRequestModal | `feedback/FeatureRequestModal.tsx` | Feedback button | Submit feature requests and track updates with GitHub integration |
+| 19 | FeedbackModal | `feedback/FeedbackModal.tsx` | Feedback button | Submit bugs or feature requests via GitHub Issues |
 
-### Setup/Onboarding Modals (1)
+### Setup/Onboarding Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 12 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
+| 20 | AgentSetupDialog | `agent/AgentSetupDialog.tsx` | Auto on app load (if agent not connected) | Install KubeStellar Console agent with quick install command |
+| 21 | SetupInstructionsDialog | `setup/SetupInstructionsDialog.tsx` | Help/Setup menu | Full setup instructions with copy-paste commands and OAuth configuration |
+
+### Deployment Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 22 | DeployConfirmDialog | `deploy/DeployConfirmDialog.tsx` | Deploy workload action | Confirm deployment with dependency resolution and target cluster selection |
 
 ### GitOps Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 13 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
+| 23 | SyncDialog | `gitops/SyncDialog.tsx` | GitOps sync action | Multi-phase sync workflow: Detection → Plan → Execute → Complete |
 
-### Stats Configuration Modals (1)
+### Mission/Resolution Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 14 | StatsConfigModal | `ui/StatsConfig.tsx` | Stats settings icon | Configure visible stats, drag-drop reordering |
+| 24 | SaveResolutionDialog | `missions/SaveResolutionDialog.tsx` | Save resolution action | Save successful mission resolution for future reference |
 
-### Policy Modals (2)
+### Alerts Modals (1)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 15 | PolicyDetailModal | `cards/OPAPolicies.tsx` | Click policy in OPA card | OPA policy details with violations list |
-| 16 | ViolationsModal | `cards/OPAPolicies.tsx` | Click cluster with violations | OPA Gatekeeper violations list by severity |
+| 25 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Create or edit alert rules with conditions, severity, and notification channels |
 
-### Inline Card Modals (3)
+### Stats Configuration Modals (2)
 | # | Name | File | Trigger | Description |
 |---|------|------|---------|-------------|
-| 17 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit ResourceQuota with CPU/memory/storage limits |
-| 18 | ApiKeyPromptModal | `cards/console-missions/shared.tsx` | AI feature without API key | Prompts user to configure Anthropic API key for AI features |
-| 19 | AlertRuleEditor | `alerts/AlertRuleEditor.tsx` | Add/Edit alert rule | Form for creating/editing Prometheus-style alert rules |
+| 26 | StatsConfigModal | `clusters/components/StatsConfig.tsx` | Stats settings icon | Configure visible stats and drag-drop reordering for stat blocks |
+| 27 | StatsConfigModal (UI) | `ui/StatsConfig.tsx` | Stats settings icon | Alternative stats configuration component |
+
+### API Key & Settings Modals (2)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 28 | APIKeySettings | `agent/APIKeySettings.tsx` | Settings > API Keys | Configure AI provider API keys (Claude, OpenAI, Gemini) with validation and status |
+| 29 | ApiKeyPromptModal | `cards/console-missions/shared.tsx` | AI feature without key | Prompt to configure API key when AI features are used without credentials |
+
+### Widget & Export Modals (1)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 30 | WidgetExportModal | `widgets/WidgetExportModal.tsx` | Export menu | Export dashboard cards as standalone desktop widgets for Übersicht and other platforms |
+
+### Utility Modals (2)
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 31 | BaseModal | `lib/modals/BaseModal.tsx` | N/A (Base component) | Base modal component providing consistent styling and keyboard navigation |
+| 32 | ConfirmDialog | `lib/modals/ConfirmDialog.tsx` | Various actions | Reusable confirmation dialog with danger/warning/info variants |
+
+---
+
+### Inline Modals (7 Total)
+
+These modals are defined within card/page components rather than as standalone files:
+
+| # | Name | File | Trigger | Description |
+|---|------|------|---------|-------------|
+| 1 | PolicyDetailModal | `cards/OPAPolicies.tsx` | Click policy in OPA card | Display policy details, violations, and enforcement mode with option to create similar |
+| 2 | ClusterOPAModal | `cards/OPAPolicies.tsx` | Click violations count | Full cluster OPA status with policies and violations management |
+| 3 | QuotaModal | `cards/NamespaceQuotas.tsx` | Add/Edit quota button | Create or edit namespace resource quotas with GPU presets |
+| 4 | ResourceDetailModal | `clusters/Clusters.tsx` | Click pod/event item | Generic resource details with tabs: Overview/Labels/Related/Describe/Logs/Events/YAML |
+| 5 | InstallModal | `onboarding/DemoInstallGuide.tsx` | Demo mode banner | Installation guide with copy-paste commands and OAuth configuration |
+| 6 | GitHubInviteModal | `rewards/GitHubInvite.tsx` | Invite action | Invite users to GitHub repository and earn coins in rewards system |
+| 7 | Violations Display | `cards/OPAPolicies.tsx` | Policy violation actions | Shows policy violation details rendered in BaseModal (not a separate modal component) |
+
+**Note:** The GPUDetailModal exported from `ResourceDetailModals.tsx` is listed as standalone modal #16 above, not as an inline modal.
 
 ### Modal Features
 - All modals support ESC key to close
@@ -582,7 +634,7 @@ Based on feature requests:
 
 ---
 
-## 8. Drill-Down Views (22 Total)
+## 8. Drill-Down Views (23 Total)
 
 Drill-down views are displayed within `DrillDownModal` when clicking items in cards.
 
@@ -600,64 +652,67 @@ Drill-down views are displayed within `DrillDownModal` when clicking items in ca
 | 10 | HelmReleaseDrillDown | `drilldown/views/HelmReleaseDrillDown.tsx` | HelmReleaseStatus, HelmHistory |
 | 11 | KustomizationDrillDown | `drilldown/views/KustomizationDrillDown.tsx` | KustomizationStatus, OverlayComparison |
 | 12 | LogsDrillDown | `drilldown/views/LogsDrillDown.tsx` | Pod logs access |
-| 13 | NamespaceDrillDown | `drilldown/views/NamespaceDrillDown.tsx` | NamespaceOverview card |
-| 14 | NodeDrillDown | `drilldown/views/NodeDrillDown.tsx` | Node items in ComputeOverview |
-| 15 | OperatorDrillDown | `drilldown/views/OperatorDrillDown.tsx` | OperatorStatus, OperatorSubscriptions |
-| 16 | PodDrillDown | `drilldown/views/PodDrillDown.tsx` | TopPods, PodIssues cards |
-| 17 | PolicyDrillDown | `drilldown/views/PolicyDrillDown.tsx` | OPAPolicies, KyvernoPolicies |
-| 18 | ReplicaSetDrillDown | `drilldown/views/ReplicaSetDrillDown.tsx` | ReplicaSet resources |
-| 19 | ResourcesDrillDown | `drilldown/views/ResourcesDrillDown.tsx` | Generic resource drill-down |
-| 20 | SecretDrillDown | `drilldown/views/SecretDrillDown.tsx` | Secret resources |
-| 21 | ServiceAccountDrillDown | `drilldown/views/ServiceAccountDrillDown.tsx` | RBAC service accounts |
-| 22 | YAMLDrillDown | `drilldown/views/YAMLDrillDown.tsx` | YAML view for any resource |
+| 13 | MultiClusterSummaryDrillDown | `drilldown/views/MultiClusterSummaryDrillDown.tsx` | All-clusters, all-namespaces, all-deployments, all-pods views |
+| 14 | NamespaceDrillDown | `drilldown/views/NamespaceDrillDown.tsx` | NamespaceOverview card |
+| 15 | NodeDrillDown | `drilldown/views/NodeDrillDown.tsx` | Node items in ComputeOverview |
+| 16 | OperatorDrillDown | `drilldown/views/OperatorDrillDown.tsx` | OperatorStatus, OperatorSubscriptions |
+| 17 | PodDrillDown | `drilldown/views/PodDrillDown.tsx` | TopPods, PodIssues cards |
+| 18 | PolicyDrillDown | `drilldown/views/PolicyDrillDown.tsx` | OPAPolicies, KyvernoPolicies |
+| 19 | ReplicaSetDrillDown | `drilldown/views/ReplicaSetDrillDown.tsx` | ReplicaSet resources |
+| 20 | ResourcesDrillDown | `drilldown/views/ResourcesDrillDown.tsx` | Generic resource drill-down |
+| 21 | SecretDrillDown | `drilldown/views/SecretDrillDown.tsx` | Secret resources |
+| 22 | ServiceAccountDrillDown | `drilldown/views/ServiceAccountDrillDown.tsx` | RBAC service accounts |
+| 23 | YAMLDrillDown | `drilldown/views/YAMLDrillDown.tsx` | YAML view for any resource |
 
 ---
 
-## 9. Cards with Drill-Down (40 Total)
+## 9. Cards with Drill-Down (37 with actual views + 3 planned)
 
 Cards that have `useDrillDownActions` hook for clickable items:
 
-| # | Card | Drill Action | Target View |
-|---|------|--------------|-------------|
-| 1 | AppStatus | drillToDeployment | DeploymentDrillDown |
-| 2 | ArgoCDApplications | drillToArgoApp | ArgoAppDrillDown |
-| 3 | ClusterComparison | drillToCluster | ClusterDrillDown |
-| 4 | ClusterCosts | drillToCost | CostDrillDown |
-| 5 | ClusterFocus | drillToCluster | ClusterDrillDown |
-| 6 | ClusterResourceTree | drillToNamespace/Pod | NamespaceDrillDown/PodDrillDown |
-| 7 | ComputeOverview | drillToNode | NodeDrillDown |
-| 8 | DeploymentIssues | drillToDeployment | DeploymentDrillDown |
-| 9 | DeploymentProgress | drillToDeployment | DeploymentDrillDown |
-| 10 | DeploymentStatus | drillToDeployment | DeploymentDrillDown |
-| 11 | EventStream | drillToEvents | EventsDrillDown |
-| 12 | GitOpsDrift | drillToDrift | DriftDrillDown |
-| 13 | GPUInventory | drillToGPUNode | GPUNodeDrillDown |
-| 14 | GPUOverview | drillToGPUNode | GPUNodeDrillDown |
-| 15 | GPUStatus | drillToCluster | ClusterDrillDown |
-| 16 | GPUWorkloads | drillToPod | PodDrillDown |
-| 17 | HelmHistory | drillToHelm | HelmReleaseDrillDown |
-| 18 | HelmReleaseStatus | drillToHelm | HelmReleaseDrillDown |
-| 19 | HelmValuesDiff | drillToHelm | HelmReleaseDrillDown |
-| 21 | KubecostOverview | drillToCost | CostDrillDown |
-| 22 | KustomizationStatus | drillToKustomization | KustomizationDrillDown |
-| 23 | NamespaceEvents | drillToEvents | EventsDrillDown |
-| 24 | NamespaceOverview | drillToNamespace | NamespaceDrillDown |
-| 25 | NamespaceRBAC | drillToRBAC | ServiceAccountDrillDown |
-| 26 | NetworkOverview | drillToService | ServiceDrillDown |
-| 27 | OpenCostOverview | drillToCost | CostDrillDown |
-| 28 | OperatorStatus | drillToOperator | OperatorDrillDown |
-| 29 | OperatorSubscriptions | drillToOperator | OperatorDrillDown |
-| 30 | OverlayComparison | drillToKustomization | KustomizationDrillDown |
-| 31 | PodIssues | drillToPod | PodDrillDown |
-| 32 | PVCStatus | drillToPVC | PVCDrillDown |
-| 33 | ResourceCapacity | drillToNode | NodeDrillDown |
-| 34 | ResourceUsage | drillToNode | NodeDrillDown |
-| 35 | SecurityIssues | drillToPod | PodDrillDown |
-| 36 | ServiceStatus | drillToService | ServiceDrillDown |
-| 37 | StorageOverview | drillToPVC | PVCDrillDown |
-| 38 | TopPods | drillToPod | PodDrillDown |
-| 39 | UpgradeStatus | drillToCluster | ClusterDrillDown |
-| 40 | UserManagement | drillToRBAC | ServiceAccountDrillDown |
+| # | Card | Drill Action | Target View | Status |
+|---|------|--------------|-------------|--------|
+| 1 | AppStatus | drillToDeployment | DeploymentDrillDown | ✓ |
+| 2 | ArgoCDApplications | drillToArgoApp | ArgoAppDrillDown | ✓ |
+| 3 | ClusterComparison | drillToCluster | ClusterDrillDown | ✓ |
+| 4 | ClusterCosts | drillToCost | CostDrillDown | **Planned** |
+| 5 | ClusterFocus | drillToCluster | ClusterDrillDown | ✓ |
+| 6 | ClusterResourceTree | drillToNamespace/Pod | NamespaceDrillDown/PodDrillDown | ✓ |
+| 7 | ComputeOverview | drillToNode | NodeDrillDown | ✓ |
+| 8 | DeploymentIssues | drillToDeployment | DeploymentDrillDown | ✓ |
+| 9 | DeploymentProgress | drillToDeployment | DeploymentDrillDown | ✓ |
+| 10 | DeploymentStatus | drillToDeployment | DeploymentDrillDown | ✓ |
+| 11 | EventStream | drillToEvents | EventsDrillDown | ✓ |
+| 12 | GitOpsDrift | drillToDrift | DriftDrillDown | ✓ |
+| 13 | GPUInventory | drillToGPUNode | GPUNodeDrillDown | ✓ |
+| 14 | GPUOverview | drillToGPUNode | GPUNodeDrillDown | ✓ |
+| 15 | GPUStatus | drillToCluster | ClusterDrillDown | ✓ |
+| 16 | GPUWorkloads | drillToPod | PodDrillDown | ✓ |
+| 17 | HelmHistory | drillToHelm | HelmReleaseDrillDown | ✓ |
+| 18 | HelmReleaseStatus | drillToHelm | HelmReleaseDrillDown | ✓ |
+| 19 | HelmValuesDiff | drillToHelm | HelmReleaseDrillDown | ✓ |
+| 20 | KubecostOverview | drillToCost | CostDrillDown | **Planned** |
+| 21 | KustomizationStatus | drillToKustomization | KustomizationDrillDown | ✓ |
+| 22 | NamespaceEvents | drillToEvents | EventsDrillDown | ✓ |
+| 23 | NamespaceOverview | drillToNamespace | NamespaceDrillDown | ✓ |
+| 24 | NamespaceRBAC | drillToRBAC | ServiceAccountDrillDown | ✓ |
+| 25 | NetworkOverview | drillToService | ServiceDrillDown | **Planned** |
+| 26 | OpenCostOverview | drillToCost | CostDrillDown | **Planned** |
+| 27 | OperatorStatus | drillToOperator | OperatorDrillDown | ✓ |
+| 28 | OperatorSubscriptions | drillToOperator | OperatorDrillDown | ✓ |
+| 29 | OverlayComparison | drillToKustomization | KustomizationDrillDown | ✓ |
+| 30 | PodIssues | drillToPod | PodDrillDown | ✓ |
+| 31 | PVCStatus | drillToPVC | PVCDrillDown | **Planned** |
+| 32 | ResourceCapacity | drillToNode | NodeDrillDown | ✓ |
+| 33 | ResourceUsage | drillToNode | NodeDrillDown | ✓ |
+| 34 | SecurityIssues | drillToPod | PodDrillDown | ✓ |
+| 35 | ServiceStatus | drillToService | ServiceDrillDown | **Planned** |
+| 36 | StorageOverview | drillToPVC | PVCDrillDown | **Planned** |
+| 37 | TopPods | drillToPod | PodDrillDown | ✓ |
+| 38 | UpgradeStatus | drillToCluster | ClusterDrillDown | ✓ |
+| 39 | UserManagement | drillToRBAC | ServiceAccountDrillDown | ✓ |
+
+**Note**: Cards marked as "Planned" reference drill-down views that don't yet exist as separate files. They may use generic ResourcesDrillDown or open inline views until dedicated drill-down components are implemented.
 
 ### Cards WITHOUT Drill-Down (25 Total)
 

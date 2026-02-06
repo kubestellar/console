@@ -7,11 +7,11 @@ export function APIKeysSection() {
 
   return (
     <>
-      <div className="glass rounded-xl p-6">
+      <div id="api-keys-settings" className="glass rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/20">
-              <Key className="w-5 h-5 text-amber-400" />
+            <div className="p-2 rounded-lg bg-secondary">
+              <Key className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-medium text-foreground">AI Provider Keys</h2>

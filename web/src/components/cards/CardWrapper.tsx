@@ -1,9 +1,9 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info,
+  Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download,
   // Card icons
-  AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2,
+  AlertTriangle, Box, Activity, Database, Server, Cpu, Network, Shield, Package, GitBranch, FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp, Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope, MonitorCheck, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
@@ -15,6 +15,8 @@ import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
 import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
+import { isCardExportable } from '../../lib/widgets/widgetRegistry'
+import { WidgetExportModal } from '../widgets/WidgetExportModal'
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
@@ -53,6 +55,13 @@ const LARGE_EXPANDED_CARDS = new Set([
   'cluster_comparison',
   'cluster_resource_tree',
   'match_game',
+  // AI-ML cards that need more space when expanded
+  'llmd_flow',
+  'epp_routing',
+  'kvcache_monitor',
+  'pd_disaggregation',
+  'llmd_benchmarks',
+  'llmd_ai_insights',
 ])
 
 // Cards that should be nearly fullscreen when expanded (maps, large visualizations, games)
@@ -169,11 +178,17 @@ export const CARD_TITLES: Record<string, string> = {
   deployment_progress: 'Deployment Progress',
   deployment_status: 'Deployment Status',
   deployment_issues: 'Deployment Issues',
+  statefulset_status: 'StatefulSet Status',
+  daemonset_status: 'DaemonSet Status',
+  replicaset_status: 'ReplicaSet Status',
+  job_status: 'Job Status',
+  cronjob_status: 'CronJob Status',
+  hpa_status: 'HPA Status',
   cluster_groups: 'Cluster Groups',
   resource_marshall: 'Resource Marshall',
   workload_monitor: 'Workload Monitor',
   llmd_stack_monitor: 'llm-d Stack Monitor',
-  prow_ci_monitor: 'Prow CI Monitor',
+  prow_ci_monitor: 'PROW CI Monitor',
   github_ci_monitor: 'GitHub CI Monitor',
   cluster_health_monitor: 'Cluster Health Monitor',
 
@@ -183,6 +198,7 @@ export const CARD_TITLES: Record<string, string> = {
   resource_capacity: 'Resource Capacity',
   resource_usage: 'Resource Allocation',
   compute_overview: 'Compute Overview',
+  node_status: 'Node Status',
 
   // Events
   event_stream: 'Event Stream',
@@ -198,8 +214,12 @@ export const CARD_TITLES: Record<string, string> = {
   // Storage and network
   storage_overview: 'Storage Overview',
   pvc_status: 'PVC Status',
+  pv_status: 'PV Status',
+  resource_quota_status: 'Resource Quota Status',
   network_overview: 'Network Overview',
   service_status: 'Service Status',
+  ingress_status: 'Ingress Status',
+  network_policy_status: 'Network Policy Status',
 
   // Namespace cards
   namespace_overview: 'Namespace Overview',
@@ -212,7 +232,9 @@ export const CARD_TITLES: Record<string, string> = {
   // Operator cards
   operator_status: 'Operator Status',
   operator_subscriptions: 'Operator Subscriptions',
+  operator_subscription_status: 'Operator Subscription Status',
   crd_health: 'CRD Health',
+  configmap_status: 'ConfigMap Status',
 
   // Helm/GitOps cards
   gitops_drift: 'GitOps Drift',
@@ -229,13 +251,14 @@ export const CARD_TITLES: Record<string, string> = {
   argocd_sync_status: 'ArgoCD Sync Status',
   argocd_health: 'ArgoCD Health',
 
-  // GPU cards
+  // GPU and hardware cards
   gpu_overview: 'GPU Overview',
   gpu_status: 'GPU Status',
   gpu_inventory: 'GPU Inventory',
   gpu_workloads: 'GPU Workloads',
   gpu_utilization: 'GPU Utilization',
   gpu_usage_trend: 'GPU Usage Trend',
+  hardware_health: 'Hardware Health',
 
   // Security, RBAC, and compliance
   security_issues: 'Security Issues',
@@ -280,19 +303,26 @@ export const CARD_TITLES: Record<string, string> = {
   console_ai_issues: 'AI Issues',
   console_ai_kubeconfig_audit: 'AI Kubeconfig Audit',
   console_ai_health_check: 'AI Health Check',
-  console_ai_offline_detection: 'AI Offline Detection',
+  console_ai_offline_detection: 'Predictive Health Monitor',
 
   // Stock Market Ticker
   stock_market_ticker: 'Stock Market Ticker',
 
-  // Prow CI/CD cards
-  prow_jobs: 'Prow Jobs',
-  prow_status: 'Prow Status',
-  prow_history: 'Prow History',
+  // PROW CI/CD cards
+  prow_jobs: 'PROW Jobs',
+  prow_status: 'PROW Status',
+  prow_history: 'PROW History',
 
   // ML/AI workload cards
   llm_inference: 'llm-d Inference',
   llm_models: 'llm-d Models',
+  llmd_flow: 'llm-d Request Flow',
+  llmd_benchmarks: 'llm-d Benchmarks',
+  llmd_ai_insights: 'llm-d AI Insights',
+  llmd_configurator: 'llm-d Configurator',
+  kvcache_monitor: 'KV Cache Monitor',
+  epp_routing: 'EPP Routing',
+  pd_disaggregation: 'P/D Disaggregation',
   ml_jobs: 'ML Jobs',
   ml_notebooks: 'ML Notebooks',
 
@@ -340,17 +370,24 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   deployment_progress: 'Real-time deployment rollout progress and status.',
   deployment_status: 'Detailed status of deployments including replicas and conditions.',
   deployment_issues: 'Active deployment problems such as failed rollouts or image pull errors.',
+  statefulset_status: 'Status of StatefulSets including replicas and volume claims.',
+  daemonset_status: 'Status of DaemonSets including node coverage and update progress.',
+  replicaset_status: 'Status of ReplicaSets including replica counts and conditions.',
+  job_status: 'Status of Jobs including completion, duration, and failures.',
+  cronjob_status: 'Status of CronJobs including schedules and recent runs.',
+  hpa_status: 'Status of Horizontal Pod Autoscalers and scaling metrics.',
   cluster_groups: 'Organize clusters into logical groups for targeted deployments.',
   resource_marshall: 'Explore resource dependency trees and ownership chains.',
   workload_monitor: 'Monitor all resources for a workload with health status, alerts, and AI diagnose/repair.',
   llmd_stack_monitor: 'Monitor the llm-d inference stack: model serving, EPP, gateways, and autoscalers.',
-  prow_ci_monitor: 'Monitor Prow CI jobs with success rates, failure analysis, and AI repair.',
+  prow_ci_monitor: 'Monitor PROW CI jobs with success rates, failure analysis, and AI repair.',
   github_ci_monitor: 'Monitor GitHub Actions workflows across repos with pass rates and alerts.',
   cluster_health_monitor: 'Monitor cluster health across all connected clusters with pod and deployment issues.',
   pod_issues: 'Pods with errors, restarts, or scheduling problems.',
   top_pods: 'Top resource-consuming pods ranked by CPU or memory usage.',
   resource_capacity: 'Cluster resource capacity vs. current allocation.',
   resource_usage: 'CPU and memory allocation breakdown across clusters.',
+  node_status: 'Status of Kubernetes nodes including conditions and capacity.',
   compute_overview: 'Summary of compute resources: nodes, CPUs, and memory.',
   event_stream: 'Live stream of Kubernetes events from all clusters.',
   event_summary: 'Aggregated event counts grouped by type and reason.',
@@ -361,8 +398,12 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   resource_trend: 'Resource usage trends showing CPU and memory over time.',
   storage_overview: 'Persistent volume and storage class overview.',
   pvc_status: 'Status of Persistent Volume Claims across clusters.',
+  pv_status: 'Status of Persistent Volumes including capacity and binding.',
+  resource_quota_status: 'Resource quota utilization and limits across namespaces.',
   network_overview: 'Network policies, services, and ingress summary.',
   service_status: 'Status of Kubernetes services and their endpoints.',
+  ingress_status: 'Status of Ingress resources including hosts and backends.',
+  network_policy_status: 'Status of Network Policies and affected pods.',
   namespace_overview: 'Summary of resources within a namespace.',
   namespace_analysis: 'Detailed analysis of namespace health and resource usage.',
   namespace_rbac: 'RBAC roles and bindings within a namespace.',
@@ -371,7 +412,9 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   namespace_monitor: 'Real-time monitoring of namespace resource trends.',
   operator_status: 'Status of installed Kubernetes operators.',
   operator_subscriptions: 'Operator subscriptions and update channels.',
+  operator_subscription_status: 'Detailed status of Operator Lifecycle Manager subscriptions.',
   crd_health: 'Health and status of Custom Resource Definitions.',
+  configmap_status: 'Status of ConfigMaps including size and update times.',
   gitops_drift: 'Drift detection between Git source and live cluster state.',
   helm_release_status: 'Status of Helm releases across clusters.',
   helm_releases: 'List of all deployed Helm releases.',
@@ -389,6 +432,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   gpu_workloads: 'Workloads running on GPU-enabled nodes.',
   gpu_utilization: 'Real-time GPU utilization percentage and temperature.',
   gpu_usage_trend: 'Historical GPU usage trends over time.',
+  hardware_health: 'Detects hardware device disappearances (GPUs, NICs, NVMe, InfiniBand) that often require a power cycle to recover. Common with SuperMicro/HGX systems. Also shows full device inventory per node.',
   security_issues: 'Security vulnerabilities and misconfigurations detected.',
   rbac_overview: 'Overview of RBAC roles, bindings, and permissions.',
   policy_violations: 'Active policy violations from OPA, Kyverno, or other engines.',
@@ -421,16 +465,47 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   console_ai_issues: 'AI-detected issues and recommended fixes.',
   console_ai_kubeconfig_audit: 'AI audit of kubeconfig files for security and cleanup.',
   console_ai_health_check: 'AI-powered cluster health analysis.',
-  console_ai_offline_detection: 'AI detection of offline or unreachable clusters.',
+  console_ai_offline_detection: 'Monitors cluster health and predicts failures before they happen. Detects offline nodes, GPU exhaustion, resource pressure, and groups issues by root cause for efficient remediation.',
   stock_market_ticker: 'Live stock market ticker with tech company prices.',
-  prow_jobs: 'Prow CI/CD job status and results.',
-  prow_status: 'Overall Prow system health and queue depth.',
-  prow_history: 'Historical Prow job runs and success rates.',
+  prow_jobs: 'PROW CI/CD job status and results.',
+  prow_status: 'Overall PROW system health and queue depth.',
+  prow_history: 'Historical PROW job runs and success rates.',
   llm_inference: 'llm-d inference endpoint status and request metrics.',
   llm_models: 'LLM models deployed via llm-d with version info.',
+  llmd_flow: 'Animated visualization of inference request flow through the llm-d stack: load balancer → EPP → prefill/decode pods.',
+  llmd_benchmarks: 'Performance benchmarks for llm-d inference: throughput, latency percentiles, and comparison across models.',
+  llmd_ai_insights: 'AI-generated insights about llm-d performance, bottlenecks, and optimization recommendations.',
+  llmd_configurator: 'Configure llm-d deployment parameters: replicas, autoscaling, model variants, and resource limits.',
+  kvcache_monitor: 'Real-time KV cache utilization across inference pods with hit rates and memory usage.',
+  epp_routing: 'Endpoint Picker Pod routing decisions: how requests are distributed based on KV cache affinity.',
+  pd_disaggregation: 'Prefill/Decode disaggregation architecture: separate pools for prompt processing and token generation.',
   ml_jobs: 'Machine learning training and batch job status.',
   ml_notebooks: 'Jupyter notebook server status and resource usage.',
   provider_health: 'Health and status of AI and cloud infrastructure providers.',
+
+  // Games
+  sudoku_game: 'Classic Sudoku puzzle game with multiple difficulty levels.',
+  match_game: 'Memory matching game with Kubernetes resource icons.',
+  solitaire: 'Classic Klondike solitaire card game.',
+  checkers: 'Play checkers against an AI opponent.',
+  game_2048: 'Slide and merge tiles to reach 2048.',
+  kubedle: 'Wordle-style game with Kubernetes terminology.',
+  pod_sweeper: 'Minesweeper clone with a Kubernetes pod theme.',
+  container_tetris: 'Classic Tetris with container-shaped blocks.',
+  flappy_pod: 'Navigate a pod through cluster obstacles.',
+  kube_man: 'Pac-Man style game collecting resources in a cluster maze.',
+  kube_kong: 'Donkey Kong inspired platformer with Kubernetes theme.',
+  pod_pitfall: 'Pitfall-style adventure game as a pod.',
+  node_invaders: 'Space Invaders clone defending your cluster.',
+  pod_crosser: 'Frogger-style game crossing cluster traffic.',
+  pod_brothers: 'Super Mario Bros inspired platformer.',
+  kube_kart: 'Racing game through Kubernetes infrastructure.',
+  kube_pong: 'Classic Pong game with cluster theming.',
+  kube_snake: 'Snake game collecting Kubernetes resources.',
+  kube_galaga: 'Galaga-style shooter defending against threats.',
+  kube_doom: 'First-person debugging adventure.',
+  kube_craft: 'Build and manage your cluster world.',
+  kube_chess: 'Chess game with Kubernetes-themed pieces.',
 }
 
 // Card icons with their colors - displayed in the card header next to the title
@@ -443,6 +518,8 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   cluster_costs: { icon: TrendingUp, color: 'text-emerald-400' },
   cluster_metrics: { icon: Activity, color: 'text-purple-400' },
   cluster_locations: { icon: Globe, color: 'text-blue-400' },
+  cluster_resource_tree: { icon: GitBranch, color: 'text-purple-400' },
+  cluster_groups: { icon: Layers, color: 'text-blue-400' },
 
   // Workload and deployment cards
   app_status: { icon: Box, color: 'text-purple-400' },
@@ -450,6 +527,13 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   deployment_progress: { icon: Clock, color: 'text-blue-400' },
   deployment_status: { icon: Box, color: 'text-purple-400' },
   deployment_issues: { icon: AlertTriangle, color: 'text-orange-400' },
+  statefulset_status: { icon: Database, color: 'text-purple-400' },
+  daemonset_status: { icon: Server, color: 'text-blue-400' },
+  replicaset_status: { icon: Box, color: 'text-cyan-400' },
+  job_status: { icon: Clock, color: 'text-green-400' },
+  cronjob_status: { icon: Clock, color: 'text-orange-400' },
+  hpa_status: { icon: TrendingUp, color: 'text-purple-400' },
+  resource_marshall: { icon: GitBranch, color: 'text-blue-400' },
 
   // Pod and resource cards
   pod_issues: { icon: AlertTriangle, color: 'text-orange-400' },
@@ -458,10 +542,14 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   resource_usage: { icon: Gauge, color: 'text-purple-400' },
   pod_health_trend: { icon: Box, color: 'text-purple-400' },
   resource_trend: { icon: TrendingUp, color: 'text-blue-400' },
+  node_status: { icon: Server, color: 'text-purple-400' },
 
   // Events
   event_stream: { icon: Activity, color: 'text-blue-400' },
   events_timeline: { icon: Clock, color: 'text-purple-400' },
+  event_summary: { icon: Activity, color: 'text-purple-400' },
+  warning_events: { icon: AlertTriangle, color: 'text-orange-400' },
+  recent_events: { icon: Clock, color: 'text-blue-400' },
 
   // Namespace cards
   namespace_overview: { icon: Layers, color: 'text-purple-400' },
@@ -474,7 +562,9 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   // Operator cards
   operator_status: { icon: Package, color: 'text-purple-400' },
   operator_subscriptions: { icon: Package, color: 'text-purple-400' },
+  operator_subscription_status: { icon: Package, color: 'text-blue-400' },
   crd_health: { icon: Database, color: 'text-teal-400' },
+  configmap_status: { icon: FileCode, color: 'text-blue-400' },
 
   // Helm/GitOps cards
   gitops_drift: { icon: GitBranch, color: 'text-purple-400' },
@@ -510,7 +600,9 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
 
   // Storage
   pvc_status: { icon: HardDrive, color: 'text-blue-400' },
+  pv_status: { icon: HardDrive, color: 'text-purple-400' },
   storage_overview: { icon: Database, color: 'text-purple-400' },
+  resource_quota_status: { icon: Gauge, color: 'text-orange-400' },
 
   // Network
   network_overview: { icon: Network, color: 'text-cyan-400' },
@@ -519,6 +611,8 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   service_exports: { icon: Server, color: 'text-green-400' },
   service_imports: { icon: Server, color: 'text-blue-400' },
   gateway_status: { icon: Network, color: 'text-purple-400' },
+  ingress_status: { icon: Network, color: 'text-blue-400' },
+  network_policy_status: { icon: Shield, color: 'text-cyan-400' },
 
   // Compute
   compute_overview: { icon: Cpu, color: 'text-purple-400' },
@@ -528,13 +622,19 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   user_management: { icon: Users, color: 'text-purple-400' },
   github_activity: { icon: Activity, color: 'text-purple-400' },
   kubectl: { icon: Terminal, color: 'text-green-400' },
-  weather: { icon: Globe, color: 'text-blue-400' },
+  weather: { icon: Cloudy, color: 'text-blue-400' },
   stock_market_ticker: { icon: TrendingUp, color: 'text-green-400' },
+  rss_feed: { icon: Rss, color: 'text-orange-400' },
+  iframe_embed: { icon: Frame, color: 'text-blue-400' },
+  network_utils: { icon: Wrench, color: 'text-cyan-400' },
+  mobile_browser: { icon: Phone, color: 'text-purple-400' },
+  hardware_health: { icon: MonitorCheck, color: 'text-green-400' },
 
   // AI cards
   console_ai_issues: { icon: Wand2, color: 'text-purple-400' },
   console_ai_kubeconfig_audit: { icon: Wand2, color: 'text-purple-400' },
   console_ai_health_check: { icon: Wand2, color: 'text-purple-400' },
+  console_ai_offline_detection: { icon: Stethoscope, color: 'text-emerald-400' },
 
   // Cost cards
   opencost_overview: { icon: TrendingUp, color: 'text-emerald-400' },
@@ -559,8 +659,15 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   // ML/AI workload cards
   llm_inference: { icon: Cpu, color: 'text-purple-400' },
   llm_models: { icon: Database, color: 'text-blue-400' },
+  llmd_flow: { icon: Workflow, color: 'text-cyan-400' },
+  llmd_benchmarks: { icon: Gauge, color: 'text-orange-400' },
+  llmd_ai_insights: { icon: Wand2, color: 'text-purple-400' },
+  llmd_configurator: { icon: Settings, color: 'text-blue-400' },
+  kvcache_monitor: { icon: Database, color: 'text-cyan-400' },
+  epp_routing: { icon: Router, color: 'text-green-400' },
+  pd_disaggregation: { icon: Split, color: 'text-purple-400' },
   ml_jobs: { icon: Activity, color: 'text-orange-400' },
-  ml_notebooks: { icon: FileCode, color: 'text-purple-400' },
+  ml_notebooks: { icon: BookOpen, color: 'text-purple-400' },
 
   // Workload deployment
   workload_deployment: { icon: Box, color: 'text-blue-400' },
@@ -590,18 +697,113 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   pod_pitfall: { icon: Rocket, color: 'text-green-400' },
   node_invaders: { icon: Rocket, color: 'text-purple-400' },
   pod_brothers: { icon: Gamepad2, color: 'text-red-400' },
+  pod_crosser: { icon: Gamepad2, color: 'text-green-400' },
   kube_kart: { icon: Gamepad2, color: 'text-green-400' },
   kube_pong: { icon: Gamepad2, color: 'text-cyan-400' },
   kube_snake: { icon: Gamepad2, color: 'text-green-400' },
   kube_galaga: { icon: Rocket, color: 'text-blue-400' },
+  kube_doom: { icon: Gamepad2, color: 'text-red-400' },
   kube_craft: { icon: Puzzle, color: 'text-brown-400' },
   kube_chess: { icon: Crown, color: 'text-amber-400' },
   kube_craft_3d: { icon: Puzzle, color: 'text-green-400' },
+}
 
-  // Utilities
-  iframe_embed: { icon: Globe, color: 'text-blue-400' },
-  network_utils: { icon: Network, color: 'text-cyan-400' },
-  mobile_browser: { icon: Globe, color: 'text-purple-400' },
+/**
+ * Info tooltip that renders via portal to escape overflow-hidden containers.
+ * Updates position on scroll to stay attached to the trigger element.
+ */
+function InfoTooltip({ text }: { text: string }) {
+  const [isVisible, setIsVisible] = useState(false)
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+
+  // Update position based on trigger element's current bounding rect
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current || !isVisible) return
+
+    const rect = triggerRef.current.getBoundingClientRect()
+    const tooltipWidth = 280 // max-w-[280px]
+    const tooltipHeight = tooltipRef.current?.offsetHeight || 80 // estimate
+
+    // Position below the icon by default
+    let top = rect.bottom + 8
+    let left = rect.left - (tooltipWidth / 2) + (rect.width / 2)
+
+    // Ensure tooltip stays within viewport
+    if (left < 8) left = 8
+    if (left + tooltipWidth > window.innerWidth - 8) {
+      left = window.innerWidth - tooltipWidth - 8
+    }
+
+    // If tooltip would go below viewport, position above
+    if (top + tooltipHeight > window.innerHeight - 8) {
+      top = rect.top - tooltipHeight - 8
+    }
+
+    setPosition({ top, left })
+  }, [isVisible])
+
+  // Update position on scroll and resize
+  useEffect(() => {
+    if (!isVisible) return
+
+    updatePosition()
+
+    // Update on scroll (any scrollable ancestor)
+    const handleScroll = () => updatePosition()
+    const handleResize = () => updatePosition()
+
+    window.addEventListener('scroll', handleScroll, true) // capture phase for nested scrolls
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isVisible, updatePosition])
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    if (!isVisible) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!triggerRef.current?.contains(target) && !tooltipRef.current?.contains(target)) {
+        setIsVisible(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isVisible])
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={() => setIsVisible(!isVisible)}
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        title="Card information"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {isVisible && position && createPortal(
+        <div
+          ref={tooltipRef}
+          className="fixed z-[100] max-w-[280px] px-3 py-2 text-xs rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 shadow-xl animate-fade-in"
+          style={{ top: position.top, left: position.left }}
+          onMouseEnter={() => setIsVisible(true)}
+          onMouseLeave={() => setIsVisible(false)}
+        >
+          {text}
+        </div>,
+        document.body
+      )}
+    </>
+  )
 }
 
 export function CardWrapper({
@@ -671,6 +873,15 @@ export function CardWrapper({
     return () => clearTimeout(timer)
   }, []) // Empty deps - only run on mount
 
+  // Quick initial render timeout for cards that don't report state (static/demo cards)
+  // If a card hasn't reported state within 150ms, assume it rendered content immediately
+  // This prevents blank cards while still giving reporting cards time to report
+  const [initialRenderTimedOut, setInitialRenderTimedOut] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setInitialRenderTimedOut(true), 150)
+    return () => clearTimeout(timer)
+  }, []) // Empty deps - only run on mount
+
   // Handle minimum spin duration for refresh button
   // Include both prop and context-reported refresh state
   const contextIsRefreshing = childDataState?.isRefreshing || false
@@ -718,8 +929,16 @@ export function CardWrapper({
   const collapseKey = cardId || `${cardType}-default`
   const { isCollapsed: hookCollapsed, setCollapsed: hookSetCollapsed } = useCardCollapse(collapseKey)
 
+  // Track whether initial data load has completed AND content has been visible
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false)
+  const [collapseDelayPassed, setCollapseDelayPassed] = useState(false)
+
   // Allow external control to override hook state
-  const isCollapsed = externalCollapsed ?? hookCollapsed
+  // IMPORTANT: Don't collapse until initial data load is complete AND a brief delay has passed
+  // This prevents the jarring sequence of: skeleton → collapse → show data
+  // Cards stay expanded showing content briefly, then respect collapsed state
+  const savedCollapsedState = externalCollapsed ?? hookCollapsed
+  const isCollapsed = (hasCompletedInitialLoad && collapseDelayPassed) ? savedCollapsedState : false
   const setCollapsed = useCallback((collapsed: boolean) => {
     if (onCollapsedChange) {
       onCollapsedChange(collapsed)
@@ -730,6 +949,7 @@ export function CardWrapper({
 
   const [showSummary, setShowSummary] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showWidgetExport, setShowWidgetExport] = useState(false)
   const [showResizeMenu, setShowResizeMenu] = useState(false)
   const [resizeMenuOnLeft, setResizeMenuOnLeft] = useState(false)
   const [_timeRemaining, setTimeRemaining] = useState<number | null>(null)
@@ -761,34 +981,72 @@ export function CardWrapper({
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || 0
   // Show loading when:
   // - Card explicitly reports isLoading: true, OR
-  // - Card hasn't reported yet AND skeleton hasn't timed out (shows skeleton initially)
-  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (childDataState === null && !skeletonTimedOut)
+  // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
+  // Static/demo cards that never report will stop showing as loading after 150ms
+  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
   const effectiveIsRefreshing = childDataState?.isRefreshing || false
   // hasData logic:
   // - If card explicitly reports hasData, use it
+  // - If card hasn't reported AND quick timeout passed, assume has data (static/demo card)
   // - If card hasn't reported AND skeleton timed out, assume has data (show content)
-  // - If card hasn't reported AND skeleton NOT timed out, assume no data (show skeleton)
   // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
   // - Otherwise default to true (show content)
   const effectiveHasData = childDataState?.hasData ?? (
     childDataState === null
-      ? skeletonTimedOut  // After timeout, assume content ready
+      ? (initialRenderTimedOut || skeletonTimedOut)  // After quick timeout, assume static card has content
       : (childDataState?.isLoading ? false : true)
   )
+
+  // Merge isDemoData from child-reported state with prop
+  const effectiveIsDemoData = isDemoData || childDataState?.isDemoData || false
+
+  // Child can explicitly opt-out of demo indicator by reporting isDemoData: false
+  // This is used by stack-dependent cards that use stack data even in global demo mode
+  const childExplicitlyNotDemo = childDataState?.isDemoData === false
+
+  // Show demo indicator if:
+  // 1. Child reports demo data (isDemoData: true via prop or report), OR
+  // 2. Global demo mode is on AND child hasn't explicitly opted out
+  const showDemoIndicator = effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo)
 
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
   // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
   // This fixes the race condition where demo data briefly shows before skeleton
-  // Cards with isDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
-  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !isDemoData && !isDemoMode
+  // Cards with effectiveIsDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
+  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !effectiveIsDemoData && !isDemoMode
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
   // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
+  // This includes both explicitly marked isDemoData cards AND cards in global demo mode
   // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
-  const wantsToShowSkeleton = !isDemoData && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
+  const wantsToShowSkeleton = !(effectiveIsDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
   const shouldShowSkeleton = wantsToShowSkeleton && skeletonDelayPassed
+
+  // Mark initial load as complete when data is ready or various timeouts pass
+  // This allows the saved collapsed state to take effect only after content is ready
+  // Conditions (any triggers completion):
+  // - effectiveHasData: card reported it has data
+  // - initialRenderTimedOut: 150ms passed, assume static card has content
+  // - skeletonTimedOut: 5s passed, fallback for slow loading cards
+  // - effectiveIsDemoData/isDemoMode: demo cards always have content immediately
+  useEffect(() => {
+    if (!hasCompletedInitialLoad && (effectiveHasData || initialRenderTimedOut || skeletonTimedOut || effectiveIsDemoData || isDemoMode)) {
+      setHasCompletedInitialLoad(true)
+    }
+  }, [hasCompletedInitialLoad, effectiveHasData, initialRenderTimedOut, skeletonTimedOut, effectiveIsDemoData, isDemoMode])
+
+  // Add a small delay before allowing collapse to ensure content is visible
+  // This prevents immediate collapse for demo cards and ensures smooth UX
+  useEffect(() => {
+    if (hasCompletedInitialLoad && !collapseDelayPassed) {
+      const timer = setTimeout(() => {
+        setCollapseDelayPassed(true)
+      }, 300) // 300ms delay to show content before collapsing
+      return () => clearTimeout(timer)
+    }
+  }, [hasCompletedInitialLoad, collapseDelayPassed])
 
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
@@ -914,8 +1172,9 @@ export function CardWrapper({
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',
             isCollapsed ? 'h-auto' : 'h-full',
-            (isDemoMode || isDemoData) && '!border-2 !border-yellow-500/50',
-            (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-card-refresh-pulse',
+            showDemoIndicator && '!border-2 !border-yellow-500/50',
+            // Only animate for actual loading, not offline state (prevents flicker when agent status changes)
+            (isVisuallySpinning || effectiveIsLoading) && !forceSkeletonForOffline && 'animate-card-refresh-pulse',
             getFlashClass()
           )}
           onMouseEnter={() => setShowSummary(true)}
@@ -927,25 +1186,18 @@ export function CardWrapper({
             {dragHandle}
             {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4', resolvedIconColor)} />}
             <h3 className="text-sm font-medium text-foreground">{title}</h3>
-            {description && (
-              <span className="relative group/info">
-                <Info className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-muted-foreground cursor-help transition-colors" />
-                <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 w-56 px-2.5 py-1.5 rounded-md bg-popover border border-border text-xs text-muted-foreground shadow-lg opacity-0 pointer-events-none group-hover/info:opacity-100 group-hover/info:pointer-events-auto transition-opacity z-50 leading-relaxed">
-                  {description}
-                </span>
-              </span>
-            )}
-            {/* Demo data indicator - shows if global demo mode is on OR card uses demo data */}
-            {(isDemoMode || isDemoData) && (
+            <InfoTooltip text={description || `${title} card. Description coming soon.`} />
+            {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
+            {showDemoIndicator && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400"
-                title={isDemoMode ? "Demo mode enabled - showing sample data" : "This card displays demo data"}
+                title={effectiveIsDemoData ? "This card displays demo data" : "Demo mode enabled - showing sample data"}
               >
                 Demo
               </span>
             )}
             {/* Live data indicator - for time-series/trend cards with real data */}
-            {isLive && !isDemoMode && !isDemoData && (
+            {isLive && !showDemoIndicator && (
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
                 title="Showing live data"
@@ -1002,7 +1254,7 @@ export function CardWrapper({
             )}
             <button
               data-tour="card-chat"
-              onClick={() => console.log('Open chat for card:', cardType)}
+              onClick={() => {}}
               className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
               title="Ask AI about this card"
             >
@@ -1081,6 +1333,19 @@ export function CardWrapper({
                         </div>
                       )}
                     </div>
+                  )}
+                  {isCardExportable(cardType) && (
+                    <button
+                      onClick={() => {
+                        setShowMenu(false)
+                        setShowWidgetExport(true)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex items-center gap-2"
+                      title="Export this card as a desktop widget for Übersicht"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Widget
+                    </button>
                   )}
                   <button
                     onClick={() => {
@@ -1200,9 +1465,19 @@ export function CardWrapper({
               ? 'h-[calc(95vh-80px)]'
               : 'max-h-[calc(80vh-80px)]'
         )}>
-          {children}
+          {/* Wrapper ensures children fill available space in expanded mode */}
+          <div className="flex-1 min-h-0 flex flex-col">
+            {children}
+          </div>
         </BaseModal.Content>
       </BaseModal>
+
+      {/* Widget Export Modal */}
+      <WidgetExportModal
+        isOpen={showWidgetExport}
+        onClose={() => setShowWidgetExport(false)}
+        cardType={cardType}
+      />
       </>
     </CardDataReportContext.Provider>
     </CardExpandedContext.Provider>

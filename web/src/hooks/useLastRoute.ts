@@ -90,16 +90,20 @@ export function useLastRoute() {
       // Cards are in a grid so multiple cards can share the same row.
       // We want the first card (left-most in DOM) on the row nearest
       // the viewport top, using a 20px tolerance for breathing room.
+      //
+      // OPTIMIZATION: Only check the first few cards to avoid forced reflow
+      // on every card. Most users don't scroll past the first ~10 cards.
       let snapped = scrollTop
       let cardTitle: string | undefined
       const cards = container.querySelectorAll('[data-tour="card"]')
-      if (cards.length > 0) {
+      const maxCardsToCheck = Math.min(cards.length, 12) // Only check first 12 cards
+      if (maxCardsToCheck > 0) {
         const containerRect = container.getBoundingClientRect()
         // Find the last row whose top is at or above the viewport top + tolerance.
         // Then pick the FIRST card on that row (first in DOM order).
         let bestRowTop = -1
         let bestCard: Element | null = null
-        for (let i = 0; i < cards.length; i++) {
+        for (let i = 0; i < maxCardsToCheck; i++) {
           const cardRect = cards[i].getBoundingClientRect()
           const cardAbsTop = cardRect.top - containerRect.top + scrollTop
           if (cardAbsTop <= scrollTop + 20) {
@@ -154,18 +158,24 @@ export function useLastRoute() {
 
       // Prefer card-based restore for robustness across layout shifts
       // Only do expensive DOM queries if we have a card title to find
+      // OPTIMIZATION: Check title text FIRST (cheap) before calling getBoundingClientRect (expensive)
       if (cardTitle) {
         const cards = container.querySelectorAll('[data-tour="card"]')
-        // Only get container rect once per restore attempt
-        const containerRect = container.getBoundingClientRect()
-        const scrollTop = container.scrollTop
+        // Find the card by title first without measuring
+        let targetCard: Element | null = null
         for (let i = 0; i < cards.length; i++) {
           const titleEl = cards[i].querySelector('h3')
           if (titleEl?.textContent?.trim() === cardTitle) {
-            const cardRect = cards[i].getBoundingClientRect()
-            target = Math.max(0, cardRect.top - containerRect.top + scrollTop - 12)
+            targetCard = cards[i]
             break
           }
+        }
+        // Only measure if we found the card
+        if (targetCard) {
+          const containerRect = container.getBoundingClientRect()
+          const scrollTop = container.scrollTop
+          const cardRect = targetCard.getBoundingClientRect()
+          target = Math.max(0, cardRect.top - containerRect.top + scrollTop - 12)
         }
       }
 
@@ -250,10 +260,11 @@ export function useLastRoute() {
     let timeoutId: ReturnType<typeof setTimeout>
     const handleScroll = () => {
       clearTimeout(timeoutId)
-      // Longer debounce (1s) to reduce forced reflows from getBoundingClientRect
+      // Longer debounce (2s) to reduce forced reflows from getBoundingClientRect
+      // This is only for scroll persistence, so longer delay is acceptable
       timeoutId = setTimeout(() => {
         saveScrollPositionNow(pathnameRef.current)
-      }, 1000)
+      }, 2000)
     }
 
     container.addEventListener('scroll', handleScroll, { passive: true })

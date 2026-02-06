@@ -55,10 +55,14 @@ export interface DashboardPageProps {
   lastUpdated?: Date | null
   /** Whether there is data to display */
   hasData?: boolean
+  /** Error message to display (optional) */
+  error?: string | null
   /** Dashboard-specific content (rendered below cards) */
   children?: ReactNode
   /** Content rendered between stats and cards section (e.g., tabs, filters) */
   beforeCards?: ReactNode
+  /** Extra content to render in header row (e.g., selectors, filters) */
+  headerExtra?: ReactNode
   /** Empty state configuration for no cards */
   emptyState?: {
     title: string
@@ -90,8 +94,10 @@ export function DashboardPage({
   isRefreshing: externalRefreshing = false,
   lastUpdated,
   hasData = true,
+  error,
   children,
   beforeCards,
+  headerExtra,
   emptyState,
   isDemoData = false,
 }: DashboardPageProps) {
@@ -218,7 +224,15 @@ export function DashboardPage({
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId={`${storageKey}-auto-refresh`}
         lastUpdated={lastUpdated}
+        error={error}
       />
+
+      {/* Extra header content (e.g., stack selector) */}
+      {headerExtra && (
+        <div className="flex items-center gap-3 px-6 py-2 border-b border-border/50 bg-card/30">
+          {headerExtra}
+        </div>
+      )}
 
       {/* Stats Overview */}
       <StatsOverview

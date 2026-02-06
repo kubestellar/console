@@ -38,6 +38,49 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     loadToken()
   }, [])
 
+  // Handle deep link focus from hash or search param
+  useEffect(() => {
+    const hash = window.location.hash
+    const params = new URLSearchParams(window.location.search)
+    const shouldFocus = hash === '#github-token' || params.get('focus') === 'github-token'
+
+    if (shouldFocus) {
+      // Wait for component to render and page to settle
+      const timer = setTimeout(() => {
+        const section = document.getElementById('github-token-settings')
+        const nextSection = document.getElementById('system-updates-settings')
+        const input = document.getElementById('github-token') as HTMLInputElement | null
+
+        // Scroll to the NEXT section with block: 'center' so GitHub token is centered
+        if (nextSection) {
+          nextSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        } else if (section) {
+          // Fallback: scroll to section itself
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+
+        // Flash highlight effect on GitHub section
+        if (section) {
+          setTimeout(() => {
+            section.classList.add('ring-2', 'ring-purple-500/50')
+            setTimeout(() => section.classList.remove('ring-2', 'ring-purple-500/50'), 2000)
+          }, 400)
+        }
+
+        if (input) {
+          setTimeout(() => input.focus(), 600) // Focus after scroll completes
+        }
+
+        // Clean up URL
+        if (hash || params.get('focus')) {
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      }, 300)
+
+      return () => clearTimeout(timer)
+    }
+  }, [isInitializing])
+
   const testGithubToken = async (token: string) => {
     setGithubTokenTesting(true)
     setGithubTokenError(null)
@@ -102,8 +145,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   return (
     <div id="github-token-settings" className="glass rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-lg bg-gray-500/20">
-          <Github className="w-5 h-5 text-gray-400" />
+        <div className="p-2 rounded-lg bg-secondary">
+          <Github className="w-5 h-5 text-muted-foreground" />
         </div>
         <div>
           <h2 className="text-lg font-medium text-foreground">GitHub Integration</h2>

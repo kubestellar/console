@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   X, Plus, Code, Layers, Wand2, Eye, Save, Sparkles,
   AlertTriangle, CheckCircle, Loader2, Trash2,
@@ -68,6 +68,17 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
   const [existingCards, setExistingCards] = useState<DynamicCardDefinition[]>([])
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
+  // Track timeouts for cleanup
+  const timeoutsRef = useRef<number[]>([])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout)
+      timeoutsRef.current = []
+    }
+  }, [])
 
   // Refresh existing cards list when switching to manage tab
   const handleTabChange = useCallback((newTab: Tab) => {
@@ -141,7 +152,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
     onCardCreated?.(id)
 
     // Reset
-    setTimeout(() => setSaveMessage(null), 3000)
+    const saveMessageTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+    timeoutsRef.current.push(saveMessageTimeoutId)
   }, [t1Title, t1Description, t1DataJson, t1Columns, t1Layout, t1Width, onCardCreated])
 
   // Save Tier 2 card
@@ -179,7 +191,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
     setSaveMessage(`Card "${def.title}" created!`)
     onCardCreated?.(id)
 
-    setTimeout(() => setSaveMessage(null), 3000)
+    const tier2SaveTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+    timeoutsRef.current.push(tier2SaveTimeoutId)
   }, [t2Title, t2Description, t2Source, t2Width, onCardCreated])
 
   // Delete a card
@@ -497,7 +510,8 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
               onCardCreated={(id) => {
                 setSaveMessage('Card created with AI!')
                 onCardCreated?.(id)
-                setTimeout(() => setSaveMessage(null), 3000)
+                const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+                timeoutsRef.current.push(aiCreateTimeoutId)
               }}
             />
           )}

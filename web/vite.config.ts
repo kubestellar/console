@@ -65,21 +65,10 @@ export default defineConfig(({ mode }) => ({
     },
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
+manualChunks: (id) => {
           // IMPORTANT: Libraries that use React hooks/context MUST go in vendor chunk
           // Splitting them separately causes "undefined" errors for useLayoutEffect, createContext, etc.
-          // Only non-React libs (three.js core) can be safely split
-
-          // Split Three.js core into its own chunk (doesn't use React directly)
-          if (id.includes('three') && !id.includes('@react-three')) {
-            return 'three'
-          }
-          // Bundle dnd-kit with React to avoid useLayoutEffect issues
-          // (Previously split separately but caused React import errors)
-          if (id.includes('@dnd-kit')) {
-            return 'vendor'
-          }
-          // Split node_modules into vendor chunks
+          // Keep all node_modules in a single vendor chunk to avoid circular dependencies
           if (id.includes('node_modules')) {
             return 'vendor'
           }

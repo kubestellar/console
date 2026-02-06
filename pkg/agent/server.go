@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -58,6 +59,16 @@ type Server struct {
 	todayTokensIn    int64
 	todayTokensOut   int64
 	todayDate        string // YYYY-MM-DD format to detect day change
+
+	// Prediction system
+	predictionWorker *PredictionWorker
+	metricsHistory   *MetricsHistory
+
+	// Hardware device tracking
+	deviceTracker *DeviceTracker
+
+	// Local cluster management
+	localClusters *LocalClusterManager
 }
 
 // NewServer creates a new agent server
@@ -115,6 +126,27 @@ func NewServer(cfg Config) (*Server, error) {
 	server.upgrader = websocket.Upgrader{
 		CheckOrigin: server.checkOrigin,
 	}
+
+	// Load persisted token usage from disk
+	server.loadTokenUsage()
+
+	// Initialize prediction system
+	server.predictionWorker = NewPredictionWorker(k8sClient, server.registry, server.BroadcastToClients, server.addTokenUsage)
+	server.metricsHistory = NewMetricsHistory(k8sClient)
+
+	// Initialize local cluster manager
+	server.localClusters = NewLocalClusterManager()
+
+	// Initialize device tracker with notification callback
+	server.deviceTracker = NewDeviceTracker(k8sClient, func(msgType string, payload interface{}) {
+		server.BroadcastToClients(msgType, payload)
+		// Send native notification for device alerts
+		if msgType == "device_alerts_updated" {
+			if resp, ok := payload.(DeviceAlertsResponse); ok && len(resp.Alerts) > 0 {
+				server.sendNativeNotification(resp.Alerts)
+			}
+		}
+	})
 
 	return server, nil
 }
@@ -207,6 +239,25 @@ func (s *Server) Start() error {
 	// Provider health check (proxies status page checks server-side to avoid CORS)
 	mux.HandleFunc("/providers/health", s.handleProvidersHealth)
 
+	// Prediction endpoints
+	mux.HandleFunc("/predictions/ai", s.handlePredictionsAI)
+	mux.HandleFunc("/predictions/analyze", s.handlePredictionsAnalyze)
+	mux.HandleFunc("/predictions/feedback", s.handlePredictionsFeedback)
+	mux.HandleFunc("/predictions/stats", s.handlePredictionsStats)
+
+	// Device tracking endpoints
+	mux.HandleFunc("/devices/alerts", s.handleDeviceAlerts)
+	mux.HandleFunc("/devices/alerts/clear", s.handleDeviceAlertsClear)
+	mux.HandleFunc("/devices/inventory", s.handleDeviceInventory)
+	mux.HandleFunc("/metrics/history", s.handleMetricsHistory)
+
+	// Local cluster management endpoints
+	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
+	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
+
+	// Prometheus metrics endpoint
+	mux.Handle("/metrics", GetMetricsHandler())
+
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
@@ -230,6 +281,39 @@ func (s *Server) Start() error {
 
 	// Validate all configured API keys on startup (run in background to not delay startup)
 	go s.ValidateAllKeys()
+
+	// Start kubeconfig file watcher (uses k8s client's built-in watcher)
+	if s.k8sClient != nil {
+		s.k8sClient.SetOnReload(func() {
+			log.Println("[Server] Kubeconfig reloaded, broadcasting to clients...")
+			s.kubectl.Reload()
+			clusters, current := s.kubectl.ListContexts()
+			s.BroadcastToClients("clusters_updated", protocol.ClustersPayload{
+				Clusters: clusters,
+				Current:  current,
+			})
+			log.Printf("[Server] Broadcasted %d clusters to clients", len(clusters))
+		})
+		if err := s.k8sClient.StartWatching(); err != nil {
+			log.Printf("Warning: failed to start kubeconfig watcher: %v", err)
+		}
+	}
+
+	// Start prediction system
+	if s.predictionWorker != nil {
+		s.predictionWorker.Start()
+		log.Println("Prediction worker started")
+	}
+	if s.metricsHistory != nil {
+		s.metricsHistory.Start(10 * time.Minute)
+		log.Println("Metrics history started")
+	}
+
+	// Start device tracker
+	if s.deviceTracker != nil {
+		s.deviceTracker.Start()
+		log.Println("Device tracker started")
+	}
 
 	return http.ListenAndServe(addr, mux)
 }
@@ -1675,6 +1759,73 @@ func (s *Server) addTokenUsage(usage *ProviderTokenUsage) {
 	s.sessionTokensOut += int64(usage.OutputTokens)
 	s.todayTokensIn += int64(usage.InputTokens)
 	s.todayTokensOut += int64(usage.OutputTokens)
+
+	// Persist to disk (non-blocking)
+	go s.saveTokenUsage()
+}
+
+// tokenUsageData is persisted to disk
+type tokenUsageData struct {
+	Date      string `json:"date"`
+	InputIn   int64  `json:"inputIn"`
+	OutputOut int64  `json:"outputOut"`
+}
+
+// getTokenUsagePath returns the path to the token usage file
+func getTokenUsagePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/kc-agent-tokens.json"
+	}
+	return home + "/.kc-agent-tokens.json"
+}
+
+// loadTokenUsage loads token usage from disk on startup
+func (s *Server) loadTokenUsage() {
+	path := getTokenUsagePath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return // File doesn't exist yet
+	}
+
+	var usage tokenUsageData
+	if err := json.Unmarshal(data, &usage); err != nil {
+		log.Printf("Warning: could not parse token usage file: %v", err)
+		return
+	}
+
+	s.tokenMux.Lock()
+	defer s.tokenMux.Unlock()
+
+	// Only load if same day
+	today := time.Now().Format("2006-01-02")
+	if usage.Date == today {
+		s.todayTokensIn = usage.InputIn
+		s.todayTokensOut = usage.OutputOut
+		s.todayDate = today
+		log.Printf("Loaded token usage: %d input, %d output tokens for today", usage.InputIn, usage.OutputOut)
+	}
+}
+
+// saveTokenUsage persists token usage to disk
+func (s *Server) saveTokenUsage() {
+	s.tokenMux.RLock()
+	usage := tokenUsageData{
+		Date:      s.todayDate,
+		InputIn:   s.todayTokensIn,
+		OutputOut: s.todayTokensOut,
+	}
+	s.tokenMux.RUnlock()
+
+	data, err := json.Marshal(usage)
+	if err != nil {
+		return
+	}
+
+	path := getTokenUsagePath()
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		log.Printf("Warning: could not save token usage: %v", err)
+	}
 }
 
 // KeyStatus represents the status of an API key for a provider
@@ -2171,4 +2322,475 @@ func checkPingHealth(client *http.Client, pingURL string) string {
 	}
 	defer resp.Body.Close()
 	return "operational"
+}
+
+// =============================================================================
+// Prediction Handlers
+// =============================================================================
+
+// handlePredictionsAI returns current AI predictions
+func (s *Server) handlePredictionsAI(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.predictionWorker == nil {
+		json.NewEncoder(w).Encode(AIPredictionsResponse{
+			Predictions: []AIPrediction{},
+			Stale:       true,
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.predictionWorker.GetPredictions())
+}
+
+// handlePredictionsAnalyze triggers a manual AI analysis
+func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.predictionWorker == nil {
+		http.Error(w, "Prediction worker not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Parse optional providers from request body
+	var req AIAnalysisRequest
+	if r.Body != nil {
+		json.NewDecoder(r.Body).Decode(&req)
+	}
+
+	if s.predictionWorker.IsAnalyzing() {
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "already_running",
+		})
+		return
+	}
+
+	if err := s.predictionWorker.TriggerAnalysis(req.Providers); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":        "started",
+		"estimatedTime": "30s",
+	})
+}
+
+// PredictionFeedbackRequest represents a feedback submission
+type PredictionFeedbackRequest struct {
+	PredictionID string `json:"predictionId"`
+	Feedback     string `json:"feedback"` // "accurate" or "inaccurate"
+}
+
+// handlePredictionsFeedback handles prediction feedback submissions
+func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req PredictionFeedbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.PredictionID == "" || (req.Feedback != "accurate" && req.Feedback != "inaccurate") {
+		http.Error(w, "Invalid predictionId or feedback", http.StatusBadRequest)
+		return
+	}
+
+	// For now, just acknowledge - feedback is stored client-side
+	// In the future, this could store to a database for model improvement
+	log.Printf("[Predictions] Feedback received: %s = %s", req.PredictionID, req.Feedback)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "recorded",
+	})
+}
+
+// handlePredictionsStats returns prediction accuracy statistics
+func (s *Server) handlePredictionsStats(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Stats are calculated client-side from localStorage
+	// This endpoint is for future server-side aggregation
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"totalPredictions":   0,
+		"accurateFeedback":   0,
+		"inaccurateFeedback": 0,
+		"accuracyRate":       0.0,
+		"byProvider":         map[string]interface{}{},
+	})
+}
+
+// handleMetricsHistory returns historical metrics for trend analysis
+func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.metricsHistory == nil {
+		json.NewEncoder(w).Encode(MetricsHistoryResponse{
+			Snapshots: []MetricsSnapshot{},
+			Retention: "24h",
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.metricsHistory.GetSnapshots())
+}
+
+// handleDeviceAlerts returns current hardware device alerts
+func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		json.NewEncoder(w).Encode(DeviceAlertsResponse{
+			Alerts:    []DeviceAlert{},
+			NodeCount: 0,
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(s.deviceTracker.GetAlerts())
+}
+
+// handleDeviceAlertsClear clears a specific device alert
+func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		http.Error(w, "Device tracker not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req struct {
+		AlertID string `json:"alertId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.AlertID == "" {
+		http.Error(w, "alertId is required", http.StatusBadRequest)
+		return
+	}
+
+	cleared := s.deviceTracker.ClearAlert(req.AlertID)
+	json.NewEncoder(w).Encode(map[string]bool{"cleared": cleared})
+}
+
+func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.deviceTracker == nil {
+		json.NewEncoder(w).Encode(DeviceInventoryResponse{
+			Nodes:     []NodeDeviceInventory{},
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	response := s.deviceTracker.GetInventory()
+	json.NewEncoder(w).Encode(response)
+}
+
+// sendNativeNotification sends a native macOS notification for device alerts
+func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
+	if len(alerts) == 0 {
+		return
+	}
+
+	// Build notification message
+	var title, message string
+	if len(alerts) == 1 {
+		alert := alerts[0]
+		title = fmt.Sprintf("⚠️ Hardware Alert: %s", alert.DeviceType)
+		message = fmt.Sprintf("%s on %s/%s: %d → %d",
+			alert.DeviceType, alert.Cluster, alert.NodeName,
+			alert.PreviousCount, alert.CurrentCount)
+	} else {
+		critical := 0
+		for _, a := range alerts {
+			if a.Severity == "critical" {
+				critical++
+			}
+		}
+		title = fmt.Sprintf("⚠️ %d Hardware Alerts", len(alerts))
+		if critical > 0 {
+			message = fmt.Sprintf("%d critical, %d warning - devices have disappeared",
+				critical, len(alerts)-critical)
+		} else {
+			message = fmt.Sprintf("%d devices have disappeared from nodes", len(alerts))
+		}
+	}
+
+	// Use osascript for macOS notifications (non-blocking)
+	go func() {
+		script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`,
+			message, title)
+		cmd := exec.Command("osascript", "-e", script)
+		if err := cmd.Run(); err != nil {
+			log.Printf("[DeviceTracker] Failed to send notification: %v", err)
+		}
+	}()
+}
+
+// handleLocalClusterTools returns detected local cluster tools
+func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tools := s.localClusters.DetectTools()
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"tools": tools,
+	})
+}
+
+// handleLocalClusters handles local cluster operations (list, create, delete)
+func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		// List all local clusters
+		clusters := s.localClusters.ListClusters()
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"clusters": clusters,
+		})
+
+	case "POST":
+		// Create a new cluster
+		var req struct {
+			Tool string `json:"tool"`
+			Name string `json:"name"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		if req.Tool == "" || req.Name == "" {
+			http.Error(w, "tool and name are required", http.StatusBadRequest)
+			return
+		}
+
+		// Create cluster in background and return immediately
+		go func() {
+			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
+				log.Printf("[LocalClusters] Failed to create cluster %s with %s: %v", req.Name, req.Tool, err)
+				s.BroadcastToClients("local_cluster_error", map[string]string{
+					"tool":  req.Tool,
+					"name":  req.Name,
+					"error": err.Error(),
+				})
+			} else {
+				log.Printf("[LocalClusters] Created cluster %s with %s", req.Name, req.Tool)
+				s.BroadcastToClients("local_cluster_created", map[string]string{
+					"tool": req.Tool,
+					"name": req.Name,
+				})
+				// Kubeconfig watcher will automatically pick up the new cluster
+			}
+		}()
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "creating",
+			"tool":    req.Tool,
+			"name":    req.Name,
+			"message": "Cluster creation started. You will be notified when it completes.",
+		})
+
+	case "DELETE":
+		// Delete a cluster
+		tool := r.URL.Query().Get("tool")
+		name := r.URL.Query().Get("name")
+		if tool == "" || name == "" {
+			http.Error(w, "tool and name query parameters are required", http.StatusBadRequest)
+			return
+		}
+
+		// Delete cluster in background
+		go func() {
+			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
+				log.Printf("[LocalClusters] Failed to delete cluster %s: %v", name, err)
+				s.BroadcastToClients("local_cluster_error", map[string]string{
+					"tool":  tool,
+					"name":  name,
+					"error": err.Error(),
+				})
+			} else {
+				log.Printf("[LocalClusters] Deleted cluster %s", name)
+				s.BroadcastToClients("local_cluster_deleted", map[string]string{
+					"tool": tool,
+					"name": name,
+				})
+				// Kubeconfig watcher will automatically pick up the change
+			}
+		}()
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "deleting",
+			"tool":    tool,
+			"name":    name,
+			"message": "Cluster deletion started. You will be notified when it completes.",
+		})
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }

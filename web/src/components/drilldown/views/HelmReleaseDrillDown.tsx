@@ -56,6 +56,15 @@ interface HelmHistory {
   description: string
 }
 
+interface HelmHistoryRaw {
+  revision: number
+  updated: string
+  status: string
+  chart: string
+  app_version: string
+  description: string
+}
+
 export function HelmReleaseDrillDown({ data }: Props) {
   const cluster = data.cluster as string
   const namespace = data.namespace as string
@@ -191,7 +200,7 @@ export function HelmReleaseDrillDown({ data }: Props) {
       const output = await runHelm(['history', releaseName, '-n', namespace, '-o', 'json'])
       if (output) {
         const history = JSON.parse(output)
-        setReleaseHistory(history.map((h: any) => ({
+        setReleaseHistory(history.map((h: HelmHistoryRaw) => ({
           revision: h.revision,
           updated: h.updated,
           status: h.status,

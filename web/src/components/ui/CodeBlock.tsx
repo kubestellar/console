@@ -2,7 +2,7 @@
  * Lightweight code block component
  * Replaces react-syntax-highlighter to reduce bundle size (saves ~612KB)
  */
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Copy, Check } from 'lucide-react'
 
 interface CodeBlockProps {
@@ -13,16 +13,26 @@ interface CodeBlockProps {
 
 export function CodeBlock({ children, language = 'text', fontSize = 'sm' }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<number>()
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(children)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      timeoutRef.current = setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
     }
   }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <div className="relative group">

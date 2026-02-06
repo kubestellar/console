@@ -9,7 +9,10 @@ import { SyncDialog } from './SyncDialog'
 import { api } from '../../lib/api'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { getDefaultCards } from '../../config/dashboards'
+import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
+import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 
 // GitOps app configuration (repos to monitor)
 interface GitOpsAppConfig {
@@ -45,13 +48,7 @@ interface DriftResult {
 const GITOPS_STORAGE_KEY = 'kubestellar-gitops-dashboard-cards'
 
 // Default cards for the GitOps dashboard
-const DEFAULT_GITOPS_CARDS = [
-  { type: 'argocd_applications', title: 'ArgoCD Applications', position: { w: 6, h: 4 } },
-  { type: 'argocd_sync_status', title: 'ArgoCD Sync Status', position: { w: 6, h: 3 } },
-  { type: 'helm_release_status', title: 'Helm Releases', position: { w: 6, h: 3 } },
-  { type: 'kustomization_status', title: 'Kustomization Status', position: { w: 6, h: 3 } },
-  { type: 'gitops_drift', title: 'GitOps Drift', position: { w: 6, h: 3 } },
-]
+const DEFAULT_GITOPS_CARDS = getDefaultCards('gitops')
 
 // Apps to monitor - these could come from a config file or API
 function getGitOpsAppConfigs(): GitOpsAppConfig[] {
@@ -320,7 +317,11 @@ export function GitOps() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <StatusIndicator status={healthStatusIndicator(app.healthStatus)} size="lg" />
+                  <PortalTooltip content={STATUS_TOOLTIPS[healthStatusIndicator(app.healthStatus)]}>
+                    <span>
+                      <StatusIndicator status={healthStatusIndicator(app.healthStatus)} size="lg" />
+                    </span>
+                  </PortalTooltip>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-foreground">{app.name}</span>

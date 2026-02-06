@@ -5,13 +5,22 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import { CardSearchInput } from '../../../lib/cards'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+
+const SORT_OPTIONS = [
+  { value: 'state', label: 'State' },
+  { value: 'name', label: 'Name' },
+  { value: 'type', label: 'Type' },
+  { value: 'duration', label: 'Duration' },
+]
 
 interface ProwCIMonitorProps {
   config?: Record<string, unknown>
@@ -79,7 +88,9 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
+    setItemsPerPage,
     filters,
+    sorting,
   } = useCardData(jobs, {
     filter: {
       searchFields: ['name', 'state', 'type', 'cluster'] as (keyof typeof jobs[0])[],
@@ -220,16 +231,26 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-2">
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search jobs..."
-          className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+      {/* Controls row */}
+      <div className="flex items-center justify-end mb-2">
+        <CardControls
+          limit={itemsPerPage}
+          onLimitChange={setItemsPerPage}
+          sortBy={sorting.sortBy}
+          sortOptions={SORT_OPTIONS}
+          onSortChange={(v) => sorting.setSortBy(v as SortField)}
+          sortDirection={sorting.sortDirection}
+          onSortDirectionChange={sorting.setSortDirection}
         />
       </div>
+
+      {/* Search */}
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search jobs..."
+        className="mb-2"
+      />
 
       {/* Job list */}
       <div className="flex-1 overflow-y-auto space-y-0.5">

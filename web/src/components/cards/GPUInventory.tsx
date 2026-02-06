@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { Cpu, Server, ChevronRight, Filter, ChevronDown } from 'lucide-react'
+import { Cpu, Server, ChevronRight } from 'lucide-react'
 import { useGPUNodes } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { CardClusterFilter } from '../../lib/cards'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
@@ -160,52 +160,16 @@ export function GPUInventory({ config }: GPUInventoryProps) {
           )}
 
           {/* Cluster filter dropdown */}
-          {filters.availableClusters.length >= 1 && (
-            <div ref={filters.clusterFilterRef} className="relative">
-              <button
-                ref={filters.clusterFilterBtnRef}
-                onClick={() => filters.setShowClusterFilter(!filters.showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  filters.localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {filters.showClusterFilter && filters.dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: filters.dropdownStyle.top, left: filters.dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button
-                      onClick={filters.clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        filters.localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {filters.availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => filters.toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          filters.localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
+          <CardClusterFilter
+            availableClusters={filters.availableClusters}
+            selectedClusters={filters.localClusterFilter}
+            onToggle={filters.toggleClusterFilter}
+            onClear={filters.clearClusterFilter}
+            isOpen={filters.showClusterFilter}
+            setIsOpen={filters.setShowClusterFilter}
+            containerRef={filters.clusterFilterRef}
+            minClusters={1}
+          />
 
           <CardControls
             limit={itemsPerPage}

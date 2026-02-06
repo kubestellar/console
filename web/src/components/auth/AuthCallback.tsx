@@ -43,7 +43,6 @@ export function AuthCallback() {
 
       refreshUser(token).then(() => {
         clearTimeout(timeoutId)
-        console.log('[AuthCallback] User refreshed, navigating', { onboarded, destination })
         navigate(destination)
       }).catch((err) => {
         clearTimeout(timeoutId)

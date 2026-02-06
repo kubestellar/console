@@ -146,21 +146,32 @@ type DeploymentIssue struct {
 	Message       string `json:"message,omitempty"`
 }
 
-// GPUNode represents a node with GPU resources
+// AcceleratorType represents the category of accelerator (GPU, TPU, AIU, XPU)
+type AcceleratorType string
+
+const (
+	AcceleratorGPU AcceleratorType = "GPU"
+	AcceleratorTPU AcceleratorType = "TPU"
+	AcceleratorAIU AcceleratorType = "AIU" // Intel Gaudi
+	AcceleratorXPU AcceleratorType = "XPU" // Intel XPU
+)
+
+// GPUNode represents a node with accelerator resources (GPU, TPU, AIU, XPU)
 type GPUNode struct {
-	Name         string `json:"name"`
-	Cluster      string `json:"cluster"`
-	GPUType      string `json:"gpuType"`
-	GPUCount     int    `json:"gpuCount"`
-	GPUAllocated int    `json:"gpuAllocated"`
+	Name            string          `json:"name"`
+	Cluster         string          `json:"cluster"`
+	GPUType         string          `json:"gpuType"`                   // Display name of accelerator (e.g., "NVIDIA A100", "Intel Gaudi2")
+	GPUCount        int             `json:"gpuCount"`                  // Number of accelerators
+	GPUAllocated    int             `json:"gpuAllocated"`              // Number of allocated accelerators
+	AcceleratorType AcceleratorType `json:"acceleratorType,omitempty"` // GPU, TPU, AIU, or XPU
 	// Enhanced GPU info from NVIDIA GPU Feature Discovery
-	GPUMemoryMB      int    `json:"gpuMemoryMB,omitempty"`      // GPU memory in MB
-	GPUFamily        string `json:"gpuFamily,omitempty"`        // GPU architecture family (e.g., ampere, hopper)
-	CUDADriverVersion string `json:"cudaDriverVersion,omitempty"` // CUDA driver version
+	GPUMemoryMB        int    `json:"gpuMemoryMB,omitempty"`        // GPU memory in MB
+	GPUFamily          string `json:"gpuFamily,omitempty"`          // GPU architecture family (e.g., ampere, hopper)
+	CUDADriverVersion  string `json:"cudaDriverVersion,omitempty"`  // CUDA driver version
 	CUDARuntimeVersion string `json:"cudaRuntimeVersion,omitempty"` // CUDA runtime version
-	MIGCapable       bool   `json:"migCapable,omitempty"`       // Whether MIG is supported
-	MIGStrategy      string `json:"migStrategy,omitempty"`      // MIG strategy if enabled
-	Manufacturer     string `json:"manufacturer,omitempty"`     // GPU manufacturer (NVIDIA, AMD, Intel)
+	MIGCapable         bool   `json:"migCapable,omitempty"`         // Whether MIG is supported
+	MIGStrategy        string `json:"migStrategy,omitempty"`        // MIG strategy if enabled
+	Manufacturer       string `json:"manufacturer,omitempty"`       // Manufacturer (NVIDIA, AMD, Intel, Google)
 }
 
 // NodeCondition represents a node condition status
@@ -189,6 +200,9 @@ type NodeInfo struct {
 	PodCapacity       string            `json:"podCapacity"`
 	GPUCount          int               `json:"gpuCount"`
 	GPUType           string            `json:"gpuType,omitempty"`
+	NICCount          int               `json:"nicCount,omitempty"`          // Network interface count (from NFD)
+	NVMECount         int               `json:"nvmeCount,omitempty"`         // NVME device count (from NFD)
+	InfiniBandCount   int               `json:"infinibandCount,omitempty"`   // InfiniBand HCA count
 	Conditions        []NodeCondition   `json:"conditions"`
 	Labels            map[string]string `json:"labels,omitempty"`
 	Taints            []string          `json:"taints,omitempty"`
@@ -1326,10 +1340,14 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 		return nil, err
 	}
 
-	// Fetch all pods once upfront to calculate GPU allocations per node
+	// Fetch all pods once upfront to calculate accelerator allocations per node
 	// This is much faster than querying pods per-node for large clusters
 	allPods, _ := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	gpuAllocationByNode := make(map[string]int)
+	// Track allocations by node and accelerator type
+	gpuAllocationByNode := make(map[string]int)   // GPU allocations
+	tpuAllocationByNode := make(map[string]int)   // TPU allocations
+	aiuAllocationByNode := make(map[string]int)   // AIU (Gaudi) allocations
+	xpuAllocationByNode := make(map[string]int)   // XPU allocations
 	if allPods != nil {
 		for _, pod := range allPods.Items {
 			nodeName := pod.Spec.NodeName
@@ -1337,7 +1355,7 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 				continue
 			}
 			for _, container := range pod.Spec.Containers {
-				// Check GPU requests
+				// Check GPU requests (NVIDIA, AMD, Intel)
 				if gpuReq, ok := container.Resources.Requests["nvidia.com/gpu"]; ok {
 					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
 				}
@@ -1347,55 +1365,144 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 				if gpuReq, ok := container.Resources.Requests["gpu.intel.com/i915"]; ok {
 					gpuAllocationByNode[nodeName] += int(gpuReq.Value())
 				}
+				// Check TPU requests (Google Cloud)
+				if tpuReq, ok := container.Resources.Requests["google.com/tpu"]; ok {
+					tpuAllocationByNode[nodeName] += int(tpuReq.Value())
+				}
+				// Check AIU requests (Intel Gaudi / Habana)
+				if aiuReq, ok := container.Resources.Requests["habana.ai/gaudi"]; ok {
+					aiuAllocationByNode[nodeName] += int(aiuReq.Value())
+				}
+				if aiuReq, ok := container.Resources.Requests["habana.ai/gaudi2"]; ok {
+					aiuAllocationByNode[nodeName] += int(aiuReq.Value())
+				}
+				if aiuReq, ok := container.Resources.Requests["intel.com/gaudi"]; ok {
+					aiuAllocationByNode[nodeName] += int(aiuReq.Value())
+				}
+				// Check XPU requests (Intel)
+				if xpuReq, ok := container.Resources.Requests["intel.com/xpu"]; ok {
+					xpuAllocationByNode[nodeName] += int(xpuReq.Value())
+				}
+				// Check IBM AIU requests
+				if aiuReq, ok := container.Resources.Requests["ibm.com/aiu"]; ok {
+					aiuAllocationByNode[nodeName] += int(aiuReq.Value())
+				}
 			}
 		}
 	}
 
 	var gpuNodes []GPUNode
 	for _, node := range nodes.Items {
-		// Check for nvidia.com/gpu in allocatable resources
-		gpuQuantity, hasNvidiaGPU := node.Status.Allocatable["nvidia.com/gpu"]
-		// Also check for AMD GPUs
-		amdGPUQuantity, hasAMDGPU := node.Status.Allocatable["amd.com/gpu"]
-		// Check for Intel GPUs
-		intelGPUQuantity, hasIntelGPU := node.Status.Allocatable["gpu.intel.com/i915"]
+		// Check for various accelerator types in allocatable resources
+		// GPUs
+		nvidiaGPUQty, hasNvidiaGPU := node.Status.Allocatable["nvidia.com/gpu"]
+		amdGPUQty, hasAMDGPU := node.Status.Allocatable["amd.com/gpu"]
+		intelGPUQty, hasIntelGPU := node.Status.Allocatable["gpu.intel.com/i915"]
+		// TPUs (Google Cloud)
+		tpuQty, hasTPU := node.Status.Allocatable["google.com/tpu"]
+		// AIUs (Intel Gaudi / Habana)
+		gaudiQty, hasGaudi := node.Status.Allocatable["habana.ai/gaudi"]
+		gaudi2Qty, hasGaudi2 := node.Status.Allocatable["habana.ai/gaudi2"]
+		intelGaudiQty, hasIntelGaudi := node.Status.Allocatable["intel.com/gaudi"]
+		// XPUs (Intel)
+		xpuQty, hasXPU := node.Status.Allocatable["intel.com/xpu"]
+		// AIUs (IBM)
+		ibmAIUQty, hasIBMAIU := node.Status.Allocatable["ibm.com/aiu"]
 
-		if !hasNvidiaGPU && !hasAMDGPU && !hasIntelGPU {
+		hasAnyAccelerator := hasNvidiaGPU || hasAMDGPU || hasIntelGPU || hasTPU || hasGaudi || hasGaudi2 || hasIntelGaudi || hasXPU || hasIBMAIU
+		if !hasAnyAccelerator {
 			continue
 		}
 
-		var gpuCount int
+		var deviceCount int
 		var manufacturer string
-		var gpuType string
+		var deviceType string
+		var accelType AcceleratorType
 
-		if hasNvidiaGPU && gpuQuantity.Value() > 0 {
-			gpuCount = int(gpuQuantity.Value())
+		// Check GPUs first
+		if hasNvidiaGPU && nvidiaGPUQty.Value() > 0 {
+			deviceCount = int(nvidiaGPUQty.Value())
 			manufacturer = "NVIDIA"
+			accelType = AcceleratorGPU
 			// Get GPU type from NVIDIA GPU Feature Discovery labels
 			if label, ok := node.Labels["nvidia.com/gpu.product"]; ok {
-				gpuType = label
+				deviceType = label
 			} else if label, ok := node.Labels["accelerator"]; ok {
-				gpuType = label
+				deviceType = label
 			} else {
-				gpuType = "NVIDIA GPU"
+				deviceType = "NVIDIA GPU"
 			}
-		} else if hasAMDGPU && amdGPUQuantity.Value() > 0 {
-			gpuCount = int(amdGPUQuantity.Value())
+		} else if hasAMDGPU && amdGPUQty.Value() > 0 {
+			deviceCount = int(amdGPUQty.Value())
 			manufacturer = "AMD"
+			accelType = AcceleratorGPU
 			if label, ok := node.Labels["amd.com/gpu.product"]; ok {
-				gpuType = label
+				deviceType = label
 			} else {
-				gpuType = "AMD GPU"
+				deviceType = "AMD GPU"
 			}
-		} else if hasIntelGPU && intelGPUQuantity.Value() > 0 {
-			gpuCount = int(intelGPUQuantity.Value())
+		} else if hasIntelGPU && intelGPUQty.Value() > 0 {
+			deviceCount = int(intelGPUQty.Value())
 			manufacturer = "Intel"
-			gpuType = "Intel GPU"
+			accelType = AcceleratorGPU
+			deviceType = "Intel GPU"
+		} else if hasTPU && tpuQty.Value() > 0 {
+			// Google TPU
+			deviceCount = int(tpuQty.Value())
+			manufacturer = "Google"
+			accelType = AcceleratorTPU
+			// Get TPU type from labels if available
+			if label, ok := node.Labels["cloud.google.com/gke-tpu-accelerator"]; ok {
+				deviceType = label
+			} else if label, ok := node.Labels["cloud.google.com/gke-tpu-topology"]; ok {
+				deviceType = "TPU " + label
+			} else {
+				deviceType = "Google TPU"
+			}
+		} else if (hasGaudi && gaudiQty.Value() > 0) || (hasGaudi2 && gaudi2Qty.Value() > 0) || (hasIntelGaudi && intelGaudiQty.Value() > 0) {
+			// Intel Gaudi accelerators (formerly Habana Labs) - these are GPUs
+			manufacturer = "Intel"
+			accelType = AcceleratorGPU // Gaudi is classified as GPU-class accelerator
+			if hasGaudi2 && gaudi2Qty.Value() > 0 {
+				deviceCount = int(gaudi2Qty.Value())
+				deviceType = "Intel Gaudi2"
+			} else if hasGaudi && gaudiQty.Value() > 0 {
+				deviceCount = int(gaudiQty.Value())
+				deviceType = "Intel Gaudi"
+			} else if hasIntelGaudi && intelGaudiQty.Value() > 0 {
+				deviceCount = int(intelGaudiQty.Value())
+				// Check for Gaudi generation from labels
+				if label, ok := node.Labels["intel.com/gaudi.product"]; ok {
+					deviceType = label
+				} else {
+					deviceType = "Intel Gaudi"
+				}
+			}
+		} else if hasXPU && xpuQty.Value() > 0 {
+			// Intel XPU
+			deviceCount = int(xpuQty.Value())
+			manufacturer = "Intel"
+			accelType = AcceleratorXPU
+			if label, ok := node.Labels["intel.com/xpu.product"]; ok {
+				deviceType = label
+			} else {
+				deviceType = "Intel XPU"
+			}
+		} else if hasIBMAIU && ibmAIUQty.Value() > 0 {
+			// IBM AIU (Artificial Intelligence Unit)
+			deviceCount = int(ibmAIUQty.Value())
+			manufacturer = "IBM"
+			accelType = AcceleratorAIU
+			if label, ok := node.Labels["ibm.com/aiu.product"]; ok {
+				deviceType = label
+			} else {
+				deviceType = "IBM AIU"
+			}
 		} else {
 			continue
 		}
 
-		if gpuCount == 0 {
+		if deviceCount == 0 {
 			continue
 		}
 
@@ -1451,15 +1558,26 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 			migStrategy = strategyLabel
 		}
 
-		// Get allocated GPUs from pre-computed map
-		allocated := gpuAllocationByNode[node.Name]
+		// Get allocated accelerators from pre-computed map based on type
+		var allocated int
+		switch accelType {
+		case AcceleratorGPU:
+			allocated = gpuAllocationByNode[node.Name]
+		case AcceleratorTPU:
+			allocated = tpuAllocationByNode[node.Name]
+		case AcceleratorAIU:
+			allocated = aiuAllocationByNode[node.Name]
+		case AcceleratorXPU:
+			allocated = xpuAllocationByNode[node.Name]
+		}
 
 		gpuNodes = append(gpuNodes, GPUNode{
 			Name:               node.Name,
 			Cluster:            contextName,
-			GPUType:            gpuType,
-			GPUCount:           gpuCount,
+			GPUType:            deviceType,
+			GPUCount:           deviceCount,
 			GPUAllocated:       allocated,
+			AcceleratorType:    accelType,
 			GPUMemoryMB:        gpuMemoryMB,
 			GPUFamily:          gpuFamily,
 			CUDADriverVersion:  cudaDriverVersion,
@@ -1549,6 +1667,44 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 		} else if gpu, ok := node.Status.Allocatable["gpu.intel.com/i915"]; ok {
 			info.GPUCount = int(gpu.Value())
 			info.GPUType = "Intel GPU"
+		}
+
+		// Get NIC/InfiniBand count from allocatable resources and labels
+		// Check for Mellanox InfiniBand HCAs (common on HGX systems)
+		for key, val := range node.Status.Allocatable {
+			keyStr := string(key)
+			if strings.HasPrefix(keyStr, "rdma/") || strings.Contains(keyStr, "hca") {
+				info.InfiniBandCount += int(val.Value())
+			}
+			// NVIDIA ConnectX NICs
+			if strings.Contains(keyStr, "mellanox") || strings.Contains(keyStr, "connectx") {
+				info.NICCount += int(val.Value())
+			}
+		}
+		// Fallback: count from NFD labels (feature.node.kubernetes.io/pci-15b3.present = Mellanox)
+		if info.InfiniBandCount == 0 {
+			for key := range node.Labels {
+				if strings.Contains(key, "pci-15b3") || strings.Contains(key, "infiniband") {
+					info.InfiniBandCount = 1 // At least one present
+					break
+				}
+			}
+		}
+
+		// Get NVME count from NFD labels or allocatable resources
+		for key := range node.Labels {
+			if strings.Contains(key, "nvme") && strings.Contains(key, "present") {
+				info.NVMECount = 1 // NFD marks presence, count from capacity if available
+				break
+			}
+		}
+		// Check allocatable for explicit NVME count (some device plugins expose this)
+		for key, val := range node.Status.Allocatable {
+			keyStr := string(key)
+			if strings.Contains(keyStr, "nvme") {
+				info.NVMECount = int(val.Value())
+				break
+			}
 		}
 
 		// Get conditions

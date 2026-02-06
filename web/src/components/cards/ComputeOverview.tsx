@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { Cpu, MemoryStick, Zap, Server, Box, Filter, ChevronDown } from 'lucide-react'
+import { Cpu, MemoryStick, Zap, Server, Box, Activity } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { formatStat, formatMemoryStat } from '../../lib/formatStats'
-import { useChartFilters } from '../../lib/cards'
+import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 
 export function ComputeOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -23,10 +23,6 @@ export function ComputeOverview() {
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
-
-    clusterFilterBtnRef,
-
-    dropdownStyle,
   } = useChartFilters({
     storageKey: 'compute-overview',
   })
@@ -74,6 +70,11 @@ export function ComputeOverview() {
       gpuTypes.set(type, (gpuTypes.get(type) || 0) + n.gpuCount)
     })
 
+    // Calculate cluster health stats
+    const healthyClusters = filteredClusters.filter(c => c.healthy && c.reachable !== false).length
+    const degradedClusters = filteredClusters.filter(c => !c.healthy && c.reachable !== false).length
+    const offlineClusters = filteredClusters.filter(c => c.reachable === false).length
+
     return {
       totalCPUs,
       totalMemoryGB,
@@ -85,6 +86,9 @@ export function ComputeOverview() {
       gpuUtilization,
       gpuTypes: Array.from(gpuTypes.entries()).sort((a, b) => b[1] - a[1]),
       clustersWithGPU: new Set(filteredGPUNodes.map(n => n.cluster.split('/')[0])).size,
+      healthyClusters,
+      degradedClusters,
+      offlineClusters,
     }
   }, [filteredClusters, filteredGPUNodes])
 
@@ -117,6 +121,32 @@ export function ComputeOverview() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Health Indicator */}
+      {filteredClusters.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
+          <Activity className="w-3 h-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          {stats.healthyClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="healthy" size="sm" />
+              <span className="text-green-400">{stats.healthyClusters} healthy</span>
+            </span>
+          )}
+          {stats.degradedClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="degraded" size="sm" />
+              <span className="text-orange-400">{stats.degradedClusters} degraded</span>
+            </span>
+          )}
+          {stats.offlineClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="unreachable-timeout" size="sm" />
+              <span className="text-yellow-400">{stats.offlineClusters} offline</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex items-center justify-end mb-4">
         <div className="flex items-center gap-2">
@@ -129,52 +159,16 @@ export function ComputeOverview() {
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                ref={clusterFilterBtnRef}
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
+          <CardClusterFilter
+            availableClusters={availableClusters}
+            selectedClusters={localClusterFilter}
+            onToggle={toggleClusterFilter}
+            onClear={clearClusterFilter}
+            isOpen={showClusterFilter}
+            setIsOpen={setShowClusterFilter}
+            containerRef={clusterFilterRef}
+            minClusters={1}
+          />
 
         </div>
       </div>

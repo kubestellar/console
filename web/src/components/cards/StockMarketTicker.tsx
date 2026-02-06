@@ -20,6 +20,17 @@ interface StockSearchResult {
   currency: string
 }
 
+// Raw search result from Yahoo Finance API
+interface YahooSearchQuote {
+  symbol: string
+  longname?: string
+  shortname?: string
+  quoteType: string
+  exchDisp?: string
+  exchange?: string
+  currency?: string
+}
+
 // Saved stock interface
 interface SavedStock {
   symbol: string
@@ -45,6 +56,24 @@ interface StockData {
   week52Low: number
   sparklineData: number[]
   lastUpdated: Date
+}
+
+// Raw stock data from Yahoo Finance API
+interface YahooQuoteResponse {
+  regularMarketPrice?: number
+  regularMarketChange?: number
+  regularMarketChangePercent?: number
+  regularMarketOpen?: number
+  regularMarketDayHigh?: number
+  regularMarketDayLow?: number
+  regularMarketVolume?: number
+  marketCap?: number
+  fiftyTwoWeekHigh?: number
+  fiftyTwoWeekLow?: number
+  displayName?: string
+  longName?: string
+  shortName?: string
+  symbol: string
 }
 
 // Config interface
@@ -98,7 +127,7 @@ async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {
     const data = await response.json()
     const quotes = data.quoteResponse?.result || []
 
-    return quotes.map((quote: any) => {
+    return quotes.map((quote: YahooQuoteResponse) => {
       // Generate sparkline from recent price changes (mock for now, would need historical API)
       const currentPrice = quote.regularMarketPrice || 0
       const change = quote.regularMarketChange || 0
@@ -193,8 +222,8 @@ async function searchStocks(query: string): Promise<StockSearchResult[]> {
     const quotes = data.quotes || []
 
     return quotes
-      .filter((q: any) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
-      .map((q: any) => ({
+      .filter((q: YahooSearchQuote) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
+      .map((q: YahooSearchQuote) => ({
         symbol: q.symbol,
         name: q.longname || q.shortname || q.symbol,
         type: q.quoteType,

@@ -3,6 +3,10 @@ import { Stethoscope, Wrench, Wand2 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import type { ResourceContext, AIAction, MissionType } from '../types/modal.types'
 
+// Name truncation constants for mission titles
+const MAX_NAME_LENGTH = 30 // Maximum length before truncation
+const TRUNCATED_NAME_LENGTH = 27 // Length to truncate to (leaves room for "...")
+
 interface UseModalAIOptions {
   /** The resource being viewed in the modal */
   resource: ResourceContext
@@ -154,7 +158,7 @@ After I approve, help me execute the repairs step by step.`
       if (action.disabled) return
 
       const { kind, name, namespace, cluster } = resource
-      const shortName = name.length > 30 ? name.slice(0, 27) + '...' : name
+      const shortName = name.length > MAX_NAME_LENGTH ? name.slice(0, TRUNCATED_NAME_LENGTH) + '...' : name
 
       startMission({
         title: `${action.label} ${shortName}`,
@@ -178,7 +182,7 @@ After I approve, help me execute the repairs step by step.`
   const startCustomMission = useCallback(
     (prompt: string) => {
       const { kind, name, namespace, cluster } = resource
-      const shortName = name.length > 30 ? name.slice(0, 27) + '...' : name
+      const shortName = name.length > MAX_NAME_LENGTH ? name.slice(0, TRUNCATED_NAME_LENGTH) + '...' : name
 
       startMission({
         title: `Question about ${shortName}`,

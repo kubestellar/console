@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Dark background -->
+  <rect width="512" height="512" rx="80" fill="#0f172a"/>
+
+  <!-- KubeStellar logo centered with padding -->
+  <image x="56" y="56" width="400" height="400" xlink:href="/kubestellar-logo.svg"/>
+</svg>

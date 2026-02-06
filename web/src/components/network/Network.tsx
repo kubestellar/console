@@ -5,16 +5,13 @@ import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useU
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { getDefaultCards } from '../../config/dashboards'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
 // Default cards for the network dashboard
-const DEFAULT_NETWORK_CARDS = [
-  { type: 'network_overview', title: 'Network Overview', position: { w: 4, h: 3 } },
-  { type: 'service_status', title: 'Service Status', position: { w: 8, h: 3 } },
-  { type: 'cluster_network', title: 'Cluster Network', position: { w: 6, h: 2 } },
-]
+const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()
@@ -40,20 +37,29 @@ export function Network() {
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const drillToFirstService = () => {
       if (filteredServices.length > 0 && filteredServices[0]) {
-        drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
+        const svc = filteredServices[0]
+        if (svc?.cluster && svc?.namespace) {
+          drillToService(svc.cluster, svc.namespace, svc.name)
+        }
       }
     }
     const drillToLoadBalancer = () => {
       const svc = filteredServices.find(s => s.type === 'LoadBalancer')
-      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+      if (svc?.cluster && svc?.namespace) {
+        drillToService(svc.cluster, svc.namespace, svc.name)
+      }
     }
     const drillToNodePort = () => {
       const svc = filteredServices.find(s => s.type === 'NodePort')
-      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+      if (svc?.cluster && svc?.namespace) {
+        drillToService(svc.cluster, svc.namespace, svc.name)
+      }
     }
     const drillToClusterIP = () => {
       const svc = filteredServices.find(s => s.type === 'ClusterIP')
-      if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+      if (svc?.cluster && svc?.namespace) {
+        drillToService(svc.cluster, svc.namespace, svc.name)
+      }
     }
 
     switch (blockId) {

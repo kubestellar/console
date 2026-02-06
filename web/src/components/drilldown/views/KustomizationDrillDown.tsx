@@ -47,7 +47,20 @@ interface AppliedResource {
   apiVersion?: string
 }
 
+interface InventoryEntryRaw {
+  id?: string
+  v?: string
+}
+
 interface Condition {
+  type: string
+  status: string
+  reason?: string
+  message?: string
+  lastTransitionTime?: string
+}
+
+interface ConditionRaw {
   type: string
   status: string
   reason?: string
@@ -158,7 +171,7 @@ export function KustomizationDrillDown({ data }: Props) {
         const ks = JSON.parse(output)
         // Get applied resources from inventory
         const inventory = ks.status?.inventory?.entries || []
-        setAppliedResources(inventory.map((entry: any) => {
+        setAppliedResources(inventory.map((entry: InventoryEntryRaw) => {
           // Parse inventory entry format: namespace_name_group_kind
           const parts = entry.id?.split('_') || []
           return {
@@ -171,7 +184,7 @@ export function KustomizationDrillDown({ data }: Props) {
 
         // Get conditions
         const conds = ks.status?.conditions || []
-        setConditions(conds.map((c: any) => ({
+        setConditions(conds.map((c: ConditionRaw) => ({
           type: c.type,
           status: c.status,
           reason: c.reason,

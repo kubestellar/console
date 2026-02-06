@@ -56,18 +56,25 @@ export default {
           '51%': { transform: 'translateY(-100%)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        // GPU-accelerated spin animations using translate3d to force compositing
+        'spin': {
+          from: { transform: 'rotate(0deg) translateZ(0)' },
+          to: { transform: 'rotate(360deg) translateZ(0)' },
+        },
         'spin-slow': {
-          from: { transform: 'rotate(0deg)' },
-          to: { transform: 'rotate(360deg)' },
+          from: { transform: 'rotate(0deg) translateZ(0)' },
+          to: { transform: 'rotate(360deg) translateZ(0)' },
         },
         'spin-slower': {
-          from: { transform: 'rotate(360deg)' },
-          to: { transform: 'rotate(0deg)' },
+          from: { transform: 'rotate(360deg) translateZ(0)' },
+          to: { transform: 'rotate(0deg) translateZ(0)' },
         },
       },
       animation: {
         'roll-up': 'roll-up 0.3s ease-in-out',
         'roll-down': 'roll-down 0.3s ease-in-out',
+        // Override Tailwind's default spin with GPU-accelerated version
+        'spin': 'spin 1s linear infinite',
         'spin-slow': 'spin-slow 20s linear infinite',
         'spin-slower': 'spin-slower 30s linear infinite',
       },

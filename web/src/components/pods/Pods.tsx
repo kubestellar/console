@@ -9,17 +9,15 @@ import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
+import { getDefaultCards } from '../../config/dashboards'
+import { TechnicalAcronym, STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
+import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 
 const PODS_CARDS_KEY = 'kubestellar-pods-cards'
 
 // Default cards for the pods dashboard
-const DEFAULT_POD_CARDS = [
-  { type: 'pod_issues', title: 'Pod Issues', position: { w: 6, h: 2 } },
-  { type: 'pod_health_trend', title: 'Pod Health Trend', position: { w: 6, h: 2 } },
-  { type: 'top_pods', title: 'Top Pods', position: { w: 6, h: 2 } },
-  { type: 'app_status', title: 'Workload Status', position: { w: 6, h: 2 } },
-]
+const DEFAULT_POD_CARDS = getDefaultCards('pods')
 
 export function Pods() {
   // Use cached hooks for stale-while-revalidate pattern
@@ -36,6 +34,7 @@ export function Pods() {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
     customFilter,
+    filterByCluster,
   } = useGlobalFilters()
 
   // Combined loading/refreshing states
@@ -45,14 +44,10 @@ export function Pods() {
 
   // Filter pod issues by global cluster selection
   const filteredPodIssues = useMemo(() => {
-    let filtered = podIssues
+    // Apply cluster filtering using the built-in helper
+    let filtered = filterByCluster(podIssues)
 
-    if (!isAllClustersSelected) {
-      filtered = filtered.filter(issue =>
-        issue.cluster && globalSelectedClusters.includes(issue.cluster)
-      )
-    }
-
+    // Apply custom text filtering
     if (customFilter.trim()) {
       const query = customFilter.toLowerCase()
       filtered = filtered.filter(issue =>
@@ -64,7 +59,7 @@ export function Pods() {
     }
 
     return filtered
-  }, [podIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [podIssues, filterByCluster, customFilter])
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -159,7 +154,7 @@ export function Pods() {
           {filteredPodIssues.map((issue, i) => (
             <div
               key={i}
-              onClick={() => drillToPod(issue.cluster || '', issue.namespace, issue.name)}
+              onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name)}
               className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${
                 issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'border-l-red-500' :
                 issue.reason === 'Pending' || issue.reason === 'ContainerCreating' ? 'border-l-yellow-500' :
@@ -168,10 +163,19 @@ export function Pods() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <StatusIndicator
-                    status={issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning'}
-                    size="lg"
-                  />
+                  {(() => {
+                    const status = issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'error' : 'warning';
+                    return (
+                      <PortalTooltip content={STATUS_TOOLTIPS[status]}>
+                        <span>
+                          <StatusIndicator
+                            status={status}
+                            size="lg"
+                          />
+                        </span>
+                      </PortalTooltip>
+                    );
+                  })()}
                   <div>
                     <h3 className="font-semibold text-foreground">{issue.name}</h3>
                     <div className="flex items-center gap-2">
@@ -183,7 +187,13 @@ export function Pods() {
 
                 <div className="flex items-center gap-6">
                   <div className="text-right">
-                    <div className="text-sm font-medium text-orange-400">{issue.reason || 'Unknown'}</div>
+                    <div className="text-sm font-medium text-orange-400">
+                      {issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? (
+                        <TechnicalAcronym term={issue.reason}>{issue.reason}</TechnicalAcronym>
+                      ) : (
+                        issue.reason || 'Unknown'
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">{issue.status || 'Unknown status'}</div>
                   </div>
                   {(issue.restarts || 0) > 0 && (

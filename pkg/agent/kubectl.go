@@ -243,6 +243,9 @@ func (k *KubectlProxy) validateArgs(args []string) bool {
 
 func (k *KubectlProxy) GetCurrentContext() string { return k.config.CurrentContext }
 
+// GetKubeconfigPath returns the path to the kubeconfig file
+func (k *KubectlProxy) GetKubeconfigPath() string { return k.kubeconfig }
+
 // Reload reloads the kubeconfig from disk
 func (k *KubectlProxy) Reload() {
 	config, err := clientcmd.LoadFromFile(k.kubeconfig)

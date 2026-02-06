@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   X,
   ChevronRight,
@@ -11,6 +11,8 @@ import {
   Minus,
   Plus,
   Type,
+  MessageSquarePlus,
+  Send,
 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
@@ -22,10 +24,13 @@ import { MissionListItem } from './MissionListItem'
 import { MissionChat } from './MissionChat'
 
 export function MissionSidebar() {
-  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent } = useMissions()
+  const { missions, activeMission, isSidebarOpen, isSidebarMinimized, isFullScreen, setActiveMission, closeSidebar, dismissMission, minimizeSidebar, expandSidebar, setFullScreen, selectedAgent, startMission } = useMissions()
   const { isMobile } = useMobile()
   const [collapsedMissions, setCollapsedMissions] = useState<Set<string>>(new Set())
   const [fontSize, setFontSize] = useState<FontSize>('base')
+  const [showNewMission, setShowNewMission] = useState(false)
+  const [newMissionPrompt, setNewMissionPrompt] = useState('')
+  const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
 
   // Escape key: exit fullscreen first, then close sidebar
   useEffect(() => {
@@ -154,6 +159,24 @@ export function MissionSidebar() {
         </div>
         {/* Agent Selector */}
         <div className="flex items-center gap-2">
+          {/* New Mission Button */}
+          <button
+            onClick={() => {
+              setShowNewMission(!showNewMission)
+              if (!showNewMission) {
+                setTimeout(() => newMissionInputRef.current?.focus(), 100)
+              }
+            }}
+            className={cn(
+              "p-1.5 rounded transition-colors",
+              showNewMission
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+            )}
+            title="Start new mission"
+          >
+            <MessageSquarePlus className="w-4 h-4" />
+          </button>
           <AgentSelector compact={!isFullScreen} />
           {/* Font size controls */}
           <div className="flex items-center gap-1 border border-border rounded-lg px-1">
@@ -212,6 +235,68 @@ export function MissionSidebar() {
         </div>
       </div>
 
+      {/* New Mission Input */}
+      {showNewMission && (
+        <div className="p-3 border-b border-border bg-secondary/30">
+          <div className="flex flex-col gap-2">
+            <textarea
+              ref={newMissionInputRef}
+              value={newMissionPrompt}
+              onChange={(e) => setNewMissionPrompt(e.target.value)}
+              placeholder="What would you like help with? (e.g., 'Find pods with high memory usage' or 'Explain why my deployment is failing')"
+              className="w-full min-h-[80px] p-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && newMissionPrompt.trim()) {
+                  startMission({
+                    type: 'custom',
+                    title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
+                    description: newMissionPrompt,
+                    initialPrompt: newMissionPrompt,
+                  })
+                  setNewMissionPrompt('')
+                  setShowNewMission(false)
+                }
+              }}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">
+                {isMobile ? 'Tap send' : 'Cmd+Enter to submit'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowNewMission(false)
+                    setNewMissionPrompt('')
+                  }}
+                  className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (newMissionPrompt.trim()) {
+                      startMission({
+                        type: 'custom',
+                        title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
+                        description: newMissionPrompt,
+                        initialPrompt: newMissionPrompt,
+                      })
+                      setNewMissionPrompt('')
+                      setShowNewMission(false)
+                    }
+                  }}
+                  disabled={!newMissionPrompt.trim()}
+                  className="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-3 h-3" />
+                  Start
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {missions.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <AgentIcon provider={getAgentProvider(selectedAgent)} className="w-12 h-12 opacity-50 mb-4" />
@@ -219,6 +304,18 @@ export function MissionSidebar() {
           <p className="text-xs text-muted-foreground/70 mt-1">
             Start a mission from any card's AI action
           </p>
+          {!showNewMission && (
+            <button
+              onClick={() => {
+                setShowNewMission(true)
+                setTimeout(() => newMissionInputRef.current?.focus(), 100)
+              }}
+              className="mt-4 flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              Start Custom Mission
+            </button>
+          )}
         </div>
       ) : activeMission ? (
         <div className={cn(

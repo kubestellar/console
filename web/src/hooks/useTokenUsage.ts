@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { getDemoMode } from './useDemoMode'
 
+export type TokenCategory = 'missions' | 'diagnose' | 'insights' | 'predictions' | 'other'
+
+export interface TokenUsageByCategory {
+  missions: number
+  diagnose: number
+  insights: number
+  predictions: number
+  other: number
+}
+
 export interface TokenUsage {
   used: number
   limit: number
@@ -9,11 +19,13 @@ export interface TokenUsage {
   criticalThreshold: number
   stopThreshold: number
   resetDate: string
+  byCategory: TokenUsageByCategory
 }
 
 export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
 
 const SETTINGS_KEY = 'kubestellar-token-settings'
+const CATEGORY_KEY = 'kubestellar-token-categories'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 30000 // Poll every 30 seconds
@@ -25,17 +37,52 @@ const DEFAULT_SETTINGS = {
   stopThreshold: 1.0, // 100%
 }
 
+const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
+  missions: 0,
+  diagnose: 0,
+  insights: 0,
+  predictions: 0,
+  other: 0,
+}
+
 // Demo mode token usage - simulate realistic usage
 const DEMO_TOKEN_USAGE = 1247832 // ~25% of 5M limit
+const DEMO_BY_CATEGORY: TokenUsageByCategory = {
+  missions: 523000,
+  diagnose: 312000,
+  insights: 245832,
+  predictions: 167000,
+  other: 0,
+}
 
 // Singleton state - shared across all hook instances
 let sharedUsage: TokenUsage = {
   used: 0,
   ...DEFAULT_SETTINGS,
   resetDate: getNextResetDate(),
+  byCategory: { ...DEFAULT_BY_CATEGORY },
 }
 let pollStarted = false
 const subscribers = new Set<(usage: TokenUsage) => void>()
+
+// Track active AI operation for attributing token usage
+let activeCategory: TokenCategory | null = null
+let lastKnownUsage: number | null = null // null means not yet initialized
+
+/**
+ * Set the currently active AI operation category.
+ * Call this when starting an AI operation (mission, diagnose, etc.)
+ */
+export function setActiveTokenCategory(category: TokenCategory | null) {
+  activeCategory = category
+}
+
+/**
+ * Get the currently active category (for debugging/display)
+ */
+export function getActiveTokenCategory(): TokenCategory | null {
+  return activeCategory
+}
 
 // Initialize from localStorage
 if (typeof window !== 'undefined') {
@@ -44,9 +91,20 @@ if (typeof window !== 'undefined') {
     const parsedSettings = JSON.parse(settings)
     sharedUsage = { ...sharedUsage, ...parsedSettings }
   }
+  // Load persisted category data
+  const categoryData = localStorage.getItem(CATEGORY_KEY)
+  if (categoryData) {
+    try {
+      const parsedCategories = JSON.parse(categoryData)
+      sharedUsage.byCategory = { ...DEFAULT_BY_CATEGORY, ...parsedCategories }
+    } catch {
+      // Ignore invalid data
+    }
+  }
   // Set demo usage if in demo mode
   if (getDemoMode()) {
     sharedUsage.used = DEMO_TOKEN_USAGE
+    sharedUsage.byCategory = { ...DEMO_BY_CATEGORY }
   }
 }
 
@@ -58,17 +116,30 @@ function notifySubscribers() {
 // Update shared usage (only notifies if actually changed)
 function updateSharedUsage(updates: Partial<TokenUsage>, forceNotify = false) {
   const prevUsage = sharedUsage
+  const prevByCategory = { ...sharedUsage.byCategory }
   sharedUsage = { ...sharedUsage, ...updates }
 
   // Only notify if value actually changed (prevents UI flashing on background polls)
+  const byCategoryChanged = updates.byCategory && (
+    prevByCategory.missions !== sharedUsage.byCategory.missions ||
+    prevByCategory.diagnose !== sharedUsage.byCategory.diagnose ||
+    prevByCategory.insights !== sharedUsage.byCategory.insights ||
+    prevByCategory.predictions !== sharedUsage.byCategory.predictions ||
+    prevByCategory.other !== sharedUsage.byCategory.other
+  )
   const hasChanged = forceNotify ||
     prevUsage.used !== sharedUsage.used ||
     prevUsage.limit !== sharedUsage.limit ||
     prevUsage.warningThreshold !== sharedUsage.warningThreshold ||
     prevUsage.criticalThreshold !== sharedUsage.criticalThreshold ||
-    prevUsage.stopThreshold !== sharedUsage.stopThreshold
+    prevUsage.stopThreshold !== sharedUsage.stopThreshold ||
+    byCategoryChanged
 
   if (hasChanged) {
+    // Persist category data to localStorage
+    if (byCategoryChanged && typeof window !== 'undefined' && !getDemoMode()) {
+      localStorage.setItem(CATEGORY_KEY, JSON.stringify(sharedUsage.byCategory))
+    }
     notifySubscribers()
   }
 }
@@ -105,7 +176,23 @@ async function fetchTokenUsage() {
         const todayTokens = data.claude.tokenUsage.today
         // Track both input and output tokens
         const totalUsed = (todayTokens.input || 0) + (todayTokens.output || 0)
-        updateSharedUsage({ used: totalUsed })
+
+        // Attribute token increase to active category (only after initialization)
+        if (lastKnownUsage !== null && totalUsed > lastKnownUsage && activeCategory) {
+          const delta = totalUsed - lastKnownUsage
+          // Sanity check: don't attribute more than 50k tokens at once (likely a bug)
+          if (delta < 50000) {
+            const newByCategory = { ...sharedUsage.byCategory }
+            newByCategory[activeCategory] += delta
+            updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+          } else {
+            console.warn(`[TokenUsage] Skipping large delta ${delta} - likely initialization`)
+            updateSharedUsage({ used: totalUsed })
+          }
+        } else {
+          updateSharedUsage({ used: totalUsed })
+        }
+        lastKnownUsage = totalUsed
       }
     } else {
       reportAgentDataError('/health (token)', `HTTP ${response.status}`)
@@ -176,9 +263,14 @@ export function useTokenUsage() {
     return 'normal'
   }, [usage])
 
-  // Add tokens used
-  const addTokens = useCallback((tokens: number) => {
-    updateSharedUsage({ used: sharedUsage.used + tokens })
+  // Add tokens used (optionally with category)
+  const addTokens = useCallback((tokens: number, category: TokenCategory = 'other') => {
+    const newByCategory = { ...sharedUsage.byCategory }
+    newByCategory[category] += tokens
+    updateSharedUsage({
+      used: sharedUsage.used + tokens,
+      byCategory: newByCategory,
+    })
   }, [])
 
   // Update settings
@@ -202,7 +294,12 @@ export function useTokenUsage() {
     updateSharedUsage({
       used: 0,
       resetDate: getNextResetDate(),
-    })
+      byCategory: { ...DEFAULT_BY_CATEGORY },
+    }, true) // Force notify
+    // Clear persisted category data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CATEGORY_KEY)
+    }
   }, [])
 
   // Check if AI features should be disabled
@@ -230,4 +327,17 @@ function getNextResetDate(): string {
   const now = new Date()
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   return nextMonth.toISOString()
+}
+
+/**
+ * Global function to add category tokens without needing a hook.
+ * Use this from contexts/providers that can't call hooks directly.
+ */
+export function addCategoryTokens(tokens: number, category: TokenCategory = 'other') {
+  if (tokens <= 0) return
+  const newByCategory = { ...sharedUsage.byCategory }
+  newByCategory[category] += tokens
+  updateSharedUsage({
+    byCategory: newByCategory,
+  })
 }

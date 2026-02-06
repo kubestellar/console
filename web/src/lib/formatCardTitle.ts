@@ -7,6 +7,17 @@ const CUSTOM_TITLES: Record<string, string> = {
   helm_history: 'Helm History',
   helm_values_diff: 'Helm Values Diff',
   resource_marshall: 'Resource Marshall',
+  // llm-d cards - use lowercase "llm-d" per project convention
+  llmd_flow: 'llm-d Request Flow',
+  llmd_stack_monitor: 'llm-d Stack Monitor',
+  llmd_benchmarks: 'llm-d Benchmarks',
+  llmd_ai_insights: 'llm-d AI Insights',
+  llmd_configurator: 'llm-d Configurator',
+  llm_inference: 'llm-d Inference',
+  llm_models: 'llm-d Models',
+  kvcache_monitor: 'KV Cache Monitor',
+  epp_routing: 'EPP Routing',
+  pd_disaggregation: 'P/D Disaggregation',
 }
 
 // Known acronyms that should stay uppercase

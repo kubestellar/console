@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { Globe, Server, Layers, ExternalLink, Filter, ChevronDown } from 'lucide-react'
+import { Globe, Server, Layers, ExternalLink, Activity } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedServices } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
-import { useChartFilters } from '../../lib/cards'
+import { useChartFilters, CardClusterFilter } from '../../lib/cards'
+import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 
 export function NetworkOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -33,10 +33,6 @@ export function NetworkOverview() {
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
-
-    clusterFilterBtnRef,
-
-    dropdownStyle,
   } = useChartFilters({
     storageKey: 'network-overview',
   })
@@ -80,6 +76,11 @@ export function NetworkOverview() {
       namespaces.set(ns, (namespaces.get(ns) || 0) + 1)
     })
 
+    // Calculate cluster health stats
+    const healthyClusters = filteredClusters.filter(c => c.healthy && c.reachable !== false).length
+    const degradedClusters = filteredClusters.filter(c => !c.healthy && c.reachable !== false).length
+    const offlineClusters = filteredClusters.filter(c => c.reachable === false).length
+
     return {
       totalServices,
       loadBalancers,
@@ -88,8 +89,11 @@ export function NetworkOverview() {
       externalName,
       namespaces: Array.from(namespaces.entries()).sort((a, b) => b[1] - a[1]),
       clustersWithServices: new Set(filteredServices.map(s => s.cluster)).size,
+      healthyClusters,
+      degradedClusters,
+      offlineClusters,
     }
-  }, [filteredServices])
+  }, [filteredServices, filteredClusters])
 
   if (showSkeleton) {
     return (
@@ -110,6 +114,32 @@ export function NetworkOverview() {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Health Indicator */}
+      {filteredClusters.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
+          <Activity className="w-3 h-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          {stats.healthyClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="healthy" size="sm" />
+              <span className="text-green-400">{stats.healthyClusters} healthy</span>
+            </span>
+          )}
+          {stats.degradedClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="degraded" size="sm" />
+              <span className="text-orange-400">{stats.degradedClusters} degraded</span>
+            </span>
+          )}
+          {stats.offlineClusters > 0 && (
+            <span className="flex items-center gap-1 text-xs">
+              <ClusterStatusDot state="unreachable-timeout" size="sm" />
+              <span className="text-yellow-400">{stats.offlineClusters} offline</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex items-center justify-between mb-4">
         <div />
@@ -123,52 +153,16 @@ export function NetworkOverview() {
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                ref={clusterFilterBtnRef}
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
+          <CardClusterFilter
+            availableClusters={availableClusters}
+            selectedClusters={localClusterFilter}
+            onToggle={toggleClusterFilter}
+            onClear={clearClusterFilter}
+            isOpen={showClusterFilter}
+            setIsOpen={setShowClusterFilter}
+            containerRef={clusterFilterRef}
+            minClusters={1}
+          />
 
         </div>
       </div>
@@ -178,7 +172,10 @@ export function NetworkOverview() {
         className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20' : 'cursor-default'} transition-colors`}
         onClick={() => {
           if (stats.totalServices > 0 && filteredServices[0]) {
-            drillToService(filteredServices[0].cluster || 'default', filteredServices[0].namespace || 'default', filteredServices[0].name)
+            const svc = filteredServices[0]
+            if (svc.cluster && svc.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }
         }}
         title={stats.totalServices > 0 ? `${stats.totalServices} total services across ${stats.clustersWithServices} cluster${stats.clustersWithServices !== 1 ? 's' : ''} - Click to view details` : 'No services found'}
@@ -199,7 +196,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'LoadBalancer')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.loadBalancers > 0 ? `${stats.loadBalancers} LoadBalancer service${stats.loadBalancers !== 1 ? 's' : ''} - Click to view` : 'No LoadBalancer services'}
         >
@@ -213,7 +212,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'NodePort')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.nodePort > 0 ? `${stats.nodePort} NodePort service${stats.nodePort !== 1 ? 's' : ''} - Click to view` : 'No NodePort services'}
         >
@@ -227,7 +228,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'ClusterIP')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.clusterIP > 0 ? `${stats.clusterIP} ClusterIP service${stats.clusterIP !== 1 ? 's' : ''} - Click to view` : 'No ClusterIP services'}
         >
@@ -241,7 +244,9 @@ export function NetworkOverview() {
           className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const svc = filteredServices.find(s => s.type === 'ExternalName')
-            if (svc) drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)
+            if (svc?.cluster && svc?.namespace) {
+              drillToService(svc.cluster, svc.namespace, svc.name)
+            }
           }}
           title={stats.externalName > 0 ? `${stats.externalName} ExternalName service${stats.externalName !== 1 ? 's' : ''} - Click to view` : 'No ExternalName services'}
         >
@@ -264,7 +269,7 @@ export function NetworkOverview() {
                 <div
                   key={name}
                   className={`flex items-center justify-between gap-2 p-2 rounded bg-secondary/30 ${svc ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors`}
-                  onClick={() => svc && drillToService(svc.cluster || 'default', svc.namespace || 'default', svc.name)}
+                  onClick={() => svc?.cluster && svc?.namespace && drillToService(svc.cluster, svc.namespace, svc.name)}
                   title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${svc ? ' - Click to view' : ''}`}
                 >
                   <span className="text-sm text-foreground truncate min-w-0 flex-1">{name}</span>

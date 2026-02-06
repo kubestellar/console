@@ -374,8 +374,8 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     if (isAllClustersSelected) return items
     if (selectedClusters.includes('__none__')) return []
     return items.filter(item => {
-      const cluster = item.cluster || 'default'
-      return effectiveSelectedClusters.includes(cluster)
+      // Only include items that have a cluster defined and match the selected clusters
+      return item.cluster && effectiveSelectedClusters.includes(item.cluster)
     })
   }, [isAllClustersSelected, selectedClusters, effectiveSelectedClusters])
 

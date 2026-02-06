@@ -52,6 +52,14 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
   }, [connectToAgent, isDemoMode])
 
+  // Retry connection when dropdown is opened and agents are empty
+  useEffect(() => {
+    if (isOpen && agents.length === 0 && !agentsLoading && !isDemoMode) {
+      console.log('[AgentSelector] Dropdown opened with no agents, attempting reconnect...')
+      connectToAgent()
+    }
+  }, [isOpen, agents.length, agentsLoading, isDemoMode, connectToAgent])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -93,8 +101,8 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     )
   }
 
-  // Determine if the dropdown should be greyed out
-  const isGreyedOut = isDemoMode || (!hasAvailableAgents && visibleAgents.length === 0)
+  // Only gray out in demo mode - allow interaction during loading/reconnection
+  const isGreyedOut = isDemoMode
 
   // If only one agent and it's available, just show it (no selector needed)
   if (visibleAgents.length === 1 && hasAvailableAgents && !isDemoMode) {
@@ -184,8 +192,23 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
             </div>
           )}
           {sortedAgents.length === 0 && (
-            <div className="py-4 text-center text-sm text-muted-foreground">
-              No AI agents available
+            <div className="py-4 text-center">
+              {agentsLoading ? (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Connecting to agent...</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">No AI agents available</p>
+                  <button
+                    onClick={() => connectToAgent()}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Retry connection
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {/* Settings footer inside dropdown */}

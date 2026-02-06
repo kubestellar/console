@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import {
-  CheckCircle, XCircle, AlertTriangle, ExternalLink, Search
+  CheckCircle, XCircle, AlertTriangle, ExternalLink
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
+import { CardSearchInput } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import { useCardData } from '../../../lib/cards/cardHooks'
@@ -12,6 +13,22 @@ import { useCardLoadingState } from '../CardDataContext'
 
 interface ProwHistoryProps {
   config?: Record<string, unknown>
+}
+
+type SortField = 'started' | 'name' | 'state' | 'duration'
+
+const SORT_OPTIONS = [
+  { value: 'started', label: 'Time' },
+  { value: 'name', label: 'Name' },
+  { value: 'state', label: 'State' },
+  { value: 'duration', label: 'Duration' },
+]
+
+const STATE_ORDER: Record<string, number> = {
+  failure: 0,
+  error: 1,
+  aborted: 2,
+  success: 3,
 }
 
 export function ProwHistory({ config: _config }: ProwHistoryProps) {
@@ -29,7 +46,7 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
     [jobs]
   )
 
-  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters } = useCardData(completedJobs, {
+  const { items, totalItems, currentPage, totalPages, goToPage, needsPagination, itemsPerPage, setItemsPerPage, filters, sorting } = useCardData<ProwJob, SortField>(completedJobs, {
     filter: {
       searchFields: ['name', 'state', 'type', 'duration'] as (keyof ProwJob)[],
     },
@@ -38,6 +55,9 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
       defaultDirection: 'desc',
       comparators: {
         started: (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        name: (a, b) => a.name.localeCompare(b.name),
+        state: (a, b) => (STATE_ORDER[a.state] ?? 5) - (STATE_ORDER[b.state] ?? 5),
+        duration: (a, b) => a.duration.localeCompare(b.duration),
       },
     },
     defaultLimit: 5,
@@ -64,21 +84,22 @@ export function ProwHistory({ config: _config }: ProwHistoryProps) {
           <CardControls
             limit={itemsPerPage}
             onLimitChange={setItemsPerPage}
+            sortBy={sorting.sortBy}
+            sortOptions={SORT_OPTIONS}
+            onSortChange={(v) => sorting.setSortBy(v as SortField)}
+            sortDirection={sorting.sortDirection}
+            onSortDirectionChange={sorting.setSortDirection}
           />
         </div>
       </div>
 
       {/* Search input */}
-      <div className="relative mb-2">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search history..."
-          className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search history..."
+        className="mb-2"
+      />
 
       {/* Timeline */}
       <div className="flex-1 overflow-y-auto relative">

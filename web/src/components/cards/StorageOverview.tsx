@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Filter, ChevronDown, Server } from 'lucide-react'
+import { HardDrive, Database, CheckCircle, AlertTriangle, Clock, Server } from 'lucide-react'
 import { useClusters, usePVCs } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { formatStat, formatStorageStat } from '../../lib/formatStats'
-import { useChartFilters } from '../../lib/cards'
+import { useChartFilters, CardClusterFilter } from '../../lib/cards'
 
 export function StorageOverview() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
@@ -33,10 +32,6 @@ export function StorageOverview() {
     showClusterFilter,
     setShowClusterFilter,
     clusterFilterRef,
-
-    clusterFilterBtnRef,
-
-    dropdownStyle,
   } = useChartFilters({
     storageKey: 'storage-overview',
   })
@@ -127,52 +122,16 @@ export function StorageOverview() {
           )}
 
           {/* Cluster filter dropdown */}
-          {availableClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                ref={clusterFilterBtnRef}
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}>
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {availableClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
+          <CardClusterFilter
+            availableClusters={availableClusters}
+            selectedClusters={localClusterFilter}
+            onToggle={toggleClusterFilter}
+            onClear={clearClusterFilter}
+            isOpen={showClusterFilter}
+            setIsOpen={setShowClusterFilter}
+            containerRef={clusterFilterRef}
+            minClusters={1}
+          />
 
         </div>
       </div>
@@ -198,8 +157,8 @@ export function StorageOverview() {
         <div
           className={`p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.totalPVCs > 0 ? 'cursor-pointer hover:bg-blue-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
-            if (filteredPVCs.length > 0 && filteredPVCs[0]) {
-              drillToPVC(filteredPVCs[0].cluster || 'default', filteredPVCs[0].namespace, filteredPVCs[0].name)
+            if (filteredPVCs.length > 0 && filteredPVCs[0]?.cluster) {
+              drillToPVC(filteredPVCs[0].cluster, filteredPVCs[0].namespace, filteredPVCs[0].name)
             }
           }}
           title={stats.totalPVCs > 0 ? `${stats.totalPVCs} Persistent Volume Claims - Click to view details` : 'No PVCs found'}
@@ -221,7 +180,9 @@ export function StorageOverview() {
           className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.boundPVCs > 0 ? 'cursor-pointer hover:bg-green-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const boundPVC = filteredPVCs.find(p => p.status === 'Bound')
-            if (boundPVC) drillToPVC(boundPVC.cluster || 'default', boundPVC.namespace, boundPVC.name)
+            if (boundPVC?.cluster) {
+              drillToPVC(boundPVC.cluster, boundPVC.namespace, boundPVC.name)
+            }
           }}
           title={stats.boundPVCs > 0 ? `${stats.boundPVCs} PVC${stats.boundPVCs !== 1 ? 's' : ''} successfully bound - Click to view` : 'No bound PVCs'}
         >
@@ -235,7 +196,9 @@ export function StorageOverview() {
           className={`p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 ${stats.pendingPVCs > 0 ? 'cursor-pointer hover:bg-yellow-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const pendingPVC = filteredPVCs.find(p => p.status === 'Pending')
-            if (pendingPVC) drillToPVC(pendingPVC.cluster || 'default', pendingPVC.namespace, pendingPVC.name)
+            if (pendingPVC?.cluster) {
+              drillToPVC(pendingPVC.cluster, pendingPVC.namespace, pendingPVC.name)
+            }
           }}
           title={stats.pendingPVCs > 0 ? `${stats.pendingPVCs} PVC${stats.pendingPVCs !== 1 ? 's' : ''} pending - Click to view` : 'No pending PVCs'}
         >
@@ -249,7 +212,9 @@ export function StorageOverview() {
           className={`p-2 rounded-lg bg-red-500/10 border border-red-500/20 ${stats.failedPVCs > 0 ? 'cursor-pointer hover:bg-red-500/20' : 'cursor-default'} transition-colors`}
           onClick={() => {
             const failedPVC = filteredPVCs.find(p => p.status !== 'Bound' && p.status !== 'Pending')
-            if (failedPVC) drillToPVC(failedPVC.cluster || 'default', failedPVC.namespace, failedPVC.name)
+            if (failedPVC?.cluster) {
+              drillToPVC(failedPVC.cluster, failedPVC.namespace, failedPVC.name)
+            }
           }}
           title={stats.failedPVCs > 0 ? `${stats.failedPVCs} PVC${stats.failedPVCs !== 1 ? 's' : ''} in failed/lost state - Click to view` : 'No failed PVCs'}
         >

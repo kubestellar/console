@@ -15,6 +15,7 @@ import {
   Bot,
   Package,
   HardDrive,
+  Sparkles,
 } from 'lucide-react'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
@@ -68,7 +69,7 @@ function scrollToCard(cardType: string) {
 export function SearchDropdown() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { openSidebar, setActiveMission } = useMissions()
+  const { openSidebar, setActiveMission, startMission } = useMissions()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -78,7 +79,24 @@ export function SearchDropdown() {
 
   const { results, totalCount } = useSearchIndex(searchQuery)
 
+  // Create a custom mission from the search query
+  const handleAskAI = useCallback(() => {
+    if (!searchQuery.trim()) return
+
+    const query = searchQuery.trim()
+    startMission({
+      title: query.length > 50 ? query.substring(0, 47) + '...' : query,
+      description: 'Custom AI mission from search',
+      type: 'custom',
+      initialPrompt: query,
+    })
+
+    setSearchQuery('')
+    setIsSearchOpen(false)
+  }, [searchQuery, startMission])
+
   // Flatten results into a single list for keyboard navigation
+  // +1 for the "Ask AI" action at the end
   const flatResults = useMemo(() => {
     const flat: SearchItem[] = []
     for (const cat of CATEGORY_ORDER) {
@@ -87,6 +105,10 @@ export function SearchDropdown() {
     }
     return flat
   }, [results])
+
+  // Total selectable items: results + 1 for "Ask AI" action
+  const totalSelectableItems = flatResults.length + 1
+  const askAIIndex = flatResults.length // "Ask AI" is always the last item
 
   const handleSelect = useCallback((item: SearchItem) => {
     // Mission items open the sidebar instead of navigating
@@ -136,13 +158,17 @@ export function SearchDropdown() {
 
       if (event.key === 'ArrowDown') {
         event.preventDefault()
-        setSelectedIndex(prev => Math.min(prev + 1, flatResults.length - 1))
+        setSelectedIndex(prev => Math.min(prev + 1, totalSelectableItems - 1))
       } else if (event.key === 'ArrowUp') {
         event.preventDefault()
         setSelectedIndex(prev => Math.max(prev - 1, 0))
-      } else if (event.key === 'Enter' && flatResults[selectedIndex]) {
+      } else if (event.key === 'Enter') {
         event.preventDefault()
-        handleSelect(flatResults[selectedIndex])
+        if (selectedIndex === askAIIndex) {
+          handleAskAI()
+        } else if (flatResults[selectedIndex]) {
+          handleSelect(flatResults[selectedIndex])
+        }
       } else if (event.key === 'Escape') {
         setIsSearchOpen(false)
         inputRef.current?.blur()
@@ -151,7 +177,7 @@ export function SearchDropdown() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isSearchOpen, flatResults, selectedIndex, handleSelect])
+  }, [isSearchOpen, flatResults, selectedIndex, handleSelect, totalSelectableItems, askAIIndex, handleAskAI])
 
   // Reset selected index when results change
   useEffect(() => {
@@ -186,7 +212,7 @@ export function SearchDropdown() {
             setIsSearchOpen(true)
           }}
           onFocus={() => setIsSearchOpen(true)}
-          placeholder="Search pages, cards, clusters, pods..."
+          placeholder="Search or ask AI anything..."
           className="w-full pl-10 pr-16 py-2 bg-secondary/50 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
         />
         <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted-foreground bg-secondary rounded">
@@ -249,10 +275,55 @@ export function SearchDropdown() {
                     Showing {flatResults.length} of {totalCount} results
                   </div>
                 )}
+
+                {/* Ask AI action */}
+                <div className="border-t border-border/50">
+                  <button
+                    data-selected={selectedIndex === askAIIndex}
+                    onClick={handleAskAI}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                      selectedIndex === askAIIndex
+                        ? 'bg-purple-500/20 text-foreground'
+                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Ask AI about this</p>
+                      <p className="text-xs text-muted-foreground truncate">&quot;{searchQuery}&quot;</p>
+                    </div>
+                    <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                      ↵
+                    </kbd>
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="px-4 py-8 text-center">
-                <p className="text-muted-foreground text-sm">No results for &quot;{searchQuery}&quot;</p>
+              <div className="py-4">
+                {/* No results - show Ask AI prominently */}
+                <div className="px-4 py-2 text-center mb-2">
+                  <p className="text-muted-foreground text-sm">No results for &quot;{searchQuery}&quot;</p>
+                </div>
+                <div className="border-t border-border/50">
+                  <button
+                    data-selected={selectedIndex === askAIIndex}
+                    onClick={handleAskAI}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                      selectedIndex === askAIIndex
+                        ? 'bg-purple-500/20 text-foreground'
+                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    }`}
+                  >
+                    <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Ask AI instead</p>
+                      <p className="text-xs text-muted-foreground truncate">Start a mission: &quot;{searchQuery}&quot;</p>
+                    </div>
+                    <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                      ↵
+                    </kbd>
+                  </button>
+                </div>
               </div>
             )}
           </div>

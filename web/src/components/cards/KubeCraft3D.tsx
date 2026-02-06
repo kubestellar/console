@@ -196,8 +196,11 @@ export function KubeCraft3D() {
     const controls = new PointerLockControls(camera, renderer.domElement)
     controlsRef.current = controls
 
-    controls.addEventListener('lock', () => setIsLocked(true))
-    controls.addEventListener('unlock', () => setIsLocked(false))
+    const handleLock = () => setIsLocked(true)
+    const handleUnlock = () => setIsLocked(false)
+
+    controls.addEventListener('lock', handleLock)
+    controls.addEventListener('unlock', handleUnlock)
 
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, isDaytime ? 0.6 : 0.2)
@@ -307,6 +310,11 @@ export function KubeCraft3D() {
       cancelAnimationFrame(animationRef.current)
       renderer.dispose()
       meshesRef.current.clear()
+      // Remove event listeners from controls
+      if (controls) {
+        controls.removeEventListener('lock', handleLock)
+        controls.removeEventListener('unlock', handleUnlock)
+      }
     }
   }, [isExpanded, isDaytime, showGrid])
 

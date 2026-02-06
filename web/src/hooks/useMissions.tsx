@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
+import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
+import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed'
 
@@ -14,6 +16,13 @@ export interface MissionMessage {
 }
 
 export type MissionFeedback = 'positive' | 'negative' | null
+
+export interface MatchedResolution {
+  id: string
+  title: string
+  similarity: number
+  source: 'personal' | 'shared'
+}
 
 export interface Mission {
   id: string
@@ -38,6 +47,8 @@ export interface Mission {
   }
   /** AI agent used for this mission */
   agent?: string
+  /** Resolutions that were auto-matched for this mission */
+  matchedResolutions?: MatchedResolution[]
 }
 
 interface MissionContextValue {
@@ -175,6 +186,9 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
   const wsRef = useRef<WebSocket | null>(null)
   const pendingRequests = useRef<Map<string, string>>(new Map()) // requestId -> missionId
+  // Track last stream timestamp per mission to detect tool-use gaps (for creating new chat bubbles)
+  const lastStreamTimestamp = useRef<Map<string, number>>(new Map()) // missionId -> timestamp
+  const STREAM_GAP_THRESHOLD_MS = 2000 // If >2s gap, create new message bubble
 
   // Save missions whenever they change
   useEffect(() => {
@@ -308,7 +322,18 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           console.log('[Missions] Connection closed')
           wsRef.current = null
           setAgentsLoading(false) // Stop loading spinner on disconnect
-          setAgents([]) // Clear agents so "Configure AI" button shows
+          // Don't clear agents - keep them cached for display
+          // Users can still see available agents even if temporarily disconnected
+
+          // Auto-reconnect after a short delay (if not in demo mode)
+          if (!getDemoMode()) {
+            setTimeout(() => {
+              console.log('[Missions] Attempting auto-reconnect...')
+              ensureConnection().catch(() => {
+                // Silent fail - will retry on next user interaction
+              })
+            }, 3000)
+          }
 
           // Fail any pending missions that were waiting for a response
           if (pendingRequests.current.size > 0) {
@@ -415,6 +440,14 @@ The AI missions feature requires the local agent to be running.
           progress?: number
           tokens?: { input?: number; output?: number; total?: number }
         }
+        // Track token delta for category usage
+        if (payload.tokens?.total) {
+          const previousTotal = m.tokenUsage?.total ?? 0
+          const delta = payload.tokens.total - previousTotal
+          if (delta > 0) {
+            addCategoryTokens(delta, 'missions')
+          }
+        }
         return {
           ...m,
           currentStep: payload.step || m.currentStep,
@@ -430,22 +463,36 @@ The AI missions feature requires the local agent to be running.
         // Streaming response from agent
         const payload = message.payload as ChatStreamPayload
         const lastMsg = m.messages[m.messages.length - 1]
+        const now = Date.now()
+        const lastTs = lastStreamTimestamp.current.get(missionId)
 
-        if (lastMsg?.role === 'assistant' && !payload.done && m.status === 'running') {
-          // Append to existing assistant message mid-stream, preserve agent
+        // Check if there's been a gap (indicating tool use happened)
+        // If so, start a new message bubble instead of appending
+        const hasGap = lastTs && (now - lastTs > STREAM_GAP_THRESHOLD_MS)
+
+        // Update timestamp for next check
+        if (!payload.done) {
+          lastStreamTimestamp.current.set(missionId, now)
+        } else {
+          // Clean up on stream complete
+          lastStreamTimestamp.current.delete(missionId)
+        }
+
+        if (lastMsg?.role === 'assistant' && !payload.done && m.status === 'running' && !hasGap) {
+          // Append to existing assistant message mid-stream (no gap detected)
           return {
             ...m,
             status: 'running' as MissionStatus,
             currentStep: 'Generating response...',
             updatedAt: new Date(),
-            agent: payload.agent || m.agent, // Update mission agent if provided
+            agent: payload.agent || m.agent,
             messages: [
               ...m.messages.slice(0, -1),
               { ...lastMsg, content: lastMsg.content + (payload.content || ''), agent: payload.agent || lastMsg.agent }
             ]
           }
         } else if (!payload.done && payload.content) {
-          // First chunk - create new assistant message with agent
+          // First chunk OR gap detected - create new assistant message
           return {
             ...m,
             status: 'running' as MissionStatus,
@@ -467,6 +514,18 @@ The AI missions feature requires the local agent to be running.
           // Stream complete - mark as unread
           pendingRequests.current.delete(message.id)
           markMissionAsUnread(missionId)
+
+          // Track token delta for category usage when stream completes with usage data
+          if (payload.usage?.totalTokens) {
+            const previousTotal = m.tokenUsage?.total ?? 0
+            const delta = payload.usage.totalTokens - previousTotal
+            if (delta > 0) {
+              addCategoryTokens(delta, 'missions')
+            }
+          }
+
+          // Clear active token tracking
+          setActiveTokenCategory(null)
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -487,6 +546,15 @@ The AI missions feature requires the local agent to be running.
           output: chatPayload.usage.outputTokens,
           total: chatPayload.usage.totalTokens,
         } : m.tokenUsage
+
+        // Track token delta for category usage
+        if (chatPayload.usage?.totalTokens) {
+          const previousTotal = m.tokenUsage?.total ?? 0
+          const delta = chatPayload.usage.totalTokens - previousTotal
+          if (delta > 0) {
+            addCategoryTokens(delta, 'missions')
+          }
+        }
 
         return {
           ...m,
@@ -541,6 +609,63 @@ The AI missions feature requires the local agent to be running.
   const startMission = useCallback((params: StartMissionParams): string => {
     const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
+    // Auto-match and inject resolution context for relevant mission types
+    let enhancedPrompt = params.initialPrompt
+    let matchedResolutions: MatchedResolution[] = []
+
+    // Match resolutions for troubleshooting-related missions (not deploy/upgrade)
+    if (params.type !== 'deploy' && params.type !== 'upgrade') {
+      // Detect issue signature from mission content
+      const content = `${params.title} ${params.description} ${params.initialPrompt}`
+      const signature = detectIssueSignature(content)
+
+      if (signature.type && signature.type !== 'Unknown') {
+        // Find similar resolutions from history
+        const similarResolutions = findSimilarResolutionsStandalone(
+          { type: signature.type, resourceKind: signature.resourceKind, errorPattern: signature.errorPattern },
+          { minSimilarity: 0.4, limit: 3 }
+        )
+
+        if (similarResolutions.length > 0) {
+          // Store matched resolutions for display
+          matchedResolutions = similarResolutions.map(sr => ({
+            id: sr.resolution.id,
+            title: sr.resolution.title,
+            similarity: sr.similarity,
+            source: sr.source,
+          }))
+
+          // Inject resolution context into the prompt
+          const resolutionContext = generateResolutionPromptContext(similarResolutions)
+          enhancedPrompt = params.initialPrompt + resolutionContext
+        }
+      }
+    }
+
+    // Build initial messages
+    const initialMessages: MissionMessage[] = [
+      {
+        id: `msg-${Date.now()}`,
+        role: 'user',
+        content: params.initialPrompt, // Show original prompt in UI
+        timestamp: new Date(),
+      }
+    ]
+
+    // Add system message if resolutions were auto-matched
+    if (matchedResolutions.length > 0) {
+      const resolutionNames = matchedResolutions.map(r =>
+        `• **${r.title}** (${Math.round(r.similarity * 100)}% match, ${r.source === 'personal' ? 'your history' : 'team knowledge'})`
+      ).join('\n')
+
+      initialMessages.push({
+        id: `msg-${Date.now()}-resolutions`,
+        role: 'system',
+        content: `🔍 **Found ${matchedResolutions.length} similar resolution${matchedResolutions.length > 1 ? 's' : ''} from your knowledge base:**\n\n${resolutionNames}\n\n_This context has been automatically provided to the AI to help solve the problem faster._`,
+        timestamp: new Date(),
+      })
+    }
+
     const mission: Mission = {
       id: missionId,
       title: params.title,
@@ -548,18 +673,12 @@ The AI missions feature requires the local agent to be running.
       type: params.type,
       status: 'pending',
       cluster: params.cluster,
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          role: 'user',
-          content: params.initialPrompt,
-          timestamp: new Date(),
-        }
-      ],
+      messages: initialMessages,
       createdAt: new Date(),
       updatedAt: new Date(),
       context: params.context,
       agent: selectedAgent || defaultAgent || undefined,
+      matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
     }
 
     setMissions(prev => [mission, ...prev])
@@ -575,13 +694,18 @@ The AI missions feature requires the local agent to be running.
         m.id === missionId ? { ...m, status: 'running', currentStep: 'Connecting to agent...' } : m
       ))
 
+      // Track token usage for this mission
+      setActiveTokenCategory('missions')
+
       wsRef.current?.send(JSON.stringify({
         id: requestId,
         type: 'chat',
         payload: {
-          prompt: params.initialPrompt,
+          prompt: enhancedPrompt, // Send enhanced prompt with resolution context to AI
           sessionId: missionId,
           agent: selectedAgent || undefined,
+          // Include mission context for the agent to use
+          context: params.context,
         }
       }))
 
@@ -638,6 +762,9 @@ The AI missions feature requires the local agent to be running.
 
   // Send a follow-up message
   const sendMessage = useCallback((missionId: string, content: string) => {
+    // Track token usage for this mission
+    setActiveTokenCategory('missions')
+
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
       return {

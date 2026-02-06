@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Plus, X, Save, Trash2, Activity, Sparkles,
   CheckCircle, Eye, GripVertical,
@@ -16,6 +16,9 @@ import type { StatsDefinition, StatBlockDefinition, StatBlockColor, StatBlockVal
 import { COLOR_CLASSES } from '../../lib/stats/types'
 import { AiGenerationPanel } from './AiGenerationPanel'
 import { STAT_BLOCK_SYSTEM_PROMPT } from '../../lib/ai/prompts'
+
+// Demo/preview constants
+const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
 
 interface StatBlockFactoryModalProps {
   isOpen: boolean
@@ -105,7 +108,7 @@ function StatsPreview({ title, blocks }: { title: string; blocks: BlockEditorIte
                 <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
                 <span className="text-sm text-muted-foreground truncate">{block.label}</span>
               </div>
-              <div className="text-3xl font-bold text-foreground">42</div>
+              <div className="text-3xl font-bold text-foreground">{DEMO_STAT_VALUE}</div>
               {block.field && (
                 <div className="text-xs text-muted-foreground">{block.field}</div>
               )}
@@ -176,6 +179,17 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   // Icon picker state
   const [editingBlockIcon, setEditingBlockIcon] = useState<number | null>(null)
 
+  // Track timeouts for cleanup
+  const timeoutsRef = useRef<number[]>([])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout)
+      timeoutsRef.current = []
+    }
+  }, [])
+
   const handleTabChange = useCallback((newTab: Tab) => {
     setTab(newTab)
     if (newTab === 'manage') {
@@ -217,7 +231,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
     const type = statsType.trim() || `custom_${Date.now()}`
     if (blocks.filter(b => b.label.trim()).length === 0) {
       setSaveMessage('Add at least one stat block.')
-      setTimeout(() => setSaveMessage(null), 3000)
+      const validationTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+      timeoutsRef.current.push(validationTimeoutId)
       return
     }
 
@@ -249,7 +264,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
     setSaveMessage(`Stats "${definition.title}" created!`)
     onStatsCreated?.(type)
 
-    setTimeout(() => setSaveMessage(null), 3000)
+    const saveSuccessTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+    timeoutsRef.current.push(saveSuccessTimeoutId)
   }, [statsType, blocks, title, gridCols, onStatsCreated])
 
   const handleDelete = useCallback((type: string) => {
@@ -543,7 +559,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               saveDynamicStatsDefinition(definition)
               setSaveMessage(`Stats "${definition.title}" created with AI!`)
               onStatsCreated?.(type)
-              setTimeout(() => setSaveMessage(null), 3000)
+              const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
+              timeoutsRef.current.push(aiCreateTimeoutId)
             }}
             saveLabel="Create Stat Block"
           />

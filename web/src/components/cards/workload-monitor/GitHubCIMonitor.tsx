@@ -1,19 +1,34 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, ExternalLink,
+  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check, Stethoscope,
 } from 'lucide-react'
+import { useMissions } from '../../../hooks/useMissions'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
+import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import { CardSearchInput } from '../../../lib/cards'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
-import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
-import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import type { MonitorIssue } from '../../../types/workloadMonitor'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
+}
+
+export interface GitHubCIMonitorRef {
+  refresh: () => void
+}
+
+// Decode base64 encoded token from localStorage
+const decodeToken = (encoded: string): string => {
+  try {
+    return atob(encoded)
+  } catch {
+    return encoded // Return as-is if not encoded (backwards compatibility)
+  }
 }
 
 interface GitHubCIConfig {
@@ -62,6 +77,13 @@ const CONCLUSION_ORDER: Record<string, number> = {
   success: 5,
 }
 
+const SORT_OPTIONS = [
+  { value: 'status', label: 'Status' },
+  { value: 'name', label: 'Name' },
+  { value: 'repo', label: 'Repo' },
+  { value: 'branch', label: 'Branch' },
+]
+
 // Demo data for when GitHub API is not available
 const DEMO_WORKFLOWS: WorkflowRun[] = [
   { id: '1', name: 'CI / Build & Test', repo: 'kubestellar/kubestellar', status: 'completed', conclusion: 'success', branch: 'main', event: 'push', runNumber: 1234, createdAt: new Date(Date.now() - 300000).toISOString(), updatedAt: new Date(Date.now() - 60000).toISOString(), url: '#' },
@@ -85,25 +107,53 @@ function formatTimeAgo(iso: string): string {
   return `${days}d ago`
 }
 
-export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
+const REPOS_STORAGE_KEY = 'github_ci_repos'
+const DEFAULT_REPOS = ['kubestellar/kubestellar', 'kubestellar/console']
+
+function loadRepos(): string[] {
+  try {
+    const stored = localStorage.getItem(REPOS_STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return DEFAULT_REPOS
+}
+
+function saveRepos(repos: string[]) {
+  localStorage.setItem(REPOS_STORAGE_KEY, JSON.stringify(repos))
+}
+
+export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
   const ghConfig = config as GitHubCIConfig | undefined
+  const { startMission } = useMissions()
   const [workflows, setWorkflows] = useState<WorkflowRun[]>(DEMO_WORKFLOWS)
   const [isLoading, setIsLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isUsingDemoData, setIsUsingDemoData] = useState(true)
+  const [lastFetched, setLastFetched] = useState<Date | null>(null)
 
-  const repos = ghConfig?.repos || ['kubestellar/kubestellar', 'kubestellar/console']
+  // Repo configuration
+  const [repos, setRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
+  const [isEditingRepos, setIsEditingRepos] = useState(false)
+  const [newRepoInput, setNewRepoInput] = useState('')
 
   const fetchWorkflows = useCallback(async (isRefresh = false) => {
-    const token = ghConfig?.token || localStorage.getItem('github_token')
+    const storedToken = localStorage.getItem('github_token')
+    const token = ghConfig?.token || (storedToken ? decodeToken(storedToken) : null)
     if (!token) {
       // Use demo data
       setWorkflows(DEMO_WORKFLOWS)
+      setIsUsingDemoData(true)
       return
     }
 
-    if (isRefresh) setIsRefreshing(true)
-    else setIsLoading(true)
+    if (!isRefresh) setIsLoading(true)
     setError(null)
 
     try {
@@ -129,21 +179,75 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         }))
         allRuns.push(...runs)
       }
-      setWorkflows(allRuns.length > 0 ? allRuns : DEMO_WORKFLOWS)
+      if (allRuns.length > 0) {
+        setWorkflows(allRuns)
+        setIsUsingDemoData(false)
+        setLastFetched(new Date())
+      } else {
+        setWorkflows(DEMO_WORKFLOWS)
+        setIsUsingDemoData(true)
+      }
     } catch (err) {
       console.error('[GitHubCIMonitor] fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch workflows')
+      setIsUsingDemoData(true)
       // Keep demo data on error
     } finally {
       setIsLoading(false)
-      setIsRefreshing(false)
     }
   }, [repos, ghConfig?.token])
+
+  // Expose refresh method via ref for CardWrapper
+  useImperativeHandle(ref, () => ({
+    refresh: () => fetchWorkflows(true)
+  }), [fetchWorkflows])
+
+  // Repo management handlers
+  const handleAddRepo = useCallback(() => {
+    const repo = newRepoInput.trim()
+    if (!repo) return
+    // Validate format: owner/repo
+    if (!repo.match(/^[\w-]+\/[\w.-]+$/)) {
+      return // Invalid format
+    }
+    if (repos.includes(repo)) {
+      setNewRepoInput('')
+      return // Already exists
+    }
+    const updatedRepos = [...repos, repo]
+    setRepos(updatedRepos)
+    saveRepos(updatedRepos)
+    setNewRepoInput('')
+    // Refresh to fetch new repo data
+    setTimeout(() => fetchWorkflows(true), 100)
+  }, [newRepoInput, repos, fetchWorkflows])
+
+  const handleRemoveRepo = useCallback((repo: string) => {
+    const updatedRepos = repos.filter(r => r !== repo)
+    if (updatedRepos.length === 0) return // Keep at least one repo
+    setRepos(updatedRepos)
+    saveRepos(updatedRepos)
+    // Immediately filter out workflows from removed repo
+    setWorkflows(prev => prev.filter(w => w.repo !== repo))
+    // Refresh to update data
+    setTimeout(() => fetchWorkflows(true), 100)
+  }, [repos, fetchWorkflows])
 
   useEffect(() => {
     fetchWorkflows()
     const interval = setInterval(() => fetchWorkflows(true), 60_000)
     return () => clearInterval(interval)
+  }, [fetchWorkflows])
+
+  // Listen for token changes in localStorage (e.g., when user adds token in Settings)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'github_token') {
+        fetchWorkflows(true)
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [fetchWorkflows])
 
   // Stats
@@ -170,7 +274,9 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
     goToPage,
     needsPagination,
     itemsPerPage,
+    setItemsPerPage,
     filters,
+    sorting,
   } = useCardData(workflows, {
     filter: {
       searchFields: ['name', 'repo', 'branch', 'event'] as (keyof WorkflowRun)[],
@@ -217,23 +323,6 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
       }))
   }, [workflows])
 
-  const monitorResources = useMemo<MonitoredResource[]>(() => {
-    return workflows.slice(0, 20).map((w, idx) => ({
-      id: `WorkflowRun/${w.repo}/${w.id}`,
-      kind: 'WorkflowRun',
-      name: w.name,
-      namespace: w.repo,
-      cluster: 'github',
-      status: w.conclusion === 'success' ? 'healthy' as const :
-              (w.conclusion === 'failure' || w.conclusion === 'timed_out') ? 'unhealthy' as const :
-              w.status === 'in_progress' ? 'degraded' as const : 'unknown' as const,
-      category: 'workload' as const,
-      lastChecked: w.updatedAt,
-      optional: false,
-      order: idx,
-    }))
-  }, [workflows])
-
   const overallHealth = useMemo(() => {
     if (stats.failed > 0) return 'degraded'
     if (stats.total === 0) return 'unknown'
@@ -260,7 +349,22 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
       <div className="rounded-lg bg-card/50 border border-border p-2.5 mb-3 flex items-center gap-2">
         <GitBranch className="w-4 h-4 text-purple-400 shrink-0" />
         <span className="text-sm font-medium text-foreground">GitHub CI</span>
-        <span className="text-xs text-muted-foreground">{repos.length} repos</span>
+        <button
+          onClick={() => setIsEditingRepos(!isEditingRepos)}
+          className={cn(
+            "text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1",
+            isEditingRepos && "text-purple-400"
+          )}
+          title="Configure repos"
+        >
+          {repos.length} repos
+          <Settings className="w-3 h-3" />
+        </button>
+        {!isUsingDemoData && lastFetched && (
+          <span className="text-[10px] text-muted-foreground/60">
+            Updated {formatTimeAgo(lastFetched.toISOString())}
+          </span>
+        )}
         <span className={cn(
           'text-xs px-1.5 py-0.5 rounded ml-auto',
           overallHealth === 'healthy' ? 'bg-green-500/20 text-green-400' :
@@ -269,23 +373,79 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         )}>
           {overallHealth}
         </span>
-        <button
-          onClick={() => fetchWorkflows(true)}
-          disabled={isRefreshing}
-          className="p-1 rounded hover:bg-secondary transition-colors"
-          title="Refresh"
-        >
-          {isRefreshing
-            ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
-        </button>
       </div>
+
+      {/* Repo editor */}
+      {isEditingRepos && (
+        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={newRepoInput}
+              onChange={(e) => setNewRepoInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddRepo()}
+              placeholder="owner/repo (e.g., facebook/react)"
+              className="flex-1 px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground"
+            />
+            <button
+              onClick={handleAddRepo}
+              disabled={!newRepoInput.trim()}
+              className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Add repo"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setIsEditingRepos(false)}
+              className="p-1 rounded hover:bg-secondary text-muted-foreground"
+              title="Done"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {repos.map((repo) => (
+              <span
+                key={repo}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-xs"
+              >
+                {repo}
+                {repos.length > 1 && (
+                  <button
+                    onClick={() => handleRemoveRepo(repo)}
+                    className="hover:text-red-400 transition-colors"
+                    title="Remove repo"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Demo data indicator - no token configured */}
+      {isUsingDemoData && !error && (
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-2 flex items-center gap-2 mb-2">
+          <Key className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+          <p className="text-xs text-yellow-400/70 flex-1">
+            No GitHub token configured — showing sample data.
+          </p>
+          <a
+            href="/settings#github-token"
+            className="text-xs px-2 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded transition-colors whitespace-nowrap"
+          >
+            Add Token
+          </a>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-2 flex items-start gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-yellow-400/70">{error}</p>
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2 flex items-start gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-red-400/70">{error}</p>
         </div>
       )}
 
@@ -309,16 +469,25 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-2">
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => filters.setSearch(e.target.value)}
-          placeholder="Search workflows..."
-          className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+      {/* Controls row */}
+      <div className="flex items-center justify-end mb-2">
+        <CardControls
+          limit={itemsPerPage}
+          onLimitChange={setItemsPerPage}
+          sortBy={sorting.sortBy}
+          sortOptions={SORT_OPTIONS}
+          onSortChange={(v) => sorting.setSortBy(v as SortField)}
+          sortDirection={sorting.sortDirection}
+          onSortDirectionChange={sorting.setSortDirection}
         />
       </div>
+
+      {/* Search */}
+      <CardSearchInput
+        value={filters.search}
+        onChange={filters.setSearch}
+        placeholder="Search workflows..."
+      />
 
       {/* Workflow runs */}
       <div className="flex-1 overflow-y-auto space-y-0.5">
@@ -356,6 +525,23 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
               <span className="text-[10px] text-muted-foreground shrink-0">
                 {formatTimeAgo(w.updatedAt)}
               </span>
+              {(w.conclusion === 'failure' || w.conclusion === 'timed_out') && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    startMission({
+                      title: `Diagnose: ${w.name}`,
+                      description: `${w.conclusion} on ${w.repo}/${w.branch}`,
+                      type: 'troubleshoot',
+                      initialPrompt: `Diagnose GitHub Actions workflow failure:\n\n**Workflow:** ${w.name}\n**Repo:** ${w.repo}\n**Branch:** ${w.branch}\n**Status:** ${w.conclusion}\n**Event:** ${w.event}\n**Run #${w.runNumber}**\n${w.url !== '#' ? `**URL:** ${w.url}` : ''}\n\nPlease analyze why this workflow failed and suggest fixes.`,
+                    })
+                  }}
+                  className="shrink-0 p-0.5 rounded hover:bg-purple-500/20 transition-colors"
+                  title="Diagnose with AI"
+                >
+                  <Stethoscope className="w-3 h-3 text-purple-400" />
+                </button>
+              )}
               {w.url !== '#' && (
                 <a
                   href={w.url}
@@ -388,24 +574,8 @@ export function GitHubCIMonitor({ config }: GitHubCIMonitorProps) {
         </div>
       )}
 
-      {/* Alerts */}
-      <WorkloadMonitorAlerts issues={issues} />
-
-      {/* AI Diagnose (no repair for GitHub) */}
-      <WorkloadMonitorDiagnose
-        resources={monitorResources}
-        issues={issues}
-        monitorType="github"
-        diagnosable={true}
-        repairable={false}
-        workloadContext={{
-          repos,
-          totalWorkflows: stats.total,
-          failedWorkflows: stats.failed,
-          successRate: stats.successRate,
-          inProgress: stats.inProgress,
-        }}
-      />
+      {/* Alerts with inline diagnose buttons */}
+      <WorkloadMonitorAlerts issues={issues} monitorType="GitHub CI" />
     </div>
   )
-}
+})

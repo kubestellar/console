@@ -5,7 +5,7 @@ import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const llmInferenceConfig: UnifiedCardConfig = {
   type: 'llm_inference',
-  title: 'LLM Inference',
+  title: 'llm-d Inference',
   category: 'ai-ml',
   description: 'LLM inference endpoint status',
   icon: 'Bot',

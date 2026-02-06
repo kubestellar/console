@@ -31,8 +31,14 @@ const APP_SORT_COMPARATORS = {
   clusters: (a: AppData, b: AppData) => b.clusters.length - a.clusters.length,
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface AppStatusConfig {
+  // Configuration options for AppStatus card
+  // Future: Could add options for filtering, sorting, etc.
+}
+
 interface AppStatusProps {
-  config?: any
+  config?: AppStatusConfig
 }
 
 interface AppData {

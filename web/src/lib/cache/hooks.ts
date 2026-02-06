@@ -289,8 +289,6 @@ function cleanupOldPreferences(): void {
   for (let i = 0; i < removeCount; i++) {
     localStorage.removeItem(keysToRemove[i])
   }
-
-  console.log(`[Storage] Cleaned up ${removeCount} old preferences`)
 }
 
 /**
@@ -353,8 +351,6 @@ export async function clearAllStorage(): Promise<void> {
     }
   }
   keysToRemove.forEach(key => localStorage.removeItem(key))
-
-  console.log('[Storage] Cleared all cached data')
 }
 
 // ============================================================================

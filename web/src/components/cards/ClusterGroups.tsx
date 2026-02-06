@@ -18,6 +18,7 @@ import {
   Search,
   Tag,
   Filter,
+  Database,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -103,7 +104,7 @@ function relativeTime(iso: string): string {
 // ============================================================================
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
-  const { groups, createGroup, updateGroup, deleteGroup, evaluateGroup } = useClusterGroups()
+  const { groups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [isCreating, setIsCreating] = useState(false)
 
@@ -146,6 +147,15 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
           <span className="text-sm font-medium text-gray-300">
             {groups.length} group{groups.length !== 1 ? 's' : ''}
           </span>
+          {isPersisted && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-medium rounded bg-green-500/20 text-green-400 border border-green-500/30"
+              title="Groups are stored as Kubernetes CRs"
+            >
+              <Database className="w-2.5 h-2.5" />
+              CR
+            </span>
+          )}
         </div>
         <button
           onClick={() => setIsCreating(true)}

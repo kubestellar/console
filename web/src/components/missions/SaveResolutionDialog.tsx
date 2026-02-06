@@ -2,10 +2,10 @@
  * Save Resolution Dialog
  *
  * Dialog for saving a successful mission resolution for future reference.
- * Auto-detects issue signature and allows user to edit before saving.
+ * Uses AI to generate a clean problem/solution summary for reuse.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   X,
   Save,
@@ -16,16 +16,134 @@ import {
   FileText,
   ListOrdered,
   Code,
+  Loader2,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react'
 import type { Mission } from '../../hooks/useMissions'
 import { useResolutions, detectIssueSignature, type IssueSignature, type ResolutionSteps } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
+
+const KC_AGENT_WS_URL = 'ws://127.0.0.1:8585/ws'
+
+interface AISummary {
+  title: string
+  issueType: string
+  resourceKind?: string
+  problem: string
+  solution: string
+  steps: string[]
+  yaml?: string
+}
 
 interface SaveResolutionDialogProps {
   mission: Mission
   isOpen: boolean
   onClose: () => void
   onSaved?: () => void
+}
+
+/**
+ * Request AI to generate a resolution summary from the mission conversation
+ */
+async function generateAISummary(mission: Mission): Promise<AISummary> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(KC_AGENT_WS_URL)
+    const timeout = setTimeout(() => {
+      ws.close()
+      reject(new Error('Timeout waiting for AI summary'))
+    }, 30000)
+
+    let responseContent = ''
+
+    ws.onopen = () => {
+      // Build conversation context
+      const conversation = mission.messages
+        .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+        .join('\n\n')
+
+      const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.
+
+MISSION: ${mission.title}
+DESCRIPTION: ${mission.description}
+
+CONVERSATION:
+${conversation}
+
+Create a JSON summary with these fields:
+- title: Short descriptive title for this resolution (max 60 chars)
+- issueType: Category like "CrashLoopBackOff", "OOMKilled", "ImagePullBackOff", "DeploymentFailed", etc.
+- resourceKind: Kubernetes resource type if applicable (Pod, Deployment, Service, etc.)
+- problem: 1-2 sentence description of what went wrong
+- solution: 1-2 sentence description of how it was fixed
+- steps: Array of specific actionable steps that fixed the issue (commands, config changes, etc.)
+- yaml: Any YAML manifests or config snippets that were part of the fix (optional)
+
+Return ONLY valid JSON, no markdown code blocks or explanation.`
+
+      ws.send(JSON.stringify({
+        type: 'chat',
+        id: `summary-${Date.now()}`,
+        payload: {
+          prompt: prompt,
+          sessionId: `resolution-${mission.id}`,
+          agent: mission.agent || 'claude',
+        }
+      }))
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data)
+
+        if (message.type === 'stream') {
+          responseContent += message.payload?.content || ''
+        } else if (message.type === 'result') {
+          clearTimeout(timeout)
+          ws.close()
+
+          const content = message.payload?.content || message.payload?.output || responseContent
+
+          // Try to parse JSON from response
+          try {
+            // Extract JSON if wrapped in code blocks
+            const jsonMatch = content.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0])
+              resolve({
+                title: parsed.title || mission.title,
+                issueType: parsed.issueType || 'Unknown',
+                resourceKind: parsed.resourceKind,
+                problem: parsed.problem || '',
+                solution: parsed.solution || '',
+                steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+                yaml: parsed.yaml,
+              })
+            } else {
+              reject(new Error('Could not parse AI response as JSON'))
+            }
+          } catch (parseError) {
+            reject(new Error('Failed to parse AI summary response'))
+          }
+        } else if (message.type === 'error') {
+          clearTimeout(timeout)
+          ws.close()
+          reject(new Error(message.payload?.message || 'AI request failed'))
+        }
+      } catch {
+        // Ignore parse errors for non-JSON messages
+      }
+    }
+
+    ws.onerror = () => {
+      clearTimeout(timeout)
+      reject(new Error('WebSocket connection failed'))
+    }
+
+    ws.onclose = () => {
+      clearTimeout(timeout)
+    }
+  })
 }
 
 export function SaveResolutionDialog({
@@ -58,42 +176,53 @@ export function SaveResolutionDialog({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize form with auto-detected values
-  useEffect(() => {
-    if (isOpen) {
+  // AI summary state
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  // Generate AI summary
+  const generateSummary = useCallback(async () => {
+    setIsGenerating(true)
+    setAiError(null)
+
+    try {
+      const aiSummary = await generateAISummary(mission)
+
+      setTitle(aiSummary.title)
+      setIssueType(aiSummary.issueType)
+      setResourceKind(aiSummary.resourceKind || '')
+      setSummary(`**Problem:** ${aiSummary.problem}\n\n**Solution:** ${aiSummary.solution}`)
+      setSteps(aiSummary.steps.length > 0 ? aiSummary.steps : [''])
+      setYaml(aiSummary.yaml || '')
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Failed to generate summary')
+      // Fall back to basic extraction
       setTitle(mission.title)
       setIssueType(autoDetectedSignature.type || '')
       setResourceKind(autoDetectedSignature.resourceKind || '')
-
-      // Try to extract summary from last assistant message
-      const lastAssistant = [...mission.messages].reverse().find(m => m.role === 'assistant')
-      if (lastAssistant) {
-        // Look for a summary section or use first paragraph
-        const summaryMatch = lastAssistant.content.match(/(?:summary|solution|fix)[:\s]*([^\n]+)/i)
-        if (summaryMatch) {
-          setSummary(summaryMatch[1].trim())
-        } else {
-          // Use first non-empty paragraph
-          const firstPara = lastAssistant.content.split('\n\n')[0]?.trim() || ''
-          setSummary(firstPara.length > 200 ? firstPara.substring(0, 197) + '...' : firstPara)
-        }
-
-        // Try to extract steps from numbered lists
-        const numberedSteps = lastAssistant.content.match(/^\d+\.\s+.+$/gm) || []
-        if (numberedSteps.length > 0) {
-          setSteps(numberedSteps.map(s => s.replace(/^\d+\.\s+/, '')))
-        }
-
-        // Extract YAML code blocks
-        const yamlBlocks = lastAssistant.content.match(/```ya?ml\n([\s\S]*?)```/g) || []
-        if (yamlBlocks.length > 0) {
-          setYaml(yamlBlocks.map(b => b.replace(/```ya?ml\n|```/g, '')).join('\n---\n'))
-        }
-      }
-
-      setError(null)
+    } finally {
+      setIsGenerating(false)
     }
-  }, [isOpen, mission, autoDetectedSignature])
+  }, [mission, autoDetectedSignature])
+
+  // Initialize form when dialog opens - auto-generate AI summary
+  useEffect(() => {
+    if (isOpen) {
+      setError(null)
+      setAiError(null)
+
+      // Start with basic values while AI generates
+      setTitle(mission.title)
+      setIssueType(autoDetectedSignature.type || '')
+      setResourceKind(autoDetectedSignature.resourceKind || '')
+      setSummary('')
+      setSteps([''])
+      setYaml('')
+
+      // Generate AI summary
+      generateSummary()
+    }
+  }, [isOpen, mission, autoDetectedSignature, generateSummary])
 
   const handleAddStep = () => {
     setSteps(prev => [...prev, ''])
@@ -178,8 +307,44 @@ export function SaveResolutionDialog({
           </button>
         </div>
 
+        {/* AI Generation Status */}
+        {isGenerating && (
+          <div className="flex items-center gap-3 p-4 bg-primary/10 border-b border-primary/20">
+            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Generating AI Summary...</p>
+              <p className="text-xs text-muted-foreground">Creating a reusable problem/solution pair</p>
+            </div>
+          </div>
+        )}
+
+        {aiError && (
+          <div className="flex items-center justify-between gap-3 p-3 bg-yellow-500/10 border-b border-yellow-500/20">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-500" />
+              <span className="text-xs text-yellow-500">{aiError}</span>
+            </div>
+            <button
+              onClick={generateSummary}
+              disabled={isGenerating}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* AI Badge */}
+          {!isGenerating && !aiError && summary && (
+            <div className="flex items-center gap-2 text-xs text-primary">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI-generated summary - review and edit as needed</span>
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
@@ -191,7 +356,8 @@ export function SaveResolutionDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Fix OOM in payment service"
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              disabled={isGenerating}
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
@@ -207,7 +373,8 @@ export function SaveResolutionDialog({
                 value={issueType}
                 onChange={(e) => setIssueType(e.target.value)}
                 placeholder="e.g., CrashLoopBackOff"
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={isGenerating}
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
             <div>
@@ -219,22 +386,24 @@ export function SaveResolutionDialog({
                 value={resourceKind}
                 onChange={(e) => setResourceKind(e.target.value)}
                 placeholder="e.g., Pod, Deployment"
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                disabled={isGenerating}
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
           </div>
 
-          {/* Summary */}
+          {/* Summary (Problem & Solution) */}
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              Summary
+              Problem & Solution
             </label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="Brief description of the fix..."
-              rows={2}
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              placeholder={isGenerating ? "Generating..." : "Describe the problem and how it was fixed..."}
+              rows={4}
+              disabled={isGenerating}
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
 
@@ -242,7 +411,7 @@ export function SaveResolutionDialog({
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <ListOrdered className="w-4 h-4 text-muted-foreground" />
-              Steps
+              Remediation Steps
             </label>
             <div className="space-y-2">
               {steps.map((step, index) => (
@@ -252,13 +421,15 @@ export function SaveResolutionDialog({
                     type="text"
                     value={step}
                     onChange={(e) => handleStepChange(index, e.target.value)}
-                    placeholder="Step description..."
-                    className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder={isGenerating ? "Generating..." : "Step description..."}
+                    disabled={isGenerating}
+                    className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                   />
                   {steps.length > 1 && (
                     <button
                       onClick={() => handleRemoveStep(index)}
-                      className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                      disabled={isGenerating}
+                      className="p-1 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50"
                     >
                       <X className="w-4 h-4 text-muted-foreground hover:text-red-400" />
                     </button>
@@ -267,7 +438,8 @@ export function SaveResolutionDialog({
               ))}
               <button
                 onClick={handleAddStep}
-                className="text-xs text-primary hover:text-primary/80 ml-7"
+                disabled={isGenerating}
+                className="text-xs text-primary hover:text-primary/80 ml-7 disabled:opacity-50"
               >
                 + Add step
               </button>
@@ -278,14 +450,15 @@ export function SaveResolutionDialog({
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <Code className="w-4 h-4 text-muted-foreground" />
-              YAML Snippets (optional)
+              YAML/Config Snippets (optional)
             </label>
             <textarea
               value={yaml}
               onChange={(e) => setYaml(e.target.value)}
-              placeholder="Paste relevant YAML configuration..."
+              placeholder={isGenerating ? "Generating..." : "Paste relevant YAML configuration..."}
               rows={4}
-              className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              disabled={isGenerating}
+              className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
 
@@ -297,11 +470,13 @@ export function SaveResolutionDialog({
             <div className="flex gap-3">
               <button
                 onClick={() => setVisibility('private')}
+                disabled={isGenerating}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
                   visibility === 'private'
                     ? "bg-primary/20 border-primary/50 text-primary"
-                    : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground"
+                    : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground",
+                  isGenerating && "opacity-50"
                 )}
               >
                 <Save className="w-4 h-4" />
@@ -309,11 +484,13 @@ export function SaveResolutionDialog({
               </button>
               <button
                 onClick={() => setVisibility('shared')}
+                disabled={isGenerating}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
                   visibility === 'shared'
                     ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
-                    : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground"
+                    : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground",
+                  isGenerating && "opacity-50"
                 )}
               >
                 <Share2 className="w-4 h-4" />
@@ -332,27 +509,37 @@ export function SaveResolutionDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-border">
+        <div className="flex items-center justify-between gap-3 p-4 border-t border-border">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={generateSummary}
+            disabled={isGenerating || isSaving}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            Cancel
+            <Sparkles className="w-4 h-4" />
+            Regenerate
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isSaving ? (
-              <>Saving...</>
-            ) : (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                Save Resolution
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving || isGenerating}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSaving ? (
+                <>Saving...</>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Save Resolution
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

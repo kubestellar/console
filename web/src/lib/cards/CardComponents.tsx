@@ -4,6 +4,8 @@ import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDo
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
+import { ClusterStatusDot, getClusterState, type ClusterState } from '../../components/ui/ClusterStatusBadge'
+import type { ClusterWithHealth } from './cardHooks'
 
 // ============================================================================
 // CardSkeleton - Loading state for cards
@@ -248,8 +250,8 @@ export function CardSearchInput({
 // ============================================================================
 
 export interface CardClusterFilterProps {
-  /** Available clusters to filter */
-  availableClusters: { name: string }[]
+  /** Available clusters to filter (includes health info for status indicators) */
+  availableClusters: ClusterWithHealth[]
   /** Currently selected clusters */
   selectedClusters: string[]
   /** Toggle cluster selection */
@@ -326,19 +328,44 @@ export function CardClusterFilter({
             >
               All clusters
             </button>
-            {availableClusters.map((cluster) => (
-              <button
-                key={cluster.name}
-                onClick={() => onToggle(cluster.name)}
-                className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                  selectedClusters.includes(cluster.name)
-                    ? 'bg-purple-500/20 text-purple-400'
-                    : 'hover:bg-secondary text-foreground'
-                }`}
-              >
-                {cluster.name}
-              </button>
-            ))}
+            {availableClusters.map((cluster) => {
+              // Determine cluster state for status indicator
+              const clusterState: ClusterState = cluster.healthy !== undefined || cluster.reachable !== undefined
+                ? getClusterState(
+                    cluster.healthy ?? true,
+                    cluster.reachable,
+                    cluster.nodeCount,
+                    undefined,
+                    cluster.errorType
+                  )
+                : 'healthy'
+
+              // Get status label for tooltip
+              const stateLabel = clusterState === 'healthy' ? '' :
+                clusterState === 'degraded' ? 'degraded' :
+                clusterState === 'unreachable-auth' ? 'needs auth' :
+                clusterState === 'unreachable-timeout' ? 'offline' :
+                clusterState.startsWith('unreachable') ? 'offline' : ''
+
+              return (
+                <button
+                  key={cluster.name}
+                  onClick={() => onToggle(cluster.name)}
+                  className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
+                    selectedClusters.includes(cluster.name)
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : 'hover:bg-secondary text-foreground'
+                  }`}
+                  title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
+                >
+                  <ClusterStatusDot state={clusterState} size="sm" />
+                  <span className="flex-1 truncate">{cluster.name}</span>
+                  {stateLabel && (
+                    <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </div>,
         document.body

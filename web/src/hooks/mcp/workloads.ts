@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode } from '../useDemoMode'
+import { getDemoMode, isDemoModeForced } from '../useDemoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
@@ -720,6 +720,14 @@ export function useDeployments(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
+    // Skip fetching entirely in demo mode — no backend or agent available
+    if (isDemoModeForced) {
+      setDeployments([])
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       // Always set isRefreshing first so indicator shows
