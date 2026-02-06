@@ -59,12 +59,12 @@ export function DynamicCard({ config }: CardComponentProps) {
 // Tier 1: Declarative Card Runtime
 // ============================================================================
 
-interface Tier1Props {
+export interface Tier1Props {
   definition: DynamicCardDefinition
   cardDefinition: DynamicCardDefinition_T1
 }
 
-function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
+export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const [apiData, setApiData] = useState<Record<string, unknown>[]>([])
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
@@ -272,12 +272,12 @@ function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
 // Tier 2: Custom Code Runtime
 // ============================================================================
 
-interface Tier2Props {
+export interface Tier2Props {
   definition: DynamicCardDefinition
   config?: Record<string, unknown>
 }
 
-function Tier2CardRuntime({ definition, config }: Tier2Props) {
+export function Tier2CardRuntime({ definition, config }: Tier2Props) {
   const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
   const [compiling, setCompiling] = useState(true)
   const [error, setError] = useState<string | null>(null)

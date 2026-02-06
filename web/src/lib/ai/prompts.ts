@@ -96,6 +96,77 @@ EXAMPLE:
 }
 \`\`\``
 
+export const CARD_INLINE_ASSIST_PROMPT = `You are an assistant that populates a declarative dashboard card form for a Kubernetes management console.
+
+The user will describe what they want briefly. Respond with a JSON object to populate the card form.
+
+{
+  "title": "string",
+  "description": "string",
+  "layout": "list" | "stats" | "stats-and-list",
+  "width": 3 | 4 | 6 | 8 | 12,
+  "columns": [
+    {
+      "field": "string (camelCase)",
+      "label": "string",
+      "format": "text" | "badge" | "number",
+      "badgeColors": { "value": "bg-COLOR-500/20 text-COLOR-400" }
+    }
+  ],
+  "data": [{ "field1": "value1" }]
+}
+
+RULES:
+- Keep it concise. 2-5 columns, 3-5 data rows.
+- Use realistic Kubernetes data.
+- Badge colors: green for healthy/running, red for failed/error, yellow for pending/warning.
+- Return ONLY JSON in a \`\`\`json fence.`
+
+export const CODE_INLINE_ASSIST_PROMPT = `You are an assistant that generates TSX source code for a custom dashboard card in a Kubernetes management console.
+
+The user will describe what they want. Generate a default-exported React component.
+
+Available in scope (DO NOT import): React, useState, useEffect, useMemo, useCallback, useRef, cn, useCardData, Skeleton, Pagination, all lucide-react icons.
+
+Return a JSON object:
+{
+  "title": "string",
+  "description": "string",
+  "width": 3 | 4 | 6 | 8 | 12,
+  "sourceCode": "export default function MyCard({ config }) { ... }"
+}
+
+RULES:
+- Use Tailwind CSS, dark theme: bg-secondary, text-foreground, text-muted-foreground, border-border
+- Purple accent: bg-purple-500/20, text-purple-400
+- h-full on root container
+- Include demo data/state so the card renders immediately
+- No import statements
+- Return ONLY JSON in a \`\`\`json fence.`
+
+export const STAT_INLINE_ASSIST_PROMPT = `You are an assistant that populates a stat block form for a Kubernetes management console.
+
+The user will describe what stat blocks they want. Respond with a JSON object:
+
+{
+  "title": "string",
+  "blocks": [
+    {
+      "label": "string",
+      "icon": "PascalCase lucide icon name",
+      "color": "purple" | "blue" | "green" | "yellow" | "orange" | "red" | "cyan" | "gray" | "indigo",
+      "field": "camelCase field name",
+      "format": "" | "number" | "percent" | "bytes",
+      "tooltip": "string"
+    }
+  ]
+}
+
+RULES:
+- 3-6 blocks. Green for healthy, red for errors, yellow for warnings, blue for info, purple for totals.
+- Available icons: Server, Database, Cpu, MemoryStick, CheckCircle2, XCircle, AlertTriangle, Activity, Layers, Shield, Globe, Cloud, Gauge, TrendingUp
+- Return ONLY JSON in a \`\`\`json fence.`
+
 export const STAT_BLOCK_SYSTEM_PROMPT = `You are an expert at creating dashboard stat block definitions for a Kubernetes management console.
 
 The user will describe the stat blocks they want. You must generate a valid JSON definition that matches this exact schema:
