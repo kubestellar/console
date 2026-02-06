@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Layout, ChevronRight, Check } from 'lucide-react'
 import { DASHBOARD_TEMPLATES, TEMPLATE_CATEGORIES, DashboardTemplate } from './templates'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -41,6 +42,7 @@ const CARD_COLORS: Record<string, string> = {
 }
 
 export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesModalProps) {
+  const { t } = useTranslation()
   const [selectedCategory, setSelectedCategory] = useState<string>('cluster')
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [hoveredTemplate, setHoveredTemplate] = useState<DashboardTemplate | null>(null)
@@ -143,7 +145,7 @@ export function TemplatesModal({ isOpen, onClose, onApplyTemplate }: TemplatesMo
             {filteredTemplates.length === 0 && (
               <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
                 <Layout className="w-8 h-8 mb-2 opacity-50" />
-                <p>No templates in this category</p>
+                <p>{t('dashboard.noTemplates')}</p>
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle, X } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
@@ -88,6 +89,7 @@ export function SyncDialog({
   path,
   onSyncComplete,
 }: SyncDialogProps) {
+  const { t } = useTranslation()
   const [phase, setPhase] = useState<SyncPhase>('detection')
   const [driftedResources, setDriftedResources] = useState<DriftedResource[]>([])
   const [syncPlan, setSyncPlan] = useState<SyncPlan[]>([])
@@ -349,7 +351,7 @@ export function SyncDialog({
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Detecting drift...</span>
+                <span>{t('gitops.detectingDrift')}</span>
               </div>
             </div>
           )}

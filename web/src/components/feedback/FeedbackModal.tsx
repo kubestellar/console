@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -266,6 +267,7 @@ export function FeedbackButton({ onClick }: { onClick: () => void }) {
 
 // LinkedIn share button with coin reward
 export function LinkedInShareButton({ onShare, compact = false }: { onShare?: () => void; compact?: boolean }) {
+  const { t } = useTranslation()
   const handleShare = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}`
     window.open(linkedInUrl, '_blank', 'width=600,height=600')
@@ -280,7 +282,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
         title="Share on LinkedIn"
       >
         <Linkedin className="w-4 h-4" />
-        <span>Share</span>
+        <span>{t('feedback.share')}</span>
         <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
           +{REWARD_ACTIONS.linkedin_share.coins}
         </span>
@@ -294,7 +296,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
       className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#0A66C2] hover:bg-[#004182] text-white font-medium transition-colors"
     >
       <Linkedin className="w-4 h-4" />
-      <span>Share on LinkedIn</span>
+      <span>{t('feedback.shareOnLinkedIn')}</span>
       <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 text-white">
         +{REWARD_ACTIONS.linkedin_share.coins}
       </span>

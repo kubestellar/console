@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, Check, Loader2, Settings } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, getDemoMode } from '../../hooks/useDemoMode'
@@ -13,6 +14,7 @@ interface AgentSelectorProps {
 }
 
 export function AgentSelector({ compact = false, className = '' }: AgentSelectorProps) {
+  const { t } = useTranslation()
   const { agents, selectedAgent, agentsLoading, selectAgent, connectToAgent } = useMissions()
   const { isDemoMode: isDemoModeHook } = useDemoMode()
   // Synchronous fallback prevents flash during React transitions
@@ -196,11 +198,11 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
               {agentsLoading ? (
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Connecting to agent...</span>
+                  <span>{t('agent.connectingToAgent')}</span>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">No AI agents available</p>
+                  <p className="text-sm text-muted-foreground">{t('agent.noAgentsAvailable')}</p>
                   <button
                     onClick={() => connectToAgent()}
                     className="text-xs text-primary hover:underline"

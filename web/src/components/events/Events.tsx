@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -67,6 +68,7 @@ function getEventIcon(type: string, reason: string): React.ReactNode {
 }
 
 export function Events() {
+  const { t } = useTranslation()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected, filterBySeverity, customFilter: globalCustomFilter } = useGlobalFilters()
   const { drillToAllEvents } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
@@ -420,14 +422,14 @@ export function Events() {
               <div>
                 <label htmlFor="events-namespace-filter" className="block text-xs text-muted-foreground mb-1">Namespace</label>
                 <select id="events-namespace-filter" value={selectedNamespace} onChange={(e) => setSelectedNamespace(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">All Namespaces</option>
+                  <option value="">{t('events.allNamespaces')}</option>
                   {namespaces.map((ns) => <option key={ns} value={ns}>{ns}</option>)}
                 </select>
               </div>
               <div>
                 <label htmlFor="events-reason-filter" className="block text-xs text-muted-foreground mb-1">Reason</label>
                 <select id="events-reason-filter" value={selectedReason} onChange={(e) => setSelectedReason(e.target.value)} className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">All Reasons</option>
+                  <option value="">{t('events.allReasons')}</option>
                   {reasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
                 </select>
               </div>

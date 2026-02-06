@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Clock, ChevronDown, X, Plus, AlertTriangle, Info, Lightbulb } from 'lucide-react'
 import { useCardRecommendations, CardRecommendation } from '../../hooks/useCardRecommendations'
 import { useSnoozedRecommendations } from '../../hooks/useSnoozedRecommendations'
@@ -27,6 +28,7 @@ const PRIORITY_STYLES = {
 }
 
 export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
+  const { t } = useTranslation()
   const { recommendations, hasRecommendations, highPriorityCount } = useCardRecommendations(currentCardTypes)
   // Subscribe to snoozedRecommendations to trigger re-render when snooze state changes
   const { snoozeRecommendation, dismissRecommendation, isSnoozed, isDismissed, snoozedRecommendations } = useSnoozedRecommendations()
@@ -143,9 +145,9 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
                     {/* What this will do */}
                     <div className="text-xs text-muted-foreground mb-3">
                       <ul className="ml-3 list-disc space-y-0.5">
-                        <li>Add "{rec.title}" card to dashboard</li>
-                        <li>Show real-time cluster data</li>
-                        {rec.priority === 'high' && <li>Address critical issues faster</li>}
+                        <li>{t('dashboard.recommendations.addCard', { title: rec.title })}</li>
+                        <li>{t('dashboard.recommendations.showRealTimeData')}</li>
+                        {rec.priority === 'high' && <li>{t('dashboard.recommendations.addressCriticalIssues')}</li>}
                       </ul>
                     </div>
 

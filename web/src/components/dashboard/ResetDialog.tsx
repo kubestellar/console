@@ -1,4 +1,5 @@
 import { PlusCircle, RefreshCw, AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { BaseModal } from '../../lib/modals'
 
@@ -14,6 +15,8 @@ interface ResetDialogProps {
  * - Replace All: Reset to only default cards (remove customizations)
  */
 export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
+  const { t } = useTranslation()
+  
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
       <BaseModal.Header
@@ -62,7 +65,7 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
                 </p>
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-orange-400">
                   <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>This action cannot be undone</span>
+                  <span>{t('dashboard.resetWarning')}</span>
                 </div>
               </div>
             </div>

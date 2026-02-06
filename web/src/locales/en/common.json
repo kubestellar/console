@@ -129,5 +129,60 @@
   },
   "language": {
     "select": "Select Language"
+  },
+  "gpu": {
+    "noPendingRequests": "No pending requests"
+  },
+  "gitops": {
+    "allClusters": "All Clusters",
+    "detectingDrift": "Detecting drift..."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Your personalized multi-cluster overview",
+    "resetWarning": "This action cannot be undone",
+    "noTemplates": "No templates in this category",
+    "recommendations": {
+      "addCard": "Add \"{{title}}\" card to dashboard",
+      "showRealTimeData": "Show real-time cluster data",
+      "addressCriticalIssues": "Address critical issues faster"
+    }
+  },
+  "cardConfig": {
+    "allClusters": "All Clusters",
+    "default": "Default",
+    "cpuUsage": "CPU Usage",
+    "memoryUsage": "Memory Usage",
+    "podCount": "Pod Count"
+  },
+  "cardFactory": {
+    "formatText": "Text",
+    "formatBadge": "Badge",
+    "formatNumber": "Number"
+  },
+  "events": {
+    "allNamespaces": "All Namespaces",
+    "allReasons": "All Reasons"
+  },
+  "alerts": {
+    "weather": {
+      "severeStorm": "Severe Storm",
+      "extremeHeat": "Extreme Heat",
+      "heavyRain": "Heavy Rain",
+      "snow": "Snow",
+      "highWind": "High Wind"
+    }
+  },
+  "agent": {
+    "connectingToAgent": "Connecting to agent...",
+    "noAgentsAvailable": "No AI agents available"
+  },
+  "feedback": {
+    "share": "Share",
+    "shareOnLinkedIn": "Share on LinkedIn"
+  },
+  "drilldown": {
+    "customView": "Custom view",
+    "unknownViewType": "Unknown view type"
   }
 }

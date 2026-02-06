@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   X, Plus, Code, Layers, Wand2, Eye, Save, Sparkles,
   AlertTriangle, CheckCircle, Loader2, Trash2, LayoutTemplate,
@@ -449,6 +450,7 @@ function validateT2AssistResult(data: unknown): { valid: true; result: T2AssistR
 // ============================================================================
 
 export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactoryModalProps) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('declarative')
 
   // Declarative (Tier 1) state
@@ -831,9 +833,9 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
                           onChange={e => updateColumn(idx, 'format', e.target.value)}
                           className="w-20 text-xs px-2 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground focus:outline-none"
                         >
-                          <option value="text">Text</option>
-                          <option value="badge">Badge</option>
-                          <option value="number">Number</option>
+                          <option value="text">{t('cardFactory.formatText')}</option>
+                          <option value="badge">{t('cardFactory.formatBadge')}</option>
+                          <option value="number">{t('cardFactory.formatNumber')}</option>
                         </select>
                         <button
                           onClick={() => removeColumn(idx)}

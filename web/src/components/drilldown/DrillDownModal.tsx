@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
@@ -91,6 +92,7 @@ const getViewIcon = (type: string) => {
 }
 
 export function DrillDownModal() {
+  const { t } = useTranslation()
   const { state, pop, goTo, close } = useDrillDown()
   const { isMobile } = useMobile()
 
@@ -207,9 +209,9 @@ export function DrillDownModal() {
       case 'all-jobs':
         return <MultiClusterSummaryDrillDown data={data} viewType={type} />
       case 'custom':
-        return state.currentView?.customComponent || <div>Custom view</div>
+        return state.currentView?.customComponent || <div>{t('drilldown.customView')}</div>
       default:
-        return <div>Unknown view type</div>
+        return <div>{t('drilldown.unknownViewType')}</div>
     }
   }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Trash2, Server, Bell, BellOff, Bot, Slack, Webhook } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { BaseModal } from '../../lib/modals'
@@ -41,6 +42,7 @@ const SEVERITY_OPTIONS: { value: AlertSeverity; label: string; color: string }[]
 ]
 
 export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: AlertRuleEditorProps) {
+  const { t } = useTranslation()
   const { clusters } = useClusters()
 
   // Form state
@@ -330,11 +332,11 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                     onChange={e => setWeatherCondition(e.target.value as typeof weatherCondition)}
                     className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    <option value="severe_storm">Severe Storm</option>
-                    <option value="extreme_heat">Extreme Heat</option>
-                    <option value="heavy_rain">Heavy Rain</option>
-                    <option value="snow">Snow</option>
-                    <option value="high_wind">High Wind</option>
+                    <option value="severe_storm">{t('alerts.weather.severeStorm')}</option>
+                    <option value="extreme_heat">{t('alerts.weather.extremeHeat')}</option>
+                    <option value="heavy_rain">{t('alerts.weather.heavyRain')}</option>
+                    <option value="snow">{t('alerts.weather.snow')}</option>
+                    <option value="high_wind">{t('alerts.weather.highWind')}</option>
                   </select>
                 </div>
 

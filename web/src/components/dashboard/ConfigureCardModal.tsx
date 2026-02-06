@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, Settings, ToggleLeft } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
@@ -510,6 +511,7 @@ const CARD_CONFIG_FIELDS: Record<string, Array<{ key: string; label: string; typ
 }
 
 export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard }: ConfigureCardModalProps) {
+  const { t } = useTranslation()
   const [config, setConfig] = useState<Record<string, unknown>>({})
   const [behaviors, setBehaviors] = useState<Record<string, boolean>>({})
   const [title, setTitle] = useState('')
@@ -799,7 +801,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       onChange={(e) => updateConfig(field.key, e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     >
-                      <option value="">All Clusters</option>
+                      <option value="">{t('cardConfig.allClusters')}</option>
                       {clusters.map((c) => (
                         <option key={c.name} value={c.name}>{c.name}</option>
                       ))}
@@ -810,10 +812,10 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                       onChange={(e) => updateConfig(field.key, e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
                     >
-                      <option value="">Default</option>
-                      <option value="cpu">CPU Usage</option>
-                      <option value="memory">Memory Usage</option>
-                      <option value="pods">Pod Count</option>
+                      <option value="">{t('cardConfig.default')}</option>
+                      <option value="cpu">{t('cardConfig.cpuUsage')}</option>
+                      <option value="memory">{t('cardConfig.memoryUsage')}</option>
+                      <option value="pods">{t('cardConfig.podCount')}</option>
                     </select>
                   ) : field.type === 'number' ? (
                     <input

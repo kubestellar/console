@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
@@ -73,6 +74,7 @@ function getTimeAgo(timestamp: string | undefined): string {
 }
 
 export function GitOps() {
+  const { t } = useTranslation()
   const { clusters, isRefreshing: dataRefreshing, refetch } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
@@ -257,7 +259,7 @@ export function GitOps() {
           onChange={(e) => setSelectedCluster(e.target.value)}
           className="px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm"
         >
-          <option value="">All Clusters</option>
+          <option value="">{t('gitops.allClusters')}</option>
           {clusters.map((cluster) => (
             <option key={cluster.name} value={cluster.context || cluster.name.split('/').pop()}>
               {cluster.context || cluster.name.split('/').pop()}
