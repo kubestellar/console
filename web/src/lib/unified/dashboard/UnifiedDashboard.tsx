@@ -17,6 +17,7 @@ import type {
 } from '../types'
 import { UnifiedStatsSection } from '../stats'
 import { DashboardGrid } from './DashboardGrid'
+import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
 
 /**
  * UnifiedDashboard - Renders a complete dashboard from config
@@ -121,11 +122,15 @@ export function UnifiedDashboard({
     <div className={`p-4 md:p-6 ${className}`}>
       {/* Dashboard header */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">{config.name}</h1>
-          {config.subtitle && (
-            <p className="text-sm text-gray-400 mt-1">{config.subtitle}</p>
-          )}
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-white">{config.name}</h1>
+            {config.subtitle && (
+              <p className="text-sm text-gray-400 mt-1">{config.subtitle}</p>
+            )}
+          </div>
+          {/* Health indicator */}
+          <DashboardHealthIndicator />
         </div>
 
         <div className="flex items-center gap-2">

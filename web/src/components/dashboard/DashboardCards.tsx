@@ -8,6 +8,7 @@ import { ConfigureCardModal } from './ConfigureCardModal'
 import { DashboardTemplate } from './templates'
 import { DashboardCard } from '../../hooks/useDashboardCards'
 import { formatCardTitle } from '../../lib/formatCardTitle'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 interface CardSuggestion {
   type: string
@@ -91,14 +92,18 @@ export function DashboardCards({
     <div className="mt-6">
       {/* Header with toggle and actions */}
       <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setShowCards(!showCards)}
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <LayoutGrid className="w-4 h-4" />
-          <span>{sectionTitle} ({cards.length})</span>
-          {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCards(!showCards)}
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span>{sectionTitle} ({cards.length})</span>
+            {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          {/* Health indicator */}
+          <DashboardHealthIndicator size="sm" />
+        </div>
 
         {showCards && (
           <div className="flex items-center gap-2">
