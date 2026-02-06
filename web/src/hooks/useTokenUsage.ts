@@ -25,6 +25,7 @@ export interface TokenUsage {
 export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
 
 const SETTINGS_KEY = 'kubestellar-token-settings'
+const CATEGORY_KEY = 'kubestellar-token-categories'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 30000 // Poll every 30 seconds
@@ -90,6 +91,16 @@ if (typeof window !== 'undefined') {
     const parsedSettings = JSON.parse(settings)
     sharedUsage = { ...sharedUsage, ...parsedSettings }
   }
+  // Load persisted category data
+  const categoryData = localStorage.getItem(CATEGORY_KEY)
+  if (categoryData) {
+    try {
+      const parsedCategories = JSON.parse(categoryData)
+      sharedUsage.byCategory = { ...DEFAULT_BY_CATEGORY, ...parsedCategories }
+    } catch {
+      // Ignore invalid data
+    }
+  }
   // Set demo usage if in demo mode
   if (getDemoMode()) {
     sharedUsage.used = DEMO_TOKEN_USAGE
@@ -105,17 +116,30 @@ function notifySubscribers() {
 // Update shared usage (only notifies if actually changed)
 function updateSharedUsage(updates: Partial<TokenUsage>, forceNotify = false) {
   const prevUsage = sharedUsage
+  const prevByCategory = { ...sharedUsage.byCategory }
   sharedUsage = { ...sharedUsage, ...updates }
 
   // Only notify if value actually changed (prevents UI flashing on background polls)
+  const byCategoryChanged = updates.byCategory && (
+    prevByCategory.missions !== sharedUsage.byCategory.missions ||
+    prevByCategory.diagnose !== sharedUsage.byCategory.diagnose ||
+    prevByCategory.insights !== sharedUsage.byCategory.insights ||
+    prevByCategory.predictions !== sharedUsage.byCategory.predictions ||
+    prevByCategory.other !== sharedUsage.byCategory.other
+  )
   const hasChanged = forceNotify ||
     prevUsage.used !== sharedUsage.used ||
     prevUsage.limit !== sharedUsage.limit ||
     prevUsage.warningThreshold !== sharedUsage.warningThreshold ||
     prevUsage.criticalThreshold !== sharedUsage.criticalThreshold ||
-    prevUsage.stopThreshold !== sharedUsage.stopThreshold
+    prevUsage.stopThreshold !== sharedUsage.stopThreshold ||
+    byCategoryChanged
 
   if (hasChanged) {
+    // Persist category data to localStorage
+    if (byCategoryChanged && typeof window !== 'undefined' && !getDemoMode()) {
+      localStorage.setItem(CATEGORY_KEY, JSON.stringify(sharedUsage.byCategory))
+    }
     notifySubscribers()
   }
 }
@@ -271,7 +295,11 @@ export function useTokenUsage() {
       used: 0,
       resetDate: getNextResetDate(),
       byCategory: { ...DEFAULT_BY_CATEGORY },
-    })
+    }, true) // Force notify
+    // Clear persisted category data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CATEGORY_KEY)
+    }
   }, [])
 
   // Check if AI features should be disabled
