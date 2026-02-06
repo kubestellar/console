@@ -324,7 +324,7 @@ export function Events() {
           <div className="glass p-4 rounded-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-muted-foreground">Recent Warnings</h3>
-              <button onClick={() => { setActiveTab('list'); setFilter('warning') }} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 px-3 py-2 min-h-11">View all <ChevronRight className="w-3 h-3" /></button>
+              <button onClick={() => { setActiveTab('list'); setFilter('warning') }} className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 px-3 py-2 min-h-11 min-w-11">View all <ChevronRight className="w-3 h-3" /></button>
             </div>
             {globalFilteredWarningEvents.slice(0, 5).length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-4"><CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />No warnings</div>
