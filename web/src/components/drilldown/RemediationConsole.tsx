@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, KeyboardEvent } from 'react'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
+import { safeGetItem } from '../../lib/utils/localStorage'
 
 interface LogEntry {
   id: string
@@ -201,7 +202,7 @@ export function RemediationConsole({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${safeGetItem('token') || ''}`,
         },
         body: JSON.stringify({
           command: cmd,

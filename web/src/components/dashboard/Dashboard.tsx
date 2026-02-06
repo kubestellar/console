@@ -33,6 +33,7 @@ import { AddCardModal } from './AddCardModal'
 import { ReplaceCardModal } from './ReplaceCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
+import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { MissionSuggestions } from './MissionSuggestions'
 import { TemplatesModal } from './TemplatesModal'
 import { CreateDashboardModal } from './CreateDashboardModal'
@@ -77,14 +78,9 @@ export function Dashboard() {
   const [localCards, setLocalCards] = useState<Card[]>(() => {
     // Priority: cache > localStorage > default cards
     if (dashboardCache?.cards?.length) return dashboardCache.cards
-    try {
-      const stored = localStorage.getItem(DASHBOARD_STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      }
-    } catch {
-      // Ignore parse errors
+    const parsed = safeGetJSON<Card[]>(DASHBOARD_STORAGE_KEY)
+    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+      return parsed
     }
     return DEFAULT_DASHBOARD_CARDS
   })
@@ -180,14 +176,14 @@ export function Dashboard() {
 
   // Auto-refresh state (persisted in localStorage)
   const [autoRefresh, setAutoRefresh] = useState(() => {
-    const stored = localStorage.getItem('dashboard-auto-refresh')
+    const stored = safeGetItem('dashboard-auto-refresh')
     return stored !== null ? stored === 'true' : true // default to true
   })
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Persist auto-refresh setting
   useEffect(() => {
-    localStorage.setItem('dashboard-auto-refresh', String(autoRefresh))
+    safeSetItem('dashboard-auto-refresh', String(autoRefresh))
   }, [autoRefresh])
 
   // Auto-refresh interval
@@ -425,11 +421,7 @@ export function Dashboard() {
         dashboardCache = { ...dashboardCache, cards: localCards, timestamp: Date.now() }
       }
       // Persist to localStorage for quick restore on page refresh
-      try {
-        localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(localCards))
-      } catch {
-        // Ignore storage errors (quota exceeded, etc.)
-      }
+      safeSetJSON(DASHBOARD_STORAGE_KEY, localCards)
     }
   }, [localCards])
 

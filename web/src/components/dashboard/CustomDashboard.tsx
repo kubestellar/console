@@ -28,6 +28,7 @@ import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS } from '../cards/cardRegistry'
+import { safeGetJSON, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 import { AddCardModal } from './AddCardModal'
 import { ConfigureCardModal } from './ConfigureCardModal'
 import { CardRecommendations } from './CardRecommendations'
@@ -228,16 +229,9 @@ export function CustomDashboard() {
     try {
       // First try to load from localStorage for instant display
       if (!isRefresh) {
-        const stored = localStorage.getItem(storageKey)
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored)
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setCards(parsed)
-            }
-          } catch {
-            // Ignore parse errors
-          }
+        const parsed = safeGetJSON<Card[]>(storageKey)
+        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+          setCards(parsed)
         }
       }
 
@@ -251,7 +245,7 @@ export function CustomDashboard() {
             position: c.position || { x: 0, y: 0, w: 4, h: 2 }
           }))
           setCards(loadedCards)
-          localStorage.setItem(storageKey, JSON.stringify(loadedCards))
+          safeSetJSON(storageKey, loadedCards)
         }
       }
       setLastUpdated(new Date())
@@ -290,7 +284,7 @@ export function CustomDashboard() {
   // Persist cards to localStorage when they change
   useEffect(() => {
     if (cards.length > 0) {
-      localStorage.setItem(storageKey, JSON.stringify(cards))
+      safeSetJSON(storageKey, cards)
     }
   }, [cards, storageKey])
 
@@ -385,7 +379,7 @@ export function CustomDashboard() {
 
   const handleReset = useCallback(() => {
     setCards([])
-    localStorage.removeItem(storageKey)
+    safeRemoveItem(storageKey)
     showToast('Dashboard reset to empty', 'info')
   }, [storageKey, showToast])
 
@@ -398,7 +392,7 @@ export function CustomDashboard() {
     }
 
     // Remove local card storage
-    localStorage.removeItem(storageKey)
+    safeRemoveItem(storageKey)
 
     const displayName = sidebarItem?.name || dashboard?.name || 'this dashboard'
     showToast(`Deleted "${displayName}"`, 'success')

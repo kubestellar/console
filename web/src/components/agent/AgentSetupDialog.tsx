@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Download } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { BaseModal } from '../../lib/modals'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 const DISMISSED_KEY = 'kc-agent-setup-dismissed'
 const SNOOZED_KEY = 'kc-agent-setup-snoozed'
@@ -24,11 +25,11 @@ export function AgentSetupDialog() {
     if (isConnected) return
 
     // Check if user previously dismissed permanently
-    const dismissed = localStorage.getItem(DISMISSED_KEY)
+    const dismissed = safeGetItem(DISMISSED_KEY)
     if (dismissed) return
 
     // Check if snoozed and still within snooze period
-    const snoozedUntil = localStorage.getItem(SNOOZED_KEY)
+    const snoozedUntil = safeGetItem(SNOOZED_KEY)
     if (snoozedUntil && Date.now() < parseInt(snoozedUntil)) return
 
     // Show the dialog
@@ -42,13 +43,13 @@ export function AgentSetupDialog() {
   }
 
   const handleSnooze = () => {
-    localStorage.setItem(SNOOZED_KEY, String(Date.now() + SNOOZE_DURATION))
+    safeSetItem(SNOOZED_KEY, String(Date.now() + SNOOZE_DURATION))
     setShow(false)
   }
 
   const handleDismiss = (rememberChoice: boolean) => {
     if (rememberChoice) {
-      localStorage.setItem(DISMISSED_KEY, 'true')
+      safeSetItem(DISMISSED_KEY, 'true')
     }
     setShow(false)
   }

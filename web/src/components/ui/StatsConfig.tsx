@@ -40,6 +40,7 @@ import {
   DASHBOARD_STAT_BLOCKS,
   OPERATORS_STAT_BLOCKS,
 } from './StatsBlockDefinitions'
+import { safeGetJSON, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 
 // Re-export for backward compatibility
 export type { StatBlockConfig, DashboardStatsType }
@@ -518,45 +519,32 @@ export function useStatsConfig(
   const key = storageKey || getStatsStorageKey(dashboardType)
 
   const [blocks, setBlocks] = useState<StatBlockConfig[]>(() => {
-    try {
-      const saved = localStorage.getItem(key)
-      if (saved) {
-        const parsed = JSON.parse(saved) as StatBlockConfig[]
-        // Remove stale saved blocks whose IDs no longer exist in any definition
-        const validIds = new Set(ALL_STAT_BLOCKS.map(b => b.id))
-        const cleaned = parsed.filter(b => validIds.has(b.id))
-        // Merge with defaults to handle new blocks added in updates
-        const savedIds = new Set(cleaned.map(b => b.id))
-        const merged = [...cleaned]
-        defaultBlocks.forEach(defaultBlock => {
-          if (!savedIds.has(defaultBlock.id)) {
-            merged.push(defaultBlock)
-          }
-        })
-        return merged
-      }
-    } catch {
-      // Ignore parse errors
+    const saved = safeGetJSON<StatBlockConfig[]>(key)
+    if (saved) {
+      // Remove stale saved blocks whose IDs no longer exist in any definition
+      const validIds = new Set(ALL_STAT_BLOCKS.map(b => b.id))
+      const cleaned = saved.filter(b => validIds.has(b.id))
+      // Merge with defaults to handle new blocks added in updates
+      const savedIds = new Set(cleaned.map(b => b.id))
+      const merged = [...cleaned]
+      defaultBlocks.forEach(defaultBlock => {
+        if (!savedIds.has(defaultBlock.id)) {
+          merged.push(defaultBlock)
+        }
+      })
+      return merged
     }
     return defaultBlocks
   })
 
   const saveBlocks = (newBlocks: StatBlockConfig[]) => {
     setBlocks(newBlocks)
-    try {
-      localStorage.setItem(key, JSON.stringify(newBlocks))
-    } catch {
-      // Ignore storage errors
-    }
+    safeSetJSON(key, newBlocks)
   }
 
   const resetBlocks = () => {
     setBlocks(defaultBlocks)
-    try {
-      localStorage.removeItem(key)
-    } catch {
-      // Ignore storage errors
-    }
+    safeRemoveItem(key)
   }
 
   const visibleBlocks = blocks.filter(b => b.visible)

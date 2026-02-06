@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle, X } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { safeGetItem } from '../../lib/utils/localStorage'
 
 // Sync phases
 type SyncPhase = 'detection' | 'plan' | 'execution' | 'complete'
@@ -131,7 +132,7 @@ export function SyncDialog({
 
     try {
       // Call the real API endpoint
-      const token = localStorage.getItem('token')
+      const token = safeGetItem('token')
       const response = await fetch('/api/gitops/detect-drift', {
         method: 'POST',
         headers: {
@@ -227,7 +228,7 @@ export function SyncDialog({
 
     try {
       // Call the real sync API
-      const token = localStorage.getItem('token')
+      const token = safeGetItem('token')
       const response = await fetch('/api/gitops/sync', {
         method: 'POST',
         headers: {
