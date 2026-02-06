@@ -1,11 +1,13 @@
 name: Auto-QA Agent
 # Hourly quality checks with rotating focus areas.
 # Layer 1 (always): Build, lint, Go build, bundle size, npm audit
-# Layer 2 (always): Resilience/error handling, Inventory consistency, UI design principles
-# Layer 3 (8-day rotation via day-of-year % 8):
+# Layer 2 (always): Resilience, Inventory consistency, UI design principles
+# Layer 3 (always): NFR coverage (testing, i18n, state, navigation, efficiency)
+# Layer 4 (8-day rotation via day-of-year % 8):
 #   0=Performance, 1=Security, 2=Navigation/A11y,
 #   3=Operator Usefulness, 4=SRE/Multi-Cluster,
 #   5=Feature Recommendations, 6=Resilience, 7=Consistency
+# Layer 5 (weekly): Self-improvement analysis based on recent PR patterns
 #
 # Issues auto-assign Copilot and feed into the automation pipeline.
 #
@@ -905,6 +907,333 @@ jobs:
             echo "No pattern inconsistencies detected"
           fi
 
+      # === NFR COVERAGE & SELF-IMPROVEMENT (weekly on Sunday) ===
+      - name: "Meta: Analyze recent PRs for improvement opportunities"
+        id: meta_pr_analysis
+        if: github.event.schedule == '0 0 * * 0' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
+        continue-on-error: true
+        run: |
+          echo "Analyzing recent merged PRs for Auto-QA improvement opportunities..."
+          ISSUES=""
+
+          # Get PRs merged in the last 7 days
+          WEEK_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          # Fetch recent merged PRs
+          gh pr list --repo "${{ github.repository }}" --state merged --limit 50 --json number,title,labels,mergedAt,files > /tmp/recent-prs.json 2>/dev/null || echo "[]" > /tmp/recent-prs.json
+
+          # Analyze PR patterns
+          PR_COUNT=$(jq 'length' /tmp/recent-prs.json)
+          echo "Found $PR_COUNT recently merged PRs"
+
+          # Count PRs by category based on title prefixes
+          BUG_FIXES=$(jq '[.[] | select(.title | test("^🐛|^fix|^bug"; "i"))] | length' /tmp/recent-prs.json)
+          FEATURES=$(jq '[.[] | select(.title | test("^✨|^feat|^add"; "i"))] | length' /tmp/recent-prs.json)
+          REFACTORS=$(jq '[.[] | select(.title | test("^♻️|^refactor"; "i"))] | length' /tmp/recent-prs.json)
+          DOCS=$(jq '[.[] | select(.title | test("^📖|^📝|^doc"; "i"))] | length' /tmp/recent-prs.json)
+          TESTS=$(jq '[.[] | select(.title | test("^✅|^test"; "i"))] | length' /tmp/recent-prs.json)
+
+          # Identify NFR categories from PR titles and file paths
+          NFR_TESTING=$(jq '[.[] | select(.files[]?.path | test("test|spec|__tests__"; "i"))] | length' /tmp/recent-prs.json 2>/dev/null || echo "0")
+          NFR_SECURITY=$(jq '[.[] | select(.title | test("secur|auth|token|cred|permission"; "i"))] | length' /tmp/recent-prs.json)
+          NFR_PERF=$(jq '[.[] | select(.title | test("perf|optim|fast|slow|cache|lazy"; "i"))] | length' /tmp/recent-prs.json)
+          NFR_A11Y=$(jq '[.[] | select(.title | test("a11y|access|aria|keyboard|screen.?reader"; "i"))] | length' /tmp/recent-prs.json)
+          NFR_I18N=$(jq '[.[] | select(.title | test("i18n|l10n|local|translat|language"; "i"))] | length' /tmp/recent-prs.json)
+          NFR_UI=$(jq '[.[] | select(.title | test("ui|ux|design|style|theme|dark|color"; "i"))] | length' /tmp/recent-prs.json)
+          NFR_STORAGE=$(jq '[.[] | select(.title | test("storage|cache|persist|state|database"; "i"))] | length' /tmp/recent-prs.json)
+          NFR_NAV=$(jq '[.[] | select(.title | test("nav|route|link|breadcrumb|menu"; "i"))] | length' /tmp/recent-prs.json)
+
+          # Build NFR coverage report
+          ISSUES="${ISSUES}## Recent PR Analysis (Last 7 Days)\n\n"
+          ISSUES="${ISSUES}### PR Categories\n"
+          ISSUES="${ISSUES}| Category | Count |\n|----------|-------|\n"
+          ISSUES="${ISSUES}| 🐛 Bug Fixes | ${BUG_FIXES} |\n"
+          ISSUES="${ISSUES}| ✨ Features | ${FEATURES} |\n"
+          ISSUES="${ISSUES}| ♻️ Refactors | ${REFACTORS} |\n"
+          ISSUES="${ISSUES}| 📖 Docs | ${DOCS} |\n"
+          ISSUES="${ISSUES}| ✅ Tests | ${TESTS} |\n\n"
+
+          ISSUES="${ISSUES}### NFR Coverage Analysis\n"
+          ISSUES="${ISSUES}| NFR Area | PRs Touching | Coverage |\n|----------|--------------|----------|\n"
+
+          # Determine coverage status
+          nfr_status() {
+            if [ "$1" -eq 0 ]; then echo "⚠️ No coverage";
+            elif [ "$1" -lt 3 ]; then echo "🟡 Low";
+            else echo "🟢 Active"; fi
+          }
+
+          ISSUES="${ISSUES}| Testing | ${NFR_TESTING} | $(nfr_status $NFR_TESTING) |\n"
+          ISSUES="${ISSUES}| Security | ${NFR_SECURITY} | $(nfr_status $NFR_SECURITY) |\n"
+          ISSUES="${ISSUES}| Performance | ${NFR_PERF} | $(nfr_status $NFR_PERF) |\n"
+          ISSUES="${ISSUES}| Accessibility | ${NFR_A11Y} | $(nfr_status $NFR_A11Y) |\n"
+          ISSUES="${ISSUES}| Localization | ${NFR_I18N} | $(nfr_status $NFR_I18N) |\n"
+          ISSUES="${ISSUES}| UI/UX Design | ${NFR_UI} | $(nfr_status $NFR_UI) |\n"
+          ISSUES="${ISSUES}| Storage/State | ${NFR_STORAGE} | $(nfr_status $NFR_STORAGE) |\n"
+          ISSUES="${ISSUES}| Navigation | ${NFR_NAV} | $(nfr_status $NFR_NAV) |\n\n"
+
+          # Identify gaps and make recommendations
+          RECOMMENDATIONS=""
+
+          if [ "$NFR_TESTING" -lt 2 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Testing**: Consider adding test coverage checks (unit test %, E2E coverage)\n"
+          fi
+          if [ "$NFR_SECURITY" -lt 2 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Security**: Add checks for exposed secrets, unsafe innerHTML, eval usage\n"
+          fi
+          if [ "$NFR_A11Y" -lt 2 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Accessibility**: Enhance ARIA checks, add color contrast validation\n"
+          fi
+          if [ "$NFR_I18N" -eq 0 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Localization**: Add checks for hardcoded user-facing strings\n"
+          fi
+          if [ "$NFR_PERF" -lt 2 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Performance**: Add bundle analysis, large file detection, import cost checks\n"
+          fi
+          if [ "$NFR_STORAGE" -lt 2 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Storage**: Add checks for localStorage usage patterns, state persistence\n"
+          fi
+          if [ "$NFR_NAV" -lt 2 ]; then
+            RECOMMENDATIONS="${RECOMMENDATIONS}- **Navigation**: Add broken link detection, route consistency checks\n"
+          fi
+
+          if [ -n "$RECOMMENDATIONS" ]; then
+            ISSUES="${ISSUES}### Recommended Auto-QA Improvements\n\nBased on recent activity, consider adding these checks:\n\n${RECOMMENDATIONS}\n"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            ISSUES="${ISSUES}### Status\n\n✅ All NFR areas have recent activity. No immediate improvements needed.\n"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          printf "%b" "$ISSUES" > /tmp/meta-pr-analysis.txt
+          cat /tmp/meta-pr-analysis.txt
+
+      - name: "Check: Missing test coverage"
+        id: focus_test_coverage
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for components without tests..."
+          ISSUES=""
+
+          # Find components without corresponding test files
+          UNTESTED=""
+          for f in $(find src/components -name "*.tsx" -not -name "*.test.*" -not -name "*.spec.*" 2>/dev/null | head -50); do
+            BASENAME=$(basename "$f" .tsx)
+            DIRNAME=$(dirname "$f")
+
+            # Check for test file variants
+            TEST_EXISTS=false
+            for ext in ".test.tsx" ".spec.tsx" ".test.ts" ".spec.ts"; do
+              if [ -f "${DIRNAME}/${BASENAME}${ext}" ] || [ -f "${DIRNAME}/__tests__/${BASENAME}${ext}" ]; then
+                TEST_EXISTS=true
+                break
+              fi
+            done
+
+            if [ "$TEST_EXISTS" = "false" ]; then
+              # Check if component is complex enough to warrant tests (>50 lines)
+              LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
+              if [ "$LINES" -gt 50 ]; then
+                UNTESTED="${UNTESTED}  - \`${f}\` (${LINES} lines)\n"
+              fi
+            fi
+          done
+
+          if [ -n "$UNTESTED" ]; then
+            COUNT=$(echo -e "$UNTESTED" | grep -c "^\s*-" || echo "0")
+            if [ "$COUNT" -gt 5 ]; then
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              printf "Components over 50 lines without test files:\n%b" "$UNTESTED" > /tmp/focus-test-coverage.txt
+              cat /tmp/focus-test-coverage.txt
+            else
+              echo "found=false" >> "$GITHUB_OUTPUT"
+              echo "Test coverage looks adequate"
+            fi
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "All major components have tests"
+          fi
+
+      - name: "Check: Hardcoded user-facing strings (i18n)"
+        id: focus_i18n
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for hardcoded user-facing strings..."
+          ISSUES=""
+
+          # Find JSX text content that looks like user-facing strings
+          # Exclude: className, imports, comments, type definitions
+          HARDCODED=$(grep -rn ">[A-Z][a-z].*</" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|\.test\.\|\.spec\." | \
+            grep -v "className\|import\|//\|/\*\|interface\|type " | \
+            grep -v "{.*}" | \
+            head -25 || true)
+
+          if [ -n "$HARDCODED" ]; then
+            COUNT=$(echo "$HARDCODED" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 10 ]; then
+              ISSUES="${ISSUES}### Hardcoded strings in JSX (${COUNT} found)\nConsider extracting to a translations file for future i18n support:\n\`\`\`\n${HARDCODED}\n\`\`\`\n"
+            fi
+          fi
+
+          # Find button/label text
+          BUTTON_TEXT=$(grep -rn ">[A-Z][a-z]\+</button>\|>[A-Z][a-z]\+</Button>" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | head -15 || true)
+
+          if [ -n "$BUTTON_TEXT" ]; then
+            ISSUES="${ISSUES}\n### Hardcoded button labels\n\`\`\`\n${BUTTON_TEXT}\n\`\`\`\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-i18n.txt
+            echo "Hardcoded strings found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No obvious i18n issues"
+          fi
+
+      - name: "Check: State management patterns"
+        id: focus_state_patterns
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for state management issues..."
+          ISSUES=""
+
+          # Find localStorage usage without error handling
+          LOCALSTORAGE=$(grep -rn "localStorage\.\(get\|set\)Item" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|try\|catch" | head -15 || true)
+
+          if [ -n "$LOCALSTORAGE" ]; then
+            ISSUES="${ISSUES}### localStorage usage without try/catch\n\`\`\`\n${LOCALSTORAGE}\n\`\`\`\n\n"
+          fi
+
+          # Find excessive prop drilling (components with >6 props)
+          PROP_DRILLING=$(grep -rn "^export.*function\|^const.*=.*(" src/components --include="*.tsx" 2>/dev/null | \
+            grep -oE "\([^)]{200,}\)" | head -10 || true)
+
+          if [ -n "$PROP_DRILLING" ]; then
+            ISSUES="${ISSUES}### Components with many props (possible prop drilling)\nConsider using Context or state management:\n\`\`\`\n${PROP_DRILLING}\n\`\`\`\n\n"
+          fi
+
+          # Find components re-fetching data that could be cached
+          REFETCH=$(grep -rn "useEffect.*fetch\|useEffect.*api\." src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|cache\|memo\|useSWR\|useQuery\|useCached" | head -10 || true)
+
+          if [ -n "$REFETCH" ]; then
+            COUNT=$(echo "$REFETCH" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 3 ]; then
+              ISSUES="${ISSUES}### Data fetching without caching (${COUNT} found)\nConsider using useSWR, useQuery, or custom cache hooks:\n\`\`\`\n${REFETCH}\n\`\`\`\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-state-patterns.txt
+            echo "State management issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "State management looks good"
+          fi
+
+      - name: "Check: Navigation and routing issues"
+        id: focus_navigation
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for navigation and routing issues..."
+          ISSUES=""
+
+          # Find hardcoded route paths (should use constants)
+          HARDCODED_ROUTES=$(grep -rn "navigate(['\"]/" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
+            grep -v "node_modules\|ROUTES\.\|routes\." | head -15 || true)
+
+          if [ -n "$HARDCODED_ROUTES" ]; then
+            ISSUES="${ISSUES}### Hardcoded route paths\nConsider using route constants for maintainability:\n\`\`\`\n${HARDCODED_ROUTES}\n\`\`\`\n\n"
+          fi
+
+          # Find links without proper handling
+          BARE_LINKS=$(grep -rn "<a href=" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|target=\|rel=\|Link" | head -10 || true)
+
+          if [ -n "$BARE_LINKS" ]; then
+            ISSUES="${ISSUES}### External links without target/rel attributes\n\`\`\`\n${BARE_LINKS}\n\`\`\`\n\n"
+          fi
+
+          # Find missing breadcrumb or back navigation in drill-down views
+          DRILLDOWNS=$(find src -path "*drilldown*" -name "*.tsx" -o -path "*detail*" -name "*.tsx" 2>/dev/null | head -20)
+          MISSING_NAV=""
+          for f in $DRILLDOWNS; do
+            HAS_BACK=$(grep -l "navigate\|history\|breadcrumb\|Breadcrumb\|goBack\|Back" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_BACK" ]; then
+              MISSING_NAV="${MISSING_NAV}  - \`${f}\`\n"
+            fi
+          done
+
+          if [ -n "$MISSING_NAV" ]; then
+            ISSUES="${ISSUES}### Drill-down views possibly missing back navigation\n${MISSING_NAV}\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-navigation.txt
+            echo "Navigation issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Navigation looks good"
+          fi
+
+      - name: "Check: Efficiency patterns"
+        id: focus_efficiency
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for efficiency issues..."
+          ISSUES=""
+
+          # Find re-renders from inline object/function creation
+          INLINE_OBJECTS=$(grep -rn "style={{" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | wc -l || echo "0")
+          INLINE_FUNCS=$(grep -rn "onClick={() =>" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|useCallback" | wc -l || echo "0")
+
+          if [ "$INLINE_OBJECTS" -gt 50 ] || [ "$INLINE_FUNCS" -gt 30 ]; then
+            ISSUES="${ISSUES}### Potential re-render triggers\n"
+            ISSUES="${ISSUES}- Inline style objects: ${INLINE_OBJECTS} (each creates new object on render)\n"
+            ISSUES="${ISSUES}- Inline arrow functions: ${INLINE_FUNCS} (consider useCallback)\n\n"
+          fi
+
+          # Find components importing entire libraries
+          FULL_IMPORTS=$(grep -rn "import \* as\|from 'lodash'\|from 'moment'" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | head -10 || true)
+
+          if [ -n "$FULL_IMPORTS" ]; then
+            ISSUES="${ISSUES}### Full library imports (tree-shaking issue)\nUse specific imports instead:\n\`\`\`\n${FULL_IMPORTS}\n\`\`\`\n\n"
+          fi
+
+          # Find components without memo that receive object props
+          UNMEMO=$(grep -rn "export const\|export function" src/components --include="*.tsx" 2>/dev/null | \
+            grep -v "memo\|React.memo" | head -20 || true)
+          UNMEMO_COUNT=$(echo "$UNMEMO" | grep -c "export" || echo "0")
+
+          if [ "$UNMEMO_COUNT" -gt 30 ]; then
+            ISSUES="${ISSUES}### Many components without React.memo (${UNMEMO_COUNT})\nConsider memoizing components that receive object/array props\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-efficiency.txt
+            echo "Efficiency issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No major efficiency issues"
+          fi
+
       # === INVENTORY CONSISTENCY (every run) ===
       - name: "Check: Missing component files"
         id: focus_missing_files
@@ -1122,6 +1451,8 @@ jobs:
             "auto-qa:resilience:F97316:Resilience/error handling improvement"
             "auto-qa:consistency:6B7280:Inventory/documentation consistency"
             "auto-qa:ui-design:EC4899:UI design principle violation"
+            "auto-qa:nfr:06B6D4:Non-functional requirement improvement"
+            "auto-qa:meta:9333EA:Auto-QA self-improvement recommendation"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -1184,6 +1515,13 @@ jobs:
           FOCUS_DARK_MODE: ${{ steps.focus_dark_mode.outputs.found }}
           FOCUS_TOUCH_TARGETS: ${{ steps.focus_touch_targets.outputs.found }}
           FOCUS_COMPONENT_PATTERNS: ${{ steps.focus_component_patterns.outputs.found }}
+          # NFR Coverage & Self-Improvement
+          META_PR_ANALYSIS: ${{ steps.meta_pr_analysis.outputs.found }}
+          FOCUS_TEST_COVERAGE: ${{ steps.focus_test_coverage.outputs.found }}
+          FOCUS_I18N: ${{ steps.focus_i18n.outputs.found }}
+          FOCUS_STATE_PATTERNS: ${{ steps.focus_state_patterns.outputs.found }}
+          FOCUS_NAVIGATION: ${{ steps.focus_navigation.outputs.found }}
+          FOCUS_EFFICIENCY: ${{ steps.focus_efficiency.outputs.found }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -1666,6 +2004,101 @@ jobs:
                    'Replace inline styles with Tailwind classes where possible',
                    'Follow established patterns in existing components'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:ui-design'],
+              });
+            }
+
+            // NFR Coverage & Self-Improvement (weekly)
+            if (process.env.META_PR_ANALYSIS === 'true') {
+              checks.push({
+                title: `${prefix} Weekly NFR analysis: improvement opportunities identified`,
+                body: [
+                  `## Auto-QA Self-Improvement Analysis`,
+                  '',
+                  `**Generated:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+                  '',
+                  readOutput('/tmp/meta-pr-analysis.txt', 150),
+                  '',
+                  '### How to Act on This',
+                  '- Review the NFR coverage gaps identified above',
+                  '- Consider adding new Auto-QA checks for under-covered areas',
+                  '- Update `.github/workflows/auto-qa.yml` with new checks',
+                  '- This issue can be closed after reviewing the recommendations',
+                  '',
+                  '---',
+                  `*This is a meta-analysis issue from the [Auto-QA workflow](${runUrl}).*`,
+                  '*It helps identify gaps in automated quality coverage.*',
+                ].join('\n'),
+                labels: ['enhancement', 'auto-qa', 'triage/accepted', 'auto-qa:meta'],
+              });
+            }
+
+            // NFR: Test Coverage (every run)
+            if (process.env.FOCUS_TEST_COVERAGE === 'true') {
+              checks.push({
+                title: `${prefix} Components missing test coverage`,
+                body: buildFocusBody('Testing', 'Missing Test Files',
+                  readOutput('/tmp/focus-test-coverage.txt'),
+                  ['Add `.test.tsx` or `.spec.tsx` files for untested components',
+                   'Focus on components with complex logic or user interactions',
+                   'Consider using React Testing Library for component tests',
+                   'Run `npm test -- --coverage` to see current coverage'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nfr'],
+              });
+            }
+
+            // NFR: Localization (every run)
+            if (process.env.FOCUS_I18N === 'true') {
+              checks.push({
+                title: `${prefix} Hardcoded user-facing strings need extraction`,
+                body: buildFocusBody('Localization', 'Hardcoded Strings',
+                  readOutput('/tmp/focus-i18n.txt'),
+                  ['Extract strings to a translations file (e.g., `en.json`)',
+                   'Use a translation function like `t("key")` or `<Trans>`',
+                   'Consider using react-i18next or similar library',
+                   'Start with visible UI text: buttons, labels, headings'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nfr'],
+              });
+            }
+
+            // NFR: State Management (every run)
+            if (process.env.FOCUS_STATE_PATTERNS === 'true') {
+              checks.push({
+                title: `${prefix} State management patterns need improvement`,
+                body: buildFocusBody('Storage & State', 'State Pattern Issues',
+                  readOutput('/tmp/focus-state-patterns.txt'),
+                  ['Wrap localStorage calls in try/catch for private browsing',
+                   'Use Context API or state management for prop drilling',
+                   'Consider useSWR/useQuery for data fetching with caching',
+                   'Extract repeated data fetching logic into custom hooks'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nfr'],
+              });
+            }
+
+            // NFR: Navigation (every run)
+            if (process.env.FOCUS_NAVIGATION === 'true') {
+              checks.push({
+                title: `${prefix} Navigation and routing improvements needed`,
+                body: buildFocusBody('Navigation', 'Routing Issues',
+                  readOutput('/tmp/focus-navigation.txt'),
+                  ['Define route paths as constants in a routes.ts file',
+                   'Add `target="_blank" rel="noopener noreferrer"` to external links',
+                   'Add back navigation to drill-down/detail views',
+                   'Consider adding breadcrumbs for deep navigation'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nfr'],
+              });
+            }
+
+            // NFR: Efficiency (every run)
+            if (process.env.FOCUS_EFFICIENCY === 'true') {
+              checks.push({
+                title: `${prefix} React efficiency improvements available`,
+                body: buildFocusBody('Efficiency', 'Performance Patterns',
+                  readOutput('/tmp/focus-efficiency.txt'),
+                  ['Move inline style objects to constants or useMemo',
+                   'Wrap callback functions in useCallback when passed as props',
+                   'Use named imports: `import { debounce } from "lodash/debounce"`',
+                   'Consider React.memo for components receiving object props'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nfr'],
               });
             }
 
