@@ -1,12 +1,13 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Bot, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
+import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
+import { CardAIActions } from '../../lib/cards/CardComponents'
 
 // Animated counter component for the badge - exported for future use
 export function AnimatedCounter({ value, className }: { value: number; className?: string }) {
@@ -466,13 +467,12 @@ export function AlertBadge() {
                       } else {
                         // No mission or mission was deleted - show diagnose button
                         return (
-                          <button
-                            onClick={e => handleDiagnose(e, alert.id)}
-                            className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
-                          >
-                            <Bot className="w-3 h-3" />
-                            Diagnose
-                          </button>
+                          <CardAIActions
+                            resource={{ kind: 'Alert', name: alert.ruleName, cluster: alert.cluster, status: alert.severity }}
+                            issues={[{ name: alert.ruleName, message: alert.message }]}
+                            showRepair={false}
+                            onDiagnose={e => handleDiagnose(e, alert.id)}
+                          />
                         )
                       }
                     })()}

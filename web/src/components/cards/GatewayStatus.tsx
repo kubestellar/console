@@ -5,6 +5,7 @@ import {
   useCardData,
   commonComparators,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
+  CardAIActions,
 } from '../../lib/cards'
 import { K8S_DOCS } from '../../config/externalApis'
 import { useCardLoadingState } from './CardDataContext'
@@ -375,6 +376,13 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
                     </span>
                   ))}
                 </div>
+              )}
+              {(gw.status === 'NotAccepted' || gw.status === 'Pending') && (
+                <CardAIActions
+                  resource={{ kind: 'Gateway', name: gw.name, namespace: gw.namespace, cluster: gw.cluster, status: gw.status }}
+                  issues={[{ name: `Gateway ${gw.status}`, message: `Gateway "${gw.name}" (class: ${gw.gatewayClass}) is ${gw.status}` }]}
+                  className="mt-1"
+                />
               )}
             </div>
           )

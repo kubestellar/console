@@ -5,7 +5,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 
 interface CRDHealthProps {
   config?: {
@@ -319,6 +319,13 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
                     <span className="text-border">|</span>
                     <span>{crd.scope}</span>
                   </div>
+                  {crd.status !== 'Established' && (
+                    <CardAIActions
+                      resource={{ kind: 'CustomResourceDefinition', name: crd.name, cluster: crd.cluster, status: crd.status }}
+                      issues={[{ name: `CRD ${crd.status}`, message: `CRD "${crd.name}" (${crd.group}) is ${crd.status} on cluster ${crd.cluster}` }]}
+                      className="mt-1 ml-6"
+                    />
+                  )}
                 </div>
               )
             })}

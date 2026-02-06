@@ -6,7 +6,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import {
   useCardData,
-  CardSearchInput, CardControlsRow, CardPaginationFooter,
+  CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 
@@ -324,6 +324,12 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                       <span className="text-sm text-foreground font-medium group-hover:text-purple-400" title={release.name}>{release.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
+                      {release.status !== 'deployed' && release.status !== 'superseded' && (
+                        <CardAIActions
+                          resource={{ kind: 'HelmRelease', name: release.name, namespace: release.namespace, cluster: release.cluster, status: release.status }}
+                          issues={[{ name: `Release ${release.status}`, message: `Helm release ${release.name} (chart: ${release.chart}@${release.version}) is in ${release.status} state` }]}
+                        />
+                      )}
                       <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`} title={`Release status: ${release.status}`}>
                         {release.status}
                       </span>

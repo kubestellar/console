@@ -5,7 +5,7 @@ import type { PVC } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 
 type SortByOption = 'status' | 'name' | 'capacity' | 'age'
@@ -262,6 +262,12 @@ export function PVCStatus() {
                   </span>
                 )}
                 <span className={getStatusColor(pvc.status)}>{pvc.status}</span>
+                {pvc.status !== 'Bound' && (
+                  <CardAIActions
+                    resource={{ kind: 'PersistentVolumeClaim', name: pvc.name, namespace: pvc.namespace, cluster: pvc.cluster, status: pvc.status }}
+                    issues={[{ name: `PVC ${pvc.status}`, message: `PersistentVolumeClaim is in ${pvc.status} state${pvc.storageClass ? ` (storageClass: ${pvc.storageClass})` : ''}` }]}
+                  />
+                )}
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>

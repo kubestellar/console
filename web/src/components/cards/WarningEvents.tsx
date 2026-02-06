@@ -6,7 +6,7 @@ import { RefreshButton } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
 
 function getTimeAgo(timestamp: string | undefined): string {
@@ -205,6 +205,11 @@ export function WarningEvents() {
                     {event.cluster && (
                       <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />
                     )}
+                    <CardAIActions
+                      resource={{ kind: 'Event', name: event.object, namespace: event.namespace, cluster: event.cluster, status: 'Warning' }}
+                      issues={[{ name: event.reason, message: event.message }]}
+                      showRepair={false}
+                    />
                     <span className="text-xs text-muted-foreground ml-auto">{getTimeAgo(event.lastSeen)}</span>
                   </div>
                 </div>

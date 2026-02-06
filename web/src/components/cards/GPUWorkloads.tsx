@@ -3,7 +3,7 @@ import { Cpu, Box, ChevronRight, AlertTriangle, CheckCircle, Loader2, Server } f
 import { useGPUNodes, useAllPods, useClusters } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { CardClusterFilter, CardSearchInput } from '../../lib/cards'
+import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { Skeleton } from '../ui/Skeleton'
@@ -322,6 +322,12 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       )}
                     </div>
                   </div>
+                  {pod.status !== 'Running' && pod.status !== 'Succeeded' && pod.status !== 'Completed' && (
+                    <CardAIActions
+                      resource={{ kind: 'Pod', name: pod.name, namespace: pod.namespace, cluster: pod.cluster, status: pod.status }}
+                      issues={[{ name: `Pod ${pod.status}`, message: `GPU workload pod is in ${pod.status} state` }]}
+                    />
+                  )}
                   <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </div>
               </div>

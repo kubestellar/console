@@ -6,7 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 
 interface UpgradeStatusProps {
@@ -563,6 +563,18 @@ Please proceed step by step and ask for confirmation before making any changes.`
                 <Rocket className="w-3 h-3" />
                 Start Upgrade to {cluster.targetVersion}
               </button>
+            )}
+            {(cluster.status === 'unreachable' || cluster.status === 'available') && (
+              <CardAIActions
+                resource={{ kind: 'Cluster', name: cluster.name, status: cluster.status }}
+                issues={[{
+                  name: cluster.status === 'unreachable' ? 'Cluster unreachable' : 'Upgrade available',
+                  message: cluster.status === 'unreachable'
+                    ? `Cluster ${cluster.name} is unreachable and cannot be queried for version info`
+                    : `Cluster ${cluster.name} can be upgraded from ${cluster.currentVersion} to ${cluster.targetVersion}`,
+                }]}
+                className="mt-2"
+              />
             )}
           </div>
         ))}

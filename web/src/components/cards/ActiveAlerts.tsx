@@ -18,7 +18,7 @@ import { getSeverityIcon } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
-import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards'
+import { useCardData, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 
 // Format relative time
@@ -367,13 +367,12 @@ export function ActiveAlerts() {
                     )
                   } else {
                     return (
-                      <button
-                        onClick={e => handleAIDiagnose(e, alert.id)}
-                        className="px-2 py-1 text-xs rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1"
-                      >
-                        <Bot className="w-3 h-3" />
-                        AI Diagnose
-                      </button>
+                      <CardAIActions
+                        resource={{ kind: 'Alert', name: alert.ruleName, cluster: alert.cluster, status: alert.severity }}
+                        issues={[{ name: alert.ruleName, message: alert.message }]}
+                        showRepair={false}
+                        onDiagnose={e => handleAIDiagnose(e, alert.id)}
+                      />
                     )
                   }
                 })()}

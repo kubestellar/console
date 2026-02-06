@@ -4,6 +4,7 @@ import {
   useCardData,
   commonComparators,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
+  CardAIActions,
 } from '../../lib/cards'
 import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
@@ -323,6 +324,13 @@ export function ServiceExports({ config: _config }: ServiceExportsProps) {
                   </span>
                 )}
               </div>
+              {(exp.status === 'Pending' || exp.status === 'Failed') && (
+                <CardAIActions
+                  resource={{ kind: 'ServiceExport', name: exp.name, namespace: exp.namespace, cluster: exp.cluster, status: exp.status }}
+                  issues={[{ name: `Export ${exp.status}`, message: exp.message || `ServiceExport "${exp.name}" is ${exp.status}` }]}
+                  className="mt-1"
+                />
+              )}
             </div>
           )
         })}

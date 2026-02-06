@@ -786,6 +786,18 @@ export interface CardAIActionsProps {
   additionalContext?: Record<string, unknown>
   /** CSS class for the container */
   className?: string
+  /** Whether to show the repair button (default: true) */
+  showRepair?: boolean
+  /** Custom tooltip for the repair button (default: "Repair") */
+  repairLabel?: string
+  /** Override the default diagnose prompt */
+  diagnosePrompt?: string
+  /** Override the default repair prompt */
+  repairPrompt?: string
+  /** Custom diagnose handler (bypasses startMission) */
+  onDiagnose?: (e: React.MouseEvent) => void
+  /** Custom repair handler (bypasses startMission) */
+  onRepair?: (e: React.MouseEvent) => void
 }
 
 /**
@@ -800,6 +812,12 @@ export function CardAIActions({
   issues = [],
   additionalContext,
   className = '',
+  showRepair = true,
+  repairLabel = 'Repair',
+  diagnosePrompt,
+  repairPrompt,
+  onDiagnose,
+  onRepair,
 }: CardAIActionsProps) {
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -812,13 +830,14 @@ export function CardAIActions({
 
   const handleDiagnose = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+    if (onDiagnose) { onDiagnose(e); return }
     checkKeyAndRun(() => {
       startMission({
         title: `Diagnose ${name}`,
         description: `Analyze ${kind} health and identify issues`,
         type: 'troubleshoot',
         cluster,
-        initialPrompt: `Analyze the health of ${kind} "${name}"${loc}${on}.
+        initialPrompt: diagnosePrompt || `Analyze the health of ${kind} "${name}"${loc}${on}.
 
 Current status: ${status || 'Unknown'}${hasIssues ? `\n\nKnown issues:\n${issuesList}` : ''}
 
@@ -829,17 +848,18 @@ Please provide:
         context: { kind, name, namespace, cluster, status, issues, ...additionalContext },
       })
     })
-  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, issues, hasIssues, issuesList, loc, on, additionalContext])
+  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, issues, hasIssues, issuesList, loc, on, additionalContext, onDiagnose, diagnosePrompt])
 
   const handleRepair = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+    if (onRepair) { onRepair(e); return }
     checkKeyAndRun(() => {
       startMission({
-        title: `Repair ${name}`,
+        title: `${repairLabel} ${name}`,
         description: `Fix issues with ${kind}`,
         type: 'repair',
         cluster,
-        initialPrompt: `I need help repairing issues with ${kind} "${name}"${loc}${on}.
+        initialPrompt: repairPrompt || `I need help repairing issues with ${kind} "${name}"${loc}${on}.
 
 Issues to fix:
 ${hasIssues ? issuesList : 'No specific issues identified - please diagnose first'}
@@ -852,7 +872,7 @@ For each issue, please:
         context: { kind, name, namespace, cluster, status, issues, ...additionalContext },
       })
     })
-  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, issues, hasIssues, issuesList, loc, on, additionalContext])
+  }, [checkKeyAndRun, startMission, kind, name, namespace, cluster, status, issues, hasIssues, issuesList, loc, on, additionalContext, onRepair, repairPrompt, repairLabel])
 
   return (
     <div
@@ -867,13 +887,15 @@ For each issue, please:
         <Stethoscope className="w-3.5 h-3.5" />
       </button>
 
-      <button
-        onClick={handleRepair}
-        className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
-        title={`Repair ${name}`}
-      >
-        <Wrench className="w-3.5 h-3.5" />
-      </button>
+      {showRepair && (
+        <button
+          onClick={handleRepair}
+          className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+          title={`${repairLabel} ${name}`}
+        >
+          <Wrench className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {showKeyPrompt && (
         <ApiKeyPromptModal

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap, Layers, List, Stethoscope, Wrench } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, Cpu, HardDrive, RefreshCw, Info, Sparkles, ThumbsUp, ThumbsDown, Zap, Layers, List } from 'lucide-react'
 import { useCardDemoState } from '../CardDataContext'
 import { useMissions } from '../../../hooks/useMissions'
 import { useGPUNodes, usePodIssues, useClusters } from '../../../hooks/useMCP'
@@ -14,7 +14,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 import type { PredictedRisk, TrendDirection } from '../../../types/predictions'
-import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../../lib/cards/CardComponents'
+import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../../lib/cards/CardComponents'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 
 // ============================================================================
@@ -1152,62 +1152,11 @@ TASK:
                 </div>
                 {/* Item action buttons */}
                 <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      startMission({
-                        title: `Diagnose: ${node.name}`,
-                        description: `Diagnosing node ${node.name}`,
-                        type: 'troubleshoot',
-                        initialPrompt: `Diagnose this Kubernetes node issue:
-
-NODE: ${node.name}
-CLUSTER: ${node.cluster || 'unknown'}
-STATUS: ${node.unschedulable ? 'Cordoned' : node.status}
-ROOT CAUSE: ${rootCause?.cause || 'Unknown'}
-DETAILS: ${rootCause?.details || 'No details available'}
-
-Please:
-1. Explain what this issue means
-2. Identify the root cause
-3. List diagnostic commands to gather more info
-4. Provide the steps to fix this issue`,
-                        context: { node: node.name, cluster: node.cluster },
-                      })
-                    }}
-                    className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title={`Diagnose ${node.name}`}
-                  >
-                    <Stethoscope className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      startMission({
-                        title: `Repair: ${node.name}`,
-                        description: `Repairing node ${node.name}`,
-                        type: 'troubleshoot',
-                        initialPrompt: `Repair this Kubernetes node:
-
-NODE: ${node.name}
-CLUSTER: ${node.cluster || 'unknown'}
-STATUS: ${node.unschedulable ? 'Cordoned' : node.status}
-ROOT CAUSE: ${rootCause?.cause || 'Unknown'}
-DETAILS: ${rootCause?.details || 'No details available'}
-
-Please provide:
-1. The exact commands to fix this issue
-2. Any prerequisites or safety checks
-3. How to verify the repair was successful
-4. Any follow-up actions needed`,
-                        context: { node: node.name, cluster: node.cluster },
-                      })
-                    }}
-                    className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title={`Repair ${node.name}`}
-                  >
-                    <Wrench className="w-3 h-3" />
-                  </button>
+                  <CardAIActions
+                    resource={{ kind: 'Node', name: node.name, cluster: node.cluster, status: node.unschedulable ? 'Cordoned' : node.status }}
+                    issues={rootCause ? [{ name: rootCause.cause, message: rootCause.details }] : []}
+                    className="opacity-0 group-hover:opacity-100"
+                  />
                   <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 </div>
               </div>
@@ -1235,60 +1184,11 @@ Please provide:
                 </div>
                 {/* Item action buttons */}
                 <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      startMission({
-                        title: `Diagnose GPU: ${issue.nodeName}`,
-                        description: `Diagnosing GPU issue on ${issue.nodeName}`,
-                        type: 'troubleshoot',
-                        initialPrompt: `Diagnose this GPU issue:
-
-NODE: ${issue.nodeName}
-CLUSTER: ${issue.cluster}
-ISSUE: ${issue.reason}
-EXPECTED GPUs: ${issue.expected > 0 ? issue.expected : 'Unknown'}
-AVAILABLE GPUs: ${issue.available}
-
-Please:
-1. Explain what could cause GPUs to show as unavailable
-2. List diagnostic commands to check GPU status
-3. Check for driver issues, nvidia-smi output, device plugin status
-4. Identify the root cause`,
-                        context: { node: issue.nodeName, cluster: issue.cluster },
-                      })
-                    }}
-                    className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title={`Diagnose GPU on ${issue.nodeName}`}
-                  >
-                    <Stethoscope className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      startMission({
-                        title: `Repair GPU: ${issue.nodeName}`,
-                        description: `Repairing GPU on ${issue.nodeName}`,
-                        type: 'troubleshoot',
-                        initialPrompt: `Repair the GPU issue on this node:
-
-NODE: ${issue.nodeName}
-CLUSTER: ${issue.cluster}
-ISSUE: ${issue.reason}
-
-Please provide:
-1. Steps to restore GPU availability
-2. How to restart NVIDIA device plugin
-3. Driver-related fixes if applicable
-4. How to verify GPUs are working again`,
-                        context: { node: issue.nodeName, cluster: issue.cluster },
-                      })
-                    }}
-                    className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title={`Repair GPU on ${issue.nodeName}`}
-                  >
-                    <Wrench className="w-3 h-3" />
-                  </button>
+                  <CardAIActions
+                    resource={{ kind: 'GPU', name: issue.nodeName, cluster: issue.cluster, status: `${issue.available}/${issue.expected} GPUs available` }}
+                    issues={[{ name: 'GPU Unavailable', message: issue.reason }]}
+                    className="opacity-0 group-hover:opacity-100"
+                  />
                   <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 </div>
               </div>
@@ -1361,71 +1261,14 @@ Please provide:
 
                   {/* Action Buttons + Feedback + Chevron */}
                   <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                    {/* Diagnose & Repair buttons */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startMission({
-                          title: `Diagnose: ${risk.name}`,
-                          description: `Diagnosing predicted risk for ${risk.name}`,
-                          type: 'troubleshoot',
-                          initialPrompt: `Diagnose this predicted failure risk:
-
-RESOURCE: ${risk.name}
-CLUSTER: ${risk.cluster || 'unknown'}
-${risk.namespace ? `NAMESPACE: ${risk.namespace}` : ''}
-TYPE: ${risk.type}
-SEVERITY: ${risk.severity}
-PREDICTION SOURCE: ${risk.source === 'ai' ? `AI (${risk.confidence || 0}% confidence)` : 'Heuristic threshold'}
-${risk.trend ? `TREND: ${risk.trend}` : ''}
-
-SUMMARY: ${risk.reason}
-${risk.reasonDetailed ? `DETAILS: ${risk.reasonDetailed}` : ''}
-
-Please:
-1. Explain what this prediction means
-2. Assess the likelihood of this failure occurring
-3. List diagnostic commands to verify the risk
-4. Identify contributing factors`,
-                          context: { name: risk.name, cluster: risk.cluster, type: risk.type },
-                        })
-                      }}
-                      className="p-1 rounded text-muted-foreground hover:text-purple-400 hover:bg-purple-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                      title={`Diagnose ${risk.name}`}
-                    >
-                      <Stethoscope className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        startMission({
-                          title: `Prevent: ${risk.name}`,
-                          description: `Preventing predicted failure for ${risk.name}`,
-                          type: 'troubleshoot',
-                          initialPrompt: `Prevent this predicted failure:
-
-RESOURCE: ${risk.name}
-CLUSTER: ${risk.cluster || 'unknown'}
-${risk.namespace ? `NAMESPACE: ${risk.namespace}` : ''}
-TYPE: ${risk.type}
-SEVERITY: ${risk.severity}
-
-SUMMARY: ${risk.reason}
-${risk.reasonDetailed ? `DETAILS: ${risk.reasonDetailed}` : ''}
-
-Please provide:
-1. Preventive actions to avoid this failure
-2. Specific commands or configuration changes
-3. How to verify the risk has been mitigated
-4. Monitoring recommendations to catch this earlier`,
-                          context: { name: risk.name, cluster: risk.cluster, type: risk.type },
-                        })
-                      }}
-                      className="p-1 rounded text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                      title={`Prevent failure for ${risk.name}`}
-                    >
-                      <Wrench className="w-3 h-3" />
-                    </button>
+                    {/* Diagnose & Prevent buttons */}
+                    <CardAIActions
+                      resource={{ kind: risk.type, name: risk.name, namespace: risk.namespace, cluster: risk.cluster, status: risk.severity }}
+                      issues={[{ name: risk.reason, message: risk.reasonDetailed || risk.reason }]}
+                      additionalContext={{ source: risk.source, confidence: risk.confidence, trend: risk.trend }}
+                      repairLabel="Prevent"
+                      className="opacity-0 group-hover:opacity-100"
+                    />
                     {/* AI feedback buttons */}
                     {risk.source === 'ai' && risk.id && (
                       <>

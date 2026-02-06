@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
   RefreshCw, Loader2, ChevronDown, ChevronRight, Filter,
-  Stethoscope, Wrench, AlertTriangle
+  AlertTriangle
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
-import { CardSearchInput } from '../../../lib/cards'
+import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
@@ -744,24 +744,14 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                               {item.cluster}
                             </span>
                           )}
-                          {/* Diag/Repair icons - show always for non-healthy items */}
+                          {/* Diag icon - show for non-healthy items */}
                           {item.status !== 'healthy' && (
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <button
-                                className="p-0.5 rounded hover:bg-blue-500/20 text-blue-400/70 hover:text-blue-400 transition-colors"
-                                title={`Diagnose ${item.name}`}
-                                onClick={(e) => { e.stopPropagation(); handleItemDiagnose(item) }}
-                              >
-                                <Stethoscope className="w-3 h-3" />
-                              </button>
-                              <button
-                                className="p-0.5 rounded hover:bg-orange-500/20 text-orange-400/70 hover:text-orange-400 transition-colors"
-                                title={`Repair ${item.name}`}
-                                onClick={(e) => { e.stopPropagation(); handleItemDiagnose(item) }}
-                              >
-                                <Wrench className="w-3 h-3" />
-                              </button>
-                            </div>
+                            <CardAIActions
+                              resource={{ kind: 'Deployment', name: item.name, namespace: item.namespace, cluster: item.cluster, status: item.status }}
+                              issues={item.detail ? [{ name: item.status, message: item.detail }] : []}
+                              showRepair={false}
+                              onDiagnose={(e) => { e.stopPropagation(); handleItemDiagnose(item) }}
+                            />
                           )}
                         </div>
                       ))}
@@ -861,18 +851,17 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleItemDiagnose({
+                      <CardAIActions
+                        resource={{ kind: issue.resource?.kind || 'Resource', name: issue.resource?.name || issue.title, namespace: issue.resource?.namespace, cluster: issue.resource?.cluster, status: issue.severity }}
+                        issues={[{ name: issue.title, message: issue.description || '' }]}
+                        showRepair={false}
+                        onDiagnose={() => handleItemDiagnose({
                           name: issue.resource?.name || issue.title,
                           status: issue.severity === 'critical' ? 'unhealthy' : 'degraded',
                           namespace: issue.resource?.namespace,
                           cluster: issue.resource?.cluster,
                         })}
-                        className="shrink-0 p-1.5 rounded hover:bg-purple-500/20 transition-colors"
-                        title="Diagnose with AI"
-                      >
-                        <Stethoscope className="w-4 h-4 text-purple-400" />
-                      </button>
+                      />
                     </div>
                   </div>
                 )

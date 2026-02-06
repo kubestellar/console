@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, CheckCircle, Cpu, HardDrive, Wifi, Server, RefreshCw, XCircle, ChevronRight, List, AlertCircle, BellOff, Clock, MoreVertical } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useCardDemoState, useCardLoadingState } from './CardDataContext'
-import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
@@ -817,6 +817,10 @@ export function HardwareHealthCard() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    <CardAIActions
+                      resource={{ kind: 'HardwareDevice', name: alert.nodeName, cluster: alert.cluster, status: alert.severity }}
+                      issues={[{ name: `${getDeviceLabel(alert.deviceType)} disappeared`, message: `${alert.previousCount} → ${alert.currentCount} (${alert.droppedCount} disappeared)` }]}
+                    />
                     {/* Snooze indicator or snooze button */}
                     {isSnoozed(alert.id) ? (
                       <button

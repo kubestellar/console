@@ -15,6 +15,7 @@ import {
   CardSearchInput,
   CardControlsRow,
   CardPaginationFooter,
+  CardAIActions,
 } from '../../lib/cards/CardComponents'
 
 interface OperatorStatusProps {
@@ -265,6 +266,12 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
                       <span className="text-sm text-foreground group-hover:text-purple-400">{op.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
+                      {op.status !== 'Succeeded' && (
+                        <CardAIActions
+                          resource={{ kind: 'Operator', name: op.name, namespace: op.namespace, cluster: op.cluster, status: op.status }}
+                          issues={[{ name: `Operator ${op.status}`, message: `Operator is in ${op.status} state${op.upgradeAvailable ? `, upgrade available: ${op.upgradeAvailable}` : ''}` }]}
+                        />
+                      )}
                       <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
                         {op.status}
                       </span>

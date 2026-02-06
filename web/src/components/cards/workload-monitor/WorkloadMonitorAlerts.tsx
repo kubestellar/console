@@ -1,7 +1,7 @@
-import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight, Stethoscope } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
-import { useMissions } from '../../../hooks/useMissions'
+import { CardAIActions } from '../../../lib/cards/CardComponents'
 
 interface AlertsProps {
   issues: MonitorIssue[]
@@ -16,19 +16,9 @@ const SEVERITY_CONFIG = {
   info: { icon: Info, bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-400' },
 }
 
-export function WorkloadMonitorAlerts({ issues, monitorType, expanded: forcedExpanded }: AlertsProps) {
+export function WorkloadMonitorAlerts({ issues, monitorType: _monitorType, expanded: forcedExpanded }: AlertsProps) {
   const [localExpanded, setLocalExpanded] = useState(true)
   const isExpanded = forcedExpanded !== undefined ? forcedExpanded : localExpanded
-  const { startMission } = useMissions()
-
-  const handleDiagnose = (issue: MonitorIssue) => {
-    startMission({
-      title: `Diagnose: ${issue.title}`,
-      description: issue.description || `${issue.severity} issue`,
-      type: 'troubleshoot',
-      initialPrompt: `Diagnose this ${monitorType || 'workflow'} issue:\n\n**Issue:** ${issue.title}\n**Severity:** ${issue.severity}\n**Details:** ${issue.description || 'No additional details'}\n**Resource:** ${issue.resource?.name || 'Unknown'} (${issue.resource?.kind || 'Unknown'})\n\nPlease analyze the root cause and suggest fixes.`,
-    })
-  }
 
   const criticalCount = issues.filter(i => i.severity === 'critical').length
   const warningCount = issues.filter(i => i.severity === 'warning').length
@@ -106,13 +96,11 @@ export function WorkloadMonitorAlerts({ issues, monitorType, expanded: forcedExp
                     <p className={`text-[10px] ${config.text} opacity-70 mt-0.5`}>{issue.description}</p>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDiagnose(issue)}
-                  className="shrink-0 p-1 rounded hover:bg-purple-500/20 transition-colors"
-                  title="Diagnose with AI"
-                >
-                  <Stethoscope className="w-3.5 h-3.5 text-purple-400" />
-                </button>
+                <CardAIActions
+                  resource={{ kind: issue.resource?.kind || 'Resource', name: issue.resource?.name || issue.title, namespace: issue.resource?.namespace, cluster: issue.resource?.cluster, status: issue.severity }}
+                  issues={[{ name: issue.title, message: issue.description || '' }]}
+                  showRepair={false}
+                />
               </div>
             )
           })}

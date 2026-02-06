@@ -5,7 +5,7 @@ import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardLoadingState } from './CardDataContext'
-import { useCardData, commonComparators, CardClusterFilter, CardSearchInput } from '../../lib/cards'
+import { useCardData, commonComparators, CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/cards'
 
 type SortByOption = 'restarts' | 'name' | 'cpu' | 'memory' | 'gpu'
 
@@ -379,7 +379,18 @@ export function TopPods({ config }: TopPodsProps) {
                   <span className="flex-shrink-0">{pod.ready}</span>
                   <span className="flex-shrink-0">{pod.age}</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-1">
+                  {(pod.restarts >= 1 || (pod.status !== 'Running' && pod.status !== 'Succeeded' && pod.status !== 'Completed')) && (
+                    <CardAIActions
+                      resource={{ kind: 'Pod', name: pod.name, namespace: pod.namespace, cluster: pod.cluster, status: pod.status }}
+                      issues={[
+                        ...(pod.restarts >= 1 ? [{ name: 'High restarts', message: `Pod has restarted ${pod.restarts} time${pod.restarts !== 1 ? 's' : ''}` }] : []),
+                        ...(pod.status !== 'Running' && pod.status !== 'Succeeded' && pod.status !== 'Completed' ? [{ name: `Pod ${pod.status}`, message: `Pod is in ${pod.status} state` }] : []),
+                      ]}
+                    />
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </div>
             </div>
           )})}

@@ -1,14 +1,13 @@
 import { useState, useMemo, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import {
   GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check, Stethoscope,
+  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check,
 } from 'lucide-react'
-import { useMissions } from '../../../hooks/useMissions'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
-import { CardSearchInput } from '../../../lib/cards'
+import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
@@ -131,7 +130,6 @@ function saveRepos(repos: string[]) {
 
 export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
   const ghConfig = config as GitHubCIConfig | undefined
-  const { startMission } = useMissions()
   const [workflows, setWorkflows] = useState<WorkflowRun[]>(DEMO_WORKFLOWS)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -526,21 +524,11 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
                 {formatTimeAgo(w.updatedAt)}
               </span>
               {(w.conclusion === 'failure' || w.conclusion === 'timed_out') && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    startMission({
-                      title: `Diagnose: ${w.name}`,
-                      description: `${w.conclusion} on ${w.repo}/${w.branch}`,
-                      type: 'troubleshoot',
-                      initialPrompt: `Diagnose GitHub Actions workflow failure:\n\n**Workflow:** ${w.name}\n**Repo:** ${w.repo}\n**Branch:** ${w.branch}\n**Status:** ${w.conclusion}\n**Event:** ${w.event}\n**Run #${w.runNumber}**\n${w.url !== '#' ? `**URL:** ${w.url}` : ''}\n\nPlease analyze why this workflow failed and suggest fixes.`,
-                    })
-                  }}
-                  className="shrink-0 p-0.5 rounded hover:bg-purple-500/20 transition-colors"
-                  title="Diagnose with AI"
-                >
-                  <Stethoscope className="w-3 h-3 text-purple-400" />
-                </button>
+                <CardAIActions
+                  resource={{ kind: 'GitHubWorkflow', name: w.name, status: w.conclusion }}
+                  issues={[{ name: `${w.conclusion} on ${w.repo}/${w.branch}`, message: `Run #${w.runNumber}, event: ${w.event}` }]}
+                  showRepair={false}
+                />
               )}
               {w.url !== '#' && (
                 <a

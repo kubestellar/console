@@ -8,6 +8,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import {
   useCardData,
   CardSearchInput, CardControlsRow, CardPaginationFooter,
+  CardAIActions,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
 
@@ -386,6 +387,13 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                       <span>{formatTime(ks.lastApplied)}</span>
                     </div>
                   </div>
+                  {(ks.status === 'NotReady' || ks.status === 'Suspended') && (
+                    <CardAIActions
+                      resource={{ kind: 'Kustomization', name: ks.name, namespace: ks.namespace, cluster: selectedCluster, status: ks.status }}
+                      issues={[{ name: `Kustomization ${ks.status}`, message: `Kustomization "${ks.name}" in ${ks.namespace} is ${ks.status} (source: ${ks.sourceRef}, path: ${ks.path})` }]}
+                      className="mt-1 ml-6"
+                    />
+                  )}
                 </div>
               )
             })}

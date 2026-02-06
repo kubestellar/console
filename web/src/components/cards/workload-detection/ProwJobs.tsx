@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { CardControls } from '../../ui/CardControls'
-import { CardSearchInput } from '../../../lib/cards'
+import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
@@ -205,6 +205,13 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
                 </a>
               )}
             </div>
+            {(job.state === 'failure' || job.state === 'error' || job.state === 'aborted') && (
+              <CardAIActions
+                resource={{ kind: 'ProwJob', name: job.name, status: job.state }}
+                issues={[{ name: `Job ${job.state}`, message: `PROW job "${job.name}" (${job.type}) ended with state: ${job.state}` }]}
+                className="mt-1"
+              />
+            )}
           </div>
         ))}
       </div>
