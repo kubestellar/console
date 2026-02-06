@@ -203,9 +203,9 @@ export function NamespaceBadge({
   onClick,
 }: NamespaceBadgeProps) {
   const sizeClasses = {
-    sm: 'text-[10px] px-1.5 py-0.5',
-    md: 'text-xs px-2 py-0.5',
-    lg: 'text-sm px-2.5 py-1',
+    sm: onClick ? 'text-[10px] px-2 py-1.5 min-h-11' : 'text-[10px] px-1.5 py-0.5',
+    md: onClick ? 'text-xs px-2.5 py-2 min-h-11' : 'text-xs px-2 py-0.5',
+    lg: onClick ? 'text-sm px-3 py-2 min-h-11' : 'text-sm px-2.5 py-1',
   }
 
   const iconSizes = {
@@ -245,9 +245,9 @@ export function ResourceKindBadge({
   const colors = RESOURCE_COLORS[kind] || DEFAULT_COLORS
 
   const sizeClasses = {
-    sm: 'text-[10px] px-1.5 py-0.5',
-    md: 'text-xs px-2 py-0.5',
-    lg: 'text-sm px-2.5 py-1',
+    sm: onClick ? 'text-[10px] px-2 py-1.5 min-h-11' : 'text-[10px] px-1.5 py-0.5',
+    md: onClick ? 'text-xs px-2.5 py-2 min-h-11' : 'text-xs px-2 py-0.5',
+    lg: onClick ? 'text-sm px-3 py-2 min-h-11' : 'text-sm px-2.5 py-1',
   }
 
   const iconSizes = {

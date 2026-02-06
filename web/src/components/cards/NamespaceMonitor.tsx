@@ -471,7 +471,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
               })()}
               <span className="font-medium text-foreground">{modalResource.name}</span>
             </div>
-            <button onClick={() => setModalResource(null)} className="p-1 hover:bg-secondary rounded">
+            <button onClick={() => setModalResource(null)} className="p-2 hover:bg-secondary rounded min-h-11 min-w-11 flex items-center justify-center">
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
@@ -524,7 +524,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     }`}>
       <div className="flex items-center justify-between p-3 border-b border-border">
         <span className="text-sm font-medium text-foreground">Recent Changes</span>
-        <button onClick={() => setShowChangesPanel(false)} className="p-1 hover:bg-secondary rounded">
+        <button onClick={() => setShowChangesPanel(false)} className="p-2 hover:bg-secondary rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-4 h-4 text-muted-foreground" />
         </button>
       </div>

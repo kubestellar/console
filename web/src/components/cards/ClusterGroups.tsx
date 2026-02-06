@@ -522,7 +522,7 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
     <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-blue-400">New Cluster Group</span>
-        <button onClick={onCancel} className="p-1 hover:bg-white/10 rounded">
+        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-gray-500" />
         </button>
       </div>
@@ -1026,7 +1026,7 @@ function EditGroupForm({ group, availableClusters, clusterHealthMap, onSave, onC
     <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-yellow-400">Edit: {group.name}</span>
-        <button onClick={onCancel} className="p-1 hover:bg-white/10 rounded">
+        <button onClick={onCancel} className="p-2 hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
           <X className="w-3.5 h-3.5 text-gray-500" />
         </button>
       </div>

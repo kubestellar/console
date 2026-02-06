@@ -425,7 +425,7 @@ export function NodeInvaders(_props: CardComponentProps) {
           </div>
         </div>
 
-        <button onClick={startGame} className="p-1.5 rounded hover:bg-secondary" title="New Game">
+        <button onClick={startGame} className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center" title="New Game">
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
