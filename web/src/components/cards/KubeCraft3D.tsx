@@ -1,6 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useCardExpanded } from './CardWrapper'
-import * as THREE from 'three'
+import {
+  Scene,
+  Color,
+  Fog,
+  PerspectiveCamera,
+  WebGLRenderer,
+  AmbientLight,
+  DirectionalLight,
+  BoxGeometry,
+  GridHelper,
+  LineBasicMaterial,
+  BufferGeometry,
+  Vector3,
+  LineSegments,
+  Clock,
+  Raycaster,
+  Vector2,
+  Mesh,
+  MeshLambertMaterial,
+} from 'three'
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js'
 import { Play, Pause, RotateCcw, Sun, Moon } from 'lucide-react'
 
@@ -141,12 +160,12 @@ export function KubeCraft3D() {
   const { isExpanded } = useCardExpanded()
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const sceneRef = useRef<Scene | null>(null)
+  const cameraRef = useRef<PerspectiveCamera | null>(null)
+  const rendererRef = useRef<WebGLRenderer | null>(null)
   const controlsRef = useRef<PointerLockControls | null>(null)
   const worldRef = useRef<Block[][][]>([])
-  const meshesRef = useRef<Map<string, THREE.Mesh>>(new Map())
+  const meshesRef = useRef<Map<string, Mesh>>(new Map())
   const animationRef = useRef<number>(0)
 
   const [, setIsPlaying] = useState(false)
@@ -164,7 +183,7 @@ export function KubeCraft3D() {
     right: false,
     up: false,
     down: false,
-    velocity: new THREE.Vector3(),
+    velocity: new Vector3(),
   })
 
   // Initialize Three.js scene
@@ -175,18 +194,18 @@ export function KubeCraft3D() {
     const height = isExpanded ? 500 : 350
 
     // Scene
-    const scene = new THREE.Scene()
-    scene.background = new THREE.Color(isDaytime ? 0x87CEEB : 0x1a1a2e)
-    scene.fog = new THREE.Fog(isDaytime ? 0x87CEEB : 0x1a1a2e, 20, 60)
+    const scene = new Scene()
+    scene.background = new Color(isDaytime ? 0x87CEEB : 0x1a1a2e)
+    scene.fog = new Fog(isDaytime ? 0x87CEEB : 0x1a1a2e, 20, 60)
     sceneRef.current = scene
 
     // Camera
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100)
+    const camera = new PerspectiveCamera(75, width / height, 0.1, 100)
     camera.position.set(position.x, position.y, position.z)
     cameraRef.current = camera
 
     // Renderer
-    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true })
+    const renderer = new WebGLRenderer({ canvas: canvasRef.current, antialias: true })
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
@@ -203,10 +222,10 @@ export function KubeCraft3D() {
     controls.addEventListener('unlock', handleUnlock)
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, isDaytime ? 0.6 : 0.2)
+    const ambientLight = new AmbientLight(0xffffff, isDaytime ? 0.6 : 0.2)
     scene.add(ambientLight)
 
-    const sunLight = new THREE.DirectionalLight(0xffffff, isDaytime ? 1 : 0.3)
+    const sunLight = new DirectionalLight(0xffffff, isDaytime ? 1 : 0.3)
     sunLight.position.set(50, 100, 50)
     sunLight.castShadow = true
     scene.add(sunLight)
@@ -226,7 +245,7 @@ export function KubeCraft3D() {
     worldRef.current = world
 
     // Create block meshes
-    const blockGeometry = new THREE.BoxGeometry(1, 1, 1)
+    const blockGeometry = new BoxGeometry(1, 1, 1)
 
     for (let x = 0; x < WORLD_SIZE; x++) {
       for (let y = 0; y < CHUNK_HEIGHT; y++) {
@@ -241,25 +260,25 @@ export function KubeCraft3D() {
 
     // Grid helper
     if (showGrid) {
-      const gridHelper = new THREE.GridHelper(WORLD_SIZE, WORLD_SIZE)
+      const gridHelper = new GridHelper(WORLD_SIZE, WORLD_SIZE)
       gridHelper.position.set(WORLD_SIZE / 2, 0, WORLD_SIZE / 2)
       scene.add(gridHelper)
     }
 
     // Crosshair
-    const crosshairMaterial = new THREE.LineBasicMaterial({ color: 0xffffff })
-    const crosshairGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-0.01, 0, -0.3),
-      new THREE.Vector3(0.01, 0, -0.3),
-      new THREE.Vector3(0, -0.01, -0.3),
-      new THREE.Vector3(0, 0.01, -0.3),
+    const crosshairMaterial = new LineBasicMaterial({ color: 0xffffff })
+    const crosshairGeometry = new BufferGeometry().setFromPoints([
+      new Vector3(-0.01, 0, -0.3),
+      new Vector3(0.01, 0, -0.3),
+      new Vector3(0, -0.01, -0.3),
+      new Vector3(0, 0.01, -0.3),
     ])
-    const crosshair = new THREE.LineSegments(crosshairGeometry, crosshairMaterial)
+    const crosshair = new LineSegments(crosshairGeometry, crosshairMaterial)
     camera.add(crosshair)
     scene.add(camera)
 
     // Animation loop
-    const clock = new THREE.Clock()
+    const clock = new Clock()
 
     function animate() {
       animationRef.current = requestAnimationFrame(animate)
@@ -274,7 +293,7 @@ export function KubeCraft3D() {
         velocity.z -= velocity.z * 10.0 * delta
         velocity.y -= velocity.y * 10.0 * delta
 
-        const direction = new THREE.Vector3()
+        const direction = new Vector3()
         direction.z = Number(moveState.current.forward) - Number(moveState.current.backward)
         direction.x = Number(moveState.current.right) - Number(moveState.current.left)
         direction.normalize()
@@ -319,23 +338,23 @@ export function KubeCraft3D() {
   }, [isExpanded, isDaytime, showGrid])
 
   // Create a block mesh
-  const createBlockMesh = useCallback((x: number, y: number, z: number, type: BlockType, scene: THREE.Scene, geometry?: THREE.BoxGeometry) => {
+  const createBlockMesh = useCallback((x: number, y: number, z: number, type: BlockType, scene: Scene, geometry?: BoxGeometry) => {
     const colors = BLOCK_COLORS[type]
     if (!colors || type === 'air') return
 
-    const geo = geometry || new THREE.BoxGeometry(1, 1, 1)
+    const geo = geometry || new BoxGeometry(1, 1, 1)
 
     // Create materials for each face
     const materials = [
-      new THREE.MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // right
-      new THREE.MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // left
-      new THREE.MeshLambertMaterial({ color: colors.top, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }),  // top
-      new THREE.MeshLambertMaterial({ color: colors.bottom, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // bottom
-      new THREE.MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // front
-      new THREE.MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // back
+      new MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // right
+      new MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // left
+      new MeshLambertMaterial({ color: colors.top, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }),  // top
+      new MeshLambertMaterial({ color: colors.bottom, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // bottom
+      new MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // front
+      new MeshLambertMaterial({ color: colors.side, transparent: colors.transparent, opacity: colors.transparent ? 0.7 : 1 }), // back
     ]
 
-    const mesh = new THREE.Mesh(geo, materials)
+    const mesh = new Mesh(geo, materials)
     mesh.position.set(x + 0.5, y + 0.5, z + 0.5)
     mesh.castShadow = true
     mesh.receiveShadow = true
@@ -385,15 +404,15 @@ export function KubeCraft3D() {
     const onClick = (event: MouseEvent) => {
       if (!isLocked || !cameraRef.current || !sceneRef.current) return
 
-      const raycaster = new THREE.Raycaster()
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current)
+      const raycaster = new Raycaster()
+      raycaster.setFromCamera(new Vector2(0, 0), cameraRef.current)
 
       const meshArray = Array.from(meshesRef.current.values())
       const intersects = raycaster.intersectObjects(meshArray)
 
       if (intersects.length > 0) {
         const intersect = intersects[0]
-        const mesh = intersect.object as THREE.Mesh
+        const mesh = intersect.object as Mesh
 
         if (event.button === 0) {
           // Left click - break block
