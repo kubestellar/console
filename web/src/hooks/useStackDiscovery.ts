@@ -215,15 +215,18 @@ function saveCachedStacks(stacks: LLMdStack[]) {
  * Uses localStorage caching for instant initial display.
  */
 export function useStackDiscovery(clusters: string[]) {
-  // Initialize from cache for instant display
+  // Initialize from cache for instant display (stale-while-revalidate)
   const cached = useMemo(() => loadCachedStacks(), [])
+  const hasCachedStacks = cached !== null && cached.stacks.length > 0
   const isCacheValid = cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)
 
   const [stacks, setStacks] = useState<LLMdStack[]>(cached?.stacks || [])
-  const [isLoading, setIsLoading] = useState(!isCacheValid)
+  // Only show loading if we have NO cached data at all — stale cache is still shown
+  const [isLoading, setIsLoading] = useState(!hasCachedStacks)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached ? new Date(cached.timestamp) : null)
   const initialLoadDone = useRef(isCacheValid || false)
+  const hasStacksRef = useRef(hasCachedStacks) // Track if we have any data to show
   const isRefetching = useRef(false) // Guard against concurrent refetches
 
   const refetch = useCallback(async (silent = false) => {
@@ -248,9 +251,11 @@ export function useStackDiscovery(clusters: string[]) {
     console.log('[useStackDiscovery] Fetching stacks from clusters:', clusters)
 
     if (!silent) {
-      setIsLoading(true)
-      if (!initialLoadDone.current) {
-        setStacks([])
+      // Only show loading spinner if we have no stacks at all.
+      // If we have stale cached stacks, keep showing them while fetching fresh data
+      // (stale-while-revalidate pattern — never wipe visible data).
+      if (!hasStacksRef.current) {
+        setIsLoading(true)
       }
     }
 
@@ -578,6 +583,7 @@ export function useStackDiscovery(clusters: string[]) {
                 return a.name.localeCompare(b.name)
               })
               saveCachedStacks(merged) // Cache progressively too
+              hasStacksRef.current = merged.length > 0
               return merged
             })
           }
@@ -615,9 +621,9 @@ export function useStackDiscovery(clusters: string[]) {
     if (clusters.length === 0) {
       return
     }
-    // If we have valid cache, do a silent refresh in background
-    // Otherwise do a full fetch with loading state
-    refetch(Boolean(isCacheValid))
+    // If we have any cached stacks (even stale), do a silent background refresh
+    // to avoid wiping visible data. Only show loading if we have nothing to show.
+    refetch(hasCachedStacks || Boolean(isCacheValid))
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
