@@ -8,6 +8,7 @@ export interface ActiveUsersInfo {
 
 const POLL_INTERVAL = 10000 // Poll every 10 seconds
 const HEARTBEAT_INTERVAL = 30000 // Heartbeat every 30 seconds
+const HEARTBEAT_JITTER = 3000 // Jitter (0-3s) to spread heartbeats without long delays
 const WS_RECONNECT_DELAY = 5000
 
 // Singleton state to share across all hook instances
@@ -29,6 +30,10 @@ let presencePingInterval: ReturnType<typeof setInterval> | null = null
 
 // Netlify heartbeat state (serverless mode)
 let heartbeatStarted = false
+
+// Smoothing for unstable Netlify Blobs counts (eventual consistency causes fluctuations)
+const recentCounts: number[] = []
+const SMOOTHING_WINDOW = 5 // Keep last 5 counts
 
 // Generate a unique session ID per browser tab (survives page navigation, not tab close)
 function getSessionId(): string {
@@ -62,9 +67,15 @@ function startHeartbeat() {
   // Send initial heartbeat immediately, then poll for count
   sendHeartbeat().then(() => fetchActiveUsers())
 
-  setInterval(() => {
-    sendHeartbeat()
-  }, HEARTBEAT_INTERVAL)
+  // Subsequent heartbeats with jitter to spread them out
+  function scheduleNextHeartbeat() {
+    const jitter = Math.random() * HEARTBEAT_JITTER
+    setTimeout(() => {
+      sendHeartbeat()
+      scheduleNextHeartbeat()
+    }, HEARTBEAT_INTERVAL + jitter)
+  }
+  scheduleNextHeartbeat()
 }
 
 // Start WebSocket presence connection (backend mode)
@@ -153,9 +164,21 @@ async function fetchActiveUsers() {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     const data: ActiveUsersInfo = await resp.json()
     consecutiveFailures = 0 // Reset on success
-    if (data.activeUsers !== sharedInfo.activeUsers ||
-        data.totalConnections !== sharedInfo.totalConnections) {
-      sharedInfo = data
+
+    // Smooth the count to handle Netlify Blobs eventual consistency fluctuations
+    // Use the max of recent counts since undercounting is more common than overcounting
+    recentCounts.push(data.activeUsers)
+    if (recentCounts.length > SMOOTHING_WINDOW) recentCounts.shift()
+    const smoothedCount = Math.max(...recentCounts)
+
+    const smoothedData: ActiveUsersInfo = {
+      activeUsers: smoothedCount,
+      totalConnections: smoothedCount,
+    }
+
+    if (smoothedData.activeUsers !== sharedInfo.activeUsers ||
+        smoothedData.totalConnections !== sharedInfo.totalConnections) {
+      sharedInfo = smoothedData
       notifySubscribers({ loading: false, error: false })
     }
   } catch {
