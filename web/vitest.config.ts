@@ -1,13 +1,16 @@
 /**
  * Vitest Configuration for KubeStellar Console
- * 
+ *
  * This configuration sets up unit testing with Vitest, React Testing Library,
  * and coverage reporting using the V8 coverage provider.
  */
 
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // https://vitest.dev/config/
 export default defineConfig({
@@ -15,10 +18,10 @@ export default defineConfig({
   test: {
     // Environment for running tests
     environment: 'jsdom',
-    
+
     // Glob patterns for test files
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    
+
     // Exclude patterns
     exclude: [
       'node_modules/',
@@ -26,7 +29,7 @@ export default defineConfig({
       '.git/',
       'coverage/',
     ],
-    
+
     // Coverage configuration
     coverage: {
       provider: 'v8',
@@ -45,13 +48,13 @@ export default defineConfig({
       ],
       include: ['src/components/**/*.{ts,tsx}'],
     },
-    
+
     // Global test timeout
     timeout: 10000,
-    
+
     // Setup files
     setupFiles: ['./src/test/setup.ts'],
-    
+
     // Pool configuration for parallel execution
     pool: 'threads',
     poolOptions: {
@@ -59,14 +62,11 @@ export default defineConfig({
         singleThread: false,
       },
     },
-    
+
     // Reporter configuration
     reporters: ['default'],
-    
-    // Output directory for test results
-    outputFile: {},
   },
-  
+
   // Resolve aliases for cleaner imports
   resolve: {
     alias: {

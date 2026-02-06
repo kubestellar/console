@@ -6,7 +6,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChunkErrorBoundary } from './ChunkErrorBoundary'
-import '@testing-library/jest-dom/vitest'
 
 // Suppress console.error for error boundary tests
 const originalError = console.error
@@ -50,12 +49,6 @@ describe('ChunkErrorBoundary', () => {
       )
       expect(screen.getByTestId('child-1')).toBeInTheDocument()
       expect(screen.getByTestId('child-2')).toBeInTheDocument()
-    })
-  })
-
-  describe('Error State', () => {
-    it('should be defined', () => {
-      expect(ChunkErrorBoundary).toBeDefined()
     })
   })
 })

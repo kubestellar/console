@@ -1,11 +1,11 @@
 /**
  * Vitest Test Setup
- * 
+ *
  * This file configures the testing environment for Vitest and React Testing Library.
  * It includes global mocks, custom matchers, and test utilities.
  */
 
-import { vi, expect, beforeEach, afterEach, describe, it } from 'vitest';
+import { vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 
 // SECTION: Global Test Configuration
