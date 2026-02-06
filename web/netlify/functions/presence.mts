@@ -1,11 +1,7 @@
 import { getStore } from "@netlify/blobs";
 
-interface Sessions {
-  [sessionId: string]: number; // timestamp of last heartbeat
-}
-
 const STORE_NAME = "presence";
-const BLOB_KEY = "sessions";
+const SESSION_PREFIX = "session-";
 const SESSION_TTL_MS = 90_000; // 90 seconds — sessions expire if no heartbeat
 
 export default async (req: Request) => {
@@ -23,44 +19,50 @@ export default async (req: Request) => {
     return new Response(null, { status: 204, headers });
   }
 
-  // Read current sessions from blob store
-  let sessions: Sessions = {};
-  try {
-    const raw = await store.get(BLOB_KEY);
-    if (raw) sessions = JSON.parse(raw);
-  } catch {
-    sessions = {};
-  }
-
   const now = Date.now();
 
   // POST = heartbeat (register or refresh a session)
+  // Each session gets its own blob key — no read-modify-write race
   if (req.method === "POST") {
     try {
       const body = await req.json();
       const sessionId = body.sessionId;
       if (typeof sessionId === "string" && sessionId.length > 0) {
-        sessions[sessionId] = now;
+        await store.set(`${SESSION_PREFIX}${sessionId}`, String(now));
       }
     } catch {
       // Ignore malformed bodies
     }
   }
 
-  // Prune expired sessions
-  const cutoff = now - SESSION_TTL_MS;
-  for (const [id, ts] of Object.entries(sessions)) {
-    if (ts < cutoff) delete sessions[id];
-  }
-
-  // Persist updated sessions
+  // Count active sessions by listing all session blobs
+  let count = 0;
   try {
-    await store.set(BLOB_KEY, JSON.stringify(sessions));
-  } catch {
-    // Best-effort write — don't fail the response
-  }
+    const { blobs } = await store.list({ prefix: SESSION_PREFIX });
+    const cutoff = now - SESSION_TTL_MS;
 
-  const count = Object.keys(sessions).length;
+    // Check each session blob and prune expired ones
+    const checks = blobs.map(async (blob) => {
+      try {
+        const raw = await store.get(blob.key);
+        if (!raw) return false;
+        const ts = parseInt(raw, 10);
+        if (ts < cutoff) {
+          // Expired — clean up in background (best-effort)
+          store.delete(blob.key).catch(() => {});
+          return false;
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    const results = await Promise.all(checks);
+    count = results.filter(Boolean).length;
+  } catch {
+    // If list fails, return 0 rather than error
+  }
 
   return new Response(
     JSON.stringify({ activeUsers: count, totalConnections: count }),
