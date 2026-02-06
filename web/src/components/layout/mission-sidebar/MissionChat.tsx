@@ -27,7 +27,7 @@ import { MemoizedMessage } from './MemoizedMessage'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void }) {
   const { sendMessage, cancelMission, rateMission, setActiveMission, dismissMission, selectedAgent } = useMissions()
-  const { findSimilarResolutions, recordUsage } = useResolutions()
+  const { findSimilarResolutions, recordUsage, allResolutions } = useResolutions()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -248,24 +248,44 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             <button
               onClick={() => setResolutionPanelView('related')}
               className={cn(
-                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
                 resolutionPanelView === 'related'
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               Related
+              {relatedResolutions.length > 0 && (
+                <span className={cn(
+                  "px-1.5 py-0.5 text-[10px] rounded-full",
+                  resolutionPanelView === 'related'
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {relatedResolutions.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setResolutionPanelView('history')}
               className={cn(
-                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                "flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
                 resolutionPanelView === 'history'
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               All Saved
+              {allResolutions.length > 0 && (
+                <span className={cn(
+                  "px-1.5 py-0.5 text-[10px] rounded-full",
+                  resolutionPanelView === 'history'
+                    ? "bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {allResolutions.length}
+                </span>
+              )}
             </button>
           </div>
           {/* Panel content */}
