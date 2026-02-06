@@ -113,6 +113,56 @@ interface GatewayResource {
   }
 }
 
+/**
+ * Merge fresh stack data with cached, preserving details when fresh data degraded
+ * due to partial API failures (e.g., pods fetch timed out but pools succeeded).
+ * This prevents the dropdown from losing P/D/WVA details during background refreshes.
+ */
+function mergeStackWithCached(fresh: LLMdStack, cached: LLMdStack): LLMdStack {
+  const merged = {
+    ...fresh,
+    components: { ...fresh.components },
+  }
+
+  // Preserve pod component details if fresh lost them (likely API failure)
+  if (fresh.components.prefill.length === 0 && cached.components.prefill.length > 0) {
+    merged.components.prefill = cached.components.prefill
+  }
+  if (fresh.components.decode.length === 0 && cached.components.decode.length > 0) {
+    merged.components.decode = cached.components.decode
+  }
+  if (fresh.components.both.length === 0 && cached.components.both.length > 0) {
+    merged.components.both = cached.components.both
+  }
+
+  // Preserve EPP/Gateway if fresh didn't find them
+  if (!merged.components.epp && cached.components.epp) {
+    merged.components.epp = cached.components.epp
+  }
+  if (!merged.components.gateway && cached.components.gateway) {
+    merged.components.gateway = cached.components.gateway
+  }
+
+  // Preserve autoscaler if fresh didn't detect it
+  if (!merged.autoscaler && cached.autoscaler) {
+    merged.autoscaler = cached.autoscaler
+  }
+
+  // Preserve model name
+  if (!merged.model && cached.model) {
+    merged.model = cached.model
+  }
+
+  // Recalculate derived fields from the (possibly preserved) components
+  const allServing = [...merged.components.prefill, ...merged.components.decode, ...merged.components.both]
+  merged.totalReplicas = allServing.reduce((sum, c) => sum + c.replicas, 0)
+  merged.readyReplicas = allServing.reduce((sum, c) => sum + c.readyReplicas, 0)
+  merged.hasDisaggregation = merged.components.prefill.length > 0 && merged.components.decode.length > 0
+  merged.status = getStackStatus(merged.components)
+
+  return merged
+}
+
 function getStackStatus(components: LLMdStack['components']): LLMdStack['status'] {
   const allComponents = [
     ...components.prefill,
@@ -506,9 +556,21 @@ export function useStackDiscovery(clusters: string[]) {
           // Only update if we got results - preserve cached data when cluster is unreachable
           if (clusterStacks.length > 0) {
             setStacks(prev => {
-              // Remove any existing stacks from this cluster (in case of refresh)
+              // Build lookup of cached stacks for this cluster
+              const cachedById = new Map(
+                prev.filter(s => s.cluster === cluster).map(s => [s.id, s])
+              )
               const filtered = prev.filter(s => s.cluster !== cluster)
-              const merged = [...filtered, ...clusterStacks]
+
+              // Merge each fresh stack with its cached counterpart to preserve
+              // P/D/WVA details that may be missing due to partial API failures
+              const mergedStacks = clusterStacks.map(freshStack => {
+                const cachedStack = cachedById.get(freshStack.id)
+                if (!cachedStack) return freshStack
+                return mergeStackWithCached(freshStack, cachedStack)
+              })
+
+              const merged = [...filtered, ...mergedStacks]
               // Sort: healthy first, then by name
               merged.sort((a, b) => {
                 if (a.status === 'healthy' && b.status !== 'healthy') return -1
