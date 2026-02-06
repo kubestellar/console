@@ -17,6 +17,13 @@ export interface MissionMessage {
 
 export type MissionFeedback = 'positive' | 'negative' | null
 
+export interface MatchedResolution {
+  id: string
+  title: string
+  similarity: number
+  source: 'personal' | 'shared'
+}
+
 export interface Mission {
   id: string
   title: string
@@ -40,6 +47,8 @@ export interface Mission {
   }
   /** AI agent used for this mission */
   agent?: string
+  /** Resolutions that were auto-matched for this mission */
+  matchedResolutions?: MatchedResolution[]
 }
 
 interface MissionContextValue {
@@ -589,9 +598,12 @@ The AI missions feature requires the local agent to be running.
   const startMission = useCallback((params: StartMissionParams): string => {
     const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-    // Auto-inject resolution context for repair/troubleshoot missions
+    // Auto-match and inject resolution context for relevant mission types
     let enhancedPrompt = params.initialPrompt
-    if (params.type === 'repair' || params.type === 'troubleshoot') {
+    let matchedResolutions: MatchedResolution[] = []
+
+    // Match resolutions for troubleshooting-related missions (not deploy/upgrade)
+    if (params.type !== 'deploy' && params.type !== 'upgrade') {
       // Detect issue signature from mission content
       const content = `${params.title} ${params.description} ${params.initialPrompt}`
       const signature = detectIssueSignature(content)
@@ -604,11 +616,43 @@ The AI missions feature requires the local agent to be running.
         )
 
         if (similarResolutions.length > 0) {
+          // Store matched resolutions for display
+          matchedResolutions = similarResolutions.map(sr => ({
+            id: sr.resolution.id,
+            title: sr.resolution.title,
+            similarity: sr.similarity,
+            source: sr.source,
+          }))
+
           // Inject resolution context into the prompt
           const resolutionContext = generateResolutionPromptContext(similarResolutions)
           enhancedPrompt = params.initialPrompt + resolutionContext
         }
       }
+    }
+
+    // Build initial messages
+    const initialMessages: MissionMessage[] = [
+      {
+        id: `msg-${Date.now()}`,
+        role: 'user',
+        content: params.initialPrompt, // Show original prompt in UI
+        timestamp: new Date(),
+      }
+    ]
+
+    // Add system message if resolutions were auto-matched
+    if (matchedResolutions.length > 0) {
+      const resolutionNames = matchedResolutions.map(r =>
+        `• **${r.title}** (${Math.round(r.similarity * 100)}% match, ${r.source === 'personal' ? 'your history' : 'team knowledge'})`
+      ).join('\n')
+
+      initialMessages.push({
+        id: `msg-${Date.now()}-resolutions`,
+        role: 'system',
+        content: `🔍 **Found ${matchedResolutions.length} similar resolution${matchedResolutions.length > 1 ? 's' : ''} from your knowledge base:**\n\n${resolutionNames}\n\n_This context has been automatically provided to the AI to help solve the problem faster._`,
+        timestamp: new Date(),
+      })
     }
 
     const mission: Mission = {
@@ -618,18 +662,12 @@ The AI missions feature requires the local agent to be running.
       type: params.type,
       status: 'pending',
       cluster: params.cluster,
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          role: 'user',
-          content: params.initialPrompt, // Show original prompt in UI
-          timestamp: new Date(),
-        }
-      ],
+      messages: initialMessages,
       createdAt: new Date(),
       updatedAt: new Date(),
       context: params.context,
       agent: selectedAgent || defaultAgent || undefined,
+      matchedResolutions: matchedResolutions.length > 0 ? matchedResolutions : undefined,
     }
 
     setMissions(prev => [mission, ...prev])
