@@ -18,7 +18,7 @@ export interface DashboardHealthInfo {
  * Checks alerts, cluster health, and pod issues
  */
 export function useDashboardHealth(): DashboardHealthInfo {
-  const { stats: alertStats, activeAlerts } = useAlerts()
+  const { activeAlerts } = useAlerts()
   const { deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { issues: podIssues, isLoading: podsLoading } = usePodIssues()
 
@@ -42,8 +42,17 @@ export function useDashboardHealth(): DashboardHealthInfo {
 
     // Check cluster health (only if data is loaded)
     if (!clustersLoading && deduplicatedClusters.length > 0) {
-      const unhealthyClusters = deduplicatedClusters.filter(c => !c.healthy).length
-      const unreachableClusters = deduplicatedClusters.filter(c => c.reachable === false).length
+      let unhealthyClusters = 0
+      let unreachableClusters = 0
+      
+      // Single pass through clusters
+      deduplicatedClusters.forEach(c => {
+        if (c.reachable === false) {
+          unreachableClusters++
+        } else if (!c.healthy) {
+          unhealthyClusters++
+        }
+      })
       
       if (unreachableClusters > 0) {
         criticalCount += unreachableClusters
@@ -89,5 +98,5 @@ export function useDashboardHealth(): DashboardHealthInfo {
       warningCount,
       navigateTo,
     }
-  }, [activeAlerts, alertStats, deduplicatedClusters, clustersLoading, podIssues, podsLoading])
+  }, [activeAlerts, deduplicatedClusters, clustersLoading, podIssues, podsLoading])
 }
