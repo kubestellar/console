@@ -64,6 +64,25 @@ let sharedUsage: TokenUsage = {
 let pollStarted = false
 const subscribers = new Set<(usage: TokenUsage) => void>()
 
+// Track active AI operation for attributing token usage
+let activeCategory: TokenCategory | null = null
+let lastKnownUsage: number | null = null // null means not yet initialized
+
+/**
+ * Set the currently active AI operation category.
+ * Call this when starting an AI operation (mission, diagnose, etc.)
+ */
+export function setActiveTokenCategory(category: TokenCategory | null) {
+  activeCategory = category
+}
+
+/**
+ * Get the currently active category (for debugging/display)
+ */
+export function getActiveTokenCategory(): TokenCategory | null {
+  return activeCategory
+}
+
 // Initialize from localStorage
 if (typeof window !== 'undefined') {
   const settings = localStorage.getItem(SETTINGS_KEY)
@@ -133,7 +152,23 @@ async function fetchTokenUsage() {
         const todayTokens = data.claude.tokenUsage.today
         // Track both input and output tokens
         const totalUsed = (todayTokens.input || 0) + (todayTokens.output || 0)
-        updateSharedUsage({ used: totalUsed })
+
+        // Attribute token increase to active category (only after initialization)
+        if (lastKnownUsage !== null && totalUsed > lastKnownUsage && activeCategory) {
+          const delta = totalUsed - lastKnownUsage
+          // Sanity check: don't attribute more than 50k tokens at once (likely a bug)
+          if (delta < 50000) {
+            const newByCategory = { ...sharedUsage.byCategory }
+            newByCategory[activeCategory] += delta
+            updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+          } else {
+            console.warn(`[TokenUsage] Skipping large delta ${delta} - likely initialization`)
+            updateSharedUsage({ used: totalUsed })
+          }
+        } else {
+          updateSharedUsage({ used: totalUsed })
+        }
+        lastKnownUsage = totalUsed
       }
     } else {
       reportAgentDataError('/health (token)', `HTTP ${response.status}`)
@@ -264,4 +299,17 @@ function getNextResetDate(): string {
   const now = new Date()
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   return nextMonth.toISOString()
+}
+
+/**
+ * Global function to add category tokens without needing a hook.
+ * Use this from contexts/providers that can't call hooks directly.
+ */
+export function addCategoryTokens(tokens: number, category: TokenCategory = 'other') {
+  if (tokens <= 0) return
+  const newByCategory = { ...sharedUsage.byCategory }
+  newByCategory[category] += tokens
+  updateSharedUsage({
+    byCategory: newByCategory,
+  })
 }

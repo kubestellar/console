@@ -249,6 +249,71 @@ export interface SimilarResolution {
 }
 
 /**
+ * Standalone function to find similar resolutions without needing the hook.
+ * Reads directly from localStorage. Use in places where hooks can't be called.
+ */
+export function findSimilarResolutionsStandalone(
+  signature: IssueSignature,
+  options?: { minSimilarity?: number; limit?: number }
+): SimilarResolution[] {
+  const minSimilarity = options?.minSimilarity ?? 0.5
+  const limit = options?.limit ?? 5
+
+  const resolutions = loadResolutions()
+  const sharedResolutions = loadSharedResolutions()
+  const results: SimilarResolution[] = []
+
+  for (const resolution of resolutions) {
+    const similarity = calculateSignatureSimilarity(signature, resolution.issueSignature)
+    if (similarity >= minSimilarity) {
+      results.push({ resolution, similarity, source: 'personal' })
+    }
+  }
+
+  for (const resolution of sharedResolutions) {
+    const similarity = calculateSignatureSimilarity(signature, resolution.issueSignature)
+    if (similarity >= minSimilarity) {
+      results.push({ resolution, similarity, source: 'shared' })
+    }
+  }
+
+  return results.sort((a, b) => b.similarity - a.similarity).slice(0, limit)
+}
+
+/**
+ * Generate AI prompt context from similar resolutions.
+ * Use this to inject resolution knowledge into AI prompts.
+ */
+export function generateResolutionPromptContext(similarResolutions: SimilarResolution[]): string {
+  if (similarResolutions.length === 0) return ''
+
+  const lines = [
+    '\n---',
+    'PREVIOUS SUCCESSFUL RESOLUTIONS (from your knowledge base):',
+  ]
+
+  for (let i = 0; i < Math.min(3, similarResolutions.length); i++) {
+    const { resolution, source } = similarResolutions[i]
+    const eff = resolution.effectiveness
+    const successRate = eff.timesUsed > 0
+      ? `${Math.round((eff.timesSuccessful / eff.timesUsed) * 100)}% success rate`
+      : 'new resolution'
+
+    lines.push(`\n${i + 1}. [${source === 'personal' ? 'Your history' : 'Team knowledge'}] "${resolution.title}" (${successRate})`)
+    lines.push(`   Issue type: ${resolution.issueSignature.type}`)
+    lines.push(`   Fix: ${resolution.resolution.summary}`)
+    if (resolution.resolution.steps.length > 0) {
+      lines.push(`   Steps: ${resolution.resolution.steps.slice(0, 3).join(' → ')}`)
+    }
+  }
+
+  lines.push('\nConsider these past resolutions when diagnosing and recommending fixes.')
+  lines.push('---\n')
+
+  return lines.join('\n')
+}
+
+/**
  * Hook for managing resolution memory
  */
 export function useResolutions() {

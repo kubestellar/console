@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
+import { addCategoryTokens, setActiveTokenCategory } from './useTokenUsage'
+import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 
 export type MissionStatus = 'pending' | 'running' | 'waiting_input' | 'completed' | 'failed'
 
@@ -418,6 +420,14 @@ The AI missions feature requires the local agent to be running.
           progress?: number
           tokens?: { input?: number; output?: number; total?: number }
         }
+        // Track token delta for category usage
+        if (payload.tokens?.total) {
+          const previousTotal = m.tokenUsage?.total ?? 0
+          const delta = payload.tokens.total - previousTotal
+          if (delta > 0) {
+            addCategoryTokens(delta, 'missions')
+          }
+        }
         return {
           ...m,
           currentStep: payload.step || m.currentStep,
@@ -484,6 +494,8 @@ The AI missions feature requires the local agent to be running.
           // Stream complete - mark as unread
           pendingRequests.current.delete(message.id)
           markMissionAsUnread(missionId)
+          // Clear active token tracking
+          setActiveTokenCategory(null)
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -558,6 +570,28 @@ The AI missions feature requires the local agent to be running.
   const startMission = useCallback((params: StartMissionParams): string => {
     const missionId = `mission-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
+    // Auto-inject resolution context for repair/troubleshoot missions
+    let enhancedPrompt = params.initialPrompt
+    if (params.type === 'repair' || params.type === 'troubleshoot') {
+      // Detect issue signature from mission content
+      const content = `${params.title} ${params.description} ${params.initialPrompt}`
+      const signature = detectIssueSignature(content)
+
+      if (signature.type && signature.type !== 'Unknown') {
+        // Find similar resolutions from history
+        const similarResolutions = findSimilarResolutionsStandalone(
+          { type: signature.type, resourceKind: signature.resourceKind, errorPattern: signature.errorPattern },
+          { minSimilarity: 0.4, limit: 3 }
+        )
+
+        if (similarResolutions.length > 0) {
+          // Inject resolution context into the prompt
+          const resolutionContext = generateResolutionPromptContext(similarResolutions)
+          enhancedPrompt = params.initialPrompt + resolutionContext
+        }
+      }
+    }
+
     const mission: Mission = {
       id: missionId,
       title: params.title,
@@ -569,7 +603,7 @@ The AI missions feature requires the local agent to be running.
         {
           id: `msg-${Date.now()}`,
           role: 'user',
-          content: params.initialPrompt,
+          content: params.initialPrompt, // Show original prompt in UI
           timestamp: new Date(),
         }
       ],
@@ -592,11 +626,14 @@ The AI missions feature requires the local agent to be running.
         m.id === missionId ? { ...m, status: 'running', currentStep: 'Connecting to agent...' } : m
       ))
 
+      // Track token usage for this mission
+      setActiveTokenCategory('missions')
+
       wsRef.current?.send(JSON.stringify({
         id: requestId,
         type: 'chat',
         payload: {
-          prompt: params.initialPrompt,
+          prompt: enhancedPrompt, // Send enhanced prompt with resolution context to AI
           sessionId: missionId,
           agent: selectedAgent || undefined,
           // Include mission context for the agent to use
@@ -657,6 +694,9 @@ The AI missions feature requires the local agent to be running.
 
   // Send a follow-up message
   const sendMessage = useCallback((missionId: string, content: string) => {
+    // Track token usage for this mission
+    setActiveTokenCategory('missions')
+
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
       return {
