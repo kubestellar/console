@@ -140,13 +140,15 @@ const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').
 const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
 const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
 
-// Kagenti AI agent platform cards
+// Kagenti AI Agent Platform cards
 const KagentiStatusCard = lazy(() => import('./KagentiStatusCard').then(m => ({ default: m.KagentiStatusCard })))
 const KagentiAgentFleet = lazy(() => import('./kagenti/KagentiAgentFleet').then(m => ({ default: m.KagentiAgentFleet })))
 const KagentiBuildPipeline = lazy(() => import('./kagenti/KagentiBuildPipeline').then(m => ({ default: m.KagentiBuildPipeline })))
 const KagentiToolRegistry = lazy(() => import('./kagenti/KagentiToolRegistry').then(m => ({ default: m.KagentiToolRegistry })))
 const KagentiAgentDiscovery = lazy(() => import('./kagenti/KagentiAgentDiscovery').then(m => ({ default: m.KagentiAgentDiscovery })))
+const KagentiSecurity = lazy(() => import('./kagenti/KagentiSecurity').then(m => ({ default: m.KagentiSecurity })))
 const KagentiSecurityPosture = lazy(() => import('./kagenti/KagentiSecurityPosture').then(m => ({ default: m.KagentiSecurityPosture })))
+const KagentiTopology = lazy(() => import('./kagenti/KagentiTopology').then(m => ({ default: m.KagentiTopology })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -349,6 +351,16 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   // Provider Health card (AI + Cloud provider status)
   provider_health: ProviderHealth,
 
+  // Kagenti AI Agent Platform cards
+  kagenti_status: KagentiStatusCard,
+  kagenti_agent_fleet: KagentiAgentFleet,
+  kagenti_build_pipeline: KagentiBuildPipeline,
+  kagenti_tool_registry: KagentiToolRegistry,
+  kagenti_agent_discovery: KagentiAgentDiscovery,
+  kagenti_security: KagentiSecurity,
+  kagenti_security_posture: KagentiSecurityPosture,
+  kagenti_topology: KagentiTopology,
+
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
   kvcache_monitor: KVCacheMonitor,
@@ -357,14 +369,6 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llmd_benchmarks: LLMdBenchmarks,
   llmd_ai_insights: LLMdAIInsights,
   llmd_configurator: LLMdConfigurator,
-
-  // Kagenti AI agent platform cards
-  kagenti_status: KagentiStatusCard,
-  kagenti_agent_fleet: KagentiAgentFleet,
-  kagenti_build_pipeline: KagentiBuildPipeline,
-  kagenti_tool_registry: KagentiToolRegistry,
-  kagenti_agent_discovery: KagentiAgentDiscovery,
-  kagenti_security_posture: KagentiSecurityPosture,
 
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
@@ -450,6 +454,14 @@ export const DEMO_DATA_CARDS = new Set([
   'llmd_configurator',
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
+  // Kagenti cards - demo until kagenti-operator is installed on clusters
+  'kagenti_status',
+  'kagenti_agent_fleet',
+  'kagenti_build_pipeline',
+  'kagenti_tool_registry',
+  'kagenti_agent_discovery',
+  'kagenti_security',
+  'kagenti_topology',
 ])
 
 /**
@@ -528,7 +540,8 @@ export const LIVE_DATA_CARDS = new Set([
   'kagenti_build_pipeline',
   'kagenti_tool_registry',
   'kagenti_agent_discovery',
-  'kagenti_security_posture',
+  'kagenti_security',
+  'kagenti_topology',
 ])
 
 /**
@@ -577,6 +590,15 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // Provider Health card
   provider_health: 6,
 
+  // Kagenti AI Agent Platform cards
+  kagenti_status: 4,
+  kagenti_agent_fleet: 8,
+  kagenti_build_pipeline: 4,
+  kagenti_tool_registry: 4,
+  kagenti_agent_discovery: 4,
+  kagenti_security: 4,
+  kagenti_topology: 8,
+
   // LLM-d stunning visualization cards
   llmd_flow: 8,           // Hero animated flow diagram
   kvcache_monitor: 4,     // KV cache gauges
@@ -585,14 +607,6 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   llmd_benchmarks: 6,     // Benchmark charts
   llmd_ai_insights: 6,    // AI insights panel
   llmd_configurator: 4,   // Configurator showcase
-
-  // Kagenti AI agent platform cards
-  kagenti_status: 6,
-  kagenti_agent_fleet: 6,
-  kagenti_build_pipeline: 6,
-  kagenti_tool_registry: 6,
-  kagenti_agent_discovery: 6,
-  kagenti_security_posture: 6,
 
   // Event dashboard cards
   event_summary: 6,

@@ -87,8 +87,8 @@ const DEFAULT_CONFIG: SidebarConfig = {
   isMobileOpen: false,
 }
 
-const STORAGE_KEY = 'kubestellar-sidebar-config-v8'
-const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v7'
+const STORAGE_KEY = 'kubestellar-sidebar-config-v9'
+const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v8'
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']
@@ -382,7 +382,7 @@ export const AVAILABLE_ICONS = [
   'History', 'Settings', 'Plus', 'Zap', 'Database', 'Cloud', 'Lock',
   'Key', 'Users', 'Bell', 'AlertTriangle', 'CheckCircle', 'XCircle',
   'RefreshCw', 'Search', 'Filter', 'Layers', 'Globe', 'Terminal',
-  'Code', 'Cpu', 'HardDrive', 'Wifi', 'Monitor', 'Folder', 'Gamepad2',
+  'Code', 'Cpu', 'HardDrive', 'Wifi', 'Monitor', 'Folder', 'Gamepad2', 'Bot',
   'Sparkles', 'GitMerge', 'Rocket', 'ShieldCheck', 'ClipboardCheck',
   'DollarSign', 'Package', 'FileText', 'CircuitBoard', 'Cog', 'Hexagon', 'Network',
 ]

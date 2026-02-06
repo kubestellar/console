@@ -74,7 +74,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   alerts: 'Alerts',
   operators: 'Operators',
   deploy: 'Deploy',
-  kagenti: 'AI Agents',
+  'ai-agents': 'AI Agents',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -94,13 +94,13 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   alerts: '/alerts',
   operators: '/operators',
   deploy: '/deploy',
-  kagenti: '/ai-agents',
+  'ai-agents': '/ai-agents',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
   'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
   'network', 'security', 'compliance', 'data-compliance', 'compute',
-  'events', 'cost', 'alerts', 'operators', 'deploy', 'kagenti',
+  'events', 'cost', 'alerts', 'operators', 'deploy', 'ai-agents',
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---

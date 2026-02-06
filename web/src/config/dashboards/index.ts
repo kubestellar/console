@@ -30,7 +30,7 @@ import { logsDashboardConfig } from './logs'
 import { dataComplianceDashboardConfig } from './data-compliance'
 import { arcadeDashboardConfig } from './arcade'
 import { deployDashboardConfig } from './deploy'
-import { kagentiDashboardConfig } from './kagenti'
+import { aiAgentsDashboardConfig } from './ai-agents'
 
 /**
  * Registry of all unified dashboard configurations
@@ -61,7 +61,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'data-compliance': dataComplianceDashboardConfig,
   arcade: arcadeDashboardConfig,
   deploy: deployDashboardConfig,
-  kagenti: kagentiDashboardConfig,
+  'ai-agents': aiAgentsDashboardConfig,
 }
 
 /**
@@ -148,5 +148,5 @@ export {
   dataComplianceDashboardConfig,
   arcadeDashboardConfig,
   deployDashboardConfig,
-  kagentiDashboardConfig,
+  aiAgentsDashboardConfig,
 }

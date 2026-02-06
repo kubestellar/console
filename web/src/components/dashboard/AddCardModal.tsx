@@ -137,6 +137,15 @@ const CARD_CATALOG = {
     { type: 'resource_trend', title: 'Resource Trend', description: 'CPU, memory, pods, nodes over time', visualization: 'timeseries' },
     { type: 'gpu_utilization', title: 'GPU Utilization', description: 'GPU allocation trend with donut chart', visualization: 'timeseries' },
   ],
+  'AI Agents': [
+    { type: 'kagenti_status', title: 'Kagenti Overview', description: 'Agent platform status — agents, tools, builds, and security posture across clusters', visualization: 'status' },
+    { type: 'kagenti_agent_fleet', title: 'Agent Fleet', description: 'Full agent management table with status, framework, and replicas', visualization: 'table' },
+    { type: 'kagenti_build_pipeline', title: 'Build Pipeline', description: 'Agent build status with source, pipeline, and progress tracking', visualization: 'status' },
+    { type: 'kagenti_tool_registry', title: 'MCP Tool Registry', description: 'Centralized view of MCP tools registered through kagenti gateway', visualization: 'table' },
+    { type: 'kagenti_agent_discovery', title: 'Agent Discovery', description: 'AgentCard-based A2A discovery with skills, capabilities, and sync status', visualization: 'status' },
+    { type: 'kagenti_security', title: 'Security Posture', description: 'SPIFFE identity binding coverage and unbound agent warnings', visualization: 'gauge' },
+    { type: 'kagenti_topology', title: 'Agent Topology', description: 'Visual graph of agent-to-agent and agent-to-tool relationships', visualization: 'status' },
+  ],
   'AI Assistant': [
     { type: 'console_ai_issues', title: 'AI Issues', description: 'AI-powered issue detection and repair', visualization: 'status' },
     { type: 'console_ai_kubeconfig_audit', title: 'AI Kubeconfig Audit', description: 'Audit kubeconfig for stale contexts', visualization: 'status' },
