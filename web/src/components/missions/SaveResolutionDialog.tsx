@@ -85,7 +85,8 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
         type: 'chat',
         id: `summary-${Date.now()}`,
         payload: {
-          content: prompt,
+          prompt: prompt,
+          sessionId: `resolution-${mission.id}`,
           agent: mission.agent || 'claude',
         }
       }))
