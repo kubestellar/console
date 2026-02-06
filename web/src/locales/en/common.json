@@ -1,7 +1,7 @@
 {
   "navigation": {
     "dashboard": "Dashboard",
-    "clusters": "Clusters",
+    "clusters": "My Clusters",
     "applications": "Applications",
     "events": "Events",
     "security": "Security",

@@ -113,7 +113,7 @@ interface KnownRoute {
 const KNOWN_ROUTES: KnownRoute[] = [
   // Core Dashboards
   { href: '/', name: 'Main Dashboard', description: 'Customizable overview with cluster health, workloads, and events', icon: 'LayoutDashboard', category: 'Core Dashboards' },
-  { href: '/clusters', name: 'Clusters', description: 'Detailed cluster management, health monitoring, and node status', icon: 'Server', category: 'Core Dashboards' },
+  { href: '/clusters', name: 'My Clusters', description: 'Detailed cluster management, health monitoring, and node status', icon: 'Server', category: 'Core Dashboards' },
   { href: '/workloads', name: 'Workloads', description: 'Deployments, pods, services, and application status across clusters', icon: 'Box', category: 'Core Dashboards' },
   { href: '/compute', name: 'Compute', description: 'CPU, memory, and GPU resource utilization and capacity', icon: 'Cpu', category: 'Core Dashboards' },
   { href: '/events', name: 'Events', description: 'Real-time cluster events, warnings, and audit logs', icon: 'Activity', category: 'Core Dashboards' },

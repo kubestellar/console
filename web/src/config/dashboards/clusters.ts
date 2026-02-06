@@ -5,7 +5,7 @@ import type { UnifiedDashboardConfig } from '../../lib/unified/types'
 
 export const clustersDashboardConfig: UnifiedDashboardConfig = {
   id: 'clusters',
-  name: 'Clusters',
+  name: 'My Clusters',
   subtitle: 'Multi-cluster overview and management',
   route: '/clusters',
   statsType: 'clusters',
