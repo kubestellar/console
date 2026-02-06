@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import istanbul from 'vite-plugin-istanbul'
 import { execSync } from 'child_process'
+import path from 'path'
 
 const isE2ECoverage = process.env.VITE_COVERAGE === 'true'
 
@@ -31,6 +32,11 @@ function getGitCommitHash(): string {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   define: {
     // Version from git tags, can be overridden by VITE_APP_VERSION for CI/CD
     __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || getGitVersion()),
