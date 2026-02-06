@@ -106,10 +106,31 @@ export function SaveResolutionDialog({
         // Extract steps - try numbered lists, then bullet points
         let extractedSteps: string[] = []
 
+        // Helper to filter out placeholder/template commands and duplicates
+        const isPlaceholder = (s: string) => {
+          return /<[a-z_-]+>/i.test(s) || // Contains <placeholder>
+                 /\$\{[^}]+\}/.test(s) || // Contains ${variable}
+                 /your[_-]?(token|password|secret|key)/i.test(s) || // Contains your-token etc
+                 /---+/.test(s.trim()) // Just dashes (separator)
+        }
+
+        // Helper to deduplicate while preserving order
+        const dedupe = (arr: string[]) => {
+          const seen = new Set<string>()
+          return arr.filter(item => {
+            const normalized = item.toLowerCase().trim()
+            if (seen.has(normalized)) return false
+            seen.add(normalized)
+            return true
+          })
+        }
+
         // Numbered lists: "1. Step" or "1) Step"
         const numberedSteps = assistantMessages.match(/^\s*\d+[\.\)]\s+.+$/gm) || []
         if (numberedSteps.length > 0) {
-          extractedSteps = numberedSteps.map(s => s.replace(/^\s*\d+[\.\)]\s+/, '').trim())
+          extractedSteps = numberedSteps
+            .map(s => s.replace(/^\s*\d+[\.\)]\s+/, '').trim())
+            .filter(s => s.length > 5 && !isPlaceholder(s))
         }
 
         // Bullet points: "- Step" or "* Step" (if no numbered steps)
@@ -118,25 +139,40 @@ export function SaveResolutionDialog({
           if (bulletSteps.length > 0) {
             extractedSteps = bulletSteps
               .map(s => s.replace(/^\s*[-*]\s+/, '').trim())
-              .filter(s => s.length > 10 && !s.startsWith('**')) // Skip short items and bold headers
+              .filter(s => s.length > 10 && !s.startsWith('**') && !isPlaceholder(s))
           }
         }
 
-        // Also extract inline code commands as potential steps
+        // Also extract inline code commands as potential steps (skip placeholders)
         const codeCommands = assistantMessages.match(/`(kubectl|oc|helm|docker|podman|crictl|systemctl|journalctl)[^`]+`/g) || []
         if (codeCommands.length > 0 && extractedSteps.length < 3) {
-          const commandSteps = codeCommands.map(c => `Run: ${c.replace(/`/g, '')}`)
+          const commandSteps = codeCommands
+            .map(c => c.replace(/`/g, ''))
+            .filter(c => !isPlaceholder(c))
+            .map(c => `Run: ${c}`)
           extractedSteps = [...extractedSteps, ...commandSteps].slice(0, 10)
         }
+
+        // Deduplicate steps
+        extractedSteps = dedupe(extractedSteps)
 
         setSteps(extractedSteps.length > 0 ? extractedSteps : [''])
 
         // Extract code blocks - YAML, bash, shell, or generic
         const codeBlocks = assistantMessages.match(/```(?:ya?ml|bash|sh|shell)?\n([\s\S]*?)```/g) || []
         if (codeBlocks.length > 0) {
+          const seenBlocks = new Set<string>()
           const yamlContent = codeBlocks
             .map(b => b.replace(/```(?:ya?ml|bash|sh|shell)?\n|```/g, '').trim())
-            .filter(b => b.length > 0)
+            .filter(b => {
+              if (b.length === 0) return false
+              // Skip blocks that are just placeholders or duplicates
+              if (isPlaceholder(b)) return false
+              const normalized = b.toLowerCase()
+              if (seenBlocks.has(normalized)) return false
+              seenBlocks.add(normalized)
+              return true
+            })
             .join('\n---\n')
           setYaml(yamlContent)
         }
