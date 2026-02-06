@@ -23,7 +23,7 @@ echo "🛑 Stopping dev server..."
 kill $DEV_PID 2>/dev/null || true
 
 echo "📊 Generating coverage report..."
-npx nyc report --reporter=text --reporter=html --reporter=lcov
+node scripts/coverage-report.mjs
 
 echo ""
 echo "✅ Done! Coverage report available in ./coverage/index.html"

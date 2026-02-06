@@ -18,7 +18,7 @@
     "test:e2e:webkit": "playwright test --project=webkit",
     "test:e2e:report": "playwright show-report",
     "test:e2e:coverage": "./scripts/run-e2e-coverage.sh",
-    "coverage:report": "nyc report --reporter=text --reporter=html --reporter=lcov",
+    "coverage:report": "node scripts/coverage-report.mjs",
     "coverage:clean": "rimraf .nyc_output coverage"
   },
   "dependencies": {
@@ -48,7 +48,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
-    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.1.7",
     "@playwright/test": "^1.57.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
@@ -60,7 +62,6 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "msw": "^2.12.7",
-    "nyc": "^17.1.0",
     "postcss": "^8.4.49",
     "rimraf": "^6.1.2",
     "tailwindcss": "^3.4.17",
@@ -77,25 +78,9 @@
       "public"
     ]
   },
-  "nyc": {
-    "extends": "@istanbuljs/nyc-config-typescript",
-    "all": true,
-    "include": [
-      "src/**/*.ts",
-      "src/**/*.tsx"
-    ],
-    "exclude": [
-      "src/**/*.d.ts",
-      "src/**/*.test.ts",
-      "src/**/*.spec.ts",
-      "src/test/**",
-      "src/mocks/**"
-    ],
-    "reporter": [
-      "text",
-      "html",
-      "lcov"
-    ],
-    "report-dir": "coverage"
+  "overrides": {
+    "@react-three/drei": {
+      "three-mesh-bvh": "^0.8.0"
+    }
   }
 }
