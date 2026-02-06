@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, User, Menu, X, MoreVertical } from 'lucide-react'
+import { Sun, Moon, Monitor, Menu, X, MoreVertical } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
-import { useActiveUsers } from '../../../hooks/useActiveUsers'
 import { usePresentationMode } from '../../../hooks/usePresentationMode'
 import { useMobile } from '../../../hooks/useMobile'
 import { TourTrigger } from '../../onboarding/Tour'
@@ -23,17 +22,11 @@ export function Navbar() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
-  const { viewerCount, isLoading: viewersLoading, hasError: viewersError, refetch } = useActiveUsers()
   const location = useLocation()
   const [showFeedback, setShowFeedback] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
   const { config, toggleMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
-
-  // Refetch viewer count on page navigation
-  useEffect(() => {
-    refetch()
-  }, [location.pathname, refetch])
 
   // Close mobile more menu on route change
   useEffect(() => {
@@ -91,16 +84,6 @@ export function Navbar() {
           {/* Tour trigger */}
           <TourTrigger />
 
-          {/* Active Viewers */}
-          <div
-            className="flex items-center gap-1 px-1.5 py-1.5 text-muted-foreground"
-          >
-            <User className={`w-4 h-4 ${viewersError ? 'text-red-400' : ''}`} />
-            <span className={`text-xs tabular-nums ${viewersLoading ? 'animate-pulse' : ''}`}>
-              {viewersError ? '!' : viewerCount}
-            </span>
-          </div>
-
           {/* Feature Request (includes notifications) */}
           <FeatureRequestButton />
         </div>
@@ -157,17 +140,6 @@ export function Navbar() {
                   {/* Simplified mobile menu - only essential items */}
                   <div className="px-3 py-2">
                     <AgentStatusIndicator />
-                  </div>
-                  <div className="px-3 py-2 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Viewers</span>
-                    <div
-                      className="flex items-center gap-1 text-muted-foreground"
-                    >
-                      <User className={`w-4 h-4 ${viewersError ? 'text-red-400' : ''}`} />
-                      <span className={`text-xs tabular-nums ${viewersLoading ? 'animate-pulse' : ''}`}>
-                        {viewersError ? '!' : viewerCount}
-                      </span>
-                    </div>
                   </div>
                   <div className="px-3 py-2">
                     <FeatureRequestButton />

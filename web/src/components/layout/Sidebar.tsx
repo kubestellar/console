@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import * as Icons from 'lucide-react'
-import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical } from 'lucide-react'
+import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, User } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
 import { SidebarCustomizer } from './SidebarCustomizer'
@@ -12,6 +12,7 @@ import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
+import { useActiveUsers } from '../../hooks/useActiveUsers'
 
 export function Sidebar() {
   const { config, toggleCollapsed, reorderItems, updateItem, closeMobileSidebar } = useSidebarConfig()
@@ -19,6 +20,7 @@ export function Sidebar() {
   const { deduplicatedClusters } = useClusters()
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
+  const { viewerCount, hasError: viewersError } = useActiveUsers()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -366,8 +368,8 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Customize button */}
-        <div className="mt-4">
+        {/* Customize button and viewer count */}
+        <div className="mt-4 flex items-center justify-between">
           <button
             data-testid="sidebar-customize"
             onClick={() => setIsCustomizerOpen(true)}
@@ -380,6 +382,18 @@ export function Sidebar() {
             <Pencil className={isCollapsed ? 'w-5 h-5' : 'w-3 h-3'} />
             {!isCollapsed && 'Customize'}
           </button>
+          {/* Viewer count - small and inconspicuous */}
+          {!isCollapsed && (
+            <div
+              className="flex items-center gap-1 px-2 text-muted-foreground/60"
+              title={`${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
+            >
+              <User className={cn('w-3 h-3', viewersError && 'text-red-400')} />
+              <span className="text-[10px] tabular-nums">
+                {viewersError ? '!' : viewerCount}
+              </span>
+            </div>
+          )}
         </div>
       </aside>
 
