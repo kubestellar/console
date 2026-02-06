@@ -1,4 +1,4 @@
-import { Shield, AlertTriangle, User, Network, Server, ChevronRight } from 'lucide-react'
+import { Shield, AlertTriangle, User, Network, Server, ChevronRight, FileCode, Calendar, Eye } from 'lucide-react'
 import { useMemo } from 'react'
 import type { SecurityIssue } from '../../hooks/useMCP'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
@@ -7,7 +7,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
-import { useCardData, CardClusterFilter, CardSearchInput } from '../../lib/cards'
+import { useCardData, CardClusterFilter, CardSearchInput, CardActionButtons } from '../../lib/cards'
 import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 
@@ -107,7 +107,7 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
   const isFailed = isDemoMode ? false : cachedFailed
   const consecutiveFailures = isDemoMode ? 0 : cachedFailures
 
-  const { drillToPod } = useDrillDownActions()
+  const { drillToPod, drillToEvents, drillToYAML } = useDrillDownActions()
 
   // Report card data state to parent CardWrapper for automatic skeleton/refresh handling
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -319,6 +319,37 @@ export function SecurityIssues({ config }: SecurityIssuesProps) {
                       {issue.details}
                     </p>
                   )}
+                  {/* Diagnose & Repair actions */}
+                  <CardActionButtons
+                    className="mt-2"
+                    onDiagnose={() => drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
+                      securityIssue: issue.issue,
+                      severity: issue.severity,
+                    })}
+                    repairOptions={[
+                      {
+                        label: 'View Pod Details',
+                        icon: Eye,
+                        description: 'Inspect pod configuration',
+                        onClick: () => drillToPod(issue.cluster || 'default', issue.namespace, issue.name, {
+                          securityIssue: issue.issue,
+                          severity: issue.severity,
+                        }),
+                      },
+                      {
+                        label: 'Edit YAML',
+                        icon: FileCode,
+                        description: 'View and fix pod security context',
+                        onClick: () => drillToYAML(issue.cluster || 'default', issue.namespace, 'Pod', issue.name),
+                      },
+                      {
+                        label: 'View Events',
+                        icon: Calendar,
+                        description: 'See recent pod events',
+                        onClick: () => drillToEvents(issue.cluster || 'default', issue.namespace, issue.name),
+                      },
+                    ]}
+                  />
                 </div>
                 <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
               </div>

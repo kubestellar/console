@@ -64,6 +64,7 @@ export {
   CardFilterChips,
   CardControlsRow,
   CardPaginationFooter,
+  CardActionButtons,
   type CardSkeletonProps,
   type CardEmptyStateProps,
   type CardErrorStateProps,
@@ -77,6 +78,8 @@ export {
   type CardFilterChipsProps,
   type CardControlsRowProps,
   type CardPaginationFooterProps,
+  type RepairOption,
+  type CardActionButtonsProps,
   useDropdownPortal,
 } from './CardComponents'
 

@@ -1,6 +1,6 @@
 import { ReactNode, useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server } from 'lucide-react'
+import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server, Stethoscope, Wrench } from 'lucide-react'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Pagination } from '../../components/ui/Pagination'
 import { CardControls as CardControlsUI, type SortDirection } from '../../components/ui/CardControls'
@@ -757,6 +757,133 @@ export function CardPaginationFooter({
         itemsPerPage={itemsPerPage}
         onPageChange={onPageChange}
       />
+    </div>
+  )
+}
+
+// ============================================================================
+// CardActionButtons - Diagnose and Repair buttons for failed items
+// ============================================================================
+
+export interface RepairOption {
+  label: string
+  icon: LucideIcon
+  onClick: () => void
+  description?: string
+}
+
+export interface CardActionButtonsProps {
+  /** Callback when Diagnose is clicked */
+  onDiagnose: () => void
+  /** Repair options to show in the dropdown menu */
+  repairOptions: RepairOption[]
+  /** Extra CSS classes for the container */
+  className?: string
+}
+
+const REPAIR_MENU_WIDTH = 200
+
+/**
+ * Diagnose and Repair action buttons for failed/unhealthy items.
+ * - Diagnose: triggers diagnostic view (events, logs, errors)
+ * - Repair: shows contextual repair options dropdown
+ *
+ * Stops event propagation so parent onClick (drill-down) is not triggered.
+ */
+export function CardActionButtons({
+  onDiagnose,
+  repairOptions,
+  className = '',
+}: CardActionButtonsProps) {
+  const [showRepairMenu, setShowRepairMenu] = useState(false)
+  const repairBtnRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (showRepairMenu && repairBtnRef.current) {
+      const rect = repairBtnRef.current.getBoundingClientRect()
+      setMenuPos({
+        top: rect.bottom + 4,
+        left: Math.max(8, rect.right - REPAIR_MENU_WIDTH),
+      })
+    } else {
+      setMenuPos(null)
+    }
+  }, [showRepairMenu])
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!showRepairMenu) return
+    const handleClick = () => setShowRepairMenu(false)
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [showRepairMenu])
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onDiagnose()
+        }}
+        className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/20 transition-colors"
+        title="Diagnose - View events, logs, and error details"
+      >
+        <Stethoscope className="w-3 h-3" />
+        <span>Diagnose</span>
+      </button>
+
+      <div className="relative">
+        <button
+          ref={repairBtnRef}
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowRepairMenu(!showRepairMenu)
+          }}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border border-blue-500/20 transition-colors"
+          title="Repair - Quick fix actions"
+        >
+          <Wrench className="w-3 h-3" />
+          <span>Repair</span>
+          <ChevronDown className="w-2.5 h-2.5" />
+        </button>
+
+        {showRepairMenu && menuPos && createPortal(
+          <div
+            className="fixed rounded-lg bg-card border border-border shadow-xl z-50 py-1"
+            style={{ top: menuPos.top, left: menuPos.left, width: REPAIR_MENU_WIDTH }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {repairOptions.map((option, idx) => {
+              const OptionIcon = option.icon
+              return (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    option.onClick()
+                    setShowRepairMenu(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-secondary/80 transition-colors text-left"
+                  title={option.description}
+                >
+                  <OptionIcon className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span>{option.label}</span>
+                    {option.description && (
+                      <p className="text-[10px] text-muted-foreground truncate">{option.description}</p>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>,
+          document.body
+        )}
+      </div>
     </div>
   )
 }

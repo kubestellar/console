@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound } from 'lucide-react'
+import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound, RefreshCw, Calendar, Activity } from 'lucide-react'
 import { useClusters, useGPUNodes, ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMobile } from '../../hooks/useMobile'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardActionButtons } from '../../lib/cards/CardComponents'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired } from '../clusters/utils'
 import { useCardLoadingState } from './CardDataContext'
+import { useDrillDownActions } from '../../hooks/useDrillDown'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -85,6 +86,7 @@ export function ClusterHealth() {
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isMobile } = useMobile()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
+  const { drillToEvents, drillToCluster } = useDrillDownActions()
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -385,6 +387,33 @@ export function ClusterHealth() {
                   </span>
                 )}
               </div>
+              {/* Diagnose & Repair for unhealthy/offline clusters */}
+              {!clusterLoading && (clusterUnreachable || !clusterHealthy) && (
+                <CardActionButtons
+                  className={isMobile ? 'mt-1.5 pl-6' : 'mt-1.5'}
+                  onDiagnose={() => drillToEvents(cluster.name)}
+                  repairOptions={[
+                    {
+                      label: 'Check Health',
+                      icon: Activity,
+                      description: 'Run cluster health check',
+                      onClick: () => drillToCluster(cluster.name, { action: 'health-check' }),
+                    },
+                    {
+                      label: 'View Events',
+                      icon: Calendar,
+                      description: 'See cluster-wide events',
+                      onClick: () => drillToEvents(cluster.name),
+                    },
+                    ...(clusterUnreachable ? [{
+                      label: 'Retry Connection',
+                      icon: RefreshCw,
+                      description: 'Attempt to reconnect to cluster',
+                      onClick: () => drillToCluster(cluster.name, { action: 'reconnect' }),
+                    }] : []),
+                  ]}
+                />
+              )}
             </div>
           )
         })}
