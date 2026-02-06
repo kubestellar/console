@@ -528,6 +528,104 @@ jobs:
             echo "No overly complex components detected"
           fi
 
+      # === CODE QUALITY (Saturday - part of features) ===
+      - name: "Focus: Debug console.log statements"
+        id: focus_console_logs
+        if: steps.focus.outputs.area == 'features'
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Scanning for debug console.log statements..."
+          ISSUES=""
+
+          # Find console.log that looks like debugging (not error handling)
+          DEBUG_LOGS=$(grep -rn "console\.log" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | \
+            grep -v "// eslint-disable" | \
+            grep -v "error\|Error\|warn\|Warn\|debug mode" | \
+            head -20 || true)
+
+          if [ -n "$DEBUG_LOGS" ]; then
+            COUNT=$(echo "$DEBUG_LOGS" | wc -l | tr -d ' ')
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+            printf "Debug console.log statements found (${COUNT} occurrences):\n\`\`\`\n%s\n\`\`\`\n" "$DEBUG_LOGS" > /tmp/focus-console-logs.txt
+            cat /tmp/focus-console-logs.txt
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No debug console.log statements found"
+          fi
+
+      - name: "Focus: Excessive any types"
+        id: focus_any_types
+        if: steps.focus.outputs.area == 'features'
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Scanning for excessive use of 'any' type..."
+          ISSUES=""
+
+          # Find explicit 'any' type annotations (excluding eslint comments)
+          ANY_TYPES=$(grep -rn ": any\|: any\[\]\|as any\|<any>" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | \
+            grep -v "eslint-disable" | \
+            grep -v "\.d\.ts" | \
+            head -25 || true)
+
+          if [ -n "$ANY_TYPES" ]; then
+            COUNT=$(echo "$ANY_TYPES" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 10 ]; then
+              echo "found=true" >> "$GITHUB_OUTPUT"
+              echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+              printf "Excessive 'any' type usage (${COUNT} occurrences) reduces type safety:\n\`\`\`\n%s\n\`\`\`\n" "$ANY_TYPES" > /tmp/focus-any-types.txt
+              cat /tmp/focus-any-types.txt
+            else
+              echo "found=false" >> "$GITHUB_OUTPUT"
+              echo "Only ${COUNT} 'any' types found (acceptable)"
+            fi
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No excessive 'any' types found"
+          fi
+
+      - name: "Focus: Potential memory leaks"
+        id: focus_memory_leaks
+        if: steps.focus.outputs.area == 'features'
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for potential memory leak patterns..."
+          ISSUES=""
+
+          # Find useEffect with setInterval/setTimeout but no cleanup
+          for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules); do
+            HAS_TIMER=$(grep -l "setInterval\|setTimeout" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_TIMER" ]; then
+              HAS_CLEANUP=$(grep -l "clearInterval\|clearTimeout\|return.*=>" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_CLEANUP" ]; then
+                ISSUES="${ISSUES}  - \`${f}\` — uses setInterval/setTimeout without cleanup\n"
+              fi
+            fi
+          done
+
+          # Find addEventListener without removeEventListener
+          for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules); do
+            ADD_COUNT=$(grep -c "addEventListener" "$f" 2>/dev/null || echo "0")
+            REMOVE_COUNT=$(grep -c "removeEventListener" "$f" 2>/dev/null || echo "0")
+            if [ "$ADD_COUNT" -gt 0 ] && [ "$REMOVE_COUNT" -lt "$ADD_COUNT" ]; then
+              ISSUES="${ISSUES}  - \`${f}\` — adds ${ADD_COUNT} event listeners but only removes ${REMOVE_COUNT}\n"
+            fi
+          done
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "Potential memory leak patterns:\n%b\n\nThese components may leak memory by not cleaning up timers or event listeners." "$ISSUES" > /tmp/focus-memory-leaks.txt
+            cat /tmp/focus-memory-leaks.txt
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No obvious memory leak patterns detected"
+          fi
+
       # === RESILIENCE & ERROR HANDLING (every run) ===
       - name: "Check: Swallowed errors"
         id: focus_swallowed
@@ -849,6 +947,11 @@ jobs:
           FOCUS_TODOS: ${{ steps.focus_todos.outputs.found }}
           FOCUS_TODO_COUNT: ${{ steps.focus_todos.outputs.count }}
           FOCUS_COMPLEXITY: ${{ steps.focus_complexity.outputs.found }}
+          FOCUS_CONSOLE_LOGS: ${{ steps.focus_console_logs.outputs.found }}
+          FOCUS_CONSOLE_LOG_COUNT: ${{ steps.focus_console_logs.outputs.count }}
+          FOCUS_ANY_TYPES: ${{ steps.focus_any_types.outputs.found }}
+          FOCUS_ANY_TYPE_COUNT: ${{ steps.focus_any_types.outputs.count }}
+          FOCUS_MEMORY_LEAKS: ${{ steps.focus_memory_leaks.outputs.found }}
           # Resilience focus
           FOCUS_SWALLOWED: ${{ steps.focus_swallowed.outputs.found }}
           FOCUS_LOADING_STATES: ${{ steps.focus_loading_states.outputs.found }}
@@ -1170,6 +1273,43 @@ jobs:
                   labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
                 });
               }
+              if (process.env.FOCUS_CONSOLE_LOGS === 'true') {
+                const count = process.env.FOCUS_CONSOLE_LOG_COUNT || '?';
+                checks.push({
+                  title: `${prefix} ${count} debug console.log statements should be removed`,
+                  body: buildFocusBody('Feature Recommendations', 'Debug Statements',
+                    readOutput('/tmp/focus-console-logs.txt'),
+                    ['Remove console.log statements used for debugging',
+                     'Use proper logging framework for production logging',
+                     'Consider using debug package with namespaces for development'], true),
+                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
+                });
+              }
+              if (process.env.FOCUS_ANY_TYPES === 'true') {
+                const count = process.env.FOCUS_ANY_TYPE_COUNT || '?';
+                checks.push({
+                  title: `${prefix} ${count} uses of 'any' type reduce type safety`,
+                  body: buildFocusBody('Feature Recommendations', 'Type Safety',
+                    readOutput('/tmp/focus-any-types.txt'),
+                    ['Replace `any` with specific types or `unknown`',
+                     'Create interfaces for API response types',
+                     'Use generics for flexible but type-safe code',
+                     'Add `// eslint-disable-next-line` only when truly necessary'], true),
+                  labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
+                });
+              }
+              if (process.env.FOCUS_MEMORY_LEAKS === 'true') {
+                checks.push({
+                  title: `${prefix} Potential memory leaks in component cleanup`,
+                  body: buildFocusBody('Feature Recommendations', 'Memory Leaks',
+                    readOutput('/tmp/focus-memory-leaks.txt'),
+                    ['Add cleanup functions to useEffect that returns a function',
+                     'Clear intervals/timeouts in cleanup: `return () => clearInterval(id)`',
+                     'Remove event listeners in cleanup: `return () => el.removeEventListener(...)`',
+                     'Consider using AbortController for fetch cleanup'], true),
+                  labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', focusLabel],
+                });
+              }
             }
 
             // Resilience (every run)
@@ -1252,13 +1392,42 @@ jobs:
 
             core.info(`${checks.length} finding(s) detected (focus: ${focusArea}). Processing...`);
 
-            const { data: existingIssues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'auto-qa',
-              per_page: 100,
-            });
+            // Fetch both open AND recently closed issues to prevent duplicates after PR merges
+            const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'auto-qa',
+                per_page: 100,
+              }),
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'closed',
+                labels: 'auto-qa',
+                per_page: 50,
+                sort: 'updated',
+                direction: 'desc',
+              }),
+            ]);
+
+            // Filter closed issues to only those closed in the last 7 days
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const recentlyClosedIssues = closedIssues.filter(i => new Date(i.closed_at) > sevenDaysAgo);
+            const existingIssues = [...openIssues, ...recentlyClosedIssues];
+
+            core.info(`Found ${openIssues.length} open + ${recentlyClosedIssues.length} recently closed auto-qa issues`);
+
+            // Helper to extract the core issue pattern (removes dynamic counts/numbers)
+            const extractPattern = (title) => {
+              return title
+                .replace(/\[Auto-QA\]\s*/, '')           // Remove prefix
+                .replace(/\d+\s*(critical|high|TODO|FIXME|HACK)/gi, '$1')  // Remove counts
+                .replace(/\d+/g, 'N')                    // Replace remaining numbers with N
+                .toLowerCase()
+                .trim();
+            };
 
             let created = 0;
 
@@ -1268,9 +1437,16 @@ jobs:
                 break;
               }
 
-              const duplicate = existingIssues.find(i => i.title === check.title);
+              // Check for duplicates using pattern matching (handles varying counts in titles)
+              const checkPattern = extractPattern(check.title);
+              const duplicate = existingIssues.find(i => {
+                const existingPattern = extractPattern(i.title);
+                return existingPattern === checkPattern;
+              });
+
               if (duplicate) {
-                core.info(`Skipping duplicate: "${check.title}" (#${duplicate.number}) — still open.`);
+                const status = duplicate.state === 'open' ? 'still open' : `closed ${new Date(duplicate.closed_at).toLocaleDateString()}`;
+                core.info(`Skipping duplicate: "${check.title}" matches #${duplicate.number} (${status})`);
                 continue;
               }
 
