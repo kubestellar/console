@@ -1,6 +1,8 @@
 import { useEffect, useCallback, ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Dashboard page resolves icon names from dashboard definitions at runtime
 import * as Icons from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
 import {

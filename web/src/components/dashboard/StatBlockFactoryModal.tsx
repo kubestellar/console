@@ -4,6 +4,9 @@ import {
   CheckCircle, GripVertical, Eye, EyeOff,
   Maximize2, Minimize2,
 } from 'lucide-react'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Users select from POPULAR_ICONS list and icons are rendered dynamically via getIcon()
+// which resolves icon names at runtime using Icons[name]
 import * as Icons from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'

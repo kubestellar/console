@@ -41,6 +41,9 @@ import { cn } from '../../lib/cn'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal } from '../../lib/modals'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Sidebar customizer allows users to add/edit items with configurable icons
+// The renderIcon() function resolves icon names dynamically via Icons[iconName]
 import * as Icons from 'lucide-react'
 
 // Sortable sidebar item component

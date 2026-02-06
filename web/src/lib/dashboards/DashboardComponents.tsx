@@ -2,6 +2,9 @@ import { memo, ReactNode } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass } from 'lucide-react'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Dashboard cards specify icon names as strings at runtime
+// The getIcon() helper resolves these names dynamically via Icons[name]
 import * as Icons from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
 import { DashboardCard } from './types'

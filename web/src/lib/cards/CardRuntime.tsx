@@ -38,6 +38,9 @@
 
 import { ReactNode, useMemo } from 'react'
 import { LucideIcon } from 'lucide-react'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Card definitions specify icon names as strings at runtime
+// The getIcon() helper resolves these names dynamically via Icons[name]
 import * as Icons from 'lucide-react'
 import { CardDefinition, CardColumnDefinition } from './types'
 import { useCardData, SortDirection } from './cardHooks'

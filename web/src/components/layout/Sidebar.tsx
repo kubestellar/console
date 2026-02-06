@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Sidebar items are configured with icon names as strings (from sidebar config)
+// The renderIcon() function resolves these names dynamically via Icons[iconName]
 import * as Icons from 'lucide-react'
 import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, User } from 'lucide-react'
 import { cn } from '../../lib/cn'

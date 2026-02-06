@@ -52,6 +52,10 @@
  */
 
 import { useState, useMemo, useCallback, ComponentType } from 'react'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Modal definitions specify icon names as strings at runtime (e.g., "Server", "CheckCircle")
+// The getIcon() helper function resolves these names dynamically via Icons[name]
+// Tree-shaking is not applicable as icon names are determined at runtime, not build time
 import * as Icons from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
 import {

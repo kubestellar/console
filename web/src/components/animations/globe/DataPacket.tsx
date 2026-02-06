@@ -1,5 +1,7 @@
 import { useRef, useState, useMemo } from "react"
 import { useFrame } from "@react-three/fiber"
+// NOTE: Wildcard import is required for React Three Fiber (R3F) type support
+// R3F uses THREE namespace for type annotations and JSX intrinsic elements
 import * as THREE from "three"
 
 interface DataPacketProps {

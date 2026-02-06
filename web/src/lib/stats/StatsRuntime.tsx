@@ -33,6 +33,9 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
+// NOTE: Wildcard import is required for dynamic icon resolution
+// Stats definitions specify icon names as strings at runtime
+// The getIcon() helper resolves these names dynamically via Icons[name]
 import * as Icons from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
 import { ChevronDown, ChevronRight, Activity, Settings } from 'lucide-react'

@@ -1,6 +1,8 @@
 import { useRef, useMemo, useState, useEffect } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Sphere, Line, Text, Torus, Billboard } from "@react-three/drei"
+// NOTE: Wildcard import is required for React Three Fiber (R3F) type support
+// R3F uses THREE namespace for type annotations and JSX intrinsic elements
 import * as THREE from "three"
 import { COLORS } from "./colors"
 import DataPacket from "./DataPacket"

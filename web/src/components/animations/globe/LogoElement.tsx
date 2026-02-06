@@ -1,5 +1,8 @@
 import { useRef } from "react"
 import { useFrame } from "@react-three/fiber"
+// NOTE: Wildcard import is required for React Three Fiber (R3F) type support
+// R3F uses THREE namespace for type annotations and JSX intrinsic elements
+// Named imports would break R3F's type system which expects the THREE namespace
 import * as THREE from "three"
 import GlowingSphere from "./GlowingSphere"
 
