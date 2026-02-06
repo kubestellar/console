@@ -11,7 +11,8 @@ import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedLLMdServers } from '../../../hooks/useCachedData'
 import type { LLMdServer, LLMdComponentType } from '../../../hooks/useLLMd'
-import { LLMD_CLUSTERS } from './shared'
+import { useLLMdClusters } from './shared'
+import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
 
 interface LLMInferenceProps {
@@ -38,7 +39,13 @@ const COMPONENT_FILTERS: { value: LLMdComponentType | 'all' | 'autoscale', label
 ]
 
 export function LLMInference({ config: _config }: LLMInferenceProps) {
-  const { servers, isLoading, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(LLMD_CLUSTERS)
+  // Dynamically discover LLM-d clusters instead of using static list
+  const { deduplicatedClusters } = useClusters()
+  const { nodes: gpuNodes } = useGPUNodes()
+  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+  const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
+
+  const { servers, isLoading, refetch, isFailed, consecutiveFailures, error } = useCachedLLMdServers(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
@@ -266,7 +273,7 @@ export function LLMInference({ config: _config }: LLMInferenceProps) {
             <Cpu className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-sm">{error ? `Error: ${error}` : 'No inference servers found'}</p>
             <p className="text-xs">
-              {isFailed ? `Failed after ${consecutiveFailures} attempts` : 'Scanning vllm-d and platform-eval clusters'}
+              {isFailed ? `Failed after ${consecutiveFailures} attempts` : `Scanning ${llmdClusters.length} cluster${llmdClusters.length !== 1 ? 's' : ''}`}
             </p>
             {servers.length === 0 && !isLoading && !error && (
               <button onClick={() => refetch()} className="mt-2 text-xs text-purple-400 hover:underline">

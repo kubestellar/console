@@ -1,9 +1,11 @@
+import { useMemo } from 'react'
 import { Layers, AlertCircle, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdModels } from '../../../hooks/useCachedData'
-import { LLMD_CLUSTERS } from './shared'
+import { useLLMdClusters } from './shared'
+import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import type { LLMdModel } from '../../../hooks/useLLMd'
 import { useCardLoadingState } from '../CardDataContext'
 
@@ -21,7 +23,13 @@ interface LLMModelsProps {
 }
 
 export function LLMModels({ config: _config }: LLMModelsProps) {
-  const { models, isLoading } = useCachedLLMdModels(LLMD_CLUSTERS)
+  // Dynamically discover LLM-d clusters instead of using static list
+  const { deduplicatedClusters } = useClusters()
+  const { nodes: gpuNodes } = useGPUNodes()
+  const gpuClusterNames = useMemo(() => new Set(gpuNodes.map(n => n.cluster)), [gpuNodes])
+  const llmdClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
+
+  const { models, isLoading } = useCachedLLMdModels(llmdClusters)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState({
@@ -149,7 +157,7 @@ export function LLMModels({ config: _config }: LLMModelsProps) {
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <Layers className="w-8 h-8 mb-2 opacity-50" />
             <p className="text-sm">No InferencePools found</p>
-            <p className="text-xs">Scanning vllm-d and platform-eval clusters</p>
+            <p className="text-xs">Scanning {llmdClusters.length} cluster{llmdClusters.length !== 1 ? 's' : ''}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
