@@ -497,6 +497,34 @@ const DEMO_GITOPS_DRIFT = [
   { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: Date.now() - 120000 },
 ]
 
+// Pod health trend demo data
+const DEMO_POD_HEALTH_TREND = [
+  { timestamp: Date.now() - 300000, healthy: 145, unhealthy: 3 },
+  { timestamp: Date.now() - 240000, healthy: 148, unhealthy: 2 },
+  { timestamp: Date.now() - 180000, healthy: 142, unhealthy: 5 },
+  { timestamp: Date.now() - 120000, healthy: 150, unhealthy: 1 },
+  { timestamp: Date.now() - 60000, healthy: 147, unhealthy: 4 },
+  { timestamp: Date.now(), healthy: 149, unhealthy: 2 },
+]
+
+// Resource trend demo data
+const DEMO_RESOURCE_TREND = [
+  { timestamp: Date.now() - 300000, cpu: 45, memory: 62 },
+  { timestamp: Date.now() - 240000, cpu: 52, memory: 65 },
+  { timestamp: Date.now() - 180000, cpu: 48, memory: 58 },
+  { timestamp: Date.now() - 120000, cpu: 55, memory: 70 },
+  { timestamp: Date.now() - 60000, cpu: 50, memory: 67 },
+  { timestamp: Date.now(), cpu: 53, memory: 64 },
+]
+
+// Compute overview demo data
+const DEMO_COMPUTE_OVERVIEW = {
+  nodes: 12,
+  cpuUsage: 48,
+  memoryUsage: 62,
+  podCount: 156,
+}
+
 // ============================================================================
 // Filtered event hooks
 // These provide pre-filtered event data for specific card types
@@ -581,6 +609,18 @@ function useGitOpsDrift() {
   return useDemoDataHook(DEMO_GITOPS_DRIFT)
 }
 
+function usePodHealthTrend() {
+  return useDemoDataHook(DEMO_POD_HEALTH_TREND)
+}
+
+function useResourceTrend() {
+  return useDemoDataHook(DEMO_RESOURCE_TREND)
+}
+
+function useComputeOverview() {
+  return useDemoDataHook([DEMO_COMPUTE_OVERVIEW])
+}
+
 // ============================================================================
 // Register all data hooks for use in unified cards
 // Call this once at application startup
@@ -633,6 +673,9 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useNetworkOverview', useNetworkOverview)
   registerDataHook('useTopPods', useTopPods)
   registerDataHook('useGitOpsDrift', useGitOpsDrift)
+  registerDataHook('usePodHealthTrend', usePodHealthTrend)
+  registerDataHook('useResourceTrend', useResourceTrend)
+  registerDataHook('useComputeOverview', useComputeOverview)
 }
 
 // Auto-register when this module is imported

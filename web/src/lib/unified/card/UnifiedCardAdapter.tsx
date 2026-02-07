@@ -82,6 +82,28 @@ export const UNIFIED_READY_CARDS = new Set<string>([
 
   // Service account
   'service_account_status', // useServiceAccounts
+
+  // =====================================================================
+  // Phase 6 Batch 3 - Chart and overview cards
+  // =====================================================================
+
+  // Chart cards (demo data)
+  'cluster_metrics',        // useCachedClusterMetrics
+  'events_timeline',        // useCachedEventsTimeline
+  'pod_health_trend',       // usePodHealthTrend
+  'resource_trend',         // useResourceTrend
+
+  // Table/list cards with demo data
+  'resource_usage',         // useCachedResourceUsage
+  'top_pods',               // useTopPods
+  'security_issues',        // useSecurityIssues
+  'active_alerts',          // useActiveAlerts
+  'gitops_drift',           // useGitOpsDrift
+
+  // Status grid/overview cards (demo data)
+  'storage_overview',       // useStorageOverview
+  'network_overview',       // useNetworkOverview
+  'compute_overview',       // useComputeOverview
 ])
 
 /**
