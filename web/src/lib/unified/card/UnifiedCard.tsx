@@ -24,6 +24,7 @@ import { TableVisualization } from './visualizations/TableVisualization'
 import { ChartVisualization } from './visualizations/ChartVisualization'
 import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useReportCardDataState } from '../../../components/cards/CardDataContext'
 
 /**
  * UnifiedCard - Renders any card type from config
@@ -53,6 +54,21 @@ export function UnifiedCard({
 
   // Use override data if provided, otherwise use fetched data
   const data = overrideData ?? fetchedData
+
+  // Determine if we have any data
+  const hasAnyData = Array.isArray(data) ? data.length > 0 : !!data
+
+  // Report loading state to CardWrapper for refresh icon animation and skeleton coordination
+  // This enables the refresh icon to spin while data is loading
+  useReportCardDataState({
+    isFailed: !!error,
+    consecutiveFailures: error ? 1 : 0,
+    errorMessage: error?.message,
+    isLoading: isLoading && !hasAnyData,      // Initial load - show skeleton
+    isRefreshing: isLoading && hasAnyData,     // Refresh - spin refresh icon
+    hasData: !isLoading || hasAnyData,         // True once loading completes or has cached data
+    isDemoData: mergedConfig.isDemoData,       // From card config
+  })
 
   // Apply filtering if configured
   const { filteredData, filterControls } = useCardFiltering(
