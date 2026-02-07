@@ -679,6 +679,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                         : ''
                     } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-sm hover:shadow`}
                     title={`${providerPricing.name}${isOverridden ? ' (manually set)' : pricingMode === 'per-cluster' ? ' (auto-detected)' : ''}\nClick to change • Right-click to reset`}
+                    aria-label={`Change provider pricing for ${cluster.name}: currently ${providerPricing.name}`}
                     onClick={(e) => {
                       e.stopPropagation()
                       // Cycle through providers

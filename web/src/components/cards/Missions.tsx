@@ -384,6 +384,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
         className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer"
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} mission ${mission.workload} in ${mission.namespace}`}
       >
         {/* Expand arrow */}
         {isExpanded

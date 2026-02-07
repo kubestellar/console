@@ -500,6 +500,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
                                   : 'border-border bg-secondary/50 hover:border-purple-500/50',
                               )}
                               title="Change icon"
+                              aria-label="Change icon"
                             >
                               <IconComponent className={cn('w-4 h-4', COLOR_CLASSES[block.color])} />
                             </button>

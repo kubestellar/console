@@ -113,6 +113,8 @@ export function BaseModal({
         onClick={handleBackdropClick}
       >
         <div
+          role="dialog"
+          aria-modal="true"
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
