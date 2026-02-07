@@ -29,13 +29,35 @@ import type { CardComponentProps } from '../../../components/cards/cardRegistry'
  * 4. Compare rendering with legacy component
  */
 export const UNIFIED_READY_CARDS = new Set<string>([
-  // Phase 6 Batch 1 - Simple list cards
+  // Phase 6 Batch 1 - Simple list cards with registered hooks
   // These cards have complete configs and list visualization
-  // Add cards here as they are validated
 
-  // Validated cards using UnifiedCard
-  'pod_issues',       // First migrated card - validates the framework works
-  'deployment_issues',
+  // Core workload cards
+  'pod_issues',           // useCachedPodIssues
+  'deployment_issues',    // useCachedDeploymentIssues
+
+  // Event cards
+  'event_stream',         // useCachedEvents
+  'warning_events',       // useWarningEvents
+  'recent_events',        // useRecentEvents
+
+  // Resource status cards
+  'service_status',       // useServices
+  'pvc_status',           // usePVCs
+  'operator_status',      // useOperators
+  'helm_release_status',  // useHelmReleases
+  'configmap_status',     // useConfigMaps
+  'secret_status',        // useSecrets
+  'ingress_status',       // useIngresses
+  'node_status',          // useNodes
+  'job_status',           // useJobs
+  'cronjob_status',       // useCronJobs
+  'statefulset_status',   // useStatefulSets
+  'daemonset_status',     // useDaemonSets
+  'hpa_status',           // useHPAs
+  'replicaset_status',    // useReplicaSets
+  'pv_status',            // usePVs
+  'namespace_status',     // useNamespaces
 ])
 
 /**
