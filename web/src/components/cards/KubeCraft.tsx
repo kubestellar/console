@@ -84,7 +84,7 @@ export function KubeCraft() {
 
     for (let x = 0; x < GRID_SIZE; x++) {
       height += Math.floor(Math.random() * 3) - 1
-      height = Math.max(GRID_SIZE / 3, Math.min(GRID_SIZE - 3, height))
+      height = Math.max(Math.floor(GRID_SIZE / 3), Math.min(GRID_SIZE - 3, height))
       heights.push(height)
     }
 

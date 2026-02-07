@@ -234,7 +234,7 @@ export function CardSearchInput({
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative mb-4 ${className}`}>
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
       <input
         type="text"

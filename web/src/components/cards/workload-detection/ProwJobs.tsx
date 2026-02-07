@@ -25,11 +25,9 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
   const {
     jobs,
     isLoading,
-    isRefreshing,
     isFailed,
     consecutiveFailures,
     formatTimeAgo,
-    error,
   } = useCachedProwJobs('prow', 'prow')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -40,9 +38,6 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     consecutiveFailures: consecutiveFailures ?? 0,
     isDemoData: shouldUseDemoData,
   })
-
-  // Debug logging
-  console.log('[ProwJobs] render:', { jobsCount: jobs.length, isLoading, isRefreshing, isFailed, error, shouldUseDemoData })
 
   const [typeFilter, setTypeFilter] = useState<ProwJob['type'] | 'all'>('all')
   const [stateFilter, setStateFilter] = useState<ProwJob['state'] | 'all'>('all')
