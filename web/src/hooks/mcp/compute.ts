@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
 
@@ -62,6 +63,29 @@ export const gpuNodeSubscribers = new Set<(cache: GPUNodeCache) => void>()
 
 export function notifyGPUNodeSubscribers() {
   gpuNodeSubscribers.forEach(subscriber => subscriber(gpuNodeCache))
+}
+
+// Register with mode transition coordinator for unified cache clearing
+if (typeof window !== 'undefined') {
+  registerCacheReset('gpu-nodes', () => {
+    try {
+      localStorage.removeItem(GPU_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+
+    // Force reset to loading state (bypasses updateGPUNodeCache protection)
+    gpuNodeCache = {
+      nodes: [],
+      lastUpdated: null,
+      isLoading: true, // Triggers skeleton display
+      isRefreshing: false,
+      error: null,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+    }
+    notifyGPUNodeSubscribers()
+  })
 }
 
 export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {

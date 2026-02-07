@@ -24,6 +24,7 @@
 
 import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import { isDemoMode, subscribeDemoMode } from '../demoMode'
+import { registerCacheReset } from '../modeTransition'
 
 // ============================================================================
 // Configuration
@@ -332,6 +333,9 @@ if (typeof window !== 'undefined') {
 
   // Subscribe to demo mode changes
   subscribeDemoMode(checkDemoModeChange)
+
+  // Register with mode transition coordinator
+  registerCacheReset('unified-cache', clearAllInMemoryCaches)
 }
 
 // ============================================================================

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
@@ -1245,4 +1246,27 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
   }, [refetch])
 
   return { logs, isLoading, error, refetch }
+}
+
+// ============================================================================
+// Mode Transition Registration - Clear all workload caches for unified demo switching
+// ============================================================================
+
+if (typeof window !== 'undefined') {
+  registerCacheReset('workloads', () => {
+    // Clear pods cache
+    try {
+      localStorage.removeItem(PODS_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+    podsCache = null
+
+    // Clear other module-level caches
+    podIssuesCache = null
+    deploymentIssuesCache = null
+    deploymentsCache = null
+
+    console.log('[Workloads] All caches cleared for mode transition')
+  })
 }

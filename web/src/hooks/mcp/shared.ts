@@ -3,6 +3,7 @@ import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getPresentationMode } from '../usePresentationMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
@@ -267,6 +268,29 @@ function handleClusterDemoModeChange() {
 if (typeof window !== 'undefined') {
   handleClusterDemoModeChange()
   subscribeDemoMode(handleClusterDemoModeChange)
+
+  // Register with mode transition coordinator for unified cache clearing
+  registerCacheReset('clusters', () => {
+    try {
+      localStorage.removeItem(CLUSTER_CACHE_KEY)
+      localStorage.removeItem(CLUSTER_DIST_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+
+    // Reset to loading state (shows skeletons) with empty data
+    clusterCache = {
+      clusters: [],
+      lastUpdated: null,
+      isLoading: true, // Triggers skeleton display
+      isRefreshing: false,
+      error: null,
+      consecutiveFailures: 0,
+      isFailed: false,
+      lastRefresh: null,
+    }
+    notifyClusterSubscribers()
+  })
 }
 
 // Debounced notification for batching rapid updates (prevents flashing during health checks)

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
@@ -579,4 +580,17 @@ function getDemoLimitRanges(): LimitRange[] {
       age: '40d'
     },
   ]
+}
+
+// Register with mode transition coordinator for unified cache clearing
+if (typeof window !== 'undefined') {
+  registerCacheReset('storage', () => {
+    try {
+      localStorage.removeItem(PVCS_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+    pvcsCache = null
+    console.log('[Storage] Cache cleared for mode transition')
+  })
 }

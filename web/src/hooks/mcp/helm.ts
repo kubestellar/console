@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
@@ -561,4 +562,35 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
   const isFailed = consecutiveFailures >= 3
 
   return { values, format, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh }
+}
+
+// Register with mode transition coordinator for unified cache clearing
+if (typeof window !== 'undefined') {
+  registerCacheReset('helm', () => {
+    try {
+      localStorage.removeItem(HELM_RELEASES_CACHE_KEY)
+      localStorage.removeItem(HELM_HISTORY_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+
+    // Reset module-level cache
+    helmReleasesCache.data = []
+    helmReleasesCache.timestamp = 0
+    helmReleasesCache.consecutiveFailures = 0
+    helmReleasesCache.lastError = null
+
+    // Notify all listeners
+    helmReleasesCache.listeners.forEach(listener => {
+      listener({
+        releases: [],
+        isRefreshing: false,
+        consecutiveFailures: 0,
+        lastError: null,
+        lastRefresh: null
+      })
+    })
+
+    console.log('[Helm] Cache cleared for mode transition')
+  })
 }

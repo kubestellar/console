@@ -16,6 +16,8 @@
  * - Cache hooks: use enabled: !isDemoMode() pattern
  */
 
+import { clearAllRegisteredCaches } from './modeTransition'
+
 const DEMO_MODE_KEY = 'kc-demo-mode'
 const DEMO_TOKEN = 'demo-token'
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
@@ -143,9 +145,19 @@ export function setDemoMode(value: boolean, userInitiated = false): void {
 /**
  * Toggle demo mode. No-op if demo mode is forced (Netlify).
  * This is a user-initiated action, so it can turn off demo mode.
+ *
+ * Clears all registered caches BEFORE toggling, which:
+ * 1. Sets isLoading: true on all caches
+ * 2. Triggers skeleton loading states in all cards simultaneously
+ * 3. Cards then fetch appropriate data (demo or live) based on new mode
  */
 export function toggleDemoMode(): void {
   if (isNetlifyDeployment && globalDemoMode) return
+
+  // Clear all caches FIRST - this sets isLoading: true, showing skeletons
+  clearAllRegisteredCaches()
+
+  // Then toggle demo mode - this triggers data fetching
   setDemoMode(!globalDemoMode, true) // userInitiated=true allows turning off
 }
 

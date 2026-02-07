@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
 
@@ -369,4 +370,13 @@ function getDemoEvents(): ClusterEvent[] {
       count: 8,
     },
   ]
+}
+
+// Register with mode transition coordinator for unified cache clearing
+if (typeof window !== 'undefined') {
+  registerCacheReset('events', () => {
+    eventsCache = null
+    warningEventsCache = null
+    console.log('[Events] Caches cleared for mode transition')
+  })
 }

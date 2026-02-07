@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerCacheReset } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { Service, Ingress, NetworkPolicy } from './types'
@@ -421,4 +422,17 @@ function getDemoServices(): Service[] {
     { name: 'grafana', namespace: 'monitoring', cluster: 'staging', type: 'NodePort', clusterIP: '10.96.40.20', ports: ['3000:30300/TCP'], age: '20d' },
     { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-d', type: 'LoadBalancer', clusterIP: '10.96.50.10', externalIP: '34.56.78.90', ports: ['8080/TCP'], age: '15d' },
   ]
+}
+
+// Register with mode transition coordinator for unified cache clearing
+if (typeof window !== 'undefined') {
+  registerCacheReset('services', () => {
+    try {
+      localStorage.removeItem(SERVICES_CACHE_KEY)
+    } catch {
+      // Ignore storage errors
+    }
+    servicesCache = null
+    console.log('[Networking] Cache cleared for mode transition')
+  })
 }
