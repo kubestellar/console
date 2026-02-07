@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL, getEffectiveInterval } from './shared'
-import { getDemoMode, isDemoModeForced } from '../useDemoMode'
+import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -117,7 +117,7 @@ const AGENT_TIMEOUT = 15000
 const POLL_INTERVAL = 60000
 
 function shouldUseDemoData(): boolean {
-  return getDemoMode() || isDemoModeForced
+  return isDemoMode() || isNetlifyDeployment
 }
 
 async function agentFetch<T>(path: string, cluster: string, namespace?: string): Promise<T | null> {

@@ -14,6 +14,7 @@ import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import { useCardLoadingState, useCardDemoState } from '../../cards/CardDataContext'
 
 const SORT_OPTIONS = [
   { value: 'state', label: 'State' },
@@ -66,7 +67,19 @@ const TYPE_BADGE: Record<string, string> = {
 }
 
 export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
-  const { jobs, status: prowStatus, isLoading, isRefreshing, refetch, formatTimeAgo } = useCachedProwJobs()
+  // Check if we should use demo data
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
+
+  const { jobs, status: prowStatus, isLoading, isRefreshing, isFailed, consecutiveFailures, refetch, formatTimeAgo } = useCachedProwJobs()
+
+  // Report loading state to CardWrapper
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: jobs.length > 0,
+    isFailed,
+    consecutiveFailures: consecutiveFailures ?? 0,
+    isDemoData: shouldUseDemoData,
+  })
 
   // Stats
   const stats = useMemo(() => {

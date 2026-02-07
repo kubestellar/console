@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode, isDemoModeForced } from '../useDemoMode'
+import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
@@ -190,8 +190,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
 
   const refetch = useCallback(async (silent = false) => {
     // Skip backend fetch in demo mode or when backend is unavailable
-    const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token' || isBackendUnavailable()) {
+    if (isDemoMode() || isBackendUnavailable()) {
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
@@ -220,7 +219,9 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       const url = `/api/mcp/pods?${params}`
 
       // Use direct fetch to bypass the global circuit breaker
-      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+      const token = localStorage.getItem('token')
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)
@@ -313,7 +314,7 @@ export function useAllPods(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoPods = getDemoAllPods().filter(p =>
         (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
       )
@@ -426,8 +427,7 @@ export function usePodIssues(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // Skip backend fetch in demo mode
-    const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token') {
+    if (isDemoMode()) {
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
@@ -581,8 +581,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // Skip backend fetch in demo mode
-    const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token') {
+    if (isDemoMode()) {
       if (!deploymentIssuesCache) {
         setIssues(getDemoDeploymentIssues())
       }
@@ -721,7 +720,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching entirely in demo mode — no backend or agent available
-    if (isDemoModeForced) {
+    if (isNetlifyDeployment) {
       setDeployments([])
       setIsLoading(false)
       setIsRefreshing(false)
@@ -816,8 +815,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/deployments?${params}`
 
-      const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         setDeployments([])
         const now = new Date()
         setLastUpdated(now)
@@ -827,6 +825,7 @@ export function useDeployments(cluster?: string, namespace?: string) {
         return
       }
 
+      const token = localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { isDemoMode } from '../../lib/demoMode'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
@@ -63,7 +64,7 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
 
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         setIssues(getDemoSecurityIssues())
         const now = new Date()
         setLastUpdated(now)
@@ -162,7 +163,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
 
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         const demoData = getDemoGitOpsDrifts()
         setDrifts(demoData)
         const now = Date.now()

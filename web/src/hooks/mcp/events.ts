@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { isDemoModeForced } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
 
@@ -36,19 +36,8 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip fetching entirely in forced demo mode (Netlify) — no backend or agent
-    if (isDemoModeForced) {
-      if (!eventsCache) {
-        setEvents(getDemoEvents())
-      }
-      setIsLoading(false)
-      setIsRefreshing(false)
-      return
-    }
-
-    // Skip backend fetch in demo mode - use cached or demo data
-    const token = localStorage.getItem('token')
-    if (!token || token === 'demo-token') {
+    // Skip fetching entirely in demo mode — use demo data
+    if (isDemoMode()) {
       if (!eventsCache) {
         setEvents(getDemoEvents())
       }
@@ -133,7 +122,9 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       const url = `/api/mcp/events?${params}`
 
       // Use direct fetch with shared AbortController signal
-      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+      const token = localStorage.getItem('token')
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), 10000) // 10 second timeout
 
       const response = await fetch(url, { method: 'GET', headers, signal })
@@ -265,9 +256,8 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       params.append('limit', limit.toString())
       const url = `/api/mcp/events/warnings?${params}`
 
-      // Skip API calls when using demo token
-      const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      // Skip API calls in demo mode
+      if (isDemoMode()) {
         if (!warningEventsCache) {
           setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
         }
@@ -284,8 +274,9 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       }
 
       // Use direct fetch to bypass the global circuit breaker
+      const token = localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      headers['Authorization'] = `Bearer ${token}`
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)

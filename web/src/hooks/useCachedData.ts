@@ -18,7 +18,7 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { isDemoModeForced } from './useDemoMode'
+import { isDemoMode } from '../lib/demoMode'
 import { clusterCacheRef } from './mcp/shared'
 import type {
   PodInfo,
@@ -40,15 +40,7 @@ const getToken = () => localStorage.getItem('token')
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
-const isDemoMode = () => {
-  // Netlify deployments are always demo mode — no local agent or backend
-  if (isDemoModeForced) return true
-  // If we have cluster data from the agent, we have a real data source
-  if (clusterCacheRef.clusters.length > 0) return false
-  const token = getToken()
-  if (!token || token === 'demo-token') return true
-  return isBackendUnavailable()
-}
+// Note: isDemoMode() is imported from '../lib/demoMode' - single source of truth
 
 async function fetchAPI<T>(
   endpoint: string,
@@ -395,7 +387,7 @@ export function useCachedPodIssues(
     key,
     category,
     initialData: getDemoPodIssues(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: async () => {
       let issues: PodIssue[]
 
@@ -458,7 +450,7 @@ export function useCachedDeploymentIssues(
     key,
     category,
     initialData: getDemoDeploymentIssues(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: async () => {
       // Try agent first — derive deployment issues from deployment data
       if (clusterCacheRef.clusters.length > 0) {
@@ -533,7 +525,7 @@ export function useCachedDeployments(
     key,
     category,
     initialData: getDemoDeployments(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: async () => {
       // Try agent first (fast, no backend needed)
       if (clusterCacheRef.clusters.length > 0) {
@@ -765,7 +757,7 @@ export function useCachedProwJobs(
     key,
     category: 'gitops',
     initialData: getDemoProwJobs(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: () => fetchProwJobs(prowCluster, namespace),
   })
 
@@ -1074,7 +1066,7 @@ export function useCachedLLMdServers(
     key,
     category: 'gitops',
     initialData: getDemoLLMdServers(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: () => fetchLLMdServers(clusters),
   })
 
@@ -1138,7 +1130,7 @@ export function useCachedLLMdModels(
     key,
     category: 'gitops',
     initialData: getDemoLLMdModels(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: () => fetchLLMdModels(clusters),
   })
 
@@ -1264,7 +1256,7 @@ export function useCachedSecurityIssues(
     key,
     category,
     initialData: getDemoSecurityIssues(),
-    enabled: true,
+    enabled: !isDemoMode(),
     fetcher: async () => {
       // Try kubectl proxy first (uses agent to run kubectl commands)
       if (clusterCacheRef.clusters.length > 0) {

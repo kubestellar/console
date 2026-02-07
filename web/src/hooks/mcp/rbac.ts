@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
-import { getDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import type { K8sRole, K8sRoleBinding, K8sServiceAccountInfo } from './types'
 
 // Demo RBAC data for when demo mode is enabled
@@ -99,7 +99,7 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
 
   const refetch = useCallback(async () => {
     // Demo mode returns demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       setRoles(getDemoK8sRoles(cluster))
       setIsLoading(false)
       setError(null)
@@ -147,7 +147,7 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
 
   const refetch = useCallback(async () => {
     // Demo mode returns demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       setBindings(getDemoK8sRoleBindings(cluster, namespace))
       setIsLoading(false)
       setError(null)
@@ -195,7 +195,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async () => {
     // Demo mode returns demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       setServiceAccounts(getDemoK8sServiceAccounts(cluster, namespace))
       setIsLoading(false)
       setError(null)

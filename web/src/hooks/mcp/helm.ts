@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { isDemoModeForced } from '../useDemoMode'
+import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
@@ -95,7 +95,7 @@ export function useHelmReleases(cluster?: string) {
 
   const refetch = useCallback(async (silent = false) => {
     // Skip fetching entirely in forced demo mode (Netlify) — no backend
-    if (isDemoModeForced) {
+    if (isNetlifyDeployment) {
       setIsLoading(false)
       setIsRefreshing(false)
       notifyListeners(false)
@@ -115,7 +115,7 @@ export function useHelmReleases(cluster?: string) {
 
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         setLastRefresh(Date.now())
         setIsLoading(false)
         if (!silent) {
@@ -273,7 +273,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
 
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         setIsLoading(false)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
@@ -405,7 +405,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
 
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         setIsLoading(false)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
@@ -505,7 +505,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       const doFetch = async () => {
         // Skip API calls when using demo token
         const token = localStorage.getItem('token')
-        if (!token || token === 'demo-token') {
+        if (isDemoMode()) {
           setIsLoading(false)
           setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
           return

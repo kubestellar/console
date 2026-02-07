@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
-import { getDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
 
@@ -24,7 +24,7 @@ function loadOperatorsCacheFromStorage(cacheKey: string): { data: Operator[], ti
 
 function saveOperatorsCacheToStorage(data: Operator[], key: string) {
   try {
-    if (data.length > 0 && !getDemoMode()) {
+    if (data.length > 0 && !isDemoMode()) {
       localStorage.setItem(OPERATORS_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now(), key }))
     }
   } catch { /* ignore */ }
@@ -46,7 +46,7 @@ function loadSubscriptionsCacheFromStorage(cacheKey: string): { data: OperatorSu
 
 function saveSubscriptionsCacheToStorage(data: OperatorSubscription[], key: string) {
   try {
-    if (data.length > 0 && !getDemoMode()) {
+    if (data.length > 0 && !isDemoMode()) {
       localStorage.setItem(SUBSCRIPTIONS_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now(), key }))
     }
   } catch { /* ignore */ }
@@ -81,7 +81,7 @@ export function useOperators(cluster?: string) {
 
     const doFetch = async () => {
       // If demo mode is enabled, use demo data directly
-      if (getDemoMode()) {
+      if (isDemoMode()) {
         if (!cancelled) {
           const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
           const allOperators = clusters.flatMap(c => getDemoOperators(c))
@@ -200,7 +200,7 @@ export function useOperatorSubscriptions(cluster?: string) {
 
     const doFetch = async () => {
       // If demo mode is enabled, use demo data directly
-      if (getDemoMode()) {
+      if (isDemoMode()) {
         if (!cancelled) {
           const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
           const allSubscriptions = clusters.flatMap(c => getDemoOperatorSubscriptions(c))

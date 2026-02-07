@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
 
@@ -45,7 +45,7 @@ function saveGPUCacheToStorage(cache: GPUNodeCache) {
   try {
     // Never save demo data to localStorage - only save real cluster data
     // Demo data has cluster names like "vllm-gpu-cluster" which don't match real clusters
-    if (cache.nodes.length > 0 && !getDemoMode()) {
+    if (cache.nodes.length > 0 && !isDemoMode()) {
       localStorage.setItem(GPU_CACHE_KEY, JSON.stringify({
         nodes: cache.nodes,
         lastUpdated: cache.lastUpdated?.toISOString(),
@@ -90,7 +90,7 @@ let gpuFetchInProgress = false
 async function fetchGPUNodes(cluster?: string, _source?: string) {
   const token = localStorage.getItem('token')
   // If demo mode is enabled, use demo data instead of fetching
-  if (getDemoMode()) {
+  if (isDemoMode()) {
     updateGPUNodeCache({
       nodes: getDemoGPUNodes(),
       lastUpdated: new Date(),
@@ -150,7 +150,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     }
 
     // If agent didn't work (not just "returned 0 nodes"), try backend API as fallback
-    if (!agentSucceeded && token && token !== 'demo-token') {
+    if (!agentSucceeded && token && !isDemoMode()) {
       try {
         const { data } = await api.get<{ nodes: GPUNode[] }>(`/api/mcp/gpu-nodes?${params}`)
         newNodes = data.nodes || []
@@ -198,7 +198,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
 
     // On error, preserve existing cached data
     // Only use demo data if demo mode is explicitly enabled
-    if (gpuNodeCache.nodes.length === 0 && getDemoMode()) {
+    if (gpuNodeCache.nodes.length === 0 && isDemoMode()) {
       updateGPUNodeCache({
         nodes: getDemoGPUNodes(),
         isLoading: false,
@@ -242,7 +242,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       // Retry logic: schedule a retry if we haven't exceeded max retries
       const MAX_RETRIES = 2
       const RETRY_DELAYS = [2000, 5000] // 2s, then 5s
-      if (newFailures <= MAX_RETRIES && !getDemoMode()) {
+      if (newFailures <= MAX_RETRIES && !isDemoMode()) {
         const delay = RETRY_DELAYS[newFailures - 1] || 5000
         setTimeout(() => {
           fetchGPUNodes(cluster, `retry-${newFailures}`)
@@ -365,7 +365,7 @@ export function useNodes(cluster?: string) {
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoNodes = getDemoNodes().filter(n => !cluster || n.cluster === cluster)
       setNodes(demoNodes)
       setIsLoading(false)
@@ -423,9 +423,8 @@ export function useNodes(cluster?: string) {
       if (cluster) params.append('cluster', cluster)
       const url = `/api/mcp/nodes?${params}`
 
-      // Skip API calls when using demo token
-      const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      // Skip API calls in demo mode
+      if (isDemoMode()) {
         // Try to construct basic node info from cluster cache (from health checks)
         const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
         if (cachedCluster && cachedCluster.nodeCount && cachedCluster.nodeCount > 0) {
@@ -452,8 +451,9 @@ export function useNodes(cluster?: string) {
       }
 
       // Use direct fetch to bypass the global circuit breaker
+      const token = localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      headers['Authorization'] = `Bearer ${token}`
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(url, { method: 'GET', headers })
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`)

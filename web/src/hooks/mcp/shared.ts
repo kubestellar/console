@@ -1,6 +1,6 @@
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode, setGlobalDemoMode, isDemoModeForced } from '../useDemoMode'
+import { isDemoMode, setDemoMode, isNetlifyDeployment, isDemoToken } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getPresentationMode } from '../usePresentationMode'
 import type { ClusterInfo, ClusterHealth } from './types'
@@ -542,8 +542,7 @@ const WS_BACKEND_RECHECK_INTERVAL = 120000 // Re-check backend every 2 minutes
 // Connect to shared WebSocket for kubeconfig change notifications
 export function connectSharedWebSocket() {
   // Don't attempt WebSocket if not authenticated or using demo token
-  const token = localStorage.getItem('token')
-  if (!token || token === 'demo-token') {
+  if (isDemoToken()) {
     return
   }
 
@@ -684,11 +683,11 @@ if (import.meta.hot) {
 
 // Fetch basic cluster list from local agent (fast, no health check)
 async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
-  // On Netlify deployments (isDemoModeForced), skip agent entirely — there is
+  // On Netlify deployments (isNetlifyDeployment), skip agent entirely — there is
   // no local agent and the request would fail with CORS errors.
   // On localhost, always attempt to reach the agent — it may be running even if
   // AgentManager has not detected it yet.
-  if (isDemoModeForced) return null
+  if (isNetlifyDeployment) return null
 
   try {
     const controller = new AbortController()
@@ -756,7 +755,7 @@ export function clearClusterFailure(clusterName: string): void {
 export async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: string): Promise<ClusterHealth | null> {
   // Try local agent's HTTP endpoint first (same pattern as GPU nodes)
   // This is more reliable than WebSocket for simple data fetching
-  if (!isDemoModeForced && !isAgentUnavailable()) {
+  if (!isNetlifyDeployment && !isAgentUnavailable()) {
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
@@ -778,12 +777,12 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   }
 
   // Skip backend if we've had too many consecutive failures or using demo token
-  const token = localStorage.getItem('token')
-  if (healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES || !token || token === 'demo-token') {
+  if (healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES || isDemoToken()) {
     return null
   }
 
   // Fall back to backend API
+  const token = localStorage.getItem('token')
   try {
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
@@ -890,16 +889,15 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     }
   }
 
-  const token = localStorage.getItem('token')
-
   // Skip backend if using demo token, too many failures, or health checks failing
-  if (!token || token === 'demo-token' ||
+  if (isDemoToken() ||
       distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES ||
       healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES) {
     return {}
   }
 
-  const headers: Record<string, string> = { 'Authorization': `Bearer ${token}` }
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
 
   // Helper to extract namespaces from API response
   const extractNamespaces = (items: Array<{ namespace?: string }>): string[] => {
@@ -1189,8 +1187,8 @@ export async function fullFetchClusters() {
     const agentClusters = await fetchClusterListFromAgent()
     if (agentClusters) {
       // Agent has real data — disable demo mode
-      if (getDemoMode()) {
-        setGlobalDemoMode(false)
+      if (isDemoMode()) {
+        setDemoMode(false)
       }
       // Merge new cluster list with existing cached health data (preserve stats during refresh)
       const existingClusters = clusterCache.clusters
@@ -1243,17 +1241,14 @@ export async function fullFetchClusters() {
     }
 
     // Agent unavailable — if demo mode is on and no real token, use demo data
-    if (getDemoMode()) {
-      const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
-        await finishWithMinDuration({
-          clusters: getDemoClusters(),
-          isLoading: false,
-          isRefreshing: false,
-          error: null,
-        })
-        return
-      }
+    if (isDemoMode() && isDemoToken()) {
+      await finishWithMinDuration({
+        clusters: getDemoClusters(),
+        isLoading: false,
+        isRefreshing: false,
+        error: null,
+      })
+      return
     }
 
     // Skip backend if not authenticated

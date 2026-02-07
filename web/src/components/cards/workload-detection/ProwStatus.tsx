@@ -1,13 +1,26 @@
 import { ExternalLink } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
+import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
 
 interface ProwStatusProps {
   config?: Record<string, unknown>
 }
 
 export function ProwStatus({ config: _config }: ProwStatusProps) {
-  const { status, isLoading } = useCachedProwJobs('prow', 'prow')
+  // Check if we should use demo data
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
+
+  const { status, jobs, isLoading, isFailed, consecutiveFailures } = useCachedProwJobs('prow', 'prow')
+
+  // Report loading state to CardWrapper
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: jobs.length > 0,
+    isFailed,
+    consecutiveFailures: consecutiveFailures ?? 0,
+    isDemoData: shouldUseDemoData,
+  })
 
   if (isLoading) {
     return (

@@ -11,14 +11,17 @@ import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import type { ProwJob } from '../../../hooks/useProw'
-import { useCardLoadingState } from '../CardDataContext'
+import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
 
 interface ProwJobsProps {
   config?: Record<string, unknown>
 }
 
 export function ProwJobs({ config: _config }: ProwJobsProps) {
-  // Fetch real ProwJobs from the prow cluster with caching
+  // Check if we should use demo data
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
+
+  // Fetch ProwJobs from the prow cluster with caching (returns demo data in demo mode)
   const {
     jobs,
     isLoading,
@@ -35,10 +38,11 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
     hasAnyData: jobs.length > 0,
     isFailed,
     consecutiveFailures: consecutiveFailures ?? 0,
+    isDemoData: shouldUseDemoData,
   })
 
   // Debug logging
-  console.log('[ProwJobs] render:', { jobsCount: jobs.length, isLoading, isRefreshing, isFailed, error })
+  console.log('[ProwJobs] render:', { jobsCount: jobs.length, isLoading, isRefreshing, isFailed, error, shouldUseDemoData })
 
   const [typeFilter, setTypeFilter] = useState<ProwJob['type'] | 'all'>('all')
   const [stateFilter, setStateFilter] = useState<ProwJob['state'] | 'all'>('all')

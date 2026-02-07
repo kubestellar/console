@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { api } from '../../lib/api'
-import { useDemoMode, getDemoMode } from '../useDemoMode'
+import { useDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
 import type { ClusterHealth, MCPStatus } from './types'
 import {
@@ -206,7 +207,7 @@ export function useClusterHealth(cluster?: string) {
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoHealth = getDemoHealth(cluster)
       prevHealthRef.current = demoHealth
       setHealth(demoHealth)

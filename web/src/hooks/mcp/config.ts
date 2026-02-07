@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { LOCAL_AGENT_URL } from './shared'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
@@ -12,7 +12,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoConfigMaps = getDemoConfigMaps().filter(cm =>
         (!cluster || cm.cluster === cluster) && (!namespace || cm.namespace === namespace)
       )
@@ -78,7 +78,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoSecrets = getDemoSecrets().filter(s =>
         (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
       )
@@ -144,7 +144,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoSAs = getDemoServiceAccounts().filter(sa =>
         (!cluster || sa.cluster === cluster) && (!namespace || sa.namespace === namespace)
       )

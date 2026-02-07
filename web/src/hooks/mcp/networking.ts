@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { Service, Ingress, NetworkPolicy } from './types'
@@ -185,7 +185,7 @@ export function useServices(cluster?: string, namespace?: string) {
 
     try {
       // If demo mode is enabled, use demo data
-      if (getDemoMode()) {
+      if (isDemoMode()) {
         const demoServices = getDemoServices().filter(s =>
           (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
         )
@@ -203,7 +203,7 @@ export function useServices(cluster?: string, namespace?: string) {
 
       // Skip API calls when using demo token
       const token = localStorage.getItem('token')
-      if (!token || token === 'demo-token') {
+      if (isDemoMode()) {
         const demoServices = getDemoServices().filter(s =>
           (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
         )

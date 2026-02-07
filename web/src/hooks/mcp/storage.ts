@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { getDemoMode } from '../useDemoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
@@ -96,7 +96,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setIsRefreshing(true)
     }
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoPVCs = getDemoPVCs().filter(p =>
         (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
       )
@@ -366,7 +366,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoQuotas = getDemoResourceQuotas().filter(q =>
         (!cluster || q.cluster === cluster) && (!namespace || q.namespace === namespace)
       )
@@ -410,7 +410,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
-    if (getDemoMode()) {
+    if (isDemoMode()) {
       const demoRanges = getDemoLimitRanges().filter(lr =>
         (!cluster || lr.cluster === cluster) && (!namespace || lr.namespace === namespace)
       )
