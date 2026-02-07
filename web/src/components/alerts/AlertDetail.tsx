@@ -16,6 +16,7 @@ import { useAlerts, useSlackNotification, useSlackWebhooks } from '../../hooks/u
 import { useMissions } from '../../hooks/useMissions'
 import { getSeverityIcon, getSeverityColor } from '../../types/alerts'
 import type { Alert } from '../../types/alerts'
+import { useToast } from '../ui/Toast'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -46,6 +47,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
   const { webhooks } = useSlackWebhooks()
   const { sendNotification } = useSlackNotification()
   const { missions, setActiveMission, openSidebar } = useMissions()
+  const { showToast } = useToast()
 
   const [showDetails, setShowDetails] = useState(false)
   const [isSendingSlack, setIsSendingSlack] = useState(false)
@@ -95,6 +97,7 @@ export function AlertDetail({ alert, onClose }: AlertDetailProps) {
       timeoutsRef.current.push(timeoutId)
     } catch (error) {
       console.error('Failed to send Slack notification:', error)
+      showToast('Failed to send Slack notification', 'error')
     } finally {
       setIsSendingSlack(false)
     }

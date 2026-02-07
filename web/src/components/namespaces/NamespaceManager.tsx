@@ -23,6 +23,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { api } from '../../lib/api'
+import { useToast } from '../ui/Toast'
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
@@ -49,6 +50,7 @@ interface NamespaceAccessEntry {
 const namespaceCache = new Map<string, NamespaceDetails[]>()
 
 export function NamespaceManager() {
+  const { showToast } = useToast()
   const { clusters, deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   // Note: We don't check permissions upfront - the API will return auth errors for inaccessible clusters
@@ -259,6 +261,7 @@ export function NamespaceManager() {
     } catch (err) {
       console.error('Failed to fetch access:', err)
       setAccessEntries([])
+      showToast('Failed to fetch namespace access', 'error')
     } finally {
       setAccessLoading(false)
     }

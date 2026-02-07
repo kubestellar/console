@@ -13,6 +13,7 @@ import {
   type NotificationType,
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
+import { useToast } from '../ui/Toast'
 
 // Time thresholds for relative time formatting
 const MINUTES_PER_HOUR = 60 // Minutes in an hour
@@ -114,6 +115,7 @@ function getStatusInfo(status: RequestStatus, closedByUser?: boolean): { label: 
 
 export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProps) {
   const { user, isAuthenticated, token } = useAuth()
+  const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: _isDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading: notificationsLoading, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
@@ -148,6 +150,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
     } catch (err) {
       console.error('Failed to request update:', err)
       setActionError('Failed to request update')
+      showToast('Failed to request update', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -163,6 +166,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
     } catch (err) {
       console.error('Failed to close request:', err)
       setActionError('Failed to close request')
+      showToast('Failed to close request', 'error')
     } finally {
       setActionLoading(null)
     }

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Copy, Check, Download, RefreshCw } from 'lucide-react'
 import { api } from '../../../lib/api'
+import { useToast } from '../../ui/Toast'
 
 interface Props {
   data: Record<string, unknown>
 }
 
 export function YAMLDrillDown({ data }: Props) {
+  const { showToast } = useToast()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const resourceType = data.resourceType as string
@@ -49,6 +51,7 @@ export function YAMLDrillDown({ data }: Props) {
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
+      showToast('Failed to copy to clipboard', 'error')
     }
   }
 

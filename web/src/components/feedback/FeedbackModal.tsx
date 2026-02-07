@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, Linkedin } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
+import { useToast } from '../ui/Toast'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -19,6 +20,7 @@ interface FeedbackModalProps {
 const GITHUB_ISSUES_URL = 'https://github.com/kubestellar/kubestellar/issues/new'
 
 export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: FeedbackModalProps) {
+  const { showToast } = useToast()
   const [type, setType] = useState<FeedbackType>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -49,6 +51,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       setSuccess(true)
     } catch (err) {
       console.error('Failed to submit feedback:', err)
+      showToast('Failed to submit feedback', 'error')
     } finally {
       setIsSubmitting(false)
     }

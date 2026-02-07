@@ -391,6 +391,7 @@ export function Dashboard() {
             await api.post(`/api/dashboards/${newDashboard.id}/cards`, card)
           } catch (error) {
             console.error('Failed to add template card:', error)
+            showToast('Failed to add template card', 'error')
           }
         }
 
@@ -567,6 +568,7 @@ export function Dashboard() {
           await api.post(`/api/dashboards/${dashboard.id}/cards`, card)
         } catch (error) {
           console.error('Failed to persist card:', error)
+          showToast('Failed to persist card to backend', 'error')
         }
       }
     }
@@ -593,6 +595,7 @@ export function Dashboard() {
         await api.delete(`/api/cards/${cardId}`)
       } catch (error) {
         console.error('Failed to delete card from backend:', error)
+        showToast('Failed to delete card from backend', 'error')
       }
     }
   }, [localCards, dashboard, recordCardRemoved])
@@ -627,6 +630,7 @@ export function Dashboard() {
         }
       } catch (error) {
         console.error('Failed to update card width:', error)
+        showToast('Failed to update card width', 'error')
       }
     }
   }, [dashboard, localCards])
@@ -684,6 +688,7 @@ export function Dashboard() {
         await api.put(`/api/cards/${cardId}`, { config: newConfig, title: newTitle })
       } catch (error) {
         console.error('Failed to update card configuration:', error)
+        showToast('Failed to update card configuration', 'error')
       }
     }
   }, [localCards, dashboard, recordCardConfigured])

@@ -309,6 +309,7 @@ export function CustomDashboard() {
           await api.post(`/api/dashboards/${id}/cards`, card)
         } catch (error) {
           console.error('Failed to persist card:', error)
+          showToast('Failed to persist card to backend', 'error')
         }
       }
     }
@@ -325,6 +326,7 @@ export function CustomDashboard() {
         await api.delete(`/api/dashboards/${id}/cards/${cardId}`)
       } catch (error) {
         console.error('Failed to delete card:', error)
+        showToast('Failed to delete card from backend', 'error')
       }
     }
   }, [id])
@@ -367,6 +369,7 @@ export function CustomDashboard() {
           await api.post(`/api/dashboards/${id}/cards`, card)
         } catch (error) {
           console.error('Failed to persist template card:', error)
+          showToast('Failed to persist template card', 'error')
         }
       }
     }

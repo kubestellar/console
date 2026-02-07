@@ -6,6 +6,7 @@ import { StatBlockFactoryModal } from './StatBlockFactoryModal'
 import { getAllDynamicCards, onRegistryChange } from '../../lib/dynamic-cards'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { ReactNode } from 'react'
+import { useToast } from '../ui/Toast'
 
 // Helper function to wrap technical abbreviations in text with tooltips
 function wrapAbbreviations(text: string): ReactNode {
@@ -867,6 +868,7 @@ function CardPreview({ card }: { card: HoveredCard }) {
 }
 
 export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = [] }: AddCardModalProps) {
+  const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<'ai' | 'browse'>('browse')
   const [showCardFactory, setShowCardFactory] = useState(false)
   const [showStatFactory, setShowStatFactory] = useState(false)
@@ -1025,6 +1027,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
       onAddCards(cardsToAdd)
     } catch (error) {
       console.error('Error adding cards:', error)
+      showToast('Failed to add cards', 'error')
     }
     // Always close and reset state
     onClose()
