@@ -3,11 +3,13 @@ name: Auto-QA Agent
 # Layer 1 (always): Build, lint, Go build, bundle size, npm audit
 # Layer 2 (always): Resilience, Inventory consistency, UI design principles
 # Layer 3 (always): NFR coverage (testing, i18n, state, navigation, efficiency)
-# Layer 4 (8-day rotation via day-of-year % 8):
+# Layer 4 (always): Flicker detection, code centralization, demo data coverage
+# Layer 5 (always): Console error patterns, button/action consistency, stale data
+# Layer 6 (8-day rotation via day-of-year % 8):
 #   0=Performance, 1=Security, 2=Navigation/A11y,
 #   3=Operator Usefulness, 4=SRE/Multi-Cluster,
 #   5=Feature Recommendations, 6=Resilience, 7=Consistency
-# Layer 5 (weekly): Self-improvement analysis based on recent PR patterns
+# Layer 7 (weekly): Self-improvement analysis based on recent PR patterns
 #
 # Issues auto-assign Copilot and feed into the automation pipeline.
 #
@@ -1434,6 +1436,814 @@ jobs:
             echo "All modals and drill-downs verified"
           fi
 
+      # === FLICKER DETECTION (every run) ===
+      - name: "Check: UI flicker patterns"
+        id: focus_flicker
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for UI flicker patterns..."
+          ISSUES=""
+
+          # Find rapid consecutive setState calls (potential flicker)
+          RAPID_SETSTATE=$(grep -rn "set[A-Z][A-Za-z]*(" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | \
+            awk -F: '{file=$1; line=$2}
+              prev_file==file && line-prev_line<=2 {print prev_file":"prev_line" and "file":"line" - consecutive setState calls"}
+              {prev_file=file; prev_line=line}' | head -15 || true)
+
+          if [ -n "$RAPID_SETSTATE" ]; then
+            ISSUES="${ISSUES}### Potential flicker: consecutive setState calls\nBatch these with a single state update or useReducer:\n\`\`\`\n${RAPID_SETSTATE}\n\`\`\`\n\n"
+          fi
+
+          # Find components with loading state but no skeleton/spinner
+          LOADING_NO_SKELETON=$(for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules); do
+            HAS_LOADING=$(grep -l "isLoading\|loading" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_LOADING" ]; then
+              HAS_SKELETON=$(grep -l "Skeleton\|Spinner\|Loading\|skeleton" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_SKELETON" ]; then
+                echo "  - \`${f}\`"
+              fi
+            fi
+          done | head -15)
+
+          if [ -n "$LOADING_NO_SKELETON" ]; then
+            ISSUES="${ISSUES}### Components with loading state but no skeleton/spinner\nAdd visual loading indicators to prevent flicker:\n${LOADING_NO_SKELETON}\n\n"
+          fi
+
+          # Find async data without Suspense boundaries
+          ASYNC_NO_SUSPENSE=$(grep -rln "await\|\.then(" src/components --include="*.tsx" 2>/dev/null | while read f; do
+            HAS_SUSPENSE=$(grep -l "Suspense" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_SUSPENSE" ]; then
+              basename "$f"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$ASYNC_NO_SUSPENSE" ]; then
+            COUNT=$(echo "$ASYNC_NO_SUSPENSE" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 3 ]; then
+              ISSUES="${ISSUES}### Components with async operations but no Suspense\nConsider adding Suspense boundaries:\n\`\`\`\n${ASYNC_NO_SUSPENSE}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find useLayoutEffect usage (can cause visible flicker if misused)
+          LAYOUT_EFFECT=$(grep -rn "useLayoutEffect" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | head -10 || true)
+
+          if [ -n "$LAYOUT_EFFECT" ]; then
+            COUNT=$(echo "$LAYOUT_EFFECT" | wc -l | tr -d ' ')
+            ISSUES="${ISSUES}### useLayoutEffect usage (${COUNT} instances)\nReview for correctness - only use for DOM measurements:\n\`\`\`\n${LAYOUT_EFFECT}\n\`\`\`\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-flicker.txt
+            echo "Flicker patterns found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No obvious flicker patterns detected"
+          fi
+
+      # === CODE CENTRALIZATION (every run) ===
+      - name: "Check: Code centralization opportunities"
+        id: focus_centralization
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for code centralization opportunities..."
+          ISSUES=""
+
+          # Find duplicate patterns in card components
+          CARD_PATTERNS=""
+          CARD_FILES=$(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test\|spec" | head -50)
+
+          # Check for repeated useCardData patterns
+          USECARD_VARIANTS=$(grep -rh "useCardData\|useCardDemoState" src/components/cards --include="*.tsx" 2>/dev/null | \
+            sed 's/.*useCard/useCard/' | sort | uniq -c | sort -rn | head -10 || true)
+
+          if [ -n "$USECARD_VARIANTS" ]; then
+            ISSUES="${ISSUES}### Card hook usage patterns (consider standardizing)\n\`\`\`\n${USECARD_VARIANTS}\n\`\`\`\n\n"
+          fi
+
+          # Find repeated stat block patterns
+          STAT_PATTERNS=$(grep -rn "grid grid-cols-\|flex.*gap-\|bg-.*rounded.*p-" src/components/cards --include="*.tsx" 2>/dev/null | \
+            grep -oE "grid grid-cols-[0-9]+|flex.*gap-[0-9]+|bg-[a-z]+-[0-9]+/[0-9]+ rounded" | \
+            sort | uniq -c | sort -rn | head -10 || true)
+
+          if [ -n "$STAT_PATTERNS" ]; then
+            REPEAT_THRESHOLD=5
+            HIGH_REPEAT=$(echo "$STAT_PATTERNS" | awk -v t=$REPEAT_THRESHOLD '$1 > t {print}')
+            if [ -n "$HIGH_REPEAT" ]; then
+              ISSUES="${ISSUES}### Repeated layout patterns (extract to shared components)\n\`\`\`\n${HIGH_REPEAT}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find repeated modal open/close logic
+          MODAL_PATTERNS=$(grep -rn "useState.*false\|setIs.*Open\|setShow" src/components --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | wc -l || echo "0")
+
+          if [ "$MODAL_PATTERNS" -gt 30 ]; then
+            MODAL_EXAMPLES=$(grep -rn "const \[is.*Open, setIs.*Open\]\|const \[show.*Modal" src/components --include="*.tsx" 2>/dev/null | \
+              grep -v "node_modules" | head -15 || true)
+            ISSUES="${ISSUES}### Modal state patterns (${MODAL_PATTERNS} instances)\nConsider using a shared useModal hook:\n\`\`\`\n${MODAL_EXAMPLES}\n\`\`\`\n\n"
+          fi
+
+          # Find repeated dashboard grid patterns
+          DASHBOARD_GRIDS=$(grep -rn "grid.*grid-cols\|GridItem\|CardWrapper" src/pages --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | head -20 || true)
+
+          if [ -n "$DASHBOARD_GRIDS" ]; then
+            UNIQUE_PATTERNS=$(echo "$DASHBOARD_GRIDS" | grep -oE "grid-cols-[0-9]+|lg:grid-cols-[0-9]+" | sort | uniq -c | sort -rn)
+            if [ -n "$UNIQUE_PATTERNS" ]; then
+              ISSUES="${ISSUES}### Dashboard grid patterns (consider DashboardLayout component)\n\`\`\`\n${UNIQUE_PATTERNS}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find cards not using the standardized card hooks
+          NON_STANDARD_CARDS=$(for f in $CARD_FILES; do
+            HAS_CARD_HOOK=$(grep -l "useCardData\|useCardDemoState" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_CARD_HOOK" ]; then
+              HAS_STATE=$(grep -c "useState\|useEffect" "$f" 2>/dev/null || echo "0")
+              if [ "$HAS_STATE" -gt 2 ]; then
+                echo "  - $(basename "$f") (${HAS_STATE} hooks, not using standardized card hooks)"
+              fi
+            fi
+          done | head -10)
+
+          if [ -n "$NON_STANDARD_CARDS" ]; then
+            ISSUES="${ISSUES}### Cards not using standardized hooks\nMigrate to useCardData/useCardDemoState:\n${NON_STANDARD_CARDS}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-centralization.txt
+            echo "Centralization opportunities found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Code appears well-centralized"
+          fi
+
+      # === INVENTORY DEMO DATA TESTING (every run) ===
+      - name: "Check: Inventory demo data coverage"
+        id: focus_inventory_demo
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking inventory items for demo data support..."
+          ISSUES=""
+
+          # Find card components without demo data functions
+          CARDS_NO_DEMO=""
+          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test\|spec\|types\|utils" | head -60); do
+            # Check if it's a card component (exports a component)
+            IS_CARD=$(grep -l "export.*function\|export const" "$f" 2>/dev/null || true)
+            if [ -n "$IS_CARD" ]; then
+              # Check for demo data patterns
+              HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useDemoMode\|isDemoMode\|useCardDemoState" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_DEMO" ]; then
+                LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
+                if [ "$LINES" -gt 50 ]; then
+                  CARDS_NO_DEMO="${CARDS_NO_DEMO}  - \`$(basename "$f")\` (${LINES} lines) — no demo data support\n"
+                fi
+              fi
+            fi
+          done
+
+          if [ -n "$CARDS_NO_DEMO" ]; then
+            ISSUES="${ISSUES}### Cards without demo data support\nAdd demo data for offline/demo mode:\n${CARDS_NO_DEMO}\n\n"
+          fi
+
+          # Find components without Skeleton imports (for loading states)
+          NO_SKELETON=""
+          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test\|spec" | head -60); do
+            HAS_LOADING=$(grep -l "isLoading\|loading\|Loading" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_LOADING" ]; then
+              HAS_SKELETON=$(grep -l "Skeleton\|from.*Skeleton" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_SKELETON" ]; then
+                NO_SKELETON="${NO_SKELETON}  - \`$(basename "$f")\`\n"
+              fi
+            fi
+          done
+
+          if [ -n "$NO_SKELETON" ]; then
+            ISSUES="${ISSUES}### Cards with loading state but no Skeleton component\nUse Skeleton for consistent loading UX:\n${NO_SKELETON}\n\n"
+          fi
+
+          # Check INVENTORY.md listed items exist and have demo support
+          if [ -f "../INVENTORY.md" ]; then
+            # Extract card component names from inventory
+            INVENTORY_CARDS=$(grep -oE '[A-Z][A-Za-z]+Card\b|[A-Z][A-Za-z]+Monitor\b|[A-Z][A-Za-z]+Status\b' ../INVENTORY.md | sort -u | head -50 || true)
+
+            INVENTORY_NO_DEMO=""
+            for card in $INVENTORY_CARDS; do
+              CARD_FILE=$(find src -name "${card}.tsx" -o -name "${card}Card.tsx" 2>/dev/null | head -1)
+              if [ -n "$CARD_FILE" ]; then
+                HAS_DEMO=$(grep -l "getDemoData\|DEMO_\|demoData\|useCardDemoState" "$CARD_FILE" 2>/dev/null || true)
+                if [ -z "$HAS_DEMO" ]; then
+                  INVENTORY_NO_DEMO="${INVENTORY_NO_DEMO}  - \`${card}\`\n"
+                fi
+              fi
+            done
+
+            if [ -n "$INVENTORY_NO_DEMO" ]; then
+              ISSUES="${ISSUES}### INVENTORY.md items without demo data\nThese inventory-listed items need demo data:\n${INVENTORY_NO_DEMO}\n\n"
+            fi
+          fi
+
+          # Check for stat blocks without demo values
+          STAT_NO_DEMO=$(grep -rln "StatBlock\|StatCard\|stats\[" src/components --include="*.tsx" 2>/dev/null | while read f; do
+            HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|sample\|Sample" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_DEMO" ]; then
+              basename "$f"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$STAT_NO_DEMO" ]; then
+            COUNT=$(echo "$STAT_NO_DEMO" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 2 ]; then
+              ISSUES="${ISSUES}### Stat blocks without demo data (${COUNT} files)\n\`\`\`\n${STAT_NO_DEMO}\n\`\`\`\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-inventory-demo.txt
+            echo "Demo data gaps found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Demo data coverage looks good"
+          fi
+
+      # === CONSOLE ERROR PATTERNS (every run) ===
+      - name: "Check: Console error patterns"
+        id: focus_console_errors
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for potential console error patterns..."
+          ISSUES=""
+
+          # Find unhandled promise rejections (async without catch)
+          UNHANDLED_ASYNC=$(grep -rn "async\s*(" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
+            grep -v "node_modules\|\.test\.\|try\|catch" | head -20 || true)
+
+          # Cross-reference with files that don't have error handling
+          ASYNC_NO_ERROR=""
+          for f in $(echo "$UNHANDLED_ASYNC" | cut -d: -f1 | sort -u | head -15); do
+            if [ -n "$f" ] && [ -f "$f" ]; then
+              HAS_CATCH=$(grep -c "\.catch\|try.*catch\|onError" "$f" 2>/dev/null || echo "0")
+              HAS_ASYNC=$(grep -c "async\s*(" "$f" 2>/dev/null || echo "0")
+              if [ "$HAS_ASYNC" -gt 0 ] && [ "$HAS_CATCH" -eq 0 ]; then
+                ASYNC_NO_ERROR="${ASYNC_NO_ERROR}  - \`${f}\` (${HAS_ASYNC} async functions, no error handling)\n"
+              fi
+            fi
+          done
+
+          if [ -n "$ASYNC_NO_ERROR" ]; then
+            ISSUES="${ISSUES}### Async functions without error handling\nThese may cause unhandled promise rejections:\n${ASYNC_NO_ERROR}\n\n"
+          fi
+
+          # Find fetch/API calls without error handling
+          FETCH_NO_ERROR=""
+          for f in $(grep -rln "fetch(\|axios\.\|api\." src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -20); do
+            if [ -f "$f" ]; then
+              HAS_CATCH=$(grep -c "\.catch\|try.*catch\|onError\|error:" "$f" 2>/dev/null || echo "0")
+              if [ "$HAS_CATCH" -eq 0 ]; then
+                FETCH_NO_ERROR="${FETCH_NO_ERROR}  - \`$(basename "$f")\`\n"
+              fi
+            fi
+          done
+
+          if [ -n "$FETCH_NO_ERROR" ]; then
+            ISSUES="${ISSUES}### API calls without error handling\nThese may cause console errors on network failure:\n${FETCH_NO_ERROR}\n\n"
+          fi
+
+          # Find components without ErrorBoundary wrapping
+          COMPLEX_NO_BOUNDARY=$(for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | head -30); do
+            LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
+            if [ "$LINES" -gt 100 ]; then
+              HAS_BOUNDARY=$(grep -l "ErrorBoundary\|error.*boundary\|componentDidCatch" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_BOUNDARY" ]; then
+                echo "  - \`$(basename "$f")\` (${LINES} lines)"
+              fi
+            fi
+          done | head -10)
+
+          if [ -n "$COMPLEX_NO_BOUNDARY" ]; then
+            ISSUES="${ISSUES}### Complex components without ErrorBoundary\nWrap in ErrorBoundary to prevent full-page crashes:\n${COMPLEX_NO_BOUNDARY}\n\n"
+          fi
+
+          # Find console.error usage without proper error handling
+          CONSOLE_ERROR_ONLY=$(grep -rn "console\.error" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
+            grep -v "node_modules\|test\|spec" | \
+            grep -v "setError\|onError\|ErrorBoundary\|throw" | head -15 || true)
+
+          if [ -n "$CONSOLE_ERROR_ONLY" ]; then
+            COUNT=$(echo "$CONSOLE_ERROR_ONLY" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 5 ]; then
+              ISSUES="${ISSUES}### console.error without user-visible error handling (${COUNT})\nUsers should see error feedback, not just console:\n\`\`\`\n$(echo "$CONSOLE_ERROR_ONLY" | head -10)\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find null/undefined access patterns that cause console errors
+          UNSAFE_ACCESS=$(grep -rn "\.[a-zA-Z_]*\.[a-zA-Z_]*\.[a-zA-Z_]*" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|\?\.\|&&\|import\|from\|console\|window\." | head -15 || true)
+
+          if [ -n "$UNSAFE_ACCESS" ]; then
+            COUNT=$(echo "$UNSAFE_ACCESS" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 10 ]; then
+              ISSUES="${ISSUES}### Deep property access without optional chaining\nMay cause 'Cannot read property of undefined' errors:\n\`\`\`\n$(echo "$UNSAFE_ACCESS" | head -8)\n\`\`\`\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-console-errors.txt
+            echo "Console error patterns found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No obvious console error patterns"
+          fi
+
+      # === NAVIGATION FLOW TESTING (every run) ===
+      - name: "Check: Button and action consistency"
+        id: focus_button_actions
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking button and action consistency..."
+          ISSUES=""
+
+          # Find onClick handlers that reference non-existent functions
+          UNDEFINED_HANDLERS=""
+          for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules | head -50); do
+            # Extract onClick handler names
+            HANDLERS=$(grep -oE "onClick=\{[A-Za-z_]+\}" "$f" 2>/dev/null | grep -oE "[A-Za-z_]+" | tail -n +2 || true)
+            for handler in $HANDLERS; do
+              # Check if handler is defined in the same file
+              DEFINED=$(grep -c "const ${handler}\|function ${handler}\|${handler}=" "$f" 2>/dev/null || echo "0")
+              # Check if it's a prop or hook return
+              IS_PROP=$(grep -c "${handler}.*:\|{ ${handler}\|${handler} }" "$f" 2>/dev/null || echo "0")
+              if [ "$DEFINED" -eq 0 ] && [ "$IS_PROP" -eq 0 ]; then
+                UNDEFINED_HANDLERS="${UNDEFINED_HANDLERS}  - $(basename "$f"): \`${handler}\` - onClick references undefined function\n"
+              fi
+            done
+          done
+
+          if [ -n "$UNDEFINED_HANDLERS" ]; then
+            ISSUES="${ISSUES}### onClick handlers referencing potentially undefined functions\n${UNDEFINED_HANDLERS}\n\n"
+          fi
+
+          # Find buttons that open dialogs - check if dialog component exists
+          DIALOG_TRIGGERS=$(grep -rn "setIs.*Open(true)\|setShow.*Modal(true)\|open.*Dialog\|openModal" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | head -20 || true)
+
+          if [ -n "$DIALOG_TRIGGERS" ]; then
+            # Extract modal names and verify they exist
+            MODAL_NAMES=$(echo "$DIALOG_TRIGGERS" | grep -oE "setIs([A-Z][A-Za-z]+)Open\|setShow([A-Z][A-Za-z]+)Modal" | \
+              sed 's/setIs//;s/Open//;s/setShow//;s/Modal//' | sort -u || true)
+            MISSING_MODALS=""
+            for modal in $MODAL_NAMES; do
+              MODAL_FILE=$(find src -name "*${modal}*Modal*.tsx" -o -name "*${modal}*Dialog*.tsx" 2>/dev/null | head -1)
+              if [ -z "$MODAL_FILE" ]; then
+                MISSING_MODALS="${MISSING_MODALS}  - \`${modal}\` — trigger found but no Modal/Dialog component\n"
+              fi
+            done
+            if [ -n "$MISSING_MODALS" ]; then
+              ISSUES="${ISSUES}### Modal triggers without corresponding components\n${MISSING_MODALS}\n\n"
+            fi
+          fi
+
+          # Find Link/navigate calls to routes - verify routes exist
+          ROUTE_REFS=$(grep -rn "navigate(['\"]/" src/ --include="*.tsx" 2>/dev/null | \
+            grep -oE "/[a-z-/]+" | sort -u | head -30 || true)
+
+          if [ -n "$ROUTE_REFS" ]; then
+            # Check if routes are defined in App.tsx or router
+            ROUTER_FILE=$(find src -name "App.tsx" -o -name "router.tsx" -o -name "routes.tsx" 2>/dev/null | head -1)
+            if [ -n "$ROUTER_FILE" ]; then
+              UNDEFINED_ROUTES=""
+              for route in $ROUTE_REFS; do
+                DEFINED=$(grep -c "path.*['\"]${route}['\"]" src/ -r --include="*.tsx" 2>/dev/null || echo "0")
+                if [ "$DEFINED" -eq 0 ]; then
+                  UNDEFINED_ROUTES="${UNDEFINED_ROUTES}  - \`${route}\`\n"
+                fi
+              done
+              if [ -n "$UNDEFINED_ROUTES" ]; then
+                ISSUES="${ISSUES}### navigate() calls to potentially undefined routes\n${UNDEFINED_ROUTES}\n\n"
+              fi
+            fi
+          fi
+
+          # Find empty onClick handlers
+          EMPTY_HANDLERS=$(grep -rn "onClick={() => {}}\|onClick={() => null}\|onClick={() => undefined}" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules" | head -10 || true)
+
+          if [ -n "$EMPTY_HANDLERS" ]; then
+            ISSUES="${ISSUES}### Empty onClick handlers (no-op buttons)\n\`\`\`\n${EMPTY_HANDLERS}\n\`\`\`\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-button-actions.txt
+            echo "Button action issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Button actions look consistent"
+          fi
+
+      # === STALE DATA PATTERNS (every run) ===
+      - name: "Check: Stale data and freshness indicators"
+        id: focus_stale_data
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for stale data patterns..."
+          ISSUES=""
+
+          # Find components with cache but no freshness indicator
+          CACHE_NO_TIMESTAMP=""
+          for f in $(grep -rln "useCached\|useQuery\|cache\|Cache" src/components --include="*.tsx" 2>/dev/null | head -30); do
+            HAS_TIMESTAMP=$(grep -l "lastUpdated\|lastFetched\|updatedAt\|refreshedAt\|timestamp\|Timestamp\|ago\|timeAgo" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_TIMESTAMP" ]; then
+              CACHE_NO_TIMESTAMP="${CACHE_NO_TIMESTAMP}  - \`$(basename "$f")\`\n"
+            fi
+          done
+
+          if [ -n "$CACHE_NO_TIMESTAMP" ]; then
+            ISSUES="${ISSUES}### Components with caching but no freshness indicator\nUsers should know when data was last updated:\n${CACHE_NO_TIMESTAMP}\n\n"
+          fi
+
+          # Find cards that don't respect demo mode toggle (check for demo mode subscription)
+          NO_DEMO_SUBSCRIPTION=""
+          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test" | head -40); do
+            HAS_DEMO=$(grep -l "useDemoMode\|useCardDemoState\|isDemoMode\|subscribeDemoMode" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_DEMO" ]; then
+              # Only flag if it has data fetching
+              HAS_FETCH=$(grep -l "fetch\|useQuery\|useCached\|useEffect.*api" "$f" 2>/dev/null || true)
+              if [ -n "$HAS_FETCH" ]; then
+                NO_DEMO_SUBSCRIPTION="${NO_DEMO_SUBSCRIPTION}  - \`$(basename "$f")\`\n"
+              fi
+            fi
+          done
+
+          if [ -n "$NO_DEMO_SUBSCRIPTION" ]; then
+            ISSUES="${ISSUES}### Cards with data fetching but no demo mode subscription\nMay not respond to demo mode toggle:\n${NO_DEMO_SUBSCRIPTION}\n\n"
+          fi
+
+          # Find components showing "Loading..." text instead of skeletons
+          LOADING_TEXT=$(grep -rn ">Loading\.\.\.<\|>Loading<\|Loading\.\.\.\`" src/components --include="*.tsx" 2>/dev/null | \
+            grep -v "Skeleton\|spinner\|Spinner" | \
+            grep -v "node_modules\|test" | head -15 || true)
+
+          if [ -n "$LOADING_TEXT" ]; then
+            ISSUES="${ISSUES}### 'Loading...' text instead of skeletons\nUse Skeleton components for better UX:\n\`\`\`\n${LOADING_TEXT}\n\`\`\`\n\n"
+          fi
+
+          # Find localStorage reads without checking for stale data
+          STALE_STORAGE=$(grep -rn "localStorage.getItem" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
+            grep -v "node_modules\|test\|timestamp\|Timestamp\|expir\|ttl\|TTL" | head -15 || true)
+
+          if [ -n "$STALE_STORAGE" ]; then
+            COUNT=$(echo "$STALE_STORAGE" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 5 ]; then
+              ISSUES="${ISSUES}### localStorage reads without staleness check (${COUNT})\nConsider adding TTL or timestamp validation:\n\`\`\`\n$(echo "$STALE_STORAGE" | head -8)\n\`\`\`\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-stale-data.txt
+            echo "Stale data patterns found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Data freshness looks good"
+          fi
+
+      # === COLOR CONSISTENCY (every run) ===
+      - name: "Check: Color consistency across components"
+        id: focus_color_consistency
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking color consistency across components..."
+          ISSUES=""
+
+          # Extract all color classes used in cards
+          CARD_COLORS=$(grep -rhoE "(text|bg|border|ring)-[a-z]+-[0-9]+(/[0-9]+)?" src/components/cards --include="*.tsx" 2>/dev/null | \
+            sort | uniq -c | sort -rn | head -30 || true)
+
+          # Find inconsistent status colors (success should be green, error should be red, etc.)
+          # Check for red being used for success or green for errors
+          WRONG_SUCCESS=$(grep -rn "success\|Success\|healthy\|Healthy" src/components --include="*.tsx" 2>/dev/null | \
+            grep -i "red-\|orange-\|yellow-" | grep -v "node_modules" | head -10 || true)
+
+          if [ -n "$WRONG_SUCCESS" ]; then
+            ISSUES="${ISSUES}### Success/healthy states using non-green colors\n\`\`\`\n${WRONG_SUCCESS}\n\`\`\`\n\n"
+          fi
+
+          WRONG_ERROR=$(grep -rn "error\|Error\|failed\|Failed\|critical\|Critical" src/components --include="*.tsx" 2>/dev/null | \
+            grep -i "green-\|blue-" | grep -v "node_modules\|ErrorBoundary\|errorMessage" | head -10 || true)
+
+          if [ -n "$WRONG_ERROR" ]; then
+            ISSUES="${ISSUES}### Error/failed states using non-red colors\n\`\`\`\n${WRONG_ERROR}\n\`\`\`\n\n"
+          fi
+
+          # Find inconsistent color shades for similar purposes
+          # Extract unique color patterns per component type
+          STATUS_COLORS=$(grep -rn "status\|Status" src/components --include="*.tsx" 2>/dev/null | \
+            grep -oE "(text|bg)-[a-z]+-[0-9]+(/[0-9]+)?" | sort | uniq -c | sort -rn | head -15 || true)
+
+          if [ -n "$STATUS_COLORS" ]; then
+            # Count unique shades per color family
+            GREEN_SHADES=$(echo "$STATUS_COLORS" | grep "green" | wc -l || echo "0")
+            RED_SHADES=$(echo "$STATUS_COLORS" | grep "red" | wc -l || echo "0")
+            YELLOW_SHADES=$(echo "$STATUS_COLORS" | grep "yellow" | wc -l || echo "0")
+
+            if [ "$GREEN_SHADES" -gt 3 ] || [ "$RED_SHADES" -gt 3 ] || [ "$YELLOW_SHADES" -gt 3 ]; then
+              ISSUES="${ISSUES}### Inconsistent color shades for status indicators\nStandardize on consistent shades:\n\`\`\`\nGreen variants: ${GREEN_SHADES}\nRed variants: ${RED_SHADES}\nYellow variants: ${YELLOW_SHADES}\n\nMost common:\n${STATUS_COLORS}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find demo badge colors - should be consistent
+          DEMO_BADGE_COLORS=$(grep -rn "Demo\|demo" src/components --include="*.tsx" 2>/dev/null | \
+            grep -oE "(text|bg|border)-[a-z]+-[0-9]+(/[0-9]+)?" | sort | uniq -c | sort -rn | head -10 || true)
+
+          if [ -n "$DEMO_BADGE_COLORS" ]; then
+            UNIQUE_DEMO=$(echo "$DEMO_BADGE_COLORS" | grep -E "amber|yellow|orange" | wc -l || echo "0")
+            if [ "$UNIQUE_DEMO" -gt 4 ]; then
+              ISSUES="${ISSUES}### Multiple color variants for demo badges\nStandardize demo badge colors:\n\`\`\`\n${DEMO_BADGE_COLORS}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Find cards using different opacity patterns
+          OPACITY_PATTERNS=$(grep -rhoE "(bg|text|border)-[a-z]+-[0-9]+/[0-9]+" src/components/cards --include="*.tsx" 2>/dev/null | \
+            grep -oE "/[0-9]+" | sort | uniq -c | sort -rn | head -10 || true)
+
+          if [ -n "$OPACITY_PATTERNS" ]; then
+            UNIQUE_OPACITIES=$(echo "$OPACITY_PATTERNS" | wc -l | tr -d ' ')
+            if [ "$UNIQUE_OPACITIES" -gt 6 ]; then
+              ISSUES="${ISSUES}### Many different opacity values (${UNIQUE_OPACITIES})\nStandardize on fewer opacity levels (10, 20, 50, etc.):\n\`\`\`\n${OPACITY_PATTERNS}\n\`\`\`\n\n"
+            fi
+          fi
+
+          # Check for purple vs violet inconsistency (common in this codebase)
+          PURPLE_COUNT=$(grep -rc "purple-" src/components --include="*.tsx" 2>/dev/null | awk -F: '{sum+=$2} END {print sum}' || echo "0")
+          VIOLET_COUNT=$(grep -rc "violet-" src/components --include="*.tsx" 2>/dev/null | awk -F: '{sum+=$2} END {print sum}' || echo "0")
+
+          if [ "$PURPLE_COUNT" -gt 10 ] && [ "$VIOLET_COUNT" -gt 10 ]; then
+            ISSUES="${ISSUES}### Mixed purple (${PURPLE_COUNT}) and violet (${VIOLET_COUNT}) usage\nPick one color family for consistency\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-color-consistency.txt
+            echo "Color consistency issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Color usage looks consistent"
+          fi
+
+      # === ACTIVE USER COUNT FEATURE (every run) ===
+      - name: "Check: Active user count feature"
+        id: focus_user_count
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking active user count feature implementation..."
+          ISSUES=""
+
+          # Find user count component/feature
+          USER_COUNT_FILES=$(find src -name "*user*count*" -o -name "*active*user*" -o -name "*UserCount*" -o -name "*ActiveUser*" 2>/dev/null | grep "\.tsx\|\.ts" || true)
+          USER_COUNT_HOOKS=$(grep -rln "activeUsers\|userCount\|onlineUsers\|connectedUsers" src/ --include="*.tsx" --include="*.ts" 2>/dev/null || true)
+
+          if [ -z "$USER_COUNT_FILES" ] && [ -z "$USER_COUNT_HOOKS" ]; then
+            ISSUES="${ISSUES}### No active user count feature found\nConsider adding a real-time user count for console.kubestellar.io\n\n"
+          else
+            # Check for WebSocket or real-time updates
+            HAS_REALTIME=$(grep -rln "WebSocket\|socket\|useSubscription\|onmessage\|EventSource\|sse" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+            if [ -z "$HAS_REALTIME" ]; then
+              ISSUES="${ISSUES}### User count may not update in real-time\nConsider using WebSocket for live user count updates\n\n"
+            fi
+
+            # Check for demo mode handling in user count
+            USER_COUNT_DEMO=$(grep -rln "activeUser\|userCount" src/ --include="*.tsx" 2>/dev/null | while read f; do
+              HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_DEMO" ]; then
+                basename "$f"
+              fi
+            done | head -5 || true)
+
+            if [ -n "$USER_COUNT_DEMO" ]; then
+              ISSUES="${ISSUES}### User count components without demo mode handling\n\`\`\`\n${USER_COUNT_DEMO}\n\`\`\`\n\n"
+            fi
+
+            # Check for error handling in user count
+            USER_COUNT_ERROR=$(grep -rln "activeUser\|userCount" src/ --include="*.tsx" 2>/dev/null | while read f; do
+              HAS_ERROR=$(grep -l "error\|Error\|catch\|fallback" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_ERROR" ]; then
+                basename "$f"
+              fi
+            done | head -5 || true)
+
+            if [ -n "$USER_COUNT_ERROR" ]; then
+              ISSUES="${ISSUES}### User count without error handling\nShow fallback when count unavailable:\n\`\`\`\n${USER_COUNT_ERROR}\n\`\`\`\n\n"
+            fi
+
+            # Check for proper cleanup (unsubscribe)
+            SUBSCRIBE_COUNT=$(grep -rc "subscribe\|addEventListener\|onmessage" src/ --include="*user*" --include="*User*" 2>/dev/null | awk -F: '{sum+=$2} END {print sum}' || echo "0")
+            UNSUBSCRIBE_COUNT=$(grep -rc "unsubscribe\|removeEventListener\|close()" src/ --include="*user*" --include="*User*" 2>/dev/null | awk -F: '{sum+=$2} END {print sum}' || echo "0")
+
+            if [ "$SUBSCRIBE_COUNT" -gt 0 ] && [ "$UNSUBSCRIBE_COUNT" -eq 0 ]; then
+              ISSUES="${ISSUES}### User count subscriptions without cleanup\nEnsure WebSocket/EventSource connections are closed on unmount\n\n"
+            fi
+
+            # Check if user count is visible in header/footer
+            HEADER_USER=$(grep -rln "activeUser\|userCount\|UserCount" src/components/layout --include="*.tsx" src/components/header --include="*.tsx" src/components/Header* 2>/dev/null | head -1 || true)
+            if [ -z "$HEADER_USER" ]; then
+              ISSUES="${ISSUES}### User count not in header/layout\nConsider showing active users in the app header for visibility\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-user-count.txt
+            echo "User count issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "User count implementation looks good"
+          fi
+
+      # === TOKEN COUNTER FEATURE (every run) ===
+      - name: "Check: Token counter feature"
+        id: focus_token_counter
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking token counter feature implementation..."
+          ISSUES=""
+
+          # Find token counter component/feature
+          TOKEN_FILES=$(find src -name "*token*" -o -name "*Token*" 2>/dev/null | grep -i "count\|counter\|usage\|meter" | grep "\.tsx\|\.ts" || true)
+          TOKEN_HOOKS=$(grep -rln "tokenCount\|tokenUsage\|tokensUsed\|tokenLimit\|TokenCounter\|tokenMeter" src/ --include="*.tsx" --include="*.ts" 2>/dev/null || true)
+
+          if [ -z "$TOKEN_FILES" ] && [ -z "$TOKEN_HOOKS" ]; then
+            ISSUES="${ISSUES}### No token counter feature found\nConsider adding token usage tracking for LLM-D features\n\n"
+          else
+            # Check for visual progress indicator
+            TOKEN_VISUAL=$(grep -rln "Progress\|progress\|meter\|Meter\|bar\|Bar" src/ --include="*token*" --include="*Token*" 2>/dev/null | head -1 || true)
+            if [ -z "$TOKEN_VISUAL" ]; then
+              TOKEN_VISUAL2=$(grep -rln "tokenCount\|tokenUsage" src/ --include="*.tsx" 2>/dev/null | while read f; do
+                HAS_VISUAL=$(grep -l "Progress\|progress\|%\|percent" "$f" 2>/dev/null || true)
+                if [ -z "$HAS_VISUAL" ]; then
+                  basename "$f"
+                fi
+              done | head -3 || true)
+              if [ -n "$TOKEN_VISUAL2" ]; then
+                ISSUES="${ISSUES}### Token counter without visual progress indicator\nAdd a progress bar or percentage display:\n\`\`\`\n${TOKEN_VISUAL2}\n\`\`\`\n\n"
+              fi
+            fi
+
+            # Check for limit/warning thresholds
+            TOKEN_LIMITS=$(grep -rn "tokenLimit\|maxTokens\|TOKEN_LIMIT\|token.*threshold" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -5 || true)
+            if [ -z "$TOKEN_LIMITS" ]; then
+              ISSUES="${ISSUES}### Token counter without usage limits\nAdd configurable token limits with warnings\n\n"
+            fi
+
+            # Check for demo mode in token counter
+            TOKEN_DEMO=$(grep -rln "token" src/ --include="*.tsx" 2>/dev/null | grep -i "count\|usage\|meter" | while read f; do
+              HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|isDemoMode" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_DEMO" ]; then
+                basename "$f"
+              fi
+            done | head -5 || true)
+
+            if [ -n "$TOKEN_DEMO" ]; then
+              ISSUES="${ISSUES}### Token counter without demo mode handling\n\`\`\`\n${TOKEN_DEMO}\n\`\`\`\n\n"
+            fi
+
+            # Check for reset functionality
+            TOKEN_RESET=$(grep -rn "resetToken\|clearToken\|token.*reset\|reset.*token" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+            if [ -z "$TOKEN_RESET" ]; then
+              ISSUES="${ISSUES}### Token counter without reset functionality\nAllow users to reset/clear token count\n\n"
+            fi
+
+            # Check for persistence
+            TOKEN_PERSIST=$(grep -rln "localStorage.*token\|token.*localStorage\|persist.*token\|token.*persist" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -1 || true)
+            if [ -z "$TOKEN_PERSIST" ]; then
+              ISSUES="${ISSUES}### Token usage not persisted\nSave token count across sessions\n\n"
+            fi
+
+            # Check for predictions/estimates integration
+            TOKEN_PREDICT=$(grep -rn "predict\|estimate\|forecast\|remaining" src/ --include="*token*" --include="*Token*" 2>/dev/null | head -3 || true)
+            if [ -z "$TOKEN_PREDICT" ]; then
+              ISSUES="${ISSUES}### Token counter without predictions\nConsider showing estimated tokens remaining or cost\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-token-counter.txt
+            echo "Token counter issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Token counter implementation looks good"
+          fi
+
+      # === TOUR AND ONBOARDING (every run) ===
+      - name: "Check: Tour and onboarding coverage"
+        id: focus_tour
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking tour and onboarding coverage..."
+          ISSUES=""
+
+          # Find tour step definitions
+          TOUR_FILES=$(find src -name "*tour*" -o -name "*Tour*" -o -name "*onboarding*" 2>/dev/null | grep "\.tsx\|\.ts" || true)
+          TOUR_STEPS=$(grep -rn "step\|Step\|target\|selector" src/ --include="*tour*" --include="*Tour*" 2>/dev/null | head -50 || true)
+
+          # Check if tour targets exist in the DOM
+          if [ -n "$TOUR_STEPS" ]; then
+            # Extract target selectors/IDs from tour definitions
+            TARGETS=$(echo "$TOUR_STEPS" | grep -oE "target:\s*['\"][^'\"]+['\"]|selector:\s*['\"][^'\"]+['\"]|id:\s*['\"][^'\"]+['\"]" | \
+              grep -oE "['\"][^'\"]+['\"]" | tr -d "'\"\`" | sort -u || true)
+
+            MISSING_TARGETS=""
+            for target in $TARGETS; do
+              # Skip CSS class selectors and data attributes
+              case "$target" in
+                .*|#*|\[*) continue ;;
+              esac
+              # Search for this ID in components
+              FOUND=$(grep -rl "id=['\"]${target}['\"]" src/ --include="*.tsx" 2>/dev/null | head -1 || true)
+              if [ -z "$FOUND" ]; then
+                MISSING_TARGETS="${MISSING_TARGETS}  - \`${target}\` — tour target not found in DOM\n"
+              fi
+            done
+
+            if [ -n "$MISSING_TARGETS" ]; then
+              ISSUES="${ISSUES}### Tour targets not found in components\nThese tour steps may fail:\n${MISSING_TARGETS}\n\n"
+            fi
+          fi
+
+          # Check for pages/dashboards without tour coverage
+          PAGES_NO_TOUR=""
+          for f in $(find src/pages -name "*.tsx" 2>/dev/null | head -20); do
+            PAGE_NAME=$(basename "$f" .tsx)
+            # Check if this page is covered by a tour
+            TOUR_COVERAGE=$(grep -rl "${PAGE_NAME}\|$(echo "$PAGE_NAME" | tr '[:upper:]' '[:lower:]')" src/*tour* src/*Tour* 2>/dev/null | head -1 || true)
+            if [ -z "$TOUR_COVERAGE" ]; then
+              PAGES_NO_TOUR="${PAGES_NO_TOUR}  - \`${PAGE_NAME}\`\n"
+            fi
+          done
+
+          if [ -n "$PAGES_NO_TOUR" ]; then
+            ISSUES="${ISSUES}### Pages without tour coverage\nConsider adding tours for new users:\n${PAGES_NO_TOUR}\n\n"
+          fi
+
+          # Check for tour reset/restart functionality
+          TOUR_RESET=$(grep -rln "resetTour\|restartTour\|clearTour\|tour.*reset" src/ --include="*.tsx" --include="*.ts" 2>/dev/null || true)
+          if [ -z "$TOUR_RESET" ]; then
+            ISSUES="${ISSUES}### No tour reset functionality found\nUsers should be able to replay tours from Settings\n\n"
+          fi
+
+          # Check for tour persistence (don't show again)
+          TOUR_PERSISTENCE=$(grep -rln "localStorage.*tour\|tour.*localStorage\|completedTour\|tourCompleted\|hasSeenTour" src/ --include="*.tsx" --include="*.ts" 2>/dev/null || true)
+          if [ -z "$TOUR_PERSISTENCE" ]; then
+            ISSUES="${ISSUES}### No tour completion persistence\nTours should remember if user has seen them\n\n"
+          fi
+
+          # Check for tour content accessibility
+          TOUR_A11Y=$(grep -rn "Tour\|tour" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "aria-\|role=\|tabIndex" | grep -v "node_modules\|import\|type" | head -10 || true)
+
+          if [ -n "$TOUR_A11Y" ]; then
+            COUNT=$(echo "$TOUR_A11Y" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 3 ]; then
+              ISSUES="${ISSUES}### Tour components may need accessibility improvements\nEnsure tour modals have proper ARIA attributes\n\n"
+            fi
+          fi
+
+          # Check for tooltip components used in tours
+          TOUR_TOOLTIPS=$(grep -rln "Tooltip\|tooltip" src/*tour* src/*Tour* 2>/dev/null | wc -l || echo "0")
+          if [ "$TOUR_TOOLTIPS" -eq 0 ]; then
+            # Check if any tour system exists
+            HAS_TOUR=$(find src -name "*tour*" -o -name "*Tour*" 2>/dev/null | wc -l || echo "0")
+            if [ "$HAS_TOUR" -eq 0 ]; then
+              ISSUES="${ISSUES}### No tour/onboarding system detected\nConsider adding guided tours for new users (react-joyride, intro.js, etc.)\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-tour.txt
+            echo "Tour issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Tour coverage looks good"
+          fi
+
       # ── Ensure Labels Exist ────────────────────────────────────────
 
       - name: Ensure labels exist
@@ -1453,6 +2263,16 @@ jobs:
             "auto-qa:ui-design:EC4899:UI design principle violation"
             "auto-qa:nfr:06B6D4:Non-functional requirement improvement"
             "auto-qa:meta:9333EA:Auto-QA self-improvement recommendation"
+            "auto-qa:flicker:FF5722:UI flicker and layout shift issues"
+            "auto-qa:centralization:4CAF50:Code centralization opportunity"
+            "auto-qa:demo-data:2196F3:Demo mode data coverage"
+            "auto-qa:console-errors:B71C1C:Console error patterns"
+            "auto-qa:actions:7C4DFF:Button and action consistency"
+            "auto-qa:stale-data:FF9800:Stale data and freshness issues"
+            "auto-qa:color:E91E63:Color consistency issues"
+            "auto-qa:tour:00BCD4:Tour and onboarding issues"
+            "auto-qa:user-count:9C27B0:Active user count feature"
+            "auto-qa:token-counter:795548:Token counter feature"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -1522,6 +2342,17 @@ jobs:
           FOCUS_STATE_PATTERNS: ${{ steps.focus_state_patterns.outputs.found }}
           FOCUS_NAVIGATION: ${{ steps.focus_navigation.outputs.found }}
           FOCUS_EFFICIENCY: ${{ steps.focus_efficiency.outputs.found }}
+          # Flicker & Centralization
+          FOCUS_FLICKER: ${{ steps.focus_flicker.outputs.found }}
+          FOCUS_CENTRALIZATION: ${{ steps.focus_centralization.outputs.found }}
+          FOCUS_INVENTORY_DEMO: ${{ steps.focus_inventory_demo.outputs.found }}
+          FOCUS_CONSOLE_ERRORS: ${{ steps.focus_console_errors.outputs.found }}
+          FOCUS_BUTTON_ACTIONS: ${{ steps.focus_button_actions.outputs.found }}
+          FOCUS_STALE_DATA: ${{ steps.focus_stale_data.outputs.found }}
+          FOCUS_COLOR_CONSISTENCY: ${{ steps.focus_color_consistency.outputs.found }}
+          FOCUS_USER_COUNT: ${{ steps.focus_user_count.outputs.found }}
+          FOCUS_TOUR: ${{ steps.focus_tour.outputs.found }}
+          FOCUS_TOKEN_COUNTER: ${{ steps.focus_token_counter.outputs.found }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -2099,6 +2930,157 @@ jobs:
                    'Use named imports: `import { debounce } from "lodash/debounce"`',
                    'Consider React.memo for components receiving object props'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nfr'],
+              });
+            }
+
+            // Flicker Detection (every run)
+            if (process.env.FOCUS_FLICKER === 'true') {
+              checks.push({
+                title: `${prefix} UI flicker patterns detected`,
+                body: buildFocusBody('UI Quality', 'Flicker Prevention',
+                  readOutput('/tmp/focus-flicker.txt'),
+                  ['Batch multiple setState calls into a single update or use useReducer',
+                   'Add Skeleton components for loading states to prevent layout shifts',
+                   'Use Suspense boundaries around async components',
+                   'Only use useLayoutEffect for DOM measurements, not side effects',
+                   'Consider useDeferredValue or useTransition for non-urgent updates'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:flicker'],
+              });
+            }
+
+            // Code Centralization (every run)
+            if (process.env.FOCUS_CENTRALIZATION === 'true') {
+              checks.push({
+                title: `${prefix} Code centralization opportunities found`,
+                body: buildFocusBody('Code Quality', 'Centralization',
+                  readOutput('/tmp/focus-centralization.txt'),
+                  ['Migrate cards to use standardized useCardData/useCardDemoState hooks',
+                   'Extract repeated layout patterns into shared components (StatGrid, CardLayout)',
+                   'Create a useModal hook to standardize modal open/close logic',
+                   'Use DashboardLayout component for consistent grid patterns',
+                   'Move common card utilities to lib/cards/'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:centralization'],
+              });
+            }
+
+            // Inventory Demo Data (every run)
+            if (process.env.FOCUS_INVENTORY_DEMO === 'true') {
+              checks.push({
+                title: `${prefix} Cards missing demo data support`,
+                body: buildFocusBody('Demo Mode', 'Demo Data Coverage',
+                  readOutput('/tmp/focus-inventory-demo.txt'),
+                  ['Add getDemoData() function or DEMO_ constants to cards',
+                   'Use useCardDemoState hook for automatic demo mode handling',
+                   'Import and use Skeleton component for loading states',
+                   'Ensure cards work offline by providing realistic demo data',
+                   'Test with localStorage.setItem("kc-demo-mode", "true")'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:demo-data'],
+              });
+            }
+
+            // Console Error Patterns (every run)
+            if (process.env.FOCUS_CONSOLE_ERRORS === 'true') {
+              checks.push({
+                title: `${prefix} Potential console error patterns detected`,
+                body: buildFocusBody('Error Handling', 'Console Errors',
+                  readOutput('/tmp/focus-console-errors.txt'),
+                  ['Add try/catch blocks around async operations',
+                   'Use .catch() on fetch/axios calls to handle network errors',
+                   'Wrap complex components in ErrorBoundary',
+                   'Use optional chaining (?.) for deep property access',
+                   'Show user-visible error states, not just console.error'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:console-errors'],
+              });
+            }
+
+            // Button/Action Consistency (every run)
+            if (process.env.FOCUS_BUTTON_ACTIONS === 'true') {
+              checks.push({
+                title: `${prefix} Button and action consistency issues`,
+                body: buildFocusBody('Navigation', 'Button Actions',
+                  readOutput('/tmp/focus-button-actions.txt'),
+                  ['Ensure onClick handlers reference defined functions',
+                   'Verify modal triggers have corresponding Modal components',
+                   'Check navigate() calls point to defined routes',
+                   'Replace empty onClick handlers with proper actions or remove them',
+                   'Use TypeScript to catch undefined handler references'], false),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:actions'],
+              });
+            }
+
+            // Stale Data Patterns (every run)
+            if (process.env.FOCUS_STALE_DATA === 'true') {
+              checks.push({
+                title: `${prefix} Stale data and freshness indicator issues`,
+                body: buildFocusBody('Data Freshness', 'Stale Data',
+                  readOutput('/tmp/focus-stale-data.txt'),
+                  ['Add "Last updated X ago" timestamps to cached data displays',
+                   'Use useDemoMode/useCardDemoState to respond to demo mode toggle',
+                   'Replace "Loading..." text with Skeleton components',
+                   'Add TTL validation to localStorage reads',
+                   'Show visual indicators when data may be stale'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:stale-data'],
+              });
+            }
+
+            // Color Consistency (every run)
+            if (process.env.FOCUS_COLOR_CONSISTENCY === 'true') {
+              checks.push({
+                title: `${prefix} Color consistency issues across components`,
+                body: buildFocusBody('Design System', 'Color Consistency',
+                  readOutput('/tmp/focus-color-consistency.txt'),
+                  ['Use green for success/healthy states, red for errors/failures',
+                   'Standardize on consistent color shades (e.g., always use -500 for primary)',
+                   'Use consistent opacity values (10, 20, 50 rather than arbitrary values)',
+                   'Pick one color family (purple vs violet) and use it consistently',
+                   'Define semantic color tokens in tailwind.config.js'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:color'],
+              });
+            }
+
+            // User Count Feature (every run)
+            if (process.env.FOCUS_USER_COUNT === 'true') {
+              checks.push({
+                title: `${prefix} Active user count feature needs improvements`,
+                body: buildFocusBody('Features', 'User Count',
+                  readOutput('/tmp/focus-user-count.txt'),
+                  ['Add WebSocket or EventSource for real-time user count updates',
+                   'Handle demo mode with mock user count data',
+                   'Add error handling with fallback display',
+                   'Ensure proper cleanup of subscriptions on component unmount',
+                   'Display user count prominently in header/layout'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:user-count'],
+              });
+            }
+
+            // Token Counter Feature (every run)
+            if (process.env.FOCUS_TOKEN_COUNTER === 'true') {
+              checks.push({
+                title: `${prefix} Token counter feature needs improvements`,
+                body: buildFocusBody('Features', 'Token Counter',
+                  readOutput('/tmp/focus-token-counter.txt'),
+                  ['Add visual progress bar or percentage display for token usage',
+                   'Implement configurable token limits with warnings at thresholds',
+                   'Handle demo mode with mock token data',
+                   'Add reset functionality to clear token count',
+                   'Persist token usage across sessions',
+                   'Consider adding usage predictions/estimates'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:token-counter'],
+              });
+            }
+
+            // Tour and Onboarding (every run)
+            if (process.env.FOCUS_TOUR === 'true') {
+              checks.push({
+                title: `${prefix} Tour and onboarding improvements needed`,
+                body: buildFocusBody('Onboarding', 'Tour Coverage',
+                  readOutput('/tmp/focus-tour.txt'),
+                  ['Ensure tour target elements exist in the DOM with correct IDs',
+                   'Add tour coverage for new pages and features',
+                   'Implement tour reset in Settings for users to replay',
+                   'Persist tour completion state to avoid showing repeatedly',
+                   'Add ARIA attributes to tour modals/tooltips for accessibility'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:tour'],
               });
             }
 
