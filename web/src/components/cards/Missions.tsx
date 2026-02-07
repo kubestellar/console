@@ -377,10 +377,13 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
       'rounded-lg border transition-all',
       isActive ? `${config.bg} border-gray-700/50` : 'bg-gray-900/30 border-gray-800/50',
     )}>
-      {/* Summary row */}
-      <button
+      {/* Summary row - use div instead of button to avoid nesting violation with inner log toggle button */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-3 py-2 text-left"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
+        className="flex items-center gap-2 w-full px-3 py-2 text-left cursor-pointer"
       >
         {/* Expand arrow */}
         {isExpanded
@@ -435,7 +438,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive }: MissionRowProps
             {config.label}
           </span>
         </div>
-      </button>
+      </div>
 
       {/* Progress bar — always visible so completed missions show final state */}
       <div className="px-3 pb-2">
