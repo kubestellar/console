@@ -729,10 +729,10 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               }
 
               saveDynamicStatsDefinition(definition)
-              // Batch state updates to prevent flicker
+              // Notify parent immediately, then show message with transition
+              onStatsCreated?.(type)
               startTransition(() => {
                 setSaveMessage(`Stats "${definition.title}" created with AI!`)
-                onStatsCreated?.(type)
               })
               const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
               timeoutsRef.current.push(aiCreateTimeoutId)

@@ -188,8 +188,8 @@ export function SyncDialog({
       setPhase('plan')
     } catch (err) {
       // Error states should be shown immediately (not deferred with startTransition)
-      const message = err instanceof Error ? err.message : 'Detection failed'
       updateLastLog('error')
+      const message = err instanceof Error ? err.message : 'Detection failed'
       addLog(`Error: ${message}`, 'error')
       setError(message)
     } finally {
