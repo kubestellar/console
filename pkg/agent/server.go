@@ -245,13 +245,6 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/predictions/feedback", s.handlePredictionsFeedback)
 	mux.HandleFunc("/predictions/stats", s.handlePredictionsStats)
 
-	// Kagenti AI agent platform endpoints
-	mux.HandleFunc("/kagenti/agents", s.handleKagentiAgentsHTTP)
-	mux.HandleFunc("/kagenti/cards", s.handleKagentiCardsHTTP)
-	mux.HandleFunc("/kagenti/builds", s.handleKagentiBuildsHTTP)
-	mux.HandleFunc("/kagenti/tools", s.handleKagentiToolsHTTP)
-	mux.HandleFunc("/kagenti/summary", s.handleKagentiSummaryHTTP)
-
 	// Device tracking endpoints
 	mux.HandleFunc("/devices/alerts", s.handleDeviceAlerts)
 	mux.HandleFunc("/devices/alerts/clear", s.handleDeviceAlertsClear)
