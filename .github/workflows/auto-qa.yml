@@ -2441,6 +2441,159 @@ jobs:
             echo "Refresh icon animations look good"
           fi
 
+      # === DOM NESTING AND STRUCTURE ERRORS (every run) ===
+      - name: "Check: DOM nesting and structure violations"
+        id: focus_dom_errors
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for DOM nesting and structure violations..."
+          ISSUES=""
+
+          # Check for button inside button (most common violation)
+          BUTTON_NESTING=$(grep -rn "<button" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            # Get context: 20 lines after this button opening
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 20))p" "$FILE" 2>/dev/null)
+            # Check if there's another button before the closing tag
+            NESTED=$(echo "$CONTEXT" | grep -n "<button" | tail -n +2 | head -1 || true)
+            if [ -n "$NESTED" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — potential nested button"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$BUTTON_NESTING" ]; then
+            ISSUES="${ISSUES}### Button inside button violations\nThese cause React DOM nesting warnings:\n${BUTTON_NESTING}\n\n"
+          fi
+
+          # Check for interactive elements inside anchor tags
+          ANCHOR_NESTING=$(grep -rn "<a " src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 15))p" "$FILE" 2>/dev/null)
+            # Check for button/input/select inside anchor
+            NESTED=$(echo "$CONTEXT" | grep -E "<button|<input|<select" | head -1 || true)
+            if [ -n "$NESTED" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — interactive element inside anchor"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$ANCHOR_NESTING" ]; then
+            ISSUES="${ISSUES}### Interactive elements inside anchor tags\nButtons/inputs cannot be inside <a> tags:\n${ANCHOR_NESTING}\n\n"
+          fi
+
+          # Check for div inside p (block in inline)
+          DIV_IN_P=$(grep -rn "<p[^>]*>" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 10))p" "$FILE" 2>/dev/null)
+            NESTED=$(echo "$CONTEXT" | grep -E "<div|<section|<article|<header|<footer" | head -1 || true)
+            if [ -n "$NESTED" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — block element inside <p>"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$DIV_IN_P" ]; then
+            ISSUES="${ISSUES}### Block elements inside paragraph tags\nDiv/section/article cannot be inside <p>:\n${DIV_IN_P}\n\n"
+          fi
+
+          # Check for forms inside forms
+          FORM_NESTING=$(grep -rn "<form" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 50))p" "$FILE" 2>/dev/null)
+            NESTED=$(echo "$CONTEXT" | grep -n "<form" | tail -n +2 | head -1 || true)
+            if [ -n "$NESTED" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — nested form element"
+            fi
+          done | head -5 || true)
+
+          if [ -n "$FORM_NESTING" ]; then
+            ISSUES="${ISSUES}### Nested form elements\nForms cannot be nested inside other forms:\n${FORM_NESTING}\n\n"
+          fi
+
+          # Check for table structure violations
+          TABLE_ISSUES=$(grep -rn "<table" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 30))p" "$FILE" 2>/dev/null)
+            # Check for div directly inside table (should be tbody/thead)
+            BAD_CHILD=$(echo "$CONTEXT" | grep -E "<table[^>]*>\s*<div|</thead>\s*<div|</tbody>\s*<div" | head -1 || true)
+            if [ -n "$BAD_CHILD" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — invalid table child element"
+            fi
+          done | head -5 || true)
+
+          if [ -n "$TABLE_ISSUES" ]; then
+            ISSUES="${ISSUES}### Table structure violations\nTable must have proper thead/tbody/tr structure:\n${TABLE_ISSUES}\n\n"
+          fi
+
+          # Check for li outside ul/ol
+          LI_OUTSIDE=$(grep -rn "<li" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            # Check 10 lines before for ul/ol
+            CONTEXT=$(sed -n "$((LINE_NO > 10 ? LINE_NO - 10 : 1)),${LINE_NO}p" "$FILE" 2>/dev/null)
+            HAS_LIST=$(echo "$CONTEXT" | grep -E "<ul|<ol" || true)
+            if [ -z "$HAS_LIST" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — <li> may be outside <ul>/<ol>"
+            fi
+          done | head -5 || true)
+
+          if [ -n "$LI_OUTSIDE" ]; then
+            ISSUES="${ISSUES}### List item outside list container\n<li> elements must be inside <ul> or <ol>:\n${LI_OUTSIDE}\n\n"
+          fi
+
+          # Check for heading nesting violations (h1 inside h2, etc.)
+          HEADING_NESTING=$(grep -rn "<h[1-6]" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 5))p" "$FILE" 2>/dev/null)
+            NESTED=$(echo "$CONTEXT" | grep -oE "<h[1-6]" | wc -l | tr -d ' ')
+            if [ "$NESTED" -gt 1 ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — nested heading elements"
+            fi
+          done | head -5 || true)
+
+          if [ -n "$HEADING_NESTING" ]; then
+            ISSUES="${ISSUES}### Nested heading elements\nHeadings (h1-h6) cannot contain other headings:\n${HEADING_NESTING}\n\n"
+          fi
+
+          # Check for common onClick on non-interactive elements without role
+          CLICK_NO_ROLE=$(grep -rn "onClick=" src/ --include="*.tsx" 2>/dev/null | \
+            grep -E "<div|<span|<td|<tr" | \
+            grep -v "role=" | \
+            grep -v "tabIndex" | head -20 || true)
+
+          if [ -n "$CLICK_NO_ROLE" ]; then
+            COUNT=$(echo "$CLICK_NO_ROLE" | wc -l | tr -d ' ')
+            if [ "$COUNT" -gt 5 ]; then
+              SAMPLE=$(echo "$CLICK_NO_ROLE" | head -5 | while read line; do
+                FILE=$(echo "$line" | cut -d: -f1 | sed 's|^src/||')
+                LINE_NO=$(echo "$line" | cut -d: -f2)
+                echo "  - \`${FILE}:${LINE_NO}\`"
+              done)
+              ISSUES="${ISSUES}### Clickable elements without accessibility attributes\n${COUNT} elements have onClick but no role/tabIndex:\n${SAMPLE}\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-dom-errors.txt
+            echo "DOM structure issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "DOM structure looks good"
+          fi
+
       # ── Ensure Labels Exist ────────────────────────────────────────
 
       - name: Ensure labels exist
@@ -2472,6 +2625,7 @@ jobs:
             "auto-qa:token-counter:795548:Token counter feature"
             "auto-qa:local-clusters:3F51B5:Local cluster detection and creation"
             "auto-qa:refresh-spin:607D8B:Refresh icon animation consistency"
+            "auto-qa:dom-errors:D32F2F:DOM nesting and structure violations"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -2554,6 +2708,7 @@ jobs:
           FOCUS_TOKEN_COUNTER: ${{ steps.focus_token_counter.outputs.found }}
           FOCUS_LOCAL_CLUSTERS: ${{ steps.focus_local_clusters.outputs.found }}
           FOCUS_REFRESH_SPIN: ${{ steps.focus_refresh_spin.outputs.found }}
+          FOCUS_DOM_ERRORS: ${{ steps.focus_dom_errors.outputs.found }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -3317,6 +3472,23 @@ jobs:
                    'Add refresh icons to data-fetching inventory cards',
                    'Use Tailwind animate-spin for consistent behavior'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:refresh-spin'],
+              });
+            }
+
+            // DOM Nesting and Structure Violations (every run)
+            if (process.env.FOCUS_DOM_ERRORS === 'true') {
+              checks.push({
+                title: `${prefix} DOM nesting and structure violations found`,
+                body: buildFocusBody('UI', 'DOM Structure',
+                  readOutput('/tmp/focus-dom-errors.txt'),
+                  ['Fix button-inside-button: use div with role="button" and tabIndex={0}',
+                   'Fix interactive elements inside anchor: restructure or use onClick navigation',
+                   'Fix block elements inside <p>: use <div> or <span> appropriately',
+                   'Fix nested forms: refactor to single form with fieldsets',
+                   'Fix table structure: ensure proper thead/tbody/tr hierarchy',
+                   'Fix list items: ensure <li> is always inside <ul> or <ol>',
+                   'Add role and tabIndex to clickable non-interactive elements for accessibility'], true),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:dom-errors'],
               });
             }
 
