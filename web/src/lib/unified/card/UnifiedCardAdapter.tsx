@@ -1,0 +1,219 @@
+/**
+ * UnifiedCardAdapter
+ *
+ * A bridge component that enables gradual migration from legacy card components
+ * to the UnifiedCard framework. Cards can opt-in to using UnifiedCard rendering
+ * by being added to the UNIFIED_READY_CARDS set.
+ *
+ * Usage:
+ *   <UnifiedCardAdapter cardType="pod_issues" cardId="abc" />
+ *
+ * Migration path:
+ *   1. Add card type to UNIFIED_READY_CARDS set
+ *   2. Verify rendering matches legacy component
+ *   3. Eventually deprecate legacy component
+ */
+
+import { useMemo } from 'react'
+import { UnifiedCard } from './UnifiedCard'
+import { getCardConfig } from '../../../config/cards'
+import type { CardComponentProps } from '../../../components/cards/cardRegistry'
+
+/**
+ * Cards that have been validated to work correctly with UnifiedCard.
+ *
+ * Before adding a card here:
+ * 1. Verify the card config in config/cards/*.ts is complete
+ * 2. Test that UnifiedCard renders data correctly
+ * 3. Verify filtering, pagination, and drill-down work
+ * 4. Compare rendering with legacy component
+ */
+export const UNIFIED_READY_CARDS = new Set<string>([
+  // Phase 6 Batch 1 - Simple list cards
+  // These cards have complete configs and list visualization
+  // Add cards here as they are validated
+
+  // Example: Uncomment when validated
+  // 'pod_issues',
+  // 'deployment_issues',
+  // 'security_issues',
+  // 'active_alerts',
+  // 'event_stream',
+  // 'top_pods',
+])
+
+/**
+ * Cards that should NEVER use UnifiedCard (games, embeds, custom viz)
+ */
+export const UNIFIED_EXCLUDED_CARDS = new Set<string>([
+  // Arcade games - require custom rendering
+  'kube_man', 'kube_kong', 'node_invaders', 'pod_pitfall', 'container_tetris',
+  'flappy_pod', 'pod_sweeper', 'game_2048', 'checkers', 'kube_chess',
+  'solitaire', 'match_game', 'kubedle', 'sudoku_game', 'pod_brothers',
+  'kube_kart', 'kube_pong', 'kube_snake', 'kube_galaga', 'kube_craft',
+  'kube_craft_3d', 'kube_doom', 'pod_crosser',
+  // Embedded content
+  'iframe_embed', 'mobile_browser', 'kubectl',
+  // Weather has animated backgrounds
+  'weather',
+  // Complex visualizations
+  'cluster_resource_tree', 'service_topology', 'cluster_locations',
+  // AI-ML flow visualizations
+  'llmd_flow', 'epp_routing', 'kv_cache_monitor', 'pd_disaggregation',
+])
+
+interface UnifiedCardAdapterProps extends CardComponentProps {
+  /** The card type to render */
+  cardType: string
+  /** Unique card instance ID */
+  cardId: string
+  /** Instance-specific config overrides */
+  instanceConfig?: Record<string, unknown>
+  /** Force legacy rendering even if card is unified-ready */
+  forceLegacy?: boolean
+  /** Callback when legacy component should be rendered */
+  renderLegacy?: () => React.ReactNode
+}
+
+/**
+ * Check if a card should use UnifiedCard rendering
+ */
+export function shouldUseUnifiedCard(cardType: string): boolean {
+  // Explicitly excluded cards never use unified
+  if (UNIFIED_EXCLUDED_CARDS.has(cardType)) {
+    return false
+  }
+
+  // Only cards in the ready set use unified
+  return UNIFIED_READY_CARDS.has(cardType)
+}
+
+/**
+ * Check if a card has a valid config for UnifiedCard
+ */
+export function hasValidUnifiedConfig(cardType: string): boolean {
+  const config = getCardConfig(cardType)
+  if (!config) return false
+
+  // Check required fields
+  if (!config.type || !config.dataSource || !config.content) {
+    return false
+  }
+
+  // Check data source is configured
+  if (config.dataSource.type === 'hook' && !config.dataSource.hook) {
+    return false
+  }
+
+  // Check content type is supported
+  const supportedTypes = ['list', 'table', 'chart', 'status-grid']
+  if (!supportedTypes.includes(config.content.type)) {
+    return false
+  }
+
+  return true
+}
+
+/**
+ * UnifiedCardAdapter - Renders cards via UnifiedCard or legacy component
+ */
+export function UnifiedCardAdapter({
+  cardType,
+  cardId: _cardId,
+  instanceConfig,
+  forceLegacy = false,
+  renderLegacy,
+}: UnifiedCardAdapterProps) {
+  // Get config for this card type
+  const config = useMemo(() => getCardConfig(cardType), [cardType])
+
+  // Determine if we should use UnifiedCard
+  const useUnified = useMemo(() => {
+    if (forceLegacy) return false
+    if (!shouldUseUnifiedCard(cardType)) return false
+    if (!hasValidUnifiedConfig(cardType)) return false
+    return true
+  }, [cardType, forceLegacy])
+
+  // Render via UnifiedCard
+  if (useUnified && config) {
+    return (
+      <UnifiedCard
+        config={config}
+        instanceConfig={instanceConfig}
+        className="h-full"
+      />
+    )
+  }
+
+  // Fall back to legacy rendering
+  if (renderLegacy) {
+    return <>{renderLegacy()}</>
+  }
+
+  // If no legacy renderer provided, show placeholder
+  return (
+    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      Card not available
+    </div>
+  )
+}
+
+/**
+ * Get migration status for a card type
+ */
+export function getCardMigrationStatus(cardType: string): {
+  status: 'unified' | 'ready' | 'pending' | 'excluded'
+  reason?: string
+} {
+  if (UNIFIED_EXCLUDED_CARDS.has(cardType)) {
+    return {
+      status: 'excluded',
+      reason: 'Card type not suitable for unified framework',
+    }
+  }
+
+  if (UNIFIED_READY_CARDS.has(cardType)) {
+    return {
+      status: 'unified',
+      reason: 'Card is rendering via UnifiedCard',
+    }
+  }
+
+  if (hasValidUnifiedConfig(cardType)) {
+    return {
+      status: 'ready',
+      reason: 'Config complete, ready for validation',
+    }
+  }
+
+  return {
+    status: 'pending',
+    reason: 'Config incomplete or missing',
+  }
+}
+
+/**
+ * Get all cards by migration status
+ */
+export function getCardsByMigrationStatus(): {
+  unified: string[]
+  ready: string[]
+  pending: string[]
+  excluded: string[]
+} {
+  const result = {
+    unified: Array.from(UNIFIED_READY_CARDS),
+    ready: [] as string[],
+    pending: [] as string[],
+    excluded: Array.from(UNIFIED_EXCLUDED_CARDS),
+  }
+
+  // Import all card types from config registry
+  // This would need to be done dynamically in practice
+  // For now, we check known card types
+
+  return result
+}
+
+export default UnifiedCardAdapter

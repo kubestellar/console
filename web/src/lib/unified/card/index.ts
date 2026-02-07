@@ -25,3 +25,14 @@ export {
 
 export { ListVisualization, TableVisualization, ChartVisualization } from './visualizations'
 export type { ListVisualizationProps, TableVisualizationProps, ChartVisualizationProps } from './visualizations'
+
+// Unified Card Adapter for gradual migration
+export {
+  UnifiedCardAdapter,
+  UNIFIED_READY_CARDS,
+  UNIFIED_EXCLUDED_CARDS,
+  shouldUseUnifiedCard,
+  hasValidUnifiedConfig,
+  getCardMigrationStatus,
+  getCardsByMigrationStatus,
+} from './UnifiedCardAdapter'
