@@ -206,6 +206,12 @@ export interface CardDemoStateResult {
   shouldUseDemoData: boolean
   /** Why the card is using demo data (null if not using demo) */
   reason: DemoReason
+  /**
+   * Whether to show the demo badge/indicator in CardWrapper.
+   * This is usually the same as shouldUseDemoData, but for stack-dependent cards
+   * it's true when global demo mode is on (even if a stack is selected).
+   */
+  showDemoBadge: boolean
 }
 
 /**
@@ -247,7 +253,7 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
 
     // 1. Demo-only card (requires: 'none')
     if (requires === 'none') {
-      return { shouldUseDemoData: true, reason: 'demo-only-card' as DemoReason }
+      return { shouldUseDemoData: true, reason: 'demo-only-card' as DemoReason, showDemoBadge: true }
     }
 
     // 2. Stack-dependent cards: use stack data if a stack is selected
@@ -256,29 +262,31 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
       // Check if we're in a StackProvider and have a selected stack
       // If a stack is selected (real or demo), use its data - not generic demo data
       if (stackContext?.selectedStack) {
-        return { shouldUseDemoData: false, reason: null }
+        // Stack is selected - use its data (even if it's demo data)
+        // But still show demo badge if global demo mode is on
+        return { shouldUseDemoData: false, reason: null, showDemoBadge: isDemoMode }
       }
       // No stack selected - use demo data
-      return { shouldUseDemoData: true, reason: 'stack-not-selected' as DemoReason }
+      return { shouldUseDemoData: true, reason: 'stack-not-selected' as DemoReason, showDemoBadge: true }
     }
 
     // 3. Global demo mode is ON - use demo data for non-stack cards
     if (isDemoMode) {
-      return { shouldUseDemoData: true, reason: 'global-demo-mode' as DemoReason }
+      return { shouldUseDemoData: true, reason: 'global-demo-mode' as DemoReason, showDemoBadge: true }
     }
 
     // 4. Agent-dependent card but agent is offline
     if (requires === 'agent' && isAgentUnavailable()) {
-      return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason }
+      return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason, showDemoBadge: true }
     }
 
     // 5. Specific endpoint returned 404/error
     if (!isLiveDataAvailable) {
-      return { shouldUseDemoData: true, reason: 'endpoint-missing' as DemoReason }
+      return { shouldUseDemoData: true, reason: 'endpoint-missing' as DemoReason, showDemoBadge: true }
     }
 
     // All checks passed - use live data
-    return { shouldUseDemoData: false, reason: null }
+    return { shouldUseDemoData: false, reason: null, showDemoBadge: false }
   }, [isDemoMode, requires, isLiveDataAvailable, stackContext?.selectedStack])
 }
 

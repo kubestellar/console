@@ -176,13 +176,14 @@ function ServerCard({ server, isHighlighted }: ServerCardProps) {
 export function PDDisaggregation() {
   const stackContext = useOptionalStack()
   const selectedStack = stackContext?.selectedStack
-  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+  const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
+  // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
 
   const [servers, setServers] = useState<ServerStats[]>([])
   const [packets, setPackets] = useState<TransferPacket[]>([])

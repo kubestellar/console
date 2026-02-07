@@ -316,10 +316,11 @@ function generateStackInsights(stack: LLMdStack): AIInsight[] {
 
 export function LLMdAIInsights() {
   const stackContext = useOptionalStack()
-  const { shouldUseDemoData, reason } = useCardDemoState({ requires: 'stack' })
+  const { shouldUseDemoData, showDemoBadge, reason } = useCardDemoState({ requires: 'stack' })
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
+  // Use showDemoBadge (true when global demo mode) rather than shouldUseDemoData (false when stack selected)
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState('')
@@ -400,7 +401,6 @@ export function LLMdAIInsights() {
     critical: insights.filter(i => i.severity === 'critical').length,
   }
 
-  const showDemoBadge = shouldUseDemoData
   const selectedStack = stackContext?.selectedStack
 
   return (

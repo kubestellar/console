@@ -577,10 +577,11 @@ export function LLMdFlow() {
 
   // Get selected stack from context and centralized demo state
   const selectedStack = stackContext?.selectedStack
-  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+  const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
+  // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
 
   // Build dynamic node positions based on actual stack topology
   const { nodePositions, connections, nodeLabels } = useMemo(() => {

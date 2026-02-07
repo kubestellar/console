@@ -62,10 +62,11 @@ function getStackComparisonData(stacks: LLMdStack[]): StackComparisonData[] {
 
 export function LLMdBenchmarks() {
   const stackContext = useOptionalStack()
-  const { shouldUseDemoData } = useCardDemoState({ requires: 'stack' })
+  const { shouldUseDemoData, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed: false, consecutiveFailures: 0 })
+  // Use showDemoBadge (true when global demo mode) rather than shouldUseDemoData (false when stack selected)
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
 
   const [viewMode, setViewMode] = useState<ViewMode>(shouldUseDemoData ? 'comparison' : 'stacks')
   const [modelFilter, setModelFilter] = useState<ModelFilter>('all')
@@ -154,7 +155,6 @@ export function LLMdBenchmarks() {
     return { totalReplicas, healthyStacks, disaggStacks, autoscaledStacks, total: stackComparison.length }
   }, [stackComparison])
 
-  const showDemoBadge = shouldUseDemoData
   const availableViews: ViewMode[] = shouldUseDemoData
     ? ['comparison', 'latency']
     : ['stacks', 'comparison', 'latency']

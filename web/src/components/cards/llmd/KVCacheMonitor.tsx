@@ -259,10 +259,10 @@ export function KVCacheMonitor() {
 
   // Get stack context and centralized demo state
   const selectedStack = stackContext?.selectedStack
-  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'stack' })
+  const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  useReportCardDataState({ isDemoData: isDemoMode, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
 
   // Generate stats from stack data or demo
   const generateStats = useCallback((): KVCacheStats[] => {
