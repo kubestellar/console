@@ -18,6 +18,25 @@ import type {
 import { UnifiedStatsSection } from '../stats'
 import { DashboardGrid } from './DashboardGrid'
 import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
+import { AddCardModal } from '../../../components/dashboard/AddCardModal'
+import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
+
+/** Card suggestion type from AddCardModal */
+interface CardSuggestion {
+  type: string
+  title: string
+  description: string
+  visualization: string
+  config: Record<string, unknown>
+}
+
+/** Card type for ConfigureCardModal */
+interface ConfigurableCard {
+  id: string
+  card_type: string
+  config: Record<string, unknown>
+  title?: string
+}
 
 /**
  * UnifiedDashboard - Renders a complete dashboard from config
@@ -49,6 +68,11 @@ export function UnifiedDashboard({
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
+  // Modal state
+  const [showAddCardModal, setShowAddCardModal] = useState(false)
+  const [showConfigureCardModal, setShowConfigureCardModal] = useState(false)
+  const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
+
   // Persist cards to localStorage when they change
   useEffect(() => {
     if (config.storageKey && cards.length > 0) {
@@ -71,9 +95,18 @@ export function UnifiedDashboard({
   }, [])
 
   // Handle card configuration
-  const handleConfigureCard = useCallback((_cardId: string) => {
-    // TODO: Open configuration modal
-  }, [])
+  const handleConfigureCard = useCallback((cardId: string) => {
+    const card = cards.find((c) => c.id === cardId)
+    if (card) {
+      setCardToEdit({
+        id: card.id,
+        card_type: card.cardType,
+        config: card.config || {},
+        title: card.title,
+      })
+      setShowConfigureCardModal(true)
+    }
+  }, [cards])
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -86,7 +119,44 @@ export function UnifiedDashboard({
 
   // Handle add card
   const handleAddCard = useCallback(() => {
-    // TODO: Open add card modal
+    setShowAddCardModal(true)
+  }, [])
+
+  // Handle adding cards from AddCardModal
+  const handleAddCards = useCallback((newCards: CardSuggestion[]) => {
+    setCards((prev) => {
+      const additions: DashboardCardPlacement[] = newCards.map((card, index) => ({
+        id: `${card.type}-${Date.now()}-${index}`,
+        cardType: card.type,
+        title: card.title,
+        config: card.config,
+        position: {
+          x: (prev.length + index) % 12, // Simple grid placement
+          y: Math.floor((prev.length + index) / 2) * 3, // Stack rows
+          w: 6, // Default width
+          h: 3, // Default height
+        },
+      }))
+      return [...prev, ...additions]
+    })
+    setShowAddCardModal(false)
+  }, [])
+
+  // Handle saving card configuration
+  const handleSaveCardConfig = useCallback((cardId: string, newConfig: Record<string, unknown>, title?: string) => {
+    setCards((prev) =>
+      prev.map((card) =>
+        card.id === cardId
+          ? {
+              ...card,
+              config: { ...card.config, ...newConfig },
+              title: title || card.title,
+            }
+          : card
+      )
+    )
+    setShowConfigureCardModal(false)
+    setCardToEdit(null)
   }, [])
 
   // Handle reset to defaults
@@ -221,6 +291,25 @@ export function UnifiedDashboard({
           )}
         </div>
       )}
+
+      {/* Add Card Modal */}
+      <AddCardModal
+        isOpen={showAddCardModal}
+        onClose={() => setShowAddCardModal(false)}
+        onAddCards={handleAddCards}
+        existingCardTypes={cards.map((c) => c.cardType)}
+      />
+
+      {/* Configure Card Modal */}
+      <ConfigureCardModal
+        isOpen={showConfigureCardModal}
+        card={cardToEdit}
+        onClose={() => {
+          setShowConfigureCardModal(false)
+          setCardToEdit(null)
+        }}
+        onSave={handleSaveCardConfig}
+      />
     </div>
   )
 }

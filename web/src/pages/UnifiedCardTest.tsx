@@ -41,14 +41,14 @@ export function UnifiedCardTest() {
 
       {/* Diff analysis */}
       <div className="mt-8 p-4 bg-secondary/50 rounded-lg">
-        <h3 className="font-semibold mb-3">Framework Gaps to Fix (Phase 4)</h3>
+        <h3 className="font-semibold mb-3">Remaining Minor Gaps</h3>
         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-          <li>❌ <strong>Header stats badge</strong> - Legacy shows "168 issues" count badge</li>
-          <li>❌ <strong>Restart count format</strong> - Shows "6.3K" vs legacy "6260 restarts"</li>
-          <li>❌ <strong>Multi-status display</strong> - Shows single status vs "CrashLoopBackOff, OOMKilled"</li>
-          <li>❌ <strong>Row layout</strong> - Simpler layout vs legacy CardListItem with metadata</li>
+          <li>⚠️ <strong>Header stats badge</strong> - Legacy shows "168 issues" count badge</li>
+          <li>⚠️ <strong>Restart count format</strong> - Shows "6.3K" vs legacy "6260 restarts"</li>
+          <li>⚠️ <strong>Multi-status display</strong> - Shows single status vs "CrashLoopBackOff, OOMKilled"</li>
+          <li>⚠️ <strong>Row layout</strong> - Simpler layout vs legacy CardListItem with metadata</li>
         </ul>
-        <h3 className="font-semibold mb-3 mt-4">Working Features</h3>
+        <h3 className="font-semibold mb-3 mt-4">Working Features (Phase 4 Complete)</h3>
         <ul className="list-disc list-inside text-sm text-green-400 space-y-1">
           <li>✅ <strong>Hook registration</strong> - registerUnifiedHooks() called in main.tsx</li>
           <li>✅ <strong>Data fetching</strong> - useCachedPodIssues loads 168 issues</li>
@@ -58,6 +58,9 @@ export function UnifiedCardTest() {
           <li>✅ <strong>Renderers</strong> - cluster-badge, status-badge, number renderers work</li>
           <li>✅ <strong>CardAIActions</strong> - Diagnose/Repair buttons on each list item (hover to reveal)</li>
           <li>✅ <strong>Sorting</strong> - Sort by field with ascending/descending toggle</li>
+          <li>✅ <strong>Custom visualization</strong> - Loads components from cardRegistry by name</li>
+          <li>✅ <strong>Dashboard AddCard modal</strong> - UnifiedDashboard opens AddCardModal for adding cards</li>
+          <li>✅ <strong>Dashboard ConfigureCard modal</strong> - UnifiedDashboard opens ConfigureCardModal for editing</li>
         </ul>
       </div>
     </div>
