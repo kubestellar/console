@@ -156,6 +156,14 @@ export interface CardContentList {
   showRowNumbers?: boolean
   /** AI actions configuration for list items */
   aiActions?: CardAIActionsConfig
+  /** Enable sorting controls */
+  sortable?: boolean
+  /** Default sort field (column field name) */
+  defaultSort?: string
+  /** Default sort direction */
+  defaultDirection?: 'asc' | 'desc'
+  /** Sort options to show in dropdown (defaults to all sortable columns) */
+  sortOptions?: Array<{ field: string; label: string }>
 }
 
 /**

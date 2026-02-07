@@ -43,7 +43,6 @@ export function UnifiedCardTest() {
       <div className="mt-8 p-4 bg-secondary/50 rounded-lg">
         <h3 className="font-semibold mb-3">Framework Gaps to Fix (Phase 4)</h3>
         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-          <li>❌ <strong>Sorting</strong> - No sort controls (Sort: Status, Ascending buttons)</li>
           <li>❌ <strong>Header stats badge</strong> - Legacy shows "168 issues" count badge</li>
           <li>❌ <strong>Restart count format</strong> - Shows "6.3K" vs legacy "6260 restarts"</li>
           <li>❌ <strong>Multi-status display</strong> - Shows single status vs "CrashLoopBackOff, OOMKilled"</li>
@@ -58,6 +57,7 @@ export function UnifiedCardTest() {
           <li>✅ <strong>Cluster filter</strong> - Dropdown filters by cluster</li>
           <li>✅ <strong>Renderers</strong> - cluster-badge, status-badge, number renderers work</li>
           <li>✅ <strong>CardAIActions</strong> - Diagnose/Repair buttons on each list item (hover to reveal)</li>
+          <li>✅ <strong>Sorting</strong> - Sort by field with ascending/descending toggle</li>
         </ul>
       </div>
     </div>

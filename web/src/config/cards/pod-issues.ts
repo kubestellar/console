@@ -47,6 +47,16 @@ export const podIssuesConfig: UnifiedCardConfig = {
     type: 'list',
     pageSize: 5,
     itemClick: 'drill',
+    // Sorting configuration
+    sortable: true,
+    defaultSort: 'status',
+    defaultDirection: 'asc',
+    sortOptions: [
+      { field: 'status', label: 'Status' },
+      { field: 'name', label: 'Name' },
+      { field: 'restarts', label: 'Restarts' },
+      { field: 'cluster', label: 'Cluster' },
+    ],
     columns: [
       {
         field: 'cluster',
