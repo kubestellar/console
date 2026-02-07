@@ -14,6 +14,7 @@ import { ToastProvider } from './components/ui/Toast'
 import { AlertsProvider } from './contexts/AlertsContext'
 import { RewardsProvider } from './hooks/useRewards'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
+import { ROUTES } from './config/routes'
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -143,7 +144,7 @@ function CardHistoryWithRestore() {
       dashboardId: entry.dashboardId,
     })
     // Navigate to the dashboard
-    navigate('/')
+    navigate(ROUTES.HOME)
   }
 
   return <CardHistory onRestoreCard={handleRestoreCard} />
@@ -164,7 +165,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={ROUTES.LOGIN} replace />
   }
 
   return <>{children}</>
@@ -174,7 +175,7 @@ function OnboardedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
 
   if (user && !user.onboarded) {
-    return <Navigate to="/onboarding" replace />
+    return <Navigate to={ROUTES.ONBOARDING} replace />
   }
 
   return <>{children}</>
@@ -605,7 +606,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
       </Suspense>
       </ChunkErrorBoundary>

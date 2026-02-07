@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useDrillDownActions } from './useDrillDown'
 import { scrollToCard } from '../lib/scrollToCard'
+import { ROUTES } from '../config/routes'
 
 /**
  * Deep linking support for notifications and external links.
@@ -135,16 +136,16 @@ export function useDeepLink() {
       switch (action) {
         case 'offline-detection':
           // Navigate to dashboard - the card will be visible
-          navigate('/')
+          navigate(ROUTES.HOME)
           break
         case 'hardware-health':
-          navigate('/')
+          navigate(ROUTES.HOME)
           break
         case 'security':
-          navigate('/security')
+          navigate(ROUTES.SECURITY)
           break
         case 'alerts':
-          navigate('/alerts')
+          navigate(ROUTES.ALERTS)
           break
       }
       clearParams()

@@ -359,8 +359,14 @@ export function useStackDiscovery(clusters: string[]) {
             deploymentsByNamespace.get(ns)!.push(dep)
           }
 
+          // DEBUG: Log discovery counts
+          console.log(`[useStackDiscovery] Cluster ${cluster}: pods=${pods.length}, pools=${pools.length}, llmdDeployments=${llmdDeployments.length}, totalDeployments=${allDeployments.length}`)
+          console.log(`[useStackDiscovery] Cluster ${cluster}: deployment namespaces:`, [...deploymentsByNamespace.keys()])
+          console.log(`[useStackDiscovery] Cluster ${cluster}: deploymentsResponse.exitCode=${deploymentsResponse.exitCode}`)
+
           // Skip cluster early if no labeled pods, InferencePools, or LLM-d Deployments
           if (pods.length === 0 && pools.length === 0 && llmdDeployments.length === 0) {
+            console.log(`[useStackDiscovery] SKIPPING cluster ${cluster}: no pods, pools, or llmd deployments`)
             continue
           }
 
@@ -448,6 +454,7 @@ export function useStackDiscovery(clusters: string[]) {
             ...poolsByNamespace.keys(),
             ...deploymentsByNamespace.keys(),
           ])
+          console.log(`[useStackDiscovery] Cluster ${cluster}: allStackNamespaces (${allStackNamespaces.size}):`, [...allStackNamespaces])
 
           // Build stacks from namespaces
           for (const namespace of allStackNamespaces) {
@@ -631,7 +638,7 @@ export function useStackDiscovery(clusters: string[]) {
               }
             }
 
-            clusterStacks.push({
+            const stack = {
               id: `${namespace}@${cluster}`,
               name: pool?.metadata.name || namespace,
               namespace,
@@ -644,7 +651,9 @@ export function useStackDiscovery(clusters: string[]) {
               totalReplicas,
               readyReplicas,
               autoscaler,
-            })
+            }
+            console.log(`[useStackDiscovery] Created stack: ${stack.id} (${stack.name}) - P:${prefillComponents.length} D:${decodeComponents.length} B:${bothComponents.length} nsDeployments:${nsDeployments.length}`)
+            clusterStacks.push(stack)
           }
 
           // Progressive update: add this cluster's stacks immediately

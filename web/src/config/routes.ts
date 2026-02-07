@@ -67,7 +67,7 @@ export const ROUTES = {
  * Helper function to create a custom dashboard route with ID
  */
 export function getCustomDashboardRoute(id: string): string {
-  return `/custom-dashboard/${id}`
+  return ROUTES.CUSTOM_DASHBOARD.replace(':id', id)
 }
 
 /**

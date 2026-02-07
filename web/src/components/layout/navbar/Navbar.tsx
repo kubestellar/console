@@ -16,6 +16,7 @@ import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { UpdateIndicator } from './UpdateIndicator'
+import { ROUTES } from '../../../config/routes'
 
 export function Navbar() {
   const { user, logout } = useAuth()
@@ -154,7 +155,7 @@ export function Navbar() {
         <UserProfileDropdown
           user={user}
           onLogout={logout}
-          onPreferences={() => navigate('/settings')}
+          onPreferences={() => navigate(ROUTES.SETTINGS)}
           onFeedback={() => setShowFeedback(true)}
           isPresentationMode={isPresentationMode}
           onTogglePresentationMode={togglePresentationMode}
