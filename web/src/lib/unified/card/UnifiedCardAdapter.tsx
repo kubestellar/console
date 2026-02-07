@@ -146,6 +146,57 @@ export const UNIFIED_READY_CARDS = new Set<string>([
 
   // Namespace cards
   'namespace_events',       // useNamespaceEvents
+
+  // =====================================================================
+  // Phase 6 Batch 5 - GitOps, Security, Status cards
+  // =====================================================================
+
+  // ArgoCD cards
+  'argocd_health',          // useArgoCDHealth (stats-grid)
+  'argocd_sync_status',     // useArgoCDSyncStatus (stats-grid)
+
+  // GitOps cards
+  'gateway_status',         // useGatewayStatus
+  'kustomization_status',   // useKustomizationStatus
+
+  // Cluster status cards
+  'provider_health',        // useProviderHealth
+  'upgrade_status',         // useUpgradeStatus
+
+  // Prow/CI cards
+  'prow_status',            // useProwStatus (stats-grid)
+  'prow_history',           // useProwHistory
+
+  // Helm cards
+  'helm_history',           // useHelmHistory
+
+  // Security cards
+  'external_secrets',       // useExternalSecrets (stats-grid)
+  'cert_manager',           // useCertManager (stats-grid)
+  'vault_secrets',          // useVaultSecrets
+  'falco_alerts',           // useFalcoAlerts
+  'kubescape_scan',         // useKubescapeScan (stats-grid)
+  'trivy_scan',             // useTrivyScan (stats-grid)
+  'policy_violations',      // usePolicyViolations
+
+  // Event cards
+  'event_summary',          // useEventSummary (stats-grid)
+
+  // App cards
+  'app_status',             // useAppStatus
+
+  // GPU cards
+  'gpu_status',             // useGPUStatus (stats-grid)
+  'gpu_utilization',        // useGPUUtilization (chart)
+  'gpu_usage_trend',        // useGPUUsageTrend (chart)
+
+  // Namespace cards
+  'namespace_overview',     // useNamespaceOverview (stats-grid)
+  'namespace_quotas',       // useNamespaceQuotas
+  'namespace_rbac',         // useNamespaceRBAC
+
+  // Resource cards
+  'resource_capacity',      // useResourceCapacity (stats-grid)
 ])
 
 /**

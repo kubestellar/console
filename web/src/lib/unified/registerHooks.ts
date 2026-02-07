@@ -634,6 +634,190 @@ const DEMO_DEPLOYMENT_PROGRESS = [
 ]
 
 // ============================================================================
+// Batch 5 demo data - GitOps, Security, Status cards
+// ============================================================================
+
+// ArgoCD health demo data (stats-grid)
+const DEMO_ARGOCD_HEALTH = {
+  healthy: 12,
+  degraded: 2,
+  progressing: 1,
+  missing: 0,
+}
+
+// ArgoCD sync status demo data (stats-grid)
+const DEMO_ARGOCD_SYNC_STATUS = {
+  synced: 11,
+  outOfSync: 3,
+  unknown: 1,
+}
+
+// Gateway status demo data
+const DEMO_GATEWAY_STATUS = [
+  { name: 'api-gateway', class: 'istio', addresses: 2, status: 'Programmed', cluster: 'prod-east' },
+  { name: 'internal-gw', class: 'nginx', addresses: 1, status: 'Programmed', cluster: 'staging' },
+]
+
+// Kustomization status demo data
+const DEMO_KUSTOMIZATION_STATUS = [
+  { name: 'apps', namespace: 'flux-system', ready: true, lastApplied: Date.now() - 120000 },
+  { name: 'infra', namespace: 'flux-system', ready: true, lastApplied: Date.now() - 300000 },
+  { name: 'monitoring', namespace: 'flux-system', ready: false, lastApplied: Date.now() - 600000 },
+]
+
+// Provider health demo data
+const DEMO_PROVIDER_HEALTH = [
+  { provider: 'AWS', type: 'cloud', status: 'healthy', latency: 45 },
+  { provider: 'OpenAI', type: 'ai', status: 'healthy', latency: 120 },
+  { provider: 'Azure', type: 'cloud', status: 'degraded', latency: 250 },
+]
+
+// Upgrade status demo data
+const DEMO_UPGRADE_STATUS = [
+  { cluster: 'prod-east', currentVersion: '1.28.5', availableVersion: '1.29.2', status: 'available' },
+  { cluster: 'staging', currentVersion: '1.29.1', availableVersion: '1.29.2', status: 'available' },
+  { cluster: 'dev', currentVersion: '1.29.2', availableVersion: '1.29.2', status: 'current' },
+]
+
+// Prow status demo data (stats-grid)
+const DEMO_PROW_STATUS = {
+  running: 5,
+  passed: 42,
+  failed: 3,
+  pending: 2,
+}
+
+// Prow history demo data
+const DEMO_PROW_HISTORY = [
+  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: Date.now() - 3600000 },
+  { job: 'unit-tests', result: 'success', duration: 300, finishedAt: Date.now() - 7200000 },
+  { job: 'lint', result: 'failure', duration: 60, finishedAt: Date.now() - 10800000 },
+]
+
+// Helm history demo data
+const DEMO_HELM_HISTORY = [
+  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: Date.now() - 86400000 },
+  { revision: 4, chart: 'nginx-ingress-4.5.2', appVersion: '1.8.0', status: 'superseded', updated: Date.now() - 172800000 },
+]
+
+// External secrets demo data (stats-grid)
+const DEMO_EXTERNAL_SECRETS = {
+  total: 25,
+  ready: 23,
+  failed: 2,
+}
+
+// Cert manager demo data (stats-grid)
+const DEMO_CERT_MANAGER = {
+  certificates: 15,
+  ready: 14,
+  expiringSoon: 1,
+  expired: 0,
+}
+
+// Vault secrets demo data
+const DEMO_VAULT_SECRETS = [
+  { path: 'secret/data/api-keys', status: 'synced', lastSync: Date.now() - 60000 },
+  { path: 'secret/data/db-creds', status: 'synced', lastSync: Date.now() - 120000 },
+]
+
+// Falco alerts demo data
+const DEMO_FALCO_ALERTS = [
+  { rule: 'Terminal shell in container', severity: 'Warning', count: 3, lastSeen: Date.now() - 300000 },
+  { rule: 'Sensitive file read', severity: 'Notice', count: 12, lastSeen: Date.now() - 600000 },
+]
+
+// Kubescape scan demo data (stats-grid)
+const DEMO_KUBESCAPE_SCAN = {
+  passed: 85,
+  failed: 12,
+  skipped: 3,
+  riskScore: 22,
+}
+
+// Trivy scan demo data (stats-grid)
+const DEMO_TRIVY_SCAN = {
+  critical: 2,
+  high: 8,
+  medium: 25,
+  low: 45,
+}
+
+// Event summary demo data (stats-grid)
+const DEMO_EVENT_SUMMARY = {
+  normal: 156,
+  warning: 23,
+  error: 5,
+}
+
+// App status demo data
+const DEMO_APP_STATUS = [
+  { name: 'frontend', namespace: 'production', status: 'healthy', pods: 3, cluster: 'prod-east' },
+  { name: 'backend', namespace: 'production', status: 'degraded', pods: 5, cluster: 'prod-east' },
+]
+
+// GPU status demo data (stats-grid)
+const DEMO_GPU_STATUS = {
+  total: 24,
+  available: 6,
+  allocated: 18,
+  errored: 0,
+}
+
+// GPU utilization demo data (chart)
+const DEMO_GPU_UTILIZATION = [
+  { timestamp: Date.now() - 300000, utilization: 72, memory: 68 },
+  { timestamp: Date.now() - 240000, utilization: 78, memory: 72 },
+  { timestamp: Date.now() - 180000, utilization: 65, memory: 60 },
+  { timestamp: Date.now() - 120000, utilization: 82, memory: 78 },
+  { timestamp: Date.now() - 60000, utilization: 75, memory: 70 },
+  { timestamp: Date.now(), utilization: 80, memory: 74 },
+]
+
+// GPU usage trend demo data (chart)
+const DEMO_GPU_USAGE_TREND = [
+  { timestamp: Date.now() - 3600000, avgUtilization: 68 },
+  { timestamp: Date.now() - 2700000, avgUtilization: 72 },
+  { timestamp: Date.now() - 1800000, avgUtilization: 78 },
+  { timestamp: Date.now() - 900000, avgUtilization: 74 },
+  { timestamp: Date.now(), avgUtilization: 76 },
+]
+
+// Policy violations demo data
+const DEMO_POLICY_VIOLATIONS = [
+  { policy: 'require-labels', resource: 'deployment/api', namespace: 'default', severity: 'warning', cluster: 'prod-east' },
+  { policy: 'deny-privileged', resource: 'pod/debug', namespace: 'kube-system', severity: 'critical', cluster: 'staging' },
+]
+
+// Namespace overview demo data (stats-grid)
+const DEMO_NAMESPACE_OVERVIEW = {
+  pods: 45,
+  deployments: 12,
+  services: 8,
+  configmaps: 15,
+}
+
+// Namespace quotas demo data
+const DEMO_NAMESPACE_QUOTAS = [
+  { namespace: 'production', cpuUsed: '4', cpuLimit: '8', memUsed: '8Gi', memLimit: '16Gi' },
+  { namespace: 'staging', cpuUsed: '2', cpuLimit: '4', memUsed: '4Gi', memLimit: '8Gi' },
+]
+
+// Namespace RBAC demo data
+const DEMO_NAMESPACE_RBAC = [
+  { subject: 'developers', type: 'Group', role: 'edit', namespace: 'production' },
+  { subject: 'ci-bot', type: 'ServiceAccount', role: 'admin', namespace: 'production' },
+]
+
+// Resource capacity demo data (stats-grid)
+const DEMO_RESOURCE_CAPACITY = {
+  cpuTotal: 96,
+  cpuUsed: 48,
+  memoryTotal: 384,
+  memoryUsed: 256,
+}
+
+// ============================================================================
 // Filtered event hooks
 // These provide pre-filtered event data for specific card types
 // ============================================================================
@@ -810,6 +994,110 @@ function useDeploymentProgress() {
 }
 
 // ============================================================================
+// Batch 5 demo hooks - GitOps, Security, Status cards
+// ============================================================================
+
+function useArgoCDHealth() {
+  return useDemoDataHook([DEMO_ARGOCD_HEALTH])
+}
+
+function useArgoCDSyncStatus() {
+  return useDemoDataHook([DEMO_ARGOCD_SYNC_STATUS])
+}
+
+function useGatewayStatus() {
+  return useDemoDataHook(DEMO_GATEWAY_STATUS)
+}
+
+function useKustomizationStatus() {
+  return useDemoDataHook(DEMO_KUSTOMIZATION_STATUS)
+}
+
+function useProviderHealth() {
+  return useDemoDataHook(DEMO_PROVIDER_HEALTH)
+}
+
+function useUpgradeStatus() {
+  return useDemoDataHook(DEMO_UPGRADE_STATUS)
+}
+
+function useProwStatus() {
+  return useDemoDataHook([DEMO_PROW_STATUS])
+}
+
+function useProwHistory() {
+  return useDemoDataHook(DEMO_PROW_HISTORY)
+}
+
+function useHelmHistory() {
+  return useDemoDataHook(DEMO_HELM_HISTORY)
+}
+
+function useExternalSecrets() {
+  return useDemoDataHook([DEMO_EXTERNAL_SECRETS])
+}
+
+function useCertManager() {
+  return useDemoDataHook([DEMO_CERT_MANAGER])
+}
+
+function useVaultSecrets() {
+  return useDemoDataHook(DEMO_VAULT_SECRETS)
+}
+
+function useFalcoAlerts() {
+  return useDemoDataHook(DEMO_FALCO_ALERTS)
+}
+
+function useKubescapeScan() {
+  return useDemoDataHook([DEMO_KUBESCAPE_SCAN])
+}
+
+function useTrivyScan() {
+  return useDemoDataHook([DEMO_TRIVY_SCAN])
+}
+
+function useEventSummary() {
+  return useDemoDataHook([DEMO_EVENT_SUMMARY])
+}
+
+function useAppStatus() {
+  return useDemoDataHook(DEMO_APP_STATUS)
+}
+
+function useGPUStatus() {
+  return useDemoDataHook([DEMO_GPU_STATUS])
+}
+
+function useGPUUtilization() {
+  return useDemoDataHook(DEMO_GPU_UTILIZATION)
+}
+
+function useGPUUsageTrend() {
+  return useDemoDataHook(DEMO_GPU_USAGE_TREND)
+}
+
+function usePolicyViolations() {
+  return useDemoDataHook(DEMO_POLICY_VIOLATIONS)
+}
+
+function useNamespaceOverview() {
+  return useDemoDataHook([DEMO_NAMESPACE_OVERVIEW])
+}
+
+function useNamespaceQuotas() {
+  return useDemoDataHook(DEMO_NAMESPACE_QUOTAS)
+}
+
+function useNamespaceRBAC() {
+  return useDemoDataHook(DEMO_NAMESPACE_RBAC)
+}
+
+function useResourceCapacity() {
+  return useDemoDataHook([DEMO_RESOURCE_CAPACITY])
+}
+
+// ============================================================================
 // Register all data hooks for use in unified cards
 // Call this once at application startup
 // ============================================================================
@@ -881,6 +1169,33 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useGPUOverview', useGPUOverview)
   registerDataHook('useGPUWorkloads', useGPUWorkloads)
   registerDataHook('useDeploymentProgress', useDeploymentProgress)
+
+  // Batch 5 - GitOps, Security, Status cards
+  registerDataHook('useArgoCDHealth', useArgoCDHealth)
+  registerDataHook('useArgoCDSyncStatus', useArgoCDSyncStatus)
+  registerDataHook('useGatewayStatus', useGatewayStatus)
+  registerDataHook('useKustomizationStatus', useKustomizationStatus)
+  registerDataHook('useProviderHealth', useProviderHealth)
+  registerDataHook('useUpgradeStatus', useUpgradeStatus)
+  registerDataHook('useProwStatus', useProwStatus)
+  registerDataHook('useProwHistory', useProwHistory)
+  registerDataHook('useHelmHistory', useHelmHistory)
+  registerDataHook('useExternalSecrets', useExternalSecrets)
+  registerDataHook('useCertManager', useCertManager)
+  registerDataHook('useVaultSecrets', useVaultSecrets)
+  registerDataHook('useFalcoAlerts', useFalcoAlerts)
+  registerDataHook('useKubescapeScan', useKubescapeScan)
+  registerDataHook('useTrivyScan', useTrivyScan)
+  registerDataHook('useEventSummary', useEventSummary)
+  registerDataHook('useAppStatus', useAppStatus)
+  registerDataHook('useGPUStatus', useGPUStatus)
+  registerDataHook('useGPUUtilization', useGPUUtilization)
+  registerDataHook('useGPUUsageTrend', useGPUUsageTrend)
+  registerDataHook('usePolicyViolations', usePolicyViolations)
+  registerDataHook('useNamespaceOverview', useNamespaceOverview)
+  registerDataHook('useNamespaceQuotas', useNamespaceQuotas)
+  registerDataHook('useNamespaceRBAC', useNamespaceRBAC)
+  registerDataHook('useResourceCapacity', useResourceCapacity)
 }
 
 // Auto-register when this module is imported
