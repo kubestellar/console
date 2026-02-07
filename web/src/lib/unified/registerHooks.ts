@@ -818,6 +818,53 @@ const DEMO_RESOURCE_CAPACITY = {
 }
 
 // ============================================================================
+// Batch 6 demo data - Remaining compatible cards
+// ============================================================================
+
+// GitHub activity demo data
+const DEMO_GITHUB_ACTIVITY = [
+  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: Date.now() - 3600000 },
+  { type: 'PullRequestEvent', repo: 'kubestellar/console', actor: 'developer2', timestamp: Date.now() - 7200000 },
+  { type: 'IssuesEvent', repo: 'kubestellar/kubestellar', actor: 'contributor', timestamp: Date.now() - 10800000 },
+]
+
+// RSS feed demo data
+const DEMO_RSS_FEED = [
+  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: Date.now() - 86400000 },
+  { title: 'New CNCF Project Announcement', source: 'cncf.io', pubDate: Date.now() - 172800000 },
+  { title: 'Cloud Native Best Practices', source: 'blog.k8s.io', pubDate: Date.now() - 259200000 },
+]
+
+// Kubecost overview demo data (chart/donut)
+const DEMO_KUBECOST_OVERVIEW = {
+  totalCost: 12500,
+  breakdown: [
+    { category: 'Compute', cost: 7500 },
+    { category: 'Storage', cost: 2500 },
+    { category: 'Network', cost: 1500 },
+    { category: 'Other', cost: 1000 },
+  ],
+}
+
+// OpenCost overview demo data
+const DEMO_OPENCOST_OVERVIEW = {
+  totalCost: 8500,
+  breakdown: [
+    { category: 'CPU', cost: 4500 },
+    { category: 'Memory', cost: 2500 },
+    { category: 'Storage', cost: 1000 },
+    { category: 'GPU', cost: 500 },
+  ],
+}
+
+// Cluster costs demo data
+const DEMO_CLUSTER_COSTS = [
+  { cluster: 'prod-east', dailyCost: 450, monthlyCost: 13500, trend: 'up' },
+  { cluster: 'staging', dailyCost: 120, monthlyCost: 3600, trend: 'stable' },
+  { cluster: 'dev', dailyCost: 80, monthlyCost: 2400, trend: 'down' },
+]
+
+// ============================================================================
 // Filtered event hooks
 // These provide pre-filtered event data for specific card types
 // ============================================================================
@@ -1098,6 +1145,30 @@ function useResourceCapacity() {
 }
 
 // ============================================================================
+// Batch 6 demo hooks - Remaining compatible cards
+// ============================================================================
+
+function useGithubActivity() {
+  return useDemoDataHook(DEMO_GITHUB_ACTIVITY)
+}
+
+function useRSSFeed() {
+  return useDemoDataHook(DEMO_RSS_FEED)
+}
+
+function useKubecostOverview() {
+  return useDemoDataHook([DEMO_KUBECOST_OVERVIEW])
+}
+
+function useOpencostOverview() {
+  return useDemoDataHook([DEMO_OPENCOST_OVERVIEW])
+}
+
+function useClusterCosts() {
+  return useDemoDataHook(DEMO_CLUSTER_COSTS)
+}
+
+// ============================================================================
 // Register all data hooks for use in unified cards
 // Call this once at application startup
 // ============================================================================
@@ -1196,6 +1267,13 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useNamespaceQuotas', useNamespaceQuotas)
   registerDataHook('useNamespaceRBAC', useNamespaceRBAC)
   registerDataHook('useResourceCapacity', useResourceCapacity)
+
+  // Batch 6 - Remaining compatible cards
+  registerDataHook('useGithubActivity', useGithubActivity)
+  registerDataHook('useRSSFeed', useRSSFeed)
+  registerDataHook('useKubecostOverview', useKubecostOverview)
+  registerDataHook('useOpencostOverview', useOpencostOverview)
+  registerDataHook('useClusterCosts', useClusterCosts)
 }
 
 // Auto-register when this module is imported

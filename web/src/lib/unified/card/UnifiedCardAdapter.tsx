@@ -197,6 +197,24 @@ export const UNIFIED_READY_CARDS = new Set<string>([
 
   // Resource cards
   'resource_capacity',      // useResourceCapacity (stats-grid)
+
+  // =====================================================================
+  // Phase 6 Batch 6 - Final compatible cards
+  // =====================================================================
+
+  // Cluster cards
+  'cluster_health',         // useClusters (already registered)
+  'cluster_costs',          // useClusterCosts
+
+  // CI/CD cards
+  'github_activity',        // useGithubActivity
+
+  // Utility cards
+  'rss_feed',               // useRSSFeed
+
+  // Cost cards
+  'kubecost_overview',      // useKubecostOverview (chart/donut)
+  'opencost_overview',      // useOpencostOverview (chart/donut)
 ])
 
 /**
@@ -209,14 +227,41 @@ export const UNIFIED_EXCLUDED_CARDS = new Set<string>([
   'solitaire', 'match_game', 'kubedle', 'sudoku_game', 'pod_brothers',
   'kube_kart', 'kube_pong', 'kube_snake', 'kube_galaga', 'kube_craft',
   'kube_craft_3d', 'kube_doom', 'pod_crosser',
+
   // Embedded content
   'iframe_embed', 'mobile_browser', 'kubectl',
+
   // Weather has animated backgrounds
   'weather',
-  // Complex visualizations
+
+  // Complex tree/topology visualizations
   'cluster_resource_tree', 'service_topology', 'cluster_locations',
+  'cluster_comparison', 'cluster_network',
+
   // AI-ML flow visualizations
   'llmd_flow', 'epp_routing', 'kv_cache_monitor', 'pd_disaggregation',
+
+  // LLM/ML stack cards - require StackContext
+  'llm_inference', 'llm_models', 'llmd_stack_monitor',
+
+  // Monitor cards - complex custom visualizations
+  'cluster_health_monitor', 'namespace_monitor', 'workload_monitor',
+  'prow_ci_monitor', 'github_ci_monitor',
+
+  // Complex interactive cards
+  'cluster_focus', 'cluster_groups', 'resource_marshall',
+  'user_management', 'workload_deployment',
+
+  // Diff/comparison cards
+  'helm_values_diff', 'overlay_comparison',
+
+  // Console AI cards - special agent integration
+  'console_ai_health_check', 'console_ai_issues',
+  'console_ai_kubeconfig_audit', 'console_ai_offline_detection',
+
+  // Special cards
+  'deployment_missions', 'dynamic_card', 'hardware_health',
+  'stock_market_ticker',
 ])
 
 interface UnifiedCardAdapterProps extends CardComponentProps {
