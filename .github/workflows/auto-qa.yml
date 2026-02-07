@@ -2244,6 +2244,203 @@ jobs:
             echo "Tour coverage looks good"
           fi
 
+      # === LOCAL CLUSTER DETECTION AND CREATION (every run) ===
+      - name: "Check: Local cluster detection and creation"
+        id: focus_local_clusters
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking local cluster detection and creation feature..."
+          ISSUES=""
+
+          # Check for local cluster hooks/components
+          LOCAL_CLUSTER_FILES=$(find src -name "*localCluster*" -o -name "*LocalCluster*" 2>/dev/null | grep "\.tsx\|\.ts" || true)
+          LOCAL_CLUSTER_HOOKS=$(grep -rln "useLocalCluster\|localClusterTools\|LocalClustersSection\|kind\|k3d\|minikube" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -20 || true)
+
+          if [ -z "$LOCAL_CLUSTER_FILES" ] && [ -z "$LOCAL_CLUSTER_HOOKS" ]; then
+            ISSUES="${ISSUES}### No local cluster feature found\nConsider adding detection for kind, k3d, minikube clusters\n\n"
+          else
+            # Check for tool detection (kind, k3d, minikube)
+            TOOL_DETECTION=$(grep -rn "kind\|k3d\|minikube" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null || true)
+            if [ -z "$TOOL_DETECTION" ]; then
+              TOOL_DETECTION2=$(grep -rn "'kind'\|'k3d'\|'minikube'" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -10 || true)
+              if [ -z "$TOOL_DETECTION2" ]; then
+                ISSUES="${ISSUES}### Local cluster tool detection not implemented\nAdd detection for kind, k3d, and minikube\n\n"
+              fi
+            fi
+
+            # Check for cluster creation functionality
+            CREATE_CLUSTER=$(grep -rn "createCluster\|create.*cluster\|cluster.*create" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -5 || true)
+            if [ -z "$CREATE_CLUSTER" ]; then
+              ISSUES="${ISSUES}### No cluster creation functionality found\nAllow users to create local clusters from the UI\n\n"
+            fi
+
+            # Check for cluster deletion functionality
+            DELETE_CLUSTER=$(grep -rn "deleteCluster\|delete.*cluster\|cluster.*delete\|removeCluster" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | head -5 || true)
+            if [ -z "$DELETE_CLUSTER" ]; then
+              ISSUES="${ISSUES}### No cluster deletion functionality found\nAllow users to delete local clusters from the UI\n\n"
+            fi
+
+            # Check for cluster status display
+            CLUSTER_STATUS=$(grep -rn "cluster.*status\|status.*running\|status.*stopped" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null | head -5 || true)
+            if [ -z "$CLUSTER_STATUS" ]; then
+              CLUSTER_STATUS2=$(grep -rn "'running'\|'stopped'\|'unknown'" src/ --include="*.tsx" 2>/dev/null | grep -i "cluster\|status" | head -5 || true)
+              if [ -z "$CLUSTER_STATUS2" ]; then
+                ISSUES="${ISSUES}### Cluster status not displayed\nShow running/stopped status for each cluster\n\n"
+              fi
+            fi
+
+            # Check for agent connectivity requirement
+            AGENT_CHECK=$(grep -rn "isConnected\|useLocalAgent\|agent.*connected" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null | head -5 || true)
+            if [ -z "$AGENT_CHECK" ]; then
+              ISSUES="${ISSUES}### No agent connectivity check\nVerify local agent is connected before showing cluster management\n\n"
+            fi
+
+            # Check for loading states during operations
+            LOADING_STATES=$(grep -rn "isLoading\|isCreating\|isDeleting\|Loading\|Loader" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null | head -5 || true)
+            if [ -z "$LOADING_STATES" ]; then
+              ISSUES="${ISSUES}### Loading states not shown during operations\nShow spinners during create/delete operations\n\n"
+            fi
+
+            # Check for error handling
+            ERROR_HANDLING=$(grep -rn "error\|Error\|setError\|catch" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null | head -5 || true)
+            if [ -z "$ERROR_HANDLING" ]; then
+              ISSUES="${ISSUES}### Error handling not implemented\nShow errors when cluster operations fail\n\n"
+            fi
+
+            # Check for installation instructions when no tools found
+            INSTALL_HELP=$(grep -rn "brew install\|apt install\|install.*kind\|install.*k3d\|install.*minikube" src/ --include="*.tsx" 2>/dev/null | head -3 || true)
+            if [ -z "$INSTALL_HELP" ]; then
+              ISSUES="${ISSUES}### No installation instructions for missing tools\nGuide users to install kind/k3d/minikube when not detected\n\n"
+            fi
+
+            # Check for refresh functionality
+            REFRESH_FUNC=$(grep -rn "refresh\|Refresh\|fetchCluster" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null | head -5 || true)
+            if [ -z "$REFRESH_FUNC" ]; then
+              ISSUES="${ISSUES}### No refresh functionality\nAllow users to refresh cluster list manually\n\n"
+            fi
+
+            # Check for demo mode handling
+            DEMO_MODE=$(grep -rln "demo\|Demo\|isDemoMode" src/ --include="*localCluster*" --include="*LocalCluster*" 2>/dev/null | head -3 || true)
+            if [ -z "$DEMO_MODE" ]; then
+              ISSUES="${ISSUES}### No demo mode handling in local clusters\nShow mock clusters when in demo mode\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-local-clusters.txt
+            echo "Local cluster issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Local cluster implementation looks good"
+          fi
+
+      # === REFRESH ICON ANIMATION (every run) ===
+      - name: "Check: Refresh icon animation consistency"
+        id: focus_refresh_spin
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking refresh icon animation consistency..."
+          ISSUES=""
+
+          # Find all refresh icon usages
+          REFRESH_ICONS=$(grep -rn "RefreshCw\|RefreshCcw\|refresh\|Refresh" src/ --include="*.tsx" 2>/dev/null | \
+            grep -v "node_modules\|\.test\." | head -100 || true)
+
+          if [ -n "$REFRESH_ICONS" ]; then
+            # Check for animate-spin on refresh icons
+            MISSING_SPIN=""
+            for f in $(grep -rl "RefreshCw\|RefreshCcw" src/ --include="*.tsx" 2>/dev/null | head -50); do
+              # Check if file has animate-spin with refresh icon
+              HAS_SPIN=$(grep -n "RefreshCw\|RefreshCcw" "$f" | while read line; do
+                LINE_NO=$(echo "$line" | cut -d: -f1)
+                # Check context around the line (5 lines before/after) for animate-spin
+                HAS_ANIMATE=$(sed -n "$((LINE_NO > 5 ? LINE_NO - 5 : 1)),$((LINE_NO + 5))p" "$f" | grep "animate-spin" || true)
+                if [ -z "$HAS_ANIMATE" ]; then
+                  echo "missing:$LINE_NO"
+                fi
+              done | head -3 || true)
+
+              if [ -n "$HAS_SPIN" ]; then
+                RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
+                MISSING_SPIN="${MISSING_SPIN}  - \`${RELATIVE_PATH}\` — refresh icon without animate-spin\n"
+              fi
+            done
+
+            if [ -n "$MISSING_SPIN" ]; then
+              ISSUES="${ISSUES}### Refresh icons without spin animation\nThese components may not show loading feedback:\n${MISSING_SPIN}\n\n"
+            fi
+
+            # Check that animation triggers on loading state
+            SPIN_WITHOUT_LOADING=""
+            for f in $(grep -rl "animate-spin" src/ --include="*.tsx" 2>/dev/null | head -50); do
+              # Check if animate-spin is tied to a loading/isLoading condition
+              HAS_LOADING_CONDITION=$(grep -n "animate-spin" "$f" | while read line; do
+                LINE_NO=$(echo "$line" | cut -d: -f1)
+                # Check if line or nearby lines have loading state check
+                CONTEXT=$(sed -n "$((LINE_NO > 3 ? LINE_NO - 3 : 1)),$((LINE_NO + 3))p" "$f")
+                HAS_CONDITION=$(echo "$CONTEXT" | grep -E "isLoading|loading|isRefreshing|isFetching|\? " || true)
+                if [ -z "$HAS_CONDITION" ]; then
+                  echo "unconditional:$LINE_NO"
+                fi
+              done | head -1 || true)
+
+              if [ -n "$HAS_LOADING_CONDITION" ]; then
+                RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
+                SPIN_WITHOUT_LOADING="${SPIN_WITHOUT_LOADING}  - \`${RELATIVE_PATH}\` — animate-spin may not be tied to loading state\n"
+              fi
+            done
+
+            if [ -n "$SPIN_WITHOUT_LOADING" ]; then
+              ISSUES="${ISSUES}### Spin animation not tied to loading state\nAnimation should only spin during loading:\n${SPIN_WITHOUT_LOADING}\n\n"
+            fi
+
+            # Check for consistent spin duration (full rotation)
+            # Look for any custom animation durations on refresh icons
+            CUSTOM_DURATION=$(grep -rn "RefreshCw\|RefreshCcw" src/ --include="*.tsx" 2>/dev/null | \
+              grep -E "duration|transition|animation:" | head -10 || true)
+            if [ -n "$CUSTOM_DURATION" ]; then
+              ISSUES="${ISSUES}### Custom animation durations on refresh icons\nEnsure all refresh icons complete a full rotation:\n\`\`\`\n$(echo "$CUSTOM_DURATION" | head -5)\n\`\`\`\n\n"
+            fi
+
+            # Check inventory items for refresh functionality
+            INVENTORY_FILES=$(find src -path "*card*" -name "*.tsx" 2>/dev/null | head -50)
+            CARDS_WITHOUT_REFRESH=""
+            for f in $INVENTORY_FILES; do
+              # Skip non-card files
+              case "$f" in
+                *index*|*types*|*utils*|*hooks*) continue ;;
+              esac
+
+              # Check if it's a card that might need refresh
+              HAS_DATA_FETCH=$(grep -l "useQuery\|useFetch\|fetch\|axios" "$f" 2>/dev/null || true)
+              if [ -n "$HAS_DATA_FETCH" ]; then
+                HAS_REFRESH=$(grep -l "RefreshCw\|RefreshCcw\|refetch\|refresh" "$f" 2>/dev/null || true)
+                if [ -z "$HAS_REFRESH" ]; then
+                  RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
+                  CARDS_WITHOUT_REFRESH="${CARDS_WITHOUT_REFRESH}  - \`${RELATIVE_PATH}\`\n"
+                fi
+              fi
+            done
+
+            if [ -n "$CARDS_WITHOUT_REFRESH" ]; then
+              FIRST_FEW=$(echo -e "$CARDS_WITHOUT_REFRESH" | head -10)
+              COUNT=$(echo -e "$CARDS_WITHOUT_REFRESH" | grep -c "^" || echo "0")
+              ISSUES="${ISSUES}### Inventory cards without refresh icon\n${COUNT} cards fetch data but don't have refresh:\n${FIRST_FEW}\n\n"
+            fi
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-refresh-spin.txt
+            echo "Refresh icon issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Refresh icon animations look good"
+          fi
+
       # ── Ensure Labels Exist ────────────────────────────────────────
 
       - name: Ensure labels exist
@@ -2273,6 +2470,8 @@ jobs:
             "auto-qa:tour:00BCD4:Tour and onboarding issues"
             "auto-qa:user-count:9C27B0:Active user count feature"
             "auto-qa:token-counter:795548:Token counter feature"
+            "auto-qa:local-clusters:3F51B5:Local cluster detection and creation"
+            "auto-qa:refresh-spin:607D8B:Refresh icon animation consistency"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -2353,6 +2552,8 @@ jobs:
           FOCUS_USER_COUNT: ${{ steps.focus_user_count.outputs.found }}
           FOCUS_TOUR: ${{ steps.focus_tour.outputs.found }}
           FOCUS_TOKEN_COUNTER: ${{ steps.focus_token_counter.outputs.found }}
+          FOCUS_LOCAL_CLUSTERS: ${{ steps.focus_local_clusters.outputs.found }}
+          FOCUS_REFRESH_SPIN: ${{ steps.focus_refresh_spin.outputs.found }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -3081,6 +3282,41 @@ jobs:
                    'Persist tour completion state to avoid showing repeatedly',
                    'Add ARIA attributes to tour modals/tooltips for accessibility'], true),
                 labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:tour'],
+              });
+            }
+
+            // Local Cluster Detection and Creation (every run)
+            if (process.env.FOCUS_LOCAL_CLUSTERS === 'true') {
+              checks.push({
+                title: `${prefix} Local cluster detection and creation needs improvements`,
+                body: buildFocusBody('Features', 'Local Clusters',
+                  readOutput('/tmp/focus-local-clusters.txt'),
+                  ['Implement detection for kind, k3d, and minikube tools',
+                   'Add cluster creation UI with tool selection and naming',
+                   'Show cluster status (running/stopped) with visual indicators',
+                   'Add cluster deletion with confirmation dialog',
+                   'Check agent connectivity before showing cluster management',
+                   'Show loading spinners during create/delete operations',
+                   'Display installation instructions when no tools are detected',
+                   'Add manual refresh button to update cluster list',
+                   'Handle demo mode with mock cluster data'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:local-clusters'],
+              });
+            }
+
+            // Refresh Icon Animation Consistency (every run)
+            if (process.env.FOCUS_REFRESH_SPIN === 'true') {
+              checks.push({
+                title: `${prefix} Refresh icon animation consistency issues`,
+                body: buildFocusBody('UI', 'Refresh Animation',
+                  readOutput('/tmp/focus-refresh-spin.txt'),
+                  ['Add animate-spin class to all RefreshCw/RefreshCcw icons',
+                   'Tie spin animation to loading state (isLoading, isFetching)',
+                   'Ensure animation completes a full 360° rotation',
+                   'Use consistent animation duration across all components',
+                   'Add refresh icons to data-fetching inventory cards',
+                   'Use Tailwind animate-spin for consistent behavior'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:refresh-spin'],
               });
             }
 
