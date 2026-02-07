@@ -187,14 +187,12 @@ export function SyncDialog({
 
       setPhase('plan')
     } catch (err) {
-      // Batch state updates to prevent flicker
+      // Error states should be shown immediately (not deferred with startTransition)
       const message = err instanceof Error ? err.message : 'Detection failed'
-      startTransition(() => {
-        updateLastLog('error')
-        addLog(`Error: ${message}`, 'error')
-        setError(message)
-        setIsInitializing(false)
-      })
+      updateLastLog('error')
+      addLog(`Error: ${message}`, 'error')
+      setError(message)
+      setIsInitializing(false)
     }
   }, [appName, namespace, cluster, repoUrl, path, addLog, updateLastLog])
 

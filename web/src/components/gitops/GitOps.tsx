@@ -132,7 +132,7 @@ export function GitOps() {
         }
       }
 
-      // Batch state updates to prevent flicker
+      // React 18+ automatically batches state updates in async functions
       setDriftResults(results)
       setIsDetecting(false)
     }
@@ -148,7 +148,7 @@ export function GitOps() {
   // Handle sync complete - mark app as synced and refresh drift status
   const handleSyncComplete = useCallback(() => {
     if (syncDialogApp) {
-      // Batch state updates to prevent flicker
+      // React 18+ automatically batches these state updates
       setSyncedApps(prev => new Set(prev).add(syncDialogApp.name))
       setDriftResults(prev => {
         const updated = new Map(prev)

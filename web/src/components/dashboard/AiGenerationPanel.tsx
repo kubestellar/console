@@ -58,24 +58,20 @@ export function AiGenerationPanel<T>({
       if (data) {
         const validation = validateResult(data)
         if (validation.valid) {
-          // Batch state updates to prevent flicker
+          // Batch non-urgent state updates to prevent flicker
           startTransition(() => {
             setParsedResult(validation.result)
             setPhase('parsed')
           })
         } else {
-          // Batch state updates to prevent flicker
-          startTransition(() => {
-            setParseError(validation.error)
-            setPhase('error')
-          })
+          // Error states should be shown immediately (not deferred)
+          setParseError(validation.error)
+          setPhase('error')
         }
       } else {
-        // Batch state updates to prevent flicker
-        startTransition(() => {
-          setParseError(error || 'Failed to parse AI response')
-          setPhase('error')
-        })
+        // Error states should be shown immediately (not deferred)
+        setParseError(error || 'Failed to parse AI response')
+        setPhase('error')
       }
     }
 
