@@ -116,7 +116,9 @@ function LoadingFallback() {
   }, [])
 
   if (!showLoading) {
-    return null
+    // Invisible placeholder maintains layout dimensions during route transitions,
+    // preventing the content area from collapsing to 0 height (blank flash).
+    return <div className="min-h-screen" />
   }
 
   return (

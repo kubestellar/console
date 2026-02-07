@@ -94,6 +94,17 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const { isDemoMode } = useDemoMode()
   const previousDemoMode = useRef(isDemoMode)
 
+  // Refs for polling data — lets evaluateConditions read latest data
+  // without being recreated on every poll cycle
+  const gpuNodesRef = useRef(gpuNodes)
+  gpuNodesRef.current = gpuNodes
+  const podIssuesRef = useRef(podIssues)
+  podIssuesRef.current = podIssues
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
+  const rulesRef = useRef(rules)
+  rulesRef.current = rules
+
   // Save rules whenever they change
   useEffect(() => {
     saveToStorage(ALERT_RULES_KEY, rules)
@@ -358,47 +369,18 @@ Please provide:
     [alerts, startMission]
   )
 
-  // Evaluate alert conditions
-  const evaluateConditions = useCallback(() => {
-    if (isEvaluating) return
-    setIsEvaluating(true)
-
-    try {
-      const enabledRules = rules.filter(r => r.enabled)
-
-      for (const rule of enabledRules) {
-        switch (rule.condition.type) {
-          case 'gpu_usage':
-            evaluateGPUUsage(rule)
-            break
-          case 'node_not_ready':
-            evaluateNodeReady(rule)
-            break
-          case 'pod_crash':
-            evaluatePodCrash(rule)
-            break
-          case 'weather_alerts':
-            evaluateWeatherAlerts(rule)
-            break
-          default:
-            break
-        }
-      }
-    } finally {
-      setIsEvaluating(false)
-    }
-  }, [rules, gpuNodes, podIssues, clusters, isEvaluating])
-
-  // Evaluate GPU usage condition
+  // Evaluate GPU usage condition — reads from refs for stable identity
   const evaluateGPUUsage = useCallback(
     (rule: AlertRule) => {
       const threshold = rule.condition.threshold || 90
+      const currentClusters = clustersRef.current
+      const currentGPUNodes = gpuNodesRef.current
       const relevantClusters = rule.condition.clusters?.length
-        ? clusters.filter(c => rule.condition.clusters!.includes(c.name))
-        : clusters
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
 
       for (const cluster of relevantClusters) {
-        const clusterGPUNodes = gpuNodes.filter(n => n.cluster.startsWith(cluster.name))
+        const clusterGPUNodes = currentGPUNodes.filter(n => n.cluster.startsWith(cluster.name))
         const totalGPUs = clusterGPUNodes.reduce((sum, n) => sum + n.gpuCount, 0)
         const allocatedGPUs = clusterGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
 
@@ -441,15 +423,16 @@ Please provide:
         }
       }
     },
-    [gpuNodes, clusters, createAlert]
+    [createAlert]
   )
 
-  // Evaluate node ready condition
+  // Evaluate node ready condition — reads from refs for stable identity
   const evaluateNodeReady = useCallback(
     (rule: AlertRule) => {
+      const currentClusters = clustersRef.current
       const relevantClusters = rule.condition.clusters?.length
-        ? clusters.filter(c => rule.condition.clusters!.includes(c.name))
-        : clusters
+        ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
+        : currentClusters
 
       for (const cluster of relevantClusters) {
         if (cluster.healthy === false) {
@@ -485,15 +468,15 @@ Please provide:
         }
       }
     },
-    [clusters, createAlert]
+    [createAlert]
   )
 
-  // Evaluate pod crash condition
+  // Evaluate pod crash condition — reads from refs for stable identity
   const evaluatePodCrash = useCallback(
     (rule: AlertRule) => {
       const threshold = rule.condition.threshold || 5
 
-      for (const issue of podIssues) {
+      for (const issue of podIssuesRef.current) {
         if (issue.restarts && issue.restarts >= threshold) {
           const clusterMatch =
             !rule.condition.clusters?.length ||
@@ -520,7 +503,7 @@ Please provide:
         }
       }
     },
-    [podIssues, createAlert]
+    [createAlert]
   )
 
   // Evaluate weather alerts condition - mock implementation for demo purposes
@@ -597,24 +580,62 @@ Please provide:
     [createAlert]
   )
 
-  // Periodic evaluation (every 30 seconds)
+  // Evaluate alert conditions — uses refs so callback identity is stable
+  const isEvaluatingRef = useRef(false)
+  const evaluateConditions = useCallback(() => {
+    if (isEvaluatingRef.current) return
+    isEvaluatingRef.current = true
+    setIsEvaluating(true)
+
+    try {
+      const enabledRules = rulesRef.current.filter(r => r.enabled)
+
+      for (const rule of enabledRules) {
+        switch (rule.condition.type) {
+          case 'gpu_usage':
+            evaluateGPUUsage(rule)
+            break
+          case 'node_not_ready':
+            evaluateNodeReady(rule)
+            break
+          case 'pod_crash':
+            evaluatePodCrash(rule)
+            break
+          case 'weather_alerts':
+            evaluateWeatherAlerts(rule)
+            break
+          default:
+            break
+        }
+      }
+    } finally {
+      isEvaluatingRef.current = false
+      setIsEvaluating(false)
+    }
+  }, [evaluateGPUUsage, evaluateNodeReady, evaluatePodCrash, evaluateWeatherAlerts])
+
+  // Stable ref for evaluateConditions so the interval never resets
+  const evaluateConditionsRef = useRef(evaluateConditions)
+  evaluateConditionsRef.current = evaluateConditions
+
+  // Periodic evaluation (every 30 seconds) — stable, never re-creates timers
   useEffect(() => {
     const timer = setTimeout(() => {
-      evaluateConditions()
+      evaluateConditionsRef.current()
     }, 1000)
 
     const alertInterval = getPresentationMode() ? 300000 : 30000
     const interval = setInterval(() => {
-      evaluateConditions()
+      evaluateConditionsRef.current()
     }, alertInterval)
 
     return () => {
       clearTimeout(timer)
       clearInterval(interval)
     }
-  }, [evaluateConditions])
+  }, [])
 
-  const value: AlertsContextValue = {
+  const value: AlertsContextValue = useMemo(() => ({
     alerts,
     activeAlerts,
     acknowledgedAlerts,
@@ -631,7 +652,7 @@ Please provide:
     updateRule,
     deleteRule,
     toggleRule,
-  }
+  }), [alerts, activeAlerts, acknowledgedAlerts, stats, rules, isEvaluating, acknowledgeAlert, acknowledgeAlerts, resolveAlert, deleteAlert, runAIDiagnosis, evaluateConditions, createRule, updateRule, deleteRule, toggleRule])
 
   return (
     <AlertsContext.Provider value={value}>

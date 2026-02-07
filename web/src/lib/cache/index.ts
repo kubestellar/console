@@ -42,9 +42,6 @@ const META_PREFIX = 'kc_meta:'
 /** Maximum consecutive failures before marking as failed */
 const MAX_FAILURES = 3
 
-/** Minimum time to show refreshing indicator (ensures visibility) */
-const MIN_REFRESH_INDICATOR_MS = 500
-
 /** Refresh rates by data category (in milliseconds) */
 export const REFRESH_RATES = {
   // Real-time data - refresh frequently
@@ -407,17 +404,6 @@ class CacheStore<T> {
     }
   }
 
-  // Visual-only refresh for demo/disabled mode — triggers isRefreshing without fetching
-  simulateRefresh(): void {
-    if (this.fetchingRef) return
-    this.fetchingRef = true
-    this.setState({ isRefreshing: true })
-    setTimeout(() => {
-      this.setState({ isRefreshing: false, lastRefresh: Date.now() })
-      this.fetchingRef = false
-    }, MIN_REFRESH_INDICATOR_MS)
-  }
-
   // Fetching
   async fetch(fetcher: () => Promise<T>, merge?: (old: T, new_: T) => T): Promise<void> {
     if (this.fetchingRef) return
@@ -431,7 +417,6 @@ class CacheStore<T> {
     }
 
     const hasCachedData = this.state.data !== this.initialData || this.initialDataLoaded
-    const startTime = Date.now()
 
     this.setState({
       isLoading: !hasCachedData,
@@ -441,12 +426,6 @@ class CacheStore<T> {
     try {
       const newData = await fetcher()
       const finalData = merge && hasCachedData ? merge(this.state.data, newData) : newData
-
-      // Ensure minimum refresh indicator time
-      const elapsed = Date.now() - startTime
-      if (elapsed < MIN_REFRESH_INDICATOR_MS) {
-        await new Promise(r => setTimeout(r, MIN_REFRESH_INDICATOR_MS - elapsed))
-      }
 
       await this.saveToStorage(finalData)
       this.saveMeta({ consecutiveFailures: 0, lastSuccessfulRefresh: Date.now() })
@@ -609,10 +588,7 @@ export function useCache<T>({
   mergeRef.current = merge
 
   const refetch = useCallback(async () => {
-    if (!enabled) {
-      store.simulateRefresh()
-      return
-    }
+    if (!enabled) return
     await store.fetch(() => fetcherRef.current(), mergeRef.current)
   }, [enabled, store])
 
@@ -627,9 +603,7 @@ export function useCache<T>({
   useEffect(() => {
     if (!enabled) {
       // In demo/disabled mode, no fetch will run — mark loading as done
-      // and trigger a brief refresh animation so cards pulse on page open
       store.markReady()
-      store.simulateRefresh()
       return
     }
 
@@ -739,34 +713,24 @@ export async function prefetchCache<T>(
 }
 
 /**
- * Preload common cache keys from IndexedDB at app startup.
- * This ensures cached data is available immediately when components mount.
+ * Preload ALL cache keys from IndexedDB at app startup.
+ * This ensures cached data is available immediately when components mount,
+ * eliminating skeleton flashes on page navigation.
  * Call this early in app initialization, before rendering routes.
  */
 export async function preloadCacheFromStorage(): Promise<void> {
-  // Common cache keys that should be preloaded for instant display
-  const keysToPreload = [
-    'securityIssues:all:all',
-    'podIssues:all:all',
-    'deployments:all:all',
-    'deploymentIssues:all:all',
-    'events:all:all:100',
-    'services:all:all',
-  ]
+  const stats = await idbStorage.getStats()
+  if (stats.count === 0) return
 
   let loadedCount = 0
-  const loadPromises = keysToPreload.map(async (key) => {
+  const loadPromises = stats.keys.map(async (key) => {
     try {
       const entry = await idbStorage.get<unknown>(key)
       if (entry) {
-        // Pre-populate the registry with loaded data
-        // This creates a CacheStore with data already loaded
         const store = getOrCreateCache(key, entry.data, true)
-        // Mark as loaded and set proper state so it shows cached data immediately
         const storeWithState = store as unknown as {
           initialDataLoaded: boolean
           state: CacheState<unknown>
-          notify: () => void
         }
         storeWithState.initialDataLoaded = true
         storeWithState.state = {
@@ -784,7 +748,7 @@ export async function preloadCacheFromStorage(): Promise<void> {
   })
 
   await Promise.all(loadPromises)
-  console.log(`[Cache] Preloaded ${loadedCount}/${keysToPreload.length} cache entries`)
+  console.log(`[Cache] Preloaded ${loadedCount}/${stats.count} cache entries`)
 }
 
 /** Migrate old localStorage cache to IndexedDB (run once on app startup) */

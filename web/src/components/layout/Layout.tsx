@@ -19,6 +19,16 @@ import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 
 
+// Module-level constant — computed once, never changes on re-render.
+// Prevents star field from flickering when Layout re-renders due to hooks.
+const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
+  width: Math.random() * 2 + 1 + 'px',
+  height: Math.random() * 2 + 1 + 'px',
+  left: Math.random() * 100 + '%',
+  top: Math.random() * 100 + '%',
+  animationDelay: Math.random() * 3 + 's',
+}))
+
 interface LayoutProps {
   children: ReactNode
 }
@@ -67,20 +77,10 @@ export function Layout({ children }: LayoutProps) {
       <TourOverlay />
       <TourPrompt />
 
-      {/* Star field background */}
+      {/* Star field background — positions are stable (module-level constant) */}
       <div className="star-field">
-        {Array.from({ length: 30 }).map((_, i) => (
-          <div
-            key={i}
-            className="star"
-            style={{
-              width: Math.random() * 2 + 1 + 'px',
-              height: Math.random() * 2 + 1 + 'px',
-              left: Math.random() * 100 + '%',
-              top: Math.random() * 100 + '%',
-              animationDelay: Math.random() * 3 + 's',
-            }}
-          />
+        {STAR_POSITIONS.map((style, i) => (
+          <div key={i} className="star" style={style} />
         ))}
       </div>
 
@@ -203,7 +203,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
+      <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
         <main className={cn(
           'flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto',

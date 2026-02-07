@@ -987,7 +987,8 @@ export function CardWrapper({
   // - Card explicitly reports isLoading: true, OR
   // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
   // Static/demo cards that never report will stop showing as loading after 150ms
-  const effectiveIsLoading = isRefreshing || childDataState?.isLoading || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
+  // NOTE: isRefreshing is NOT included — background refreshes should be invisible to avoid flicker
+  const effectiveIsLoading = childDataState?.isLoading || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
   const effectiveIsRefreshing = childDataState?.isRefreshing || false
   // hasData logic:
   // - If card explicitly reports hasData, use it
