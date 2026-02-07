@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -51,13 +52,14 @@ type Config struct {
 
 // Server represents the API server
 type Server struct {
-	app                *fiber.App
-	store              store.Store
-	config             Config
-	hub                *handlers.Hub
-	bridge             *mcp.Bridge
-	k8sClient          *k8s.MultiClusterClient
+	app                 *fiber.App
+	store               store.Store
+	config              Config
+	hub                 *handlers.Hub
+	bridge              *mcp.Bridge
+	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
+	persistenceStore    *store.PersistenceStore
 }
 
 // NewServer creates a new API server
@@ -185,6 +187,14 @@ func NewServer(cfg Config) (*Server, error) {
 	notificationService := notifications.NewService()
 	log.Println("Notification service initialized")
 
+	// Initialize persistence store
+	persistenceConfigPath := filepath.Join(filepath.Dir(cfg.DatabasePath), "persistence.json")
+	persistenceStore := store.NewPersistenceStore(persistenceConfigPath)
+	if err := persistenceStore.Load(); err != nil {
+		log.Printf("Warning: Failed to load persistence config: %v", err)
+	}
+	log.Println("Persistence store initialized")
+
 	server := &Server{
 		app:                 app,
 		store:               db,
@@ -193,6 +203,7 @@ func NewServer(cfg Config) (*Server, error) {
 		bridge:              bridge,
 		k8sClient:           k8sClient,
 		notificationService: notificationService,
+		persistenceStore:    persistenceStore,
 	}
 
 	server.setupMiddleware()
@@ -477,6 +488,32 @@ func (s *Server) setupRoutes() {
 	api.Post("/notifications/send", notificationHandler.SendAlertNotification)
 	api.Get("/notifications/config", notificationHandler.GetNotificationConfig)
 	api.Post("/notifications/config", notificationHandler.SaveNotificationConfig)
+
+	// Console persistence routes (CRD-based state management)
+	persistenceHandler := handlers.NewConsolePersistenceHandlers(s.persistenceStore, s.k8sClient, s.hub)
+	api.Get("/persistence/config", persistenceHandler.GetConfig)
+	api.Put("/persistence/config", persistenceHandler.UpdateConfig)
+	api.Get("/persistence/status", persistenceHandler.GetStatus)
+	api.Post("/persistence/sync", persistenceHandler.SyncNow)
+	api.Post("/persistence/test", persistenceHandler.TestConnection)
+	// ManagedWorkload endpoints
+	api.Get("/persistence/workloads", persistenceHandler.ListManagedWorkloads)
+	api.Get("/persistence/workloads/:name", persistenceHandler.GetManagedWorkload)
+	api.Post("/persistence/workloads", persistenceHandler.CreateManagedWorkload)
+	api.Put("/persistence/workloads/:name", persistenceHandler.UpdateManagedWorkload)
+	api.Delete("/persistence/workloads/:name", persistenceHandler.DeleteManagedWorkload)
+	// ClusterGroup endpoints
+	api.Get("/persistence/groups", persistenceHandler.ListClusterGroups)
+	api.Get("/persistence/groups/:name", persistenceHandler.GetClusterGroup)
+	api.Post("/persistence/groups", persistenceHandler.CreateClusterGroup)
+	api.Put("/persistence/groups/:name", persistenceHandler.UpdateClusterGroup)
+	api.Delete("/persistence/groups/:name", persistenceHandler.DeleteClusterGroup)
+	// WorkloadDeployment endpoints
+	api.Get("/persistence/deployments", persistenceHandler.ListWorkloadDeployments)
+	api.Get("/persistence/deployments/:name", persistenceHandler.GetWorkloadDeployment)
+	api.Post("/persistence/deployments", persistenceHandler.CreateWorkloadDeployment)
+	api.Put("/persistence/deployments/:name/status", persistenceHandler.UpdateWorkloadDeploymentStatus)
+	api.Delete("/persistence/deployments/:name", persistenceHandler.DeleteWorkloadDeployment)
 
 	// GitHub webhook (public endpoint, uses signature verification)
 	s.app.Post("/webhooks/github", feedback.HandleGitHubWebhook)
