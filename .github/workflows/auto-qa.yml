@@ -2594,6 +2594,384 @@ jobs:
             echo "DOM structure looks good"
           fi
 
+      # === SILENT FAILURE DETECTION (every run) ===
+      - name: "Check: Silent failures in error handling"
+        id: focus_silent_failures
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for silent failures in error handling..."
+          ISSUES=""
+
+          # Find catch blocks that log but don't notify user
+          SILENT_CATCHES=$(grep -rn "catch" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            # Get 5 lines after catch
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 5))p" "$FILE" 2>/dev/null)
+            # Check if it has console.log/error but no user notification
+            HAS_CONSOLE=$(echo "$CONTEXT" | grep -E "console\.(log|error|warn)" || true)
+            HAS_NOTIFY=$(echo "$CONTEXT" | grep -iE "toast|Toast|showError|setError|showNotification|addToast" || true)
+            if [ -n "$HAS_CONSOLE" ] && [ -z "$HAS_NOTIFY" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\` — logs error but no user notification"
+            fi
+          done | head -15 || true)
+
+          if [ -n "$SILENT_CATCHES" ]; then
+            ISSUES="${ISSUES}### Silent error handling\nThese catch blocks log errors but don't notify users:\n${SILENT_CATCHES}\n\n"
+          fi
+
+          # Find try blocks without user-facing error handling
+          TRY_NO_USER_ERROR=$(grep -rn "try {" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            # Get 20 lines for full try-catch block
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 20))p" "$FILE" 2>/dev/null)
+            HAS_CATCH=$(echo "$CONTEXT" | grep "catch" || true)
+            HAS_USER_ERROR=$(echo "$CONTEXT" | grep -iE "setError|showError|toast|Toast|setErrorMessage" || true)
+            if [ -n "$HAS_CATCH" ] && [ -z "$HAS_USER_ERROR" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\`"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$TRY_NO_USER_ERROR" ]; then
+            ISSUES="${ISSUES}### Try-catch without user error display\n${TRY_NO_USER_ERROR}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-silent-failures.txt
+            echo "Silent failure issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Error handling looks good"
+          fi
+
+      # === MISSING USER FEEDBACK (every run) ===
+      - name: "Check: Missing user feedback on actions"
+        id: focus_feedback_gaps
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for missing user feedback on actions..."
+          ISSUES=""
+
+          # Count toast usage
+          TOAST_COUNT=$(grep -rn "toast\|showToast\|addToast" src/ --include="*.tsx" 2>/dev/null | wc -l | tr -d ' ')
+          # Count action components (forms, buttons with handlers)
+          ACTION_COUNT=$(grep -rn "onSubmit\|onClick.*async\|handleSubmit\|handleSave\|handleDelete" src/ --include="*.tsx" 2>/dev/null | wc -l | tr -d ' ')
+
+          if [ "$ACTION_COUNT" -gt 0 ]; then
+            RATIO=$((TOAST_COUNT * 100 / ACTION_COUNT))
+            if [ "$RATIO" -lt 15 ]; then
+              ISSUES="${ISSUES}### Low toast/feedback usage\nOnly ${TOAST_COUNT} toast notifications for ${ACTION_COUNT} action handlers (${RATIO}%)\nRecommend adding success/error feedback to more user actions\n\n"
+            fi
+          fi
+
+          # Find form submissions without feedback
+          FORMS_NO_FEEDBACK=$(grep -rln "onSubmit=" src/ --include="*.tsx" 2>/dev/null | while read f; do
+            HAS_FEEDBACK=$(grep -l "toast\|Toast\|showSuccess\|setSuccess\|setMessage" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_FEEDBACK" ]; then
+              RELATIVE=$(echo "$f" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}\`"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$FORMS_NO_FEEDBACK" ]; then
+            ISSUES="${ISSUES}### Forms without success feedback\n${FORMS_NO_FEEDBACK}\n\n"
+          fi
+
+          # Find delete handlers without confirmation
+          DELETE_NO_CONFIRM=$(grep -rn "handleDelete\|onDelete\|deleteItem\|removeItem" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            CONTEXT=$(sed -n "$((LINE_NO > 5 ? LINE_NO - 5 : 1)),$((LINE_NO + 10))p" "$FILE" 2>/dev/null)
+            HAS_CONFIRM=$(echo "$CONTEXT" | grep -iE "confirm|Confirm|dialog|Dialog|modal|Modal" || true)
+            if [ -z "$HAS_CONFIRM" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\`"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$DELETE_NO_CONFIRM" ]; then
+            ISSUES="${ISSUES}### Delete actions without confirmation\n${DELETE_NO_CONFIRM}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-feedback-gaps.txt
+            echo "Feedback gap issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "User feedback looks good"
+          fi
+
+      # === LOADING STATE GAPS (every run) ===
+      - name: "Check: Missing loading states on async actions"
+        id: focus_loading_gaps
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for missing loading states..."
+          ISSUES=""
+
+          # Find async onClick without loading state
+          ASYNC_NO_LOADING=$(grep -rn "onClick.*async" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            # Check component for loading state
+            HAS_LOADING=$(grep -l "isLoading\|loading\|isSubmitting\|isPending\|Loader\|Spinner" "$FILE" 2>/dev/null || true)
+            if [ -z "$HAS_LOADING" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\`"
+            fi
+          done | head -15 || true)
+
+          if [ -n "$ASYNC_NO_LOADING" ]; then
+            ISSUES="${ISSUES}### Async handlers without loading state\nThese components have async onClick but no loading indicator:\n${ASYNC_NO_LOADING}\n\n"
+          fi
+
+          # Find buttons that should have loading state
+          BUTTONS_NO_LOADING=$(grep -rn "<button.*onClick" src/ --include="*.tsx" 2>/dev/null | \
+            grep -iE "submit|save|deploy|create|delete|update|send" | \
+            while read line; do
+              FILE=$(echo "$line" | cut -d: -f1)
+              LINE_NO=$(echo "$line" | cut -d: -f2)
+              CONTEXT=$(sed -n "$((LINE_NO > 3 ? LINE_NO - 3 : 1)),$((LINE_NO + 3))p" "$FILE" 2>/dev/null)
+              HAS_DISABLED=$(echo "$CONTEXT" | grep "disabled=" || true)
+              if [ -z "$HAS_DISABLED" ]; then
+                RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+                echo "  - \`${RELATIVE}:${LINE_NO}\`"
+              fi
+            done | head -10 || true)
+
+          if [ -n "$BUTTONS_NO_LOADING" ]; then
+            ISSUES="${ISSUES}### Action buttons without disabled state\n${BUTTONS_NO_LOADING}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-loading-gaps.txt
+            echo "Loading state issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Loading states look good"
+          fi
+
+      # === KEYBOARD NAVIGATION GAPS (every run) ===
+      - name: "Check: Keyboard navigation gaps"
+        id: focus_keyboard_nav
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for keyboard navigation gaps..."
+          ISSUES=""
+
+          # Find dropdown/menu without keyboard handlers
+          DROPDOWN_NO_KEYBOARD=$(grep -rln "dropdown\|Dropdown\|menu\|Menu\|popover\|Popover" src/ --include="*.tsx" 2>/dev/null | while read f; do
+            HAS_KEYBOARD=$(grep -l "onKeyDown\|onKeyUp\|useKeyboard\|ArrowDown\|ArrowUp" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_KEYBOARD" ]; then
+              RELATIVE=$(echo "$f" | sed 's|^src/||')
+              # Only flag if it has interactive elements
+              HAS_INTERACTIVE=$(grep -l "onClick\|button\|Button" "$f" 2>/dev/null || true)
+              if [ -n "$HAS_INTERACTIVE" ]; then
+                echo "  - \`${RELATIVE}\`"
+              fi
+            fi
+          done | head -10 || true)
+
+          if [ -n "$DROPDOWN_NO_KEYBOARD" ]; then
+            ISSUES="${ISSUES}### Dropdowns/menus without keyboard navigation\nAdd arrow key navigation:\n${DROPDOWN_NO_KEYBOARD}\n\n"
+          fi
+
+          # Find tab panels without keyboard support
+          TABS_NO_KEYBOARD=$(grep -rln "tab\|Tab\|TabPanel\|TabList" src/ --include="*.tsx" 2>/dev/null | while read f; do
+            HAS_ARROW_NAV=$(grep -l "ArrowLeft\|ArrowRight\|onKeyDown" "$f" 2>/dev/null || true)
+            if [ -z "$HAS_ARROW_NAV" ]; then
+              RELATIVE=$(echo "$f" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}\`"
+            fi
+          done | head -5 || true)
+
+          if [ -n "$TABS_NO_KEYBOARD" ]; then
+            ISSUES="${ISSUES}### Tab components without arrow key navigation\n${TABS_NO_KEYBOARD}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-keyboard-nav.txt
+            echo "Keyboard navigation issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Keyboard navigation looks good"
+          fi
+
+      # === ARIA COMPLETENESS (every run) ===
+      - name: "Check: ARIA label and role completeness"
+        id: focus_aria_gaps
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for ARIA gaps..."
+          ISSUES=""
+
+          # Find role="button" without aria-label
+          ROLE_NO_LABEL=$(grep -rn 'role="button"' src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            LINE_CONTENT=$(sed -n "${LINE_NO}p" "$FILE" 2>/dev/null)
+            HAS_LABEL=$(echo "$LINE_CONTENT" | grep -E "aria-label|aria-labelledby|title=" || true)
+            if [ -z "$HAS_LABEL" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\`"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$ROLE_NO_LABEL" ]; then
+            ISSUES="${ISSUES}### Elements with role=\"button\" but no aria-label\n${ROLE_NO_LABEL}\n\n"
+          fi
+
+          # Find icon-only buttons without labels
+          ICON_BUTTON_NO_LABEL=$(grep -rn "<button" src/ --include="*.tsx" 2>/dev/null | while read line; do
+            FILE=$(echo "$line" | cut -d: -f1)
+            LINE_NO=$(echo "$line" | cut -d: -f2)
+            # Get button content (next 3 lines)
+            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 3))p" "$FILE" 2>/dev/null)
+            # Check if it only contains an icon
+            HAS_ICON=$(echo "$CONTEXT" | grep -E "Icon|<[A-Z][a-z]+.*className.*w-[0-9]" || true)
+            HAS_TEXT=$(echo "$CONTEXT" | grep -E ">[A-Za-z]|{['\"]" || true)
+            HAS_LABEL=$(echo "$CONTEXT" | grep -E "aria-label|title=" || true)
+            if [ -n "$HAS_ICON" ] && [ -z "$HAS_TEXT" ] && [ -z "$HAS_LABEL" ]; then
+              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+              echo "  - \`${RELATIVE}:${LINE_NO}\`"
+            fi
+          done | head -10 || true)
+
+          if [ -n "$ICON_BUTTON_NO_LABEL" ]; then
+            ISSUES="${ISSUES}### Icon-only buttons without aria-label\n${ICON_BUTTON_NO_LABEL}\n\n"
+          fi
+
+          # Find modals/dialogs without proper ARIA
+          MODAL_NO_ARIA=$(grep -rln "Modal\|Dialog\|isOpen\|isVisible" src/ --include="*.tsx" 2>/dev/null | while read f; do
+            HAS_ROLE=$(grep -l 'role="dialog"\|role="alertdialog"\|aria-modal' "$f" 2>/dev/null || true)
+            if [ -z "$HAS_ROLE" ]; then
+              # Only flag if it looks like a modal component
+              IS_MODAL=$(grep -l "portal\|Portal\|overlay\|Overlay\|backdrop" "$f" 2>/dev/null || true)
+              if [ -n "$IS_MODAL" ]; then
+                RELATIVE=$(echo "$f" | sed 's|^src/||')
+                echo "  - \`${RELATIVE}\`"
+              fi
+            fi
+          done | head -5 || true)
+
+          if [ -n "$MODAL_NO_ARIA" ]; then
+            ISSUES="${ISSUES}### Modal components without role=\"dialog\"\n${MODAL_NO_ARIA}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-aria-gaps.txt
+            echo "ARIA gap issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "ARIA attributes look good"
+          fi
+
+      # === MODAL SAFETY (every run) ===
+      - name: "Check: Modal safety patterns"
+        id: focus_modal_safety
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for modal safety issues..."
+          ISSUES=""
+
+          # Find modals with forms that allow backdrop close
+          UNSAFE_MODALS=$(grep -rln "Modal\|BaseModal" src/ --include="*.tsx" 2>/dev/null | while read f; do
+            # Check if file has form elements
+            HAS_FORM=$(grep -l "<form\|<input\|<textarea\|<select" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_FORM" ]; then
+              # Check if backdrop close is prevented
+              PREVENTS_CLOSE=$(grep -l "closeOnBackdrop={false}\|closeOnBackdropClick={false}\|disableBackdropClose" "$f" 2>/dev/null || true)
+              if [ -z "$PREVENTS_CLOSE" ]; then
+                RELATIVE=$(echo "$f" | sed 's|^src/||')
+                echo "  - \`${RELATIVE}\`"
+              fi
+            fi
+          done | head -10 || true)
+
+          if [ -n "$UNSAFE_MODALS" ]; then
+            ISSUES="${ISSUES}### Modals with forms that allow accidental close\nThese modals have forms but allow backdrop click to close:\n${UNSAFE_MODALS}\n\n"
+          fi
+
+          # Find modals without escape key handling
+          MODAL_NO_ESCAPE=$(grep -rln "isOpen\|isVisible\|showModal" src/ --include="*.tsx" 2>/dev/null | while read f; do
+            # Check if it's a modal-like component
+            IS_MODAL=$(grep -l "portal\|Portal\|overlay\|backdrop\|fixed.*inset" "$f" 2>/dev/null || true)
+            if [ -n "$IS_MODAL" ]; then
+              HAS_ESCAPE=$(grep -l "Escape\|onKeyDown\|useEscape\|closeOnEscape" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_ESCAPE" ]; then
+                RELATIVE=$(echo "$f" | sed 's|^src/||')
+                echo "  - \`${RELATIVE}\`"
+              fi
+            fi
+          done | head -5 || true)
+
+          if [ -n "$MODAL_NO_ESCAPE" ]; then
+            ISSUES="${ISSUES}### Modals without Escape key handling\n${MODAL_NO_ESCAPE}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-modal-safety.txt
+            echo "Modal safety issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Modal safety looks good"
+          fi
+
+      # === EVENT HANDLER PARITY (every run) ===
+      - name: "Check: Event handler accessibility parity"
+        id: focus_event_parity
+        working-directory: web
+        continue-on-error: true
+        run: |
+          echo "Checking for event handler parity..."
+          ISSUES=""
+
+          # Find onClick on non-button elements without keyboard equivalent
+          CLICK_NO_KEY=$(grep -rn "onClick=" src/ --include="*.tsx" 2>/dev/null | \
+            grep -E "<div|<span|<tr|<td|<li" | \
+            grep -v "role=" | \
+            while read line; do
+              FILE=$(echo "$line" | cut -d: -f1)
+              LINE_NO=$(echo "$line" | cut -d: -f2)
+              LINE_CONTENT=$(sed -n "${LINE_NO}p" "$FILE" 2>/dev/null)
+              HAS_KEY=$(echo "$LINE_CONTENT" | grep -E "onKeyDown|onKeyUp|onKeyPress" || true)
+              HAS_ROLE=$(echo "$LINE_CONTENT" | grep 'role=' || true)
+              if [ -z "$HAS_KEY" ] && [ -z "$HAS_ROLE" ]; then
+                RELATIVE=$(echo "$FILE" | sed 's|^src/||')
+                echo "  - \`${RELATIVE}:${LINE_NO}\`"
+              fi
+            done | head -15 || true)
+
+          if [ -n "$CLICK_NO_KEY" ]; then
+            COUNT=$(echo "$CLICK_NO_KEY" | wc -l | tr -d ' ')
+            SAMPLE=$(echo "$CLICK_NO_KEY" | head -10)
+            ISSUES="${ISSUES}### Clickable elements without keyboard support\n${COUNT} elements have onClick but no role/onKeyDown:\n${SAMPLE}\n\n"
+          fi
+
+          if [ -n "$ISSUES" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf "%b" "$ISSUES" > /tmp/focus-event-parity.txt
+            echo "Event parity issues found"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Event parity looks good"
+          fi
+
       # ── Ensure Labels Exist ────────────────────────────────────────
 
       - name: Ensure labels exist
@@ -2626,6 +3004,13 @@ jobs:
             "auto-qa:local-clusters:3F51B5:Local cluster detection and creation"
             "auto-qa:refresh-spin:607D8B:Refresh icon animation consistency"
             "auto-qa:dom-errors:D32F2F:DOM nesting and structure violations"
+            "auto-qa:silent-failures:B71C1C:Errors logged but not shown to users"
+            "auto-qa:feedback-gaps:FF9800:Missing user feedback on actions"
+            "auto-qa:loading-gaps:2196F3:Missing loading states on async actions"
+            "auto-qa:keyboard-nav:9C27B0:Keyboard navigation gaps"
+            "auto-qa:aria-gaps:A855F7:ARIA label and role gaps"
+            "auto-qa:modal-safety:F44336:Modal patterns that risk data loss"
+            "auto-qa:event-parity:607D8B:onClick without keyboard equivalent"
           )
           for entry in "${LABELS[@]}"; do
             IFS=: read -r NAME COLOR DESC <<< "$entry"
@@ -2709,6 +3094,13 @@ jobs:
           FOCUS_LOCAL_CLUSTERS: ${{ steps.focus_local_clusters.outputs.found }}
           FOCUS_REFRESH_SPIN: ${{ steps.focus_refresh_spin.outputs.found }}
           FOCUS_DOM_ERRORS: ${{ steps.focus_dom_errors.outputs.found }}
+          FOCUS_SILENT_FAILURES: ${{ steps.focus_silent_failures.outputs.found }}
+          FOCUS_FEEDBACK_GAPS: ${{ steps.focus_feedback_gaps.outputs.found }}
+          FOCUS_LOADING_GAPS: ${{ steps.focus_loading_gaps.outputs.found }}
+          FOCUS_KEYBOARD_NAV: ${{ steps.focus_keyboard_nav.outputs.found }}
+          FOCUS_ARIA_GAPS: ${{ steps.focus_aria_gaps.outputs.found }}
+          FOCUS_MODAL_SAFETY: ${{ steps.focus_modal_safety.outputs.found }}
+          FOCUS_EVENT_PARITY: ${{ steps.focus_event_parity.outputs.found }}
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -3489,6 +3881,111 @@ jobs:
                    'Fix list items: ensure <li> is always inside <ul> or <ol>',
                    'Add role and tabIndex to clickable non-interactive elements for accessibility'], true),
                 labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:dom-errors'],
+              });
+            }
+
+            // Silent Failure Detection (every run)
+            if (process.env.FOCUS_SILENT_FAILURES === 'true') {
+              checks.push({
+                title: `${prefix} Silent failures in error handling detected`,
+                body: buildFocusBody('UX', 'Error Handling',
+                  readOutput('/tmp/focus-silent-failures.txt'),
+                  ['Add toast notifications to catch blocks that only log errors',
+                   'Show user-friendly error messages instead of just console.error',
+                   'Use setError state to display inline error messages',
+                   'Consider using error boundaries for component-level failures',
+                   'Log errors to monitoring service AND show user notification'], true),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:silent-failures'],
+              });
+            }
+
+            // Missing User Feedback (every run)
+            if (process.env.FOCUS_FEEDBACK_GAPS === 'true') {
+              checks.push({
+                title: `${prefix} Missing user feedback on actions`,
+                body: buildFocusBody('UX', 'User Feedback',
+                  readOutput('/tmp/focus-feedback-gaps.txt'),
+                  ['Add toast notifications for successful form submissions',
+                   'Show confirmation dialogs before destructive actions (delete, remove)',
+                   'Display success messages after save/update operations',
+                   'Add error messages when API calls fail',
+                   'Consider progress indicators for long-running operations'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:feedback-gaps'],
+              });
+            }
+
+            // Loading State Gaps (every run)
+            if (process.env.FOCUS_LOADING_GAPS === 'true') {
+              checks.push({
+                title: `${prefix} Missing loading states on async actions`,
+                body: buildFocusBody('UX', 'Loading States',
+                  readOutput('/tmp/focus-loading-gaps.txt'),
+                  ['Add isLoading state to async onClick handlers',
+                   'Disable buttons while async operations are in progress',
+                   'Show spinner or loading text on action buttons',
+                   'Use skeleton components for content loading',
+                   'Prevent double-submission with disabled state'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:loading-gaps'],
+              });
+            }
+
+            // Keyboard Navigation Gaps (every run)
+            if (process.env.FOCUS_KEYBOARD_NAV === 'true') {
+              checks.push({
+                title: `${prefix} Keyboard navigation gaps detected`,
+                body: buildFocusBody('A11y', 'Keyboard Navigation',
+                  readOutput('/tmp/focus-keyboard-nav.txt'),
+                  ['Add arrow key navigation to dropdown menus',
+                   'Implement Tab key navigation in tab panels',
+                   'Support Enter/Space to activate menu items',
+                   'Add Home/End keys for list navigation',
+                   'Ensure focus is visible on all interactive elements'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:keyboard-nav'],
+              });
+            }
+
+            // ARIA Gaps (every run)
+            if (process.env.FOCUS_ARIA_GAPS === 'true') {
+              checks.push({
+                title: `${prefix} ARIA label and role gaps detected`,
+                body: buildFocusBody('A11y', 'ARIA Attributes',
+                  readOutput('/tmp/focus-aria-gaps.txt'),
+                  ['Add aria-label to elements with role="button"',
+                   'Add aria-label or title to icon-only buttons',
+                   'Add role="dialog" and aria-modal to modal components',
+                   'Use aria-labelledby to reference visible labels',
+                   'Add aria-describedby for additional context'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:aria-gaps'],
+              });
+            }
+
+            // Modal Safety (every run)
+            if (process.env.FOCUS_MODAL_SAFETY === 'true') {
+              checks.push({
+                title: `${prefix} Modal safety issues detected`,
+                body: buildFocusBody('UX', 'Modal Safety',
+                  readOutput('/tmp/focus-modal-safety.txt'),
+                  ['Disable backdrop close for modals with forms (closeOnBackdrop={false})',
+                   'Add unsaved changes warning before closing form modals',
+                   'Ensure Escape key is handled for modal close',
+                   'Trap focus within modals to prevent accidental navigation',
+                   'Add confirmation for modals with pending changes'], true),
+                labels: ['bug', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:modal-safety'],
+              });
+            }
+
+            // Event Handler Parity (every run)
+            if (process.env.FOCUS_EVENT_PARITY === 'true') {
+              checks.push({
+                title: `${prefix} Event handler accessibility parity issues`,
+                body: buildFocusBody('A11y', 'Event Parity',
+                  readOutput('/tmp/focus-event-parity.txt'),
+                  ['Add role="button" and tabIndex={0} to clickable divs/spans',
+                   'Add onKeyDown handler alongside onClick for keyboard support',
+                   'Handle Enter and Space keys for button-like elements',
+                   'Consider using actual <button> elements instead of divs',
+                   'Ensure all interactive elements are keyboard accessible'], true),
+                labels: ['enhancement', 'ai-fix-requested', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:event-parity'],
               });
             }
 
