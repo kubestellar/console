@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, startTransition } from 'react'
 import {
   Plus, X, Save, Trash2, Activity, Sparkles,
   CheckCircle, GripVertical, Eye, EyeOff,
@@ -266,10 +266,13 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   }, [])
 
   const handleTabChange = useCallback((newTab: Tab) => {
-    setTab(newTab)
-    if (newTab === 'manage') {
-      setExistingStats(getAllDynamicStats())
-    }
+    // Batch state updates to prevent flicker
+    startTransition(() => {
+      setTab(newTab)
+      if (newTab === 'manage') {
+        setExistingStats(getAllDynamicStats())
+      }
+    })
   }, [])
 
   const addBlock = useCallback(() => {
@@ -305,7 +308,10 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   const handleSave = useCallback(() => {
     const type = statsType.trim() || `custom_${Date.now()}`
     if (blocks.filter(b => b.label.trim()).length === 0) {
-      setSaveMessage('Add at least one stat block.')
+      // Batch state updates to prevent flicker
+      startTransition(() => {
+        setSaveMessage('Add at least one stat block.')
+      })
       const validationTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
       timeoutsRef.current.push(validationTimeoutId)
       return
@@ -344,24 +350,30 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   }, [statsType, blocks, title, gridCols, onStatsCreated])
 
   const handleDelete = useCallback((type: string) => {
+    // Batch state updates to prevent flicker
     deleteDynamicStatsDefinition(type)
-    setExistingStats(getAllDynamicStats())
+    startTransition(() => {
+      setExistingStats(getAllDynamicStats())
+    })
   }, [])
 
   // Handle inline AI assist result
   const handleAssistResult = useCallback((result: StatAssistResult) => {
-    if (result.title) setTitle(result.title)
-    if (result.blocks && result.blocks.length > 0) {
-      setBlocks(result.blocks.map(b => ({
-        id: b.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `stat_${Date.now()}`,
-        label: b.label,
-        icon: b.icon || 'Activity',
-        color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
-        field: b.field || '',
-        format: b.format || '',
-        tooltip: b.tooltip || '',
-      })))
-    }
+    // Batch state updates to prevent flicker
+    startTransition(() => {
+      if (result.title) setTitle(result.title)
+      if (result.blocks && result.blocks.length > 0) {
+        setBlocks(result.blocks.map(b => ({
+          id: b.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `stat_${Date.now()}`,
+          label: b.label,
+          icon: b.icon || 'Activity',
+          color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
+          field: b.field || '',
+          format: b.format || '',
+          tooltip: b.tooltip || '',
+        })))
+      }
+    })
   }, [])
 
   // Smart default suggestions per block
@@ -719,8 +731,11 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               }
 
               saveDynamicStatsDefinition(definition)
-              setSaveMessage(`Stats "${definition.title}" created with AI!`)
-              onStatsCreated?.(type)
+              // Batch state updates to prevent flicker
+              startTransition(() => {
+                setSaveMessage(`Stats "${definition.title}" created with AI!`)
+                onStatsCreated?.(type)
+              })
               const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
               timeoutsRef.current.push(aiCreateTimeoutId)
             }}

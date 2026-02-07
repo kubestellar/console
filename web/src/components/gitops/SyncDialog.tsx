@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle, X } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
@@ -187,24 +187,29 @@ export function SyncDialog({
 
       setPhase('plan')
     } catch (err) {
-      updateLastLog('error')
+      // Batch state updates to prevent flicker
       const message = err instanceof Error ? err.message : 'Detection failed'
-      addLog(`Error: ${message}`, 'error')
-      setError(message)
-    } finally {
-      setIsInitializing(false)
+      startTransition(() => {
+        updateLastLog('error')
+        addLog(`Error: ${message}`, 'error')
+        setError(message)
+        setIsInitializing(false)
+      })
     }
   }, [appName, namespace, cluster, repoUrl, path, addLog, updateLastLog])
 
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      setPhase('detection')
-      setDriftedResources([])
-      setSyncPlan([])
-      setSyncLogs([])
-      setTokenCount(0)
-      setError(null)
+      // Batch state updates to prevent flicker - startTransition for non-urgent updates
+      startTransition(() => {
+        setPhase('detection')
+        setDriftedResources([])
+        setSyncPlan([])
+        setSyncLogs([])
+        setTokenCount(0)
+        setError(null)
+      })
       // runDetection() will set isInitializing to true
       runDetection()
     }

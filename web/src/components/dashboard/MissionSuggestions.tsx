@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, startTransition } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lightbulb, Clock, X, ChevronDown, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope } from 'lucide-react'
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
@@ -97,9 +97,11 @@ export function MissionSuggestions() {
     e.stopPropagation()
     e.preventDefault()
 
-    // Close dropdown and dismiss the suggestion permanently
-    setExpandedId(null)
-    setProcessingId(null)
+    // Batch state updates to prevent flicker
+    startTransition(() => {
+      setExpandedId(null)
+      setProcessingId(null)
+    })
     dismissMission(suggestion.id) // Permanently remove tile after starting action
 
     // Execute action after dropdown closes
@@ -122,9 +124,11 @@ export function MissionSuggestions() {
     e.stopPropagation()
     e.preventDefault()
 
-    // Close dropdown and dismiss the suggestion permanently
-    setExpandedId(null)
-    setProcessingId(null)
+    // Batch state updates to prevent flicker
+    startTransition(() => {
+      setExpandedId(null)
+      setProcessingId(null)
+    })
     dismissMission(suggestion.id) // Permanently remove tile after starting repair
 
     // Start mission after dropdown closes

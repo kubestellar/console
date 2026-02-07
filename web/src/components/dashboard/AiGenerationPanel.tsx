@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, startTransition, type ReactNode } from 'react'
 import { Sparkles, Loader2, CheckCircle, AlertTriangle, RotateCw, Save } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
@@ -58,15 +58,24 @@ export function AiGenerationPanel<T>({
       if (data) {
         const validation = validateResult(data)
         if (validation.valid) {
-          setParsedResult(validation.result)
-          setPhase('parsed')
+          // Batch state updates to prevent flicker
+          startTransition(() => {
+            setParsedResult(validation.result)
+            setPhase('parsed')
+          })
         } else {
-          setParseError(validation.error)
-          setPhase('error')
+          // Batch state updates to prevent flicker
+          startTransition(() => {
+            setParseError(validation.error)
+            setPhase('error')
+          })
         }
       } else {
-        setParseError(error || 'Failed to parse AI response')
-        setPhase('error')
+        // Batch state updates to prevent flicker
+        startTransition(() => {
+          setParseError(error || 'Failed to parse AI response')
+          setPhase('error')
+        })
       }
     }
 
