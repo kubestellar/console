@@ -8,7 +8,6 @@ interface StatusConfig {
   bgColor: string
   borderColor: string
   icon: React.ComponentType<{ className?: string }>
-  emoji: string
 }
 
 const STATUS_CONFIGS: Record<DashboardHealthStatus, StatusConfig> = {
@@ -17,21 +16,18 @@ const STATUS_CONFIGS: Record<DashboardHealthStatus, StatusConfig> = {
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/30',
     icon: CheckCircle,
-    emoji: '🟢',
   },
   warning: {
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-500/10',
     borderColor: 'border-yellow-500/30',
     icon: AlertTriangle,
-    emoji: '🟡',
   },
   critical: {
     color: 'text-red-400',
     bgColor: 'bg-red-500/10',
     borderColor: 'border-red-500/30',
     icon: AlertCircle,
-    emoji: '🔴',
   },
 }
 
@@ -85,6 +81,7 @@ export function DashboardHealthIndicator({
         className
       )}
       title={tooltip}
+      aria-label={`System health status: ${health.message}`}
     >
       {showIcon && <Icon className={iconSize} />}
       <span>{health.message}</span>
