@@ -308,10 +308,8 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   const handleSave = useCallback(() => {
     const type = statsType.trim() || `custom_${Date.now()}`
     if (blocks.filter(b => b.label.trim()).length === 0) {
-      // Batch state updates to prevent flicker
-      startTransition(() => {
-        setSaveMessage('Add at least one stat block.')
-      })
+      // Validation feedback should show immediately
+      setSaveMessage('Add at least one stat block.')
       const validationTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
       timeoutsRef.current.push(validationTimeoutId)
       return
