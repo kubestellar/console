@@ -526,6 +526,114 @@ const DEMO_COMPUTE_OVERVIEW = {
 }
 
 // ============================================================================
+// Batch 4 demo data - ArgoCD, Prow, GPU, ML, Policy cards
+// ============================================================================
+
+// ArgoCD applications demo data
+const DEMO_ARGOCD_APPLICATIONS = [
+  { name: 'frontend-app', project: 'production', syncStatus: 'Synced', healthStatus: 'Healthy', namespace: 'apps' },
+  { name: 'backend-api', project: 'production', syncStatus: 'OutOfSync', healthStatus: 'Progressing', namespace: 'apps' },
+  { name: 'monitoring', project: 'infra', syncStatus: 'Synced', healthStatus: 'Healthy', namespace: 'monitoring' },
+]
+
+// GPU inventory demo data
+const DEMO_GPU_INVENTORY = [
+  { cluster: 'vllm-d', node: 'gpu-node-1', model: 'NVIDIA A100 80GB', memory: 85899345920, utilization: 72 },
+  { cluster: 'vllm-d', node: 'gpu-node-2', model: 'NVIDIA A100 80GB', memory: 85899345920, utilization: 85 },
+  { cluster: 'ml-train', node: 'ml-worker-1', model: 'NVIDIA H100', memory: 85899345920, utilization: 45 },
+]
+
+// Prow jobs demo data
+const DEMO_PROW_JOBS = [
+  { name: 'pull-kubestellar-verify', type: 'presubmit', state: 'success', startTime: Date.now() - 120000 },
+  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: Date.now() - 60000 },
+  { name: 'post-kubestellar-deploy', type: 'postsubmit', state: 'failure', startTime: Date.now() - 300000 },
+]
+
+// ML jobs demo data
+const DEMO_ML_JOBS = [
+  { name: 'train-llm-v2', namespace: 'ml-workloads', status: 'Running', progress: 75, cluster: 'ml-train' },
+  { name: 'fine-tune-bert', namespace: 'ml-workloads', status: 'Completed', progress: 100, cluster: 'ml-train' },
+  { name: 'eval-model-v3', namespace: 'ml-eval', status: 'Pending', progress: 0, cluster: 'vllm-d' },
+]
+
+// ML notebooks demo data
+const DEMO_ML_NOTEBOOKS = [
+  { name: 'data-exploration', namespace: 'ml-notebooks', status: 'Running', user: 'data-scientist', cluster: 'ml-train' },
+  { name: 'model-analysis', namespace: 'ml-notebooks', status: 'Stopped', user: 'ml-engineer', cluster: 'ml-train' },
+]
+
+// OPA policies demo data
+const DEMO_OPA_POLICIES = [
+  { name: 'require-labels', namespace: 'gatekeeper-system', status: 'active', violations: 3, cluster: 'prod-east' },
+  { name: 'deny-privileged', namespace: 'gatekeeper-system', status: 'active', violations: 0, cluster: 'prod-east' },
+  { name: 'require-requests', namespace: 'gatekeeper-system', status: 'warn', violations: 12, cluster: 'staging' },
+]
+
+// Kyverno policies demo data
+const DEMO_KYVERNO_POLICIES = [
+  { name: 'require-image-tag', namespace: 'kyverno', status: 'enforce', violations: 2, cluster: 'prod-east' },
+  { name: 'disallow-latest', namespace: 'kyverno', status: 'audit', violations: 5, cluster: 'staging' },
+]
+
+// Alert rules demo data
+const DEMO_ALERT_RULES = [
+  { name: 'HighCPUUsage', severity: 'warning', state: 'firing', group: 'kubernetes', cluster: 'prod-east' },
+  { name: 'PodCrashLooping', severity: 'critical', state: 'pending', group: 'kubernetes', cluster: 'staging' },
+  { name: 'NodeNotReady', severity: 'critical', state: 'inactive', group: 'nodes', cluster: 'dev' },
+]
+
+// Chart versions demo data
+const DEMO_CHART_VERSIONS = [
+  { chart: 'nginx-ingress', current: '4.6.0', latest: '4.8.0', updateAvailable: true, cluster: 'prod-east' },
+  { chart: 'cert-manager', current: '1.12.0', latest: '1.12.0', updateAvailable: false, cluster: 'prod-east' },
+  { chart: 'prometheus', current: '45.0.0', latest: '47.0.0', updateAvailable: true, cluster: 'monitoring' },
+]
+
+// CRD health demo data
+const DEMO_CRD_HEALTH = [
+  { name: 'applications.argoproj.io', version: 'v1alpha1', status: 'healthy', instances: 15, cluster: 'prod-east' },
+  { name: 'certificates.cert-manager.io', version: 'v1', status: 'healthy', instances: 8, cluster: 'prod-east' },
+  { name: 'inferencepools.llm.kubestellar.io', version: 'v1', status: 'degraded', instances: 2, cluster: 'vllm-d' },
+]
+
+// Compliance score demo data
+const DEMO_COMPLIANCE_SCORE = {
+  overall: 85,
+  categories: [
+    { name: 'Security', score: 92, passed: 46, failed: 4 },
+    { name: 'Reliability', score: 78, passed: 39, failed: 11 },
+    { name: 'Best Practices', score: 85, passed: 68, failed: 12 },
+  ],
+}
+
+// Namespace events demo data
+const DEMO_NAMESPACE_EVENTS = [
+  { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', object: 'pod/api-7d8f', namespace: 'production', count: 1, lastSeen: Date.now() - 30000 },
+  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - 60000 },
+]
+
+// GPU overview demo data
+const DEMO_GPU_OVERVIEW = {
+  totalGPUs: 24,
+  allocatedGPUs: 18,
+  utilizationAvg: 72,
+  memoryUsageAvg: 68,
+}
+
+// GPU workloads demo data
+const DEMO_GPU_WORKLOADS = [
+  { name: 'llm-inference-7d8f', namespace: 'ml-serving', gpus: 4, model: 'A100', utilization: 85, cluster: 'vllm-d' },
+  { name: 'training-job-5c6d', namespace: 'ml-training', gpus: 8, model: 'H100', utilization: 92, cluster: 'ml-train' },
+]
+
+// Deployment progress demo data
+const DEMO_DEPLOYMENT_PROGRESS = [
+  { name: 'api-server', namespace: 'production', replicas: 5, ready: 5, progress: 100, status: 'complete' },
+  { name: 'worker', namespace: 'production', replicas: 10, ready: 7, progress: 70, status: 'progressing' },
+]
+
+// ============================================================================
 // Filtered event hooks
 // These provide pre-filtered event data for specific card types
 // ============================================================================
@@ -622,6 +730,86 @@ function useComputeOverview() {
 }
 
 // ============================================================================
+// Batch 4 demo hooks - ArgoCD, Prow, GPU, ML, Policy cards
+// ============================================================================
+
+function useArgoCDApplications() {
+  return useDemoDataHook(DEMO_ARGOCD_APPLICATIONS)
+}
+
+function useGPUInventory() {
+  return useDemoDataHook(DEMO_GPU_INVENTORY)
+}
+
+function useProwJobs() {
+  return useDemoDataHook(DEMO_PROW_JOBS)
+}
+
+function useMLJobs() {
+  return useDemoDataHook(DEMO_ML_JOBS)
+}
+
+function useMLNotebooks() {
+  return useDemoDataHook(DEMO_ML_NOTEBOOKS)
+}
+
+function useOPAPolicies() {
+  return useDemoDataHook(DEMO_OPA_POLICIES)
+}
+
+function useKyvernoPolicies() {
+  return useDemoDataHook(DEMO_KYVERNO_POLICIES)
+}
+
+function useAlertRules() {
+  return useDemoDataHook(DEMO_ALERT_RULES)
+}
+
+function useChartVersions() {
+  return useDemoDataHook(DEMO_CHART_VERSIONS)
+}
+
+function useCRDHealth() {
+  return useDemoDataHook(DEMO_CRD_HEALTH)
+}
+
+function useComplianceScore() {
+  return useDemoDataHook([DEMO_COMPLIANCE_SCORE])
+}
+
+function useNamespaceEvents(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useCachedEvents(cluster, namespace)
+
+  // Filter to specific namespace if provided
+  const namespaceEvents = useMemo(() => {
+    if (!result.data) return []
+    if (!namespace) return result.data.slice(0, 20)
+    return result.data.filter(e => e.namespace === namespace)
+  }, [result.data, namespace])
+
+  return {
+    data: namespaceEvents.length > 0 ? namespaceEvents : DEMO_NAMESPACE_EVENTS,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useGPUOverview() {
+  return useDemoDataHook([DEMO_GPU_OVERVIEW])
+}
+
+function useGPUWorkloads() {
+  return useDemoDataHook(DEMO_GPU_WORKLOADS)
+}
+
+function useDeploymentProgress() {
+  return useDemoDataHook(DEMO_DEPLOYMENT_PROGRESS)
+}
+
+// ============================================================================
 // Register all data hooks for use in unified cards
 // Call this once at application startup
 // ============================================================================
@@ -676,6 +864,23 @@ export function registerUnifiedHooks(): void {
   registerDataHook('usePodHealthTrend', usePodHealthTrend)
   registerDataHook('useResourceTrend', useResourceTrend)
   registerDataHook('useComputeOverview', useComputeOverview)
+
+  // Batch 4 - ArgoCD, Prow, GPU, ML, Policy cards
+  registerDataHook('useArgoCDApplications', useArgoCDApplications)
+  registerDataHook('useGPUInventory', useGPUInventory)
+  registerDataHook('useProwJobs', useProwJobs)
+  registerDataHook('useMLJobs', useMLJobs)
+  registerDataHook('useMLNotebooks', useMLNotebooks)
+  registerDataHook('useOPAPolicies', useOPAPolicies)
+  registerDataHook('useKyvernoPolicies', useKyvernoPolicies)
+  registerDataHook('useAlertRules', useAlertRules)
+  registerDataHook('useChartVersions', useChartVersions)
+  registerDataHook('useCRDHealth', useCRDHealth)
+  registerDataHook('useComplianceScore', useComplianceScore)
+  registerDataHook('useNamespaceEvents', useNamespaceEvents)
+  registerDataHook('useGPUOverview', useGPUOverview)
+  registerDataHook('useGPUWorkloads', useGPUWorkloads)
+  registerDataHook('useDeploymentProgress', useDeploymentProgress)
 }
 
 // Auto-register when this module is imported

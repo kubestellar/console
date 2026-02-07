@@ -104,6 +104,48 @@ export const UNIFIED_READY_CARDS = new Set<string>([
   'storage_overview',       // useStorageOverview
   'network_overview',       // useNetworkOverview
   'compute_overview',       // useComputeOverview
+
+  // =====================================================================
+  // Phase 6 Batch 4 - ArgoCD, Prow, GPU, ML, Policy cards
+  // =====================================================================
+
+  // Deployment cards
+  'deployment_status',      // useCachedDeployments (already registered)
+  'deployment_progress',    // useDeploymentProgress
+
+  // ArgoCD cards
+  'argocd_applications',    // useArgoCDApplications
+
+  // Prow/CI cards
+  'prow_jobs',              // useProwJobs
+
+  // GPU cards
+  'gpu_inventory',          // useGPUInventory
+  'gpu_overview',           // useGPUOverview
+  'gpu_workloads',          // useGPUWorkloads
+
+  // ML cards
+  'ml_jobs',                // useMLJobs
+  'ml_notebooks',           // useMLNotebooks
+
+  // Policy cards
+  'opa_policies',           // useOPAPolicies
+  'kyverno_policies',       // useKyvernoPolicies
+
+  // Alert cards
+  'alert_rules',            // useAlertRules
+
+  // Chart/upgrade cards
+  'chart_versions',         // useChartVersions
+
+  // CRD cards
+  'crd_health',             // useCRDHealth
+
+  // Compliance cards
+  'compliance_score',       // useComplianceScore
+
+  // Namespace cards
+  'namespace_events',       // useNamespaceEvents
 ])
 
 /**
