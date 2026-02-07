@@ -15,7 +15,6 @@ import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
 import { cn } from '../../../lib/cn'
 // WorkloadMonitorAlerts replaced with inline issue cards in Issues tab
-import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import { useLLMdClusters } from '../workload-detection/shared'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
@@ -194,7 +193,6 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   // Use workload monitor for the primary llm-d namespace
   const llmdCluster = discoveredClusters[0] || ''
   const {
-    resources,
     issues,
     overallStatus,
     isLoading: monitorLoading,
@@ -402,26 +400,6 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   }, [sortedIssues, safeIssueCurrentPage, issueLimit, issueItemsPerPage])
 
   const needsIssuePagination = issueItemsPerPage !== 'unlimited' && totalIssues > issueLimit
-
-  // Combine resources
-  const allResources = useMemo<MonitoredResource[]>(() => {
-    if (resources.length > 0) return resources
-    // Synthesize from servers if no monitor resources
-    return servers.map((s, idx) => ({
-      id: `${'Deployment'}/${s.namespace}/${s.name}`,
-      kind: 'Deployment',
-      name: s.name,
-      namespace: s.namespace,
-      cluster: s.cluster,
-      status: s.status === 'running' ? 'healthy' as const :
-              s.status === 'scaling' ? 'degraded' as const :
-              s.status === 'error' ? 'unhealthy' as const : 'unknown' as const,
-      category: 'workload' as const,
-      lastChecked: new Date().toISOString(),
-      optional: false,
-      order: idx,
-    }))
-  }, [resources, servers])
 
   // Calculate overall health
   const stackHealth = useMemo(() => {
@@ -900,26 +878,6 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           )}
         </>
       )}
-
-      {/* AI Diagnose (no repair for llm-d) */}
-      <WorkloadMonitorDiagnose
-        resources={allResources}
-        issues={allIssues}
-        monitorType="llmd"
-        diagnosable={true}
-        repairable={false}
-        workloadContext={{
-          clusters: discoveredClusters,
-          stackHealth,
-          totalComponents,
-          healthyComponents,
-          sections: sections.map(s => ({
-            label: s.label,
-            total: s.items.length,
-            healthy: s.items.filter(i => i.status === 'healthy').length,
-          })),
-        }}
-      />
 
       {/* API Key prompt for per-item diagnose */}
       <ApiKeyPromptModal
