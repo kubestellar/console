@@ -44,6 +44,10 @@ import {
   useK8sRoles,
   useK8sRoleBindings,
 } from '../../hooks/mcp'
+import {
+  useServiceExports,
+  useServiceImports,
+} from '../../hooks/useMCS'
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -378,6 +382,30 @@ function useUnifiedK8sRoleBindings(params?: Record<string, unknown>) {
   }
 }
 
+function useUnifiedServiceExports(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useServiceExports(cluster, namespace)
+  return {
+    data: result.exports,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedServiceImports(params?: Record<string, unknown>) {
+  const cluster = params?.cluster as string | undefined
+  const namespace = params?.namespace as string | undefined
+  const result = useServiceImports(cluster, namespace)
+  return {
+    data: result.imports,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
 // ============================================================================
 // Demo data hooks for cards that don't have real data hooks yet
 // These return static demo data for visualization purposes
@@ -588,6 +616,8 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useServiceAccounts', useUnifiedServiceAccounts)
   registerDataHook('useK8sRoles', useUnifiedK8sRoles)
   registerDataHook('useK8sRoleBindings', useUnifiedK8sRoleBindings)
+  registerDataHook('useServiceExports', useUnifiedServiceExports)
+  registerDataHook('useServiceImports', useUnifiedServiceImports)
 
   // Filtered event hooks
   registerDataHook('useWarningEvents', useWarningEvents)

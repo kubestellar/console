@@ -29,8 +29,9 @@ import type { CardComponentProps } from '../../../components/cards/cardRegistry'
  * 4. Compare rendering with legacy component
  */
 export const UNIFIED_READY_CARDS = new Set<string>([
+  // =====================================================================
   // Phase 6 Batch 1 - Simple list cards with registered hooks
-  // These cards have complete configs and list visualization
+  // =====================================================================
 
   // Core workload cards
   'pod_issues',           // useCachedPodIssues
@@ -58,6 +59,29 @@ export const UNIFIED_READY_CARDS = new Set<string>([
   'replicaset_status',    // useReplicaSets
   'pv_status',            // usePVs
   'namespace_status',     // useNamespaces
+
+  // =====================================================================
+  // Phase 6 Batch 2 - Additional list/table cards
+  // =====================================================================
+
+  // RBAC cards
+  'role_status',          // useK8sRoles
+  'role_binding_status',  // useK8sRoleBindings
+
+  // Quota cards
+  'resource_quota_status', // useResourceQuotas
+  'limit_range_status',   // useLimitRanges
+
+  // Network cards
+  'network_policy_status', // useNetworkPolicies
+  'service_exports',      // useServiceExports
+  'service_imports',      // useServiceImports
+
+  // Operator cards
+  'operator_subscription_status', // useOperatorSubscriptions
+
+  // Service account
+  'service_account_status', // useServiceAccounts
 ])
 
 /**
