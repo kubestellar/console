@@ -186,11 +186,8 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
   const mountedRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
-    if (shouldUseDemoData()) {
-      setData(getDemoAgents())
-      setIsLoading(false)
-      return
-    }
+    // Demo data is already set in initial state - skip to avoid re-render flicker
+    if (shouldUseDemoData()) return
 
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
@@ -241,11 +238,8 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
   const mountedRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
-    if (shouldUseDemoData()) {
-      setData(getDemoBuilds())
-      setIsLoading(false)
-      return
-    }
+    // Demo data is already set in initial state - skip to avoid re-render flicker
+    if (shouldUseDemoData()) return
 
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
@@ -296,11 +290,8 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
   const mountedRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
-    if (shouldUseDemoData()) {
-      setData(getDemoCards())
-      setIsLoading(false)
-      return
-    }
+    // Demo data is already set in initial state - skip to avoid re-render flicker
+    if (shouldUseDemoData()) return
 
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
@@ -351,11 +342,8 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
   const mountedRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
-    if (shouldUseDemoData()) {
-      setData(getDemoTools())
-      setIsLoading(false)
-      return
-    }
+    // Demo data is already set in initial state - skip to avoid re-render flicker
+    if (shouldUseDemoData()) return
 
     if (!silent) setIsLoading(true)
     else setIsRefreshing(true)
