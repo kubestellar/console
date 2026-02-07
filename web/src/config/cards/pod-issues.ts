@@ -80,6 +80,19 @@ export const podIssuesConfig: UnifiedCardConfig = {
         width: 80,
       },
     ],
+    // AI Actions for Diagnose/Repair buttons
+    aiActions: {
+      resourceMapping: {
+        kind: 'Pod',
+        nameField: 'name',
+        namespaceField: 'namespace',
+        clusterField: 'cluster',
+        statusField: 'status',
+      },
+      issuesField: 'issues',
+      contextFields: ['restarts'],
+      showRepair: true,
+    },
   },
 
   // Drill-down

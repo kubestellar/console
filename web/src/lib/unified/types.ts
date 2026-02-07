@@ -154,6 +154,33 @@ export interface CardContentList {
   pageSize?: number
   /** Show row numbers */
   showRowNumbers?: boolean
+  /** AI actions configuration for list items */
+  aiActions?: CardAIActionsConfig
+}
+
+/**
+ * Configuration for AI actions (Diagnose/Repair) on list items
+ */
+export interface CardAIActionsConfig {
+  /** Field mappings to construct the resource context */
+  resourceMapping: {
+    /** Resource kind (e.g., 'Pod', 'Deployment') - can be field name or static value */
+    kind: string
+    /** Field for resource name */
+    nameField: string
+    /** Field for namespace (optional) */
+    namespaceField?: string
+    /** Field for cluster (optional) */
+    clusterField?: string
+    /** Field for status (optional) */
+    statusField?: string
+  }
+  /** Field that contains issues array (optional) - each issue should have name/message */
+  issuesField?: string
+  /** Additional context fields to include */
+  contextFields?: string[]
+  /** Whether to show the repair button (default: true) */
+  showRepair?: boolean
 }
 
 export interface CardContentTable {

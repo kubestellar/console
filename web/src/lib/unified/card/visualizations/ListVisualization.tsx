@@ -7,8 +7,9 @@
 
 import { useMemo, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import type { CardContentList, CardColumnConfig, CardDrillDownConfig } from '../../types'
+import type { CardContentList, CardColumnConfig, CardDrillDownConfig, CardAIActionsConfig } from '../../types'
 import { renderCell } from '../renderers'
+import { CardAIActions } from '../../../cards/CardComponents'
 
 export interface ListVisualizationProps {
   /** Content configuration */
@@ -30,7 +31,7 @@ export function ListVisualization({
   drillDown,
   onDrillDown,
 }: ListVisualizationProps) {
-  const { columns, pageSize = 10, itemClick = 'none', showRowNumbers = false } = content
+  const { columns, pageSize = 10, itemClick = 'none', showRowNumbers = false, aiActions } = content
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0)
@@ -88,6 +89,7 @@ export function ListVisualization({
                 rowNumber={showRowNumbers ? currentPage * pageSize + index + 1 : undefined}
                 isClickable={isClickable}
                 onClick={() => handleItemClick(item as Record<string, unknown>)}
+                aiActions={aiActions}
               />
             ))}
           </div>
@@ -135,6 +137,7 @@ function ListItem({
   rowNumber,
   isClickable,
   onClick,
+  aiActions,
 }: {
   item: Record<string, unknown>
   columns: CardColumnConfig[]
@@ -142,10 +145,62 @@ function ListItem({
   rowNumber?: number
   isClickable: boolean
   onClick: () => void
+  aiActions?: CardAIActionsConfig
 }) {
+  // Build AI resource context from item using the mapping config
+  const aiResource = useMemo(() => {
+    if (!aiActions) return null
+
+    const { resourceMapping, issuesField, contextFields, showRepair } = aiActions
+    const { kind, nameField, namespaceField, clusterField, statusField } = resourceMapping
+
+    // Kind can be a static value or a field reference (starts with $)
+    const resolvedKind = kind.startsWith('$')
+      ? String(item[kind.slice(1)] ?? '')
+      : kind
+
+    const resource = {
+      kind: resolvedKind,
+      name: String(item[nameField] ?? ''),
+      namespace: namespaceField ? String(item[namespaceField] ?? '') : undefined,
+      cluster: clusterField ? String(item[clusterField] ?? '') : undefined,
+      status: statusField ? String(item[statusField] ?? '') : undefined,
+    }
+
+    // Extract issues if configured
+    let issues: Array<{ name: string; message: string }> = []
+    if (issuesField) {
+      const rawIssues = item[issuesField]
+      if (Array.isArray(rawIssues)) {
+        issues = rawIssues.map((issue) => {
+          if (typeof issue === 'string') {
+            return { name: resource.status || 'Issue', message: issue }
+          }
+          if (typeof issue === 'object' && issue !== null) {
+            return {
+              name: String((issue as Record<string, unknown>).name ?? 'Issue'),
+              message: String((issue as Record<string, unknown>).message ?? ''),
+            }
+          }
+          return { name: 'Issue', message: String(issue) }
+        })
+      }
+    }
+
+    // Extract additional context fields
+    const additionalContext: Record<string, unknown> = {}
+    if (contextFields) {
+      for (const field of contextFields) {
+        additionalContext[field] = item[field]
+      }
+    }
+
+    return { resource, issues, additionalContext, showRepair: showRepair !== false }
+  }, [item, aiActions])
+
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2 ${
+      className={`flex items-center gap-3 px-3 py-2 group ${
         isClickable
           ? 'cursor-pointer hover:bg-gray-800/50 transition-colors'
           : ''
@@ -188,6 +243,17 @@ function ListItem({
           </div>
         )
       })}
+
+      {/* AI Actions (Diagnose/Repair) */}
+      {aiResource && (
+        <CardAIActions
+          resource={aiResource.resource}
+          issues={aiResource.issues}
+          additionalContext={aiResource.additionalContext}
+          showRepair={aiResource.showRepair}
+          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+        />
+      )}
     </div>
   )
 }
