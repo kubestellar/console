@@ -31,7 +31,7 @@ const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 const POLL_INTERVAL = 30000 // Poll every 30 seconds
 
 const DEFAULT_SETTINGS = {
-  limit: 5000000, // 5M tokens (realistic for Claude usage)
+  limit: 500000000, // 500M tokens monthly default
   warningThreshold: 0.7, // 70%
   criticalThreshold: 0.9, // 90%
   stopThreshold: 1.0, // 100%

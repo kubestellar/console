@@ -4,6 +4,7 @@
  * Discovers llm-d stacks from Kubernetes clusters by finding:
  * - Pods with llm-d.ai/role labels (prefill/decode/both)
  * - InferencePool CRDs
+ * - Deployments matching LLM-d name/label/namespace patterns (broad discovery)
  * - EPP and Gateway services
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -111,6 +112,49 @@ interface GatewayResource {
       value: string
     }>
   }
+}
+
+interface DeploymentResource {
+  metadata: { name: string; namespace: string; labels?: Record<string, string> }
+  spec: {
+    replicas?: number
+    template?: { metadata?: { labels?: Record<string, string> } }
+  }
+  status: { replicas?: number; readyReplicas?: number; availableReplicas?: number }
+}
+
+// Namespace heuristics for LLM-d workloads (mirrors useLLMdServers patterns)
+function isLlmdNamespace(ns: string): boolean {
+  const n = ns.toLowerCase()
+  return n.includes('llm-d') || n.includes('llmd') || n.includes('e2e') || n.includes('vllm') ||
+    n === 'b2' || n.includes('effi') || n.includes('guygir') || n.includes('aibrix') ||
+    n.includes('hc4ai') || n.includes('inf') || n.includes('gaie') || n.includes('sched') ||
+    n.includes('inference') || n.includes('serving') || n.includes('model') ||
+    n.includes('ai-') || n.includes('-ai') || n.includes('ml-')
+}
+
+// Deployment-level detection for LLM-d workloads (mirrors useLLMdServers patterns)
+function isLlmdDeployment(d: DeploymentResource): boolean {
+  const name = d.metadata.name.toLowerCase()
+  const labels = d.spec.template?.metadata?.labels || {}
+  const nsMatch = isLlmdNamespace(d.metadata.namespace)
+  return (
+    name.includes('vllm') || name.includes('llm-d') || name.includes('llmd') ||
+    name.includes('tgi') || name.includes('triton') ||
+    name.includes('llama') || name.includes('granite') ||
+    name.includes('qwen') || name.includes('mistral') || name.includes('mixtral') ||
+    name.includes('inference') || name.includes('modelservice') ||
+    labels['llmd.org/inferenceServing'] === 'true' ||
+    !!labels['llmd.org/model'] ||
+    !!labels['llm-d.ai/role'] ||
+    labels['app'] === 'llm-inference' ||
+    labels['app.kubernetes.io/name'] === 'vllm' ||
+    labels['app.kubernetes.io/name'] === 'tgi' ||
+    labels['app.kubernetes.io/part-of'] === 'inference' ||
+    name.includes('-epp') || name.endsWith('epp') ||
+    name.includes('scheduling') || name.includes('inference-pool') ||
+    (nsMatch && (name.includes('gateway') || name.includes('ingress')))
+  )
 }
 
 /**
@@ -266,14 +310,15 @@ export function useStackDiscovery(clusters: string[]) {
 
         try {
           // Run all kubectl calls in parallel for speed
-          const [podsResponse, poolsResponse, svcResponse, gwResponse, hpaResponse, wvaResponse, vpaResponse] = await Promise.all([
-            kubectlProxy.exec(['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'], { context: cluster, timeout: 15000 }),
-            kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
-            kubectlProxy.exec(['get', 'services', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
-            kubectlProxy.exec(['get', 'gateway', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
-            kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
-            kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
-            kubectlProxy.exec(['get', 'vpa', '-A', '-o', 'json'], { context: cluster, timeout: 15000 }),
+          const [podsResponse, poolsResponse, svcResponse, gwResponse, hpaResponse, wvaResponse, vpaResponse, deploymentsResponse] = await Promise.all([
+            kubectlProxy.exec(['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'services', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'gateway', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'vpa', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'deployments', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
           ])
 
           // Skip cluster entirely if it's unreachable (connection error or timeout)
@@ -303,8 +348,19 @@ export function useStackDiscovery(clusters: string[]) {
           const pools = (poolsData.items || []) as InferencePoolResource[]
           const poolsByNamespace = new Map(pools.map(p => [p.metadata.namespace, p]))
 
-          // Skip cluster early if no pods AND no InferencePools
-          if (pods.length === 0 && pools.length === 0) {
+          // Parse and filter Deployments for LLM-d workloads (broad discovery)
+          const depsData = deploymentsResponse.exitCode === 0 ? JSON.parse(deploymentsResponse.output) : { items: [] }
+          const allDeployments = (depsData.items || []) as DeploymentResource[]
+          const llmdDeployments = allDeployments.filter(isLlmdDeployment)
+          const deploymentsByNamespace = new Map<string, DeploymentResource[]>()
+          for (const dep of llmdDeployments) {
+            const ns = dep.metadata.namespace
+            if (!deploymentsByNamespace.has(ns)) deploymentsByNamespace.set(ns, [])
+            deploymentsByNamespace.get(ns)!.push(dep)
+          }
+
+          // Skip cluster early if no labeled pods, InferencePools, or LLM-d Deployments
+          if (pods.length === 0 && pools.length === 0 && llmdDeployments.length === 0) {
             continue
           }
 
@@ -386,10 +442,11 @@ export function useStackDiscovery(clusters: string[]) {
             vpaByNamespace.set(vpa.metadata.namespace, vpa)
           }
 
-          // Collect all namespaces that have either pods OR InferencePools
+          // Collect all namespaces that have pods, InferencePools, or LLM-d Deployments
           const allStackNamespaces = new Set<string>([
             ...podsByNamespace.keys(),
             ...poolsByNamespace.keys(),
+            ...deploymentsByNamespace.keys(),
           ])
 
           // Build stacks from namespaces
@@ -423,9 +480,9 @@ export function useStackDiscovery(clusters: string[]) {
               }
             }
 
-            // Get model name from first pod
+            // Get model name from first pod (mutable - may be enriched from Deployments)
             const firstPod = nsPods[0]
-            const model = firstPod?.metadata.labels?.['llm-d.ai/model']
+            let model = firstPod?.metadata.labels?.['llm-d.ai/model']
 
             // Build components
             const buildComponent = (pods: PodResource[], type: LLMdStackComponent['type']): LLMdStackComponent[] => {
@@ -465,9 +522,42 @@ export function useStackDiscovery(clusters: string[]) {
             const decodeComponents = buildComponent(decodePods, 'decode')
             const bothComponents = buildComponent(bothPods, 'both')
 
+            // Fall back to Deployment-based discovery when no labeled pods exist
+            const nsDeployments = deploymentsByNamespace.get(namespace) || []
+            let eppFromDeployment: LLMdStackComponent | null = null
+
+            if (prefillPods.length === 0 && decodePods.length === 0 && bothPods.length === 0 && nsDeployments.length > 0) {
+              for (const dep of nsDeployments) {
+                const depName = dep.metadata.name.toLowerCase()
+                const depLabels = dep.spec.template?.metadata?.labels || {}
+                const role = depLabels['llm-d.ai/role']?.toLowerCase()
+                const replicas = dep.spec.replicas ?? dep.status.replicas ?? 0
+                const ready = dep.status.readyReplicas ?? 0
+                const depModel = depLabels['llmd.org/model'] || model
+                const depStatus: LLMdStackComponent['status'] = ready === replicas && replicas > 0 ? 'running' : ready > 0 ? 'running' : 'error'
+
+                const isEpp = depName.includes('-epp') || depName.endsWith('epp') || depName.includes('scheduling') || depName.includes('inference-pool')
+
+                if (isEpp && !eppFromDeployment) {
+                  eppFromDeployment = { name: dep.metadata.name, namespace, cluster, type: 'epp', status: ready > 0 ? 'running' : 'pending', replicas, readyReplicas: ready }
+                } else if (role === 'prefill' || depName.includes('prefill')) {
+                  prefillComponents.push({ name: dep.metadata.name, namespace, cluster, type: 'prefill', status: depStatus, replicas, readyReplicas: ready, model: depModel })
+                } else if (role === 'decode' || depName.includes('decode')) {
+                  decodeComponents.push({ name: dep.metadata.name, namespace, cluster, type: 'decode', status: depStatus, replicas, readyReplicas: ready, model: depModel })
+                } else {
+                  bothComponents.push({ name: dep.metadata.name, namespace, cluster, type: 'both', status: depStatus, replicas, readyReplicas: ready, model: depModel })
+                }
+              }
+            }
+
+            // Extract model name from Deployments when pods don't provide it
+            if (!model && nsDeployments.length > 0) {
+              model = nsDeployments[0].spec.template?.metadata?.labels?.['llmd.org/model']
+            }
+
             // EPP component
             const eppService = eppByNamespace.get(namespace)
-            const eppComponent: LLMdStackComponent | null = eppService ? {
+            const eppComponent: LLMdStackComponent | null = eppFromDeployment || (eppService ? {
               name: eppService.metadata.name,
               namespace,
               cluster,
@@ -475,7 +565,7 @@ export function useStackDiscovery(clusters: string[]) {
               status: 'running', // Assume running if service exists
               replicas: 1,
               readyReplicas: 1,
-            } : null
+            } : null)
 
             // Gateway component
             const gateway = gatewayByNamespace.get(namespace)
