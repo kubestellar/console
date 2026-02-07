@@ -63,15 +63,17 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip fetching entirely in demo mode — use demo data
+    // In demo mode, use demo data
     if (isDemoMode()) {
-      if (!eventsCache) {
-        setEvents(getDemoEvents())
-      }
+      const demoEvents = getDemoEvents().filter(e =>
+        (!cluster || e.cluster === cluster) && (!namespace || e.namespace === namespace)
+      ).slice(0, limit)
+      setEvents(demoEvents)
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
       setIsLoading(false)
+      setError(null)
       if (!silent) {
         setIsRefreshing(true)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
@@ -295,13 +297,17 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       params.append('limit', limit.toString())
       const url = `/api/mcp/events/warnings?${params}`
 
-      // Skip API calls in demo mode
+      // In demo mode, use demo data
       if (isDemoMode()) {
-        if (!warningEventsCache) {
-          setEvents(getDemoEvents().filter(e => e.type === 'Warning'))
-        }
+        const demoWarnings = getDemoEvents().filter(e =>
+          e.type === 'Warning' &&
+          (!cluster || e.cluster === cluster) &&
+          (!namespace || e.namespace === namespace)
+        ).slice(0, limit)
+        setEvents(demoWarnings)
         const now = new Date()
         setLastUpdated(now)
+        setError(null)
         setIsLoading(false)
         if (!silent) {
           setIsRefreshing(true)

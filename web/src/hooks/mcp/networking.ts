@@ -118,6 +118,26 @@ export function useServices(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
+    // In demo mode, use demo data
+    if (isDemoMode()) {
+      const demoServices = getDemoServices().filter(s =>
+        (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
+      )
+      setServices(demoServices)
+      setError(null)
+      setLastUpdated(new Date())
+      setConsecutiveFailures(0)
+      setLastRefresh(new Date())
+      setIsLoading(false)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      return
+    }
+
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
     if (!silent) {
       setIsRefreshing(true)
@@ -211,39 +231,13 @@ export function useServices(cluster?: string, namespace?: string) {
     }
 
     try {
-      // If demo mode is enabled, use demo data
-      if (isDemoMode()) {
-        const demoServices = getDemoServices().filter(s =>
-          (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-        )
-        setServices(demoServices)
-        setError(null)
-        setLastUpdated(new Date())
-        setConsecutiveFailures(0)
-        setLastRefresh(new Date())
-        return
-      }
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
       const url = `/api/mcp/services?${params}`
 
-      // Skip API calls when using demo token
-      const token = localStorage.getItem('token')
-      if (isDemoMode()) {
-        const demoServices = getDemoServices().filter(s =>
-          (!cluster || s.cluster === cluster) && (!namespace || s.namespace === namespace)
-        )
-        setServices(demoServices)
-        const now = new Date()
-        setLastUpdated(now)
-        setLastRefresh(now)
-        setIsLoading(false)
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-        return
-      }
-
       // Use direct fetch with timeout to prevent hanging
+      const token = localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
       const controller = new AbortController()

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
-import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
+import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
@@ -55,6 +55,38 @@ function getDemoPods(): PodInfo[] {
   ]
 }
 
+function getDemoPodIssues(): PodIssue[] {
+  return [
+    {
+      name: 'api-server-crash-7d8f9c6b5',
+      namespace: 'production',
+      cluster: 'prod-east',
+      status: 'CrashLoopBackOff',
+      restarts: 23,
+      reason: 'CrashLoopBackOff',
+      issues: ['Back-off 5m0s restarting failed container'],
+    },
+    {
+      name: 'worker-oom-5c6d7e8f9',
+      namespace: 'batch',
+      cluster: 'vllm-d',
+      status: 'OOMKilled',
+      restarts: 8,
+      reason: 'OOMKilled',
+      issues: ['Container exceeded memory limit'],
+    },
+    {
+      name: 'pending-pod-abc123',
+      namespace: 'staging',
+      cluster: 'staging',
+      status: 'Pending',
+      restarts: 0,
+      reason: 'Unschedulable',
+      issues: ['No nodes available with required resources'],
+    },
+  ]
+}
+
 function getDemoDeploymentIssues(): DeploymentIssue[] {
   return [
     {
@@ -78,8 +110,7 @@ function getDemoDeploymentIssues(): DeploymentIssue[] {
   ]
 }
 
-// @ts-ignore - kept for demo mode reference
-function __getDemoDeployments(): Deployment[] {
+function getDemoDeployments(): Deployment[] {
   return [
     {
       name: 'api-gateway',
@@ -219,8 +250,32 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip backend fetch in demo mode or when backend is unavailable
-    if (isDemoMode() || isBackendUnavailable()) {
+    // In demo mode, use demo data
+    if (isDemoMode()) {
+      const demoPods = getDemoPods().filter(p =>
+        (!cluster || p.cluster === cluster) && (!namespace || p.namespace === namespace)
+      )
+      // Sort demo data the same way as live data
+      const sortedDemoPods = sortBy === 'restarts'
+        ? demoPods.sort((a, b) => b.restarts - a.restarts)
+        : demoPods.sort((a, b) => a.name.localeCompare(b.name))
+      setPods(sortedDemoPods.slice(0, limit))
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
+      setIsLoading(false)
+      setError(null)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
+      return
+    }
+
+    // Skip backend fetch when backend is unavailable
+    if (isBackendUnavailable()) {
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
@@ -482,12 +537,17 @@ export function usePodIssues(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip backend fetch in demo mode
+    // In demo mode, use demo data
     if (isDemoMode()) {
+      const demoIssues = getDemoPodIssues().filter(i =>
+        (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
+      )
+      setIssues(demoIssues)
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
       setIsLoading(false)
+      setError(null)
       if (!silent) {
         setIsRefreshing(true)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
@@ -648,15 +708,17 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip backend fetch in demo mode
+    // In demo mode, use demo data
     if (isDemoMode()) {
-      if (!deploymentIssuesCache) {
-        setIssues(getDemoDeploymentIssues())
-      }
+      const demoIssues = getDemoDeploymentIssues().filter(i =>
+        (!cluster || i.cluster === cluster) && (!namespace || i.namespace === namespace)
+      )
+      setIssues(demoIssues)
       const now = new Date()
       setLastUpdated(now)
       setLastRefresh(now)
       setIsLoading(false)
+      setError(null)
       if (!silent) {
         setIsRefreshing(true)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
@@ -799,11 +861,23 @@ export function useDeployments(cluster?: string, namespace?: string) {
   }, [cluster, namespace])
 
   const refetch = useCallback(async (silent = false) => {
-    // Skip fetching entirely in demo mode — no backend or agent available
-    if (isNetlifyDeployment) {
-      setDeployments([])
+    // In demo mode, use demo data
+    if (isDemoMode()) {
+      const demoDeployments = getDemoDeployments().filter(d =>
+        (!cluster || d.cluster === cluster) && (!namespace || d.namespace === namespace)
+      )
+      setDeployments(demoDeployments)
+      const now = new Date()
+      setLastUpdated(now)
+      setLastRefresh(now)
       setIsLoading(false)
-      setIsRefreshing(false)
+      setError(null)
+      if (!silent) {
+        setIsRefreshing(true)
+        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+      } else {
+        setIsRefreshing(false)
+      }
       return
     }
 
