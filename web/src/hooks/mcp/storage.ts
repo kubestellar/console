@@ -7,6 +7,32 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
+// ---------------------------------------------------------------------------
+// Shared Storage State - enables cache reset notifications to all consumers
+// ---------------------------------------------------------------------------
+
+interface StorageSharedState {
+  cacheVersion: number
+  isResetting: boolean
+}
+
+let storageSharedState: StorageSharedState = {
+  cacheVersion: 0,
+  isResetting: false,
+}
+
+type StorageSubscriber = (state: StorageSharedState) => void
+const storageSubscribers = new Set<StorageSubscriber>()
+
+function notifyStorageSubscribers() {
+  storageSubscribers.forEach(subscriber => subscriber(storageSharedState))
+}
+
+export function subscribeStorageCache(callback: StorageSubscriber): () => void {
+  storageSubscribers.add(callback)
+  return () => storageSubscribers.delete(callback)
+}
+
 // Module-level cache for PVCs data (persists across navigation)
 const PVCS_CACHE_KEY = 'kubestellar-pvcs-cache'
 
@@ -294,6 +320,18 @@ export function usePVCs(cluster?: string, namespace?: string) {
       clearInterval(interval)
     }
   }, [refetch, cacheKey])
+
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: StorageSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setPVCs([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeStorageCache(handleCacheReset)
+  }, [])
 
   return {
     pvcs,
@@ -585,12 +623,26 @@ function getDemoLimitRanges(): LimitRange[] {
 // Register with mode transition coordinator for unified cache clearing
 if (typeof window !== 'undefined') {
   registerCacheReset('storage', () => {
+    // Set resetting flag to trigger skeleton display
+    storageSharedState = {
+      cacheVersion: storageSharedState.cacheVersion + 1,
+      isResetting: true,
+    }
+    notifyStorageSubscribers()
+
     try {
       localStorage.removeItem(PVCS_CACHE_KEY)
     } catch {
       // Ignore storage errors
     }
     pvcsCache = null
+
+    // Reset the resetting flag after a tick
+    setTimeout(() => {
+      storageSharedState = { ...storageSharedState, isResetting: false }
+      notifyStorageSubscribers()
+    }, 0)
+
     console.log('[Storage] Cache cleared for mode transition')
   })
 }

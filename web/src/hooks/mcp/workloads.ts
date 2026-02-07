@@ -8,6 +8,35 @@ import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LO
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
 
 // ---------------------------------------------------------------------------
+// Shared Workloads State - enables cache reset notifications to all consumers
+// ---------------------------------------------------------------------------
+
+interface WorkloadsSharedState {
+  cacheVersion: number  // Increments when cache is cleared to trigger re-fetch
+  isResetting: boolean  // True during cache reset, triggers skeleton display
+}
+
+let workloadsSharedState: WorkloadsSharedState = {
+  cacheVersion: 0,
+  isResetting: false,
+}
+
+// Subscribers that get notified when workloads cache is cleared
+type WorkloadsSubscriber = (state: WorkloadsSharedState) => void
+const workloadsSubscribers = new Set<WorkloadsSubscriber>()
+
+// Notify all subscribers of cache reset
+function notifyWorkloadsSubscribers() {
+  workloadsSubscribers.forEach(subscriber => subscriber(workloadsSharedState))
+}
+
+// Subscribe to workloads cache changes (for hooks that need reactive updates)
+export function subscribeWorkloadsCache(callback: WorkloadsSubscriber): () => void {
+  workloadsSubscribers.add(callback)
+  return () => workloadsSubscribers.delete(callback)
+}
+
+// ---------------------------------------------------------------------------
 // Demo data (internal to this module)
 // ---------------------------------------------------------------------------
 
@@ -277,6 +306,20 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: WorkloadsSharedState) => {
+      if (state.isResetting) {
+        // Cache was cleared - show skeleton by setting loading with no data
+        setIsLoading(true)
+        setPods([])
+        setLastUpdated(null)
+      }
+    }
+    const unsubscribe = subscribeWorkloadsCache(handleCacheReset)
+    return unsubscribe
+  }, [])
+
   return {
     pods,
     isLoading,
@@ -369,6 +412,18 @@ export function useAllPods(cluster?: string, namespace?: string) {
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
+
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: WorkloadsSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setPods([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeWorkloadsCache(handleCacheReset)
+  }, [])
 
   return { pods, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
@@ -532,6 +587,18 @@ export function usePodIssues(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: WorkloadsSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setIssues([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeWorkloadsCache(handleCacheReset)
+  }, [])
+
   return {
     issues,
     isLoading,
@@ -652,6 +719,18 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
+
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: WorkloadsSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setIssues([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeWorkloadsCache(handleCacheReset)
+  }, [])
 
   return {
     issues,
@@ -866,6 +945,18 @@ export function useDeployments(cluster?: string, namespace?: string) {
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
+
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: WorkloadsSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setDeployments([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeWorkloadsCache(handleCacheReset)
+  }, [])
 
   return {
     deployments,
@@ -1254,6 +1345,13 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
 
 if (typeof window !== 'undefined') {
   registerCacheReset('workloads', () => {
+    // Set resetting flag to trigger skeleton display in all subscribed hooks
+    workloadsSharedState = {
+      cacheVersion: workloadsSharedState.cacheVersion + 1,
+      isResetting: true,
+    }
+    notifyWorkloadsSubscribers()
+
     // Clear pods cache
     try {
       localStorage.removeItem(PODS_CACHE_KEY)
@@ -1266,6 +1364,12 @@ if (typeof window !== 'undefined') {
     podIssuesCache = null
     deploymentIssuesCache = null
     deploymentsCache = null
+
+    // Reset the resetting flag after a tick (hooks will re-fetch)
+    setTimeout(() => {
+      workloadsSharedState = { ...workloadsSharedState, isResetting: false }
+      notifyWorkloadsSubscribers()
+    }, 0)
 
     console.log('[Workloads] All caches cleared for mode transition')
   })

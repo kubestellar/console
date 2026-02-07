@@ -5,6 +5,32 @@ import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
 
+// ---------------------------------------------------------------------------
+// Shared Events State - enables cache reset notifications to all consumers
+// ---------------------------------------------------------------------------
+
+interface EventsSharedState {
+  cacheVersion: number
+  isResetting: boolean
+}
+
+let eventsSharedState: EventsSharedState = {
+  cacheVersion: 0,
+  isResetting: false,
+}
+
+type EventsSubscriber = (state: EventsSharedState) => void
+const eventsSubscribers = new Set<EventsSubscriber>()
+
+function notifyEventsSubscribers() {
+  eventsSubscribers.forEach(subscriber => subscriber(eventsSharedState))
+}
+
+export function subscribeEventsCache(callback: EventsSubscriber): () => void {
+  eventsSubscribers.add(callback)
+  return () => eventsSubscribers.delete(callback)
+}
+
 // Module-level cache for events data (persists across navigation)
 interface EventsCache {
   data: ClusterEvent[]
@@ -201,6 +227,18 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: EventsSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setEvents([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeEventsCache(handleCacheReset)
+  }, [])
+
   return {
     events,
     isLoading,
@@ -319,6 +357,18 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: EventsSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setEvents([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeEventsCache(handleCacheReset)
+  }, [])
+
   return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }
 
@@ -375,8 +425,22 @@ function getDemoEvents(): ClusterEvent[] {
 // Register with mode transition coordinator for unified cache clearing
 if (typeof window !== 'undefined') {
   registerCacheReset('events', () => {
+    // Set resetting flag to trigger skeleton display
+    eventsSharedState = {
+      cacheVersion: eventsSharedState.cacheVersion + 1,
+      isResetting: true,
+    }
+    notifyEventsSubscribers()
+
     eventsCache = null
     warningEventsCache = null
+
+    // Reset the resetting flag after a tick
+    setTimeout(() => {
+      eventsSharedState = { ...eventsSharedState, isResetting: false }
+      notifyEventsSubscribers()
+    }, 0)
+
     console.log('[Events] Caches cleared for mode transition')
   })
 }

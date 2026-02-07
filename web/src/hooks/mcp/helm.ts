@@ -20,6 +20,7 @@ interface HelmReleasesCache {
 
 interface HelmReleasesCacheState {
   releases: HelmRelease[]
+  isLoading: boolean  // Added for unified demo mode switching
   isRefreshing: boolean
   consecutiveFailures: number
   lastError: string | null
@@ -74,6 +75,7 @@ export function useHelmReleases(cluster?: string) {
   useEffect(() => {
     const updateHandler = (state: HelmReleasesCacheState) => {
       setReleases(state.releases)
+      if (state.isLoading !== undefined) setIsLoading(state.isLoading)
       setIsRefreshing(state.isRefreshing)
       setConsecutiveFailures(state.consecutiveFailures)
       setError(state.lastError)
@@ -83,9 +85,10 @@ export function useHelmReleases(cluster?: string) {
     return () => { helmReleasesCache.listeners.delete(updateHandler) }
   }, [])
 
-  const notifyListeners = useCallback((isRefreshing: boolean) => {
+  const notifyListeners = useCallback((isRefreshing: boolean, isLoading = false) => {
     const state: HelmReleasesCacheState = {
       releases: helmReleasesCache.data,
+      isLoading,
       isRefreshing,
       consecutiveFailures: helmReleasesCache.consecutiveFailures,
       lastError: helmReleasesCache.lastError,
@@ -580,10 +583,11 @@ if (typeof window !== 'undefined') {
     helmReleasesCache.consecutiveFailures = 0
     helmReleasesCache.lastError = null
 
-    // Notify all listeners
+    // Notify all listeners with isLoading: true to trigger skeleton display
     helmReleasesCache.listeners.forEach(listener => {
       listener({
         releases: [],
+        isLoading: true,  // Trigger skeleton display
         isRefreshing: false,
         consecutiveFailures: 0,
         lastError: null,

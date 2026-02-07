@@ -7,6 +7,32 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { Service, Ingress, NetworkPolicy } from './types'
 
+// ---------------------------------------------------------------------------
+// Shared Networking State - enables cache reset notifications to all consumers
+// ---------------------------------------------------------------------------
+
+interface NetworkingSharedState {
+  cacheVersion: number
+  isResetting: boolean
+}
+
+let networkingSharedState: NetworkingSharedState = {
+  cacheVersion: 0,
+  isResetting: false,
+}
+
+type NetworkingSubscriber = (state: NetworkingSharedState) => void
+const networkingSubscribers = new Set<NetworkingSubscriber>()
+
+function notifyNetworkingSubscribers() {
+  networkingSubscribers.forEach(subscriber => subscriber(networkingSharedState))
+}
+
+export function subscribeNetworkingCache(callback: NetworkingSubscriber): () => void {
+  networkingSubscribers.add(callback)
+  return () => networkingSubscribers.delete(callback)
+}
+
 // Module-level cache for services data (persists across navigation)
 const SERVICES_CACHE_KEY = 'kubestellar-services-cache'
 
@@ -279,6 +305,18 @@ export function useServices(cluster?: string, namespace?: string) {
     return () => clearInterval(interval)
   }, [refetch, cacheKey])
 
+  // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
+  useEffect(() => {
+    const handleCacheReset = (state: NetworkingSharedState) => {
+      if (state.isResetting) {
+        setIsLoading(true)
+        setServices([])
+        setLastUpdated(null)
+      }
+    }
+    return subscribeNetworkingCache(handleCacheReset)
+  }, [])
+
   return {
     services,
     isLoading,
@@ -427,12 +465,26 @@ function getDemoServices(): Service[] {
 // Register with mode transition coordinator for unified cache clearing
 if (typeof window !== 'undefined') {
   registerCacheReset('services', () => {
+    // Set resetting flag to trigger skeleton display
+    networkingSharedState = {
+      cacheVersion: networkingSharedState.cacheVersion + 1,
+      isResetting: true,
+    }
+    notifyNetworkingSubscribers()
+
     try {
       localStorage.removeItem(SERVICES_CACHE_KEY)
     } catch {
       // Ignore storage errors
     }
     servicesCache = null
+
+    // Reset the resetting flag after a tick
+    setTimeout(() => {
+      networkingSharedState = { ...networkingSharedState, isResetting: false }
+      notifyNetworkingSubscribers()
+    }, 0)
+
     console.log('[Networking] Cache cleared for mode transition')
   })
 }
