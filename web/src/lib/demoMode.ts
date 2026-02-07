@@ -125,13 +125,14 @@ export function isDemoMode(): boolean {
  * Set demo mode state. Respects forced demo mode on Netlify.
  * Notifies all subscribers (React hooks, event listeners).
  *
- * Will NOT auto-disable demo mode if the user explicitly toggled it ON.
+ * @param value - Whether to enable demo mode
+ * @param userInitiated - If true, this is a manual toggle (allows turning off). If false, this is automatic.
  */
-export function setDemoMode(value: boolean): void {
+export function setDemoMode(value: boolean, userInitiated = false): void {
   // Never allow disabling on Netlify
   if (isNetlifyDeployment && !value) return
-  // Don't auto-disable if user explicitly enabled demo mode
-  if (!value && localStorage.getItem(DEMO_MODE_KEY) === 'true') return
+  // Don't auto-disable if user explicitly enabled demo mode (only allow manual toggles)
+  if (!value && !userInitiated && localStorage.getItem(DEMO_MODE_KEY) === 'true') return
   if (globalDemoMode === value) return
 
   globalDemoMode = value
@@ -141,10 +142,11 @@ export function setDemoMode(value: boolean): void {
 
 /**
  * Toggle demo mode. No-op if demo mode is forced (Netlify).
+ * This is a user-initiated action, so it can turn off demo mode.
  */
 export function toggleDemoMode(): void {
   if (isNetlifyDeployment && globalDemoMode) return
-  setDemoMode(!globalDemoMode)
+  setDemoMode(!globalDemoMode, true) // userInitiated=true allows turning off
 }
 
 /**
