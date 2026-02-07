@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { Server, Box, Wifi, WifiOff } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { useDemoMode, isDemoModeForced, getDemoMode } from '../../../hooks/useDemoMode'
 import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { cn } from '../../../lib/cn'
 
 export function AgentStatusIndicator() {
   const { status: agentStatus, health: agentHealth, connectionEvents, isConnected, isDegraded, dataErrorCount, lastDataError } = useLocalAgent()
+  const { status: backendStatus, isConnected: isBackendConnected } = useBackendHealth()
   const { isDemoMode: isDemoModeHook, toggleDemoMode } = useDemoMode()
   // Synchronous fallback prevents flash of WifiOff icon during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
@@ -115,10 +117,15 @@ export function AgentStatusIndicator() {
   // showDemoStyle is sticky: stays true after demo toggle until agent connects.
   const showAsDemoMode = isDemoMode || showDemoStyle
 
+  // Backend health affects the indicator when agent is connected (but not in demo mode)
+  const backendIssue = !showAsDemoMode && !isBackendConnected && backendStatus !== 'connecting'
+
   const pillStyle = showAsDemoMode
     ? { bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20', dot: 'bg-purple-400', label: 'Demo', Icon: Box, title: 'Demo Mode - showing sample data' }
     : stableDegraded
     ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'Degraded', Icon: Wifi, title: `Local Agent degraded (${dataErrorCount} errors)` }
+    : stableConnected && backendIssue
+    ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'AI', Icon: Wifi, title: 'Backend API unavailable' }
     : stableConnected
     ? { bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20', dot: 'bg-green-400', label: 'AI', Icon: Wifi, title: 'Local Agent connected' }
     : stableStatus === 'connecting'
@@ -211,6 +218,29 @@ export function AgentStatusIndicator() {
               </p>
             )}
           </div>
+
+          {/* Backend API Status - only show when not in demo mode */}
+          {!isDemoMode && (
+            <div className="p-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  'w-3 h-3 rounded-full',
+                  isBackendConnected ? 'bg-green-400' : backendStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
+                )} />
+                <span className="text-sm font-medium text-foreground">
+                  Backend API: {isBackendConnected ? 'Connected' : backendStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isBackendConnected
+                  ? 'Connected to backend API at localhost:8080'
+                  : backendStatus === 'connecting'
+                  ? 'Checking backend connection...'
+                  : 'Unable to connect to backend API'
+                }
+              </p>
+            </div>
+          )}
 
           <div className="p-2 max-h-48 overflow-y-auto">
             <div className="text-xs text-muted-foreground px-2 py-1 font-medium">Connection Log</div>

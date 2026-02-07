@@ -367,7 +367,6 @@ export function useStackDiscovery(clusters: string[]) {
 
     // Wait for clusters to be loaded before fetching
     if (clusters.length === 0) {
-      console.log('[useStackDiscovery] Waiting for clusters to load...')
       return
     }
 
@@ -376,8 +375,6 @@ export function useStackDiscovery(clusters: string[]) {
       return
     }
     isRefetching.current = true
-
-    console.log('[useStackDiscovery] Fetching stacks from clusters:', clusters)
 
     if (!silent) {
       // Only show loading spinner if we have no stacks at all.
@@ -643,10 +640,6 @@ export function useStackDiscovery(clusters: string[]) {
           const candidateNamespaces = allClusterNamespaces
             .filter(isLlmdNamespace)
             .filter(ns => !phase1Namespaces.has(ns))
-
-          if (candidateNamespaces.length > 0) {
-            console.log(`[useStackDiscovery] Phase 2 for ${cluster}: ${candidateNamespaces.length} candidate namespaces`)
-          }
 
           // Query deployments per namespace in small batches
           for (let i = 0; i < candidateNamespaces.length; i += DEPLOYMENT_BATCH_SIZE) {

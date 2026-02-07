@@ -37,7 +37,6 @@ export function useLLMdClusters(
   return useMemo(() => {
     // If clusters not loaded yet, use known fallback clusters
     if (clusters.length === 0) {
-      console.log('[useLLMdClusters] No clusters loaded, using fallback:', LLMD_CLUSTERS)
       return LLMD_CLUSTERS
     }
 
@@ -62,16 +61,12 @@ export function useLLMdClusters(
       const reachableNames = new Set(reachable.map(c => c.name))
       const fallbackMatches = LLMD_CLUSTERS.filter(name => reachableNames.has(name))
       if (fallbackMatches.length > 0) {
-        console.log('[useLLMdClusters] No keyword matches, using fallback:', fallbackMatches)
         return fallbackMatches
       }
       // Last resort: return first 10 reachable clusters
-      const lastResort = reachable.slice(0, 10).map(c => c.name)
-      console.log('[useLLMdClusters] Last resort - first 10 reachable:', lastResort)
-      return lastResort
+      return reachable.slice(0, 10).map(c => c.name)
     }
 
-    console.log('[useLLMdClusters] Found candidates:', candidates)
     return candidates
   }, [clusters, gpuClusterNames])
 }

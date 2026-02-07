@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
+import { useAuth } from '../lib/auth'
 
 // =============================================================================
 // Types
@@ -57,6 +58,7 @@ const DEFAULT_STATUS: PersistenceStatus = {
 
 export function usePersistence() {
   const { status: agentStatus } = useLocalAgent()
+  const { token } = useAuth()
   const [config, setConfig] = useState<PersistenceConfig>(DEFAULT_CONFIG)
   const [status, setStatus] = useState<PersistenceStatus>(DEFAULT_STATUS)
   const [loading, setLoading] = useState(true)
@@ -64,42 +66,50 @@ export function usePersistence() {
   const [syncing, setSyncing] = useState(false)
 
   const isBackendAvailable = agentStatus === 'connected'
+  // Only make API calls if user has a real token (not demo-token)
+  const hasRealToken = !!token && token !== 'demo-token'
 
   // Fetch config from backend
   const fetchConfig = useCallback(async () => {
-    if (!isBackendAvailable) {
+    if (!isBackendAvailable || !hasRealToken) {
       setLoading(false)
       return
     }
 
     try {
-      const response = await fetch('/api/persistence/config')
+      const response = await fetch('/api/persistence/config', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setConfig(data)
       }
+      // Silently ignore 401 - user needs to re-authenticate
     } catch (err) {
       console.error('[usePersistence] Failed to fetch config:', err)
       setError('Failed to load persistence config')
     } finally {
       setLoading(false)
     }
-  }, [isBackendAvailable])
+  }, [isBackendAvailable, hasRealToken, token])
 
   // Fetch status from backend
   const fetchStatus = useCallback(async () => {
-    if (!isBackendAvailable) return
+    if (!isBackendAvailable || !hasRealToken) return
 
     try {
-      const response = await fetch('/api/persistence/status')
+      const response = await fetch('/api/persistence/status', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       if (response.ok) {
         const data = await response.json()
         setStatus(data)
       }
+      // Silently ignore 401 - user needs to re-authenticate
     } catch (err) {
       console.error('[usePersistence] Failed to fetch status:', err)
     }
-  }, [isBackendAvailable])
+  }, [isBackendAvailable, hasRealToken, token])
 
   // Update config
   const updateConfig = useCallback(async (newConfig: Partial<PersistenceConfig>): Promise<boolean> => {
