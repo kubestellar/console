@@ -133,7 +133,7 @@ const decodeToken = (encoded: string): string => {
 }
 
 // Default repository to show if none configured
-const DEFAULT_REPO = 'kubestellar/kubestellar'
+const DEFAULT_REPO = 'kubestellar/console'
 
 // LocalStorage key for saved repos
 const SAVED_REPOS_KEY = 'github_activity_saved_repos'
@@ -212,7 +212,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const [openPRCount, setOpenPRCount] = useState(0)
   const [openIssueCount, setOpenIssueCount] = useState(0)
 
-  // Use configured repos or default to kubestellar/kubestellar
+  // Use configured repos or default to kubestellar/console
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
   const org = config?.org
   // Note: Token stored in localStorage base64 encoded - decode before use
