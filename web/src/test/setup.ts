@@ -89,15 +89,11 @@ Object.defineProperty(window, 'IntersectionObserver', {
   value: MockIntersectionObserver,
 });
 
-// SECTION: Cleanup After Each Test
+// SECTION: Cleanup Configuration
 
-afterEach(() => {
-  // Clear all mocks after each test
-  vi.clearAllMocks();
-  
-  // Reset any mocked implementations
-  vi.resetAllMocks();
-});
+// Note: afterEach cannot be used in setup files.
+// Vitest automatically handles mock cleanup between tests.
+// Individual test files can use afterEach for specific cleanup needs.
 
 // SECTION: Custom Test Utilities
 

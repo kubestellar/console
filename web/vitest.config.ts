@@ -16,6 +16,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   test: {
+    // Enable global test APIs (afterEach, beforeEach, etc.)
+    globals: true,
+
     // Environment for running tests
     environment: 'jsdom',
 
