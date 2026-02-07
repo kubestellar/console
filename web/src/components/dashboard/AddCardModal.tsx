@@ -1039,7 +1039,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
 
   return (
     <>
-    <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false}>
       <BaseModal.Header
         title="Add Cards"
         icon={Plus}

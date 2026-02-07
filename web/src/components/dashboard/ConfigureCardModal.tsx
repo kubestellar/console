@@ -761,7 +761,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   ]
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
         title="Configure Card"
         description={`Customize "${card.title || card.card_type}"`}

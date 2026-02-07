@@ -381,7 +381,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
   ]
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="xl">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false}>
       <BaseModal.Header title="Stat Block Factory" icon={Activity} onClose={onClose} showBack={false} />
 
       <BaseModal.Tabs

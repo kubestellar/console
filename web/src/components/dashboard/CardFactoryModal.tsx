@@ -683,6 +683,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated }: CardFactory
       isOpen={isOpen}
       onClose={onClose}
       size="xl"
+      closeOnBackdrop={false}
     >
       <BaseModal.Header title="Card Factory" icon={Wand2} onClose={onClose} showBack={false} />
       <BaseModal.Content className="max-h-[70vh]">

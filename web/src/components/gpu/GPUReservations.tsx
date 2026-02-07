@@ -787,7 +787,7 @@ export function GPUReservations() {
       )}
 
       {/* New Reservation Modal */}
-      <BaseModal isOpen={showNewReservationForm} onClose={() => setShowNewReservationForm(false)} size="md">
+      <BaseModal isOpen={showNewReservationForm} onClose={() => setShowNewReservationForm(false)} size="md" closeOnBackdrop={false}>
         <BaseModal.Header
           title="New GPU Reservation"
           icon={Calendar}

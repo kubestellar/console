@@ -149,7 +149,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
         title="Replace Card"
         description={`Replace "${card.title || card.card_type}" with a new card`}

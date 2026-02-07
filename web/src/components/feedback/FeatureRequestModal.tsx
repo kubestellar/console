@@ -224,7 +224,7 @@ export function FeatureRequestModal({ isOpen, onClose }: FeatureRequestModalProp
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false}>
       {/* Login Prompt Dialog */}
       {showLoginPrompt && (
         <>

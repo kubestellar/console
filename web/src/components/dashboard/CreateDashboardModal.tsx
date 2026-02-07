@@ -61,7 +61,7 @@ export function CreateDashboardModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
         title="Create Dashboard"
         description="Name your dashboard and optionally start with a template."
