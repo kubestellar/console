@@ -192,6 +192,8 @@ export function SyncDialog({
       updateLastLog('error')
       addLog(`Error: ${message}`, 'error')
       setError(message)
+    } finally {
+      // Always reset initializing state
       setIsInitializing(false)
     }
   }, [appName, namespace, cluster, repoUrl, path, addLog, updateLastLog])
@@ -199,14 +201,15 @@ export function SyncDialog({
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      // Batch state updates to prevent flicker - startTransition for non-urgent updates
+      // Batch non-urgent state updates to prevent flicker
+      // Note: setError(null) is kept outside to clear immediately
+      setError(null)
       startTransition(() => {
         setPhase('detection')
         setDriftedResources([])
         setSyncPlan([])
         setSyncLogs([])
         setTokenCount(0)
-        setError(null)
       })
       // runDetection() will set isInitializing to true
       runDetection()
