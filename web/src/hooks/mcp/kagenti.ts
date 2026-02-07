@@ -199,7 +199,8 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
       const agents = await agentFetchAllClusters<KagentiAgent>(
         '/kagenti/agents', 'agents', options?.namespace, options?.cluster,
       )
-      if (agents !== null && mountedRef.current) {
+      // Use real data only if non-empty; fallback to demo data for demo-only cards
+      if (agents !== null && agents.length > 0 && mountedRef.current) {
         setData(agents)
         setError(null)
         setConsecutiveFailures(0)
@@ -253,7 +254,8 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
       const builds = await agentFetchAllClusters<KagentiBuild>(
         '/kagenti/builds', 'builds', options?.namespace, options?.cluster,
       )
-      if (builds !== null && mountedRef.current) {
+      // Use real data only if non-empty; fallback to demo data for demo-only cards
+      if (builds !== null && builds.length > 0 && mountedRef.current) {
         setData(builds)
         setError(null)
         setConsecutiveFailures(0)
@@ -307,7 +309,8 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
       const cards = await agentFetchAllClusters<KagentiCard>(
         '/kagenti/cards', 'cards', options?.namespace, options?.cluster,
       )
-      if (cards !== null && mountedRef.current) {
+      // Use real data only if non-empty; fallback to demo data for demo-only cards
+      if (cards !== null && cards.length > 0 && mountedRef.current) {
         setData(cards)
         setError(null)
         setConsecutiveFailures(0)
@@ -361,7 +364,8 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
       const tools = await agentFetchAllClusters<KagentiTool>(
         '/kagenti/tools', 'tools', options?.namespace, options?.cluster,
       )
-      if (tools !== null && mountedRef.current) {
+      // Use real data only if non-empty; fallback to demo data for demo-only cards
+      if (tools !== null && tools.length > 0 && mountedRef.current) {
         setData(tools)
         setError(null)
         setConsecutiveFailures(0)
