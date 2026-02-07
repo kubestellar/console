@@ -15,6 +15,7 @@ import {
   CardControlsRow,
   CardPaginationFooter,
 } from '../../lib/cards/CardComponents'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface ArgoCDApplicationsProps {
   config?: {
@@ -56,7 +57,7 @@ const ARGO_SORT_COMPARATORS = {
   namespace: commonComparators.string<ArgoApplication>('namespace'),
 }
 
-export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
+function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   const {
     applications: allApps,
     isLoading,
@@ -329,5 +330,13 @@ export function ArgoCDApplications({ config }: ArgoCDApplicationsProps) {
         needsPagination={needsPagination}
       />
     </div>
+  )
+}
+
+export function ArgoCDApplications(props: ArgoCDApplicationsProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="ArgoCDApplications">
+      <ArgoCDApplicationsInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
   useCardData,
   useCardFilters,
@@ -50,7 +51,7 @@ const FILTER_CONFIG = {
   storageKey: 'operator-status',
 }
 
-export function OperatorStatus({ config: _config }: OperatorStatusProps) {
+function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
@@ -310,5 +311,13 @@ export function OperatorStatus({ config: _config }: OperatorStatusProps) {
         </>
       )}
     </div>
+  )
+}
+
+export function OperatorStatus(props: OperatorStatusProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="OperatorStatus">
+      <OperatorStatusInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

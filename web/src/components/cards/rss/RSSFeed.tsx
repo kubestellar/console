@@ -9,6 +9,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../..
 import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps, RSSItemRaw } from './types'
 import { PRESET_FEEDS, CORS_PROXIES } from './constants'
 import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
   isValidThumbnail, normalizeRedditLink, formatTimeAgo,
@@ -25,7 +26,7 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
   title: commonComparators.string<FeedItem>('title'),
 }
 
-export function RSSFeed({ config }: RSSFeedProps) {
+function RSSFeedInternal({ config }: RSSFeedProps) {
   const [feeds, setFeeds] = useState<FeedConfig[]>(() => {
     if (config?.feedUrl) {
       return [{ url: config.feedUrl, name: config.feedName || 'Custom Feed' }]
@@ -1344,5 +1345,13 @@ export function RSSFeed({ config }: RSSFeedProps) {
       </div>
 
     </div>
+  )
+}
+
+export function RSSFeed(props: RSSFeedProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="RSSFeed">
+      <RSSFeedInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 // Chess piece types
 type PieceType = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' // King, Queen, Rook, Bishop, kNight, Pawn
@@ -451,7 +452,7 @@ function findBestMove(state: GameState, depth: number): { from: { row: number; c
   return bestMove
 }
 
-export function KubeChess() {
+function KubeChessInternal() {
   const { isExpanded } = useCardExpanded()
 
   const [gameState, setGameState] = useState<GameState>(() => {
@@ -799,5 +800,13 @@ export function KubeChess() {
         )}
       </div>
     </div>
+  )
+}
+
+export function KubeChess() {
+  return (
+    <DynamicCardErrorBoundary cardId="KubeChess">
+      <KubeChessInternal />
+    </DynamicCardErrorBoundary>
   )
 }

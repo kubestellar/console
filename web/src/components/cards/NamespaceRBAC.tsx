@@ -8,6 +8,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 interface NamespaceRBACProps {
   config?: {
@@ -31,7 +32,7 @@ const SORT_OPTIONS = [
   { value: 'rules' as const, label: 'Rules' },
 ]
 
-export function NamespaceRBAC({ config }: NamespaceRBACProps) {
+function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
@@ -361,5 +362,13 @@ export function NamespaceRBAC({ config }: NamespaceRBACProps) {
         </>
       )}
     </div>
+  )
+}
+
+export function NamespaceRBAC(props: NamespaceRBACProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="NamespaceRBAC">
+      <NamespaceRBACInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

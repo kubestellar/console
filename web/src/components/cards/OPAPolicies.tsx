@@ -7,6 +7,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 // Sort options for clusters
 type SortByOption = 'name' | 'violations' | 'policies'
@@ -1045,7 +1046,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
   }
 }
 
-export function OPAPolicies({ config: _config }: OPAPoliciesProps) {
+function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
@@ -1595,5 +1596,13 @@ Let's start by discussing what kind of policy I need.`,
         />
       )}
     </div>
+  )
+}
+
+export function OPAPolicies(props: OPAPoliciesProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="OPAPolicies">
+      <OPAPoliciesInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

@@ -6,6 +6,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceImport, ServiceImportType } from '../../types/mcs'
 import { useCardLoadingState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 // Demo data for MCS ServiceImports
 const DEMO_IMPORTS: ServiceImport[] = [
@@ -110,7 +111,7 @@ interface ServiceImportsProps {
   config?: Record<string, unknown>
 }
 
-export function ServiceImports({ config: _config }: ServiceImportsProps) {
+function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   // Demo data - always available, never loading/erroring
   const isLoading = false
   const hasError = false
@@ -344,5 +345,13 @@ export function ServiceImports({ config: _config }: ServiceImportsProps) {
         </a>
       </div>
     </div>
+  )
+}
+
+export function ServiceImports(props: ServiceImportsProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="ServiceImports">
+      <ServiceImportsInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

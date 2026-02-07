@@ -4,6 +4,7 @@ import type { ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
   useCardData, commonComparators,
   CardSkeleton, CardSearchInput,
@@ -19,7 +20,7 @@ const SORT_OPTIONS = [
   { value: 'type' as const, label: 'Type' },
 ]
 
-export function EventStream() {
+function EventStreamInternal() {
   // Fetch more events from API to enable pagination (using cached data hook)
   const {
     events: rawEvents,
@@ -224,5 +225,13 @@ export function EventStream() {
 
       <LimitedAccessWarning hasError={!!error} className="mt-2" />
     </div>
+  )
+}
+
+export function EventStream() {
+  return (
+    <DynamicCardErrorBoundary cardId="EventStream">
+      <EventStreamInternal />
+    </DynamicCardErrorBoundary>
   )
 }

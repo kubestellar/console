@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Pause, Play } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 // Board dimensions
 const ROWS = 20
@@ -141,7 +142,7 @@ function calculateScore(lines: number, level: number): number {
   return basePoints[lines] * level
 }
 
-export function ContainerTetris(_props: CardComponentProps) {
+function ContainerTetrisInternal(_props: CardComponentProps) {
   const { isExpanded } = useCardExpanded()
 
   const [board, setBoard] = useState<Board>(createBoard)
@@ -480,5 +481,13 @@ export function ContainerTetris(_props: CardComponentProps) {
         )}
       </div>
     </div>
+  )
+}
+
+export function ContainerTetris(props: CardComponentProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="ContainerTetris">
+      <ContainerTetrisInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }

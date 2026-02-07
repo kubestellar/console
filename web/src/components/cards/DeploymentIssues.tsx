@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
 import { useCardLoadingState } from './CardDataContext'
+import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
   useCardData, commonComparators,
   CardSkeleton, CardEmptyState, CardSearchInput,
@@ -31,7 +32,7 @@ const getIssueIcon = (status: string): { icon: typeof AlertCircle; tooltip: stri
   return { icon: AlertTriangle, tooltip: 'Deployment issue - Check deployment status' }
 }
 
-export function DeploymentIssues({ config }: DeploymentIssuesProps) {
+function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   const clusterConfig = config?.cluster as string | undefined
   const namespaceConfig = config?.namespace as string | undefined
   const {
@@ -245,5 +246,13 @@ export function DeploymentIssues({ config }: DeploymentIssuesProps) {
 
       <LimitedAccessWarning hasError={!!error} className="mt-2" />
     </div>
+  )
+}
+
+export function DeploymentIssues(props: DeploymentIssuesProps) {
+  return (
+    <DynamicCardErrorBoundary cardId="DeploymentIssues">
+      <DeploymentIssuesInternal {...props} />
+    </DynamicCardErrorBoundary>
   )
 }
