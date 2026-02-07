@@ -246,7 +246,13 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect }: DraggableWork
         <div className="flex items-start gap-2 min-w-0">
           <GripVertical className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
           <TypeIcon type={workload.type} />
-          <div className="min-w-0" onClick={onSelect}>
+          <div 
+            className="min-w-0" 
+            onClick={onSelect}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
+          >
             <div className="flex items-center gap-2 cursor-pointer">
               <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
                 {workload.name}

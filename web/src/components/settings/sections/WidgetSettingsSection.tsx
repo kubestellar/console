@@ -225,7 +225,13 @@ export const render = ({ output }) => {
           >
             <span style={styles.dragIndicator}>⋮⋮</span>
           </div>
-          <div style={styles.header} onClick={() => openUrl()}>
+          <div 
+            style={styles.header} 
+            onClick={() => openUrl()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl() } }}
+          >
             <div style={{ ...styles.statusDot, backgroundColor: styles.colors.offline }} />
             <span style={styles.title}>KubeStellar Console</span>
           </div>
@@ -255,38 +261,74 @@ export const render = ({ output }) => {
         >
           <span style={styles.dragIndicator}>⋮⋮</span>
         </div>
-        <div style={styles.header} onClick={() => openUrl()}>
+        <div 
+          style={styles.header} 
+          onClick={() => openUrl()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl() } }}
+        >
           <div style={{ ...styles.statusDot, backgroundColor: statusColor }} />
           <span style={styles.title}>KubeStellar Console</span>
           <span style={{ marginLeft: 'auto', fontSize: '10px', opacity: 0.5 }}>↗</span>
         </div>
         <div style={styles.statsGrid}>
-          <div style={styles.statBlock} onClick={() => openUrl('/clusters')}>
+          <div 
+            style={styles.statBlock} 
+            onClick={() => openUrl('/clusters')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/clusters') } }}
+          >
             <div style={{ ...styles.statValue, color: hasIssues ? styles.colors.error : styles.colors.healthy }}>
               {offlineNodes.length}
             </div>
             <div style={styles.statLabel}>Offline</div>
           </div>
-          <div style={styles.statBlock} onClick={() => openUrl('/clusters')}>
+          <div 
+            style={styles.statBlock} 
+            onClick={() => openUrl('/clusters')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/clusters') } }}
+          >
             <div style={{ ...styles.statValue, color: styles.colors.info }}>
               {nodes.length - offlineNodes.length}/{nodes.length}
             </div>
             <div style={styles.statLabel}>Ready</div>
           </div>
-          <div style={styles.statBlock} onClick={() => openUrl('/gpu')}>
+          <div 
+            style={styles.statBlock} 
+            onClick={() => openUrl('/gpu')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/gpu') } }}
+          >
             <div style={{ ...styles.statValue, color: styles.colors.healthy }}>
               {allocatedGPUs}/{totalGPUs}
             </div>
             <div style={styles.statLabel}>GPUs</div>
           </div>
-          <div style={styles.statBlock} onClick={() => openUrl('/clusters')}>
+          <div 
+            style={styles.statBlock} 
+            onClick={() => openUrl('/clusters')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/clusters') } }}
+          >
             <div style={{ ...styles.statValue, color: styles.colors.healthy }}>
               {nodes.length}
             </div>
             <div style={styles.statLabel}>Total</div>
           </div>
         </div>
-        <div style={{ ...styles.footer, color: statusColor }} onClick={() => openUrl('/dashboard')}>
+        <div 
+          style={{ ...styles.footer, color: statusColor }} 
+          onClick={() => openUrl('/dashboard')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUrl('/dashboard') } }}
+        >
           {hasIssues ? \`⚠️ \${offlineNodes.length} node(s) need attention\` : '✓ All nodes healthy'}
         </div>
       </div>

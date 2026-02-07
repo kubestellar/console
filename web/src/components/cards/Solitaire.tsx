@@ -221,7 +221,14 @@ function StockPile({
   }
 
   return (
-    <div onClick={onClick} className="cursor-pointer" title="Click to draw">
+    <div 
+      onClick={onClick} 
+      className="cursor-pointer" 
+      title="Click to draw"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+    >
       <Card card={{ ...cards[0], faceUp: false }} size={size} />
     </div>
   )
