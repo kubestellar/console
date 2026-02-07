@@ -33,13 +33,9 @@ export const UNIFIED_READY_CARDS = new Set<string>([
   // These cards have complete configs and list visualization
   // Add cards here as they are validated
 
-  // Example: Uncomment when validated
-  // 'pod_issues',
-  // 'deployment_issues',
-  // 'security_issues',
-  // 'active_alerts',
-  // 'event_stream',
-  // 'top_pods',
+  // Validated cards using UnifiedCard
+  'pod_issues',       // First migrated card - validates the framework works
+  'deployment_issues',
 ])
 
 /**
