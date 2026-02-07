@@ -91,7 +91,7 @@ Object.defineProperty(window, 'IntersectionObserver', {
 
 // SECTION: Cleanup After Each Test
 
-vi.afterEach(() => {
+afterEach(() => {
   // Clear all mocks after each test
   vi.clearAllMocks();
   
