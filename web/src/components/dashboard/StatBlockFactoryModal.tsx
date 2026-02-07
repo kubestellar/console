@@ -729,11 +729,9 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated }: StatB
               }
 
               saveDynamicStatsDefinition(definition)
-              // Notify parent immediately, then show message with transition
+              // Execute parent callback and show success message immediately
               onStatsCreated?.(type)
-              startTransition(() => {
-                setSaveMessage(`Stats "${definition.title}" created with AI!`)
-              })
+              setSaveMessage(`Stats "${definition.title}" created with AI!`)
               const aiCreateTimeoutId = setTimeout(() => setSaveMessage(null), 3000)
               timeoutsRef.current.push(aiCreateTimeoutId)
             }}

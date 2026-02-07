@@ -201,9 +201,9 @@ export function SyncDialog({
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      // Batch non-urgent state updates to prevent flicker
-      // Note: setError(null) is kept outside to clear immediately
+      // Clear error immediately so user doesn't see stale errors
       setError(null)
+      // Batch non-critical state resets to prevent flicker
       startTransition(() => {
         setPhase('detection')
         setDriftedResources([])
