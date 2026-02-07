@@ -88,12 +88,11 @@ export function UnifiedStatBlock({
     return {
       value: resolved.value,
       sublabel: config.sublabelField
-        ? String(resolvedValue.sublabel ?? '')
+        ? resolved.sublabel
         : undefined,
       isDemo: resolved.isDemo,
       isClickable: !!config.onClick,
     }
-     
   }, [config, data, getValue])
 
   // Get components

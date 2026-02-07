@@ -194,8 +194,9 @@ function DashboardCardWrapper({
   // Calculate height (each row unit = 100px approximately)
   const minHeight = `min-h-[${placement.position.h * 100}px]`
 
-  // Get card config
-  const cardConfig = getCardConfig(placement.cardType)
+  // Get card config - support both cardType (new) and card_type (legacy localStorage)
+  const cardTypeKey = placement.cardType || (placement as { card_type?: string }).card_type
+  const cardConfig = cardTypeKey ? getCardConfig(cardTypeKey) : undefined
 
   // Style for drag transform
   const style = isDraggable
@@ -213,7 +214,7 @@ function DashboardCardWrapper({
         style={style}
         className={`${colSpan} ${minHeight} glass rounded-lg p-4 flex items-center justify-center text-gray-500`}
       >
-        Unknown card type: {placement.cardType}
+        Unknown card type: {cardTypeKey || 'undefined'}
       </div>
     )
   }

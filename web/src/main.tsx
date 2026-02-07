@@ -5,6 +5,8 @@ import App from './App.tsx'
 import './index.css'
 // Initialize i18n before rendering
 import './lib/i18n'
+// Register unified card data hooks (must be before App renders)
+import './lib/unified/registerHooks'
 // Import cache utilities
 import { migrateFromLocalStorage, preloadCacheFromStorage } from './lib/cache'
 // Import dynamic card/stats persistence loaders

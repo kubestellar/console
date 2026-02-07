@@ -53,6 +53,9 @@ const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m
 const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => ({ default: m.AIAgents })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
+const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
+const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m => ({ default: m.UnifiedStatsTest })))
+const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
 
 // Prefetch all lazy route chunks after initial page load.
 // This runs during idle time so by the time the user navigates,
@@ -601,6 +604,43 @@ function App() {
               <OnboardedRoute>
                 <Layout>
                   <CICD />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        {/* Dev test routes for unified framework validation */}
+        <Route
+          path="/test/unified-card"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <UnifiedCardTest />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/test/unified-stats"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <UnifiedStatsTest />
+                </Layout>
+              </OnboardedRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/test/unified-dashboard"
+          element={
+            <ProtectedRoute>
+              <OnboardedRoute>
+                <Layout>
+                  <UnifiedDashboardTest />
                 </Layout>
               </OnboardedRoute>
             </ProtectedRoute>
