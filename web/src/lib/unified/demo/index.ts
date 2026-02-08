@@ -44,3 +44,17 @@ export type {
   SkeletonConfig,
   ModeSwitchEvent,
 } from './types'
+
+// Demo data generators
+export {
+  registerAllDemoGenerators,
+  getDemoClusters,
+  getDemoPodIssues,
+  getDemoDeploymentIssues,
+  getDemoEvents,
+  getDemoSecurityIssues,
+  getDemoGPUNodes,
+  getDemoHelmReleases,
+  getDemoOperators,
+  getDemoServices,
+} from './generators/registerDemoGenerators'
