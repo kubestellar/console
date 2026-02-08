@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { UnifiedStatBlockProps, StatBlockValue } from '../types'
 import { resolveStatValue } from './valueResolvers'
+import { useIsModeSwitching } from '../demo'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -75,6 +76,9 @@ export function UnifiedStatBlock({
   getValue,
   isLoading = false,
 }: UnifiedStatBlockProps) {
+  // Check if mode is switching (show skeleton during transition)
+  const isModeSwitching = useIsModeSwitching()
+
   // Resolve the value
   const resolvedValue = useMemo((): StatBlockValue => {
     // If custom getValue is provided, use it
@@ -105,16 +109,29 @@ export function UnifiedStatBlock({
   const isDemo = resolvedValue.isDemo === true
   const hasData = resolvedValue.value !== undefined && resolvedValue.value !== '-'
 
-  // Loading state
-  if (isLoading) {
+  // Show skeleton when loading OR when mode is switching
+  const showSkeleton = isLoading || isModeSwitching
+
+  // Loading/mode switching state - show skeleton with refresh animation
+  if (showSkeleton) {
     return (
-      <div className="glass p-4 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-5 h-5 bg-gray-800 rounded-full animate-pulse" />
-          <div className="h-4 bg-gray-800 rounded w-20 animate-pulse" />
+      <div className="glass p-4 rounded-lg relative">
+        {/* Refresh indicator during skeleton */}
+        <div className="absolute top-2 right-2">
+          <RefreshCw className="w-3 h-3 text-muted-foreground/40 animate-spin" />
         </div>
-        <div className="h-9 bg-gray-800 rounded w-16 animate-pulse mb-1" />
-        <div className="h-3 bg-gray-800 rounded w-24 animate-pulse" />
+
+        {/* Icon and label skeleton */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-5 h-5 bg-secondary/60 rounded-full animate-pulse" />
+          <div className="h-4 bg-secondary/60 rounded w-20 animate-pulse" />
+        </div>
+
+        {/* Value skeleton */}
+        <div className="h-9 bg-secondary/60 rounded w-16 animate-pulse mb-1" />
+
+        {/* Sublabel skeleton */}
+        <div className="h-3 bg-secondary/60 rounded w-24 animate-pulse" />
       </div>
     )
   }
