@@ -12,6 +12,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import {
@@ -49,10 +50,12 @@ export function Security() {
   // Check demo mode and agent status
   const { isDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
+  const isModeSwitching = useIsModeSwitching()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
+  // Also show skeleton during mode switching for smooth transitions
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline || isModeSwitching
 
   // Fetch cached security issues (stale-while-revalidate pattern)
   const { issues: cachedSecurityIssues, isLoading: securityLoading, isRefreshing: securityRefreshing } = useCachedSecurityIssues()

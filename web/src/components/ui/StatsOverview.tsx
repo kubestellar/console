@@ -8,9 +8,10 @@ import {
 } from 'lucide-react'
 import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
-import { Skeleton } from './Skeleton'
+import { SkeletonStatBlock } from './Skeleton'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -153,12 +154,14 @@ export function StatsOverview({
   const { blocks, saveBlocks, visibleBlocks, defaultBlocks } = useStatsConfig(dashboardType)
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
+  const isModeSwitching = useIsModeSwitching()
 
   // When demo mode is OFF and agent is confirmed disconnected, force skeleton display
   // Don't force skeleton during 'connecting' - show cached data to prevent flicker
   const isAgentOffline = agentStatus === 'disconnected'
   const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline
-  const effectiveIsLoading = isLoading || forceLoadingForOffline
+  // Show skeleton during mode switching for smooth transitions
+  const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData
   const [showConfig, setShowConfig] = useState(false)
 
@@ -238,17 +241,10 @@ export function StatsOverview({
       {(!collapsible || isExpanded) && (
         <div className={`grid ${gridCols} gap-4`}>
           {effectiveIsLoading ? (
-            // Loading skeletons
+            // Loading skeletons with animated refresh icon
             <>
               {visibleBlocks.map((block) => (
-                <div key={block.id} className="glass p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Skeleton variant="circular" width={20} height={20} />
-                    <Skeleton variant="text" width={80} height={16} />
-                  </div>
-                  <Skeleton variant="text" width={60} height={36} className="mb-1" />
-                  <Skeleton variant="text" width={100} height={12} />
-                </div>
+                <SkeletonStatBlock key={block.id} />
               ))}
             </>
           ) : (

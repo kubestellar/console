@@ -47,6 +47,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { useMissions } from '../../hooks/useMissions'
 import { Gauge } from '../charts/Gauge'
 import { ClusterCardSkeleton, StatsOverviewSkeleton } from '../ui/ClusterCardSkeleton'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 
 // Helper to format labels/annotations for tooltip
 function formatMetadata(labels?: Record<string, string>, annotations?: Record<string, string>): string {
@@ -1369,8 +1370,10 @@ export function Clusters() {
   const { operators: nvidiaOperators } = useNVIDIAOperators()
   const { isConnected, status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
+  const isModeSwitching = useIsModeSwitching()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
+  // Also show skeleton during mode switching for smooth transitions
   const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline
   const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
@@ -1666,8 +1669,8 @@ export function Clusters() {
     }
   }, [globalFilteredClusters, gpuByCluster])
 
-  // Determine if we should show skeleton content (loading with no data OR offline without demo)
-  const showSkeletonContent = (isLoading && clusters.length === 0) || forceSkeletonForOffline
+  // Determine if we should show skeleton content (loading with no data OR offline without demo OR mode switching)
+  const showSkeletonContent = (isLoading && clusters.length === 0) || forceSkeletonForOffline || isModeSwitching
 
   // Note: We no longer block on errors - always show demo data gracefully
   // The error variable is kept for potential future use but UI always renders

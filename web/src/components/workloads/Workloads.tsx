@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -34,16 +35,17 @@ export function Workloads() {
   const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
+  const isModeSwitching = useIsModeSwitching()
 
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods } = useDrillDownActions()
 
   // Combined states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
-  // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF
+  // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF OR mode switching
   const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline
-  const showSkeletons = ((allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline
+  const showSkeletons = ((allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
 
   // Combined refresh
   const handleRefresh = useCallback(() => {

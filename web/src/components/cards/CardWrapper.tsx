@@ -11,6 +11,7 @@ import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
@@ -964,6 +965,7 @@ export function CardWrapper({
   const { snoozeSwap } = useSnoozedCards()
   const { isDemoMode: globalDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
+  const isModeSwitching = useIsModeSwitching()
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
   const isDemoMode = globalDemoMode && !isDemoExempt
 
@@ -1016,18 +1018,21 @@ export function CardWrapper({
 
   // Determine if we should show skeleton: loading with no cached data
   // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
+  // OR when mode is switching (smooth transition between demo and live)
   // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
   // This fixes the race condition where demo data briefly shows before skeleton
   // Cards with effectiveIsDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
   const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !effectiveIsDemoData && !isDemoMode
+  const forceSkeletonForModeSwitching = isModeSwitching && !isDemoExempt
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
   // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
   // This includes both explicitly marked isDemoData cards AND cards in global demo mode
   // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
-  const wantsToShowSkeleton = !(effectiveIsDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline)
-  const shouldShowSkeleton = wantsToShowSkeleton && skeletonDelayPassed
+  // Mode switching forces skeleton to show for smooth transitions (no delay for mode switching)
+  const wantsToShowSkeleton = !(effectiveIsDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline) || forceSkeletonForModeSwitching
+  const shouldShowSkeleton = (wantsToShowSkeleton && skeletonDelayPassed) || forceSkeletonForModeSwitching
 
   // Mark initial load as complete when data is ready or various timeouts pass
   // This allows the saved collapsed state to take effect only after content is ready

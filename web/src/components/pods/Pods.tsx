@@ -5,6 +5,7 @@ import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -40,7 +41,9 @@ export function Pods() {
   // Combined loading/refreshing states
   const isLoading = podIssuesLoading || clustersLoading
   const isRefreshing = podIssuesRefreshing
-  const showSkeletons = podIssues.length === 0 && isLoading
+  const isModeSwitching = useIsModeSwitching()
+  // Show skeleton during mode switching for smooth transitions
+  const showSkeletons = (podIssues.length === 0 && isLoading) || isModeSwitching
 
   // Filter pod issues by global cluster selection
   const filteredPodIssues = useMemo(() => {
