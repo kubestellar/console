@@ -4,6 +4,7 @@ import { useServices } from '../../hooks/useMCP'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -22,6 +23,7 @@ export function Network() {
   } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
   const { getStatValue: getUniversalStatValue } = useUniversalStats()
+  const isModeSwitching = useIsModeSwitching()
 
   // Filter services based on global cluster selection
   const filteredServices = services.filter(s =>
@@ -85,7 +87,8 @@ export function Network() {
     [getDashboardStatValue, getUniversalStatValue]
   )
 
-  const showSkeletons = services.length === 0 && servicesLoading
+  // Show skeleton during mode switching for smooth transitions
+  const showSkeletons = (services.length === 0 && servicesLoading) || isModeSwitching
 
   return (
     <DashboardPage
