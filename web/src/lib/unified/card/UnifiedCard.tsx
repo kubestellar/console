@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useCallback, ReactNode } from 'react'
-import { AlertTriangle, Info } from 'lucide-react'
+import { AlertTriangle, Info, RefreshCw } from 'lucide-react'
 import type {
   UnifiedCardConfig,
   UnifiedCardProps,
@@ -25,6 +25,7 @@ import { ChartVisualization } from './visualizations/ChartVisualization'
 import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useReportCardDataState } from '../../../components/cards/CardDataContext'
+import { useIsModeSwitching } from '../demo'
 
 /**
  * UnifiedCard - Renders any card type from config
@@ -36,6 +37,9 @@ export function UnifiedCard({
   className,
   overrideData,
 }: UnifiedCardProps) {
+  // Check if mode is switching (show skeleton during transition)
+  const isModeSwitching = useIsModeSwitching()
+
   // Merge instance config with base config
   const mergedConfig = useMemo(() => {
     if (!instanceConfig) return config
@@ -47,7 +51,7 @@ export function UnifiedCard({
   }, [config, instanceConfig])
 
   // Fetch data using the configured data source (skipped if overrideData provided)
-  const { data: fetchedData, isLoading, error, refetch } = useDataSource(
+  const { data: fetchedData, isLoading: isDataLoading, error, refetch } = useDataSource(
     mergedConfig.dataSource,
     { skip: !!overrideData }
   )
@@ -55,16 +59,19 @@ export function UnifiedCard({
   // Use override data if provided, otherwise use fetched data
   const data = overrideData ?? fetchedData
 
+  // Show skeleton when loading OR when mode is switching
+  const isLoading = isDataLoading || isModeSwitching
+
   // Determine if we have any data
   const hasAnyData = Array.isArray(data) ? data.length > 0 : !!data
 
   // Report loading state to CardWrapper for refresh icon animation and skeleton coordination
-  // This enables the refresh icon to spin while data is loading
+  // This enables the refresh icon to spin while data is loading or mode is switching
   useReportCardDataState({
     isFailed: !!error,
     consecutiveFailures: error ? 1 : 0,
     errorMessage: error?.message,
-    isLoading: isLoading && !hasAnyData,      // Initial load - show skeleton
+    isLoading: isLoading && !hasAnyData,      // Initial load or mode switch - show skeleton
     isRefreshing: isLoading && hasAnyData,     // Refresh - spin refresh icon
     hasData: !isLoading || hasAnyData,         // True once loading completes or has cached data
     isDemoData: mergedConfig.isDemoData,       // From card config
@@ -122,7 +129,7 @@ export function UnifiedCard({
       )
     }
 
-    // Loading state
+    // Loading state (show skeleton with refresh animation)
     if (isLoading) {
       return <LoadingState config={mergedConfig.loadingState} />
     }
@@ -248,7 +255,8 @@ function PlaceholderVisualization({
 }
 
 /**
- * Loading state component
+ * Loading state component with skeleton rows
+ * Note: The refresh icon in the card header animates while this is shown
  */
 function LoadingState({
   config,
@@ -257,17 +265,32 @@ function LoadingState({
 }) {
   const rows = config?.rows ?? 3
   const showSearch = config?.showSearch ?? true
+  const showHeader = config?.showHeader ?? false
 
   return (
-    <div className="p-2 space-y-2 animate-pulse">
-      {showSearch && (
-        <div className="h-8 bg-gray-800 rounded w-full" />
+    <div className="p-2 space-y-2">
+      {/* Header skeleton */}
+      {showHeader && (
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-5 bg-secondary/60 rounded-full animate-pulse" />
+            <div className="h-4 bg-secondary/60 rounded w-24 animate-pulse" />
+          </div>
+          <RefreshCw className="w-4 h-4 text-muted-foreground/40 animate-spin" />
+        </div>
       )}
+
+      {/* Search skeleton */}
+      {showSearch && (
+        <div className="h-8 bg-secondary/60 rounded w-full animate-pulse" />
+      )}
+
+      {/* Content rows skeleton */}
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-2">
-          <div className="h-4 bg-gray-800 rounded w-16" />
-          <div className="h-4 bg-gray-800 rounded flex-1" />
-          <div className="h-4 bg-gray-800 rounded w-20" />
+          <div className="h-4 bg-secondary/60 rounded w-16 animate-pulse" />
+          <div className="h-4 bg-secondary/60 rounded flex-1 animate-pulse" />
+          <div className="h-4 bg-secondary/60 rounded w-20 animate-pulse" />
         </div>
       ))}
     </div>
