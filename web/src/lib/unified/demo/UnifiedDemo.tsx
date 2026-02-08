@@ -1,0 +1,214 @@
+/**
+ * Unified Demo Provider
+ *
+ * Central provider for the unified demo system.
+ * Manages demo mode state, mode switching with skeleton transitions,
+ * and demo data generation for all components.
+ */
+
+import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { UnifiedDemoContext } from './UnifiedDemoContext'
+import { useDemoMode, isDemoModeForced } from '../../../hooks/useDemoMode'
+import {
+  registerDemoData,
+  generateDemoDataSync,
+  clearDemoDataCache,
+} from './demoDataRegistry'
+import type { UnifiedDemoContextValue, DemoDataEntry, DemoDataState } from './types'
+
+/**
+ * Duration to show skeleton when switching modes (ms).
+ * Ensures smooth visual transition between demo and live data.
+ */
+const MODE_SWITCH_SKELETON_DURATION = 500
+
+/**
+ * Custom event name for mode switch notifications.
+ */
+const MODE_SWITCH_EVENT = 'kc-demo-mode-switch'
+
+interface UnifiedDemoProviderProps {
+  children: ReactNode
+}
+
+/**
+ * Provider component for the unified demo system.
+ * Wrap your app with this to enable demo mode and skeleton states.
+ */
+export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
+  const { isDemoMode, toggleDemoMode, setDemoMode } = useDemoMode()
+  const [isModeSwitching, setIsModeSwitching] = useState(false)
+  const previousModeRef = useRef(isDemoMode)
+  const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Track mode changes and trigger skeleton state
+  useEffect(() => {
+    if (previousModeRef.current !== isDemoMode) {
+      // Mode has changed - trigger skeleton state
+      setIsModeSwitching(true)
+
+      // Clear any existing timeout
+      if (switchTimeoutRef.current) {
+        clearTimeout(switchTimeoutRef.current)
+      }
+
+      // Clear cache when switching modes
+      clearDemoDataCache()
+
+      // Dispatch custom event for cross-component coordination
+      window.dispatchEvent(
+        new CustomEvent(MODE_SWITCH_EVENT, {
+          detail: {
+            from: previousModeRef.current ? 'demo' : 'live',
+            to: isDemoMode ? 'demo' : 'live',
+            timestamp: Date.now(),
+          },
+        })
+      )
+
+      // End skeleton state after duration
+      switchTimeoutRef.current = setTimeout(() => {
+        setIsModeSwitching(false)
+        switchTimeoutRef.current = null
+      }, MODE_SWITCH_SKELETON_DURATION)
+
+      previousModeRef.current = isDemoMode
+    }
+
+    return () => {
+      if (switchTimeoutRef.current) {
+        clearTimeout(switchTimeoutRef.current)
+      }
+    }
+  }, [isDemoMode])
+
+  // Get demo data for a component
+  const getDemoData = useCallback(<T = unknown>(id: string): DemoDataState<T> => {
+    if (isModeSwitching) {
+      // Return loading state during mode switch
+      return {
+        data: undefined,
+        isLoading: true,
+        isDemoData: true,
+      }
+    }
+
+    // Generate demo data synchronously
+    return generateDemoDataSync<T>(id)
+  }, [isModeSwitching])
+
+  // Register a demo data generator
+  const registerGenerator = useCallback(<T = unknown>(entry: DemoDataEntry<T>): void => {
+    registerDemoData(entry)
+  }, [])
+
+  // Trigger data regeneration for a component
+  const regenerate = useCallback((id: string): void => {
+    clearDemoDataCache(id)
+  }, [])
+
+  // Trigger data regeneration for all components
+  const regenerateAll = useCallback((): void => {
+    clearDemoDataCache()
+  }, [])
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo<UnifiedDemoContextValue>(() => ({
+    isDemoMode,
+    isForced: isDemoModeForced,
+    toggleDemoMode,
+    setDemoMode,
+    isModeSwitching,
+    getDemoData,
+    registerGenerator,
+    regenerate,
+    regenerateAll,
+  }), [
+    isDemoMode,
+    isModeSwitching,
+    toggleDemoMode,
+    setDemoMode,
+    getDemoData,
+    registerGenerator,
+    regenerate,
+    regenerateAll,
+  ])
+
+  return (
+    <UnifiedDemoContext.Provider value={contextValue}>
+      {children}
+    </UnifiedDemoContext.Provider>
+  )
+}
+
+/**
+ * Hook to use unified data (demo or live) with skeleton support.
+ * Automatically handles mode switching with skeleton states.
+ *
+ * @param id Component ID for demo data lookup
+ * @param liveData Live data from hooks/API
+ * @param isLiveLoading Whether live data is loading
+ * @param options Additional options
+ * @returns Unified data state with skeleton support
+ */
+export function useUnifiedData<T = unknown>(
+  id: string,
+  liveData: T | undefined,
+  isLiveLoading: boolean,
+  options: {
+    /** Force skeleton display */
+    forceSkeleton?: boolean
+    /** Skip demo data even in demo mode */
+    skipDemo?: boolean
+    /** Live data error */
+    error?: Error | null
+  } = {}
+): {
+  data: T | undefined
+  isLoading: boolean
+  showSkeleton: boolean
+  isDemoData: boolean
+  error?: Error
+  refetch: () => void
+} {
+  const { isDemoMode, isModeSwitching, getDemoData, regenerate } = useUnifiedDemoContext()
+  const { forceSkeleton, skipDemo, error } = options
+
+  // Determine if we should use demo data
+  const useDemoData = isDemoMode && !skipDemo
+
+  // Get demo data if in demo mode
+  const demoState = useDemoData ? getDemoData<T>(id) : null
+
+  // Determine final data and loading state
+  const data = useDemoData ? demoState?.data : liveData
+  const isLoading = useDemoData ? (demoState?.isLoading ?? true) : isLiveLoading
+  const isDemoData = useDemoData && demoState?.data !== undefined
+
+  // Show skeleton when:
+  // 1. Force skeleton is true
+  // 2. Mode is switching
+  // 3. Data is loading and no cached data available
+  const showSkeleton = forceSkeleton || isModeSwitching || (isLoading && data === undefined)
+
+  // Refetch function
+  const refetch = useCallback(() => {
+    if (useDemoData) {
+      regenerate(id)
+    }
+    // For live data, the caller should handle refetch
+  }, [useDemoData, regenerate, id])
+
+  return {
+    data,
+    isLoading,
+    showSkeleton,
+    isDemoData,
+    error: useDemoData ? demoState?.error : (error ?? undefined),
+    refetch,
+  }
+}
+
+// Re-export the context hook
+import { useUnifiedDemoContext } from './UnifiedDemoContext'
+export { useUnifiedDemoContext }

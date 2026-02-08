@@ -148,3 +148,32 @@ export type { DashboardGridProps } from './dashboard'
 
 // Hook registration
 export { registerUnifiedHooks } from './registerHooks'
+
+// Demo system (unified skeleton and demo data)
+export {
+  UnifiedDemoProvider,
+  useUnifiedData,
+  useUnifiedDemoContext,
+  useIsDemoMode,
+  useIsModeSwitching,
+  registerDemoData,
+  registerDemoDataBatch,
+  hasDemoData,
+  generateDemoDataSync,
+  clearDemoDataCache,
+  getRegistryStats,
+} from './demo'
+
+export type {
+  DemoDataGenerator,
+  DemoDataGeneratorConfig,
+  DemoDataEntry,
+  DemoDataState,
+  LiveDataState,
+  DataState,
+  UnifiedDemoContextValue,
+  UnifiedDemoProps,
+  UseUnifiedDataResult,
+  SkeletonConfig,
+  ModeSwitchEvent,
+} from './demo'
