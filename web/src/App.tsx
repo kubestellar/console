@@ -13,6 +13,7 @@ import { CardEventProvider } from './lib/cardEvents'
 import { ToastProvider } from './components/ui/Toast'
 import { AlertsProvider } from './contexts/AlertsContext'
 import { RewardsProvider } from './hooks/useRewards'
+import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { ROUTES } from './config/routes'
 
@@ -188,6 +189,7 @@ function App() {
   return (
     <ThemeProvider>
     <AuthProvider>
+    <UnifiedDemoProvider>
       <RewardsProvider>
       <ToastProvider>
       <GlobalFiltersProvider>
@@ -658,6 +660,7 @@ function App() {
       </GlobalFiltersProvider>
       </ToastProvider>
       </RewardsProvider>
+    </UnifiedDemoProvider>
     </AuthProvider>
     </ThemeProvider>
   )

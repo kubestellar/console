@@ -7,6 +7,9 @@ import './index.css'
 import './lib/i18n'
 // Register unified card data hooks (must be before App renders)
 import './lib/unified/registerHooks'
+// Register demo data generators for unified demo system
+import { registerAllDemoGenerators } from './lib/unified/demo'
+registerAllDemoGenerators()
 // Import cache utilities
 import { migrateFromLocalStorage, preloadCacheFromStorage } from './lib/cache'
 // Import dynamic card/stats persistence loaders
