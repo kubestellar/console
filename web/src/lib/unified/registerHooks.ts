@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
 import {
   useCachedPodIssues,
@@ -412,15 +413,21 @@ function useUnifiedServiceImports(params?: Record<string, unknown>) {
 // ============================================================================
 
 function useDemoDataHook<T>(demoData: T[]) {
+  const { isDemoMode: demoMode } = useDemoMode()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    if (!demoMode) {
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
     const timer = setTimeout(() => setIsLoading(false), 500)
     return () => clearTimeout(timer)
-  }, [])
+  }, [demoMode])
 
   return {
-    data: isLoading ? [] : demoData,
+    data: !demoMode ? [] : isLoading ? [] : demoData,
     isLoading,
     error: null,
     refetch: () => {},
