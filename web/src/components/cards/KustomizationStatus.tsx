@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -46,13 +47,6 @@ function loadKustomizationsFromStorage(): { data: Kustomization[], timestamp: nu
   return { data: [], timestamp: 0 }
 }
 
-// Save to localStorage
-function saveKustomizationsToStorage(data: Kustomization[], timestamp: number) {
-  try {
-    localStorage.setItem(KUSTOMIZATION_CACHE_KEY, JSON.stringify({ data, timestamp }))
-  } catch { /* ignore storage errors */ }
-}
-
 type SortByOption = 'status' | 'name' | 'namespace' | 'lastApplied'
 
 const SORT_OPTIONS = [
@@ -75,6 +69,7 @@ function getDemoKustomizations(): Kustomization[] {
 }
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
+  const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
@@ -85,20 +80,21 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   } = useGlobalFilters()
   const { drillToKustomization } = useDrillDownActions()
 
-  // Initialize from localStorage cache
+  // In demo mode, use demo data; in live mode, use localStorage cache (real data)
   const storedData = loadKustomizationsFromStorage()
   const [kustomizationData, setKustomizationData] = useState<Kustomization[]>(
-    storedData.data.length > 0 ? storedData.data : getDemoKustomizations()
+    demoMode ? getDemoKustomizations() : storedData.data
   )
 
-  // Save demo data to localStorage on first load
+  // Update data when mode changes
   useEffect(() => {
-    if (storedData.data.length === 0) {
-      const demoData = getDemoKustomizations()
-      setKustomizationData(demoData)
-      saveKustomizationsToStorage(demoData, Date.now())
+    if (demoMode) {
+      setKustomizationData(getDemoKustomizations())
+    } else {
+      const stored = loadKustomizationsFromStorage()
+      setKustomizationData(stored.data)
     }
-  }, [storedData.data.length])
+  }, [demoMode])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({

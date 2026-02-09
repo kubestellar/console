@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Minus, Edit, Layers, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -21,6 +22,7 @@ interface OverlayDiff {
 }
 
 export function OverlayComparison({ config }: OverlayComparisonProps) {
+  const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters, isLoading } = useClusters()
   const { drillToKustomization } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -57,11 +59,10 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Mock overlays
-  const overlays = selectedCluster ? ['base', 'dev', 'staging', 'production'] : []
+  // Only show mock overlays/diffs in demo mode; live mode shows empty until real data source exists
+  const overlays = selectedCluster && demoMode ? ['base', 'dev', 'staging', 'production'] : []
 
-  // Mock diff data
-  const diffs: OverlayDiff[] = selectedBase && selectedOverlay ? [
+  const diffs: OverlayDiff[] = selectedBase && selectedOverlay && demoMode ? [
     { resource: 'Deployment/app', type: 'patch', overlay: selectedOverlay, details: 'replicas: 1 → 3' },
     { resource: 'Deployment/app', type: 'patch', overlay: selectedOverlay, details: 'resources.limits.memory: 256Mi → 512Mi' },
     { resource: 'ConfigMap/app-config', type: 'patch', overlay: selectedOverlay, details: 'LOG_LEVEL: debug → info' },

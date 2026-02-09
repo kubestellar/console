@@ -419,8 +419,8 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   // Fetch real workloads from API (skip when in demo mode)
   const { data: realWorkloads } = useWorkloads(undefined, !demoMode)
 
-  // Use demo data when in demo mode or when no real data available
-  const isDemo = demoMode || !realWorkloads || realWorkloads.length === 0
+  // Only use demo data when explicitly in demo mode
+  const isDemo = demoMode
 
   // In demo mode, derive available clusters from demo workloads' targetClusters
   // In live mode, use real clusters from the API
@@ -434,6 +434,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   }, [deduplicatedClusters, isDemo])
   const workloads: Workload[] = useMemo(() => {
     if (isDemo) return DEMO_WORKLOADS
+    if (!realWorkloads || realWorkloads.length === 0) return []
     // Transform API workloads to card format
     const mapped = realWorkloads.map((w: ApiWorkload) => {
       const clusters = w.targetClusters || (w.cluster ? [w.cluster] : [])

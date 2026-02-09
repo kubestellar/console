@@ -70,9 +70,9 @@ export function ClusterDropZone({
 
   if (!isDragging || !draggedWorkload) return null
 
-  // Use demo data when in demo mode or when no real data available
-  const clusters = demoMode || !realClusters || realClusters.length === 0 ? DEMO_CLUSTERS : realClusters
-  const isDemo = demoMode || !realClusters || realClusters.length === 0
+  // Only use demo data when explicitly in demo mode
+  const clusters = demoMode ? DEMO_CLUSTERS : (realClusters ?? [])
+  const isDemo = demoMode
 
   // Filter out clusters where workload is already deployed and unavailable clusters
   const availableClusters = clusters.filter(
