@@ -21,6 +21,7 @@ import { cn } from '../../lib/cn'
 import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -412,11 +413,14 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  // Fetch real workloads from API
-  const { data: realWorkloads } = useWorkloads()
+  // Check demo mode to avoid fetching live data when in demo mode
+  const { isDemoMode: demoMode } = useDemoMode()
 
-  // Use real data if available, otherwise demo data
-  const isDemo = !realWorkloads || realWorkloads.length === 0
+  // Fetch real workloads from API (skip when in demo mode)
+  const { data: realWorkloads } = useWorkloads(undefined, !demoMode)
+
+  // Use demo data when in demo mode or when no real data available
+  const isDemo = demoMode || !realWorkloads || realWorkloads.length === 0
 
   // In demo mode, derive available clusters from demo workloads' targetClusters
   // In live mode, use real clusters from the API

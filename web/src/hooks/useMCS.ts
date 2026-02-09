@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, BackendUnavailableError } from '../lib/api'
+import { useDemoMode } from './useDemoMode'
 import type {
   ServiceExport,
   ServiceExportList,
@@ -18,6 +19,18 @@ import type {
 
 // Refresh interval for automatic polling (2 minutes)
 const REFRESH_INTERVAL_MS = 120000
+
+// Demo data for demo mode
+const DEMO_SERVICE_EXPORTS: ServiceExport[] = [
+  { name: 'api-gateway', namespace: 'production', cluster: 'us-east-1', status: 'Ready', createdAt: new Date(Date.now() - 7 * 86400000).toISOString(), targetClusters: ['eu-central-1', 'us-west-2'] },
+  { name: 'auth-service', namespace: 'production', cluster: 'us-east-1', status: 'Ready', createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
+  { name: 'data-service', namespace: 'analytics', cluster: 'eu-central-1', status: 'Pending', createdAt: new Date(Date.now() - 86400000).toISOString() },
+]
+
+const DEMO_SERVICE_IMPORTS: ServiceImport[] = [
+  { name: 'api-gateway', namespace: 'production', cluster: 'eu-central-1', sourceCluster: 'us-east-1', type: 'ClusterSetIP', endpoints: 3, createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
+  { name: 'auth-service', namespace: 'production', cluster: 'us-west-2', sourceCluster: 'us-east-1', type: 'ClusterSetIP', endpoints: 2, createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
+]
 
 interface UseMCSState<T> {
   data: T | null
@@ -31,6 +44,7 @@ interface UseMCSState<T> {
  * Hook to get MCS availability status across all clusters.
  */
 export function useMCSStatus() {
+  const { isDemoMode: demoMode } = useDemoMode()
   const [state, setState] = useState<UseMCSState<ClusterMCSStatus[]>>({
     data: null,
     isLoading: true,
@@ -76,8 +90,12 @@ export function useMCSStatus() {
   }, [])
 
   useEffect(() => {
+    if (demoMode) {
+      setState({ data: [], isLoading: false, isRefreshing: false, error: null, lastUpdated: Date.now() })
+      return
+    }
     fetchStatus()
-  }, [fetchStatus])
+  }, [fetchStatus, demoMode])
 
   return {
     clusters: state.data ?? [],
@@ -96,6 +114,7 @@ export function useMCSStatus() {
  * @param namespace - Optional namespace filter
  */
 export function useServiceExports(cluster?: string, namespace?: string) {
+  const { isDemoMode: demoMode } = useDemoMode()
   const [state, setState] = useState<UseMCSState<ServiceExport[]>>({
     data: null,
     isLoading: true,
@@ -150,6 +169,11 @@ export function useServiceExports(cluster?: string, namespace?: string) {
 
   // Initial fetch and polling
   useEffect(() => {
+    if (demoMode) {
+      setState({ data: DEMO_SERVICE_EXPORTS, isLoading: false, isRefreshing: false, error: null, lastUpdated: Date.now() })
+      return
+    }
+
     fetchExports()
 
     // Set up polling
@@ -162,7 +186,7 @@ export function useServiceExports(cluster?: string, namespace?: string) {
         clearInterval(intervalRef.current)
       }
     }
-  }, [fetchExports])
+  }, [fetchExports, demoMode])
 
   return {
     exports: state.data ?? [],
@@ -182,6 +206,7 @@ export function useServiceExports(cluster?: string, namespace?: string) {
  * @param namespace - Optional namespace filter
  */
 export function useServiceImports(cluster?: string, namespace?: string) {
+  const { isDemoMode: demoMode } = useDemoMode()
   const [state, setState] = useState<UseMCSState<ServiceImport[]>>({
     data: null,
     isLoading: true,
@@ -236,6 +261,11 @@ export function useServiceImports(cluster?: string, namespace?: string) {
 
   // Initial fetch and polling
   useEffect(() => {
+    if (demoMode) {
+      setState({ data: DEMO_SERVICE_IMPORTS, isLoading: false, isRefreshing: false, error: null, lastUpdated: Date.now() })
+      return
+    }
+
     fetchImports()
 
     // Set up polling
@@ -248,7 +278,7 @@ export function useServiceImports(cluster?: string, namespace?: string) {
         clearInterval(intervalRef.current)
       }
     }
-  }, [fetchImports])
+  }, [fetchImports, demoMode])
 
   return {
     imports: state.data ?? [],

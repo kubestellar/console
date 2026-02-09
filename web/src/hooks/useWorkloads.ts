@@ -190,12 +190,13 @@ export function useWorkloads(options?: {
 }
 
 // Fetch cluster capabilities
-export function useClusterCapabilities() {
+export function useClusterCapabilities(enabled = true) {
   const [data, setData] = useState<ClusterCapability[] | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
 
   const fetchData = useCallback(async () => {
+    if (!enabled) return
     setIsLoading(true)
     setError(null)
 
@@ -214,10 +215,15 @@ export function useClusterCapabilities() {
   }, [])
 
   useEffect(() => {
+    if (!enabled) {
+      setData(undefined)
+      setIsLoading(false)
+      return
+    }
     fetchData()
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
-  }, [fetchData])
+  }, [fetchData, enabled])
 
   return { data, isLoading, error, refetch: fetchData }
 }

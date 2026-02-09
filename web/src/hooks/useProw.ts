@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { useDemoMode } from './useDemoMode'
 
 // Refresh interval for automatic polling (2 minutes)
 const REFRESH_INTERVAL_MS = 120000
@@ -98,6 +99,7 @@ function formatTimeAgo(timestamp: string): string {
  * Hook to fetch ProwJobs from a cluster
  */
 export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
+  const { isDemoMode: demoMode } = useDemoMode()
   const [jobs, setJobs] = useState<ProwJob[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -174,12 +176,24 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
    
   }, [prowCluster, namespace])
 
+  // Return demo data when in demo mode
   useEffect(() => {
+    if (demoMode) {
+      setJobs(getDemoProwJobs())
+      setIsLoading(false)
+      setError(null)
+      setConsecutiveFailures(0)
+      setLastRefresh(new Date())
+      initialLoadDone.current = true
+      return
+    }
+
+    // Live mode: fetch from kubectlProxy
     refetch(false)
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [demoMode])
 
   // Compute status from jobs
   const status = useMemo((): ProwStatus => {

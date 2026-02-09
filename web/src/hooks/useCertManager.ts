@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { useDemoMode } from './useDemoMode'
 
 // Refresh interval for automatic polling (2 minutes)
 const REFRESH_INTERVAL_MS = 120000
@@ -184,7 +185,26 @@ function getIssuerStatus(issuer: IssuerResource): Issuer['status'] {
 /**
  * Hook to fetch cert-manager data from clusters
  */
+// Demo certificates for demo mode
+function getDemoCertificates(): Certificate[] {
+  return [
+    { id: 'demo/default/app-tls', name: 'app-tls', namespace: 'default', cluster: 'us-east-1', dnsNames: ['app.example.com'], issuerName: 'letsencrypt-prod', issuerKind: 'ClusterIssuer', secretName: 'app-tls-secret', status: 'ready', notAfter: new Date(Date.now() + 60 * 86400000) },
+    { id: 'demo/monitoring/grafana-tls', name: 'grafana-tls', namespace: 'monitoring', cluster: 'us-east-1', dnsNames: ['grafana.example.com'], issuerName: 'letsencrypt-prod', issuerKind: 'ClusterIssuer', secretName: 'grafana-tls', status: 'ready', notAfter: new Date(Date.now() + 45 * 86400000) },
+    { id: 'demo/ingress/api-tls', name: 'api-tls', namespace: 'ingress', cluster: 'eu-central-1', dnsNames: ['api.example.com', 'api-v2.example.com'], issuerName: 'letsencrypt-staging', issuerKind: 'ClusterIssuer', secretName: 'api-tls', status: 'expiring', notAfter: new Date(Date.now() + 15 * 86400000) },
+    { id: 'demo/default/old-cert', name: 'old-cert', namespace: 'default', cluster: 'us-west-2', dnsNames: ['old.example.com'], issuerName: 'self-signed', issuerKind: 'Issuer', secretName: 'old-cert', status: 'expired', notAfter: new Date(Date.now() - 5 * 86400000) },
+  ]
+}
+
+function getDemoIssuers(): Issuer[] {
+  return [
+    { id: 'demo/letsencrypt-prod', name: 'letsencrypt-prod', cluster: 'us-east-1', kind: 'ClusterIssuer', type: 'ACME', status: 'ready', certificateCount: 2 },
+    { id: 'demo/letsencrypt-staging', name: 'letsencrypt-staging', cluster: 'eu-central-1', kind: 'ClusterIssuer', type: 'ACME', status: 'ready', certificateCount: 1 },
+    { id: 'demo/default/self-signed', name: 'self-signed', namespace: 'default', cluster: 'us-west-2', kind: 'Issuer', type: 'SelfSigned', status: 'ready', certificateCount: 1 },
+  ]
+}
+
 export function useCertManager() {
+  const { isDemoMode: demoMode } = useDemoMode()
   const { clusters: allClusters } = useClusters()
 
   // Initialize state from cache
@@ -355,17 +375,31 @@ export function useCertManager() {
     }
   }, [clusters])
 
-  // Initial load
+  // Return demo data when in demo mode
   useEffect(() => {
+    if (demoMode) {
+      setCertificates(getDemoCertificates())
+      setIssuers(getDemoIssuers())
+      setInstalled(true)
+      setIsLoading(false)
+      setError(null)
+      setConsecutiveFailures(0)
+      setLastRefresh(new Date())
+      initialLoadDone.current = true
+      return
+    }
+
+    // Live mode: reset and fetch from clusters
     if (clusters.length > 0) {
       refetch()
     } else {
       setIsLoading(false)
     }
-  }, [clusters.length]) // Only re-run when cluster list changes
+  }, [clusters.length, demoMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh
+  // Auto-refresh (only in live mode)
   useEffect(() => {
+    if (demoMode) return
     if (!installed) return
 
     const interval = setInterval(() => {
@@ -373,7 +407,7 @@ export function useCertManager() {
     }, REFRESH_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [installed, refetch])
+  }, [installed, refetch, demoMode])
 
   // Calculate status
   const status = useMemo((): CertManagerStatus => {

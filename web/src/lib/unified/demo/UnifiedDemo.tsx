@@ -48,6 +48,9 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
   const initialLoadTriggeredRef = useRef(false)
 
   // Track mode changes and trigger skeleton state
+  // IMPORTANT: Only depend on isDemoMode, NOT modeVersion. The setModeVersion call
+  // inside this effect would cause a re-render that triggers cleanup, which cancels
+  // the timeout before it can clear isModeSwitching — leaving skeletons stuck forever.
   useEffect(() => {
     if (previousModeRef.current !== isDemoMode) {
       // Mode has changed - trigger skeleton state
@@ -59,7 +62,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
       // Increment global mode transition version to invalidate stale fetches
       incrementModeTransitionVersion()
 
-      // Clear any existing timeout
+      // Clear any existing timeout (from rapid toggles)
       if (switchTimeoutRef.current) {
         clearTimeout(switchTimeoutRef.current)
       }
@@ -74,7 +77,6 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
             from: previousModeRef.current ? 'demo' : 'live',
             to: isDemoMode ? 'demo' : 'live',
             timestamp: Date.now(),
-            modeVersion: modeVersion + 1,
           },
         })
       )
@@ -95,7 +97,8 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
         clearTimeout(switchTimeoutRef.current)
       }
     }
-  }, [isDemoMode, modeVersion])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode])
 
   // Trigger initial data load ONCE when provider mounts
   // This ensures all registered refetch functions run on page load
