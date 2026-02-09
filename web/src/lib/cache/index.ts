@@ -700,7 +700,7 @@ export function useCache<T>({
   // This ensures demo mode shows demo content while preserving cache for live mode
   return {
     data: effectiveEnabled ? state.data : initialData,
-    isLoading: state.isLoading,
+    isLoading: effectiveEnabled ? state.isLoading : false,
     isRefreshing: state.isRefreshing,
     error: state.error,
     isFailed: state.isFailed,
