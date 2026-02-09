@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL, getEffectiveInterval } from './shared'
 import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -185,6 +186,8 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const mountedRef = useRef(true)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
     // Demo data is already set in initial state - skip to avoid re-render flicker
@@ -235,6 +238,21 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
     }
   }, [fetchData, options?.cluster, options?.namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    // Re-set initial data based on current mode
+    if (shouldUseDemoData()) {
+      setData(getDemoAgents())
+      setIsLoading(false)
+    } else {
+      fetchData(false)
+    }
+  }, [demoMode, fetchData])
+
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }
 
@@ -245,6 +263,8 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const mountedRef = useRef(true)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
     // Demo data is already set in initial state - skip to avoid re-render flicker
@@ -295,6 +315,20 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
     }
   }, [fetchData, options?.cluster, options?.namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    if (shouldUseDemoData()) {
+      setData(getDemoBuilds())
+      setIsLoading(false)
+    } else {
+      fetchData(false)
+    }
+  }, [demoMode, fetchData])
+
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }
 
@@ -305,6 +339,8 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const mountedRef = useRef(true)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
     // Demo data is already set in initial state - skip to avoid re-render flicker
@@ -355,6 +391,20 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
     }
   }, [fetchData, options?.cluster, options?.namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    if (shouldUseDemoData()) {
+      setData(getDemoCards())
+      setIsLoading(false)
+    } else {
+      fetchData(false)
+    }
+  }, [demoMode, fetchData])
+
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }
 
@@ -365,6 +415,8 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const mountedRef = useRef(true)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const fetchData = useCallback(async (silent = false) => {
     // Demo data is already set in initial state - skip to avoid re-render flicker
@@ -414,6 +466,20 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
       unregisterRefetch()
     }
   }, [fetchData, options?.cluster, options?.namespace])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    if (shouldUseDemoData()) {
+      setData(getDemoTools())
+      setIsLoading(false)
+    } else {
+      fetchData(false)
+    }
+  }, [demoMode, fetchData])
 
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }

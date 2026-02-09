@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
@@ -78,6 +79,8 @@ function saveServicesCacheToStorage() {
 // Hook to get services with localStorage-backed caching
 export function useServices(cluster?: string, namespace?: string) {
   const cacheKey = `services:${cluster || 'all'}:${namespace || 'all'}`
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   // Initialize from cache if available and matches current key
   const getCachedData = () => {
@@ -320,6 +323,15 @@ export function useServices(cluster?: string, namespace?: string) {
     return subscribeNetworkingCache(handleCacheReset)
   }, [])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch(false)
+  }, [demoMode, refetch])
+
   return {
     services,
     isLoading,
@@ -339,6 +351,8 @@ export function useIngresses(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -398,6 +412,16 @@ export function useIngresses(cluster?: string, namespace?: string) {
 
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
+
   return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
@@ -408,6 +432,8 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
@@ -467,6 +493,16 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
 
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
+
   return { networkpolicies, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 

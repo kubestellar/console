@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { LOCAL_AGENT_URL } from './shared'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
@@ -10,6 +11,8 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
   const [configmaps, setConfigMaps] = useState<ConfigMap[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
@@ -73,6 +76,15 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
+
   return { configmaps, isLoading, error, refetch }
 }
 
@@ -81,6 +93,8 @@ export function useSecrets(cluster?: string, namespace?: string) {
   const [secrets, setSecrets] = useState<Secret[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     if (isDemoMode()) {
@@ -143,6 +157,15 @@ export function useSecrets(cluster?: string, namespace?: string) {
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
+
   return { secrets, isLoading, error, refetch }
 }
 
@@ -151,6 +174,8 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
   const [serviceAccounts, setServiceAccounts] = useState<ServiceAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     if (isDemoMode()) {
@@ -212,6 +237,15 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
     const unregisterRefetch = registerRefetch(`serviceaccounts:${cluster || 'all'}:${namespace || 'all'}`, refetch)
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
 
   return { serviceAccounts, isLoading, error, refetch }
 }

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
@@ -57,6 +58,8 @@ function saveSubscriptionsCacheToStorage(data: OperatorSubscription[], key: stri
 export function useOperators(cluster?: string) {
   const cacheKey = `operators:${cluster || 'all'}`
   const cached = loadOperatorsCacheFromStorage(cacheKey)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const [operators, setOperators] = useState<Operator[]>(cached?.data || [])
   const [isLoading, setIsLoading] = useState(!cached)
@@ -175,6 +178,15 @@ export function useOperators(cluster?: string) {
     setFetchVersion(v => v + 1)
   }, [])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    setFetchVersion(v => v + 1)
+  }, [demoMode])
+
   return { operators, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
@@ -182,6 +194,8 @@ export function useOperators(cluster?: string) {
 export function useOperatorSubscriptions(cluster?: string) {
   const cacheKey = `subscriptions:${cluster || 'all'}`
   const cached = loadSubscriptionsCacheFromStorage(cacheKey)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const [subscriptions, setSubscriptions] = useState<OperatorSubscription[]>(cached?.data || [])
   const [isLoading, setIsLoading] = useState(!cached)
@@ -299,6 +313,15 @@ export function useOperatorSubscriptions(cluster?: string) {
   const refetch = useCallback(() => {
     setFetchVersion(v => v + 1)
   }, [])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    setFetchVersion(v => v + 1)
+  }, [demoMode])
 
   return { subscriptions, isLoading, isRefreshing, error, refetch, lastRefresh, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }

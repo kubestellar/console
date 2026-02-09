@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import type { K8sRole, K8sRoleBinding, K8sServiceAccountInfo } from './types'
 
@@ -97,6 +98,8 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
   const [roles, setRoles] = useState<K8sRole[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     // Demo mode returns demo data
@@ -141,6 +144,15 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
+
   return { roles, isLoading, error, refetch }
 }
 
@@ -149,6 +161,8 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
   const [bindings, setBindings] = useState<K8sRoleBinding[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     // Demo mode returns demo data
@@ -193,6 +207,15 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
+
   return { bindings, isLoading, error, refetch }
 }
 
@@ -201,6 +224,8 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
   const [serviceAccounts, setServiceAccounts] = useState<K8sServiceAccountInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async () => {
     // Demo mode returns demo data
@@ -237,6 +262,15 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     const unregisterRefetch = registerRefetch(`k8s-service-accounts:${cluster || 'all'}:${namespace || 'all'}`, refetch)
     return () => unregisterRefetch()
   }, [refetch, cluster, namespace])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
 
   return { serviceAccounts, isLoading, error, refetch }
 }

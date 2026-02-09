@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
@@ -281,10 +282,21 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
 // Hook to get GPU nodes with shared caching
 export function useGPUNodes(cluster?: string) {
   const [state, setState] = useState<GPUNodeCache>(gpuNodeCache)
+  const { isDemoMode: demoMode } = useDemoMode()
 
   // Stable refetch function for registration
   const refetchRef = useRef(() => fetchGPUNodes(cluster, 'mode-switch'))
   refetchRef.current = () => fetchGPUNodes(cluster, 'mode-switch')
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  const initialMountRef = useRef(true)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    fetchGPUNodes(cluster, 'mode-switch')
+  }, [demoMode, cluster])
 
   useEffect(() => {
     // Subscribe to cache updates
@@ -383,9 +395,11 @@ export function useNodes(cluster?: string) {
   const [nodes, setNodes] = useState<NodeInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isDemoMode: demoMode } = useDemoMode()
 
   // Track previous cluster to detect actual changes (not just initial mount)
   const prevClusterRef = useRef<string | undefined>(cluster)
+  const initialMountRef = useRef(true)
 
   // Reset state only when cluster actually CHANGES (not on initial mount)
   useEffect(() => {
@@ -536,6 +550,15 @@ export function useNodes(cluster?: string) {
       unregisterRefetch()
     }
   }, [refetch, cluster])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch()
+  }, [demoMode, refetch])
 
   return { nodes, isLoading, error, refetch }
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
@@ -45,6 +46,8 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   // Track AbortController for cleanup on unmount
   const abortControllerRef = useRef<AbortController | null>(null)
   const isMountedRef = useRef(true)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   // Initialize from cache if available
   const getCachedData = () => {
@@ -249,6 +252,15 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     return subscribeEventsCache(handleCacheReset)
   }, [])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch(false)
+  }, [demoMode, refetch])
+
   return {
     events,
     isLoading,
@@ -272,6 +284,8 @@ let warningEventsCache: WarningEventsCache | null = null
 
 export function useWarningEvents(cluster?: string, namespace?: string, limit = 20) {
   const cacheKey = `warningEvents:${cluster || 'all'}:${namespace || 'all'}:${limit}`
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   // Initialize from cache if available
   const getCachedData = () => {
@@ -389,6 +403,15 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     }
     return subscribeEventsCache(handleCacheReset)
   }, [])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch(false)
+  }, [demoMode, refetch])
 
   return { events, isLoading, isRefreshing, lastUpdated, error, refetch: () => refetch(false) }
 }

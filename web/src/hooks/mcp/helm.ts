@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
@@ -64,6 +65,8 @@ export function useHelmReleases(cluster?: string) {
   // Initialize from cache (localStorage backed)
   const [releases, setReleases] = useState<HelmRelease[]>(helmReleasesCache.data)
   const [isLoading, setIsLoading] = useState(helmReleasesCache.data.length === 0)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(helmReleasesCache.lastError)
   const [consecutiveFailures, setConsecutiveFailures] = useState(helmReleasesCache.consecutiveFailures)
@@ -207,6 +210,15 @@ export function useHelmReleases(cluster?: string) {
     }
   }, [refetch, cluster])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch(false)
+  }, [demoMode, refetch])
+
   const isFailed = consecutiveFailures >= 3
 
   return { releases, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed, lastRefresh }
@@ -249,6 +261,8 @@ const helmHistoryCache = loadHelmHistoryFromStorage()
 export function useHelmHistory(cluster?: string, release?: string, namespace?: string) {
   const cacheKey = cluster && release ? `${cluster}:${release}` : ''
   const cachedEntry = cacheKey ? helmHistoryCache.get(cacheKey) : undefined
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const [history, setHistory] = useState<HelmHistoryEntry[]>(cachedEntry?.data || [])
   const [isLoading, setIsLoading] = useState(cachedEntry?.data.length === 0 || !cachedEntry)
@@ -362,6 +376,15 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
     return () => unregisterRefetch()
   }, [cluster, release, refetch])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    if (release) refetch()
+  }, [demoMode, refetch, release])
+
   const isFailed = consecutiveFailures >= 3
 
   return { history, isLoading, isRefreshing, error, refetch, isFailed, consecutiveFailures, lastRefresh }
@@ -381,6 +404,8 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
   // We must have namespace to make a meaningful API call
   const cacheKey = cluster && release && namespace ? `${cluster}:${release}:${namespace}` : ''
   const cachedEntry = cacheKey ? helmValuesCache.get(cacheKey) : undefined
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const [values, setValues] = useState<Record<string, unknown> | string | null>(cachedEntry?.values || null)
   const [format, setFormat] = useState<'json' | 'yaml'>(cachedEntry?.format || 'json')
@@ -576,6 +601,15 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
     const unregisterRefetch = registerRefetch(`helm-values:${key}`, refetch)
     return () => unregisterRefetch()
   }, [cluster, release, namespace, refetch])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    if (release && namespace) refetch()
+  }, [demoMode, refetch, release, namespace])
 
   const isFailed = consecutiveFailures >= 3
 

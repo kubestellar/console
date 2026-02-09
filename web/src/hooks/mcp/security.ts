@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { isDemoMode } from '../../lib/demoMode'
+import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
@@ -39,6 +40,8 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [isUsingDemoData, setIsUsingDemoData] = useState(false)
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -126,6 +129,15 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
     }
   }, [cluster, namespace, refetch])
 
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch(false)
+  }, [demoMode, refetch])
+
   return {
     issues,
     isLoading,
@@ -152,6 +164,8 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(
     storedDrifts.timestamp > 0 ? new Date(storedDrifts.timestamp) : null
   )
+  const { isDemoMode: demoMode } = useDemoMode()
+  const initialMountRef = useRef(true)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -253,6 +267,15 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       unregisterRefetch()
     }
   }, [refetch, cluster, namespace])
+
+  // Re-fetch when demo mode changes (not on initial mount)
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false
+      return
+    }
+    refetch(false)
+  }, [demoMode, refetch])
 
   return {
     drifts,
