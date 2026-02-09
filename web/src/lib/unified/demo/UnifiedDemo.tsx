@@ -38,6 +38,7 @@ interface UnifiedDemoProviderProps {
 export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
   const { isDemoMode, toggleDemoMode, setDemoMode } = useDemoMode()
   const [isModeSwitching, setIsModeSwitching] = useState(false)
+  const [modeVersion, setModeVersion] = useState(0)
   const previousModeRef = useRef(isDemoMode)
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -46,6 +47,9 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
     if (previousModeRef.current !== isDemoMode) {
       // Mode has changed - trigger skeleton state
       setIsModeSwitching(true)
+
+      // Increment mode version - this invalidates all in-flight fetches
+      setModeVersion(v => v + 1)
 
       // Clear any existing timeout
       if (switchTimeoutRef.current) {
@@ -62,6 +66,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
             from: previousModeRef.current ? 'demo' : 'live',
             to: isDemoMode ? 'demo' : 'live',
             timestamp: Date.now(),
+            modeVersion: modeVersion + 1,
           },
         })
       )
@@ -80,7 +85,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
         clearTimeout(switchTimeoutRef.current)
       }
     }
-  }, [isDemoMode])
+  }, [isDemoMode, modeVersion])
 
   // Get demo data for a component
   const getDemoData = useCallback(<T = unknown>(id: string): DemoDataState<T> => {
@@ -119,6 +124,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
     toggleDemoMode,
     setDemoMode,
     isModeSwitching,
+    modeVersion,
     getDemoData,
     registerGenerator,
     regenerate,
@@ -126,6 +132,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
   }), [
     isDemoMode,
     isModeSwitching,
+    modeVersion,
     toggleDemoMode,
     setDemoMode,
     getDemoData,
@@ -144,6 +151,10 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
 /**
  * Hook to use unified data (demo or live) with skeleton support.
  * Automatically handles mode switching with skeleton states.
+ *
+ * CRITICAL: This hook filters out stale live data during mode switches.
+ * Live data captured before a mode switch is discarded to prevent
+ * race conditions where in-flight fetches complete after mode changes.
  *
  * @param id Component ID for demo data lookup
  * @param liveData Live data from hooks/API
@@ -171,17 +182,59 @@ export function useUnifiedData<T = unknown>(
   error?: Error
   refetch: () => void
 } {
-  const { isDemoMode, isModeSwitching, getDemoData, regenerate } = useUnifiedDemoContext()
+  const { isDemoMode, isModeSwitching, getDemoData, regenerate, modeVersion } = useUnifiedDemoContext()
   const { forceSkeleton, skipDemo, error } = options
+
+  // Track mode version when live data was last accepted
+  const [lastAcceptedVersion, setLastAcceptedVersion] = useState(modeVersion)
+  const [cachedLiveData, setCachedLiveData] = useState<T | undefined>(undefined)
+
+  // Track the version when current live data was captured
+  const liveDataVersionRef = useRef(modeVersion)
 
   // Determine if we should use demo data
   const useDemoData = isDemoMode && !skipDemo
+
+  // CRITICAL FIX: Only accept live data if:
+  // 1. Not switching modes
+  // 2. Not in demo mode
+  // 3. Live data was captured in the SAME mode version
+  const acceptLiveData = !isModeSwitching && !useDemoData && liveDataVersionRef.current === modeVersion
+
+  // Reset cached data when mode version changes
+  useEffect(() => {
+    if (modeVersion !== lastAcceptedVersion) {
+      // Mode has changed - reset the version tracking
+      liveDataVersionRef.current = modeVersion
+      setLastAcceptedVersion(modeVersion)
+      setCachedLiveData(undefined) // Clear stale cached data
+    }
+  }, [modeVersion, lastAcceptedVersion])
+
+  // Update cached live data only when we should accept it
+  useEffect(() => {
+    if (acceptLiveData && liveData !== undefined) {
+      setCachedLiveData(liveData)
+      liveDataVersionRef.current = modeVersion
+    }
+  }, [acceptLiveData, liveData, modeVersion])
 
   // Get demo data if in demo mode
   const demoState = useDemoData ? getDemoData<T>(id) : null
 
   // Determine final data and loading state
-  const data = useDemoData ? demoState?.data : liveData
+  let data: T | undefined
+  if (useDemoData) {
+    // In demo mode, use demo data
+    data = demoState?.data
+  } else if (isModeSwitching) {
+    // During mode switch, force undefined to show skeleton
+    data = undefined
+  } else {
+    // In live mode, use cached live data (which is only updated when acceptLiveData is true)
+    data = cachedLiveData ?? (acceptLiveData ? liveData : undefined)
+  }
+
   const isLoading = useDemoData ? (demoState?.isLoading ?? true) : isLiveLoading
   const isDemoData = useDemoData && demoState?.data !== undefined
 

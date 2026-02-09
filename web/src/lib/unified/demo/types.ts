@@ -96,6 +96,11 @@ export interface UnifiedDemoContextValue {
   setDemoMode: (value: boolean) => void
   /** Whether mode is currently switching (triggers skeleton) */
   isModeSwitching: boolean
+  /**
+   * Mode version counter - increments on each mode switch.
+   * Used to detect and discard stale data from before the switch.
+   */
+  modeVersion: number
   /** Get demo data for a component by ID */
   getDemoData: <T = unknown>(id: string) => DemoDataState<T>
   /** Register a demo data generator */

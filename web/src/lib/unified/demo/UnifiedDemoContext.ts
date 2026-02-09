@@ -32,6 +32,7 @@ const defaultContextValue: UnifiedDemoContextValue = {
     console.warn('UnifiedDemoProvider not mounted')
   },
   isModeSwitching: false,
+  modeVersion: 0,
   getDemoData: <T = unknown>() => createDefaultDemoDataState<T>(),
   registerGenerator: () => {
     console.warn('UnifiedDemoProvider not mounted')
@@ -73,4 +74,14 @@ export function useIsDemoMode(): boolean {
 export function useIsModeSwitching(): boolean {
   const { isModeSwitching } = useContext(UnifiedDemoContext)
   return isModeSwitching
+}
+
+/**
+ * Hook to get the current mode version.
+ * Increments on each mode switch. Used to detect stale data.
+ * @returns Current mode version
+ */
+export function useModeVersion(): number {
+  const { modeVersion } = useContext(UnifiedDemoContext)
+  return modeVersion
 }
