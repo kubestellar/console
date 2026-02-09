@@ -185,54 +185,35 @@ export function useUnifiedData<T = unknown>(
   const { isDemoMode, isModeSwitching, getDemoData, regenerate, modeVersion } = useUnifiedDemoContext()
   const { forceSkeleton, skipDemo, error } = options
 
-  // Track mode version when live data was last accepted
-  const [lastAcceptedVersion, setLastAcceptedVersion] = useState(modeVersion)
-  const [cachedLiveData, setCachedLiveData] = useState<T | undefined>(undefined)
-
-  // Track the version when current live data was captured
-  const liveDataVersionRef = useRef(modeVersion)
+  // Track the mode version when we last accepted data
+  // This helps discard stale data from before mode switch
+  const lastModeVersionRef = useRef(modeVersion)
 
   // Determine if we should use demo data
   const useDemoData = isDemoMode && !skipDemo
 
-  // CRITICAL FIX: Only accept live data if:
-  // 1. Not switching modes
-  // 2. Not in demo mode
-  // 3. Live data was captured in the SAME mode version
-  const acceptLiveData = !isModeSwitching && !useDemoData && liveDataVersionRef.current === modeVersion
-
-  // Reset cached data when mode version changes
-  useEffect(() => {
-    if (modeVersion !== lastAcceptedVersion) {
-      // Mode has changed - reset the version tracking
-      liveDataVersionRef.current = modeVersion
-      setLastAcceptedVersion(modeVersion)
-      setCachedLiveData(undefined) // Clear stale cached data
-    }
-  }, [modeVersion, lastAcceptedVersion])
-
-  // Update cached live data only when we should accept it
-  useEffect(() => {
-    if (acceptLiveData && liveData !== undefined) {
-      setCachedLiveData(liveData)
-      liveDataVersionRef.current = modeVersion
-    }
-  }, [acceptLiveData, liveData, modeVersion])
-
   // Get demo data if in demo mode
   const demoState = useDemoData ? getDemoData<T>(id) : null
 
+  // Detect mode version change - discard stale live data
+  const modeJustChanged = lastModeVersionRef.current !== modeVersion
+  if (modeJustChanged) {
+    lastModeVersionRef.current = modeVersion
+  }
+
   // Determine final data and loading state
+  // Simple logic: during switch show skeleton, otherwise use appropriate data source
   let data: T | undefined
-  if (useDemoData) {
+  if (isModeSwitching) {
+    // During mode switch, force skeleton to prevent stale data flash
+    data = undefined
+  } else if (useDemoData) {
     // In demo mode, use demo data
     data = demoState?.data
-  } else if (isModeSwitching) {
-    // During mode switch, force undefined to show skeleton
-    data = undefined
   } else {
-    // In live mode, use cached live data (which is only updated when acceptLiveData is true)
-    data = cachedLiveData ?? (acceptLiveData ? liveData : undefined)
+    // In live mode, use live data directly
+    // The isModeSwitching guard above prevents stale data during transition
+    data = liveData
   }
 
   const isLoading = useDemoData ? (demoState?.isLoading ?? true) : isLiveLoading
