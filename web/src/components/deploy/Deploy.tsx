@@ -34,6 +34,7 @@ import { DeployConfirmDialog } from './DeployConfirmDialog'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { usePersistence } from '../../hooks/usePersistence'
 import { useWorkloadDeployments, useManagedWorkloads } from '../../hooks/useConsoleCRs'
+import { useToast } from '../ui/Toast'
 
 const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
 
@@ -199,6 +200,7 @@ export function Deploy() {
 
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
+  const { showToast } = useToast()
 
   // Persistence hooks for CR-backed state
   const { isEnabled: persistenceEnabled, isActive: persistenceActive } = usePersistence()
@@ -340,7 +342,8 @@ export function Deploy() {
           },
         })
       } catch (err) {
-        console.warn('Failed to create persistence CRs:', err)
+        console.error('Failed to create persistence CRs:', err)
+        showToast('Failed to create deployment tracking records', 'warning')
         // Continue with deploy even if CR creation fails
       }
     }
@@ -380,7 +383,7 @@ export function Deploy() {
     } catch (err) {
       console.error('Deploy failed:', err)
     }
-  }, [pendingDeploy, publishCardEvent, deployWorkload, shouldPersist, createManagedWorkload, createWorkloadDeployment])
+  }, [pendingDeploy, publishCardEvent, deployWorkload, shouldPersist, createManagedWorkload, createWorkloadDeployment, showToast])
 
   // Handle addCard URL param - open modal and clear param
   useEffect(() => {

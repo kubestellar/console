@@ -13,7 +13,7 @@ export function safeGetItem(key: string): string | null {
     return localStorage.getItem(key)
   } catch (error) {
     // localStorage may throw in private browsing mode or when disabled
-    console.warn(`Failed to read from localStorage: ${key}`, error)
+    console.error(`Failed to read from localStorage: ${key}`, error)
     return null
   }
 }
@@ -30,7 +30,7 @@ export function safeSetItem(key: string, value: string): boolean {
     return true
   } catch (error) {
     // localStorage may throw in private browsing mode, when quota exceeded, or when disabled
-    console.warn(`Failed to write to localStorage: ${key}`, error)
+    console.error(`Failed to write to localStorage: ${key}`, error)
     return false
   }
 }
@@ -45,7 +45,7 @@ export function safeRemoveItem(key: string): boolean {
     localStorage.removeItem(key)
     return true
   } catch (error) {
-    console.warn(`Failed to remove from localStorage: ${key}`, error)
+    console.error(`Failed to remove from localStorage: ${key}`, error)
     return false
   }
 }
@@ -62,7 +62,7 @@ export function safeGetJSON<T = unknown>(key: string): T | null {
       return JSON.parse(item) as T
     }
   } catch (error) {
-    console.warn(`Failed to read/parse JSON from localStorage: ${key}`, error)
+    console.error(`Failed to read/parse JSON from localStorage: ${key}`, error)
   }
   return null
 }
@@ -78,7 +78,7 @@ export function safeSetJSON<T = unknown>(key: string, value: T): boolean {
     localStorage.setItem(key, JSON.stringify(value))
     return true
   } catch (error) {
-    console.warn(`Failed to write JSON to localStorage: ${key}`, error)
+    console.error(`Failed to write JSON to localStorage: ${key}`, error)
     return false
   }
 }
