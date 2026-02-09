@@ -19,7 +19,6 @@ import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { isDemoMode } from '../lib/demoMode'
-import { useDemoMode } from './useDemoMode'
 import { clusterCacheRef } from './mcp/shared'
 import type {
   PodInfo,
@@ -299,15 +298,14 @@ export function useCachedPods(
   namespace?: string,
   options?: { limit?: number; category?: RefreshCategory }
 ): CachedHookResult<PodInfo[]> & { pods: PodInfo[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { limit = 100, category = 'pods' } = options || {}
   const key = `pods:${cluster || 'all'}:${namespace || 'all'}:${limit}`
 
+  // Note: useCache handles demo mode detection internally via useSyncExternalStore
   const result = useCache({
     key,
     category,
     initialData: getDemoPods(),
-    enabled: !demoMode,
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
@@ -346,7 +344,6 @@ export function useCachedEvents(
   namespace?: string,
   options?: { limit?: number; category?: RefreshCategory }
 ): CachedHookResult<ClusterEvent[]> & { events: ClusterEvent[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { limit = 20, category = 'realtime' } = options || {}
   const key = `events:${cluster || 'all'}:${namespace || 'all'}:${limit}`
 
@@ -354,7 +351,6 @@ export function useCachedEvents(
     key,
     category,
     initialData: getDemoEvents(),
-    enabled: !demoMode,
     fetcher: async () => {
       const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { cluster, namespace, limit })
       return data.events || []
@@ -383,7 +379,6 @@ export function useCachedPodIssues(
   namespace?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<PodIssue[]> & { issues: PodIssue[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { category = 'pods' } = options || {}
   const key = `podIssues:${cluster || 'all'}:${namespace || 'all'}`
 
@@ -391,7 +386,6 @@ export function useCachedPodIssues(
     key,
     category,
     initialData: getDemoPodIssues(),
-    enabled: !demoMode,
     fetcher: async () => {
       let issues: PodIssue[]
 
@@ -447,7 +441,6 @@ export function useCachedDeploymentIssues(
   namespace?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<DeploymentIssue[]> & { issues: DeploymentIssue[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { category = 'deployments' } = options || {}
   const key = `deploymentIssues:${cluster || 'all'}:${namespace || 'all'}`
 
@@ -455,7 +448,6 @@ export function useCachedDeploymentIssues(
     key,
     category,
     initialData: getDemoDeploymentIssues(),
-    enabled: !demoMode,
     fetcher: async () => {
       // Try agent first — derive deployment issues from deployment data
       if (clusterCacheRef.clusters.length > 0) {
@@ -523,7 +515,6 @@ export function useCachedDeployments(
   namespace?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<Deployment[]> & { deployments: Deployment[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { category = 'deployments' } = options || {}
   const key = `deployments:${cluster || 'all'}:${namespace || 'all'}`
 
@@ -531,7 +522,6 @@ export function useCachedDeployments(
     key,
     category,
     initialData: getDemoDeployments(),
-    enabled: !demoMode,
     fetcher: async () => {
       // Try agent first (fast, no backend needed)
       if (clusterCacheRef.clusters.length > 0) {
@@ -597,7 +587,6 @@ export function useCachedServices(
   namespace?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<Service[]> & { services: Service[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { category = 'services' } = options || {}
   const key = `services:${cluster || 'all'}:${namespace || 'all'}`
 
@@ -605,7 +594,6 @@ export function useCachedServices(
     key,
     category,
     initialData: getDemoServices(),
-    enabled: !demoMode,
     fetcher: async () => {
       const data = await fetchAPI<{ services: Service[] }>('services', { cluster, namespace })
       return data.services || []
@@ -758,14 +746,12 @@ export function useCachedProwJobs(
   prowCluster = 'prow',
   namespace = 'prow'
 ): CachedHookResult<ProwJob[]> & { jobs: ProwJob[]; status: ProwStatus; formatTimeAgo: typeof formatTimeAgo } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const key = `prowjobs:${prowCluster}:${namespace}`
 
   const result = useCache({
     key,
     category: 'gitops',
     initialData: getDemoProwJobs(),
-    enabled: !demoMode,
     fetcher: () => fetchProwJobs(prowCluster, namespace),
   })
 
@@ -1068,14 +1054,12 @@ function computeLLMdStatus(servers: LLMdServer[], consecutiveFailures: number): 
 export function useCachedLLMdServers(
   clusters: string[] = ['vllm-d', 'platform-eval']
 ): CachedHookResult<LLMdServer[]> & { servers: LLMdServer[]; status: LLMdStatus } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const key = `llmd-servers:${clusters.join(',')}`
 
   const result = useCache({
     key,
     category: 'gitops',
     initialData: getDemoLLMdServers(),
-    enabled: !demoMode,
     fetcher: () => fetchLLMdServers(clusters),
   })
 
@@ -1133,14 +1117,12 @@ async function fetchLLMdModels(clusters: string[]): Promise<LLMdModel[]> {
 export function useCachedLLMdModels(
   clusters: string[] = ['vllm-d', 'platform-eval']
 ): CachedHookResult<LLMdModel[]> & { models: LLMdModel[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const key = `llmd-models:${clusters.join(',')}`
 
   const result = useCache({
     key,
     category: 'gitops',
     initialData: getDemoLLMdModels(),
-    enabled: !demoMode,
     fetcher: () => fetchLLMdModels(clusters),
   })
 
@@ -1259,7 +1241,6 @@ export function useCachedSecurityIssues(
   namespace?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<SecurityIssue[]> & { issues: SecurityIssue[] } {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { category = 'pods' } = options || {}
   const key = `securityIssues:${cluster || 'all'}:${namespace || 'all'}`
 
@@ -1267,7 +1248,6 @@ export function useCachedSecurityIssues(
     key,
     category,
     initialData: getDemoSecurityIssues(),
-    enabled: !demoMode,
     fetcher: async () => {
       // Try kubectl proxy first (uses agent to run kubectl commands)
       if (clusterCacheRef.clusters.length > 0) {
