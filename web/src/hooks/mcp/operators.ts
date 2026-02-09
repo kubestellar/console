@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerRefetch } from '../../lib/modeTransition'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import type { Operator, OperatorSubscription } from './types'
 
@@ -159,8 +160,14 @@ export function useOperators(cluster?: string) {
 
     doFetch()
 
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`operators:${cacheKey}`, () => {
+      setFetchVersion(v => v + 1)
+    })
+
     return () => {
       cancelled = true
+      unregisterRefetch()
     }
   }, [cluster, clusterCount, fetchVersion, cacheKey])
 
@@ -278,8 +285,14 @@ export function useOperatorSubscriptions(cluster?: string) {
 
     doFetch()
 
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`operator-subscriptions:${cacheKey}`, () => {
+      setFetchVersion(v => v + 1)
+    })
+
     return () => {
       cancelled = true
+      unregisterRefetch()
     }
   }, [cluster, clusterCount, fetchVersion, cacheKey])
 

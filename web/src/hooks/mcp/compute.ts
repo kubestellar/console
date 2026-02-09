@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
-import { registerCacheReset } from '../../lib/modeTransition'
+import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
 
@@ -282,6 +282,10 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
 export function useGPUNodes(cluster?: string) {
   const [state, setState] = useState<GPUNodeCache>(gpuNodeCache)
 
+  // Stable refetch function for registration
+  const refetchRef = useRef(() => fetchGPUNodes(cluster, 'mode-switch'))
+  refetchRef.current = () => fetchGPUNodes(cluster, 'mode-switch')
+
   useEffect(() => {
     // Subscribe to cache updates
     const handleUpdate = (cache: GPUNodeCache) => setState(cache)
@@ -299,9 +303,15 @@ export function useGPUNodes(cluster?: string) {
       fetchGPUNodes(cluster, 'poll')
     }, getEffectiveInterval(GPU_POLL_INTERVAL_MS))
 
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`gpu-nodes:${cluster || 'all'}`, () => {
+      refetchRef.current()
+    })
+
     return () => {
       gpuNodeSubscribers.delete(handleUpdate)
       clearInterval(pollInterval)
+      unregisterRefetch()
     }
   }, [cluster])
 
@@ -516,7 +526,16 @@ export function useNodes(cluster?: string) {
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`nodes:${cluster || 'all'}`, () => {
+      refetch()
+    })
+
+    return () => {
+      unregisterRefetch()
+    }
+  }, [refetch, cluster])
 
   return { nodes, isLoading, error, refetch }
 }

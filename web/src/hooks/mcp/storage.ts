@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
-import { registerCacheReset } from '../../lib/modeTransition'
+import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
@@ -315,9 +315,15 @@ export function usePVCs(cluster?: string, namespace?: string) {
       if (!cancelled) refetch(true)
     }, getEffectiveInterval(REFRESH_INTERVAL_MS))
 
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`pvcs:${cacheKey}`, () => {
+      if (!cancelled) refetch(false)
+    })
+
     return () => {
       cancelled = true
       clearInterval(interval)
+      unregisterRefetch()
     }
   }, [refetch, cacheKey])
 
@@ -391,8 +397,17 @@ export function usePVs(cluster?: string) {
   useEffect(() => {
     refetch()
     const interval = setInterval(refetch, getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`pvs:${cluster || 'all'}`, () => {
+      refetch()
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [refetch, cluster])
 
   return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
@@ -435,8 +450,17 @@ export function useResourceQuotas(cluster?: string, namespace?: string) {
   useEffect(() => {
     refetch()
     const interval = setInterval(refetch, getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`resource-quotas:${cluster || 'all'}:${namespace || 'all'}`, () => {
+      refetch()
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [refetch, cluster, namespace])
 
   return { resourceQuotas, isLoading, error, refetch }
 }
@@ -479,8 +503,17 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
   useEffect(() => {
     refetch()
     const interval = setInterval(refetch, getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`limit-ranges:${cluster || 'all'}:${namespace || 'all'}`, () => {
+      refetch()
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [refetch, cluster, namespace])
 
   return { limitRanges, isLoading, error, refetch }
 }

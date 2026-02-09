@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
-import { registerCacheReset } from '../../lib/modeTransition'
+import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { Service, Ingress, NetworkPolicy } from './types'
@@ -296,7 +296,16 @@ export function useServices(cluster?: string, namespace?: string) {
 
     // Poll every 30 seconds for service updates
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`services:${cacheKey}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
@@ -379,7 +388,16 @@ export function useIngresses(cluster?: string, namespace?: string) {
     }
   }, [cluster, namespace])
 
-  useEffect(() => { refetch() }, [refetch])
+  useEffect(() => {
+    refetch()
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`ingresses:${cluster || 'all'}:${namespace || 'all'}`, () => {
+      refetch()
+    })
+
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
   return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
@@ -439,7 +457,16 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
     }
   }, [cluster, namespace])
 
-  useEffect(() => { refetch() }, [refetch])
+  useEffect(() => {
+    refetch()
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`network-policies:${cluster || 'all'}:${namespace || 'all'}`, () => {
+      refetch()
+    })
+
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
   return { networkpolicies, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerRefetch } from '../../lib/modeTransition'
 import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL } from './shared'
 import type { ClusterEvent } from './types'
@@ -226,7 +227,14 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for events
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`events:${cacheKey}`, () => refetch(false))
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
@@ -360,7 +368,14 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll every 30 seconds for events
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`warning-events:${cacheKey}`, () => refetch(false))
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared

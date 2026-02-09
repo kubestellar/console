@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
@@ -114,7 +115,16 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-  }, [cluster, namespace]) // Only refetch on parameter changes, not on refetch function change
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`security-issues:${cluster || 'all'}:${namespace || 'all'}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      unregisterRefetch()
+    }
+  }, [cluster, namespace, refetch])
 
   return {
     issues,
@@ -232,8 +242,17 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
 
     // Poll every 30 seconds
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`gitops-drifts:${cluster || 'all'}:${namespace || 'all'}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [refetch, cluster, namespace])
 
   return {
     drifts,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
-import { registerCacheReset } from '../../lib/modeTransition'
+import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
@@ -197,7 +197,14 @@ export function useHelmReleases(cluster?: string) {
     }
 
     const interval = setInterval(() => refetch(true), getEffectiveInterval(HELM_REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`helm-releases:${cluster || 'all'}`, () => refetch(false))
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cluster])
 
   const isFailed = consecutiveFailures >= 3
@@ -349,6 +356,10 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       // No release selected - not loading, just waiting for user selection
       setIsLoading(false)
     }
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`helm-history:${key}`, refetch)
+    return () => unregisterRefetch()
   }, [cluster, release, refetch])
 
   const isFailed = consecutiveFailures >= 3
@@ -560,6 +571,10 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       }
       doFetch()
     }
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`helm-values:${key}`, refetch)
+    return () => unregisterRefetch()
   }, [cluster, release, namespace, refetch])
 
   const isFailed = consecutiveFailures >= 3

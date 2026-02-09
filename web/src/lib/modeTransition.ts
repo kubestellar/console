@@ -10,10 +10,19 @@
  * 1. Clear stored data (localStorage, module variables)
  * 2. Set isLoading: true and data: [] or null
  * 3. Notify subscribers so React components re-render with skeletons
+ *
+ * Additionally, hooks can register refetch functions that are called AFTER
+ * mode transition completes to fetch appropriate data (demo or live).
  */
 
 // Registry of cache reset functions
 const cacheResetRegistry = new Map<string, () => void | Promise<void>>()
+
+// Registry of refetch functions - called after mode switch to trigger data re-fetch
+const refetchRegistry = new Map<string, () => void | Promise<void>>()
+
+// Mode transition version - increments on each toggle
+let modeTransitionVersion = 0
 
 /**
  * Register a cache reset function.
@@ -63,4 +72,60 @@ export function clearAllRegisteredCaches(): void {
  */
 export function getRegisteredCacheCount(): number {
   return cacheResetRegistry.size
+}
+
+// ---------------------------------------------------------------------------
+// UNIFIED REFETCH MECHANISM
+// Hooks register refetch functions that are called after mode transitions
+// ---------------------------------------------------------------------------
+
+/**
+ * Register a refetch function to be called after mode transitions.
+ * Called by hooks in their useEffect to subscribe to mode changes.
+ *
+ * @param key - Unique identifier for this hook (e.g., 'gpu-nodes', 'pods')
+ * @param refetchFn - Function that fetches appropriate data for current mode
+ * @returns Unsubscribe function
+ */
+export function registerRefetch(
+  key: string,
+  refetchFn: () => void | Promise<void>
+): () => void {
+  refetchRegistry.set(key, refetchFn)
+  return () => refetchRegistry.delete(key)
+}
+
+/**
+ * Get current mode transition version.
+ * Used by hooks to detect stale operations.
+ */
+export function getModeTransitionVersion(): number {
+  return modeTransitionVersion
+}
+
+/**
+ * Trigger all registered refetch functions.
+ * Called after mode transition completes (after skeleton delay).
+ */
+export function triggerAllRefetches(): void {
+  console.log(
+    `[ModeTransition] Triggering ${refetchRegistry.size} registered refetches`
+  )
+
+  refetchRegistry.forEach((refetchFn, key) => {
+    try {
+      refetchFn()
+    } catch (e) {
+      console.error(`[ModeTransition] Failed to refetch '${key}':`, e)
+    }
+  })
+}
+
+/**
+ * Increment mode transition version.
+ * Called at the start of mode transition to invalidate in-flight fetches.
+ */
+export function incrementModeTransitionVersion(): void {
+  modeTransitionVersion++
+  console.log(`[ModeTransition] Version incremented to ${modeTransitionVersion}`)
 }

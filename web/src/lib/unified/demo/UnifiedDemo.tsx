@@ -14,6 +14,10 @@ import {
   generateDemoDataSync,
   clearDemoDataCache,
 } from './demoDataRegistry'
+import {
+  triggerAllRefetches,
+  incrementModeTransitionVersion,
+} from '../../modeTransition'
 import type { UnifiedDemoContextValue, DemoDataEntry, DemoDataState } from './types'
 
 /**
@@ -41,6 +45,7 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
   const [modeVersion, setModeVersion] = useState(0)
   const previousModeRef = useRef(isDemoMode)
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const initialLoadTriggeredRef = useRef(false)
 
   // Track mode changes and trigger skeleton state
   useEffect(() => {
@@ -50,6 +55,9 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
 
       // Increment mode version - this invalidates all in-flight fetches
       setModeVersion(v => v + 1)
+
+      // Increment global mode transition version to invalidate stale fetches
+      incrementModeTransitionVersion()
 
       // Clear any existing timeout
       if (switchTimeoutRef.current) {
@@ -71,10 +79,12 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
         })
       )
 
-      // End skeleton state after duration
+      // End skeleton state after duration and trigger all registered refetches
       switchTimeoutRef.current = setTimeout(() => {
         setIsModeSwitching(false)
         switchTimeoutRef.current = null
+        // Trigger all hooks to refetch data for the new mode
+        triggerAllRefetches()
       }, MODE_SWITCH_SKELETON_DURATION)
 
       previousModeRef.current = isDemoMode
@@ -86,6 +96,21 @@ export function UnifiedDemoProvider({ children }: UnifiedDemoProviderProps) {
       }
     }
   }, [isDemoMode, modeVersion])
+
+  // Trigger initial data load ONCE when provider mounts
+  // This ensures all registered refetch functions run on page load
+  // Use a short delay to allow all components to mount and register
+  useEffect(() => {
+    if (!initialLoadTriggeredRef.current) {
+      initialLoadTriggeredRef.current = true
+      // Short delay to allow hooks to register their refetch functions
+      const timeoutId = setTimeout(() => {
+        console.log('[UnifiedDemo] Triggering initial data load')
+        triggerAllRefetches()
+      }, 100)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [])
 
   // Get demo data for a component
   const getDemoData = useCallback(<T = unknown>(id: string): DemoDataState<T> => {

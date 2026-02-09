@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
-import { registerCacheReset } from '../../lib/modeTransition'
+import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
@@ -358,7 +358,16 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     refetch(!!hasCachedData) // silent=true if we have cached data
     // Poll for pod updates
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`pods:${cacheKey}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
@@ -1017,7 +1026,16 @@ export function useDeployments(cluster?: string, namespace?: string) {
     refetch(hasCachedData ? true : false)
     // Poll every 30 seconds for deployment updates
     const interval = setInterval(() => refetch(true), getEffectiveInterval(REFRESH_INTERVAL_MS))
-    return () => clearInterval(interval)
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`deployments:${cacheKey}`, () => {
+      refetch(false)
+    })
+
+    return () => {
+      clearInterval(interval)
+      unregisterRefetch()
+    }
   }, [refetch, cacheKey])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared

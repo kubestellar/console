@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL, getEffectiveInterval } from './shared'
 import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
+import { registerRefetch } from '../../lib/modeTransition'
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -223,8 +224,16 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
     mountedRef.current = true
     fetchData()
     const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-    return () => { mountedRef.current = false; clearInterval(interval) }
-  }, [fetchData])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`kagenti-agents:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
+
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [fetchData, options?.cluster, options?.namespace])
 
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }
@@ -275,8 +284,16 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
     mountedRef.current = true
     fetchData()
     const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-    return () => { mountedRef.current = false; clearInterval(interval) }
-  }, [fetchData])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`kagenti-builds:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
+
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [fetchData, options?.cluster, options?.namespace])
 
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }
@@ -327,8 +344,16 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
     mountedRef.current = true
     fetchData()
     const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-    return () => { mountedRef.current = false; clearInterval(interval) }
-  }, [fetchData])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`kagenti-cards:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
+
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [fetchData, options?.cluster, options?.namespace])
 
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }
@@ -379,8 +404,16 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
     mountedRef.current = true
     fetchData()
     const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-    return () => { mountedRef.current = false; clearInterval(interval) }
-  }, [fetchData])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`kagenti-tools:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
+
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+      unregisterRefetch()
+    }
+  }, [fetchData, options?.cluster, options?.namespace])
 
   return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
 }

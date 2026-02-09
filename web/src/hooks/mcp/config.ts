@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerRefetch } from '../../lib/modeTransition'
 import { LOCAL_AGENT_URL } from './shared'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
@@ -66,7 +67,11 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`configmaps:${cluster || 'all'}:${namespace || 'all'}`, refetch)
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
 
   return { configmaps, isLoading, error, refetch }
 }
@@ -132,7 +137,11 @@ export function useSecrets(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`secrets:${cluster || 'all'}:${namespace || 'all'}`, refetch)
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
 
   return { secrets, isLoading, error, refetch }
 }
@@ -198,7 +207,11 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`serviceaccounts:${cluster || 'all'}:${namespace || 'all'}`, refetch)
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
 
   return { serviceAccounts, isLoading, error, refetch }
 }

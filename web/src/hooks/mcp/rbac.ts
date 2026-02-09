@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
+import { registerRefetch } from '../../lib/modeTransition'
 import type { K8sRole, K8sRoleBinding, K8sServiceAccountInfo } from './types'
 
 // Demo RBAC data for when demo mode is enabled
@@ -134,7 +135,11 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`k8s-roles:${cluster || 'all'}:${namespace || 'all'}`, refetch)
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
 
   return { roles, isLoading, error, refetch }
 }
@@ -182,7 +187,11 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`k8s-role-bindings:${cluster || 'all'}:${namespace || 'all'}`, refetch)
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
 
   return { bindings, isLoading, error, refetch }
 }
@@ -223,7 +232,11 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
 
   useEffect(() => {
     refetch()
-  }, [refetch])
+
+    // Register for unified mode transition refetch
+    const unregisterRefetch = registerRefetch(`k8s-service-accounts:${cluster || 'all'}:${namespace || 'all'}`, refetch)
+    return () => unregisterRefetch()
+  }, [refetch, cluster, namespace])
 
   return { serviceAccounts, isLoading, error, refetch }
 }
