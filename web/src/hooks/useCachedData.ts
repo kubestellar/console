@@ -18,7 +18,6 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { isDemoMode } from '../lib/demoMode'
 import { clusterCacheRef } from './mcp/shared'
 import type {
   PodInfo,
@@ -40,15 +39,13 @@ const getToken = () => localStorage.getItem('token')
 
 const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
-// Note: isDemoMode() is imported from '../lib/demoMode' - single source of truth
-
 async function fetchAPI<T>(
   endpoint: string,
   params?: Record<string, string | number | undefined>
 ): Promise<T> {
   const token = getToken()
-  if (!token || isDemoMode()) {
-    throw new Error('Demo mode or no token')
+  if (!token) {
+    throw new Error('No authentication token')
   }
 
   const searchParams = new URLSearchParams()
@@ -146,8 +143,7 @@ async function fetchFromAllClusters<T>(
 
 /** Get reachable cluster names from the shared cluster cache (deduplicated) */
 function getAgentClusters(): Array<{ name: string; context?: string }> {
-  // No local agent in demo mode — return empty to skip all agent requests
-  if (isDemoMode()) return []
+  // useCache prevents calling fetchers in demo mode via effectiveEnabled
   // Skip long context-path names (contain '/') — these are duplicates of short-named aliases
   // e.g. "default/api-fmaas-vllm-d-...:6443/..." duplicates "vllm-d"
   return clusterCacheRef.clusters
@@ -678,9 +674,7 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 async function fetchProwJobs(prowCluster: string, namespace: string): Promise<ProwJob[]> {
-  // Skip fetching in demo mode — no agent available
-  if (isDemoMode()) return []
-
+  // useCache prevents calling fetchers in demo mode via effectiveEnabled
   const response = await kubectlProxy.exec(
     ['get', 'prowjobs', '-n', namespace, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
     { context: prowCluster, timeout: 30000 }
@@ -870,9 +864,7 @@ function extractGPUInfo(deployment: DeploymentResource): { gpu?: string; gpuCoun
 }
 
 async function fetchLLMdServers(clusters: string[]): Promise<LLMdServer[]> {
-  // Skip fetching in demo mode — no agent available
-  if (isDemoMode()) return []
-
+  // useCache prevents calling fetchers in demo mode via effectiveEnabled
   const allServers: LLMdServer[] = []
 
   for (const cluster of clusters) {
@@ -1080,9 +1072,7 @@ export function useCachedLLMdServers(
 }
 
 async function fetchLLMdModels(clusters: string[]): Promise<LLMdModel[]> {
-  // Skip fetching in demo mode — no agent available
-  if (isDemoMode()) return []
-
+  // useCache prevents calling fetchers in demo mode via effectiveEnabled
   const allModels: LLMdModel[] = []
   for (const cluster of clusters) {
     try {

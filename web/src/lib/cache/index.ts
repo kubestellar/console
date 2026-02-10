@@ -24,7 +24,7 @@
 
 import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import { isDemoMode, subscribeDemoMode } from '../demoMode'
-import { registerCacheReset } from '../modeTransition'
+import { registerCacheReset, registerRefetch } from '../modeTransition'
 
 // ============================================================================
 // Configuration
@@ -456,6 +456,7 @@ class CacheStore<T> {
    * to ensure cards show demo data instead of cached live data.
    */
   resetToInitialData(): void {
+    this.fetchingRef = false
     this.initialDataLoaded = false
     this.setState({
       data: this.initialData,
@@ -680,12 +681,16 @@ export function useCache<T>({
     // Initial fetch
     refetch()
 
+    // Register for mode-transition refetches so triggerAllRefetches() reaches us
+    const unregisterRefetch = registerRefetch(`cache:${key}`, refetch)
+
     // Auto-refresh interval
     if (autoRefresh) {
       const intervalId = setInterval(refetch, effectiveInterval)
-      return () => clearInterval(intervalId)
+      return () => { clearInterval(intervalId); unregisterRefetch() }
     }
-  }, [effectiveEnabled, autoRefresh, effectiveInterval, refetch, store])
+    return () => unregisterRefetch()
+  }, [effectiveEnabled, autoRefresh, effectiveInterval, refetch, store, key])
 
   // Cleanup non-shared stores on unmount
   useEffect(() => {
