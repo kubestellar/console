@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { RotateCcw, Trophy, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 type Grid = (number | null)[][]
 
@@ -171,6 +172,7 @@ function hasWon(grid: Grid): boolean {
 }
 
 export function Game2048(_props: CardComponentProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const [grid, setGrid] = useState<Grid>(initGame)
   const [score, setScore] = useState(0)

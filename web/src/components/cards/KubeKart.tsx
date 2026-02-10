@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react'
 
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -60,6 +61,7 @@ const COLORS = {
 const KART_NAMES = ['Pod Racer', 'Node Runner', 'Cluster Cruiser', 'Service Sprinter']
 
 export function KubeKart() {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [gameState, setGameState] = useState<'idle' | 'countdown' | 'playing' | 'paused' | 'finished'>('idle')

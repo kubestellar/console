@@ -4,6 +4,7 @@ import {
   Save, Trophy, Settings, Sparkles, X
 } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 // Types
 type Difficulty = 'easy' | 'medium' | 'hard' | 'expert'
@@ -207,6 +208,7 @@ function isComplete(board: Cell[][], solution: number[][]): boolean {
 }
 
 export function SudokuGame({ config: _config }: SudokuGameProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null)
   const [pencilMode, setPencilMode] = useState(false)
   const [showSettings, setShowSettings] = useState(false)

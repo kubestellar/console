@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Save, Download, Trash2, Grid, Sun, Moon } from 'lucide-react'
 
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -34,6 +35,7 @@ const BLOCKS: Record<BlockType, { color: string; secondary?: string; transparent
 const BLOCK_TYPES: BlockType[] = ['dirt', 'grass', 'stone', 'wood', 'leaves', 'water', 'sand', 'brick', 'glass']
 
 export function KubeCraft() {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [selectedBlock, setSelectedBlock] = useState<BlockType>('grass')

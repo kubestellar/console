@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Pause, Play } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 // Board dimensions
@@ -485,6 +486,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
 }
 
 export function ContainerTetris(props: CardComponentProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   return (
     <DynamicCardErrorBoundary cardId="ContainerTetris">
       <ContainerTetrisInternal {...props} />

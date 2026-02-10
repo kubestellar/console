@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { RotateCcw, Flag, Skull, Trophy, Timer, Bomb } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -143,6 +144,7 @@ const NUMBER_COLORS = [
 ]
 
 export function PodSweeper(_props: CardComponentProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
 
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')

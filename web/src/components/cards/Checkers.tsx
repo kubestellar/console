@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 // Board is 8x8, pieces only on dark squares
 const BOARD_SIZE = 8
@@ -405,6 +406,7 @@ function saveGameState(state: SavedGameState) {
 }
 
 export function Checkers(_props: CardComponentProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tauntIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 // 5-letter Kubernetes-themed words
 const WORD_LIST = [
@@ -121,6 +122,7 @@ const KEYBOARD_ROWS = [
 ]
 
 export function Kubedle(_props: CardComponentProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
 
   const [targetWord, setTargetWord] = useState(getTodaysWord)

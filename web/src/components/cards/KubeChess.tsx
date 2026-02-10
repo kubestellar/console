@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
@@ -804,6 +805,7 @@ function KubeChessInternal() {
 }
 
 export function KubeChess() {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   return (
     <DynamicCardErrorBoundary cardId="KubeChess">
       <KubeChessInternal />

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Play, RotateCcw, Pause, Trophy, Target, Heart, Crosshair } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
+import { useReportCardDataState } from './CardDataContext'
 
 // Canvas dimensions
 const CANVAS_WIDTH = 480
@@ -86,6 +87,7 @@ function spawnEnemies(level: number): Enemy[] {
 }
 
 export function KubeDoom() {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const { isExpanded } = useCardExpanded()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover' | 'levelcomplete'>('idle')
