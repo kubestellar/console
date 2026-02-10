@@ -328,6 +328,7 @@ class CacheStore<T> {
   private refreshTimeoutRef: ReturnType<typeof setTimeout> | null = null
   private initialDataLoaded = false
   private storageLoadPromise: Promise<void> | null = null
+  private resetVersion = 0
 
   constructor(
     private key: string,
@@ -437,6 +438,7 @@ class CacheStore<T> {
    * so the IndexedDB reload only matters for live mode transitions.
    */
   resetToInitialData(): void {
+    this.resetVersion++
     this.fetchingRef = false
     this.initialDataLoaded = false
     this.setState({
@@ -458,11 +460,24 @@ class CacheStore<T> {
     if (this.fetchingRef) return
     this.fetchingRef = true
 
+    // Capture version to detect concurrent resets (mode transitions)
+    const fetchVersion = this.resetVersion
+
     // Wait for IndexedDB to load before determining if we have cached data
     // This ensures we don't show skeleton when cached data is available
     if (this.storageLoadPromise) {
-      await this.storageLoadPromise
-      this.storageLoadPromise = null
+      const currentPromise = this.storageLoadPromise
+      await currentPromise
+      // Only clear if it hasn't been replaced by a concurrent resetToInitialData()
+      if (this.storageLoadPromise === currentPromise) {
+        this.storageLoadPromise = null
+      }
+    }
+
+    // If a reset happened during IDB load, discard this stale fetch
+    if (this.resetVersion !== fetchVersion) {
+      this.fetchingRef = false
+      return
     }
 
     const hasCachedData = this.state.data !== this.initialData || this.initialDataLoaded
@@ -474,10 +489,23 @@ class CacheStore<T> {
 
     try {
       const newData = await fetcher()
+
+      // If a reset happened during fetch, discard stale results
+      if (this.resetVersion !== fetchVersion) {
+        this.fetchingRef = false
+        return
+      }
+
       const finalData = merge && hasCachedData ? merge(this.state.data, newData) : newData
 
       await this.saveToStorage(finalData)
       this.saveMeta({ consecutiveFailures: 0, lastSuccessfulRefresh: Date.now() })
+
+      // Final check after storage save
+      if (this.resetVersion !== fetchVersion) {
+        this.fetchingRef = false
+        return
+      }
 
       this.initialDataLoaded = true
       this.setState({
@@ -490,10 +518,16 @@ class CacheStore<T> {
         lastRefresh: Date.now(),
       })
     } catch (e) {
-      // Don't show error messages at dashboard level - track failures internally
-      // but don't display user-facing error banners for optional data
+      // If a reset happened during fetch, discard stale error
+      if (this.resetVersion !== fetchVersion) {
+        this.fetchingRef = false
+        return
+      }
+
       const errorMessage = e instanceof Error ? e.message : 'Failed to fetch data'
       const newFailures = this.state.consecutiveFailures + 1
+      const hasData = this.state.data !== this.initialData || this.initialDataLoaded
+      const reachedMaxFailures = newFailures >= MAX_FAILURES
 
       this.saveMeta({
         consecutiveFailures: newFailures,
@@ -502,10 +536,13 @@ class CacheStore<T> {
       })
 
       this.setState({
-        isLoading: false,
+        // Keep isLoading: true when we have no cached data and haven't
+        // exhausted retries — skeleton stays visible while auto-refresh retries.
+        // After MAX_FAILURES, isFailed triggers failure state instead of skeleton.
+        isLoading: !hasData && !reachedMaxFailures,
         isRefreshing: false,
-        error: null, // Don't show error - it's not useful at dashboard level
-        isFailed: newFailures >= MAX_FAILURES,
+        error: null,
+        isFailed: reachedMaxFailures,
         consecutiveFailures: newFailures,
       })
     } finally {
@@ -659,15 +696,32 @@ export function useCache<T>({
   // Initial fetch and auto-refresh
   const effectiveInterval = refreshInterval ?? REFRESH_RATES[category]
 
+  // Track mount state to distinguish initial mount from mode-switch re-fires.
+  // On initial mount / page navigation: fetch immediately (needed for data).
+  // On mode transition (enabled false→true after mount): skip immediate refetch,
+  // let triggerAllRefetches() handle it after the 500ms skeleton timer.
+  const hasMountedRef = useRef(false)
+  const prevEnabledRef = useRef(effectiveEnabled)
+
   useEffect(() => {
     if (!effectiveEnabled) {
       // In demo/disabled mode, no fetch will run — mark loading as done
       store.markReady()
+      hasMountedRef.current = true
+      prevEnabledRef.current = effectiveEnabled
       return
     }
 
-    // Initial fetch
-    refetch()
+    // Detect mode transition: enabled changed false→true after initial mount
+    const isModeTransition = hasMountedRef.current && !prevEnabledRef.current && effectiveEnabled
+    hasMountedRef.current = true
+    prevEnabledRef.current = effectiveEnabled
+
+    if (!isModeTransition) {
+      // Initial mount or page navigation remount — fetch immediately
+      refetch()
+    }
+    // else: mode transition — triggerAllRefetches() will call refetch after skeleton timer
 
     // Register for mode-transition refetches so triggerAllRefetches() reaches us
     const unregisterRefetch = registerRefetch(`cache:${key}`, refetch)
