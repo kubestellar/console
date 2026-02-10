@@ -69,35 +69,3 @@ npm run dev -- --port 5174  # Frontend
 
 The backend (KC API server) runs on port 8080. The KC agent WebSocket runs on port 8585.
 
-## Shared Task Coordination
-
-This project uses `tasks.json` for coordinating work across Claude Code instances.
-
-### On Session Start
-1. Read `tasks.json` to see available tasks
-2. Check for any `in_progress` tasks that may be stale (no recent updates)
-3. Claim a `pending` task if you have work to do
-
-### Task Workflow
-1. **Claim**: Set `status: "in_progress"`, `owner: "<your-instance-id>"`, `lockedAt: "<ISO timestamp>"`
-2. **Work**: Complete the task as described
-3. **Complete**: Set `status: "completed"`, `completedAt: "<ISO timestamp>"`
-4. **Test**: Create a test task with `id: "test-{original-id}"` using Chrome DevTools MCP
-
-### Chrome DevTools MCP Testing
-After completing implementation tasks, create test tasks that use:
-- `mcp__chrome-devtools__navigate_page` - Load the page
-- `mcp__chrome-devtools__take_snapshot` - Verify UI elements
-- `mcp__chrome-devtools__list_console_messages` - Check for errors
-- `mcp__chrome-devtools__click` / `mcp__chrome-devtools__fill` - Interact with UI
-- `mcp__chrome-devtools__take_screenshot` - Capture visual state
-- `mcp__chrome-devtools__list_network_requests` - Verify API calls
-
----
-
-## TODO
-
-- [x] Test token counter works with predictions in the offline detector — Fixed: `useAIPredictions.ts` was missing `setActiveTokenCategory('predictions')` calls, so prediction tokens were never attributed to the 'predictions' category
-- [x] Does the "Run Locally" modal (start-dev.sh / startup-oauth.sh) include agent installation? YES — startup-oauth.sh auto-installs kc-agent via Homebrew, and the modal notes "The script automatically installs the local agent"
-- [x] Replace left sidebar scroller with custom scroller (apply learnings from llm-d stack dropdown and AI mission chat scroller)
-- [x] Security Issues card shows "No security issues" while still loading — should show "Loading" instead
