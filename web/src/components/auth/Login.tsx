@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { Github } from 'lucide-react'
-import { Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
+import { Github, AlertTriangle } from 'lucide-react'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
 
@@ -9,6 +9,8 @@ const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ def
 
 export function Login() {
   const { login, isAuthenticated, isLoading } = useAuth()
+  const [searchParams] = useSearchParams()
+  const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
 
   // Auto-login for Netlify deploy previews
   useEffect(() => {
@@ -77,10 +79,21 @@ export function Login() {
             </div>
           </div>
 
+          {/* Session expired banner */}
+          {sessionExpired && (
+            <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg border border-yellow-500/50 bg-yellow-500/10 text-yellow-300 text-sm">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-yellow-400" />
+              <div>
+                <p className="font-medium">Session expired</p>
+                <p className="text-xs text-yellow-400/80 mt-0.5">Your session has timed out. Please sign in again.</p>
+              </div>
+            </div>
+          )}
+
           {/* Welcome text */}
           <div className="text-center mb-8">
             <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
-              Welcome back
+              {sessionExpired ? 'Session expired' : 'Welcome back'}
             </h2>
             <p className="text-muted-foreground">
               Sign in to manage your multi-cluster deployments

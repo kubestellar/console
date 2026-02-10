@@ -28,8 +28,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const timeoutsRef = useRef<Map<string, number>>(new Map())
 
+  const toastCounter = useRef(0)
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
-    const id = `toast-${Date.now()}`
+    const id = `toast-${Date.now()}-${++toastCounter.current}`
     setToasts((prev) => [...prev, { id, message, type }])
 
     // Auto-remove after 3 seconds

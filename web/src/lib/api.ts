@@ -35,9 +35,9 @@ function handle401(): void {
   localStorage.removeItem('token')
   localStorage.removeItem('kc-user-cache')
 
-  // Redirect to login after a brief delay (allows console message to be seen)
+  // Redirect to login with session_expired reason so login page shows a banner
   setTimeout(() => {
-    window.location.href = '/login'
+    window.location.href = '/login?reason=session_expired'
   }, 100)
 }
 
