@@ -1432,3 +1432,127 @@ export function useCachedSecurityIssues(
     refetch: result.refetch,
   }
 }
+
+// ============================================================================
+// Standalone fetchers for prefetch (no React hooks, plain async)
+// ============================================================================
+
+/** Core data fetchers — used by prefetchCardData to warm caches at startup */
+export const coreFetchers = {
+  pods: async (): Promise<PodInfo[]> => {
+    const pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', {})
+    return pods.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, 100)
+  },
+  podIssues: async (): Promise<PodIssue[]> => {
+    if (clusterCacheRef.clusters.length > 0) {
+      const issues = await fetchPodIssuesViaAgent()
+      return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+    }
+    const token = getToken()
+    if (token && token !== 'demo-token' && !isBackendUnavailable()) {
+      const issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', {})
+      return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+    }
+    return []
+  },
+  events: async (): Promise<ClusterEvent[]> => {
+    const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { limit: 20 })
+    return data.events || []
+  },
+  deploymentIssues: async (): Promise<DeploymentIssue[]> => {
+    if (clusterCacheRef.clusters.length > 0) {
+      const deployments = await fetchDeploymentsViaAgent()
+      return deployments
+        .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
+        .map(d => ({
+          name: d.name,
+          namespace: d.namespace || 'default',
+          cluster: d.cluster,
+          replicas: d.replicas ?? 1,
+          readyReplicas: d.readyReplicas ?? 0,
+          reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
+        }))
+    }
+    const token = getToken()
+    if (token && token !== 'demo-token' && !isBackendUnavailable()) {
+      const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', {})
+      return data.issues || []
+    }
+    return []
+  },
+  deployments: async (): Promise<Deployment[]> => {
+    if (clusterCacheRef.clusters.length > 0) {
+      return fetchDeploymentsViaAgent()
+    }
+    const token = getToken()
+    if (token && token !== 'demo-token' && !isBackendUnavailable()) {
+      return await fetchFromAllClusters<Deployment>('deployments', 'deployments', {})
+    }
+    return []
+  },
+  services: async (): Promise<Service[]> => {
+    const data = await fetchAPI<{ services: Service[] }>('services', {})
+    return data.services || []
+  },
+  securityIssues: async (): Promise<SecurityIssue[]> => {
+    if (clusterCacheRef.clusters.length > 0) {
+      try {
+        const issues = await fetchSecurityIssuesViaKubectl()
+        if (issues.length > 0) return issues
+      } catch { /* fall through */ }
+    }
+    const token = getToken()
+    if (token && token !== 'demo-token' && !isBackendUnavailable()) {
+      const response = await fetch('/api/mcp/security-issues', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (response.ok) {
+        const data = await response.json() as { issues: SecurityIssue[] }
+        if (data.issues?.length > 0) return data.issues
+      }
+    }
+    return []
+  },
+  workloads: async (): Promise<Workload[]> => {
+    const agentData = await fetchWorkloadsFromAgent()
+    if (agentData) return agentData
+    const token = getToken()
+    if (token && token !== 'demo-token' && !isBackendUnavailable()) {
+      const res = await fetch('/api/workloads', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const items = (data.items || data) as Array<Record<string, unknown>>
+        return items.map(d => ({
+          name: String(d.name || ''),
+          namespace: String(d.namespace || 'default'),
+          type: (String(d.type || 'Deployment')) as Workload['type'],
+          cluster: String(d.cluster || ''),
+          targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
+          replicas: Number(d.replicas || 1),
+          readyReplicas: Number(d.readyReplicas || 0),
+          status: (String(d.status || 'Running')) as Workload['status'],
+          image: String(d.image || ''),
+          labels: (d.labels as Record<string, string>) || {},
+          createdAt: String(d.createdAt || new Date().toISOString()),
+        }))
+      }
+    }
+    return []
+  },
+}
+
+/** Specialty data fetchers — lower priority, prefetched after core data */
+export const specialtyFetchers = {
+  prowJobs: () => fetchProwJobs('prow', 'prow'),
+  llmdServers: () => fetchLLMdServers(['vllm-d', 'platform-eval']),
+  llmdModels: () => fetchLLMdModels(['vllm-d', 'platform-eval']),
+}

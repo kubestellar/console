@@ -17,6 +17,7 @@ import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
+import { prefetchCardData } from './lib/prefetchCardData'
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -193,11 +194,29 @@ function SettingsSyncInit() {
   return null
 }
 
+// Prefetches core Kubernetes data (pods, events, deployments, etc.) during idle
+// time after login so dashboard cards render instantly instead of showing skeletons.
+function DataPrefetchInit() {
+  const { isAuthenticated } = useAuth()
+  useEffect(() => {
+    if (!isAuthenticated) return
+    if ('requestIdleCallback' in window) {
+      const id = requestIdleCallback(() => prefetchCardData(), { timeout: 10000 })
+      return () => cancelIdleCallback(id)
+    } else {
+      const timer = setTimeout(prefetchCardData, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthenticated])
+  return null
+}
+
 function App() {
   return (
     <ThemeProvider>
     <AuthProvider>
     <SettingsSyncInit />
+    <DataPrefetchInit />
     <UnifiedDemoProvider>
       <RewardsProvider>
       <ToastProvider>
