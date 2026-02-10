@@ -94,7 +94,7 @@ function saveToCache<T>(key: string, data: T): void {
 
 /**
  * Mock ArgoCD applications for UI demonstration
- * 
+ *
  * SECURITY: Safe - These are example/placeholder URLs for demo purposes only
  * NOT REAL CREDENTIALS - Example GitHub URLs used for UI demonstration
  * In production, ArgoCD applications would be fetched from the ArgoCD API

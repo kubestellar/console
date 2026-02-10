@@ -51,12 +51,12 @@ export const K8S_DOCS = {
   gatewayApiGettingStarted: 'https://gateway-api.sigs.k8s.io/guides/getting-started/',
   gatewayApiImplementations: 'https://gateway-api.sigs.k8s.io/implementations/',
   gammaInitiative: 'https://gateway-api.sigs.k8s.io/concepts/gamma/',
-  
+
   // Official MCS API documentation (public GitHub repository)
   mcsApi: 'https://github.com/kubernetes-sigs/mcs-api',
   mcsApiServiceImport: 'https://github.com/kubernetes-sigs/mcs-api#serviceimport',
   mcsApiInstall: 'https://github.com/kubernetes-sigs/mcs-api#installing-the-crds',
-  
+
   // Installation commands using public GitHub releases (no credentials required)
   gatewayApiInstallCommand: 'kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml',
   mcsApiInstallCommand: 'kubectl apply -f https://github.com/kubernetes-sigs/mcs-api/releases/latest/download/mcs-api-crds.yaml',
