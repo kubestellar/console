@@ -21,9 +21,30 @@ const SORT_OPTIONS = [
   { value: 'cluster' as const, label: 'Cluster' },
 ]
 
-// Module-level cache for cluster versions (persists across component remounts)
-const versionCache: Record<string, { version: string; timestamp: number }> = {}
+// Module-level cache for cluster versions (persists across component remounts + page refreshes)
+const STORAGE_KEY = 'kc-cluster-versions'
 const VERSION_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Load persisted cache from localStorage on module init
+const versionCache: Record<string, { version: string; timestamp: number }> = (() => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+})()
+
+// Persist cache to localStorage (debounced to avoid excessive writes)
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+function persistCache() {
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(versionCache))
+    } catch { /* quota exceeded — non-critical */ }
+  }, 500)
+}
 
 // Get cached version if still valid
 function getCachedVersion(clusterName: string): string | null {
@@ -34,9 +55,15 @@ function getCachedVersion(clusterName: string): string | null {
   return null
 }
 
+// Get cached version regardless of TTL (for stale-while-revalidate on page refresh)
+function getStaleCachedVersion(clusterName: string): string | null {
+  return versionCache[clusterName]?.version ?? null
+}
+
 // Set cached version
 function setCachedVersion(clusterName: string, version: string) {
   versionCache[clusterName] = { version, timestamp: Date.now() }
+  persistCache()
 }
 
 // Shared WebSocket for version fetching
@@ -402,10 +429,11 @@ Please proceed step by step and ask for confirmation before making any changes.`
       const isUnreachable = c.reachable === false || (!hasNodes && c.healthy === false)
       const isStillLoading = !hasNodes && c.nodeCount === undefined && c.reachable === undefined
 
-      // Try cached version first, then component state, then show appropriate fallback
-      const cachedVersion = getCachedVersion(c.name)
+      // Try state first, then fresh cache, then stale cache (survives page refresh), then fallback
       const stateVersion = clusterVersions[c.name]
-      const currentVersion = stateVersion || cachedVersion ||
+      const freshCached = getCachedVersion(c.name)
+      const staleCached = getStaleCachedVersion(c.name)
+      const currentVersion = stateVersion || freshCached || staleCached ||
         (isUnreachable ? '-' : (isStillLoading || (!fetchCompleted && agentConnected) ? 'loading...' : '-'))
 
       const targetVersion = getRecommendedUpgrade(currentVersion)
