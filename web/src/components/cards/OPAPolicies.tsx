@@ -60,6 +60,7 @@ interface OPAClusterItem {
   name: string
   cluster: string // same as name, required for useCardData cluster filtering
   healthy?: boolean
+  reachable?: boolean
 }
 
 // Common OPA Gatekeeper policy templates
@@ -1117,13 +1118,13 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null)
 
   // Enrich cluster data with 'cluster' field for useCardData compatibility
-  // IMPORTANT: Don't filter by healthy status - the agent can reach clusters that browser health checks can't
-  // The OPA card uses kubectl via the agent, not browser-based API calls
+  // Include reachable status so we can skip OPA checks for offline clusters
   const clusterItems = useMemo<OPAClusterItem[]>(() => {
     return effectiveClusters.map(c => ({
       name: c.name,
       cluster: c.name, // useCardData needs this for global + local cluster filtering
       healthy: c.healthy,
+      reachable: (c as { reachable?: boolean }).reachable,
     }))
   }, [effectiveClusters])
 
@@ -1247,16 +1248,25 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     }
   }, [shouldUseDemoData])
 
-  // Wrapper for manual refresh - uses current effective clusters, force check to override guards
+  // Filter clusters to only include reachable ones for OPA checks
+  const reachableClusters = useMemo(() => {
+    return effectiveClusters.filter(c => (c as { reachable?: boolean }).reachable !== false)
+  }, [effectiveClusters])
+
+  // Ref for reachable clusters for manual refresh
+  const reachableClustersRef = useRef(reachableClusters)
+  reachableClustersRef.current = reachableClusters
+
+  // Wrapper for manual refresh - uses current reachable clusters, force check to override guards
   const handleRefresh = useCallback(() => {
-    checkClusters(effectiveClustersRef.current, true)
+    checkClusters(reachableClustersRef.current, true)
   }, [checkClusters])
 
-  // Initial check - only check clusters without cached data
+  // Initial check - only check reachable clusters without cached data
   // Skip if we've already triggered a check this session
   useEffect(() => {
     if (hasTriggeredInitialCheck) return
-    if (effectiveClusters.length === 0) return
+    if (reachableClusters.length === 0) return
 
     // Check sessionStorage to see if we've already done initial check this session
     const sessionKey = 'opa-initial-check-done'
@@ -1266,19 +1276,19 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
 
     // Find clusters without any status (neither cached data nor loading state)
     // Clusters with loading:true are already being checked, don't duplicate
-    const uncachedClusters = effectiveClusters.filter(c => !statuses[c.name])
+    const uncachedClusters = reachableClusters.filter(c => !statuses[c.name])
 
     if (uncachedClusters.length === 0) {
       return
     }
 
-    if (alreadyCheckedThisSession && uncachedClusters.length < effectiveClusters.length) {
+    if (alreadyCheckedThisSession && uncachedClusters.length < reachableClusters.length) {
       checkClusters(uncachedClusters)
     } else {
       sessionStorage.setItem(sessionKey, 'true')
-      checkClusters(effectiveClusters)
+      checkClusters(reachableClusters)
     }
-  }, [hasTriggeredInitialCheck, effectiveClusters, statuses, checkClusters])
+  }, [hasTriggeredInitialCheck, reachableClusters, statuses, checkClusters])
 
   const handleInstallOPA = (clusterName: string) => {
     startMission({
@@ -1418,28 +1428,31 @@ Let's start by discussing what kind of policy I need.`,
           </div>
         ) : (
           paginatedClusters.map(cluster => {
+            const isOffline = cluster.reachable === false
             const status = statuses[cluster.name]
             // Only show loading spinner for initial check (no cached data or loading state)
             // During refresh, show cached data - the refresh button spinner indicates activity
-            const isInitialLoading = !status || status.loading
+            const isInitialLoading = !isOffline && (!status || status.loading)
 
             return (
               <button
                 key={cluster.name}
-                onClick={() => status?.installed && handleShowViolations(cluster.name)}
-                disabled={!status?.installed || isInitialLoading}
+                onClick={() => status?.installed && !isOffline && handleShowViolations(cluster.name)}
+                disabled={isOffline || !status?.installed || isInitialLoading}
                 className={`w-full text-left p-2.5 rounded-lg bg-secondary/30 transition-colors ${
-                  status?.installed && !isInitialLoading
+                  !isOffline && status?.installed && !isInitialLoading
                     ? 'hover:bg-secondary/50 cursor-pointer group'
                     : ''
-                }`}
+                } ${isOffline ? 'opacity-50' : ''}`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-sm font-medium text-foreground ${status?.installed ? 'group-hover:text-purple-400' : ''}`}>
+                  <span className={`text-sm font-medium text-foreground ${!isOffline && status?.installed ? 'group-hover:text-purple-400' : ''}`}>
                     {cluster.name}
                   </span>
                   <div className="flex items-center gap-1">
-                    {isInitialLoading ? (
+                    {isOffline ? (
+                      <XCircle className="w-3.5 h-3.5 text-red-400/60" />
+                    ) : isInitialLoading ? (
                       <RefreshCw className="w-3.5 h-3.5 text-muted-foreground animate-spin" />
                     ) : status?.installed ? (
                       <>
@@ -1452,7 +1465,9 @@ Let's start by discussing what kind of policy I need.`,
                   </div>
                 </div>
 
-                {isInitialLoading ? (
+                {isOffline ? (
+                  <p className="text-xs text-red-400/60">Offline</p>
+                ) : isInitialLoading ? (
                   <p className="text-xs text-muted-foreground">Checking...</p>
                 ) : status?.installed ? (
                   <div className="space-y-1">
