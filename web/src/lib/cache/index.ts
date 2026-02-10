@@ -294,14 +294,13 @@ class IndexedDBStorage {
 const idbStorage = new IndexedDBStorage()
 
 // ============================================================================
-// Demo Mode Integration - Clear caches when demo mode toggles ON
+// Demo Mode Integration - Clear caches on mode toggle
 // ============================================================================
 
-let lastDemoMode: boolean | null = null
-
 /**
- * Clear all in-memory cache stores. Called when demo mode toggles.
- * This ensures cards get fresh demo data instead of stale live data.
+ * Clear all in-memory cache stores. Called by mode transition coordinator
+ * when demo mode is toggled (in either direction).
+ * This ensures cards get fresh data for the new mode.
  */
 function clearAllInMemoryCaches(): void {
   const count = cacheRegistry.size
@@ -309,32 +308,12 @@ function clearAllInMemoryCaches(): void {
     (store as CacheStore<unknown>).resetToInitialData()
   }
   if (count > 0) {
-    console.log(`[Cache] Reset ${count} caches to initial data for demo mode`)
+    console.log(`[Cache] Reset ${count} caches to initial data for mode transition`)
   }
 }
 
-// Subscribe to demo mode changes at module level
+// Register with mode transition coordinator (called by toggleDemoMode)
 if (typeof window !== 'undefined') {
-  // Import is already at top of file, use it here
-  const checkDemoModeChange = () => {
-    const currentDemoMode = isDemoMode()
-    if (lastDemoMode !== null && lastDemoMode !== currentDemoMode) {
-      if (currentDemoMode) {
-        // Switching TO demo mode - clear all caches so cards show demo data
-        clearAllInMemoryCaches()
-      }
-      // Note: When switching FROM demo mode, we don't clear - let cards refetch live data
-    }
-    lastDemoMode = currentDemoMode
-  }
-
-  // Check on initial load
-  checkDemoModeChange()
-
-  // Subscribe to demo mode changes
-  subscribeDemoMode(checkDemoModeChange)
-
-  // Register with mode transition coordinator
   registerCacheReset('unified-cache', clearAllInMemoryCaches)
 }
 

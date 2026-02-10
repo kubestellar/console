@@ -18,7 +18,8 @@ import {
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards'
 import { cn } from '../../lib/cn'
-import { useWorkloads, Workload as ApiWorkload } from '../../hooks/useWorkloads'
+import { Workload as ApiWorkload } from '../../hooks/useWorkloads'
+import { useCachedWorkloads } from '../../hooks/useCachedData'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -416,8 +417,8 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   // Check demo mode to avoid fetching live data when in demo mode
   const { isDemoMode: demoMode } = useDemoMode()
 
-  // Fetch real workloads from API (skip when in demo mode)
-  const { data: realWorkloads } = useWorkloads(undefined, !demoMode)
+  // Fetch real workloads from cache (handles demo mode internally via useCache)
+  const { data: realWorkloads } = useCachedWorkloads()
 
   // Only use demo data when explicitly in demo mode
   const isDemo = demoMode

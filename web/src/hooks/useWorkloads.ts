@@ -146,6 +146,7 @@ export function useWorkloads(options?: {
       const agentData = await fetchWorkloadsViaAgent(options)
       if (agentData) {
         setData(agentData)
+        setIsLoading(false)
         return
       }
     } catch {

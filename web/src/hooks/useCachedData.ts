@@ -19,6 +19,7 @@ import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { clusterCacheRef } from './mcp/shared'
+import { isAgentUnavailable } from './useLocalAgent'
 import type {
   PodInfo,
   PodIssue,
@@ -30,6 +31,7 @@ import type {
 } from './useMCP'
 import type { ProwJob, ProwStatus } from './useProw'
 import type { LLMdServer, LLMdStatus, LLMdModel } from './useLLMd'
+import type { Workload } from './useWorkloads'
 
 // ============================================================================
 // API Fetchers
@@ -1118,6 +1120,136 @@ export function useCachedLLMdModels(
 
   return {
     models: result.data,
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
+// ============================================================================
+// Workloads Cached Hooks
+// ============================================================================
+
+const getDemoWorkloads = (): Workload[] => [
+  { name: 'nginx-ingress', namespace: 'ingress-system', type: 'Deployment', status: 'Running', replicas: 3, readyReplicas: 3, image: 'nginx/nginx-ingress:3.4.0', labels: { app: 'nginx-ingress', tier: 'frontend' }, targetClusters: ['us-east-1', 'us-west-2', 'eu-central-1'], createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
+  { name: 'api-gateway', namespace: 'production', type: 'Deployment', status: 'Degraded', replicas: 5, readyReplicas: 3, image: 'company/api-gateway:v2.5.1', labels: { app: 'api-gateway', tier: 'api' }, targetClusters: ['us-east-1', 'us-west-2'], createdAt: new Date(Date.now() - 14 * 86400000).toISOString() },
+  { name: 'postgres-primary', namespace: 'databases', type: 'StatefulSet', status: 'Running', replicas: 1, readyReplicas: 1, image: 'postgres:15.4', labels: { app: 'postgres', role: 'primary' }, targetClusters: ['us-east-1'], createdAt: new Date(Date.now() - 60 * 86400000).toISOString() },
+  { name: 'fluentd', namespace: 'logging', type: 'DaemonSet', status: 'Running', replicas: 12, readyReplicas: 12, image: 'fluent/fluentd:v1.16', labels: { app: 'fluentd', tier: 'logging' }, targetClusters: ['us-east-1', 'us-west-2', 'eu-central-1'], createdAt: new Date(Date.now() - 45 * 86400000).toISOString() },
+  { name: 'ml-training', namespace: 'ml-workloads', type: 'Deployment', status: 'Pending', replicas: 1, readyReplicas: 0, image: 'company/ml-trainer:latest', labels: { app: 'ml-training', team: 'data-science' }, targetClusters: ['gpu-cluster-1'], createdAt: new Date(Date.now() - 3600000).toISOString() },
+  { name: 'payment-service', namespace: 'payments', type: 'Deployment', status: 'Failed', replicas: 2, readyReplicas: 0, image: 'company/payment-service:v1.8.0', labels: { app: 'payment-service', tier: 'backend' }, targetClusters: ['us-east-1'], createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+]
+
+/** Fetch workloads from the local agent across all clusters */
+async function fetchWorkloadsFromAgent(): Promise<Workload[] | null> {
+  if (isAgentUnavailable()) return null
+
+  const clusters = clusterCacheRef.clusters
+    .filter(c => c.reachable !== false && !c.name.includes('/'))
+  if (clusters.length === 0) return null
+
+  const results = await Promise.allSettled(
+    clusters.map(async ({ name, context }) => {
+      const params = new URLSearchParams()
+      params.append('cluster', context || name)
+
+      const ctrl = new AbortController()
+      const tid = setTimeout(() => ctrl.abort(), 15000)
+      const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+        signal: ctrl.signal,
+        headers: { Accept: 'application/json' },
+      })
+      clearTimeout(tid)
+
+      if (!res.ok) throw new Error(`Agent ${res.status}`)
+      const data = await res.json()
+      return ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
+        const st = String(d.status || 'running')
+        let ws: Workload['status'] = 'Running'
+        if (st === 'failed') ws = 'Failed'
+        else if (st === 'deploying') ws = 'Pending'
+        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+        return {
+          name: String(d.name || ''),
+          namespace: String(d.namespace || 'default'),
+          type: 'Deployment' as const,
+          cluster: name,
+          targetClusters: [name],
+          replicas: Number(d.replicas || 1),
+          readyReplicas: Number(d.readyReplicas || 0),
+          status: ws,
+          image: String(d.image || ''),
+          createdAt: new Date().toISOString(),
+        }
+      })
+    })
+  )
+
+  const items: Workload[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  return items.length > 0 ? items : null
+}
+
+/**
+ * Hook for fetching workloads with caching.
+ * Fetches all workloads across all clusters via agent, then REST fallback.
+ */
+export function useCachedWorkloads(
+  options?: { category?: RefreshCategory }
+): CachedHookResult<Workload[]> & { workloads: Workload[] } {
+  const { category = 'deployments' } = options || {}
+  const key = 'workloads:all:all'
+
+  const result = useCache({
+    key,
+    category,
+    initialData: getDemoWorkloads(),
+    fetcher: async () => {
+      // Try agent first (fast, no backend needed)
+      const agentData = await fetchWorkloadsFromAgent()
+      if (agentData) return agentData
+
+      // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        const res = await fetch('/api/workloads', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const items = (data.items || data) as Array<Record<string, unknown>>
+          return items.map(d => ({
+            name: String(d.name || ''),
+            namespace: String(d.namespace || 'default'),
+            type: (String(d.type || 'Deployment')) as Workload['type'],
+            cluster: String(d.cluster || ''),
+            targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
+            replicas: Number(d.replicas || 1),
+            readyReplicas: Number(d.readyReplicas || 0),
+            status: (String(d.status || 'Running')) as Workload['status'],
+            image: String(d.image || ''),
+            labels: (d.labels as Record<string, string>) || {},
+            createdAt: String(d.createdAt || new Date().toISOString()),
+          }))
+        }
+      }
+
+      return getDemoWorkloads()
+    },
+  })
+
+  return {
+    workloads: result.data,
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
