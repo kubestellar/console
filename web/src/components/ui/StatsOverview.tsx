@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
-import { SkeletonStatBlock } from './Skeleton'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
@@ -73,20 +72,21 @@ interface StatBlockProps {
   block: StatBlockConfig
   data: StatBlockValue
   hasData: boolean
+  isLoading?: boolean
 }
 
-function StatBlock({ block, data, hasData }: StatBlockProps) {
+function StatBlock({ block, data, hasData, isLoading }: StatBlockProps) {
   const IconComponent = ICONS[block.icon] || Server
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
-  const isClickable = data.isClickable !== false && !!data.onClick
+  const isClickable = !isLoading && data.isClickable !== false && !!data.onClick
   const isDemo = data.isDemo === true
 
   const displayValue = hasData ? data.value : '-'
 
   return (
     <div
-      className={`relative glass p-4 rounded-lg ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
+      className={`relative glass p-4 rounded-lg ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
     >
       {isDemo && (
@@ -95,10 +95,10 @@ function StatBlock({ block, data, hasData }: StatBlockProps) {
         </span>
       )}
       <div className="flex items-center gap-2 mb-2">
-        <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
+        <IconComponent className={`w-5 h-5 shrink-0 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
         <span className="text-sm text-muted-foreground truncate">{block.name}</span>
       </div>
-      <div className={`text-3xl font-bold ${valueColor}`}>{displayValue}</div>
+      <div className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
       {data.sublabel && (
         <div className="text-xs text-muted-foreground">{data.sublabel}</div>
       )}
@@ -240,31 +240,20 @@ export function StatsOverview({
       {/* Stats grid */}
       {(!collapsible || isExpanded) && (
         <div className={`grid ${gridCols} gap-4`}>
-          {effectiveIsLoading ? (
-            // Loading skeletons with animated refresh icon
-            <>
-              {visibleBlocks.map((block) => (
-                <SkeletonStatBlock key={block.id} />
-              ))}
-            </>
-          ) : (
-            // Real data
-            <>
-              {visibleBlocks.map(block => {
-                const data = getStatValue(block.id)
-                // Handle stats from other dashboards gracefully
-                const safeData = data?.value !== undefined ? data : { value: '-', sublabel: 'Not available' }
-                return (
-                  <StatBlock
-                    key={block.id}
-                    block={block}
-                    data={safeData}
-                    hasData={effectiveHasData && data?.value !== undefined}
-                  />
-                )
-              })}
-            </>
-          )}
+          {visibleBlocks.map(block => {
+            const data = effectiveIsLoading
+              ? { value: '-' as string | number, sublabel: undefined }
+              : (getStatValue(block.id) ?? { value: '-' as string | number, sublabel: 'Not available' })
+            return (
+              <StatBlock
+                key={block.id}
+                block={block}
+                data={data}
+                hasData={effectiveHasData && !effectiveIsLoading && data?.value !== undefined}
+                isLoading={effectiveIsLoading}
+              />
+            )
+          })}
         </div>
       )}
 

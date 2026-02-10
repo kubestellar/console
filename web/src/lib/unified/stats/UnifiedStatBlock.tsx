@@ -76,28 +76,26 @@ export function UnifiedStatBlock({
   getValue,
   isLoading = false,
 }: UnifiedStatBlockProps) {
-  // Check if mode is switching (show skeleton during transition)
+  // Check if mode is switching (show pulse during transition)
   const isModeSwitching = useIsModeSwitching()
+  const showPulse = isLoading || isModeSwitching
 
-  // Resolve the value
+  // Resolve the value (placeholder when loading)
   const resolvedValue = useMemo((): StatBlockValue => {
-    // If custom getValue is provided, use it
+    if (showPulse) {
+      return { value: '-' }
+    }
     if (getValue) {
       return getValue()
     }
-
-    // Otherwise resolve from config
     const resolved = resolveStatValue(config.valueSource, data, config.format)
-
     return {
       value: resolved.value,
-      sublabel: config.sublabelField
-        ? resolved.sublabel
-        : undefined,
+      sublabel: config.sublabelField ? resolved.sublabel : undefined,
       isDemo: resolved.isDemo,
       isClickable: !!config.onClick,
     }
-  }, [config, data, getValue])
+  }, [config, data, getValue, showPulse])
 
   // Get components
   const IconComponent = ICONS[config.icon] || Server
@@ -105,52 +103,33 @@ export function UnifiedStatBlock({
   const valueColor = VALUE_COLORS[config.id] || 'text-foreground'
 
   // Determine clickable state
-  const isClickable = resolvedValue.isClickable !== false && !!config.onClick
+  const isClickable = !showPulse && resolvedValue.isClickable !== false && !!config.onClick
   const isDemo = resolvedValue.isDemo === true
   const hasData = resolvedValue.value !== undefined && resolvedValue.value !== '-'
 
-  // Show skeleton when loading OR when mode is switching
-  const showSkeleton = isLoading || isModeSwitching
-
-  // Loading/mode switching state - show skeleton with refresh animation
-  if (showSkeleton) {
-    return (
-      <div className="glass p-4 rounded-lg relative">
-        {/* Refresh indicator during skeleton */}
-        <div className="absolute top-2 right-2">
-          <RefreshCw className="w-3 h-3 text-muted-foreground/40 animate-spin" />
-        </div>
-
-        {/* Icon and label skeleton */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-5 h-5 bg-secondary/60 rounded-full animate-pulse" />
-          <div className="h-4 bg-secondary/60 rounded w-20 animate-pulse" />
-        </div>
-
-        {/* Value skeleton */}
-        <div className="h-9 bg-secondary/60 rounded w-16 animate-pulse mb-1" />
-
-        {/* Sublabel skeleton */}
-        <div className="h-3 bg-secondary/60 rounded w-24 animate-pulse" />
-      </div>
-    )
-  }
-
+  // Always render the same DOM structure — pulse animation instead of DOM swap
   return (
     <div
       className={`
         relative glass p-4 rounded-lg transition-colors
+        ${showPulse ? 'animate-pulse' : ''}
         ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''}
         ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''}
       `}
       onClick={() => {
         if (isClickable && config.onClick) {
-          // Handle click action based on type
           handleStatClick(config.onClick)
         }
       }}
       title={config.tooltip}
     >
+      {/* Refresh indicator during loading */}
+      {showPulse && (
+        <div className="absolute top-2 right-2">
+          <RefreshCw className="w-3 h-3 text-muted-foreground/40 animate-spin" />
+        </div>
+      )}
+
       {/* Demo indicator */}
       {isDemo && (
         <span className="absolute -top-1 -right-1" title="Demo data">
@@ -160,12 +139,12 @@ export function UnifiedStatBlock({
 
       {/* Header with icon and name */}
       <div className="flex items-center gap-2 mb-2">
-        <IconComponent className={`w-5 h-5 shrink-0 ${iconColor}`} />
+        <IconComponent className={`w-5 h-5 shrink-0 ${showPulse ? 'text-muted-foreground/30' : iconColor}`} />
         <span className="text-sm text-muted-foreground truncate">{config.name}</span>
       </div>
 
       {/* Value */}
-      <div className={`text-3xl font-bold ${hasData ? valueColor : 'text-muted-foreground'}`}>
+      <div className={`text-3xl font-bold ${showPulse ? 'text-muted-foreground/20' : hasData ? valueColor : 'text-muted-foreground'}`}>
         {hasData ? resolvedValue.value : '-'}
       </div>
 
