@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { api } from '../lib/api'
+import { useAuth } from '../lib/auth'
 import type { AllSettings } from '../lib/settingsTypes'
 import {
   collectFromLocalStorage,
@@ -11,6 +11,22 @@ import {
 const DEBOUNCE_MS = 1000
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
+
+/** Direct fetch helper that bypasses the api module's backend availability cache. */
+async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('token')
+  const response = await fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
+    signal: options?.signal ?? AbortSignal.timeout(5000),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response.json()
+}
 
 /**
  * Central hook for persisting settings to ~/.kc/settings.json via the backend API.
@@ -25,6 +41,7 @@ export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
  * - Debounced PUT to backend (1 second)
  */
 export function usePersistedSettings() {
+  const { isAuthenticated } = useAuth()
   const [loaded, setLoaded] = useState(false)
   const [restoredFromFile, setRestoredFromFile] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
@@ -42,7 +59,10 @@ export function usePersistedSettings() {
     debounceTimer.current = setTimeout(async () => {
       try {
         const current = collectFromLocalStorage()
-        await api.put('/api/settings', current)
+        await settingsFetch('/api/settings', {
+          method: 'PUT',
+          body: JSON.stringify(current),
+        })
         if (mountedRef.current) {
           setSyncStatus('saved')
           setLastSaved(new Date())
@@ -59,10 +79,11 @@ export function usePersistedSettings() {
   // Export settings as encrypted backup file
   const exportSettings = useCallback(async () => {
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch('/api/settings/export', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
       })
       if (!response.ok) throw new Error('Export failed')
@@ -85,9 +106,13 @@ export function usePersistedSettings() {
   const importSettings = useCallback(async (file: File) => {
     try {
       const text = await file.text()
-      await api.put('/api/settings/import', JSON.parse(text), { timeout: 10000 })
+      await settingsFetch('/api/settings/import', {
+        method: 'PUT',
+        body: text,
+        signal: AbortSignal.timeout(10000),
+      })
       // Reload settings from backend after import
-      const { data } = await api.get<AllSettings>('/api/settings')
+      const data = await settingsFetch<AllSettings>('/api/settings')
       if (data) {
         restoreToLocalStorage(data)
       }
@@ -101,13 +126,18 @@ export function usePersistedSettings() {
     }
   }, [])
 
-  // Initial load from backend
+  // Initial load from backend — re-runs when auth state changes
   useEffect(() => {
     mountedRef.current = true
 
+    if (!isAuthenticated) {
+      // Not logged in yet — wait for auth to complete
+      return () => { mountedRef.current = false }
+    }
+
     async function loadSettings() {
       try {
-        const { data } = await api.get<AllSettings>('/api/settings')
+        const data = await settingsFetch<AllSettings>('/api/settings')
         if (!mountedRef.current) return
 
         if (isLocalStorageEmpty() && data) {
@@ -142,10 +172,11 @@ export function usePersistedSettings() {
         clearTimeout(debounceTimer.current)
       }
     }
-  }, [saveToBackend])
+  }, [isAuthenticated, saveToBackend])
 
   // Listen for settings changes from individual hooks
   useEffect(() => {
+    if (!isAuthenticated) return
     const handleChange = () => {
       saveToBackend()
     }
@@ -153,7 +184,7 @@ export function usePersistedSettings() {
     return () => {
       window.removeEventListener(SETTINGS_CHANGED_EVENT, handleChange)
     }
-  }, [saveToBackend])
+  }, [isAuthenticated, saveToBackend])
 
   return {
     loaded,

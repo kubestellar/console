@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
-  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container, HardDrive
+  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container, HardDrive,
+  CheckCircle, Loader2, AlertCircle, WifiOff,
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
@@ -12,7 +13,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAccessibility } from '../../hooks/useAccessibility'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { usePredictionSettings } from '../../hooks/usePredictionSettings'
-import { usePersistedSettings } from '../../hooks/usePersistedSettings'
+import { usePersistedSettings, type SyncStatus } from '../../hooks/usePersistedSettings'
 import { UpdateSettings } from './UpdateSettings'
 import {
   AISettingsSection,
@@ -32,6 +33,14 @@ import {
   SettingsBackupSection,
 } from './sections'
 import { cn } from '../../lib/cn'
+
+const SYNC_DISPLAY: Record<SyncStatus, { icon: typeof CheckCircle; label: string; className: string }> = {
+  idle:    { icon: CheckCircle, label: 'Synced',        className: 'text-muted-foreground' },
+  saving:  { icon: Loader2,     label: 'Saving...',     className: 'text-yellow-400' },
+  saved:   { icon: CheckCircle, label: 'Saved to file', className: 'text-green-400' },
+  error:   { icon: AlertCircle, label: 'Save failed',   className: 'text-red-400' },
+  offline: { icon: WifiOff,     label: 'Local only',    className: 'text-muted-foreground' },
+}
 
 // Define settings navigation structure with groups
 const SETTINGS_NAV = [
@@ -154,6 +163,9 @@ export function Settings() {
     }
   }
 
+  const sync = SYNC_DISPLAY[syncStatus]
+  const SyncIcon = sync.icon
+
   return (
     <div data-testid="settings-page" className="pt-16 max-w-6xl mx-auto flex gap-6">
       {/* Settings restored toast */}
@@ -168,6 +180,10 @@ export function Settings() {
           <div className="mb-4">
             <h1 data-testid="settings-title" className="text-xl font-bold text-foreground">Settings</h1>
             <p className="text-sm text-muted-foreground">Configure console preferences</p>
+            <div className={cn('flex items-center gap-1.5 mt-2 text-xs', sync.className)}>
+              <SyncIcon className={cn('w-3.5 h-3.5', syncStatus === 'saving' && 'animate-spin')} />
+              <span>{sync.label}</span>
+            </div>
           </div>
           {SETTINGS_NAV.map((group) => (
             <div key={group.group}>
@@ -206,6 +222,10 @@ export function Settings() {
         <div className="lg:hidden mb-6">
           <h1 data-testid="settings-title-mobile" className="text-2xl font-bold text-foreground">Settings</h1>
           <p className="text-muted-foreground">Configure console preferences and AI usage</p>
+          <div className={cn('flex items-center gap-1.5 mt-2 text-xs', sync.className)}>
+            <SyncIcon className={cn('w-3.5 h-3.5', syncStatus === 'saving' && 'animate-spin')} />
+            <span>{sync.label}</span>
+          </div>
         </div>
 
         {/* AI & Intelligence Group */}
