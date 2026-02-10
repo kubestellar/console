@@ -10,6 +10,7 @@ import {
   CardControlsRow,
   CardPaginationFooter,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 
 // Stock search result interface
 interface StockSearchResult {
@@ -545,6 +546,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Generate stock data
   const [stockData, setStockData] = useState<StockData[]>([])
   const [isLoadingData, setIsLoadingData] = useState(true)
+  useCardLoadingState({ isLoading: isLoadingData, hasAnyData: stockData.length > 0 })
 
   // --- useCardData hook replaces manual sort/pagination state ---
   const {

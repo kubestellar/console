@@ -8,6 +8,7 @@ import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
+import { useCardLoadingState } from '../CardDataContext'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
@@ -140,6 +141,8 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
   const [repos, setRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
   const [isEditingRepos, setIsEditingRepos] = useState(false)
   const [newRepoInput, setNewRepoInput] = useState('')
+
+  useCardLoadingState({ isLoading, hasAnyData: workflows.length > 0 })
 
   const fetchWorkflows = useCallback(async (isRefresh = false) => {
     const storedToken = localStorage.getItem('github_token')

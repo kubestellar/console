@@ -8,6 +8,7 @@ import {
   CardControlsRow,
   CardPaginationFooter,
 } from '../../lib/cards'
+import { useCardLoadingState } from './CardDataContext'
 import type { SortDirection } from '../../lib/cards'
 
 // Types for GitHub activity data
@@ -478,6 +479,8 @@ export const GitHubActivity = forwardRef<GitHubActivityRef, { config?: GitHubAct
     openIssueCount,
     refetch,
   } = useGitHubActivity(effectiveConfig)
+
+  useCardLoadingState({ isLoading, hasAnyData: !!repoInfo })
 
   // Expose refresh method via ref for CardWrapper refresh button
   useImperativeHandle(ref, () => ({

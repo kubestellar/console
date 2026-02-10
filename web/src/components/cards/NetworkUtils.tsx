@@ -4,6 +4,7 @@ import {
   Play, Square, Trash2, Plus, CheckCircle, XCircle,
   AlertTriangle, Loader2
 } from 'lucide-react'
+import { useCardLoadingState } from './CardDataContext'
 
 // Types
 interface PingResult {
@@ -63,6 +64,7 @@ const DEFAULT_HOSTS = [
 export function NetworkUtils() {
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
+  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized })
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)

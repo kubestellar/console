@@ -6,6 +6,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
+import { useCardLoadingState } from '../CardDataContext'
 import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps, RSSItemRaw } from './types'
 import { PRESET_FEEDS, CORS_PROXIES } from './constants'
 import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
@@ -101,6 +102,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const [sourceFilter, setSourceFilter] = useState<string[]>([]) // Empty = all sources
   const [showSourceFilter, setShowSourceFilter] = useState(false)
   const sourceFilterRef = useRef<HTMLDivElement>(null)
+
+  useCardLoadingState({ isLoading, hasAnyData: items.length > 0 })
 
   const activeFeed = feeds[activeFeedIndex] || feeds[0]
 

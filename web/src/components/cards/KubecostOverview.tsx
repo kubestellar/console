@@ -1,5 +1,6 @@
 import { TrendingDown, AlertTriangle, ExternalLink, AlertCircle, PieChart, ChevronRight } from 'lucide-react'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
+import { useReportCardDataState } from './CardDataContext'
 
 interface KubecostOverviewProps {
   config?: {
@@ -35,6 +36,7 @@ const DEMO_RECOMMENDATIONS = [
 
 export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
   const { drillToCost } = useDrillDownActions()
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">

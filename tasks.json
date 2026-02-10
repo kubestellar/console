@@ -154,10 +154,75 @@
       "id": "ai-ml-cards-skeleton-loading",
       "subject": "Add skeleton loading and refresh animation to all AI/ML and AI Agent dashboard cards",
       "description": "All cards on the AI/ML Workloads, AI Agents, and GPU Reservations dashboards show empty/collapsed states until data loads. They should display skeleton placeholders and animate the refresh icon while fetching data.\n\nAffected cards:\n\n**AI/ML Dashboard (14 cards):**\n- LLMdFlow (llmd_flow) - LLM-d request flow visualization\n- KVCacheMonitor (kvcache_monitor) - KV cache metrics\n- EPPRouting (epp_routing) - EPP routing visualization\n- PDDisaggregation (pd_disaggregation) - Prefill/Decode visualization\n- LLMdBenchmarks (llmd_benchmarks) - Performance benchmarks\n- LLMdAIInsights (llmd_ai_insights) - AI insights and anomaly detection\n- LLMdConfigurator (llmd_configurator) - LLM-d stack configuration\n- LLMModels (llm_models) - LLM model serving instances\n- LLMInference (llm_inference) - LLM inference servers\n- LLMdStackMonitor (llmd_stack_monitor) - Overall stack health\n- MLJobs (ml_jobs) - ML training jobs\n- MLNotebooks (ml_notebooks) - Jupyter/ML notebooks\n- GPUOverview (gpu_overview) - GPU count and allocation\n- HardwareHealth\n\n**AI Agents Dashboard (7 cards):**\n- KagentiStatusCard (kagenti_status) - Agent fleet overview\n- KagentiAgentFleet (kagenti_agent_fleet) - Agent list\n- KagentiBuildPipeline (kagenti_build_pipeline) - Build pipeline\n- KagentiToolRegistry (kagenti_tool_registry) - MCP tools\n- KagentiAgentDiscovery (kagenti_agent_discovery) - Agent discovery\n- KagentiSecurityPosture (kagenti_security_posture) - Security posture\n- KagentiTopology (kagenti_topology) - Network topology\n\n**GPU Reservations Dashboard (7 cards):**\n- GPUOverview (gpu_overview) - GPU overview\n- GPUStatus (gpu_status) - Per-cluster GPU status\n- GPUInventory (gpu_inventory) - Per-node GPU inventory\n- GPUUtilization (gpu_utilization) - GPU utilization donut chart\n- GPUUsageTrend (gpu_usage_trend) - Historical GPU trends\n- GPUWorkloads (gpu_workloads) - GPU-requesting workloads\n- HardwareHealth\n\nFor each card:\n1. Show skeleton placeholders (shimmer bars/circles) while data is loading\n2. Animate the refresh icon (spin) during data fetch\n3. Card should maintain its expanded size during loading (not collapse)\n4. Follow the same pattern used by OPA Policies card (opa-policies-loading-state task)",
-      "status": "pending",
+      "status": "completed",
       "priority": "medium",
       "created": "2026-02-09",
-      "tags": ["ux", "skeleton", "loading-state", "ai-ml", "ai-agents", "gpu", "dashboard-cards"]
+      "completedAt": "2026-02-09",
+      "tags": ["ux", "skeleton", "loading-state", "ai-ml", "ai-agents", "gpu", "dashboard-cards"],
+      "resolution": "Fixed in PR #775. Added useCardLoadingState to MLJobs, MLNotebooks, LLMdStackMonitor, KagentiTopology, KagentiSecurity. Added useReportCardDataState with hasData:true to LLMdConfigurator. Added hasData:true to 6 LLM-d visualization cards (LLMdFlow, EPPRouting, LLMdAIInsights, PDDisaggregation, KVCacheMonitor, LLMdBenchmarks)."
+    },
+    {
+      "id": "arcade-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Arcade dashboard cards",
+      "description": "All game cards on the Arcade dashboard show empty/collapsed states until the game loads. They should display skeleton placeholders and animate the refresh icon while loading.\n\nAffected cards (22 games):\n- Checkers, KubeChess, SudokuGame, ContainerTetris, NodeInvaders\n- KubeMan, KubeKong, PodCrosser, PodPitfall, PodBrothers\n- KubeGalaga, KubePong, KubeSnake, KubeKart, Game2048\n- PodSweeper, Kubedle, MatchGame, Solitaire, FlappyPod\n- KubeCraft, KubeDoom\n\nFor each card: add useReportCardDataState({ hasData: true }) since games are self-contained (no external data fetch). This tells CardWrapper the card is ready immediately.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "arcade", "games", "dashboard-cards"]
+    },
+    {
+      "id": "alerts-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Alerts dashboard cards",
+      "description": "Cards on the Alerts dashboard show empty/collapsed states until data loads. They should display skeleton placeholders and animate the refresh icon while fetching data.\n\nAffected cards:\n- ActiveAlerts (active_alerts)\n- AlertRules (alert_rules)\n- FalcoAlerts (falco_alerts) - if missing hook\n- WarningEvents (warning_events)\n- EventSummary (event_summary)\n\nFor each card: verify if useCardLoadingState or useReportCardDataState is already present. If missing, add the appropriate hook based on whether the card fetches data (useCardLoadingState) or shows static/demo data (useReportCardDataState with hasData:true).",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "alerts", "dashboard-cards"]
+    },
+    {
+      "id": "cost-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Cost dashboard cards",
+      "description": "Cards on the Cost dashboard show empty/collapsed states until data loads.\n\nAffected cards:\n- ClusterCosts (cluster_costs)\n- KubecostOverview (kubecost_overview) - static demo data\n- OpenCostOverview (opencost_overview) - static demo data\n- ResourceCapacity (resource_capacity)\n- ResourceTrend (resource_trend)\n\nFor each card: verify if useCardLoadingState or useReportCardDataState is already present. If missing, add the appropriate hook.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "cost", "dashboard-cards"]
+    },
+    {
+      "id": "data-compliance-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Data Compliance dashboard cards",
+      "description": "Cards on the Data Compliance dashboard show empty/collapsed states until data loads.\n\nAffected cards:\n- VaultSecrets (vault_secrets)\n- ExternalSecrets (external_secrets)\n- CertManager (cert_manager)\n- NamespaceRBAC (namespace_rbac)\n\nFor each card: verify if useCardLoadingState or useReportCardDataState is already present. If missing, add the appropriate hook.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "data-compliance", "dashboard-cards"]
+    },
+    {
+      "id": "helm-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Helm dashboard cards",
+      "description": "Cards on the Helm dashboard show empty/collapsed states until data loads.\n\nAffected cards:\n- HelmReleaseStatus (helm_release_status)\n- ChartVersions (chart_versions)\n- HelmHistory (helm_history)\n- HelmValuesDiff (helm_values_diff)\n\nFor each card: verify if useCardLoadingState or useReportCardDataState is already present. If missing, add the appropriate hook.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "helm", "dashboard-cards"]
+    },
+    {
+      "id": "network-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Network dashboard cards",
+      "description": "Cards on the Network dashboard show empty/collapsed states until data loads.\n\nAffected cards:\n- NetworkOverview (network_overview)\n- ServiceStatus (service_status)\n- IngressStatus (ingress_status) - if present\n- NetworkPolicyStatus (network_policy_status) - if present\n\nFor each card: verify if useCardLoadingState or useReportCardDataState is already present. If missing, add the appropriate hook.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "network", "dashboard-cards"]
+    },
+    {
+      "id": "services-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all Services dashboard cards",
+      "description": "Cards on the Services dashboard show empty/collapsed states until data loads.\n\nAffected cards:\n- ServiceStatus (service_status)\n- IngressStatus (ingress_status) - if present\n- GatewayStatus (gateway_status)\n- ServiceExports (service_exports)\n- ServiceImports (service_imports)\n- ServiceTopology (service_topology) - static demo data\n\nFor each card: verify if useCardLoadingState or useReportCardDataState is already present. If missing, add the appropriate hook.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-10",
+      "tags": ["ux", "skeleton", "loading-state", "services", "dashboard-cards"]
     }
   ]
 }

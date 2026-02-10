@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { AlertTriangle, CheckCircle, ExternalLink, AlertCircle, FileCheck } from 'lucide-react'
 import { CardSearchInput } from '../../lib/cards'
+import { useReportCardDataState } from './CardDataContext'
 
 interface KyvernoPoliciesProps {
   config?: Record<string, unknown>
@@ -60,6 +61,7 @@ const DEMO_STATS = {
 }
 
 export function KyvernoPolicies({ config: _config }: KyvernoPoliciesProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [localSearch, setLocalSearch] = useState('')
 
   // Filter policies by local search

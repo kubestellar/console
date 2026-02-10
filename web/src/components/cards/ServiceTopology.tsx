@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, ArrowRight } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import type { TopologyNode, TopologyEdge, TopologyHealthStatus } from '../../types/topology'
+import { useReportCardDataState } from './CardDataContext'
 
 // Demo topology data
 const DEMO_NODES: TopologyNode[] = [
@@ -79,6 +80,7 @@ interface ServiceTopologyProps {
 }
 
 export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)

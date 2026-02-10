@@ -2,6 +2,7 @@ import { Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { useReportCardDataState } from './CardDataContext'
 
 interface OpenCostOverviewProps {
   config?: {
@@ -40,6 +41,7 @@ const DEMO_NAMESPACE_COSTS: NamespaceCost[] = [
 
 export function OpenCostOverview({ config: _config }: OpenCostOverviewProps) {
   const { drillToCost } = useDrillDownActions()
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0 })
 
   const {
     items: filteredCosts,

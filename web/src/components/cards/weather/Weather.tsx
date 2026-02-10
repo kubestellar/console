@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
 import { WEATHER_API } from '../../../config/externalApis'
+import { useCardLoadingState } from '../CardDataContext'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -60,6 +61,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [currentWeather, setCurrentWeather] = useState<CurrentWeather | null>(null)
   const [forecast, setForecast] = useState<ForecastDay[]>([])
   const [hourlyForecast, setHourlyForecast] = useState<HourlyForecast[]>([])
+  useCardLoadingState({ isLoading, hasAnyData: !!currentWeather })
 
   // Save locations to localStorage whenever they change
   useEffect(() => {
