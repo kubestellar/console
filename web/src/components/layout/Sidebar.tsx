@@ -276,7 +276,7 @@ export function Sidebar() {
       )}
 
       <aside data-testid="sidebar" data-tour="sidebar" className={cn(
-        'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto transition-all duration-300 z-40',
+        'fixed left-0 top-16 bottom-0 glass border-r border-border/50 overflow-y-auto scroll-enhanced transition-all duration-300 z-40',
         // Desktop: respect collapsed state
         !isMobile && (config.collapsed ? 'w-20 p-3' : 'w-64 p-4'),
         // Mobile: always w-64 when open, slide off-screen when closed

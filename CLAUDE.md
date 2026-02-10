@@ -98,3 +98,5 @@ After completing implementation tasks, create test tasks that use:
 ## TODO
 
 - [ ] Test token counter works with predictions in the offline detector
+- [ ] Does the "Run Locally" modal (start-dev.sh / startup-oauth.sh) include agent installation?
+- [x] Replace left sidebar scroller with custom scroller (apply learnings from llm-d stack dropdown and AI mission chat scroller)
