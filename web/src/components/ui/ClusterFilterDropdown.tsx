@@ -1,10 +1,12 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Filter, ChevronDown, Server } from 'lucide-react'
+import { ClusterStatusDot, getClusterState, type ClusterState } from './ClusterStatusBadge'
+import type { ClusterErrorType } from '../../lib/errorClassifier'
 
 interface ClusterFilterDropdownProps {
   localClusterFilter: string[]
-  availableClusters: { name: string }[]
+  availableClusters: { name: string; healthy?: boolean; reachable?: boolean; nodeCount?: number; errorType?: ClusterErrorType }[]
   showClusterFilter: boolean
   setShowClusterFilter: (show: boolean) => void
   toggleClusterFilter: (cluster: string) => void
@@ -115,17 +117,46 @@ export function ClusterFilterDropdown({
               >
                 All clusters
               </button>
-              {availableClusters.map(cluster => (
-                <button
-                  key={cluster.name}
-                  onClick={() => toggleClusterFilter(cluster.name)}
-                  className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                    localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                  }`}
-                >
-                  {cluster.name}
-                </button>
-              ))}
+              {availableClusters.map(cluster => {
+                const clusterState: ClusterState = cluster.healthy !== undefined || cluster.reachable !== undefined
+                  ? getClusterState(
+                      cluster.healthy ?? true,
+                      cluster.reachable,
+                      cluster.nodeCount,
+                      undefined,
+                      cluster.errorType
+                    )
+                  : 'healthy'
+
+                const isUnreachable = cluster.reachable === false
+                const stateLabel = clusterState === 'healthy' ? '' :
+                  clusterState === 'degraded' ? 'degraded' :
+                  clusterState === 'unreachable-auth' ? 'needs auth' :
+                  clusterState === 'unreachable-timeout' ? 'offline' :
+                  clusterState.startsWith('unreachable') ? 'offline' : ''
+
+                return (
+                  <button
+                    key={cluster.name}
+                    onClick={() => !isUnreachable && toggleClusterFilter(cluster.name)}
+                    disabled={isUnreachable}
+                    className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
+                      isUnreachable
+                        ? 'opacity-40 cursor-not-allowed'
+                        : localClusterFilter.includes(cluster.name)
+                          ? 'bg-purple-500/20 text-purple-400'
+                          : 'hover:bg-secondary text-foreground'
+                    }`}
+                    title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
+                  >
+                    <ClusterStatusDot state={clusterState} size="sm" />
+                    <span className="flex-1 truncate">{cluster.name}</span>
+                    {stateLabel && (
+                      <span className="text-[10px] text-muted-foreground shrink-0">{stateLabel}</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>,
           document.body

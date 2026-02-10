@@ -159,11 +159,10 @@ export function useCardFilters<T>(
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Available clusters for local filter (respects global filter, uses deduplicated clusters)
+  // Available clusters for local filter dropdown (includes unreachable for display)
   const availableClusters = useMemo(() => {
-    const reachable = deduplicatedClusters.filter(c => c.reachable !== false)
-    if (isAllClustersSelected) return reachable
-    return reachable.filter(c => selectedClusters.includes(c.name))
+    if (isAllClustersSelected) return deduplicatedClusters
+    return deduplicatedClusters.filter(c => selectedClusters.includes(c.name))
   }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
   const toggleClusterFilter = useCallback((clusterName: string) => {
@@ -945,20 +944,15 @@ export function useChartFilters(
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Get reachable clusters (using deduplicated clusters)
-  const reachableClusters = useMemo(() => {
-    return deduplicatedClusters.filter(c => c.reachable !== false)
-  }, [deduplicatedClusters])
-
-  // Available clusters for filtering (respects global filter)
+  // Available clusters for filter dropdown (includes unreachable for display)
   const availableClusters = useMemo(() => {
-    if (isAllClustersSelected) return reachableClusters
-    return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
+    if (isAllClustersSelected) return deduplicatedClusters
+    return deduplicatedClusters.filter(c => selectedClusters.includes(c.name))
+  }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
 
-  // Filtered clusters based on global + local filters
+  // Filtered clusters based on global + local filters (reachable only for data)
   const filteredClusters = useMemo(() => {
-    let result = reachableClusters
+    let result = deduplicatedClusters.filter(c => c.reachable !== false)
     if (!isAllClustersSelected) {
       result = result.filter(c => selectedClusters.includes(c.name))
     }
@@ -966,7 +960,7 @@ export function useChartFilters(
       result = result.filter(c => localClusterFilter.includes(c.name))
     }
     return result
-  }, [reachableClusters, selectedClusters, isAllClustersSelected, localClusterFilter])
+  }, [deduplicatedClusters, selectedClusters, isAllClustersSelected, localClusterFilter])
 
   const toggleClusterFilter = useCallback((clusterName: string) => {
     if (localClusterFilter.includes(clusterName)) {

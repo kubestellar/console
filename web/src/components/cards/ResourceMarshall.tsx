@@ -15,6 +15,7 @@ import { useResolveDependencies, type ResolvedDependency } from '../../hooks/use
 import { cn } from '../../lib/cn'
 import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
 import { useCardLoadingState } from './CardDataContext'
+import { ClusterSelect } from '../ui/ClusterSelect'
 
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
@@ -64,12 +65,6 @@ export function ResourceMarshall() {
   // Dependency resolution
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
 
-  // Cluster names
-  const clusterNames = useMemo(
-    () => clusters.map(c => c.name).sort(),
-    [clusters],
-  )
-
   // Handle cluster change
   const handleClusterChange = useCallback((cluster: string) => {
     setSelectedCluster(cluster)
@@ -118,16 +113,13 @@ export function ResourceMarshall() {
         {/* Cluster selector */}
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground w-20 shrink-0">Cluster</label>
-          <select
+          <ClusterSelect
+            clusters={clusters}
             value={selectedCluster}
-            onChange={(e) => handleClusterChange(e.target.value)}
-            className="flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-          >
-            <option value="">Select cluster...</option>
-            {clusterNames.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+            onChange={handleClusterChange}
+            placeholder="Select cluster..."
+            className="flex-1"
+          />
         </div>
 
         {/* Namespace selector */}

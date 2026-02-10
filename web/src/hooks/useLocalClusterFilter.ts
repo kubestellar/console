@@ -92,17 +92,18 @@ export function useLocalClusterFilter<T extends Cluster = Cluster>(
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Get reachable clusters
-  const reachableClusters = useMemo(() => {
-    if (!excludeUnreachable) return rawClusters as unknown as T[]
-    return rawClusters.filter(c => c.reachable !== false) as unknown as T[]
-  }, [rawClusters, excludeUnreachable])
-
-  // Get available clusters for local filter (respects global filter)
+  // Available clusters for dropdown display (includes unreachable, respects global filter)
   const availableClusters = useMemo(() => {
-    if (isAllClustersSelected) return reachableClusters
-    return reachableClusters.filter(c => selectedClusters.includes(c.name))
-  }, [reachableClusters, selectedClusters, isAllClustersSelected])
+    const all = rawClusters as unknown as T[]
+    if (isAllClustersSelected) return all
+    return all.filter(c => selectedClusters.includes(c.name))
+  }, [rawClusters, selectedClusters, isAllClustersSelected])
+
+  // Reachable clusters for data filtering
+  const reachableClusters = useMemo(() => {
+    if (!excludeUnreachable) return availableClusters
+    return availableClusters.filter(c => (c as unknown as Cluster).reachable !== false)
+  }, [availableClusters, excludeUnreachable])
 
   // Compute which local filter selections are still valid (exist in available clusters)
   const activeLocalFilter = useMemo(() => {
@@ -111,13 +112,11 @@ export function useLocalClusterFilter<T extends Cluster = Cluster>(
     return localClusterFilter.filter(name => availableNames.has(name))
   }, [localClusterFilter, availableClusters])
 
-  // Filter clusters based on global selection AND local filter
+  // Filter clusters based on global selection AND local filter (reachable only for data)
   const clusters = useMemo(() => {
-    // If no local filter, show all available (already global-filtered)
-    if (activeLocalFilter.length === 0) return availableClusters
-    // Otherwise apply local filter on top
-    return availableClusters.filter(c => activeLocalFilter.includes(c.name))
-  }, [availableClusters, activeLocalFilter])
+    if (activeLocalFilter.length === 0) return reachableClusters
+    return reachableClusters.filter(c => activeLocalFilter.includes(c.name))
+  }, [reachableClusters, activeLocalFilter])
 
   const toggleClusterFilter = (clusterName: string) => {
     if (localClusterFilter.includes(clusterName)) {

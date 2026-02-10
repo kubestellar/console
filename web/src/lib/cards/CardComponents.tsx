@@ -342,6 +342,8 @@ export function CardClusterFilter({
                   )
                 : 'healthy'
 
+              const isUnreachable = cluster.reachable === false
+
               // Get status label for tooltip
               const stateLabel = clusterState === 'healthy' ? '' :
                 clusterState === 'degraded' ? 'degraded' :
@@ -352,11 +354,14 @@ export function CardClusterFilter({
               return (
                 <button
                   key={cluster.name}
-                  onClick={() => onToggle(cluster.name)}
+                  onClick={() => !isUnreachable && onToggle(cluster.name)}
+                  disabled={isUnreachable}
                   className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors flex items-center gap-2 ${
-                    selectedClusters.includes(cluster.name)
-                      ? 'bg-purple-500/20 text-purple-400'
-                      : 'hover:bg-secondary text-foreground'
+                    isUnreachable
+                      ? 'opacity-40 cursor-not-allowed'
+                      : selectedClusters.includes(cluster.name)
+                        ? 'bg-purple-500/20 text-purple-400'
+                        : 'hover:bg-secondary text-foreground'
                   }`}
                   title={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
                 >
