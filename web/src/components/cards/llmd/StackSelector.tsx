@@ -238,13 +238,6 @@ export function StackSelector() {
 
   const { stacks, isLoading, selectedStack, selectedStackId, setSelectedStackId, refetch, isDemoMode } = stackContext
 
-  // Debug: Log stacks when dropdown is open
-  useEffect(() => {
-    if (isOpen && stacks.length > 0) {
-      console.log('[StackSelector] stacks:', stacks.length, 'clusters:', [...new Set(stacks.map(s => s.cluster))])
-    }
-  }, [isOpen, stacks])
-
   // Filter and sort stacks
   const filteredAndSortedStacks = useMemo(() => {
     let result = stacks
@@ -487,8 +480,11 @@ export function StackSelector() {
               </div>
             </div>
 
-            {/* Stack list */}
-            <div className="max-h-80 min-h-[100px] overflow-y-auto overscroll-contain">
+            {/* Stack list - custom scrollbar for better grip */}
+            <div
+              className="max-h-[28rem] min-h-[100px] overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-slate-900/50 [&::-webkit-scrollbar-thumb]:bg-slate-500/60 [&::-webkit-scrollbar-thumb:hover]:bg-slate-400/80 [&::-webkit-scrollbar-thumb]:rounded-full"
+              style={{ scrollbarColor: 'rgba(100,116,139,0.6) rgba(15,23,42,0.5)' }}
+            >
               {filteredAndSortedStacks.length > 0 ? (
                 Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                   <div key={cluster}>
