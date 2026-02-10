@@ -31,14 +31,53 @@ function handle401(): void {
 
   console.warn('[API] Received 401 Unauthorized - token invalid or expired, logging out')
 
+  // Show an in-page notification before redirecting (DOM-injected, no React dependency)
+  showSessionExpiredBanner()
+
   // Clear auth state
   localStorage.removeItem('token')
   localStorage.removeItem('kc-user-cache')
 
-  // Redirect to login with session_expired reason so login page shows a banner
+  // Redirect to login after a delay so the user sees the banner
   setTimeout(() => {
     window.location.href = '/login?reason=session_expired'
-  }, 100)
+  }, 3000)
+}
+
+/**
+ * Inject a DOM-based notification banner for session expiry.
+ * This runs outside React so it works from any context (API client, background fetches, etc).
+ */
+function showSessionExpiredBanner(): void {
+  // Avoid duplicates
+  if (document.getElementById('session-expired-banner')) return
+
+  const banner = document.createElement('div')
+  banner.id = 'session-expired-banner'
+  banner.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.08));
+    border-bottom: 1px solid rgba(234,179,8,0.4);
+    backdrop-filter: blur(12px);
+    color: #fbbf24; font-family: system-ui, sans-serif; font-size: 14px;
+    animation: slideDown 0.3s ease-out;
+  `
+  banner.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
+      <path d="M12 9v4"/><path d="M12 17h.01"/>
+    </svg>
+    <span><strong>Session expired</strong> — Redirecting to sign in...</span>
+  `
+
+  // Add slide-down animation
+  const style = document.createElement('style')
+  style.textContent = `@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }`
+  document.head.appendChild(style)
+  document.body.appendChild(banner)
 }
 
 // Error class for backend unavailable
