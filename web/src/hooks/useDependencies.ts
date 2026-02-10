@@ -128,7 +128,9 @@ export function useResolveDependencies() {
   ): Promise<DependencyResolution | null> => {
     setIsLoading(true)
     setError(null)
-    setData(null)
+    // Keep previous data visible while loading (stale-while-revalidate)
+    // Clearing data here would collapse the card content, shrinking the
+    // grid row and causing the browser to scroll to the top of the page.
 
     try {
       // Try backend REST API first (works when JWT auth is available)
