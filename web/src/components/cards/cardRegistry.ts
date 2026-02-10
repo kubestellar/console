@@ -1,5 +1,16 @@
 import { lazy, Suspense, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
+import { useReportCardDataState } from './CardDataContext'
+
+/**
+ * Suspense fallback that reports isLoading: true to CardWrapper.
+ * Without this, Suspense renders null while chunks load, causing CardWrapper
+ * to assume the card is static (after 150ms timeout) and show an empty body.
+ */
+function CardSuspenseFallback() {
+  useReportCardDataState({ hasData: false, isFailed: false, consecutiveFailures: 0, isLoading: true })
+  return null
+}
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -163,7 +174,7 @@ export type CardComponent = ComponentType<CardComponentProps>
  */
 function withSuspense(LazyComponent: ComponentType<CardComponentProps>): CardComponent {
   function SuspenseWrapped(props: CardComponentProps) {
-    return createElement(Suspense, { fallback: null }, createElement(LazyComponent, props))
+    return createElement(Suspense, { fallback: createElement(CardSuspenseFallback) }, createElement(LazyComponent, props))
   }
   // Access displayName property that may exist on lazy component
   SuspenseWrapped.displayName = `Suspense(${(LazyComponent as ComponentType<CardComponentProps> & { displayName?: string }).displayName || 'Card'})`
