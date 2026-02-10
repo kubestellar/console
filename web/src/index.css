@@ -589,6 +589,22 @@
   animation: none !important;
 }
 
+/* Disable GPU compositing layers that cause screen-sharing flickering */
+.presentation-mode .glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.presentation-mode .status-healthy,
+.presentation-mode .status-warning,
+.presentation-mode .status-error {
+  box-shadow: none !important;
+}
+
+.presentation-mode [class*="weather-"] {
+  filter: none !important;
+}
+
 /* High contrast mode */
 .high-contrast {
   --border: 0 0% 100%;
