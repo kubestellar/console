@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, ExternalLink, XCircle, Info, ChevronRight, RefreshCw, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy, WifiOff } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardSkeleton } from '../../lib/cards/CardComponents'
 import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
@@ -1052,11 +1052,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
-  // Report state to CardWrapper for refresh animation
-  useCardLoadingState({
-    isLoading,
-    hasAnyData: clusters.length > 0,
-  })
+  // NOTE: useCardLoadingState is called below after statuses and reachableClusters are defined
 
   // Fetch clusters directly from agent as fallback (skip in demo mode)
   const [agentClusters, setAgentClusters] = useState<{ name: string; healthy?: boolean }[]>([])
@@ -1262,6 +1258,18 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     checkClusters(reachableClustersRef.current, true)
   }, [checkClusters])
 
+  // Track whether OPA checks have completed for at least one cluster
+  // The card should show skeleton until we have real OPA status data
+  const hasOPAData = Object.values(statuses).some(s => !s.loading)
+  const isOPAChecking = Object.values(statuses).some(s => s.loading) ||
+    (reachableClusters.length > 0 && Object.keys(statuses).length === 0)
+
+  // Report state to CardWrapper for refresh animation and skeleton
+  useCardLoadingState({
+    isLoading: isLoading || (isOPAChecking && !hasOPAData),
+    hasAnyData: clusters.length > 0 && hasOPAData,
+  })
+
   // Initial check - only check reachable clusters without cached data
   // Skip if we've already triggered a check this session
   useEffect(() => {
@@ -1352,6 +1360,11 @@ Please help me:
 Let's start by discussing what kind of policy I need.`,
       context: { basedOnPolicy },
     })
+  }
+
+  // Show skeleton until OPA checks have populated
+  if ((isLoading && clusters.length === 0) || (isOPAChecking && !hasOPAData)) {
+    return <CardSkeleton rows={4} type="list" showHeader showSearch />
   }
 
   return (
@@ -1451,7 +1464,7 @@ Let's start by discussing what kind of policy I need.`,
                   </span>
                   <div className="flex items-center gap-1">
                     {isOffline ? (
-                      <XCircle className="w-3.5 h-3.5 text-red-400/60" />
+                      <WifiOff className="w-3.5 h-3.5 text-muted-foreground/40" />
                     ) : isInitialLoading ? (
                       <RefreshCw className="w-3.5 h-3.5 text-muted-foreground animate-spin" />
                     ) : status?.installed ? (
@@ -1466,7 +1479,10 @@ Let's start by discussing what kind of policy I need.`,
                 </div>
 
                 {isOffline ? (
-                  <p className="text-xs text-red-400/60">Offline</p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground/50">
+                    <WifiOff className="w-3 h-3" />
+                    <span>Offline</span>
+                  </div>
                 ) : isInitialLoading ? (
                   <p className="text-xs text-muted-foreground">Checking...</p>
                 ) : status?.installed ? (
