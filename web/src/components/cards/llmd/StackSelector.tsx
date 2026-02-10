@@ -488,7 +488,7 @@ export function StackSelector() {
             </div>
 
             {/* Stack list */}
-            <div className="max-h-80 min-h-[100px] overflow-y-auto">
+            <div className="max-h-80 min-h-[100px] overflow-y-auto overscroll-contain">
               {filteredAndSortedStacks.length > 0 ? (
                 Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                   <div key={cluster}>
