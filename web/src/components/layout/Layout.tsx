@@ -1,6 +1,6 @@
-import { ReactNode, useState, useEffect, useRef } from 'react'
+import { ReactNode, useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Box, Wifi, WifiOff, X, Settings, Rocket } from 'lucide-react'
+import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2 } from 'lucide-react'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
@@ -45,6 +45,39 @@ export function Layout({ children }: LayoutProps) {
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
+  const [restartState, setRestartState] = useState<'idle' | 'restarting' | 'waiting' | 'copied'>('idle')
+
+  const handleCopyFallback = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText('./startup-oauth.sh')
+      setRestartState('copied')
+      setTimeout(() => setRestartState('idle'), 2000)
+    } catch {
+      setRestartState('idle')
+    }
+  }, [])
+
+  const handleRestartBackend = useCallback(async () => {
+    setRestartState('restarting')
+    try {
+      const resp = await fetch('http://127.0.0.1:8585/restart-backend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        if (data.success) {
+          // Agent confirmed restart — show "waiting for connection"
+          // until backendDown becomes false (health check succeeds)
+          setRestartState('waiting')
+          return
+        }
+      }
+      handleCopyFallback()
+    } catch {
+      handleCopyFallback()
+    }
+  }, [handleCopyFallback])
 
   // Show network banner when browser detects no network, or briefly after reconnecting
   const showNetworkBanner = !isOnline || wasOffline
@@ -73,6 +106,7 @@ export function Layout({ children }: LayoutProps) {
     prevBackendDown.current = backendDown
     // Detect transition: was disconnected → now connected
     if (wasDown && !backendDown) {
+      setRestartState('idle')
       setWasBackendDown(true)
       const timer = setTimeout(() => setWasBackendDown(false), 3000)
       return () => clearTimeout(timer)
@@ -258,7 +292,32 @@ export function Layout({ children }: LayoutProps) {
             {backendDown ? (
               <>
                 <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                Connection lost. Reconnecting&hellip;
+                <span>Connection lost</span>
+                {restartState === 'restarting' ? (
+                  <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 text-zinc-400 rounded text-xs cursor-wait">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Restarting&hellip;
+                  </button>
+                ) : restartState === 'waiting' ? (
+                  <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 text-zinc-400 rounded text-xs">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Restarted, waiting for connection&hellip;
+                  </span>
+                ) : restartState === 'copied' ? (
+                  <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-green-800/50 text-green-300 rounded text-xs">
+                    <Check className="w-3 h-3" />
+                    Copied!
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleRestartBackend}
+                    className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded text-xs transition-colors"
+                    title="Restart the backend server"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Restart
+                  </button>
+                )}
               </>
             ) : (
               <>

@@ -69,6 +69,10 @@ type Server struct {
 
 	// Local cluster management
 	localClusters *LocalClusterManager
+
+	// Backend process management (for restart-from-UI)
+	backendCmd *exec.Cmd
+	backendMux sync.Mutex
 }
 
 // NewServer creates a new agent server
@@ -261,6 +265,9 @@ func (s *Server) Start() error {
 	// Local cluster management endpoints
 	mux.HandleFunc("/local-cluster-tools", s.handleLocalClusterTools)
 	mux.HandleFunc("/local-clusters", s.handleLocalClusters)
+
+	// Backend process management
+	mux.HandleFunc("/restart-backend", s.handleRestartBackend)
 
 	// Prometheus metrics endpoint
 	mux.Handle("/metrics", GetMetricsHandler())
@@ -1108,6 +1115,128 @@ func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+}
+
+// handleRestartBackend kills the existing backend on port 8080 and starts a new one
+func (s *Server) handleRestartBackend(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]string{"error": "POST required"})
+		return
+	}
+
+	s.backendMux.Lock()
+	defer s.backendMux.Unlock()
+
+	killed := s.killBackendProcess()
+
+	if err := s.startBackendProcess(); err != nil {
+		log.Printf("[RestartBackend] Failed to start backend: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Wait for backend to become healthy
+	time.Sleep(3 * time.Second)
+	healthy := s.checkBackendHealth()
+
+	log.Printf("[RestartBackend] Backend restarted (killed=%v, healthy=%v)", killed, healthy)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"killed":  killed,
+		"healthy": healthy,
+	})
+}
+
+// killBackendProcess finds and kills the process listening on port 8080
+func (s *Server) killBackendProcess() bool {
+	// If we have a tracked process, kill it
+	if s.backendCmd != nil && s.backendCmd.Process != nil {
+		s.backendCmd.Process.Kill()
+		s.backendCmd.Wait()
+		s.backendCmd = nil
+		return true
+	}
+
+	// Fallback: find only the LISTEN process on port 8080 (not connected clients)
+	// Using -sTCP:LISTEN ensures we only kill the server, not browsers/proxies
+	out, err := exec.Command("lsof", "-ti", ":8080", "-sTCP:LISTEN").Output()
+	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+		return false
+	}
+
+	for _, pidStr := range strings.Fields(strings.TrimSpace(string(out))) {
+		pid, err := strconv.Atoi(pidStr)
+		if err != nil {
+			continue
+		}
+		if proc, err := os.FindProcess(pid); err == nil {
+			proc.Kill()
+		}
+	}
+
+	time.Sleep(500 * time.Millisecond)
+	return true
+}
+
+// startBackendProcess starts the backend via `go run ./cmd/console`
+func (s *Server) startBackendProcess() error {
+	cmd := exec.Command("go", "run", "./cmd/console")
+	cmd.Env = append(os.Environ(), "GOWORK=off")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start backend: %w", err)
+	}
+
+	s.backendCmd = cmd
+
+	// Reap process in background to avoid zombies
+	go func() {
+		cmd.Wait()
+		s.backendMux.Lock()
+		if s.backendCmd == cmd {
+			s.backendCmd = nil
+		}
+		s.backendMux.Unlock()
+	}()
+
+	return nil
+}
+
+// checkBackendHealth verifies the backend is responding on port 8080
+func (s *Server) checkBackendHealth() bool {
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get("http://127.0.0.1:8080/health")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
 }
 
 // handleRenameContextHTTP renames a kubeconfig context
