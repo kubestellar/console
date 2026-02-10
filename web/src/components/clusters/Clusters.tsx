@@ -1679,7 +1679,7 @@ export function Clusters() {
     <div data-testid="clusters-page" className="pt-16">
       {/* Header */}
       <DashboardHeader
-        title="Clusters"
+        title="My Clusters"
         subtitle="Manage your Kubernetes clusters"
         icon={<Server className="w-6 h-6 text-purple-400" />}
         isFetching={isFetching}
