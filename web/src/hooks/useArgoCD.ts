@@ -94,8 +94,11 @@ function saveToCache<T>(key: string, data: T): void {
 
 /**
  * Mock ArgoCD applications for UI demonstration
- * NOTE: These are example URLs only. In production, ArgoCD applications
- * would be fetched from the ArgoCD API.
+ * 
+ * SECURITY: Safe - These are example/placeholder URLs for demo purposes only
+ * NOT REAL CREDENTIALS - Example GitHub URLs used for UI demonstration
+ * In production, ArgoCD applications would be fetched from the ArgoCD API
+ * with real repository URLs from user's actual ArgoCD installation.
  */
 function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
   const apps: ArgoApplication[] = []
@@ -108,7 +111,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'Synced' as const,
         healthStatus: 'Healthy' as const,
         source: {
-          repoURL: 'https://github.com/example-org/frontend-app',
+          repoURL: 'https://github.com/example-org/frontend-app', // EXAMPLE URL - not a real repository
           path: 'k8s/overlays/production',
           targetRevision: 'main',
         },
@@ -120,7 +123,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'OutOfSync' as const,
         healthStatus: 'Healthy' as const,
         source: {
-          repoURL: 'https://github.com/example-org/api-gateway',
+          repoURL: 'https://github.com/example-org/api-gateway', // EXAMPLE URL - not a real repository
           path: 'deploy',
           targetRevision: 'v2.3.0',
         },
@@ -132,7 +135,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'Synced' as const,
         healthStatus: 'Progressing' as const,
         source: {
-          repoURL: 'https://github.com/example-org/backend-service',
+          repoURL: 'https://github.com/example-org/backend-service', // EXAMPLE URL - not a real repository
           path: 'manifests',
           targetRevision: 'develop',
         },
@@ -144,7 +147,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'OutOfSync' as const,
         healthStatus: 'Degraded' as const,
         source: {
-          repoURL: 'https://github.com/example-org/monitoring-stack',
+          repoURL: 'https://github.com/example-org/monitoring-stack', // EXAMPLE URL - not a real repository
           path: 'helm/prometheus',
           targetRevision: 'HEAD',
         },

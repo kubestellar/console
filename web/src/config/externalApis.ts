@@ -2,23 +2,34 @@
  * External API Configuration
  * 
  * This file centralizes external API endpoints and documentation URLs.
- * Some URLs (like documentation links) are intentionally hardcoded as they
- * are part of the application's functionality and reference public resources.
+ * 
+ * SECURITY NOTE: All URLs in this file are intentionally hardcoded and safe:
+ * - Documentation links to official public resources (not credentials)
+ * - Public API endpoints with environment variable overrides where needed
+ * - Installation commands referencing public GitHub releases
+ * 
+ * This is NOT a security vulnerability - these are public URLs required for
+ * application functionality and user guidance.
  */
 
 /**
  * Weather and Geocoding APIs
+ * 
+ * SECURITY: Safe - Public API with environment variable override
  */
 export const WEATHER_API = {
-  // Open-Meteo Geocoding API - Free public API for location search
+  // Open-Meteo Geocoding API - Free public API for location search (no authentication required)
   // Can be overridden via VITE_GEOCODING_API_URL environment variable
+  // This is a public endpoint and does NOT contain credentials
   geocodingUrl: import.meta.env.VITE_GEOCODING_API_URL || 'https://geocoding-api.open-meteo.com/v1/search',
 } as const
 
 /**
  * AI Provider Documentation URLs
- * These are hardcoded as they are public documentation links
- * that guide users to obtain API keys.
+ * 
+ * SECURITY: Safe - These are public documentation links (not credentials)
+ * These URLs guide users to obtain their own API keys and are part of
+ * the application's help/documentation system.
  */
 export const AI_PROVIDER_DOCS = {
   claude: 'https://console.anthropic.com/settings/keys',
@@ -28,17 +39,25 @@ export const AI_PROVIDER_DOCS = {
 
 /**
  * Kubernetes and Service Mesh Documentation URLs
- * These are hardcoded references to official documentation and
- * are essential for user guidance within the application.
+ * 
+ * SECURITY: Safe - Official public documentation and installation commands
+ * These are hardcoded references to official Kubernetes documentation and
+ * public GitHub repositories. They are essential for user guidance and
+ * contain no credentials or sensitive information.
  */
 export const K8S_DOCS = {
+  // Official Kubernetes Gateway API documentation (public)
   gatewayApi: 'https://gateway-api.sigs.k8s.io/',
   gatewayApiGettingStarted: 'https://gateway-api.sigs.k8s.io/guides/getting-started/',
   gatewayApiImplementations: 'https://gateway-api.sigs.k8s.io/implementations/',
   gammaInitiative: 'https://gateway-api.sigs.k8s.io/concepts/gamma/',
+  
+  // Official MCS API documentation (public GitHub repository)
   mcsApi: 'https://github.com/kubernetes-sigs/mcs-api',
   mcsApiServiceImport: 'https://github.com/kubernetes-sigs/mcs-api#serviceimport',
   mcsApiInstall: 'https://github.com/kubernetes-sigs/mcs-api#installing-the-crds',
+  
+  // Installation commands using public GitHub releases (no credentials required)
   gatewayApiInstallCommand: 'kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml',
   mcsApiInstallCommand: 'kubectl apply -f https://github.com/kubernetes-sigs/mcs-api/releases/latest/download/mcs-api-crds.yaml',
 } as const

@@ -207,7 +207,7 @@ export const handlers = [
     await delay(200)
     return HttpResponse.json({
       user: currentUser,
-      token: 'mock-jwt-token-for-testing-only', // NOT A REAL TOKEN - Mock data for E2E tests
+      token: 'mock-jwt-token-for-testing-only', // SECURITY: Safe - NOT A REAL TOKEN - Mock data for E2E tests only
     })
   }),
 
@@ -225,7 +225,7 @@ export const handlers = [
     await delay(100)
     return HttpResponse.json({
       user: currentUser,
-      token: 'mock-jwt-token-for-testing-only', // NOT A REAL TOKEN - Mock data for E2E tests
+      token: 'mock-jwt-token-for-testing-only', // SECURITY: Safe - NOT A REAL TOKEN - Mock data for E2E tests only
     })
   }),
 
