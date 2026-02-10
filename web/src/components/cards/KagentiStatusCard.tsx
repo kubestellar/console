@@ -34,8 +34,8 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
       </div>
       <div className="min-w-0">
         <div className="text-lg font-semibold leading-tight">{value}</div>
-        <div className="text-[10px] text-muted-foreground truncate">{label}</div>
-        {sub && <div className="text-[10px] text-muted-foreground/60">{sub}</div>}
+        <div className="text-xs text-muted-foreground truncate">{label}</div>
+        {sub && <div className="text-xs text-muted-foreground/60">{sub}</div>}
       </div>
     </div>
   )
@@ -160,7 +160,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Framework distribution */}
       {maxFramework.length > 0 && (
         <div className="px-1">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1.5">Frameworks</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Frameworks</div>
           <div className="space-y-1">
             {maxFramework.slice(0, 4).map(([fw, count]) => (
               <div key={fw} className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Cluster breakdown */}
       {Object.keys(stats.clusterAgents).length > 0 && (
         <div className="px-1">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1.5">Clusters</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Clusters</div>
           <div className="space-y-1">
             {Object.entries(stats.clusterAgents).map(([cluster, counts]) => (
               <div key={cluster} className="flex items-center gap-2 text-xs">
@@ -198,7 +198,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Recent builds */}
       {recentBuilds.length > 0 && (
         <div className="px-1">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1.5">Recent Builds</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Recent Builds</div>
           <div className="space-y-1">
             {recentBuilds.map(b => (
               <div key={`${b.cluster}-${b.namespace}-${b.name}`} className="flex items-center gap-2 text-xs">

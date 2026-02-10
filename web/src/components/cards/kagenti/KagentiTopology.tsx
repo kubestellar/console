@@ -110,7 +110,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Legend */}
-      <div className="flex items-center gap-4 px-3 pt-2 pb-1 text-[10px] text-gray-500">
+      <div className="flex items-center gap-4 px-3 pt-2 pb-1 text-xs text-gray-500">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full border-2 border-blue-400" />
           <span>Agent</span>

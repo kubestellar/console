@@ -106,13 +106,13 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
         <ShieldCheck className={`w-8 h-8 ${scoreColor}`} />
         <div>
           <div className={`text-2xl font-bold ${scoreColor}`}>{security.score}%</div>
-          <div className="text-[10px] text-muted-foreground">Security Score</div>
+          <div className="text-xs text-muted-foreground">Security Score</div>
         </div>
       </div>
 
       {/* Identity binding */}
       <div className="px-1">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1.5">SPIFFE Identity Binding</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">SPIFFE Identity Binding</div>
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-xs">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -136,7 +136,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
 
       {/* Tool credentials */}
       <div className="px-1">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1.5">Tool Credentials</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Tool Credentials</div>
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-xs">
             <Lock className="w-3.5 h-3.5 text-emerald-400" />

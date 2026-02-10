@@ -55,15 +55,15 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded bg-emerald-400/10 py-1.5">
             <div className="text-sm font-bold text-emerald-400">{stats.strict}</div>
-            <div className="text-[10px] text-gray-500">Strict</div>
+            <div className="text-xs text-gray-500">Strict</div>
           </div>
           <div className="rounded bg-amber-400/10 py-1.5">
             <div className="text-sm font-bold text-amber-400">{stats.permissive}</div>
-            <div className="text-[10px] text-gray-500">Permissive</div>
+            <div className="text-xs text-gray-500">Permissive</div>
           </div>
           <div className="rounded bg-red-400/10 py-1.5">
             <div className="text-sm font-bold text-red-400">{stats.unbound}</div>
-            <div className="text-[10px] text-gray-500">Unbound</div>
+            <div className="text-xs text-gray-500">Unbound</div>
           </div>
         </div>
       </div>

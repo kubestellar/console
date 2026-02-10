@@ -83,15 +83,15 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
           >
             <Wrench className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium truncate">{tool.name}</div>
-              <div className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+              <div className="text-sm font-medium truncate">{tool.name}</div>
+              <div className="text-xs text-muted-foreground/60 flex items-center gap-1">
                 <Server className="w-2.5 h-2.5" />
                 {tool.cluster}
                 {tool.toolPrefix && <span className="text-cyan-400/60">prefix: {tool.toolPrefix}</span>}
               </div>
             </div>
             {tool.targetRef && (
-              <span className="text-[10px] text-muted-foreground/50 truncate max-w-[80px]">
+              <span className="text-xs text-muted-foreground/50 truncate max-w-[80px]">
                 {tool.targetRef}
               </span>
             )}

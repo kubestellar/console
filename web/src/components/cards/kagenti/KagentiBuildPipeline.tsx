@@ -140,15 +140,15 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
           >
             <BuildStatusIcon status={build.status} />
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium truncate">{build.name}</div>
-              <div className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+              <div className="text-sm font-medium truncate">{build.name}</div>
+              <div className="text-xs text-muted-foreground/60 flex items-center gap-1">
                 <Server className="w-2.5 h-2.5" />
                 {build.cluster}
                 {build.pipeline && <span>/ {build.pipeline}</span>}
                 {build.mode && <span className="text-blue-400/60">({build.mode})</span>}
               </div>
             </div>
-            <div className="text-[10px] text-muted-foreground/40">
+            <div className="text-xs text-muted-foreground/40">
               {timeAgo(build.startTime || build.completionTime)}
             </div>
           </div>

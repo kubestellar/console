@@ -104,14 +104,14 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
           >
             <Bot className="w-3.5 h-3.5 text-violet-400 shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium truncate">{agent.name}</div>
-              <div className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+              <div className="text-sm font-medium truncate">{agent.name}</div>
+              <div className="text-xs text-muted-foreground/60 flex items-center gap-1">
                 <Server className="w-2.5 h-2.5" />
                 {agent.cluster}
                 {agent.framework && <span className="text-violet-400/60">/ {agent.framework}</span>}
               </div>
             </div>
-            <div className="text-[10px] text-muted-foreground/50">
+            <div className="text-xs text-muted-foreground/50">
               {agent.readyReplicas}/{agent.replicas}
             </div>
             <StatusBadge status={agent.status} />
