@@ -192,6 +192,8 @@ function mergeWithStoredClusters(newClusters: ClusterInfo[]): ClusterInfo[] {
         podCount: pickMetric(cluster.podCount, cached.podCount),
         pvcCount: cluster.pvcCount ?? cached.pvcCount, // pvcCount can be 0
         pvcBoundCount: cluster.pvcBoundCount ?? cached.pvcBoundCount,
+        healthy: cluster.healthy ?? cached.healthy, // Preserve last-known health until fresh check completes
+        reachable: cluster.reachable ?? cached.reachable,
         distribution: cluster.distribution || cached.distribution,
         namespaces: cluster.namespaces?.length ? cluster.namespaces : cached.namespaces,
       }
@@ -778,7 +780,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
         context: c.context || c.name,
         server: c.server,
         user: c.user,
-        healthy: true, // Will be updated by health check
+        // healthy left undefined until health check completes (prevents false-positive green status)
         reachable: undefined, // Unknown until health check completes
         source: 'kubeconfig',
         nodeCount: undefined, // undefined = still checking, 0 = unreachable

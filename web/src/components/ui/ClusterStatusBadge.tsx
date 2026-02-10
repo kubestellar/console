@@ -103,7 +103,7 @@ const STATE_CONFIGS: Record<ClusterState, StateConfig> = {
  * Determine cluster state based on health data
  */
 export function getClusterState(
-  healthy: boolean,
+  healthy: boolean | undefined,
   reachable?: boolean,
   nodeCount?: number,
   readyNodes?: number,

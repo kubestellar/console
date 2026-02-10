@@ -670,7 +670,7 @@ function ConsoleUsersTab({
 }
 
 interface ClusterUsersTabProps {
-  clusters: Array<{ name: string; healthy: boolean }>
+  clusters: Array<{ name: string; healthy?: boolean }>
   selectedCluster: string
   setSelectedCluster: (cluster: string) => void
   users: OpenShiftUser[]
@@ -768,7 +768,7 @@ function ClusterUsersTab({
 }
 
 interface ServiceAccountsTabProps {
-  clusters: Array<{ name: string; healthy: boolean }>
+  clusters: Array<{ name: string; healthy?: boolean }>
   selectedCluster: string
   setSelectedCluster: (cluster: string) => void
   selectedNamespace: string

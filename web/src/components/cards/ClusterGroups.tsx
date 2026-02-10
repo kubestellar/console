@@ -249,7 +249,7 @@ interface DroppableGroupProps {
   group: ClusterGroup
   isExpanded: boolean
   isRefreshing: boolean
-  clusterHealthMap: Map<string, boolean>
+  clusterHealthMap: Map<string, boolean | undefined>
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
@@ -420,7 +420,7 @@ function DroppableGroup({ group, isExpanded, isRefreshing, clusterHealthMap, onT
 
 interface CreateGroupFormProps {
   availableClusters: string[]
-  clusterHealthMap: Map<string, boolean>
+  clusterHealthMap: Map<string, boolean | undefined>
   onSave: (group: ClusterGroup) => void
   onCancel: () => void
 }
@@ -711,7 +711,7 @@ function StaticClusterPicker({
   accentColor,
 }: {
   availableClusters: string[]
-  clusterHealthMap: Map<string, boolean>
+  clusterHealthMap: Map<string, boolean | undefined>
   selectedClusters: Set<string>
   onToggle: (cluster: string) => void
   accentColor: 'blue' | 'yellow'
@@ -971,7 +971,7 @@ function AIAssistant({
 interface EditGroupFormProps {
   group: ClusterGroup
   availableClusters: string[]
-  clusterHealthMap: Map<string, boolean>
+  clusterHealthMap: Map<string, boolean | undefined>
   onSave: (updates: Partial<ClusterGroup>) => void
   onCancel: () => void
 }

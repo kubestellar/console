@@ -3,7 +3,7 @@ export interface ClusterInfo {
   context: string
   server?: string
   user?: string
-  healthy: boolean
+  healthy?: boolean
   source?: string
   nodeCount?: number
   podCount?: number

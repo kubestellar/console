@@ -162,18 +162,15 @@ export function ClusterHealth() {
   // This is the EXACT same logic as Clusters.tsx line 1716
   const isHealthy = (c: ClusterInfo) => (c.nodeCount && c.nodeCount > 0) || c.healthy === true
 
-  // Helper to check if cluster is in initial loading state (no data yet)
-  // Only show loading spinners when we truly have NO information about the cluster
+  // Helper to check if cluster is in initial loading state (health not yet checked)
+  // Shows loading spinner until health check completes and sets healthy to true/false
   const isInitialLoading = (c: ClusterInfo) => {
     // If unreachable, not loading - show offline state
     if (isClusterUnreachable(c)) return false
-    // If we have node data, not loading
-    if (c.nodeCount !== undefined && c.nodeCount > 0) return false
-    // If healthy flag is set (from kubeconfig or previous health check), not loading
-    // The healthy flag is our best indicator until nodeCount is populated
-    if (c.healthy === true) return false
-    // Only show loading if we have no information at all
-    return c.nodeCount === undefined && c.healthy === undefined
+    // If health has been checked (healthy is true or false), not loading
+    if (c.healthy !== undefined) return false
+    // Health unknown - show loading spinner
+    return true
   }
 
   // Stats: EXACT same logic as Clusters.tsx lines 1714-1720
@@ -183,10 +180,10 @@ export function ClusterHealth() {
   const tokenExpiredClusters = filteredForStats.filter(c => isClusterTokenExpired(c)).length
   // Network offline = unreachable but NOT due to auth error
   const networkOfflineClusters = unreachableClusters - tokenExpiredClusters
-  // Healthy = not unreachable and (has nodes OR healthy flag)
-  const healthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && isHealthy(c)).length
-  // Unhealthy = not unreachable and not healthy
-  const unhealthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && !isHealthy(c)).length
+  // Healthy = not unreachable, not loading, and healthy
+  const healthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && !isInitialLoading(c) && isHealthy(c)).length
+  // Unhealthy = not unreachable, not loading, and not healthy
+  const unhealthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && !isInitialLoading(c) && !isHealthy(c)).length
   const totalNodes = filteredForStats.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const totalCPUs = filteredForStats.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
   const totalPods = filteredForStats.reduce((sum, c) => sum + (c.podCount || 0), 0)
