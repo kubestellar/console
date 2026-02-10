@@ -25,6 +25,7 @@
 import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import { isDemoMode, subscribeDemoMode } from '../demoMode'
 import { registerCacheReset, registerRefetch } from '../modeTransition'
+import { getPresentationMode } from '../../hooks/usePresentationMode'
 
 // ============================================================================
 // Configuration
@@ -43,6 +44,18 @@ const META_PREFIX = 'kc_meta:'
 
 /** Maximum consecutive failures before marking as failed */
 const MAX_FAILURES = 3
+
+/** Presentation mode refresh multiplier (5x slower to reduce flickering) */
+const PRESENTATION_MODE_MULTIPLIER = 5
+
+/** Minimum refresh interval in presentation mode (5 minutes) */
+const PRESENTATION_MODE_MIN_INTERVAL = 300_000
+
+/** Base backoff multiplier for consecutive failures */
+const FAILURE_BACKOFF_MULTIPLIER = 2
+
+/** Maximum backoff interval (10 minutes) */
+const MAX_BACKOFF_INTERVAL = 600_000
 
 /** Refresh rates by data category (in milliseconds) */
 export const REFRESH_RATES = {
@@ -76,6 +89,31 @@ export const REFRESH_RATES = {
 } as const
 
 export type RefreshCategory = keyof typeof REFRESH_RATES
+
+/**
+ * Calculate effective refresh interval considering:
+ * 1. Presentation mode (5x slower, min 5 minutes)
+ * 2. Consecutive failures (exponential backoff)
+ */
+function getEffectiveInterval(
+  baseInterval: number,
+  consecutiveFailures: number
+): number {
+  let interval = baseInterval
+
+  // Apply presentation mode multiplier
+  if (getPresentationMode()) {
+    interval = Math.max(interval * PRESENTATION_MODE_MULTIPLIER, PRESENTATION_MODE_MIN_INTERVAL)
+  }
+
+  // Apply exponential backoff for failures (2^failures, capped at MAX_BACKOFF)
+  if (consecutiveFailures > 0) {
+    const backoffMultiplier = Math.pow(FAILURE_BACKOFF_MULTIPLIER, Math.min(consecutiveFailures, 5))
+    interval = Math.min(interval * backoffMultiplier, MAX_BACKOFF_INTERVAL)
+  }
+
+  return interval
+}
 
 // ============================================================================
 // Types
@@ -694,7 +732,9 @@ export function useCache<T>({
   }, [store, refetch])
 
   // Initial fetch and auto-refresh
-  const effectiveInterval = refreshInterval ?? REFRESH_RATES[category]
+  // Calculate effective interval with presentation mode and failure backoff
+  const baseInterval = refreshInterval ?? REFRESH_RATES[category]
+  const effectiveInterval = getEffectiveInterval(baseInterval, state.consecutiveFailures)
 
   // Track mount state to distinguish initial mount from mode-switch re-fires.
   // On initial mount / page navigation: fetch immediately (needed for data).
@@ -727,12 +767,13 @@ export function useCache<T>({
     const unregisterRefetch = registerRefetch(`cache:${key}`, refetch)
 
     // Auto-refresh interval
+    // The interval restarts when consecutiveFailures changes (backoff kicks in)
     if (autoRefresh) {
       const intervalId = setInterval(refetch, effectiveInterval)
       return () => { clearInterval(intervalId); unregisterRefetch() }
     }
     return () => unregisterRefetch()
-  }, [effectiveEnabled, autoRefresh, effectiveInterval, refetch, store, key])
+  }, [effectiveEnabled, autoRefresh, effectiveInterval, refetch, store, key, state.consecutiveFailures])
 
   // Cleanup non-shared stores on unmount
   useEffect(() => {
