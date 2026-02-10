@@ -9,6 +9,7 @@ import { CardControls } from '../../ui/CardControls'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { DEMO_ML_JOBS } from './shared'
 import { useDemoData } from './shared'
+import { useCardLoadingState } from '../CardDataContext'
 
 type MLJob = typeof DEMO_ML_JOBS[number]
 type SortByOption = 'name' | 'status' | 'framework' | 'gpus'
@@ -26,6 +27,11 @@ interface MLJobsProps {
 
 export function MLJobs({ config: _config }: MLJobsProps) {
   const { data: jobs, isLoading } = useDemoData(DEMO_ML_JOBS)
+
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: jobs.length > 0,
+  })
 
   const statusOrder: Record<string, number> = { running: 0, queued: 1, completed: 2, failed: 3 }
 

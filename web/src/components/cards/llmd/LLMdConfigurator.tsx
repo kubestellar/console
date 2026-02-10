@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, Zap, Split, Layers, Scale, ChevronRight, Check, Copy, ExternalLink } from 'lucide-react'
 import { getConfiguratorPresets, type ConfiguratorPreset } from '../../../lib/llmd/mockData'
+import { useReportCardDataState } from '../CardDataContext'
 import { Acronym } from './shared/PortalTooltip'
 
 const CATEGORY_ICONS = {
@@ -148,6 +149,9 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 export function LLMdConfigurator() {
   const presets = useMemo(() => getConfiguratorPresets(), [])
   const [selectedPresetId, setSelectedPresetId] = useState<string>(presets[0]?.id || '')
+
+  // Report to CardWrapper that this static card is ready
+  useReportCardDataState({ isFailed: false, consecutiveFailures: 0, hasData: true })
   const [customParams, setCustomParams] = useState<Record<string, unknown>>({})
   const [copied, setCopied] = useState(false)
 

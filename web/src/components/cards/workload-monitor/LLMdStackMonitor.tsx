@@ -18,6 +18,7 @@ import { cn } from '../../../lib/cn'
 import { useLLMdClusters } from '../workload-detection/shared'
 import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 import { ClusterStatusDot, getClusterState } from '../../ui/ClusterStatusBadge'
+import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 
 type SortField = 'name' | 'status' | 'type' | 'cluster'
@@ -204,6 +205,11 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
 
   const isLoading = serversLoading || monitorLoading
   const isRefreshing = serversRefreshing || monitorRefreshing
+
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: servers.length > 0,
+  })
 
   // Map server status to component status
   const mapStatus = (s: string): ComponentItem['status'] => {

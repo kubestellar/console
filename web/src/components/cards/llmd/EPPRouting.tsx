@@ -516,7 +516,7 @@ export function EPPRouting() {
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Build dynamic nodes from stack topology
   const dynamicNodes = useMemo((): FlowNode[] => {

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Bot, Wrench } from 'lucide-react'
 import { useKagentiAgents, useKagentiTools, type KagentiAgent, type KagentiTool } from '../../../hooks/mcp/kagenti'
+import { useCardLoadingState } from '../CardDataContext'
 
 const FRAMEWORK_COLORS: Record<string, string> = {
   langgraph: '#60a5fa',
@@ -28,6 +29,11 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
   const cluster = config?.cluster as string | undefined
   const { data: agents, isLoading: agentsLoading } = useKagentiAgents({ cluster })
   const { data: tools, isLoading: toolsLoading } = useKagentiTools({ cluster })
+
+  useCardLoadingState({
+    isLoading: agentsLoading || toolsLoading,
+    hasAnyData: agents.length > 0 || tools.length > 0,
+  })
 
   const { nodes, edges } = useMemo(() => {
     const nodesMap: TopoNode[] = []

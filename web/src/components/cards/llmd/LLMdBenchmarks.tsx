@@ -66,7 +66,7 @@ export function LLMdBenchmarks() {
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than shouldUseDemoData (false when stack selected)
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   const [viewMode, setViewMode] = useState<ViewMode>(shouldUseDemoData ? 'comparison' : 'stacks')
   const [modelFilter, setModelFilter] = useState<ModelFilter>('all')

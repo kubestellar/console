@@ -1,10 +1,16 @@
 import { useMemo } from 'react'
 import { Shield, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react'
 import { useKagentiCards, type KagentiCard } from '../../../hooks/mcp/kagenti'
+import { useCardLoadingState } from '../CardDataContext'
 
 export function KagentiSecurity({ config }: { config?: Record<string, unknown> }) {
   const cluster = config?.cluster as string | undefined
   const { data: cards, isLoading } = useKagentiCards({ cluster })
+
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: cards.length > 0,
+  })
 
   const stats = useMemo(() => {
     const total = cards.length

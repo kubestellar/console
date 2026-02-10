@@ -122,6 +122,42 @@
       "completedAt": "2026-01-27",
       "tags": ["bug", "cluster-health", "status", "fluctuating", "ui"],
       "resolution": "Fixed by: 1) Detecting definitive connection errors (refused/reset/no host) and marking offline immediately, 2) Fixing isClusterHealthy() to check reachable flag, 3) Fixing getClusterStateFromInfo to pass reachable status, 4) Resetting nodeCount to 0 when confirmed offline."
+    },
+    {
+      "id": "resource-marshall-scroll-to-top",
+      "subject": "Resource Marshall: selecting a workload scrolls dashboard to top",
+      "description": "When selecting a workload in the Resource Marshall card dropdown, the dashboard page scrolls to the top, forcing the user to scroll back down to see the Resource Marshall card content. The card should maintain scroll position when a workload is selected. Likely caused by a state update triggering a re-render that resets scroll position, or a focus/scroll-into-view call somewhere in the card or parent layout.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-09",
+      "tags": ["bug", "resource-marshall", "scroll", "ux"]
+    },
+    {
+      "id": "opa-policies-loading-state",
+      "subject": "OPA policies card: show skeleton and refresh icon animation on initial load",
+      "description": "When the OPA Policies card first opens, it shows empty/minimized state instead of loading indicators. Should show skeleton placeholders while data is being fetched and animate the refresh icon to indicate loading is in progress. Currently shows 'Checking...' per cluster but the card itself appears empty/minimized initially.",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-09",
+      "tags": ["bug", "opa", "loading-state", "skeleton", "ux"]
+    },
+    {
+      "id": "cluster-health-false-positive",
+      "subject": "Clusters briefly show healthy on page load before going offline",
+      "description": "When navigating to the clusters dashboard, some offline clusters initially show as healthy (green checkmark) before transitioning to offline. This resets on every page refresh. The problem is that clusters are marked healthy before their metrics (CPU, memory, nodes, pods) are populated. Fix: don't mark a cluster as healthy until its capacity/metric data has been fetched. It's fine to show a loading/checking state while polling, but don't show green healthy status until real data confirms it.",
+      "status": "pending",
+      "priority": "high",
+      "created": "2026-02-09",
+      "tags": ["bug", "cluster-health", "false-positive", "ux"]
+    },
+    {
+      "id": "ai-ml-cards-skeleton-loading",
+      "subject": "Add skeleton loading and refresh animation to all AI/ML and AI Agent dashboard cards",
+      "description": "All cards on the AI/ML Workloads, AI Agents, and GPU Reservations dashboards show empty/collapsed states until data loads. They should display skeleton placeholders and animate the refresh icon while fetching data.\n\nAffected cards:\n\n**AI/ML Dashboard (14 cards):**\n- LLMdFlow (llmd_flow) - LLM-d request flow visualization\n- KVCacheMonitor (kvcache_monitor) - KV cache metrics\n- EPPRouting (epp_routing) - EPP routing visualization\n- PDDisaggregation (pd_disaggregation) - Prefill/Decode visualization\n- LLMdBenchmarks (llmd_benchmarks) - Performance benchmarks\n- LLMdAIInsights (llmd_ai_insights) - AI insights and anomaly detection\n- LLMdConfigurator (llmd_configurator) - LLM-d stack configuration\n- LLMModels (llm_models) - LLM model serving instances\n- LLMInference (llm_inference) - LLM inference servers\n- LLMdStackMonitor (llmd_stack_monitor) - Overall stack health\n- MLJobs (ml_jobs) - ML training jobs\n- MLNotebooks (ml_notebooks) - Jupyter/ML notebooks\n- GPUOverview (gpu_overview) - GPU count and allocation\n- HardwareHealth\n\n**AI Agents Dashboard (7 cards):**\n- KagentiStatusCard (kagenti_status) - Agent fleet overview\n- KagentiAgentFleet (kagenti_agent_fleet) - Agent list\n- KagentiBuildPipeline (kagenti_build_pipeline) - Build pipeline\n- KagentiToolRegistry (kagenti_tool_registry) - MCP tools\n- KagentiAgentDiscovery (kagenti_agent_discovery) - Agent discovery\n- KagentiSecurityPosture (kagenti_security_posture) - Security posture\n- KagentiTopology (kagenti_topology) - Network topology\n\n**GPU Reservations Dashboard (7 cards):**\n- GPUOverview (gpu_overview) - GPU overview\n- GPUStatus (gpu_status) - Per-cluster GPU status\n- GPUInventory (gpu_inventory) - Per-node GPU inventory\n- GPUUtilization (gpu_utilization) - GPU utilization donut chart\n- GPUUsageTrend (gpu_usage_trend) - Historical GPU trends\n- GPUWorkloads (gpu_workloads) - GPU-requesting workloads\n- HardwareHealth\n\nFor each card:\n1. Show skeleton placeholders (shimmer bars/circles) while data is loading\n2. Animate the refresh icon (spin) during data fetch\n3. Card should maintain its expanded size during loading (not collapse)\n4. Follow the same pattern used by OPA Policies card (opa-policies-loading-state task)",
+      "status": "pending",
+      "priority": "medium",
+      "created": "2026-02-09",
+      "tags": ["ux", "skeleton", "loading-state", "ai-ml", "ai-agents", "gpu", "dashboard-cards"]
     }
   ]
 }

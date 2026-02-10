@@ -3,6 +3,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { CardPaginationFooter, CardControlsRow, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { DEMO_NOTEBOOKS, useDemoData } from './shared'
+import { useCardLoadingState } from '../CardDataContext'
 
 type Notebook = typeof DEMO_NOTEBOOKS[number]
 type SortByOption = 'name' | 'user' | 'status'
@@ -19,6 +20,11 @@ interface MLNotebooksProps {
 
 export function MLNotebooks({ config: _config }: MLNotebooksProps) {
   const { data: notebooks, isLoading } = useDemoData(DEMO_NOTEBOOKS)
+
+  useCardLoadingState({
+    isLoading,
+    hasAnyData: notebooks.length > 0,
+  })
 
   const statusOrder: Record<string, number> = { running: 0, idle: 1, stopped: 2 }
 

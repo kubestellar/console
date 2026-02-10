@@ -320,7 +320,7 @@ export function LLMdAIInsights() {
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than shouldUseDemoData (false when stack selected)
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0 })
+  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState('')
