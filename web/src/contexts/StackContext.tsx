@@ -186,14 +186,21 @@ interface StackProviderProps {
 export function StackProvider({ children }: StackProviderProps) {
   const { isDemoMode } = useDemoMode()
 
-  // Get all reachable clusters dynamically - no hardcoding!
+  // Get only confirmed-reachable clusters — exclude offline and unknown
   const { deduplicatedClusters } = useClusters()
-  const clusterNames = useMemo(() => {
-    const reachable = deduplicatedClusters.filter(c => c.reachable !== false)
-    return reachable.map(c => c.name)
+  const onlineClusterNames = useMemo(() => {
+    return deduplicatedClusters
+      .filter(c => c.reachable === true)
+      .map(c => c.name)
   }, [deduplicatedClusters])
 
-  const { stacks: liveStacks, isLoading: liveLoading, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(clusterNames)
+  const { stacks: discoveredStacks, isLoading: liveLoading, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(onlineClusterNames)
+
+  // Filter out stacks from clusters that went offline since last discovery
+  const onlineClusterSet = useMemo(() => new Set(onlineClusterNames), [onlineClusterNames])
+  const liveStacks = useMemo(() => {
+    return discoveredStacks.filter(s => onlineClusterSet.has(s.cluster))
+  }, [discoveredStacks, onlineClusterSet])
 
   // Use demo stacks when in demo mode, otherwise live stacks
   const demoStacks = useMemo(() => createDemoStacks(), [])
