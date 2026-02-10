@@ -98,6 +98,6 @@ After completing implementation tasks, create test tasks that use:
 ## TODO
 
 - [ ] Test token counter works with predictions in the offline detector
-- [ ] Does the "Run Locally" modal (start-dev.sh / startup-oauth.sh) include agent installation?
+- [x] Does the "Run Locally" modal (start-dev.sh / startup-oauth.sh) include agent installation? YES — startup-oauth.sh auto-installs kc-agent via Homebrew, and the modal notes "The script automatically installs the local agent"
 - [x] Replace left sidebar scroller with custom scroller (apply learnings from llm-d stack dropdown and AI mission chat scroller)
 - [x] Security Issues card shows "No security issues" while still loading — should show "Loading" instead

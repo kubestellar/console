@@ -18,7 +18,7 @@ const STEPS = [
   {
     number: 1,
     title: 'Start the console',
-    description: 'Clones the repo, installs dependencies, and starts all services',
+    description: 'Clones the repo, installs dependencies, and starts the backend, frontend, and local agent',
     command: `curl -sSL ${CURL_BASE}/start-dev.sh | bash`,
     altCommand: `curl -sSL ${CURL_BASE}/startup-oauth.sh | bash`,
     altLabel: 'With GitHub OAuth login',
@@ -157,7 +157,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                               </button>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              The script automatically installs the local agent via Homebrew.
+                              The script installs dependencies and starts the backend, frontend, and local agent.
                             </p>
                           </div>
                         )}
