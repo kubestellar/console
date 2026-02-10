@@ -36,6 +36,7 @@ function updateSharedSettings(updates: Partial<PredictionSettings>) {
 function persistSettings() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedSettings))
   window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
+  window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
 }
 
 /**
@@ -73,6 +74,8 @@ export function usePredictionSettings() {
     }
 
     window.addEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChange)
+    // Re-read localStorage when settings are restored from backend file (cache clear recovery)
+    window.addEventListener('kubestellar-settings-restored', handleSettingsChange)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) handleSettingsChange()
     }
@@ -80,6 +83,7 @@ export function usePredictionSettings() {
 
     return () => {
       window.removeEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChange)
+      window.removeEventListener('kubestellar-settings-restored', handleSettingsChange)
       window.removeEventListener('storage', handleStorage)
     }
   }, [])

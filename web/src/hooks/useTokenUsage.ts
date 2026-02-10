@@ -285,6 +285,7 @@ export function useTokenUsage() {
       updateSharedUsage(newSettings)
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
+      window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
     },
     []
   )

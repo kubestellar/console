@@ -22,6 +22,7 @@ function loadConfig(): NotificationConfig {
 function saveConfig(config: NotificationConfig): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   } catch (e) {
     console.error('Failed to save notification config:', e)
   }

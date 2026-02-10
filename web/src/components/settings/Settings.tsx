@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Cpu, TrendingUp, Coins, User, Bell, Shield,
-  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container
+  Palette, Eye, Plug, Github, Key, LayoutGrid, Download, Database, Container, HardDrive
 } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../hooks/useTheme'
@@ -12,6 +12,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAccessibility } from '../../hooks/useAccessibility'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { usePredictionSettings } from '../../hooks/usePredictionSettings'
+import { usePersistedSettings } from '../../hooks/usePersistedSettings'
 import { UpdateSettings } from './UpdateSettings'
 import {
   AISettingsSection,
@@ -28,6 +29,7 @@ import {
   NotificationSettingsSection,
   PersistenceSection,
   LocalClustersSection,
+  SettingsBackupSection,
 } from './sections'
 import { cn } from '../../lib/cn'
 
@@ -68,6 +70,7 @@ const SETTINGS_NAV = [
   {
     group: 'Utilities',
     items: [
+      { id: 'settings-backup', label: 'Backup & Sync', icon: HardDrive },
       { id: 'local-clusters-settings', label: 'Local Clusters', icon: Container },
       { id: 'permissions-settings', label: 'Permissions', icon: Shield },
       { id: 'system-updates-settings', label: 'Updates', icon: Download },
@@ -86,8 +89,19 @@ export function Settings() {
   const { colorBlindMode, setColorBlindMode, reduceMotion, setReduceMotion, highContrast, setHighContrast } = useAccessibility()
   const { forceCheck: forceVersionCheck } = useVersionCheck()
   const { settings: predictionSettings, updateSettings: updatePredictionSettings, resetSettings: resetPredictionSettings } = usePredictionSettings()
+  const { restoredFromFile, syncStatus, lastSaved, filePath, exportSettings, importSettings } = usePersistedSettings()
 
   const [activeSection, setActiveSection] = useState<string>('ai-mode-settings')
+  const [showRestoredToast, setShowRestoredToast] = useState(false)
+
+  // Show toast when settings are restored from backup file (after cache clear)
+  useEffect(() => {
+    if (restoredFromFile) {
+      setShowRestoredToast(true)
+      const timer = setTimeout(() => setShowRestoredToast(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [restoredFromFile])
   const contentRef = useRef<HTMLDivElement>(null)
 
   // Handle deep linking - scroll to section based on URL hash
@@ -142,6 +156,12 @@ export function Settings() {
 
   return (
     <div data-testid="settings-page" className="pt-16 max-w-6xl mx-auto flex gap-6">
+      {/* Settings restored toast */}
+      {showRestoredToast && (
+        <div className="fixed top-20 right-4 z-50 bg-green-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm shadow-lg backdrop-blur-sm animate-in slide-in-from-right">
+          Settings restored from backup file
+        </div>
+      )}
       {/* Sidebar Navigation */}
       <nav className="hidden lg:block w-56 shrink-0">
         <div className="sticky top-20 space-y-4">
@@ -263,6 +283,13 @@ export function Settings() {
             Utilities
           </h2>
           <div className="space-y-6">
+            <SettingsBackupSection
+              syncStatus={syncStatus}
+              lastSaved={lastSaved}
+              filePath={filePath}
+              onExport={exportSettings}
+              onImport={importSettings}
+            />
             <LocalClustersSection />
             <PermissionsSection />
             <UpdateSettings />

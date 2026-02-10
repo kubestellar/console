@@ -69,6 +69,7 @@ export function useAIMode() {
   // Persist mode changes
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, mode)
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   }, [mode])
 
   const setMode = useCallback((newMode: AIMode) => {

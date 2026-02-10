@@ -245,6 +245,7 @@ export function loadAccessibilitySettings(): AccessibilitySettings {
 export function saveAccessibilitySettings(settings: AccessibilitySettings): void {
   try {
     localStorage.setItem(ACCESSIBILITY_STORAGE_KEY, JSON.stringify(settings))
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   } catch (error) {
     console.error('Failed to save accessibility settings:', error)
   }

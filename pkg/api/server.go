@@ -20,6 +20,7 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/notifications"
+	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -195,6 +196,13 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 	log.Println("Persistence store initialized")
 
+	// Initialize persistent settings manager and migrate from config.yaml
+	settingsManager := settings.GetSettingsManager()
+	if err := settingsManager.MigrateFromConfigYaml(); err != nil {
+		log.Printf("Warning: Failed to migrate settings from config.yaml: %v", err)
+	}
+	log.Printf("Settings manager initialized (%s)", settingsManager.GetSettingsPath())
+
 	server := &Server{
 		app:                 app,
 		store:               db,
@@ -307,6 +315,13 @@ func (s *Server) setupRoutes() {
 	user := handlers.NewUserHandler(s.store)
 	api.Get("/me", user.GetCurrentUser)
 	api.Put("/me", user.UpdateCurrentUser)
+
+	// Persistent settings routes
+	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager())
+	api.Get("/settings", settingsHandler.GetSettings)
+	api.Put("/settings", settingsHandler.SaveSettings)
+	api.Post("/settings/export", settingsHandler.ExportSettings)
+	api.Post("/settings/import", settingsHandler.ImportSettings)
 
 	// Onboarding routes
 	onboarding := handlers.NewOnboardingHandler(s.store)

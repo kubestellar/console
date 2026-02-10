@@ -16,6 +16,7 @@ import { RewardsProvider } from './hooks/useRewards'
 import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { ROUTES } from './config/routes'
+import { usePersistedSettings } from './hooks/usePersistedSettings'
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -185,10 +186,18 @@ function OnboardedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+// Runs usePersistedSettings early to restore settings from ~/.kc/settings.json
+// if localStorage was cleared. Must be inside AuthProvider for API access.
+function SettingsSyncInit() {
+  usePersistedSettings()
+  return null
+}
+
 function App() {
   return (
     <ThemeProvider>
     <AuthProvider>
+    <SettingsSyncInit />
     <UnifiedDemoProvider>
       <RewardsProvider>
       <ToastProvider>

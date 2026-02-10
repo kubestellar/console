@@ -124,6 +124,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     if (isValid) {
       // Store base64 encoded (obfuscation)
       localStorage.setItem('github_token', encodeToken(githubToken.trim()))
+      window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
       setHasGithubToken(true)
       setGithubToken('')
       setGithubTokenSaved(true)

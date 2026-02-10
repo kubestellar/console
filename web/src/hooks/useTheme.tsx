@@ -188,6 +188,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyTheme(currentTheme)
     localStorage.setItem(STORAGE_KEY, themeId)
+    window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   }, [currentTheme, themeId])
 
   // Listen for system theme changes
