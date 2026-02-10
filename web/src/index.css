@@ -41,7 +41,7 @@
     --color-info: #06b6d4;
 
     /* Glass effect - can be overridden by theme */
-    --glass-background: rgba(17, 24, 39, 0.8);
+    --glass-background: rgba(17, 24, 39, 0.92);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: rgba(147, 51, 234, 0.2);
 
@@ -88,7 +88,7 @@
     --input: 214 32% 91%;
     --ring: 252 73% 56%;
 
-    --glass-background: rgba(255, 255, 255, 0.9);
+    --glass-background: rgba(255, 255, 255, 0.95);
     --glass-border: rgba(0, 0, 0, 0.1);
     --glass-shadow: rgba(147, 51, 234, 0.1);
     --scrollbar-thumb: rgba(147, 51, 234, 0.2);
@@ -99,6 +99,13 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  /* Globally disable backdrop-filter — creates GPU compositing layers
+     that cause flickering in screen-sharing software (Teams/Zoom). */
+  [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 
   body {
@@ -166,7 +173,6 @@
 /* Glass effect - uses theme variables */
 .glass {
   background: var(--glass-background);
-  backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
 }
 
@@ -292,7 +298,6 @@
 
 .animate-card-refresh-pulse {
   animation: card-refresh-pulse 0.5s ease-out;
-  will-change: opacity;
 }
 
 /* Disable card flash animations when reduce motion is enabled */
@@ -306,24 +311,14 @@
 /* Status indicators - use theme status colors */
 .status-healthy {
   background-color: var(--color-success);
-  box-shadow: 0 0 10px var(--color-success);
 }
 
 .status-warning {
   background-color: var(--color-warning);
-  box-shadow: 0 0 10px var(--color-warning);
 }
 
 .status-error {
   background-color: var(--color-error);
-  box-shadow: 0 0 10px var(--color-error);
-}
-
-/* Status glow only when theme supports it */
-:not(.theme-glow-effects) .status-healthy,
-:not(.theme-glow-effects) .status-warning,
-:not(.theme-glow-effects) .status-error {
-  box-shadow: none;
 }
 
 /* Scrollbar - uses theme variables */
@@ -421,13 +416,9 @@
   @apply transition-all duration-200;
 }
 
-/* Loading spinner - uses theme primary with GPU acceleration */
 .spinner {
   @apply animate-spin rounded-full border-2 border-muted;
   border-top-color: var(--ks-purple);
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 /* Shimmer animation for skeleton loading */
@@ -458,12 +449,9 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* GPU acceleration for spinning animations - prevents layout shift/flickering */
 .animate-spin,
 .animate-spin-slow,
 .animate-spin-slower {
-  will-change: transform;
-  transform: translateZ(0);
   backface-visibility: hidden;
 }
 

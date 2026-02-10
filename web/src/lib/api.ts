@@ -60,7 +60,6 @@ function showSessionExpiredBanner(): void {
     padding: 14px 24px;
     background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.08));
     border-bottom: 1px solid rgba(234,179,8,0.4);
-    backdrop-filter: blur(12px);
     color: #fbbf24; font-family: system-ui, sans-serif; font-size: 14px;
     animation: slideDown 0.3s ease-out;
   `
