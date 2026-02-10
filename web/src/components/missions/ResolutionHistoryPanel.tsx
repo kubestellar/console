@@ -57,7 +57,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
 
   if (totalResolutions === 0) {
     return (
-      <div className="w-72 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+      <div className="w-72 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookMarked className="w-4 h-4 text-purple-400" />
@@ -78,7 +78,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   return (
-    <div className="w-72 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+    <div className="w-72 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
       <div className="bg-card border border-border rounded-lg p-4">
         <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <BookMarked className="w-4 h-4 text-purple-400" />

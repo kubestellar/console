@@ -379,7 +379,7 @@ export function AlertBadge() {
             )}
 
             {/* Alerts List */}
-            <div className="max-h-64 overflow-y-auto">
+            <div className="max-h-64 overflow-y-auto scroll-enhanced">
               {displayedAlerts.length === 0 ? (
                 <div className="p-6 text-center text-muted-foreground">
                   {stats.firing === 0 ? (

@@ -389,7 +389,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-0"
       >
         {mission.messages.map((msg, index) => {
           // Find if this is the last assistant message
@@ -609,7 +609,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
       {/* Right sidebar for full screen mode */}
       {isFullScreen && (
-        <div className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
           {/* Original Ask */}
           <div className="bg-card border border-border rounded-lg p-4">
             <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">

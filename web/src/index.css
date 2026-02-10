@@ -345,6 +345,23 @@
   background: var(--scrollbar-thumb-hover);
 }
 
+/* Enhanced scrollbar for panels, sidebars, and dropdowns where
+   the default thin scrollbar is too hard to see/grab */
+.scroll-enhanced::-webkit-scrollbar {
+  width: 12px;
+}
+.scroll-enhanced::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+}
+.scroll-enhanced::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 6px;
+}
+.scroll-enhanced::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.75);
+}
+
 
 /* Star field background - only when theme supports it */
 .star-field {

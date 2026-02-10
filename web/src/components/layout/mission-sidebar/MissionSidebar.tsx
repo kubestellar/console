@@ -336,7 +336,7 @@ export function MissionSidebar() {
         </div>
       ) : (
         <div className={cn(
-          "flex-1 overflow-y-auto p-2 space-y-2",
+          "flex-1 overflow-y-auto scroll-enhanced p-2 space-y-2",
           isFullScreen && "max-w-2xl mx-auto w-full"
         )}>
           {[...missions].reverse().map((mission) => (
