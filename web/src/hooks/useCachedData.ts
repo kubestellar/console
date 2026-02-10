@@ -303,7 +303,8 @@ export function useCachedPods(
   const result = useCache({
     key,
     category,
-    initialData: getDemoPods(),
+    initialData: [] as PodInfo[],
+    demoData: getDemoPods(),
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
@@ -348,7 +349,8 @@ export function useCachedEvents(
   const result = useCache({
     key,
     category,
-    initialData: getDemoEvents(),
+    initialData: [] as ClusterEvent[],
+    demoData: getDemoEvents(),
     fetcher: async () => {
       const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { cluster, namespace, limit })
       return data.events || []
@@ -383,7 +385,8 @@ export function useCachedPodIssues(
   const result = useCache({
     key,
     category,
-    initialData: getDemoPodIssues(),
+    initialData: [] as PodIssue[],
+    demoData: getDemoPodIssues(),
     fetcher: async () => {
       let issues: PodIssue[]
 
@@ -414,7 +417,7 @@ export function useCachedPodIssues(
         return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
       }
 
-      return getDemoPodIssues()
+      return []
     },
   })
 
@@ -445,7 +448,8 @@ export function useCachedDeploymentIssues(
   const result = useCache({
     key,
     category,
-    initialData: getDemoDeploymentIssues(),
+    initialData: [] as DeploymentIssue[],
+    demoData: getDemoDeploymentIssues(),
     fetcher: async () => {
       // Try agent first — derive deployment issues from deployment data
       if (clusterCacheRef.clusters.length > 0) {
@@ -488,7 +492,7 @@ export function useCachedDeploymentIssues(
         return data.issues || []
       }
 
-      return getDemoDeploymentIssues()
+      return []
     },
   })
 
@@ -519,7 +523,8 @@ export function useCachedDeployments(
   const result = useCache({
     key,
     category,
-    initialData: getDemoDeployments(),
+    initialData: [] as Deployment[],
+    demoData: getDemoDeployments(),
     fetcher: async () => {
       // Try agent first (fast, no backend needed)
       if (clusterCacheRef.clusters.length > 0) {
@@ -560,7 +565,7 @@ export function useCachedDeployments(
         return await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
       }
 
-      return getDemoDeployments()
+      return []
     },
   })
 
@@ -591,7 +596,8 @@ export function useCachedServices(
   const result = useCache({
     key,
     category,
-    initialData: getDemoServices(),
+    initialData: [] as Service[],
+    demoData: getDemoServices(),
     fetcher: async () => {
       const data = await fetchAPI<{ services: Service[] }>('services', { cluster, namespace })
       return data.services || []
@@ -747,7 +753,8 @@ export function useCachedProwJobs(
   const result = useCache({
     key,
     category: 'gitops',
-    initialData: getDemoProwJobs(),
+    initialData: [] as ProwJob[],
+    demoData: getDemoProwJobs(),
     fetcher: () => fetchProwJobs(prowCluster, namespace),
   })
 
@@ -1053,7 +1060,8 @@ export function useCachedLLMdServers(
   const result = useCache({
     key,
     category: 'gitops',
-    initialData: getDemoLLMdServers(),
+    initialData: [] as LLMdServer[],
+    demoData: getDemoLLMdServers(),
     fetcher: () => fetchLLMdServers(clusters),
   })
 
@@ -1114,7 +1122,8 @@ export function useCachedLLMdModels(
   const result = useCache({
     key,
     category: 'gitops',
-    initialData: getDemoLLMdModels(),
+    initialData: [] as LLMdModel[],
+    demoData: getDemoLLMdModels(),
     fetcher: () => fetchLLMdModels(clusters),
   })
 
@@ -1209,7 +1218,8 @@ export function useCachedWorkloads(
   const result = useCache({
     key,
     category,
-    initialData: getDemoWorkloads(),
+    initialData: [] as Workload[],
+    demoData: getDemoWorkloads(),
     fetcher: async () => {
       // Try agent first (fast, no backend needed)
       const agentData = await fetchWorkloadsFromAgent()
@@ -1244,7 +1254,7 @@ export function useCachedWorkloads(
         }
       }
 
-      return getDemoWorkloads()
+      return []
     },
   })
 
@@ -1369,7 +1379,8 @@ export function useCachedSecurityIssues(
   const result = useCache({
     key,
     category,
-    initialData: getDemoSecurityIssues(),
+    initialData: [] as SecurityIssue[],
+    demoData: getDemoSecurityIssues(),
     fetcher: async () => {
       // Try kubectl proxy first (uses agent to run kubectl commands)
       if (clusterCacheRef.clusters.length > 0) {
@@ -1405,7 +1416,7 @@ export function useCachedSecurityIssues(
         }
       }
 
-      return getDemoSecurityIssues()
+      return []
     },
   })
 

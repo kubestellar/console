@@ -31,10 +31,17 @@ import {
 } from '../../hooks/useClusterGroups'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ClusterGroupsProps {
   config?: Record<string, unknown>
 }
+
+const DEMO_GROUPS: ClusterGroup[] = [
+  { name: 'production', kind: 'static', clusters: ['eks-prod-us-east-1', 'openshift-prod', 'do-nyc1-prod'], color: 'green' },
+  { name: 'staging', kind: 'static', clusters: ['gke-staging', 'aks-dev-westeu'], color: 'blue' },
+  { name: 'edge', kind: 'dynamic', clusters: ['k3s-edge', 'kind-local', 'minikube'], color: 'purple', query: { filters: [{ field: 'nodeCount', operator: 'lte', value: '3' }] } },
+]
 
 // ============================================================================
 // Constants
@@ -104,8 +111,10 @@ function relativeTime(iso: string): string {
 // ============================================================================
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
-  const { groups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
+  const { groups: liveGroups, createGroup, updateGroup, deleteGroup, evaluateGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { isDemoMode: demoMode } = useDemoMode()
+  const groups = demoMode ? DEMO_GROUPS : liveGroups
   const [isCreating, setIsCreating] = useState(false)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -157,13 +166,15 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-        >
-          <Plus className="w-3 h-3" />
-          New Group
-        </button>
+        {!demoMode && (
+          <button
+            onClick={() => setIsCreating(true)}
+            className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            New Group
+          </button>
+        )}
       </div>
 
       {/* Create form */}

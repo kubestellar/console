@@ -558,8 +558,10 @@ export interface UseCacheOptions<T> {
   category?: RefreshCategory
   /** Custom refresh interval in ms (overrides category) */
   refreshInterval?: number
-  /** Initial data when cache is empty */
+  /** Initial data when cache is empty (used as loading state in live mode) */
   initialData: T
+  /** Data to display in demo mode (defaults to initialData if not provided) */
+  demoData?: T
   /** Whether to persist to IndexedDB (default: true) */
   persist?: boolean
   /** Whether to auto-refresh at interval (default: true) */
@@ -599,6 +601,7 @@ export function useCache<T>({
   category = 'default',
   refreshInterval,
   initialData,
+  demoData,
   persist = true,
   autoRefresh = true,
   enabled = true,
@@ -680,10 +683,11 @@ export function useCache<T>({
     }
   }, [shared])
 
-  // When disabled (demo mode), return initialData instead of cached live data
+  // When disabled (demo mode), return demoData (or initialData) instead of cached live data
   // This ensures demo mode shows demo content while preserving cache for live mode
+  const demoDisplayData = demoData !== undefined ? demoData : initialData
   return {
-    data: effectiveEnabled ? state.data : initialData,
+    data: effectiveEnabled ? state.data : demoDisplayData,
     isLoading: effectiveEnabled ? state.isLoading : false,
     isRefreshing: state.isRefreshing,
     error: state.error,

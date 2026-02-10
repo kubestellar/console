@@ -27,10 +27,44 @@ import {
   CardEmptyState,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface MissionsProps {
   config?: Record<string, unknown>
 }
+
+const DEMO_MISSIONS: DeployMission[] = [
+  {
+    id: 'demo-1',
+    workload: 'nginx-frontend',
+    namespace: 'production',
+    sourceCluster: 'eks-prod-us-east-1',
+    targetClusters: ['openshift-prod', 'do-nyc1-prod'],
+    groupName: 'production',
+    status: 'orbit',
+    clusterStatuses: [
+      { cluster: 'openshift-prod', status: 'running', replicas: 3, readyReplicas: 3 },
+      { cluster: 'do-nyc1-prod', status: 'running', replicas: 3, readyReplicas: 3 },
+    ],
+    startedAt: Date.now() - 300000,
+    completedAt: Date.now() - 240000,
+  },
+  {
+    id: 'demo-2',
+    workload: 'api-gateway',
+    namespace: 'staging',
+    sourceCluster: 'gke-staging',
+    targetClusters: ['aks-dev-westeu', 'rancher-mgmt'],
+    groupName: 'staging',
+    status: 'orbit',
+    clusterStatuses: [
+      { cluster: 'aks-dev-westeu', status: 'running', replicas: 2, readyReplicas: 2 },
+      { cluster: 'rancher-mgmt', status: 'running', replicas: 2, readyReplicas: 2 },
+    ],
+    startedAt: Date.now() - 180000,
+    completedAt: Date.now() - 120000,
+  },
+]
 
 const STATUS_CONFIG: Record<DeployMissionStatus, {
   icon: typeof Rocket
@@ -106,8 +140,12 @@ const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
 const CLUSTER_FILTER_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
 
 export function Missions(_props: MissionsProps) {
-  const { missions, activeMissions, completedMissions } = useDeployMissions()
+  const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
   const { deduplicatedClusters, isLoading } = useClusters()
+  const { isDemoMode: demoMode } = useDemoMode()
+  const missions = demoMode ? DEMO_MISSIONS : liveMissions
+  const activeMissions = demoMode ? [] : liveActive
+  const completedMissions = demoMode ? DEMO_MISSIONS : liveCompleted
   const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set())
   const [hideCompleted, setHideCompleted] = useState(false)
 
