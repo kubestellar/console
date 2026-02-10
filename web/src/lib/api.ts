@@ -1,6 +1,6 @@
 const API_BASE = ''
-const DEFAULT_TIMEOUT = 5000 // 5 seconds default timeout
-const BACKEND_CHECK_INTERVAL = 60000 // 60 seconds between backend checks when unavailable
+const DEFAULT_TIMEOUT = 15000 // 15 seconds default timeout
+const BACKEND_CHECK_INTERVAL = 10000 // 10 seconds between backend checks when unavailable
 
 // Error class for unauthenticated requests
 export class UnauthenticatedError extends Error {
@@ -272,10 +272,9 @@ class ApiClient {
     } catch (err) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        markBackendFailure()
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
-      // Network errors also indicate backend issues
+      // Only mark backend failure on actual network errors (fetch TypeError)
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
       }
