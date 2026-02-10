@@ -164,14 +164,14 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
           <div className="space-y-1">
             {maxFramework.slice(0, 4).map(([fw, count]) => (
               <div key={fw} className="flex items-center gap-2">
-                <div className="text-xs text-muted-foreground w-20 truncate">{fw}</div>
+                <div className="text-sm text-muted-foreground w-20 truncate">{fw}</div>
                 <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-violet-500/60"
                     style={{ width: `${(count / agents.length) * 100}%` }}
                   />
                 </div>
-                <div className="text-xs text-muted-foreground w-6 text-right">{count}</div>
+                <div className="text-sm text-muted-foreground w-6 text-right">{count}</div>
               </div>
             ))}
           </div>
@@ -184,8 +184,8 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
           <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Clusters</div>
           <div className="space-y-1">
             {Object.entries(stats.clusterAgents).map(([cluster, counts]) => (
-              <div key={cluster} className="flex items-center gap-2 text-xs">
-                <Server className="w-3 h-3 text-muted-foreground/40" />
+              <div key={cluster} className="flex items-center gap-2 text-sm">
+                <Server className="w-3.5 h-3.5 text-muted-foreground/40" />
                 <span className="text-muted-foreground truncate flex-1">{cluster}</span>
                 <span className="text-violet-400">{counts.agents} agents</span>
                 <span className="text-cyan-400">{counts.tools} tools</span>
@@ -201,10 +201,10 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
           <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Recent Builds</div>
           <div className="space-y-1">
             {recentBuilds.map(b => (
-              <div key={`${b.cluster}-${b.namespace}-${b.name}`} className="flex items-center gap-2 text-xs">
+              <div key={`${b.cluster}-${b.namespace}-${b.name}`} className="flex items-center gap-2 text-sm">
                 <StatusDot status={b.status} />
                 <span className="truncate flex-1 text-muted-foreground">{b.name}</span>
-                <span className="text-muted-foreground/50">{b.status}</span>
+                <span className="text-muted-foreground">{b.status}</span>
               </div>
             ))}
           </div>

@@ -168,7 +168,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
                 x={node.type === 'agent' ? node.x - 60 : node.x + 20}
                 y={node.y + 4}
                 fill="currentColor"
-                fontSize={11}
+                fontSize={14}
                 textAnchor={node.type === 'agent' ? 'end' : 'start'}
                 className="select-none text-muted-foreground"
               >
