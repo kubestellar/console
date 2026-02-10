@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket } from 'lucide-react'
 import { Navbar } from './navbar/index'
@@ -12,6 +12,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
@@ -40,8 +41,10 @@ export function Layout({ children }: LayoutProps) {
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
   const { isOnline, wasOffline } = useNetworkStatus()
+  const { status: backendStatus } = useBackendHealth()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [wasBackendDown, setWasBackendDown] = useState(false)
 
   // Show network banner when browser detects no network, or briefly after reconnecting
   const showNetworkBanner = !isOnline || wasOffline
@@ -60,6 +63,21 @@ export function Layout({ children }: LayoutProps) {
   const offlineBannerTop = NAVBAR_HEIGHT + (showNetworkBanner ? BANNER_HEIGHT : 0) + (isDemoMode ? BANNER_HEIGHT : 0)
   const activeBannerCount = (showNetworkBanner ? 1 : 0) + (isDemoMode ? 1 : 0) + (showOfflineBanner ? 1 : 0)
   const totalBannerHeight = activeBannerCount * BANNER_HEIGHT
+
+  // Show bottom snackbar when backend is down, or briefly after reconnecting
+  const backendDown = backendStatus === 'disconnected'
+  const showBackendBanner = backendDown || wasBackendDown
+  const prevBackendDown = useRef(backendDown)
+  useEffect(() => {
+    const wasDown = prevBackendDown.current
+    prevBackendDown.current = backendDown
+    // Detect transition: was disconnected → now connected
+    if (wasDown && !backendDown) {
+      setWasBackendDown(true)
+      const timer = setTimeout(() => setWasBackendDown(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [backendDown])
 
   // Track navigation for behavior analysis
   useNavigationHistory()
@@ -227,6 +245,30 @@ export function Layout({ children }: LayoutProps) {
         isOpen={showSetupDialog}
         onClose={() => setShowSetupDialog(false)}
       />
+
+      {/* Backend connection lost snackbar — fixed bottom center */}
+      {showBackendBanner && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className={cn(
+            "flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg text-sm",
+            backendDown
+              ? "bg-zinc-800 border-zinc-700 text-zinc-200"
+              : "bg-green-900/80 border-green-700/50 text-green-200"
+          )}>
+            {backendDown ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                Connection lost. Reconnecting&hellip;
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 rounded-full bg-green-400" />
+                Reconnected
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
     </TourProvider>
   )
