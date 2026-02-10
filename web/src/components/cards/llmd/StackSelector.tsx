@@ -104,7 +104,6 @@ const StackOption = memo(function StackOption({ stack, isSelected, onSelect }: S
       className={`w-full px-3 py-2.5 text-left hover:bg-slate-700/50 transition-colors border-b border-slate-700/50 last:border-0 ${
         isSelected ? 'bg-slate-700/70' : ''
       }`}
-      style={{ contain: 'layout style paint' }}
     >
       {/* Row 1: Name and replica counts */}
       <div className="flex items-center justify-between mb-1">
@@ -488,16 +487,13 @@ export function StackSelector() {
               </div>
             </div>
 
-            {/* Stack list - use layout containment for scroll performance */}
-            <div
-              className="max-h-80 min-h-[100px] overflow-y-auto overscroll-contain"
-              style={{ contain: 'layout', willChange: 'scroll-position' }}
-            >
+            {/* Stack list */}
+            <div className="max-h-80 min-h-[100px] overflow-y-auto">
               {filteredAndSortedStacks.length > 0 ? (
                 Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                   <div key={cluster}>
-                    {/* Cluster header - solid background for sticky scroll */}
-                    <div className="px-3 py-1.5 bg-slate-800 border-b border-slate-700 sticky top-0 z-10">
+                    {/* Cluster header */}
+                    <div className="px-3 py-1.5 bg-slate-800 border-b border-slate-700">
                       <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                         {cluster}
                       </span>
