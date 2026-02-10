@@ -16,6 +16,7 @@ import {
   GripVertical,
 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { Skeleton } from '../ui/Skeleton'
 import { useCardData, commonComparators, CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards'
 import { cn } from '../../lib/cn'
 import { Workload as ApiWorkload } from '../../hooks/useWorkloads'
@@ -368,12 +369,21 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
 
   // Manual cluster filter -- Workload has targetClusters[] not a single cluster field,
   // so we can't use useCardData's built-in clusterField filtering.
-  const { deduplicatedClusters, isLoading } = useClusters()
+  const { deduplicatedClusters, isLoading: clustersLoading } = useClusters()
+
+  // Check demo mode to avoid fetching live data when in demo mode
+  const { isDemoMode: demoMode } = useDemoMode()
+  const isDemo = demoMode
+
+  // Fetch real workloads from cache (handles demo mode internally via useCache)
+  const { data: realWorkloads, isLoading: workloadsLoading, isFailed, consecutiveFailures } = useCachedWorkloads()
 
   // Report state to CardWrapper for refresh animation
-  useCardLoadingState({
-    isLoading,
-    hasAnyData: deduplicatedClusters.length > 0 || DEMO_WORKLOADS.length > 0,
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: clustersLoading || workloadsLoading,
+    hasAnyData: isDemo ? DEMO_WORKLOADS.length > 0 : (realWorkloads?.length ?? 0) > 0,
+    isFailed,
+    consecutiveFailures,
   })
   const [localClusterFilter, setLocalClusterFilterState] = useState<string[]>(() => {
     try {
@@ -413,15 +423,6 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
-
-  // Check demo mode to avoid fetching live data when in demo mode
-  const { isDemoMode: demoMode } = useDemoMode()
-
-  // Fetch real workloads from cache (handles demo mode internally via useCache)
-  const { data: realWorkloads } = useCachedWorkloads()
-
-  // Only use demo data when explicitly in demo mode
-  const isDemo = demoMode
 
   // In demo mode, derive available clusters from demo workloads' targetClusters
   // In live mode, use real clusters from the API
@@ -563,6 +564,24 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
 
   const workloadTypes: (WorkloadType | 'All')[] = ['All', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob']
   const workloadStatuses: (WorkloadStatus | 'All')[] = ['All', 'Running', 'Degraded', 'Pending', 'Failed']
+
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex flex-col min-h-card p-3">
+        <div className="flex items-center justify-between mb-2">
+          <Skeleton variant="text" width={120} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <Skeleton variant="rounded" height={32} className="mb-2" />
+        <Skeleton variant="rounded" height={48} className="mb-2" />
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={70} />
+          <Skeleton variant="rounded" height={70} />
+          <Skeleton variant="rounded" height={70} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col">

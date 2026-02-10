@@ -431,20 +431,26 @@ class CacheStore<T> {
   }
 
   /**
-   * Reset store to initial data state. Called when demo mode toggles ON
-   * to ensure cards show demo data instead of cached live data.
+   * Reset store for mode transition. Sets loading state and reloads any
+   * cached data from IndexedDB (stale-while-revalidate on mode switch).
+   * In demo mode, useCache returns demoData regardless of state.data,
+   * so the IndexedDB reload only matters for live mode transitions.
    */
   resetToInitialData(): void {
     this.fetchingRef = false
     this.initialDataLoaded = false
     this.setState({
       data: this.initialData,
-      isLoading: false,
+      isLoading: true,
       isRefreshing: false,
       error: null,
       isFailed: false,
       consecutiveFailures: 0,
     })
+    // Re-trigger IndexedDB load to recover cached live data
+    if (this.persist) {
+      this.storageLoadPromise = this.loadFromStorage()
+    }
   }
 
   // Fetching
