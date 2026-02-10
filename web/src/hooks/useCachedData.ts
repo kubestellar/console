@@ -107,36 +107,36 @@ async function fetchFromAllClusters<T>(
   endpoint: string,
   resultKey: string,
   params?: Record<string, string | number | undefined>,
-  addClusterField = true
+  addClusterField = true,
+  onProgress?: (partial: T[]) => void
 ): Promise<T[]> {
   const clusters = await fetchClusters()
+  const accumulated: T[] = []
+  let failedCount = 0
 
-  // Fetch from each cluster in parallel
-  const results = await Promise.allSettled(
-    clusters.map(async (cluster) => {
+  // Fetch from each cluster in parallel, progressively reporting results
+  const promises = clusters.map(async (cluster) => {
+    try {
       const data = await fetchAPI<Record<string, T[]>>(endpoint, { ...params, cluster })
       const items = data[resultKey] || []
-      if (addClusterField) {
-        return items.map(item => ({ ...item, cluster }))
-      }
-      return items
-    })
-  )
-
-  // Merge successful results
-  const allItems: T[] = []
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      allItems.push(...result.value)
+      const tagged = addClusterField ? items.map(item => ({ ...item, cluster })) : items
+      accumulated.push(...tagged)
+      onProgress?.([...accumulated])
+      return tagged
+    } catch {
+      failedCount++
+      throw new Error(`Cluster ${cluster} fetch failed`)
     }
-  }
+  })
+
+  await Promise.allSettled(promises)
 
   // If every cluster fetch failed, throw so callers can try agent fallback
-  if (allItems.length === 0 && results.length > 0 && results.every(r => r.status === 'rejected')) {
+  if (accumulated.length === 0 && clusters.length > 0 && failedCount === clusters.length) {
     throw new Error('All cluster fetches failed')
   }
 
-  return allItems
+  return accumulated
 }
 
 // ============================================================================
@@ -154,60 +154,58 @@ function getAgentClusters(): Array<{ name: string; context?: string }> {
 }
 
 /** Fetch pod issues from all clusters via agent kubectl proxy */
-async function fetchPodIssuesViaAgent(namespace?: string): Promise<PodIssue[]> {
+async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (partial: PodIssue[]) => void): Promise<PodIssue[]> {
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
+  const accumulated: PodIssue[] = []
 
-  const results = await Promise.allSettled(
-    clusters.map(async ({ name, context }) => {
-      const ctx = context || name
-      const issues = await kubectlProxy.getPodIssues(ctx, namespace)
-      // Always use the short name — kubectlProxy returns context path as cluster
-      return issues.map(i => ({ ...i, cluster: name }))
-    })
-  )
+  const promises = clusters.map(async ({ name, context }) => {
+    const ctx = context || name
+    const issues = await kubectlProxy.getPodIssues(ctx, namespace)
+    // Always use the short name — kubectlProxy returns context path as cluster
+    const tagged = issues.map(i => ({ ...i, cluster: name }))
+    accumulated.push(...tagged)
+    onProgress?.([...accumulated])
+    return tagged
+  })
 
-  const items: PodIssue[] = []
-  for (const r of results) {
-    if (r.status === 'fulfilled') items.push(...r.value)
-  }
-  return items
+  await Promise.allSettled(promises)
+  return accumulated
 }
 
 /** Fetch deployments from all clusters via agent HTTP endpoint */
-async function fetchDeploymentsViaAgent(namespace?: string): Promise<Deployment[]> {
+async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partial: Deployment[]) => void): Promise<Deployment[]> {
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
+  const accumulated: Deployment[] = []
 
-  const results = await Promise.allSettled(
-    clusters.map(async ({ name, context }) => {
-      const params = new URLSearchParams()
-      params.append('cluster', context || name)
-      if (namespace) params.append('namespace', namespace)
+  const promises = clusters.map(async ({ name, context }) => {
+    const params = new URLSearchParams()
+    params.append('cluster', context || name)
+    if (namespace) params.append('namespace', namespace)
 
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000)
-      const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
-      })
-      clearTimeout(timeoutId)
-
-      if (!response.ok) throw new Error(`Agent returned ${response.status}`)
-      const data = await response.json()
-      // Always use the short name — agent echoes back context path as cluster
-      return ((data.deployments || []) as Deployment[]).map(d => ({
-        ...d,
-        cluster: name,
-      }))
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    const response = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
     })
-  )
+    clearTimeout(timeoutId)
 
-  const items: Deployment[] = []
-  for (const r of results) {
-    if (r.status === 'fulfilled') items.push(...r.value)
-  }
-  return items
+    if (!response.ok) throw new Error(`Agent returned ${response.status}`)
+    const data = await response.json()
+    // Always use the short name — agent echoes back context path as cluster
+    const tagged = ((data.deployments || []) as Deployment[]).map(d => ({
+      ...d,
+      cluster: name,
+    }))
+    accumulated.push(...tagged)
+    onProgress?.([...accumulated])
+    return tagged
+  })
+
+  await Promise.allSettled(promises)
+  return accumulated
 }
 
 // ============================================================================
@@ -308,14 +306,19 @@ export function useCachedPods(
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
-        // Fetch from specific cluster
         const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster, namespace })
         pods = (data.pods || []).map(p => ({ ...p, cluster }))
       } else {
-        // Fetch from all clusters
         pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace })
       }
-      // Sort by restarts (descending) and limit
+      return pods
+        .sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+        .slice(0, limit)
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      const pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace }, true, (partial) => {
+        onProgress(partial.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, limit))
+      })
       return pods
         .sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
         .slice(0, limit)
@@ -382,6 +385,8 @@ export function useCachedPodIssues(
   const { category = 'pods' } = options || {}
   const key = `podIssues:${cluster || 'all'}:${namespace || 'all'}`
 
+  const sortIssues = (items: PodIssue[]) => items.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+
   const result = useCache({
     key,
     category,
@@ -396,12 +401,11 @@ export function useCachedPodIssues(
           const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
           const ctx = clusterInfo?.context || cluster
           issues = await kubectlProxy.getPodIssues(ctx, namespace)
-          // Always use the short name passed in, not the context path from kubectlProxy
           issues = issues.map(i => ({ ...i, cluster: cluster }))
         } else {
           issues = await fetchPodIssuesViaAgent(namespace)
         }
-        return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+        return sortIssues(issues)
       }
 
       // Fall back to REST API
@@ -414,7 +418,28 @@ export function useCachedPodIssues(
         } else {
           issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', { namespace })
         }
-        return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
+        return sortIssues(issues)
+      }
+
+      return []
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      // Try agent first
+      if (clusterCacheRef.clusters.length > 0) {
+        const issues = await fetchPodIssuesViaAgent(namespace, (partial) => {
+          onProgress(sortIssues([...partial]))
+        })
+        return sortIssues(issues)
+      }
+
+      // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        const issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', { namespace }, true, (partial) => {
+          onProgress(sortIssues([...partial]))
+        })
+        return sortIssues(issues)
       }
 
       return []
@@ -445,6 +470,18 @@ export function useCachedDeploymentIssues(
   const { category = 'deployments' } = options || {}
   const key = `deploymentIssues:${cluster || 'all'}:${namespace || 'all'}`
 
+  const deriveIssues = (deployments: Deployment[]): DeploymentIssue[] =>
+    deployments
+      .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
+      .map(d => ({
+        name: d.name,
+        namespace: d.namespace || 'default',
+        cluster: d.cluster,
+        replicas: d.replicas ?? 1,
+        readyReplicas: d.readyReplicas ?? 0,
+        reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
+      }))
+
   const result = useCache({
     key,
     category,
@@ -471,20 +508,27 @@ export function useCachedDeploymentIssues(
             })()
           : await fetchDeploymentsViaAgent(namespace)
 
-        // Derive issues: deployments where readyReplicas < replicas
-        return deployments
-          .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
-          .map(d => ({
-            name: d.name,
-            namespace: d.namespace || 'default',
-            cluster: d.cluster,
-            replicas: d.replicas ?? 1,
-            readyReplicas: d.readyReplicas ?? 0,
-            reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
-          }))
+        return deriveIssues(deployments)
       }
 
       // Fall back to REST API
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
+        return data.issues || []
+      }
+
+      return []
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      if (clusterCacheRef.clusters.length > 0) {
+        const deployments = await fetchDeploymentsViaAgent(namespace, (partialDeps) => {
+          onProgress(deriveIssues(partialDeps))
+        })
+        return deriveIssues(deployments)
+      }
+
       const token = getToken()
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
@@ -563,6 +607,19 @@ export function useCachedDeployments(
           return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
         }
         return await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
+      }
+
+      return []
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      if (clusterCacheRef.clusters.length > 0) {
+        return fetchDeploymentsViaAgent(namespace, onProgress)
+      }
+
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        return await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace }, true, onProgress)
       }
 
       return []
@@ -1154,55 +1211,54 @@ const getDemoWorkloads = (): Workload[] => [
 ]
 
 /** Fetch workloads from the local agent across all clusters */
-async function fetchWorkloadsFromAgent(): Promise<Workload[] | null> {
+async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[]) => void): Promise<Workload[] | null> {
   if (isAgentUnavailable()) return null
 
   const clusters = clusterCacheRef.clusters
     .filter(c => c.reachable !== false && !c.name.includes('/'))
   if (clusters.length === 0) return null
+  const accumulated: Workload[] = []
 
-  const results = await Promise.allSettled(
-    clusters.map(async ({ name, context }) => {
-      const params = new URLSearchParams()
-      params.append('cluster', context || name)
+  const promises = clusters.map(async ({ name, context }) => {
+    const params = new URLSearchParams()
+    params.append('cluster', context || name)
 
-      const ctrl = new AbortController()
-      const tid = setTimeout(() => ctrl.abort(), 15000)
-      const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
-        signal: ctrl.signal,
-        headers: { Accept: 'application/json' },
-      })
-      clearTimeout(tid)
-
-      if (!res.ok) throw new Error(`Agent ${res.status}`)
-      const data = await res.json()
-      return ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
-        const st = String(d.status || 'running')
-        let ws: Workload['status'] = 'Running'
-        if (st === 'failed') ws = 'Failed'
-        else if (st === 'deploying') ws = 'Pending'
-        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
-        return {
-          name: String(d.name || ''),
-          namespace: String(d.namespace || 'default'),
-          type: 'Deployment' as const,
-          cluster: name,
-          targetClusters: [name],
-          replicas: Number(d.replicas || 1),
-          readyReplicas: Number(d.readyReplicas || 0),
-          status: ws,
-          image: String(d.image || ''),
-          createdAt: new Date().toISOString(),
-        }
-      })
+    const ctrl = new AbortController()
+    const tid = setTimeout(() => ctrl.abort(), 15000)
+    const res = await fetch(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json' },
     })
-  )
+    clearTimeout(tid)
 
-  const items: Workload[] = []
-  for (const r of results) {
-    if (r.status === 'fulfilled') items.push(...r.value)
-  }
-  return items.length > 0 ? items : null
+    if (!res.ok) throw new Error(`Agent ${res.status}`)
+    const data = await res.json()
+    const tagged = ((data.deployments || []) as Array<Record<string, unknown>>).map(d => {
+      const st = String(d.status || 'running')
+      let ws: Workload['status'] = 'Running'
+      if (st === 'failed') ws = 'Failed'
+      else if (st === 'deploying') ws = 'Pending'
+      else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+      return {
+        name: String(d.name || ''),
+        namespace: String(d.namespace || 'default'),
+        type: 'Deployment' as const,
+        cluster: name,
+        targetClusters: [name],
+        replicas: Number(d.replicas || 1),
+        readyReplicas: Number(d.readyReplicas || 0),
+        status: ws,
+        image: String(d.image || ''),
+        createdAt: new Date().toISOString(),
+      }
+    })
+    accumulated.push(...tagged)
+    onProgress?.([...accumulated])
+    return tagged
+  })
+
+  await Promise.allSettled(promises)
+  return accumulated.length > 0 ? accumulated : null
 }
 
 /**
@@ -1256,6 +1312,36 @@ export function useCachedWorkloads(
 
       return []
     },
+    progressiveFetcher: async (onProgress) => {
+      const agentData = await fetchWorkloadsFromAgent(onProgress)
+      if (agentData) return agentData
+      // REST fallback is not progressive (single response)
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        const res = await fetch('/api/workloads', {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const items = (data.items || data) as Array<Record<string, unknown>>
+          return items.map(d => ({
+            name: String(d.name || ''),
+            namespace: String(d.namespace || 'default'),
+            type: (String(d.type || 'Deployment')) as Workload['type'],
+            cluster: String(d.cluster || ''),
+            targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
+            replicas: Number(d.replicas || 1),
+            readyReplicas: Number(d.readyReplicas || 0),
+            status: (String(d.status || 'Running')) as Workload['status'],
+            image: String(d.image || ''),
+            labels: (d.labels as Record<string, string>) || {},
+            createdAt: String(d.createdAt || new Date().toISOString()),
+          }))
+        }
+      }
+      return []
+    },
   })
 
   return {
@@ -1278,90 +1364,91 @@ export function useCachedWorkloads(
 /**
  * Fetch security issues via kubectlProxy - scans pods for security misconfigurations
  */
-async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: string): Promise<SecurityIssue[]> {
+async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: string, onProgress?: (partial: SecurityIssue[]) => void): Promise<SecurityIssue[]> {
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
 
   const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
-  const results = await Promise.allSettled(
-    clusters
-      .filter(c => !cluster || c.name === cluster)
-      .map(async ({ name, context }) => {
-        const ctx = context || name
-        // Get all pods and check for security issues
-        const nsFlag = namespace ? ['-n', namespace] : ['-A']
-        const response = await kubectlProxy.exec(
-          ['get', 'pods', ...nsFlag, '-o', 'json'],
-          { context: ctx, timeout: 30000 }
-        )
+  const accumulated: SecurityIssue[] = []
 
-        if (response.exitCode !== 0) return []
+  const promises = clusters
+    .filter(c => !cluster || c.name === cluster)
+    .map(async ({ name, context }) => {
+      const ctx = context || name
+      // Get all pods and check for security issues
+      const nsFlag = namespace ? ['-n', namespace] : ['-A']
+      const response = await kubectlProxy.exec(
+        ['get', 'pods', ...nsFlag, '-o', 'json'],
+        { context: ctx, timeout: 30000 }
+      )
 
-        const data = JSON.parse(response.output)
-        const issues: SecurityIssue[] = []
+      if (response.exitCode !== 0) return []
 
-        for (const pod of data.items || []) {
-          const podName = pod.metadata?.name || 'unknown'
-          const podNs = pod.metadata?.namespace || 'default'
-          const spec = pod.spec || {}
+      const data = JSON.parse(response.output)
+      const issues: SecurityIssue[] = []
 
-          // Check for security misconfigurations
-          for (const container of spec.containers || []) {
-            const sc = container.securityContext || {}
-            const podSc = spec.securityContext || {}
+      for (const pod of data.items || []) {
+        const podName = pod.metadata?.name || 'unknown'
+        const podNs = pod.metadata?.namespace || 'default'
+        const spec = pod.spec || {}
 
-            // Privileged container
-            if (sc.privileged === true) {
-              issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Privileged container', severity: 'high', details: 'Container running in privileged mode' })
-            }
+        // Check for security misconfigurations
+        for (const container of spec.containers || []) {
+          const sc = container.securityContext || {}
+          const podSc = spec.securityContext || {}
 
-            // Running as root
-            if (sc.runAsUser === 0 || (sc.runAsNonRoot !== true && podSc.runAsNonRoot !== true && !sc.runAsUser)) {
-              const isRoot = sc.runAsUser === 0 || podSc.runAsUser === 0
-              if (isRoot) {
-                issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Running as root', severity: 'high', details: 'Container running as root user' })
-              }
-            }
+          // Privileged container
+          if (sc.privileged === true) {
+            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Privileged container', severity: 'high', details: 'Container running in privileged mode' })
+          }
 
-            // Missing security context
-            if (!sc.runAsNonRoot && !sc.readOnlyRootFilesystem && !sc.allowPrivilegeEscalation && !sc.capabilities) {
-              issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Missing security context', severity: 'low', details: 'No security context defined' })
-            }
-
-            // Capabilities not dropped
-            if (sc.capabilities?.drop?.length === 0 || !sc.capabilities?.drop) {
-              if (sc.capabilities?.add?.length > 0) {
-                issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Capabilities not dropped', severity: 'medium', details: 'Container not dropping all capabilities' })
-              }
+          // Running as root
+          if (sc.runAsUser === 0 || (sc.runAsNonRoot !== true && podSc.runAsNonRoot !== true && !sc.runAsUser)) {
+            const isRoot = sc.runAsUser === 0 || podSc.runAsUser === 0
+            if (isRoot) {
+              issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Running as root', severity: 'high', details: 'Container running as root user' })
             }
           }
 
-          // Host network
-          if (spec.hostNetwork === true) {
-            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host network enabled', severity: 'medium', details: 'Pod using host network namespace' })
+          // Missing security context
+          if (!sc.runAsNonRoot && !sc.readOnlyRootFilesystem && !sc.allowPrivilegeEscalation && !sc.capabilities) {
+            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Missing security context', severity: 'low', details: 'No security context defined' })
           }
 
-          // Host PID
-          if (spec.hostPID === true) {
-            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host PID enabled', severity: 'high', details: 'Pod using host PID namespace' })
-          }
-
-          // Host IPC
-          if (spec.hostIPC === true) {
-            issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host IPC enabled', severity: 'medium', details: 'Pod using host IPC namespace' })
+          // Capabilities not dropped
+          if (sc.capabilities?.drop?.length === 0 || !sc.capabilities?.drop) {
+            if (sc.capabilities?.add?.length > 0) {
+              issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Capabilities not dropped', severity: 'medium', details: 'Container not dropping all capabilities' })
+            }
           }
         }
 
-        return issues
-      })
-  )
+        // Host network
+        if (spec.hostNetwork === true) {
+          issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host network enabled', severity: 'medium', details: 'Pod using host network namespace' })
+        }
 
-  const items: SecurityIssue[] = []
-  for (const r of results) {
-    if (r.status === 'fulfilled') items.push(...r.value)
-  }
-  // Sort by severity
-  return items.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
+        // Host PID
+        if (spec.hostPID === true) {
+          issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host PID enabled', severity: 'high', details: 'Pod using host PID namespace' })
+        }
+
+        // Host IPC
+        if (spec.hostIPC === true) {
+          issues.push({ name: podName, namespace: podNs, cluster: name, issue: 'Host IPC enabled', severity: 'medium', details: 'Pod using host IPC namespace' })
+        }
+      }
+
+      accumulated.push(...issues)
+      // Sort accumulated and report progress
+      accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
+      onProgress?.([...accumulated])
+      return issues
+    })
+
+  await Promise.allSettled(promises)
+  // Final sort
+  return accumulated.sort((a, b) => (severityOrder[a.severity] || 5) - (severityOrder[b.severity] || 5))
 }
 
 /**
@@ -1418,6 +1505,43 @@ export function useCachedSecurityIssues(
 
       return []
     },
+    // Progressive loading: show results as each cluster completes
+    progressiveFetcher: !cluster ? async (onProgress) => {
+      // Try kubectl proxy first (progressive)
+      if (clusterCacheRef.clusters.length > 0) {
+        try {
+          const issues = await fetchSecurityIssuesViaKubectl(cluster, namespace, onProgress)
+          if (issues.length > 0) return issues
+        } catch (err) {
+          console.error('[useCachedSecurityIssues] progressive kubectl fetch failed:', err)
+        }
+      }
+
+      // Fall back to REST API (not progressive — single request)
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        try {
+          const params = new URLSearchParams()
+          if (namespace) params.append('namespace', namespace)
+          const response = await fetch(`/api/mcp/security-issues?${params}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          })
+          if (response.ok) {
+            const data = await response.json() as { issues: SecurityIssue[] }
+            if (data.issues && data.issues.length > 0) return data.issues
+          }
+        } catch (err) {
+          console.error('[useCachedSecurityIssues] API fetch failed:', err)
+        }
+      }
+
+      return []
+    } : undefined,
   })
 
   return {

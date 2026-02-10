@@ -494,7 +494,7 @@ class CacheStore<T> {
   }
 
   // Fetching
-  async fetch(fetcher: () => Promise<T>, merge?: (old: T, new_: T) => T): Promise<void> {
+  async fetch(fetcher: () => Promise<T>, merge?: (old: T, new_: T) => T, progressiveFetcher?: (onProgress: (partialData: T) => void) => Promise<T>): Promise<void> {
     if (this.fetchingRef) return
     this.fetchingRef = true
 
@@ -526,7 +526,19 @@ class CacheStore<T> {
     })
 
     try {
-      const newData = await fetcher()
+      // Progressive fetcher: push partial updates to UI as each chunk arrives
+      const onProgress = progressiveFetcher ? (partialData: T) => {
+        if (this.resetVersion !== fetchVersion) return  // stale — ignore
+        this.setState({
+          data: partialData,
+          isLoading: false,
+          isRefreshing: true,
+        })
+      } : undefined
+
+      const newData = progressiveFetcher && onProgress
+        ? await progressiveFetcher(onProgress)
+        : await fetcher()
 
       // If a reset happened during fetch, discard stale results
       if (this.resetVersion !== fetchVersion) {
@@ -636,7 +648,7 @@ const cacheRegistry = new Map<string, CacheStore<unknown>>()
 
 function getOrCreateCache<T>(key: string, initialData: T, persist: boolean): CacheStore<T> {
   if (!cacheRegistry.has(key)) {
-    cacheRegistry.set(key, new CacheStore(key, initialData, persist))
+    cacheRegistry.set(key, new CacheStore(key, initialData, persist) as CacheStore<unknown>)
   }
   return cacheRegistry.get(key) as CacheStore<T>
 }
@@ -668,6 +680,9 @@ export interface UseCacheOptions<T> {
   merge?: (oldData: T, newData: T) => T
   /** Share cache across components with same key (default: true) */
   shared?: boolean
+  /** Alternative fetcher that receives an onProgress callback for progressive/partial updates.
+   *  If provided, used instead of `fetcher`. Each onProgress call updates the UI immediately. */
+  progressiveFetcher?: (onProgress: (partialData: T) => void) => Promise<T>
 }
 
 export interface UseCacheResult<T> {
@@ -703,6 +718,7 @@ export function useCache<T>({
   enabled = true,
   merge,
   shared = true,
+  progressiveFetcher,
 }: UseCacheOptions<T>): UseCacheResult<T> {
   // Subscribe to demo mode - this ensures we re-render when demo mode changes
   const demoMode = useSyncExternalStore(subscribeDemoMode, isDemoMode, isDemoMode)
@@ -736,9 +752,12 @@ export function useCache<T>({
   const mergeRef = useRef(merge)
   mergeRef.current = merge
 
+  const progressiveFetcherRef = useRef(progressiveFetcher)
+  progressiveFetcherRef.current = progressiveFetcher
+
   const refetch = useCallback(async () => {
     if (!effectiveEnabled) return
-    await store.fetch(() => fetcherRef.current(), mergeRef.current)
+    await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
   }, [effectiveEnabled, store])
 
   const clearAndRefetch = useCallback(async () => {
