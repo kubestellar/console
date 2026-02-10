@@ -12,7 +12,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
-import { useDemoMode } from './useDemoMode'
 
 // Cache expiry time (5 minutes)
 const CACHE_EXPIRY_MS = 300000
@@ -204,7 +203,6 @@ interface UseArgoCDApplicationsResult {
 }
 
 export function useArgoCDApplications(): UseArgoCDApplicationsResult {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
   // Initialize from cache
@@ -262,29 +260,17 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
     }
   }, [clusterNames])
 
-  // Reset when switching to live mode (no real ArgoCD API)
+  // Initial load — always fetch mock data (no real ArgoCD API yet, card is in DEMO_DATA_CARDS)
   useEffect(() => {
-    if (!demoMode) {
-      setApplications([])
-      setIsLoading(false)
-      initialLoadDone.current = false
-      return
-    }
-  }, [demoMode])
-
-  // Initial load (only in demo mode - no real ArgoCD API yet)
-  useEffect(() => {
-    if (!demoMode) return
     if (!clustersLoading && clusterNames.length > 0) {
       refetch()
     } else if (!clustersLoading) {
       setIsLoading(false)
     }
-  }, [clustersLoading, clusterNames.length, demoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clustersLoading, clusterNames.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh (only in demo mode)
+  // Auto-refresh
   useEffect(() => {
-    if (!demoMode) return
     if (applications.length === 0) return
 
     const interval = setInterval(() => {
@@ -292,7 +278,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
     }, REFRESH_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [applications.length, refetch, demoMode])
+  }, [applications.length, refetch])
 
   return {
     applications,
@@ -326,7 +312,6 @@ interface UseArgoCDHealthResult {
 }
 
 export function useArgoCDHealth(): UseArgoCDHealthResult {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
@@ -384,29 +369,17 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     }
   }, [filteredClusterCount])
 
-  // Reset when switching to live mode (no real ArgoCD API)
+  // Initial load — always fetch mock data (no real ArgoCD API yet, card is in DEMO_DATA_CARDS)
   useEffect(() => {
-    if (!demoMode) {
-      setStats({ healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 })
-      setIsLoading(false)
-      initialLoadDone.current = false
-      return
-    }
-  }, [demoMode])
-
-  // Initial load (only in demo mode - no real ArgoCD API yet)
-  useEffect(() => {
-    if (!demoMode) return
     if (!clustersLoading && filteredClusterCount > 0) {
       refetch()
     } else if (!clustersLoading) {
       setIsLoading(false)
     }
-  }, [clustersLoading, filteredClusterCount, demoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clustersLoading, filteredClusterCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh (only in demo mode)
+  // Auto-refresh
   useEffect(() => {
-    if (!demoMode) return
     const total = Object.values(stats).reduce((a, b) => a + b, 0)
     if (total === 0) return
 
@@ -415,7 +388,7 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     }, REFRESH_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [stats, refetch, demoMode])
+  }, [stats, refetch])
 
   const total = Object.values(stats).reduce((a, b) => a + b, 0)
   const healthyPercent = total > 0 ? (stats.healthy / total) * 100 : 0
@@ -455,7 +428,6 @@ interface UseArgoCDSyncStatusResult {
 }
 
 export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoCDSyncStatusResult {
-  const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
@@ -517,29 +489,17 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     }
   }, [filteredClusterCount])
 
-  // Reset when switching to live mode (no real ArgoCD API)
+  // Initial load — always fetch mock data (no real ArgoCD API yet, card is in DEMO_DATA_CARDS)
   useEffect(() => {
-    if (!demoMode) {
-      setStats({ synced: 0, outOfSync: 0, unknown: 0 })
-      setIsLoading(false)
-      initialLoadDone.current = false
-      return
-    }
-  }, [demoMode])
-
-  // Initial load (only in demo mode - no real ArgoCD API yet)
-  useEffect(() => {
-    if (!demoMode) return
     if (!clustersLoading && filteredClusterCount > 0) {
       refetch()
     } else if (!clustersLoading) {
       setIsLoading(false)
     }
-  }, [clustersLoading, filteredClusterCount, demoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clustersLoading, filteredClusterCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh (only in demo mode)
+  // Auto-refresh
   useEffect(() => {
-    if (!demoMode) return
     const total = stats.synced + stats.outOfSync + stats.unknown
     if (total === 0) return
 
@@ -548,7 +508,7 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     }, REFRESH_INTERVAL_MS)
 
     return () => clearInterval(interval)
-  }, [stats, refetch, demoMode])
+  }, [stats, refetch])
 
   const total = stats.synced + stats.outOfSync + stats.unknown
   const syncedPercent = total > 0 ? (stats.synced / total) * 100 : 0
