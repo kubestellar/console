@@ -35,7 +35,7 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
       <div className="min-w-0">
         <div className="text-lg font-semibold leading-tight">{value}</div>
         <div className="text-xs text-muted-foreground truncate">{label}</div>
-        {sub && <div className="text-xs text-muted-foreground/60">{sub}</div>}
+        {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
       </div>
     </div>
   )
@@ -122,7 +122,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Bot className="w-10 h-10 text-muted-foreground/30 mb-3" />
         <div className="text-sm font-medium text-muted-foreground">No Kagenti Agents Found</div>
-        <div className="text-xs text-muted-foreground/60 mt-1 max-w-[200px]">
+        <div className="text-xs text-muted-foreground mt-1 max-w-[200px]">
           Install the kagenti-operator to deploy AI agents on your clusters
         </div>
       </div>
@@ -160,7 +160,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Framework distribution */}
       {maxFramework.length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Frameworks</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Frameworks</div>
           <div className="space-y-1">
             {maxFramework.slice(0, 4).map(([fw, count]) => (
               <div key={fw} className="flex items-center gap-2">
@@ -171,7 +171,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
                     style={{ width: `${(count / agents.length) * 100}%` }}
                   />
                 </div>
-                <div className="text-xs text-muted-foreground/60 w-6 text-right">{count}</div>
+                <div className="text-xs text-muted-foreground w-6 text-right">{count}</div>
               </div>
             ))}
           </div>
@@ -181,7 +181,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Cluster breakdown */}
       {Object.keys(stats.clusterAgents).length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Clusters</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Clusters</div>
           <div className="space-y-1">
             {Object.entries(stats.clusterAgents).map(([cluster, counts]) => (
               <div key={cluster} className="flex items-center gap-2 text-xs">
@@ -198,7 +198,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Recent builds */}
       {recentBuilds.length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5">Recent Builds</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Recent Builds</div>
           <div className="space-y-1">
             {recentBuilds.map(b => (
               <div key={`${b.cluster}-${b.namespace}-${b.name}`} className="flex items-center gap-2 text-xs">

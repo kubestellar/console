@@ -99,7 +99,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
 
   if (nodes.length === 0) {
     return (
-      <div className="h-full flex flex-col min-h-card items-center justify-center text-gray-500 text-xs">
+      <div className="h-full flex flex-col min-h-card items-center justify-center text-muted-foreground text-xs">
         No agents or tools to visualize
       </div>
     )
@@ -110,24 +110,24 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Legend */}
-      <div className="flex items-center gap-4 px-3 pt-2 pb-1 text-xs text-gray-500">
+      <div className="flex items-center gap-4 px-3 pt-2 pb-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full border-2 border-blue-400" />
+          <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-400" />
           <span>Agent</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-gray-500" />
+          <div className="w-2.5 h-2.5 rounded bg-muted-foreground/50" />
           <span>MCP Tool</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-0 border-t border-dashed border-gray-500" />
+          <div className="w-6 h-0 border-t border-dashed border-muted-foreground/50" />
           <span>Connection</span>
         </div>
       </div>
 
       {/* SVG graph */}
       <div className="flex-1 overflow-auto px-2 pb-2">
-        <svg width="100%" height={svgHeight} viewBox={`0 0 420 ${svgHeight}`} className="w-full">
+        <svg width="100%" height={svgHeight} viewBox={`0 0 420 ${svgHeight}`} className="w-full" style={{ fontFamily: 'var(--font-family)' }}>
           {/* Edges */}
           {edges.map((edge, i) => {
             const from = nodes.find(n => n.id === edge.from)
@@ -167,10 +167,10 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
               <text
                 x={node.type === 'agent' ? node.x - 60 : node.x + 20}
                 y={node.y + 4}
-                fill="#d1d5db"
-                fontSize={10}
+                fill="currentColor"
+                fontSize={11}
                 textAnchor={node.type === 'agent' ? 'end' : 'start'}
-                className="select-none"
+                className="select-none text-muted-foreground"
               >
                 {node.label.length > 16 ? node.label.slice(0, 14) + '...' : node.label}
               </text>

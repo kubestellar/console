@@ -83,7 +83,7 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Bot className="w-10 h-10 text-muted-foreground/30 mb-3" />
         <div className="text-sm font-medium text-muted-foreground">No Agents Deployed</div>
-        <div className="text-xs text-muted-foreground/60 mt-1">Deploy kagenti agents to see them here</div>
+        <div className="text-xs text-muted-foreground mt-1">Deploy kagenti agents to see them here</div>
       </div>
     )
   }
@@ -105,17 +105,17 @@ export function KagentiAgentFleet({ config }: KagentiAgentFleetProps) {
             <Bot className="w-3.5 h-3.5 text-violet-400 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium truncate">{agent.name}</div>
-              <div className="text-xs text-muted-foreground/60 flex items-center gap-1">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Server className="w-2.5 h-2.5" />
                 {agent.cluster}
                 {agent.framework && <span className="text-violet-400/60">/ {agent.framework}</span>}
               </div>
             </div>
-            <div className="text-xs text-muted-foreground/50">
+            <div className="text-xs text-muted-foreground">
               {agent.readyReplicas}/{agent.replicas}
             </div>
             <StatusBadge status={agent.status} />
-            <ChevronRight className="w-3 h-3 text-muted-foreground/20 group-hover:text-muted-foreground/50" />
+            <ChevronRight className="w-3 h-3 text-muted-foreground/20 group-hover:text-muted-foreground" />
           </div>
         ))}
       </div>

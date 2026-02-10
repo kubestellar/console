@@ -41,7 +41,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
       <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
         <div className="flex items-center gap-2 mb-2">
           <Shield className="w-4 h-4 text-violet-400" />
-          <span className="text-sm text-gray-200 font-medium">SPIFFE Identity Coverage</span>
+          <span className="text-sm text-foreground font-medium">SPIFFE Identity Coverage</span>
         </div>
         <div className="flex items-center gap-3 mb-2">
           <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
@@ -55,15 +55,15 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded bg-emerald-400/10 py-1.5">
             <div className="text-sm font-bold text-emerald-400">{stats.strict}</div>
-            <div className="text-xs text-gray-500">Strict</div>
+            <div className="text-xs text-muted-foreground">Strict</div>
           </div>
           <div className="rounded bg-amber-400/10 py-1.5">
             <div className="text-sm font-bold text-amber-400">{stats.permissive}</div>
-            <div className="text-xs text-gray-500">Permissive</div>
+            <div className="text-xs text-muted-foreground">Permissive</div>
           </div>
           <div className="rounded bg-red-400/10 py-1.5">
             <div className="text-sm font-bold text-red-400">{stats.unbound}</div>
-            <div className="text-xs text-gray-500">Unbound</div>
+            <div className="text-xs text-muted-foreground">Unbound</div>
           </div>
         </div>
       </div>
@@ -80,9 +80,9 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
               <div key={`${agent.cluster}-${agent.name}`} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-red-400/5 border border-red-400/10">
                 <div className="flex items-center gap-1.5">
                   <ShieldAlert className="w-3 h-3 text-red-400" />
-                  <span className="text-gray-300">{agent.agentName}</span>
+                  <span className="text-foreground">{agent.agentName}</span>
                 </div>
-                <span className="text-gray-500 truncate max-w-[80px]">{agent.cluster}</span>
+                <span className="text-muted-foreground truncate max-w-[80px]">{agent.cluster}</span>
               </div>
             ))}
           </div>
@@ -98,7 +98,7 @@ export function KagentiSecurity({ config }: { config?: Record<string, unknown> }
       )}
 
       {stats.total === 0 && (
-        <div className="text-center py-6 text-gray-500 text-xs">No AgentCards found</div>
+        <div className="text-center py-6 text-muted-foreground text-xs">No AgentCards found</div>
       )}
     </div>
   )
