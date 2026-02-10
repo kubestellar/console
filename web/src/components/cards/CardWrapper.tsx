@@ -1027,11 +1027,14 @@ export function CardWrapper({
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
-  // Demo data cards should NEVER show skeleton - they always have hardcoded data ready to display
-  // This includes both explicitly marked isDemoData cards AND cards in global demo mode
+  // Demo/DEMO_DATA_CARDS suppress skeleton only when child has reported having data.
+  // During React.lazy() chunk loading, CardSuspenseFallback reports hasData: false —
+  // in that case, show skeleton even for demo cards so the body isn't blank.
+  // Once the actual card component mounts and reports hasData: true, skeleton is suppressed.
   // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
   // Mode switching forces skeleton to show for smooth transitions (no delay for mode switching)
-  const wantsToShowSkeleton = !(effectiveIsDemoData || isDemoMode) && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline) || forceSkeletonForModeSwitching
+  const demoSuppressesSkeleton = (effectiveIsDemoData || isDemoMode) && effectiveHasData
+  const wantsToShowSkeleton = !demoSuppressesSkeleton && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline) || forceSkeletonForModeSwitching
   const shouldShowSkeleton = (wantsToShowSkeleton && skeletonDelayPassed) || forceSkeletonForModeSwitching
 
   // Mark initial load as complete when data is ready or various timeouts pass
