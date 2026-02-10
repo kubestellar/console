@@ -142,7 +142,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
     )
   }
 
-  if (showEmptyState || preFilteredNodes.length === 0) {
+  if (showEmptyState || (!hookLoading && preFilteredNodes.length === 0)) {
     return (
       <div className="h-full flex flex-col content-loaded">
         <div className="flex items-center justify-end mb-3">
