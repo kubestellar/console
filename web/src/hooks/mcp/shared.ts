@@ -4,6 +4,7 @@ import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from 
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { getPresentationMode } from '../usePresentationMode'
 import { registerCacheReset } from '../../lib/modeTransition'
+import { resetFailuresForCluster } from '../../lib/cache'
 import type { ClusterInfo, ClusterHealth } from './types'
 
 // Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
@@ -1405,6 +1406,9 @@ export async function fullFetchClusters() {
 export async function refreshSingleCluster(clusterName: string): Promise<void> {
   // Clear failure tracking on manual refresh - user is explicitly requesting fresh data
   clearClusterFailure(clusterName)
+
+  // Reset cache layer failure counters so backoff is removed immediately
+  resetFailuresForCluster(clusterName)
 
   // Look up the cluster's context for kubectl commands
   const clusterInfo = clusterCache.clusters.find(c => c.name === clusterName)

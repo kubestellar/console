@@ -611,6 +611,21 @@ class CacheStore<T> {
     }
     this.subscribers.clear()
   }
+
+  // Reset failure counters (used when manually refreshing a cluster)
+  resetFailures(): void {
+    if (this.state.consecutiveFailures === 0) return
+
+    this.saveMeta({
+      consecutiveFailures: 0,
+      lastSuccessfulRefresh: this.state.lastRefresh ?? undefined,
+    })
+
+    this.setState({
+      consecutiveFailures: 0,
+      isFailed: false,
+    })
+  }
 }
 
 // ============================================================================
@@ -861,6 +876,33 @@ export async function invalidateCache(key: string): Promise<void> {
   }
   await idbStorage.delete(key)
   localStorage.removeItem(META_PREFIX + key)
+}
+
+/**
+ * Reset failure counters for all caches related to a specific cluster.
+ * This removes the exponential backoff so the next refresh happens at normal interval.
+ * Call this when manually refreshing a cluster (user clicked refresh button).
+ *
+ * @param clusterName - The cluster name to match in cache keys
+ * @returns Number of caches that had their failures reset
+ */
+export function resetFailuresForCluster(clusterName: string): number {
+  let resetCount = 0
+
+  for (const [key, store] of cacheRegistry.entries()) {
+    // Cache keys typically include cluster name, e.g., "pods:cluster-name:namespace:limit"
+    if (key.includes(clusterName) || key.includes(':all:')) {
+      const typedStore = store as CacheStore<unknown>
+      typedStore.resetFailures()
+      resetCount++
+    }
+  }
+
+  if (resetCount > 0) {
+    console.log(`[Cache] Reset failures for ${resetCount} caches related to cluster "${clusterName}"`)
+  }
+
+  return resetCount
 }
 
 /** Prefetch data into cache */
