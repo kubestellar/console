@@ -232,7 +232,7 @@ Start by running diagnostic commands to understand what's happening.`,
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto scroll-enhanced">
           {activeTab === 'describe' && (
             <div className="bg-secondary/50 rounded p-4 font-mono text-xs overflow-auto max-h-[400px]">
               <div className="text-muted-foreground mb-2"># kubectl describe {resource.kind.toLowerCase()} {resource.name} {resource.namespace ? `-n ${resource.namespace}` : ''}</div>

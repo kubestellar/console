@@ -1403,7 +1403,7 @@ export function CardWrapper({
 
         {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
         {!isCollapsed && (
-          <div className="flex-1 p-4 overflow-auto min-h-0 flex flex-col">
+          <div className="flex-1 p-4 overflow-auto scroll-enhanced min-h-0 flex flex-col">
             {(isVisible || isExpanded) ? (
               <>
                 {/* Show skeleton overlay when loading with no cached data */}
@@ -1483,7 +1483,7 @@ export function CardWrapper({
           showBack={false}
         />
         <BaseModal.Content className={cn(
-          'overflow-auto flex flex-col',
+          'overflow-auto scroll-enhanced flex flex-col',
           FULLSCREEN_EXPANDED_CARDS.has(cardType)
             ? 'h-[calc(98vh-80px)]'
             : LARGE_EXPANDED_CARDS.has(cardType)

@@ -332,7 +332,7 @@ export function Missions(_props: MissionsProps) {
             : 'Deploy a workload to start a mission'}
         />
       ) : (
-        <div className="flex-1 min-h-0 overflow-auto space-y-2">
+        <div className="flex-1 min-h-0 overflow-auto scroll-enhanced space-y-2">
           {visibleMissions.map(mission => {
             const isActive = mission.status === 'launching' || mission.status === 'deploying'
             return (

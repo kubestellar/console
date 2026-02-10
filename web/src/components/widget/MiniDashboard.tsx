@@ -284,7 +284,7 @@ export function MiniDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white flex items-center justify-center p-2">
       {/* Fixed-size widget container */}
       <div className="w-[520px] h-[320px] flex flex-col bg-gray-900/50 rounded-xl border border-gray-700/50 overflow-hidden">
-        <div className="flex-1 p-4 overflow-auto">
+        <div className="flex-1 p-4 overflow-auto scroll-enhanced">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

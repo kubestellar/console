@@ -206,7 +206,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
         <main className={cn(
-          'flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto',
+          'flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced',
           // Mobile: no left margin (sidebar overlays)
           // Desktop: respect collapsed state
           isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),

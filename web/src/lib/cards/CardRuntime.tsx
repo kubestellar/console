@@ -335,7 +335,7 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     switch (visualization) {
       case 'table':
         return (
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto scroll-enhanced">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
@@ -375,7 +375,7 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
       case 'status':
       default:
         return (
-          <div className="flex-1 space-y-2 overflow-y-auto min-h-card-content">
+          <div className="flex-1 space-y-2 overflow-y-auto scroll-enhanced min-h-card-content">
             {items.map((item, idx) => (
               <CardListItem
                 key={idx}
