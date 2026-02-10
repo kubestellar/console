@@ -7,6 +7,7 @@ import type {
 import { getPredictionSettings, getSettingsForBackend } from './usePredictionSettings'
 import { getDemoMode } from './useDemoMode'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
+import { setActiveTokenCategory } from './useTokenUsage'
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
@@ -289,6 +290,7 @@ export function useAIPredictions() {
   // Trigger analysis
   const analyze = useCallback(async (specificProviders?: string[]) => {
     setIsAnalyzing(true)
+    setActiveTokenCategory('predictions')
     try {
       await triggerAnalysis(specificProviders)
       // Wait a bit then fetch results
@@ -296,6 +298,7 @@ export function useAIPredictions() {
       await fetchAIPredictions()
     } finally {
       setIsAnalyzing(false)
+      setActiveTokenCategory(null)
     }
   }, [])
 
