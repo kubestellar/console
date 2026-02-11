@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
@@ -21,6 +21,12 @@ export function CardConfigModal({
   onClose,
 }: CardConfigModalProps) {
   const [config, setConfig] = useState<Record<string, unknown>>(card.config || {})
+  const onCloseRef = useRef(onClose)
+
+  // Keep ref in sync with latest onClose
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   const handleSave = () => {
     onSave(config)
@@ -31,12 +37,12 @@ export function CardConfigModal({
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        onClose()
+        onCloseRef.current()
       }
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+  }, []) // Empty deps - event listener only set up once
 
   return (
     <div 
