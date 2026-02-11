@@ -9,18 +9,29 @@ import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderCo
 // Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster
 function useMinSpin(refreshing: boolean, minDurationMs = 1000): boolean {
   const [spinning, setSpinning] = useState(false)
+  const spinStartRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
-    if (refreshing && !spinning) {
-      setSpinning(true)
+    if (refreshing) {
+      // Start spinning, record when it began
       clearTimeout(timerRef.current)
+      if (!spinning) {
+        spinStartRef.current = Date.now()
+        setSpinning(true)
+      }
+    } else if (spinning) {
+      // Refreshing ended — ensure we spin for at least minDurationMs total
+      const elapsed = Date.now() - spinStartRef.current
+      const remaining = Math.max(0, minDurationMs - elapsed)
+      timerRef.current = setTimeout(() => setSpinning(false), remaining)
     }
-    if (!refreshing && spinning) {
-      timerRef.current = setTimeout(() => setSpinning(false), minDurationMs)
-    }
+  }, [refreshing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup on unmount only
+  useEffect(() => {
     return () => clearTimeout(timerRef.current)
-  }, [refreshing, spinning, minDurationMs])
+  }, [])
 
   return spinning
 }
