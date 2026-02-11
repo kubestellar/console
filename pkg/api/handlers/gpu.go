@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -42,6 +44,23 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	}
 	if input.StartDate == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Start date is required")
+	}
+
+	// Check over-allocation: sum of active/pending reservations + this request must not exceed cluster capacity
+	if input.MaxClusterGPUs > 0 {
+		reserved, err := h.store.GetClusterReservedGPUCount(input.Cluster, nil)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check cluster GPU usage")
+		}
+		if reserved+input.GPUCount > input.MaxClusterGPUs {
+			available := input.MaxClusterGPUs - reserved
+			if available < 0 {
+				available = 0
+			}
+			return fiber.NewError(fiber.StatusConflict,
+				fmt.Sprintf("Over-allocation: cluster %q has %d GPUs available (%d reserved of %d total), but %d requested",
+					input.Cluster, available, reserved, input.MaxClusterGPUs, input.GPUCount))
+		}
 	}
 
 	// Get user info for user_name
@@ -177,6 +196,23 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 	}
 	if input.QuotaEnforced != nil {
 		existing.QuotaEnforced = *input.QuotaEnforced
+	}
+
+	// Check over-allocation on update if GPU count changed and capacity is provided
+	if input.GPUCount != nil && input.MaxClusterGPUs != nil && *input.MaxClusterGPUs > 0 {
+		reserved, err := h.store.GetClusterReservedGPUCount(existing.Cluster, &existing.ID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check cluster GPU usage")
+		}
+		if reserved+existing.GPUCount > *input.MaxClusterGPUs {
+			available := *input.MaxClusterGPUs - reserved
+			if available < 0 {
+				available = 0
+			}
+			return fiber.NewError(fiber.StatusConflict,
+				fmt.Sprintf("Over-allocation: cluster %q has %d GPUs available (%d reserved of %d total), but %d requested",
+					existing.Cluster, available, reserved, *input.MaxClusterGPUs, existing.GPUCount))
+		}
 	}
 
 	if err := h.store.UpdateGPUReservation(existing); err != nil {

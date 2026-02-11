@@ -89,6 +89,7 @@ type Store interface {
 	ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error)
 	UpdateGPUReservation(reservation *models.GPUReservation) error
 	DeleteGPUReservation(id uuid.UUID) error
+	GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error)
 
 	// Lifecycle
 	Close() error

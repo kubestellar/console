@@ -1295,6 +1295,25 @@ func (s *SQLiteStore) DeleteGPUReservation(id uuid.UUID) error {
 	return err
 }
 
+// GetClusterReservedGPUCount returns the total GPU count for active/pending reservations on a cluster.
+// If excludeID is provided, that reservation is excluded (useful for updates).
+func (s *SQLiteStore) GetClusterReservedGPUCount(cluster string, excludeID *uuid.UUID) (int, error) {
+	var total int
+	var err error
+	if excludeID != nil {
+		err = s.db.QueryRow(
+			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending') AND id != ?`,
+			cluster, excludeID.String(),
+		).Scan(&total)
+	} else {
+		err = s.db.QueryRow(
+			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')`,
+			cluster,
+		).Scan(&total)
+	}
+	return total, err
+}
+
 func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, error) {
 	var r models.GPUReservation
 	var idStr, userIDStr, status string

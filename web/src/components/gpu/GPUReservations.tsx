@@ -225,19 +225,132 @@ export function GPUReservations() {
 
   const { daysInMonth, startingDay } = getDaysInMonth(currentMonth)
 
-  // Get reservations that overlap with a specific day
-  const getReservationsForDay = (day: number) => {
+  // Get the start/end day index (0-based from month start) for a reservation within the visible month
+  const getReservationDayRange = (r: GPUReservation) => {
+    if (!r.start_date) return null
+    const start = new Date(r.start_date)
+    start.setHours(0, 0, 0, 0)
+    const durationHours = r.duration_hours || 24
+    const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000)
+    end.setHours(23, 59, 59, 999)
+
+    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+    monthStart.setHours(0, 0, 0, 0)
+    const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0)
+    monthEnd.setHours(23, 59, 59, 999)
+
+    if (end < monthStart || start > monthEnd) return null
+
+    const clampedStart = start < monthStart ? 1 : start.getDate()
+    const clampedEnd = end > monthEnd ? daysInMonth : end.getDate()
+    return { startDay: clampedStart, endDay: clampedEnd }
+  }
+
+  // Compute spanning reservation rows per calendar week
+  // Each week gets assigned rows for reservations that overlap it
+  interface CalendarBar {
+    reservation: GPUReservation
+    startCol: number // 0-6 column in this week
+    spanCols: number // number of columns it spans
+    row: number // row index within the week
+    isStart: boolean // does the bar start in this week?
+    isEnd: boolean // does the bar end in this week?
+  }
+
+  const calendarWeeks = useMemo(() => {
+    const totalCells = startingDay + daysInMonth
+    const numWeeks = Math.ceil(totalCells / 7)
+    const weeks: { days: (number | null)[]; bars: CalendarBar[] }[] = []
+
+    // Build week arrays
+    for (let w = 0; w < numWeeks; w++) {
+      const days: (number | null)[] = []
+      for (let col = 0; col < 7; col++) {
+        const cellIndex = w * 7 + col
+        const day = cellIndex - startingDay + 1
+        days.push(day >= 1 && day <= daysInMonth ? day : null)
+      }
+      weeks.push({ days, bars: [] })
+    }
+
+    // For each reservation, compute which weeks it spans and assign row slots
+    // Track row occupancy per week: rowOccupancy[weekIndex][row] = reservationId or null
+    const rowOccupancy: (string | null)[][] = weeks.map(() => [])
+
+    // Sort reservations by start day then by duration (longer first) for stable layout
+    const sortedReservations = [...filteredReservations]
+      .map(r => ({ r, range: getReservationDayRange(r) }))
+      .filter((x): x is { r: GPUReservation; range: { startDay: number; endDay: number } } => x.range !== null)
+      .sort((a, b) => a.range.startDay - b.range.startDay || (b.range.endDay - b.range.startDay) - (a.range.endDay - a.range.startDay))
+
+    for (const { r, range } of sortedReservations) {
+      // Find which weeks this reservation touches
+      for (let w = 0; w < weeks.length; w++) {
+        const weekStartDay = weeks[w].days.find(d => d !== null) ?? 1
+        const weekEndDay = [...weeks[w].days].reverse().find(d => d !== null) ?? daysInMonth
+
+        if (range.startDay > weekEndDay || range.endDay < weekStartDay) continue
+
+        // Compute column range within this week
+        const barStartDay = Math.max(range.startDay, weekStartDay)
+        const barEndDay = Math.min(range.endDay, weekEndDay)
+        const startCol = weeks[w].days.indexOf(barStartDay)
+        const endCol = weeks[w].days.indexOf(barEndDay)
+        if (startCol === -1 || endCol === -1) continue
+
+        // Find a free row slot
+        let row = 0
+        while (true) {
+          if (!rowOccupancy[w][row]) break
+          if (rowOccupancy[w][row] !== r.id) {
+            // Check if this row has a conflict in the column range
+            let conflict = false
+            for (const bar of weeks[w].bars) {
+              if (bar.row === row) {
+                const barEnd = bar.startCol + bar.spanCols - 1
+                if (!(endCol < bar.startCol || startCol > barEnd)) {
+                  conflict = true
+                  break
+                }
+              }
+            }
+            if (!conflict) break
+          }
+          row++
+        }
+        rowOccupancy[w][row] = r.id
+
+        weeks[w].bars.push({
+          reservation: r,
+          startCol,
+          spanCols: endCol - startCol + 1,
+          row,
+          isStart: barStartDay === range.startDay,
+          isEnd: barEndDay === range.endDay,
+        })
+      }
+    }
+
+    return weeks
+  }, [filteredReservations, startingDay, daysInMonth, currentMonth])
+
+  // Get GPU count reserved on a specific day
+  const getGPUCountForDay = (day: number) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     date.setHours(0, 0, 0, 0)
-    return filteredReservations.filter(r => {
-      if (!r.start_date) return false
+    let total = 0
+    for (const r of filteredReservations) {
+      if (!r.start_date) continue
       const start = new Date(r.start_date)
       start.setHours(0, 0, 0, 0)
       const durationHours = r.duration_hours || 24
       const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000)
       end.setHours(23, 59, 59, 999)
-      return date >= start && date <= end
-    })
+      if (date >= start && date <= end) {
+        total += r.gpu_count
+      }
+    }
+    return total
   }
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -250,6 +363,8 @@ export function GPUReservations() {
   const nextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
+
+  const MAX_VISIBLE_ROWS = 4
 
   // Handlers
   const handleDeleteReservation = useCallback(async () => {
@@ -357,7 +472,7 @@ export function GPUReservations() {
         <div className="space-y-6">
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-4">
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-purple-500/20">
                   <Zap className="w-5 h-5 text-purple-400" />
@@ -368,7 +483,7 @@ export function GPUReservations() {
                 </div>
               </div>
             </div>
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/20">
                   <CheckCircle2 className="w-5 h-5 text-green-400" />
@@ -379,7 +494,7 @@ export function GPUReservations() {
                 </div>
               </div>
             </div>
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/20">
                   <Settings2 className="w-5 h-5 text-blue-400" />
@@ -390,7 +505,7 @@ export function GPUReservations() {
                 </div>
               </div>
             </div>
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-yellow-500/20">
                   <AlertTriangle className="w-5 h-5 text-yellow-400" />
@@ -406,7 +521,7 @@ export function GPUReservations() {
           {/* Charts Row */}
           <div className="grid grid-cols-3 gap-4">
             {/* Utilization */}
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Utilization</h3>
               <div className="flex items-center justify-center">
                 <div className="relative w-32 h-32">
@@ -432,7 +547,7 @@ export function GPUReservations() {
             </div>
 
             {/* GPU Types */}
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Types</h3>
               {stats.typeChartData.length > 0 ? (
                 <DonutChart data={stats.typeChartData} size={150} thickness={20} showLegend={true} />
@@ -442,7 +557,7 @@ export function GPUReservations() {
             </div>
 
             {/* Usage by Namespace */}
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Usage by Namespace</h3>
               {stats.usageByNamespace.length > 0 ? (
                 <DonutChart data={stats.usageByNamespace} size={150} thickness={20} showLegend={true} />
@@ -454,14 +569,14 @@ export function GPUReservations() {
 
           {/* Cluster Allocation */}
           {stats.clusterUsage.length > 0 && (
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <h3 className="text-sm font-medium text-muted-foreground mb-4">GPU Allocation by Cluster</h3>
               <BarChart data={stats.clusterUsage} height={200} color={getChartColorByName('primary')} showGrid={true} />
             </div>
           )}
 
           {/* Active Reservations */}
-          <div className="glass p-4 rounded-lg">
+          <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
             <h3 className="text-sm font-medium text-muted-foreground mb-4">
               {showOnlyMine ? 'My GPU Reservations' : 'Active GPU Reservations'}
             </h3>
@@ -506,7 +621,7 @@ export function GPUReservations() {
       {/* Calendar Tab */}
       {activeTab === 'calendar' && (
         <div className="space-y-6">
-          <div className="glass p-4 rounded-lg">
+          <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
             <div className="flex items-center justify-center gap-4 mb-4">
               <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
                 <ChevronLeft className="w-5 h-5" />
@@ -519,50 +634,109 @@ export function GPUReservations() {
               </button>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">{day}</div>
-              ))}
+            {/* Calendar Grid - Spanning Bars */}
+            <div className="border border-border/50 rounded-lg overflow-hidden">
+              {/* Day-of-week header */}
+              <div className="grid grid-cols-7 border-b border-border/50">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="px-2 py-2 text-center text-sm font-medium text-muted-foreground border-r border-border/30 last:border-r-0">{day}</div>
+                ))}
+              </div>
 
-              {Array.from({ length: startingDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="p-2 min-h-[120px]" />
-              ))}
-
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1
-                const dayReservations = getReservationsForDay(day)
-                const isToday = new Date().toDateString() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString()
-                const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+              {/* Week rows */}
+              {calendarWeeks.map((week, weekIdx) => {
+                const maxRow = Math.max(0, ...week.bars.map(b => b.row))
+                const barAreaHeight = Math.max(MAX_VISIBLE_ROWS, maxRow + 1)
 
                 return (
-                  <div key={day} className={cn(
-                    'group relative p-2 min-h-[120px] rounded-lg border border-border/50 hover:bg-secondary/30 transition-colors',
-                    isToday && 'bg-purple-500/10 border-purple-500/50'
-                  )}>
-                    <div className={cn('text-sm font-medium mb-1', isToday ? 'text-purple-400' : 'text-foreground')}>
-                      {day}
+                  <div key={weekIdx} className="border-b border-border/30 last:border-b-0">
+                    {/* Day number row + GPU counts */}
+                    <div className="grid grid-cols-7">
+                      {week.days.map((day, col) => {
+                        if (day === null) return <div key={col} className="px-2 py-1.5 border-r border-border/30 last:border-r-0 bg-secondary/20" />
+                        const isToday = new Date().toDateString() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString()
+                        const gpuCount = getGPUCountForDay(day)
+                        return (
+                          <div key={col} className={cn(
+                            'px-2 py-1.5 border-r border-border/30 last:border-r-0',
+                            isToday && 'bg-purple-500/10'
+                          )}>
+                            <div className="flex items-center justify-between">
+                              <span className={cn('text-sm font-medium', isToday ? 'text-purple-400' : 'text-foreground')}>{day}</span>
+                              {gpuCount > 0 && (
+                                <span className="text-[10px] font-medium text-muted-foreground">GPUs: {gpuCount}</span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div className="space-y-1">
-                      {dayReservations.slice(0, 3).map(r => (
-                        <button key={r.id}
-                          onClick={() => setSelectedReservation(r)}
-                          className="w-full text-left px-1.5 py-0.5 rounded text-xs truncate bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
-                        >
-                          {r.gpu_count}x {r.title.slice(0, 12)}
-                        </button>
+
+                    {/* Reservation bars area */}
+                    <div className="group/bars relative grid grid-cols-7" style={{ minHeight: `${barAreaHeight * 24 + 8}px` }}>
+                      {/* Column borders */}
+                      {week.days.map((_, col) => (
+                        <div key={col} className="border-r border-border/30 last:border-r-0" />
                       ))}
-                      {dayReservations.length > 3 && (
-                        <div className="text-xs text-muted-foreground text-center">+{dayReservations.length - 3} more</div>
-                      )}
+
+                      {/* "+" button per day - bottom right */}
+                      {week.days.map((day, col) => {
+                        if (day === null) return null
+                        const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                        return (
+                          <button
+                            key={`add-${day}`}
+                            onClick={() => { setPrefillDate(dateStr); setEditingReservation(null); setShowReservationForm(true) }}
+                            className="absolute w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover/bars:opacity-60 hover:!opacity-100 hover:bg-purple-500/40 transition-all z-10"
+                            style={{
+                              left: `calc(${((col + 1) / 7) * 100}% - 24px)`,
+                              bottom: '4px',
+                            }}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        )
+                      })}
+
+                      {/* Spanning bars */}
+                      {week.bars.map((bar, barIdx) => {
+                        const isActive = bar.reservation.status === 'active'
+                        const isPending = bar.reservation.status === 'pending'
+                        const isInactive = bar.reservation.status === 'completed' || bar.reservation.status === 'cancelled'
+
+                        return (
+                          <button
+                            key={`${bar.reservation.id}-${weekIdx}-${barIdx}`}
+                            onClick={() => setSelectedReservation(bar.reservation)}
+                            className={cn(
+                              'absolute flex items-center gap-1.5 px-2 text-xs font-medium truncate cursor-pointer transition-opacity hover:opacity-90',
+                              'h-[20px]',
+                              isInactive
+                                ? 'bg-secondary/80 text-muted-foreground'
+                                : isActive
+                                  ? 'bg-purple-500/30 text-purple-300'
+                                  : 'bg-yellow-500/20 text-yellow-300',
+                              bar.isStart ? 'rounded-l-md' : '',
+                              bar.isEnd ? 'rounded-r-md' : '',
+                            )}
+                            style={{
+                              left: `calc(${(bar.startCol / 7) * 100}% + 2px)`,
+                              width: `calc(${(bar.spanCols / 7) * 100}% - 4px)`,
+                              top: `${bar.row * 24 + 4}px`,
+                            }}
+                            title={`${bar.reservation.title} (${bar.reservation.gpu_count} GPUs, ${bar.reservation.status})`}
+                          >
+                            {bar.isStart && (
+                              <>
+                                {isActive && <span className="inline-block w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />}
+                                {isPending && <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />}
+                              </>
+                            )}
+                            {bar.isStart ? bar.reservation.title : ''}
+                          </button>
+                        )
+                      })}
                     </div>
-                    {/* Add reservation button */}
-                    <button
-                      onClick={() => { setPrefillDate(dateStr); setEditingReservation(null); setShowReservationForm(true) }}
-                      className="absolute bottom-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover:opacity-100 hover:bg-purple-500/40 transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 )
               })}
@@ -571,7 +745,7 @@ export function GPUReservations() {
 
           {/* Selected Reservation Details */}
           {selectedReservation && (
-            <div className="glass p-4 rounded-lg">
+            <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-foreground">Reservation Details</h3>
                 <button onClick={() => setSelectedReservation(null)} className="p-1 rounded hover:bg-secondary transition-colors">
@@ -585,7 +759,8 @@ export function GPUReservations() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Status</div>
-                  <span className={cn('inline-block px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[selectedReservation.status] || STATUS_COLORS.pending)}>
+                  <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[selectedReservation.status] || STATUS_COLORS.pending)}>
+                    {(selectedReservation.status === 'active') && <span className="w-2 h-2 rounded-full bg-green-400" />}
                     {selectedReservation.status}
                   </span>
                 </div>
@@ -658,7 +833,7 @@ export function GPUReservations() {
       {activeTab === 'quotas' && (
         <div className="space-y-6">
           {filteredReservations.length === 0 && !reservationsLoading && (
-            <div className="glass p-8 rounded-lg text-center">
+            <div className={cn('glass p-8 rounded-lg text-center', demoMode && 'border-2 border-yellow-500/50')}>
               <Settings2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground mb-4">
                 {showOnlyMine ? 'No reservations found for your user.' : 'No GPU reservations yet'}
@@ -673,7 +848,7 @@ export function GPUReservations() {
           )}
           <div className="grid gap-4">
             {filteredReservations.map(r => (
-              <div key={r.id} className="glass p-4 rounded-lg">
+              <div key={r.id} className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-purple-500/20">
@@ -756,7 +931,7 @@ export function GPUReservations() {
       {activeTab === 'inventory' && (
         <div className="space-y-6">
           {gpuClusters.length === 0 && !nodesLoading && (
-            <div className="glass p-8 rounded-lg text-center">
+            <div className={cn('glass p-8 rounded-lg text-center', demoMode && 'border-2 border-yellow-500/50')}>
               <Server className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">No GPU nodes found across clusters</p>
             </div>
@@ -764,7 +939,7 @@ export function GPUReservations() {
           {gpuClusters.map(cluster => {
             const clusterNodes = nodes.filter(n => n.cluster === cluster.name)
             return (
-              <div key={cluster.name} className="glass p-4 rounded-lg">
+              <div key={cluster.name} className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <ClusterBadge cluster={cluster.name} size="sm" />
@@ -905,7 +1080,7 @@ function ReservationFormModal({
   const [startDate, setStartDate] = useState(editingReservation?.start_date || prefillDate || new Date().toISOString().split('T')[0])
   const [durationHours, setDurationHours] = useState(editingReservation ? String(editingReservation.duration_hours) : '')
   const [notes, setNotes] = useState(editingReservation?.notes || '')
-  const [enforceQuota, setEnforceQuota] = useState(editingReservation?.quota_enforced || false)
+  const enforceQuota = true
   const [extraResources, setExtraResources] = useState<Array<{ key: string; value: string }>>([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -983,6 +1158,7 @@ function ReservationFormModal({
           notes,
           quota_enforced: enforceQuota,
           quota_name: enforceQuota ? quotaName : '',
+          max_cluster_gpus: selectedClusterInfo?.totalGPUs,
         }
         await onSave(input)
       } else {
@@ -999,6 +1175,7 @@ function ReservationFormModal({
           notes,
           quota_enforced: enforceQuota,
           quota_name: enforceQuota ? quotaName : '',
+          max_cluster_gpus: selectedClusterInfo?.totalGPUs,
         }
         await onSave(input)
       }
@@ -1170,28 +1347,7 @@ function ReservationFormModal({
             </div>
           </div>
 
-          {/* Enforce K8s Quota */}
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
-            <button
-              type="button"
-              onClick={() => setEnforceQuota(!enforceQuota)}
-              className={cn(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                enforceQuota ? 'bg-purple-500' : 'bg-secondary'
-              )}
-            >
-              <span className={cn(
-                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                enforceQuota ? 'translate-x-6' : 'translate-x-1'
-              )} />
-            </button>
-            <div>
-              <div className="text-sm font-medium text-foreground">Enforce K8s ResourceQuota</div>
-              <div className="text-xs text-muted-foreground">Create a ResourceQuota in the namespace to enforce GPU limits</div>
-            </div>
-          </div>
-
-          {/* Additional Resources (only when quota enforcement is on) */}
+          {/* Additional Resource Limits */}
           {enforceQuota && (
             <div>
               <div className="flex items-center justify-between mb-2">

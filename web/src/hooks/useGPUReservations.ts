@@ -38,6 +38,7 @@ export interface CreateGPUReservationInput {
   notes?: string
   quota_name?: string
   quota_enforced?: boolean
+  max_cluster_gpus?: number
 }
 
 export interface UpdateGPUReservationInput {
@@ -53,6 +54,7 @@ export interface UpdateGPUReservationInput {
   status?: ReservationStatus
   quota_name?: string
   quota_enforced?: boolean
+  max_cluster_gpus?: number
 }
 
 // Demo mock data
