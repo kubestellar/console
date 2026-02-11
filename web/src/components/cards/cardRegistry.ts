@@ -151,14 +151,17 @@ const DynamicCard = lazy(() => import('./DynamicCard').then(m => ({ default: m.D
 const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor').then(m => ({ default: m.LLMdStackMonitor })))
 const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
 
-// LLM-d stunning visualization cards
-const LLMdFlow = lazy(() => import('./llmd/LLMdFlow').then(m => ({ default: m.LLMdFlow })))
-const KVCacheMonitor = lazy(() => import('./llmd/KVCacheMonitor').then(m => ({ default: m.KVCacheMonitor })))
-const EPPRouting = lazy(() => import('./llmd/EPPRouting').then(m => ({ default: m.EPPRouting })))
-const PDDisaggregation = lazy(() => import('./llmd/PDDisaggregation').then(m => ({ default: m.PDDisaggregation })))
-const LLMdBenchmarks = lazy(() => import('./llmd/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
-const LLMdAIInsights = lazy(() => import('./llmd/LLMdAIInsights').then(m => ({ default: m.LLMdAIInsights })))
-const LLMdConfigurator = lazy(() => import('./llmd/LLMdConfigurator').then(m => ({ default: m.LLMdConfigurator })))
+// LLM-d stunning visualization cards — eagerly start loading the barrel at
+// module parse time so all 7 heavy chunks (194KB total source) are pre-warmed
+// before the AI/ML dashboard renders, shared across all lazy() references.
+const _llmdBundle = import('./llmd')
+const LLMdFlow = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdFlow })))
+const KVCacheMonitor = lazy(() => _llmdBundle.then(m => ({ default: m.KVCacheMonitor })))
+const EPPRouting = lazy(() => _llmdBundle.then(m => ({ default: m.EPPRouting })))
+const PDDisaggregation = lazy(() => _llmdBundle.then(m => ({ default: m.PDDisaggregation })))
+const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchmarks })))
+const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
+const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
 const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
 const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
 const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
@@ -623,14 +626,15 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   prow_ci_monitor: () => import('./workload-monitor/ProwCIMonitor'),
   github_ci_monitor: () => import('./workload-monitor/GitHubCIMonitor'),
   cluster_health_monitor: () => import('./workload-monitor/ClusterHealthMonitor'),
-  // LLM-d visualization
-  llmd_flow: () => import('./llmd/LLMdFlow'),
-  kvcache_monitor: () => import('./llmd/KVCacheMonitor'),
-  epp_routing: () => import('./llmd/EPPRouting'),
-  pd_disaggregation: () => import('./llmd/PDDisaggregation'),
-  llmd_benchmarks: () => import('./llmd/LLMdBenchmarks'),
-  llmd_ai_insights: () => import('./llmd/LLMdAIInsights'),
-  llmd_configurator: () => import('./llmd/LLMdConfigurator'),
+  // LLM-d visualization — barrel import loads all 7 cards in one module graph
+  // resolution instead of 7 separate requests, reducing Vite transform overhead
+  llmd_flow: () => import('./llmd'),
+  kvcache_monitor: () => import('./llmd'),
+  epp_routing: () => import('./llmd'),
+  pd_disaggregation: () => import('./llmd'),
+  llmd_benchmarks: () => import('./llmd'),
+  llmd_ai_insights: () => import('./llmd'),
+  llmd_configurator: () => import('./llmd'),
   // Kagenti AI Agents
   kagenti_status: () => import('./KagentiStatusCard'),
   kagenti_agent_fleet: () => import('./kagenti/KagentiAgentFleet'),
@@ -679,7 +683,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./DataComplianceCards'),
     () => import('./workload-detection/MLJobs'),
     () => import('./workload-detection/MLNotebooks'),
-    () => import('./llmd/LLMdConfigurator'),
+    () => import('./llmd'),  // Barrel import loads all 7 LLM-d cards at once
     () => import('./KagentiStatusCard'),
     () => import('./kagenti/KagentiAgentFleet'),
     () => import('./kagenti/KagentiBuildPipeline'),
