@@ -68,27 +68,205 @@ async function setupAuth(page: Page) {
   )
 }
 
-/** Mock all MCP API endpoints with realistic-ish latency */
+// ---------------------------------------------------------------------------
+// Mock data for live mode — enough content so cards render >10 chars of text
+// ---------------------------------------------------------------------------
+
+const MOCK_CLUSTER = 'perf-test-cluster'
+
+const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
+  clusters: {
+    clusters: [
+      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: 4 },
+    ],
+  },
+  pods: {
+    pods: [
+      { name: 'nginx-7d4f8b', namespace: 'default', cluster: MOCK_CLUSTER, status: 'Running', ready: '1/1', restarts: 0, age: '2d' },
+      { name: 'api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, status: 'Running', ready: '1/1', restarts: 1, age: '5d' },
+    ],
+  },
+  events: {
+    events: [
+      { type: 'Normal', reason: 'Scheduled', message: 'Successfully assigned default/nginx to node-1', object: 'Pod/nginx-7d4f8b', namespace: 'default', cluster: MOCK_CLUSTER, count: 1 },
+      { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'Pod/api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, count: 3 },
+    ],
+  },
+  'pod-issues': {
+    issues: [
+      { name: 'api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, status: 'CrashLoopBackOff', reason: 'BackOff', issues: ['Container restarting'], restarts: 5 },
+    ],
+  },
+  deployments: {
+    deployments: [
+      { name: 'nginx', namespace: 'default', cluster: MOCK_CLUSTER, replicas: 2, ready: 2, available: 2, age: '10d' },
+      { name: 'api-server', namespace: 'kube-system', cluster: MOCK_CLUSTER, replicas: 1, ready: 1, available: 1, age: '30d' },
+    ],
+  },
+  'deployment-issues': {
+    issues: [],
+  },
+  services: {
+    services: [
+      { name: 'kubernetes', namespace: 'default', cluster: MOCK_CLUSTER, type: 'ClusterIP', clusterIP: '10.96.0.1', ports: '443/TCP', age: '30d' },
+      { name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER, type: 'LoadBalancer', clusterIP: '10.96.1.10', ports: '80/TCP', age: '10d' },
+    ],
+  },
+  nodes: {
+    nodes: [
+      { name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: 'control-plane', version: '1.28.0', cpu: '4', memory: '8Gi' },
+      { name: 'node-2', cluster: MOCK_CLUSTER, status: 'Ready', roles: 'worker', version: '1.28.0', cpu: '8', memory: '16Gi' },
+    ],
+  },
+  'security-issues': {
+    issues: [
+      { name: 'nginx-7d4f8b', namespace: 'default', cluster: MOCK_CLUSTER, issue: 'Running as root', severity: 'medium', details: 'Container runs as root user' },
+    ],
+  },
+  releases: {
+    releases: [
+      { name: 'nginx-release', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2025-01-15' },
+    ],
+  },
+  'warning-events': {
+    events: [
+      { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'Pod/api-server-5c9', namespace: 'kube-system', cluster: MOCK_CLUSTER, count: 3 },
+    ],
+  },
+  namespaces: {
+    namespaces: [
+      { name: 'default', cluster: MOCK_CLUSTER, status: 'Active', pods: 4, age: '30d' },
+      { name: 'kube-system', cluster: MOCK_CLUSTER, status: 'Active', pods: 8, age: '30d' },
+    ],
+  },
+  'resource-limits': {
+    limits: [
+      { namespace: 'default', cluster: MOCK_CLUSTER, cpuRequest: '500m', cpuLimit: '1', memoryRequest: '256Mi', memoryLimit: '512Mi' },
+    ],
+  },
+}
+
+/** Build an SSE response body with cluster_data + done events */
+function buildSSEResponse(endpoint: string): string {
+  const data = MOCK_DATA[endpoint]
+  const itemsKey = Object.keys(data || {})[0] || 'items'
+  const items = data ? data[itemsKey] || [] : []
+
+  const lines: string[] = []
+  // Send one cluster_data event with the mock data
+  lines.push('event: cluster_data')
+  lines.push(`data: ${JSON.stringify({ cluster: MOCK_CLUSTER, [itemsKey]: items })}`)
+  lines.push('')
+  // Send done event to cleanly close the stream
+  lines.push('event: done')
+  lines.push(`data: ${JSON.stringify({ totalClusters: 1, source: 'mock' })}`)
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+/** Get mock REST response for an endpoint URL */
+function getMockRESTData(url: string): Record<string, unknown> {
+  // Extract endpoint from URL like /api/mcp/pods?cluster=x or /api/mcp/pods
+  const match = url.match(/\/api\/mcp\/([^/?]+)/)
+  const endpoint = match?.[1] || ''
+  const data = MOCK_DATA[endpoint]
+  if (data) return { ...data, source: 'mock' }
+  // Default: return a generic response with enough text content
+  return { items: [], message: 'No data available for this endpoint', source: 'mock' }
+}
+
+/**
+ * Mock all API endpoints for live mode testing.
+ * Handles SSE streams, REST endpoints, health checks, and utility endpoints.
+ */
 async function setupLiveMocks(page: Page) {
+  // 1. Mock SSE endpoints with proper text/event-stream content type.
+  //    EventSource rejects non-text/event-stream responses, causing infinite
+  //    reconnection loops that can crash the browser.
+  //    IMPORTANT: Register this BEFORE the generic /api/mcp/** handler.
+  await page.route('**/api/mcp/*/stream**', (route) => {
+    const url = route.request().url()
+    const endpoint = url.match(/\/api\/mcp\/([^/]+)\/stream/)?.[1] || ''
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      headers: { 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+      body: buildSSEResponse(endpoint),
+    })
+  })
+
+  // 2. Mock regular MCP REST API endpoints with realistic data
   await page.route('**/api/mcp/**', async (route) => {
-    // Simulate 200-700ms backend latency for live mode
-    const delay = 200 + Math.random() * 500
+    // Skip stream endpoints (already handled above)
+    if (route.request().url().includes('/stream')) {
+      await route.fallback()
+      return
+    }
+    // Simulate 100-300ms backend latency
+    const delay = 100 + Math.random() * 200
     await new Promise((r) => setTimeout(r, delay))
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        clusters: [],
-        health: [],
-        pods: [],
-        issues: [],
-        events: [],
-        deployments: [],
-        services: [],
-        nodes: [],
-        releases: [],
-        source: 'mock',
-      }),
+      body: JSON.stringify(getMockRESTData(route.request().url())),
+    })
+  })
+
+  // 3. Mock health endpoints (backend + local agent)
+  await page.route('**/health', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'ok', uptime: 3600 }),
+    })
+  })
+
+  // 4. Mock utility endpoints that could hang or error
+  await page.route('**/api/active-users', (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  })
+  await page.route('**/api/notifications/**', (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 0 }) })
+  })
+  await page.route('**/api/user/preferences', (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+  await page.route('**/api/permissions/**', (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ permissions: [] }) })
+  })
+  await page.route('**/api/workloads**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ workloads: MOCK_DATA.pods?.pods || [] }),
+    })
+  })
+
+  // 5. Mock kubectl proxy (used by OPA Policies card)
+  await page.route('**/api/kubectl/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [], message: 'No kubectl data in test mode' }),
+    })
+  })
+
+  // 6. Catch-all for any other /api/ endpoints to prevent real network requests
+  await page.route('**/api/**', async (route) => {
+    const url = route.request().url()
+    // Skip already-handled routes
+    if (url.includes('/api/mcp/') || url.includes('/api/me') || url.includes('/api/workloads') ||
+        url.includes('/api/kubectl/') || url.includes('/api/active-users') ||
+        url.includes('/api/notifications/') || url.includes('/api/user/preferences') ||
+        url.includes('/api/permissions/') || url.includes('/health')) {
+      await route.fallback()
+      return
+    }
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [], source: 'mock-catchall' }),
     })
   })
 }
@@ -97,11 +275,14 @@ async function setupLiveMocks(page: Page) {
 async function setMode(page: Page, mode: 'demo' | 'live') {
   await page.goto('/login', { waitUntil: 'domcontentloaded' })
   await page.evaluate(
-    ({ mode }) => {
+    ({ mode, user }) => {
       localStorage.setItem('token', mode === 'demo' ? 'demo-token' : 'test-token')
       localStorage.setItem('kc-demo-mode', String(mode === 'demo'))
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kubestellar-console-tour-completed', 'true')
+      // Cache the mock user so AuthProvider.isLoading starts as false.
+      // Without this, isLoading=true blocks rendering in some dashboards.
+      localStorage.setItem('kc-user-cache', JSON.stringify(user))
       // Clear any stored dashboard card layouts from previous runs
       // to ensure we test the default config, not stale persisted layouts
       const keysToRemove: string[] = []
@@ -111,12 +292,17 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
       }
       keysToRemove.forEach(k => localStorage.removeItem(k))
     },
-    { mode }
+    { mode, user: mockUser }
   )
 }
 
 /**
  * Navigate to a dashboard and measure every card on it.
+ *
+ * Uses a SINGLE browser-side polling function that atomically discovers cards
+ * AND monitors their loading state.  This eliminates the race condition where
+ * separate waitForSelector → page.evaluate calls lose elements because React
+ * re-renders between the two CDP round-trips.
  */
 async function measureDashboard(
   page: Page,
@@ -128,123 +314,178 @@ async function measureDashboard(
   const navStart = Date.now()
   await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
 
-  // Wait for at least one card to appear in the DOM.
-  try {
-    await page.waitForSelector('[data-card-type]', { timeout: 5000 })
-  } catch {
-    const debugState = await page.evaluate(() => {
-      const body = document.body
-      return {
-        cardTypeCount: body.querySelectorAll('[data-card-type]').length,
-        h1: body.querySelector('h1')?.textContent || 'none',
-        dialogCount: body.querySelectorAll('[role="dialog"]').length,
-        hasTourPrompt: !!body.querySelector('[data-testid="tour-prompt"]'),
-        bodyText: (body.textContent || '').slice(0, 300),
-      }
-    })
-    console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
+  // --- Single atomic discover + monitor ---
+  type PerfResult = {
+    cards: { cardType: string; cardId: string; isDemoCard: boolean }[]
+    loadTimes: Record<string, number>
   }
 
-  // Find all card containers and collect info in one evaluate call (single CDP round-trip)
-  const cardInfos: { cardType: string; cardId: string; isDemoCard: boolean }[] =
-    await page.evaluate((maxCards: number) => {
-      const els = document.querySelectorAll('[data-card-type]')
-      const infos: { cardType: string; cardId: string; isDemoCard: boolean }[] = []
-      for (let i = 0; i < Math.min(els.length, maxCards); i++) {
-        const el = els[i]
-        infos.push({
-          cardType: el.getAttribute('data-card-type') || `unknown-${i}`,
-          cardId: el.getAttribute('data-card-id') || `card-${i}`,
-          isDemoCard: !!el.querySelector('[data-testid="demo-badge"]'),
-        })
-      }
-      return infos
-    }, MAX_CARDS_PER_DASHBOARD)
-
-  const cardCount = cardInfos.length
-  const cardIds = cardInfos.map(c => c.cardId)
-
-  // Use a SINGLE browser-side polling function to monitor ALL cards simultaneously.
-  // This avoids both sequential bias (checking cards one-by-one from Node) and
-  // CDP contention (N parallel waitForFunction calls overwhelming the connection).
-  // Each card's load time is recorded using performance.now() (time since navigation).
-  let cardLoadTimes: Record<string, number> = {}
+  let perfResult: PerfResult = { cards: [], loadTimes: {} }
   const timedOutCards = new Set<string>()
 
-  if (cardCount > 0) {
-    try {
-      const handle = await page.waitForFunction(
-        (ids: string[]) => {
-          // Initialize tracking state on first poll
-          const w = window as Window & { __perfCardTimes?: Record<string, number> }
-          if (!w.__perfCardTimes) w.__perfCardTimes = {}
-
-          for (const id of ids) {
-            if (w.__perfCardTimes[id] !== undefined) continue
-            const card = document.querySelector(`[data-card-id="${id}"]`)
-            if (!card) continue
-            if (card.getAttribute('data-loading') === 'true') continue
-            const pulseEls = card.querySelectorAll('.animate-pulse')
-            let hasSkeleton = false
-            for (const el of pulseEls) {
-              if ((el as HTMLElement).getBoundingClientRect().height > 40) {
-                hasSkeleton = true
-                break
-              }
-            }
-            if (hasSkeleton) continue
-            if ((card.textContent || '').trim().length <= 10) continue
-            w.__perfCardTimes[id] = Math.round(performance.now())
+  try {
+    const handle = await page.waitForFunction(
+      ({ maxCards }: { maxCards: number }) => {
+        // Per-page state stored on window so it persists across polls
+        const w = window as Window & {
+          __perf?: {
+            startTime: number
+            tracked: Record<string, { ct: string; demo: boolean; t: number | null }>
+            lastCount: number
+            stableAt: number
           }
-          // Resolve when ALL cards have loaded
-          return Object.keys(w.__perfCardTimes).length >= ids.length
-            ? w.__perfCardTimes
-            : false
-        },
-        cardIds,
-        { timeout: CARD_CONTENT_TIMEOUT, polling: 100 }
-      )
-      cardLoadTimes = (await handle.jsonValue()) as Record<string, number>
-    } catch {
-      // Some cards timed out — collect what we have
-      cardLoadTimes = await page.evaluate(() => {
-        return (window as Window & { __perfCardTimes?: Record<string, number> }).__perfCardTimes || {}
+        }
+        if (!w.__perf) {
+          w.__perf = {
+            startTime: performance.now(),
+            tracked: {},
+            lastCount: -1,
+            stableAt: performance.now(),
+          }
+        }
+        const st = w.__perf
+        const now = performance.now()
+        const elapsed = now - st.startTime
+
+        // --- Phase A: Discover [data-card-type] elements ---
+        const els = document.querySelectorAll('[data-card-type]')
+        const count = Math.min(els.length, maxCards)
+
+        // Track any newly-appeared cards
+        for (let i = 0; i < count; i++) {
+          const el = els[i]
+          const id = el.getAttribute('data-card-id') || `card-${i}`
+          if (!st.tracked[id]) {
+            st.tracked[id] = {
+              ct: el.getAttribute('data-card-type') || `unknown-${i}`,
+              demo: !!el.querySelector('[data-testid="demo-badge"]'),
+              t: null,
+            }
+          }
+        }
+
+        // --- Phase B: Monitor loading state for all tracked cards ---
+        for (const id of Object.keys(st.tracked)) {
+          if (st.tracked[id].t !== null) continue // already loaded
+          const el = document.querySelector(`[data-card-id="${id}"]`)
+          if (!el) continue // temporarily unmounted — keep polling
+          if (el.getAttribute('data-loading') === 'true') continue
+          let hasSkeleton = false
+          for (const p of el.querySelectorAll('.animate-pulse')) {
+            if ((p as HTMLElement).getBoundingClientRect().height > 40) {
+              hasSkeleton = true
+              break
+            }
+          }
+          if (hasSkeleton) continue
+          if ((el.textContent || '').trim().length <= 10) continue
+          st.tracked[id].t = Math.round(now)
+        }
+
+        // --- Stability: card count unchanged for 500ms ---
+        if (count !== st.lastCount) {
+          st.stableAt = now
+          st.lastCount = count
+        }
+        const stable = now - st.stableAt > 500
+
+        const ids = Object.keys(st.tracked)
+        const allLoaded = ids.length > 0 && ids.every((id) => st.tracked[id].t !== null)
+
+        // Resolve: all cards loaded AND count stable
+        if (allLoaded && stable) {
+          const r: {
+            cards: { cardType: string; cardId: string; isDemoCard: boolean }[]
+            loadTimes: Record<string, number>
+          } = { cards: [], loadTimes: {} }
+          for (const id of ids) {
+            r.cards.push({ cardType: st.tracked[id].ct, cardId: id, isDemoCard: st.tracked[id].demo })
+            if (st.tracked[id].t !== null) r.loadTimes[id] = st.tracked[id].t as number
+          }
+          return r
+        }
+
+        // No cards after 5s — some dashboards genuinely have 0 cards
+        if (elapsed > 5000 && ids.length === 0 && count === 0 && stable) {
+          return { cards: [] as { cardType: string; cardId: string; isDemoCard: boolean }[], loadTimes: {} as Record<string, number> }
+        }
+
+        return false // keep polling
+      },
+      { maxCards: MAX_CARDS_PER_DASHBOARD },
+      { timeout: CARD_CONTENT_TIMEOUT + 5000, polling: 100 }
+    )
+
+    perfResult = (await handle.jsonValue()) as PerfResult
+  } catch {
+    // Timeout — collect partial results from window.__perf
+    try {
+      perfResult = await page.evaluate(() => {
+        const w = window as Window & {
+          __perf?: {
+            tracked: Record<string, { ct: string; demo: boolean; t: number | null }>
+          }
+        }
+        if (!w.__perf) return { cards: [], loadTimes: {} }
+        const r: {
+          cards: { cardType: string; cardId: string; isDemoCard: boolean }[]
+          loadTimes: Record<string, number>
+        } = { cards: [], loadTimes: {} }
+        for (const [id, info] of Object.entries(w.__perf.tracked)) {
+          r.cards.push({ cardType: info.ct, cardId: id, isDemoCard: info.demo })
+          if (info.t !== null) r.loadTimes[id] = info.t
+        }
+        return r
       })
-      for (const id of cardIds) {
-        if (cardLoadTimes[id] === undefined) timedOutCards.add(id)
-      }
+    } catch {
+      // Page might have crashed
+    }
+    for (const card of perfResult.cards) {
+      if (perfResult.loadTimes[card.cardId] === undefined) timedOutCards.add(card.cardId)
     }
   }
 
+  // Debug: log if no cards found at all
+  if (perfResult.cards.length === 0) {
+    try {
+      const debugState = await page.evaluate(() => ({
+        cardTypeCount: document.querySelectorAll('[data-card-type]').length,
+        h1: document.querySelector('h1')?.textContent || 'none',
+        dialogCount: document.querySelectorAll('[role="dialog"]').length,
+        hasTourPrompt: !!document.querySelector('[data-testid="tour-prompt"]'),
+        bodyText: (document.body.textContent || '').slice(0, 300),
+      }))
+      console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
+    } catch { /* page unavailable */ }
+  }
+
+  // --- Build CardMetric array ---
   const cardMetrics: CardMetric[] = []
   let firstCardTime = Infinity
   let lastCardTime = 0
 
-  for (const info of cardInfos) {
-    const loadTimeMs = cardLoadTimes[info.cardId]
+  for (const info of perfResult.cards) {
+    const loadTimeMs = perfResult.loadTimes[info.cardId]
     const timedOut = timedOutCards.has(info.cardId)
-    // performance.now() gives ms since navigation — use directly
     const timeToFirstContent = loadTimeMs !== undefined ? loadTimeMs : Date.now() - navStart
 
     if (timedOut) {
-      const debugInfo = await page.evaluate((selector: string) => {
-        const card = document.querySelector(selector)
-        if (!card) return { found: false }
-        const isLoading = card.getAttribute('data-loading')
-        const pulseEls = card.querySelectorAll('.animate-pulse')
-        const pulseInfo: { tag: string; classes: string; height: number; width: number }[] = []
-        for (const el of pulseEls) {
-          const rect = el.getBoundingClientRect()
-          pulseInfo.push({ tag: el.tagName, classes: el.className, height: rect.height, width: rect.width })
-        }
-        const text = (card.textContent || '').trim()
-        const hiddenDiv = card.querySelector('.hidden')
-        const contentsDiv = card.querySelector('.contents')
-        const childContent = hiddenDiv || contentsDiv
-        const childText = childContent ? (childContent.textContent || '').trim().slice(0, 200) : 'N/A'
-        return { found: true, isLoading, pulseCount: pulseEls.length, pulseInfo, textLength: text.length, textSnippet: text.slice(0, 200), hasHiddenDiv: !!hiddenDiv, hasContentsDiv: !!contentsDiv, childText }
-      }, `[data-card-id="${info.cardId}"]`)
-      console.log(`  TIMEOUT DEBUG [${info.cardType}/${info.cardId}]:`, JSON.stringify(debugInfo, null, 2))
+      try {
+        const debugInfo = await page.evaluate((sel: string) => {
+          const card = document.querySelector(sel)
+          if (!card) return { found: false }
+          const pulses: { h: number; w: number }[] = []
+          for (const el of card.querySelectorAll('.animate-pulse')) {
+            const r = el.getBoundingClientRect()
+            pulses.push({ h: r.height, w: r.width })
+          }
+          const text = (card.textContent || '').trim()
+          return { found: true, loading: card.getAttribute('data-loading'), pulses, textLen: text.length, text: text.slice(0, 200) }
+        }, `[data-card-id="${info.cardId}"]`)
+        console.log(`  TIMEOUT DEBUG [${info.cardType}/${info.cardId}]:`, JSON.stringify(debugInfo, null, 2))
+      } catch {
+        console.log(`  TIMEOUT DEBUG [${info.cardType}/${info.cardId}]: page unavailable`)
+      }
     }
 
     if (!timedOut) {
@@ -264,16 +505,11 @@ async function measureDashboard(
     })
   }
 
-  // Correlate network timings — assign the first matching request timing to cards
-  // This is a rough heuristic since multiple cards may share the same API call
+  // Correlate network timings
   const networkEntries = [...networkTimings.values()]
   if (networkEntries.length > 0) {
-    const avgTtfb = Math.round(
-      networkEntries.reduce((s, t) => s + t.ttfb, 0) / networkEntries.length
-    )
-    const avgTotal = Math.round(
-      networkEntries.reduce((s, t) => s + t.totalTime, 0) / networkEntries.length
-    )
+    const avgTtfb = Math.round(networkEntries.reduce((s, t) => s + t.ttfb, 0) / networkEntries.length)
+    const avgTotal = Math.round(networkEntries.reduce((s, t) => s + t.totalTime, 0) / networkEntries.length)
     for (const cm of cardMetrics) {
       cm.apiTimeToFirstByte = avgTtfb
       cm.apiTotalTime = avgTotal
@@ -306,11 +542,12 @@ const perfReport: PerfReport = {
 // Warmup — prime Vite module cache so first real test isn't penalized
 // ---------------------------------------------------------------------------
 
-test('warmup — prime Vite module cache', async ({ page }) => {
+test('warmup (demo live) — prime Vite module cache', async ({ page }) => {
   await setupAuth(page)
   await setMode(page, 'demo')
   // Navigate through several dashboards to warm up React + card chunk modules.
   // Each route triggers loading of unique card components not shared by others.
+  // Test name contains both "demo" and "live" so it runs regardless of grep filter.
   const warmupRoutes = ['/', '/deploy', '/ai-ml', '/compliance', '/ci-cd']
   for (const route of warmupRoutes) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
