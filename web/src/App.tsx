@@ -55,6 +55,7 @@ const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ defa
 const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
 const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => ({ default: m.AIAgents })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
+const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
 const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
 const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m => ({ default: m.UnifiedStatsTest })))
@@ -94,6 +95,7 @@ if (typeof window !== 'undefined') {
       () => import('./components/aiml/AIML'),
       () => import('./components/aiagents/AIAgents'),
       () => import('./components/cicd/CICD'),
+      () => import('./components/marketplace/Marketplace'),
     ]
     // Stagger imports to avoid blocking the main thread
     chunks.forEach((load, i) => {
@@ -547,6 +549,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                   <CICD />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/marketplace"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                  <Marketplace />
               </Layout>
             </ProtectedRoute>
           }

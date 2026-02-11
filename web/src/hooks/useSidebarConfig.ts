@@ -72,10 +72,11 @@ const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
-  { id: 'history', name: 'Card History', icon: 'History', href: '/history', type: 'link', order: 0 },
-  { id: 'namespaces', name: 'Namespaces', icon: 'Folder', href: '/namespaces', type: 'link', order: 1 },
-  { id: 'users', name: 'User Management', icon: 'Users', href: '/users', type: 'link', order: 2 },
-  { id: 'settings', name: 'Settings', icon: 'Settings', href: '/settings', type: 'link', order: 3 },
+  { id: 'marketplace', name: 'Marketplace', icon: 'Store', href: '/marketplace', type: 'link', order: 0 },
+  { id: 'history', name: 'Card History', icon: 'History', href: '/history', type: 'link', order: 1 },
+  { id: 'namespaces', name: 'Namespaces', icon: 'Folder', href: '/namespaces', type: 'link', order: 2 },
+  { id: 'users', name: 'User Management', icon: 'Users', href: '/users', type: 'link', order: 3 },
+  { id: 'settings', name: 'Settings', icon: 'Settings', href: '/settings', type: 'link', order: 4 },
 ]
 
 const DEFAULT_CONFIG: SidebarConfig = {
@@ -87,8 +88,8 @@ const DEFAULT_CONFIG: SidebarConfig = {
   isMobileOpen: false,
 }
 
-const STORAGE_KEY = 'kubestellar-sidebar-config-v9'
-const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v8'
+const STORAGE_KEY = 'kubestellar-sidebar-config-v10'
+const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v9'
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']

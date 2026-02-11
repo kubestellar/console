@@ -57,6 +57,9 @@ export const ROUTES = {
   AI_ML: '/ai-ml',
   CI_CD: '/ci-cd',
   
+  // Marketplace
+  MARKETPLACE: '/marketplace',
+
   // Widget
   WIDGET: '/widget',
 } as const
