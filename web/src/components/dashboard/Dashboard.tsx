@@ -43,6 +43,8 @@ import { DashboardTemplate } from './templates'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
 import { useDashboardReset } from '../../hooks/useDashboardReset'
+import { WelcomeCard } from './WelcomeCard'
+import { getDemoMode } from '../../hooks/useDemoMode'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
@@ -831,6 +833,11 @@ export function Dashboard() {
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-dashboard-stats-collapsed"
       />
+
+      {/* Getting Started guide when no clusters are connected */}
+      {clusters.length === 0 && !isClustersLoading && !getDemoMode() && (
+        <WelcomeCard />
+      )}
 
       {/* AI Recommendations */}
       <div data-tour="recommendations">
