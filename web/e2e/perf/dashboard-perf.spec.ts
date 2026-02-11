@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import {
   setupNetworkInterceptor,
-  waitForCardContent,
   summarizeReport,
   type DashboardMetric,
   type CardMetric,
@@ -108,14 +107,14 @@ const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   },
   services: {
     services: [
-      { name: 'kubernetes', namespace: 'default', cluster: MOCK_CLUSTER, type: 'ClusterIP', clusterIP: '10.96.0.1', ports: '443/TCP', age: '30d' },
-      { name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER, type: 'LoadBalancer', clusterIP: '10.96.1.10', ports: '80/TCP', age: '10d' },
+      { name: 'kubernetes', namespace: 'default', cluster: MOCK_CLUSTER, type: 'ClusterIP', clusterIP: '10.96.0.1', ports: ['443/TCP'], age: '30d' },
+      { name: 'nginx-svc', namespace: 'default', cluster: MOCK_CLUSTER, type: 'LoadBalancer', clusterIP: '10.96.1.10', ports: ['80/TCP'], age: '10d' },
     ],
   },
   nodes: {
     nodes: [
-      { name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: 'control-plane', version: '1.28.0', cpu: '4', memory: '8Gi' },
-      { name: 'node-2', cluster: MOCK_CLUSTER, status: 'Ready', roles: 'worker', version: '1.28.0', cpu: '8', memory: '16Gi' },
+      { name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], version: '1.28.0', cpu: '4', memory: '8Gi' },
+      { name: 'node-2', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['worker'], version: '1.28.0', cpu: '8', memory: '16Gi' },
     ],
   },
   'security-issues': {
@@ -233,7 +232,8 @@ async function setupLiveMocks(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
   await page.route('**/api/permissions/**', (route) => {
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ permissions: [] }) })
+    // usePermissions expects PermissionsSummary = { clusters: Record<string, ClusterPermissions> }
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clusters: {} }) })
   })
   await page.route('**/api/workloads**', (route) => {
     route.fulfill({
@@ -252,14 +252,36 @@ async function setupLiveMocks(page: Page) {
     })
   })
 
-  // 6. Catch-all for any other /api/ endpoints to prevent real network requests
+  // 6. Endpoints that return ARRAYS (not objects) — the catch-all returns an
+  //    object `{items:[]}` which crashes any code that iterates the response
+  //    with `for (const x of data)` since plain objects aren't iterable.
+  //    useDashboards:    setDashboards(data || [])  →  for (const d of dashboards) in useSearchIndex
+  //    useGPUReservations: setReservations(data)    →  .map() / .sort() on array
+  //    useFeatureRequests: setRequests(data || [])   →  .map() / .filter() on array
+  //    useConsoleCRs:      setItems(data || [])      →  .map() on array
+  const arrayEndpoints = [
+    '**/api/dashboards**',
+    '**/api/gpu/reservations**',
+    '**/api/feedback/queue**',
+    '**/api/notifications**',
+    '**/api/persistence/**',
+  ]
+  for (const pattern of arrayEndpoints) {
+    await page.route(pattern, (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    })
+  }
+
+  // 7. Catch-all for any other /api/ endpoints to prevent real network requests
   await page.route('**/api/**', async (route) => {
     const url = route.request().url()
     // Skip already-handled routes
     if (url.includes('/api/mcp/') || url.includes('/api/me') || url.includes('/api/workloads') ||
         url.includes('/api/kubectl/') || url.includes('/api/active-users') ||
-        url.includes('/api/notifications/') || url.includes('/api/user/preferences') ||
-        url.includes('/api/permissions/') || url.includes('/health')) {
+        url.includes('/api/notifications') || url.includes('/api/user/preferences') ||
+        url.includes('/api/permissions/') || url.includes('/health') ||
+        url.includes('/api/dashboards') || url.includes('/api/gpu/') ||
+        url.includes('/api/feedback/') || url.includes('/api/persistence/')) {
       await route.fallback()
       return
     }
@@ -271,20 +293,36 @@ async function setupLiveMocks(page: Page) {
   })
 }
 
-/** Configure localStorage for demo or live mode before navigation */
+/**
+ * Configure localStorage for demo or live mode.
+ *
+ * Uses page.addInitScript() to inject localStorage values BEFORE any
+ * page scripts execute.  This avoids the race condition caused by
+ * navigating to /login first (where React could start a client-side
+ * redirect that races with the subsequent page.goto()).
+ *
+ * We also do a brief initial navigation to about:blank on the target
+ * origin to establish localStorage, then the addInitScript re-applies
+ * on each subsequent page.goto().
+ */
 async function setMode(page: Page, mode: 'demo' | 'live') {
-  await page.goto('/login', { waitUntil: 'domcontentloaded' })
-  await page.evaluate(
-    ({ mode, user }) => {
-      localStorage.setItem('token', mode === 'demo' ? 'demo-token' : 'test-token')
-      localStorage.setItem('kc-demo-mode', String(mode === 'demo'))
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kubestellar-console-tour-completed', 'true')
-      // Cache the mock user so AuthProvider.isLoading starts as false.
-      // Without this, isLoading=true blocks rendering in some dashboards.
-      localStorage.setItem('kc-user-cache', JSON.stringify(user))
-      // Clear any stored dashboard card layouts from previous runs
-      // to ensure we test the default config, not stale persisted layouts
+  const lsValues = {
+    token: mode === 'demo' ? 'demo-token' : 'test-token',
+    'kc-demo-mode': String(mode === 'demo'),
+    'demo-user-onboarded': 'true',
+    'kubestellar-console-tour-completed': 'true',
+    'kc-user-cache': JSON.stringify(mockUser),
+    'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
+  }
+
+  // addInitScript fires before any page JS on every navigation,
+  // ensuring localStorage is always set before React bootstraps.
+  await page.addInitScript(
+    (values: Record<string, string>) => {
+      for (const [k, v] of Object.entries(values)) {
+        localStorage.setItem(k, v)
+      }
+      // Clear stale dashboard card layouts
       const keysToRemove: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
@@ -292,7 +330,7 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
       }
       keysToRemove.forEach(k => localStorage.removeItem(k))
     },
-    { mode, user: mockUser }
+    lsValues,
   )
 }
 
@@ -313,6 +351,19 @@ async function measureDashboard(
 
   const navStart = Date.now()
   await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
+
+  // Wait for React to mount and the Layout component to render.
+  // Without this, we start polling for cards before the page-level
+  // lazy chunk has loaded, and the 5-second "genuinely 0 cards" timeout
+  // fires while the page is still showing the Suspense loading fallback.
+  // GPU is a custom page with no sidebar, so we skip this wait for it.
+  if (dashboard.id !== 'gpu') {
+    try {
+      await page.waitForSelector('[data-testid="sidebar"]', { timeout: 10_000 })
+    } catch {
+      // If sidebar doesn't appear, log but continue — we'll still measure what renders
+    }
+  }
 
   // --- Single atomic discover + monitor ---
   type PerfResult = {
@@ -405,8 +456,8 @@ async function measureDashboard(
           return r
         }
 
-        // No cards after 5s — some dashboards genuinely have 0 cards
-        if (elapsed > 5000 && ids.length === 0 && count === 0 && stable) {
+        // No cards after 8s — some dashboards genuinely have 0 cards
+        if (elapsed > 8000 && ids.length === 0 && count === 0 && stable) {
           return { cards: [] as { cardType: string; cardId: string; isDemoCard: boolean }[], loadTimes: {} as Record<string, number> }
         }
 
@@ -449,11 +500,15 @@ async function measureDashboard(
   if (perfResult.cards.length === 0) {
     try {
       const debugState = await page.evaluate(() => ({
+        url: window.location.pathname,
         cardTypeCount: document.querySelectorAll('[data-card-type]').length,
+        hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
+        hasMain: !!document.querySelector('main'),
         h1: document.querySelector('h1')?.textContent || 'none',
         dialogCount: document.querySelectorAll('[role="dialog"]').length,
         hasTourPrompt: !!document.querySelector('[data-testid="tour-prompt"]'),
-        bodyText: (document.body.textContent || '').slice(0, 300),
+        backendStatus: localStorage.getItem('kc-backend-status'),
+        bodyText: (document.body.textContent || '').slice(0, 500),
       }))
       console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
     } catch { /* page unavailable */ }
@@ -564,6 +619,10 @@ test('warmup (demo live) — prime Vite module cache', async ({ page }) => {
 for (const dashboard of DASHBOARDS) {
   for (const mode of ['demo', 'live'] as const) {
     test(`${dashboard.name} (${mode}) — card loading performance`, async ({ page }) => {
+      // Capture uncaught JS errors to debug React crashes
+      const pageErrors: string[] = []
+      page.on('pageerror', (err) => pageErrors.push(err.message))
+
       await setupAuth(page)
       if (mode === 'live') await setupLiveMocks(page)
       await setMode(page, mode)
@@ -580,6 +639,9 @@ for (const dashboard of DASHBOARDS) {
       console.log(
         `  ${dashboard.name} (${mode}): cards=${metric.cards.length} first=${metric.firstCardVisibleMs}ms avg=${avg}ms api_reqs=${metric.totalApiRequests}`
       )
+      if (pageErrors.length > 0) {
+        console.log(`  JS ERRORS: ${pageErrors.map(e => e.slice(0, 120)).join(' | ')}`)
+      }
     })
   }
 }
