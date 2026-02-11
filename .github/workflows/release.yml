@@ -24,11 +24,6 @@ on:
         required: false
         default: false
         type: boolean
-      force_agent_release:
-        description: 'Force agent/Homebrew release even without changes'
-        required: false
-        default: false
-        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -42,7 +37,6 @@ jobs:
       release_name: ${{ steps.version.outputs.release_name }}
       release_type: ${{ steps.type.outputs.release_type }}
       is_prerelease: ${{ steps.type.outputs.is_prerelease }}
-      agent_changed: ${{ steps.changes.outputs.agent_changed }}
       has_changes: ${{ steps.changes.outputs.has_changes }}
     steps:
       - name: Checkout repository
@@ -95,46 +89,13 @@ jobs:
         id: changes
         run: |
           LATEST_TAG="${{ steps.latest_tag.outputs.latest_tag }}"
-          FORCE_AGENT="${{ github.event.inputs.force_agent_release }}"
-          RELEASE_TYPE="${{ steps.type.outputs.release_type }}"
-
-          # For stable releases (weekly/patch/minor/major), always include agent
-          if [ "$RELEASE_TYPE" != "nightly" ]; then
-            echo "Stable release - including agent"
-            echo "agent_changed=true" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Check if forced
-          if [ "$FORCE_AGENT" = "true" ]; then
-            echo "Force agent release requested"
-            echo "agent_changed=true" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
 
           # Check for any changes since last tag
           if [ "$LATEST_TAG" = "v0.0.0" ]; then
             echo "No previous tag - including everything"
-            echo "agent_changed=true" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-
-          # Check for changes in agent-related paths
-          AGENT_PATHS="pkg/agent cmd/kc-agent go.mod go.sum"
-          AGENT_CHANGED="false"
-
-          for path in $AGENT_PATHS; do
-            if git diff --name-only "$LATEST_TAG"..HEAD | grep -q "^$path"; then
-              echo "Agent changes detected in: $path"
-              AGENT_CHANGED="true"
-              break
-            fi
-          done
-
-          echo "agent_changed=$AGENT_CHANGED" >> $GITHUB_OUTPUT
 
           # Check for any changes at all
           TOTAL_CHANGES=$(git rev-list "$LATEST_TAG"..HEAD --count)
@@ -145,8 +106,6 @@ jobs:
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "No changes since last release"
           fi
-
-          echo "Agent changed: $AGENT_CHANGED"
 
       - name: Calculate new version
         id: version
@@ -200,7 +159,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
-          go-version: '1.23'
+          go-version: '1.24'
           cache: true
 
       - name: Set up Node.js
@@ -241,10 +200,16 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
-        if: needs.determine-version.outputs.agent_changed == 'true'
         with:
-          go-version: '1.23'
+          go-version: '1.24'
           cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
@@ -272,8 +237,7 @@ jobs:
           git tag -a "$VERSION" -m "Release $VERSION"
           git push origin "$VERSION"
 
-      - name: Run GoReleaser (agent + Homebrew)
-        if: needs.determine-version.outputs.agent_changed == 'true'
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
         with:
           distribution: goreleaser
@@ -283,21 +247,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           RELEASE_NAME: ${{ needs.determine-version.outputs.release_name }}
-
-      - name: Create GitHub release (no agent)
-        if: needs.determine-version.outputs.agent_changed != 'true'
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
-        with:
-          tag_name: ${{ needs.determine-version.outputs.version }}
-          name: ${{ needs.determine-version.outputs.release_name }}
-          prerelease: ${{ needs.determine-version.outputs.is_prerelease == 'true' }}
-          generate_release_notes: true
-          body: |
-            ## Changes
-
-            This release contains web/console updates only. No changes to kc-agent binary.
-
-            The Homebrew formula was not updated as there are no agent changes.
 
       - name: Build and push Docker image
         uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
@@ -324,7 +273,6 @@ jobs:
           echo "- **Version**: ${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type**: ${{ needs.determine-version.outputs.release_type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Pre-release**: ${{ needs.determine-version.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Agent changed**: ${{ needs.determine-version.outputs.agent_changed }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Has changes**: ${{ needs.determine-version.outputs.has_changes }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
@@ -335,11 +283,8 @@ jobs:
             echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
             echo "- GitHub Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
             echo "- Docker Image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-            if [ "${{ needs.determine-version.outputs.agent_changed }}" = "true" ]; then
-              echo "- Homebrew: \`brew upgrade kc-agent\` (formula updated)" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "- Homebrew: No update (no agent changes)" >> $GITHUB_STEP_SUMMARY
-            fi
+            echo "- Binaries: kc-agent + console for linux/darwin (amd64/arm64)" >> $GITHUB_STEP_SUMMARY
+            echo "- Homebrew: \`brew upgrade kc-agent\`" >> $GITHUB_STEP_SUMMARY
           else
             echo "### Status: ${{ needs.release.result }}" >> $GITHUB_STEP_SUMMARY
           fi
