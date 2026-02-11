@@ -32,10 +32,13 @@ const TopPods = lazy(() => import('./TopPods').then(m => ({ default: m.TopPods }
 const AppStatus = lazy(() => import('./AppStatus').then(m => ({ default: m.AppStatus })))
 const ResourceUsage = lazy(() => import('./ResourceUsage').then(m => ({ default: m.ResourceUsage })))
 const ClusterMetrics = lazy(() => import('./ClusterMetrics').then(m => ({ default: m.ClusterMetrics })))
-const DeploymentStatus = lazy(() => import('./DeploymentStatus').then(m => ({ default: m.DeploymentStatus })))
-const DeploymentProgress = lazy(() => import('./DeploymentProgress').then(m => ({ default: m.DeploymentProgress })))
-const DeploymentIssues = lazy(() => import('./DeploymentIssues').then(m => ({ default: m.DeploymentIssues })))
-const GitOpsDrift = lazy(() => import('./GitOpsDrift').then(m => ({ default: m.GitOpsDrift })))
+// Deploy dashboard cards — eagerly start loading the barrel at module parse time
+// so all 16 cards share one chunk download instead of 16 separate HTTP requests.
+const _deployBundle = import('./deploy-bundle')
+const DeploymentStatus = lazy(() => _deployBundle.then(m => ({ default: m.DeploymentStatus })))
+const DeploymentProgress = lazy(() => _deployBundle.then(m => ({ default: m.DeploymentProgress })))
+const DeploymentIssues = lazy(() => _deployBundle.then(m => ({ default: m.DeploymentIssues })))
+const GitOpsDrift = lazy(() => _deployBundle.then(m => ({ default: m.GitOpsDrift })))
 const UpgradeStatus = lazy(() => import('./UpgradeStatus').then(m => ({ default: m.UpgradeStatus })))
 const ResourceCapacity = lazy(() => import('./ResourceCapacity').then(m => ({ default: m.ResourceCapacity })))
 const GPUInventory = lazy(() => import('./GPUInventory').then(m => ({ default: m.GPUInventory })))
@@ -70,15 +73,15 @@ const NamespaceMonitor = lazy(() => import('./NamespaceMonitor').then(m => ({ de
 const OperatorStatus = lazy(() => import('./OperatorStatus').then(m => ({ default: m.OperatorStatus })))
 const OperatorSubscriptions = lazy(() => import('./OperatorSubscriptions').then(m => ({ default: m.OperatorSubscriptions })))
 const CRDHealth = lazy(() => import('./CRDHealth').then(m => ({ default: m.CRDHealth })))
-const HelmReleaseStatus = lazy(() => import('./HelmReleaseStatus').then(m => ({ default: m.HelmReleaseStatus })))
+const HelmReleaseStatus = lazy(() => _deployBundle.then(m => ({ default: m.HelmReleaseStatus })))
 const HelmValuesDiff = lazy(() => import('./HelmValuesDiff').then(m => ({ default: m.HelmValuesDiff })))
-const HelmHistory = lazy(() => import('./HelmHistory').then(m => ({ default: m.HelmHistory })))
-const ChartVersions = lazy(() => import('./ChartVersions').then(m => ({ default: m.ChartVersions })))
-const KustomizationStatus = lazy(() => import('./KustomizationStatus').then(m => ({ default: m.KustomizationStatus })))
-const OverlayComparison = lazy(() => import('./OverlayComparison').then(m => ({ default: m.OverlayComparison })))
-const ArgoCDApplications = lazy(() => import('./ArgoCDApplications').then(m => ({ default: m.ArgoCDApplications })))
-const ArgoCDSyncStatus = lazy(() => import('./ArgoCDSyncStatus').then(m => ({ default: m.ArgoCDSyncStatus })))
-const ArgoCDHealth = lazy(() => import('./ArgoCDHealth').then(m => ({ default: m.ArgoCDHealth })))
+const HelmHistory = lazy(() => _deployBundle.then(m => ({ default: m.HelmHistory })))
+const ChartVersions = lazy(() => _deployBundle.then(m => ({ default: m.ChartVersions })))
+const KustomizationStatus = lazy(() => _deployBundle.then(m => ({ default: m.KustomizationStatus })))
+const OverlayComparison = lazy(() => _deployBundle.then(m => ({ default: m.OverlayComparison })))
+const ArgoCDApplications = lazy(() => _deployBundle.then(m => ({ default: m.ArgoCDApplications })))
+const ArgoCDSyncStatus = lazy(() => _deployBundle.then(m => ({ default: m.ArgoCDSyncStatus })))
+const ArgoCDHealth = lazy(() => _deployBundle.then(m => ({ default: m.ArgoCDHealth })))
 const UserManagement = lazy(() => import('./UserManagement').then(m => ({ default: m.UserManagement })))
 const ConsoleIssuesCard = lazy(() => import('./console-missions/ConsoleIssuesCard').then(m => ({ default: m.ConsoleIssuesCard })))
 const ConsoleKubeconfigAuditCard = lazy(() => import('./console-missions/ConsoleKubeconfigAuditCard').then(m => ({ default: m.ConsoleKubeconfigAuditCard })))
@@ -99,13 +102,15 @@ const ComplianceScore = lazy(() => import('./ComplianceCards').then(m => ({ defa
 const VaultSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.VaultSecrets })))
 const ExternalSecrets = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.ExternalSecrets })))
 const CertManager = lazy(() => import('./DataComplianceCards').then(m => ({ default: m.CertManager })))
-const ProwJobs = lazy(() => import('./workload-detection/ProwJobs').then(m => ({ default: m.ProwJobs })))
-const ProwStatus = lazy(() => import('./workload-detection/ProwStatus').then(m => ({ default: m.ProwStatus })))
-const ProwHistory = lazy(() => import('./workload-detection/ProwHistory').then(m => ({ default: m.ProwHistory })))
-const LLMInference = lazy(() => import('./workload-detection/LLMInference').then(m => ({ default: m.LLMInference })))
-const LLMModels = lazy(() => import('./workload-detection/LLMModels').then(m => ({ default: m.LLMModels })))
-const MLJobs = lazy(() => import('./workload-detection/MLJobs').then(m => ({ default: m.MLJobs })))
-const MLNotebooks = lazy(() => import('./workload-detection/MLNotebooks').then(m => ({ default: m.MLNotebooks })))
+// Workload detection cards — share one chunk via barrel import
+const _workloadDetectionBundle = import('./workload-detection')
+const ProwJobs = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.ProwJobs })))
+const ProwStatus = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.ProwStatus })))
+const ProwHistory = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.ProwHistory })))
+const LLMInference = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.LLMInference })))
+const LLMModels = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.LLMModels })))
+const MLJobs = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.MLJobs })))
+const MLNotebooks = lazy(() => _workloadDetectionBundle.then(m => ({ default: m.MLNotebooks })))
 const Weather = lazy(() => import('./weather/Weather').then(m => ({ default: m.Weather })))
 const GitHubActivity = lazy(() => import('./GitHubActivity').then(m => ({ default: m.GitHubActivity })))
 const RSSFeed = lazy(() => import('./rss').then(m => ({ default: m.RSSFeed })))
@@ -142,14 +147,16 @@ const ServiceExports = lazy(() => import('./ServiceExports').then(m => ({ defaul
 const ServiceImports = lazy(() => import('./ServiceImports').then(m => ({ default: m.ServiceImports })))
 const GatewayStatus = lazy(() => import('./GatewayStatus').then(m => ({ default: m.GatewayStatus })))
 const ServiceTopology = lazy(() => import('./ServiceTopology').then(m => ({ default: m.ServiceTopology })))
-const WorkloadDeployment = lazy(() => import('./WorkloadDeployment').then(m => ({ default: m.WorkloadDeployment })))
-const ClusterGroups = lazy(() => import('./ClusterGroups').then(m => ({ default: m.ClusterGroups })))
-const Missions = lazy(() => import('./Missions').then(m => ({ default: m.Missions })))
-const ResourceMarshall = lazy(() => import('./ResourceMarshall').then(m => ({ default: m.ResourceMarshall })))
-const WorkloadMonitor = lazy(() => import('./workload-monitor/WorkloadMonitor').then(m => ({ default: m.WorkloadMonitor })))
+const WorkloadDeployment = lazy(() => _deployBundle.then(m => ({ default: m.WorkloadDeployment })))
+const ClusterGroups = lazy(() => _deployBundle.then(m => ({ default: m.ClusterGroups })))
+const Missions = lazy(() => _deployBundle.then(m => ({ default: m.Missions })))
+const ResourceMarshall = lazy(() => _deployBundle.then(m => ({ default: m.ResourceMarshall })))
+// Workload monitor cards — share one chunk via barrel import
+const _workloadMonitorBundle = import('./workload-monitor')
+const WorkloadMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.WorkloadMonitor })))
 const DynamicCard = lazy(() => import('./DynamicCard').then(m => ({ default: m.DynamicCard })))
-const LLMdStackMonitor = lazy(() => import('./workload-monitor/LLMdStackMonitor').then(m => ({ default: m.LLMdStackMonitor })))
-const ProwCIMonitor = lazy(() => import('./workload-monitor/ProwCIMonitor').then(m => ({ default: m.ProwCIMonitor })))
+const LLMdStackMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.LLMdStackMonitor })))
+const ProwCIMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.ProwCIMonitor })))
 
 // LLM-d stunning visualization cards — eagerly start loading the barrel at
 // module parse time so all 7 heavy chunks (194KB total source) are pre-warmed
@@ -162,19 +169,20 @@ const PDDisaggregation = lazy(() => _llmdBundle.then(m => ({ default: m.PDDisagg
 const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchmarks })))
 const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
 const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
-const GitHubCIMonitor = lazy(() => import('./workload-monitor/GitHubCIMonitor').then(m => ({ default: m.GitHubCIMonitor })))
-const ClusterHealthMonitor = lazy(() => import('./workload-monitor/ClusterHealthMonitor').then(m => ({ default: m.ClusterHealthMonitor })))
+const GitHubCIMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.GitHubCIMonitor })))
+const ClusterHealthMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.ClusterHealthMonitor })))
 const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
 
-// Kagenti AI Agent Platform cards
+// Kagenti AI Agent Platform cards — share one chunk via barrel import
 const KagentiStatusCard = lazy(() => import('./KagentiStatusCard').then(m => ({ default: m.KagentiStatusCard })))
-const KagentiAgentFleet = lazy(() => import('./kagenti/KagentiAgentFleet').then(m => ({ default: m.KagentiAgentFleet })))
-const KagentiBuildPipeline = lazy(() => import('./kagenti/KagentiBuildPipeline').then(m => ({ default: m.KagentiBuildPipeline })))
-const KagentiToolRegistry = lazy(() => import('./kagenti/KagentiToolRegistry').then(m => ({ default: m.KagentiToolRegistry })))
-const KagentiAgentDiscovery = lazy(() => import('./kagenti/KagentiAgentDiscovery').then(m => ({ default: m.KagentiAgentDiscovery })))
-const KagentiSecurity = lazy(() => import('./kagenti/KagentiSecurity').then(m => ({ default: m.KagentiSecurity })))
-const KagentiSecurityPosture = lazy(() => import('./kagenti/KagentiSecurityPosture').then(m => ({ default: m.KagentiSecurityPosture })))
-const KagentiTopology = lazy(() => import('./kagenti/KagentiTopology').then(m => ({ default: m.KagentiTopology })))
+const _kagentiBundle = import('./kagenti')
+const KagentiAgentFleet = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiAgentFleet })))
+const KagentiBuildPipeline = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiBuildPipeline })))
+const KagentiToolRegistry = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiToolRegistry })))
+const KagentiAgentDiscovery = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiAgentDiscovery })))
+const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurity })))
+const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
+const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -542,10 +550,10 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   app_status: () => import('./AppStatus'),
   resource_usage: () => import('./ResourceUsage'),
   cluster_metrics: () => import('./ClusterMetrics'),
-  deployment_status: () => import('./DeploymentStatus'),
-  deployment_progress: () => import('./DeploymentProgress'),
-  deployment_issues: () => import('./DeploymentIssues'),
-  gitops_drift: () => import('./GitOpsDrift'),
+  deployment_status: () => import('./deploy-bundle'),
+  deployment_progress: () => import('./deploy-bundle'),
+  deployment_issues: () => import('./deploy-bundle'),
+  gitops_drift: () => import('./deploy-bundle'),
   upgrade_status: () => import('./UpgradeStatus'),
   resource_capacity: () => import('./ResourceCapacity'),
   gpu_inventory: () => import('./GPUInventory'),
@@ -577,15 +585,15 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   operator_status: () => import('./OperatorStatus'),
   operator_subscriptions: () => import('./OperatorSubscriptions'),
   crd_health: () => import('./CRDHealth'),
-  helm_release_status: () => import('./HelmReleaseStatus'),
+  helm_release_status: () => import('./deploy-bundle'),
   helm_values_diff: () => import('./HelmValuesDiff'),
-  helm_history: () => import('./HelmHistory'),
-  chart_versions: () => import('./ChartVersions'),
-  kustomization_status: () => import('./KustomizationStatus'),
-  overlay_comparison: () => import('./OverlayComparison'),
-  argocd_applications: () => import('./ArgoCDApplications'),
-  argocd_sync_status: () => import('./ArgoCDSyncStatus'),
-  argocd_health: () => import('./ArgoCDHealth'),
+  helm_history: () => import('./deploy-bundle'),
+  chart_versions: () => import('./deploy-bundle'),
+  kustomization_status: () => import('./deploy-bundle'),
+  overlay_comparison: () => import('./deploy-bundle'),
+  argocd_applications: () => import('./deploy-bundle'),
+  argocd_sync_status: () => import('./deploy-bundle'),
+  argocd_health: () => import('./deploy-bundle'),
   active_alerts: () => import('./ActiveAlerts'),
   alert_rules: () => import('./AlertRules'),
   opencost_overview: () => import('./OpenCostOverview'),
@@ -601,14 +609,14 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   vault_secrets: () => import('./DataComplianceCards'),
   external_secrets: () => import('./DataComplianceCards'),
   cert_manager: () => import('./DataComplianceCards'),
-  // Workload detection
-  prow_jobs: () => import('./workload-detection/ProwJobs'),
-  prow_status: () => import('./workload-detection/ProwStatus'),
-  prow_history: () => import('./workload-detection/ProwHistory'),
-  llm_inference: () => import('./workload-detection/LLMInference'),
-  llm_models: () => import('./workload-detection/LLMModels'),
-  ml_jobs: () => import('./workload-detection/MLJobs'),
-  ml_notebooks: () => import('./workload-detection/MLNotebooks'),
+  // Workload detection — all share one chunk via barrel
+  prow_jobs: () => import('./workload-detection'),
+  prow_status: () => import('./workload-detection'),
+  prow_history: () => import('./workload-detection'),
+  llm_inference: () => import('./workload-detection'),
+  llm_models: () => import('./workload-detection'),
+  ml_jobs: () => import('./workload-detection'),
+  ml_notebooks: () => import('./workload-detection'),
   // GitHub & misc
   github_activity: () => import('./GitHubActivity'),
   hardware_health: () => import('./HardwareHealthCard'),
@@ -618,17 +626,17 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   service_imports: () => import('./ServiceImports'),
   gateway_status: () => import('./GatewayStatus'),
   service_topology: () => import('./ServiceTopology'),
-  // Deploy dashboard
-  workload_deployment: () => import('./WorkloadDeployment'),
-  cluster_groups: () => import('./ClusterGroups'),
-  deployment_missions: () => import('./Missions'),
-  resource_marshall: () => import('./ResourceMarshall'),
-  // Workload monitors
-  workload_monitor: () => import('./workload-monitor/WorkloadMonitor'),
-  llmd_stack_monitor: () => import('./workload-monitor/LLMdStackMonitor'),
-  prow_ci_monitor: () => import('./workload-monitor/ProwCIMonitor'),
-  github_ci_monitor: () => import('./workload-monitor/GitHubCIMonitor'),
-  cluster_health_monitor: () => import('./workload-monitor/ClusterHealthMonitor'),
+  // Deploy dashboard — all share deploy-bundle chunk
+  workload_deployment: () => import('./deploy-bundle'),
+  cluster_groups: () => import('./deploy-bundle'),
+  deployment_missions: () => import('./deploy-bundle'),
+  resource_marshall: () => import('./deploy-bundle'),
+  // Workload monitors — all share one chunk via barrel
+  workload_monitor: () => import('./workload-monitor'),
+  llmd_stack_monitor: () => import('./workload-monitor'),
+  prow_ci_monitor: () => import('./workload-monitor'),
+  github_ci_monitor: () => import('./workload-monitor'),
+  cluster_health_monitor: () => import('./workload-monitor'),
   // LLM-d visualization — barrel import loads all 7 cards in one module graph
   // resolution instead of 7 separate requests, reducing Vite transform overhead
   llmd_flow: () => import('./llmd'),
@@ -638,15 +646,15 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   llmd_benchmarks: () => import('./llmd'),
   llmd_ai_insights: () => import('./llmd'),
   llmd_configurator: () => import('./llmd'),
-  // Kagenti AI Agents
+  // Kagenti AI Agents — all share one chunk via barrel
   kagenti_status: () => import('./KagentiStatusCard'),
-  kagenti_agent_fleet: () => import('./kagenti/KagentiAgentFleet'),
-  kagenti_build_pipeline: () => import('./kagenti/KagentiBuildPipeline'),
-  kagenti_tool_registry: () => import('./kagenti/KagentiToolRegistry'),
-  kagenti_agent_discovery: () => import('./kagenti/KagentiAgentDiscovery'),
-  kagenti_security: () => import('./kagenti/KagentiSecurity'),
-  kagenti_security_posture: () => import('./kagenti/KagentiSecurityPosture'),
-  kagenti_topology: () => import('./kagenti/KagentiTopology'),
+  kagenti_agent_fleet: () => import('./kagenti'),
+  kagenti_build_pipeline: () => import('./kagenti'),
+  kagenti_tool_registry: () => import('./kagenti'),
+  kagenti_agent_discovery: () => import('./kagenti'),
+  kagenti_security: () => import('./kagenti'),
+  kagenti_security_posture: () => import('./kagenti'),
+  kagenti_topology: () => import('./kagenti'),
 }
 
 /**

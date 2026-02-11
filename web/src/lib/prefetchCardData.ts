@@ -13,6 +13,7 @@
 
 import { prefetchCache } from './cache'
 import { coreFetchers, specialtyFetchers } from '../hooks/useCachedData'
+import { isDemoMode } from './demoMode'
 
 const SPECIALTY_DELAY_MS = 1000
 
@@ -44,6 +45,11 @@ let prefetched = false
 export function prefetchCardData(): void {
   if (prefetched) return
   prefetched = true
+
+  // In demo mode, cache hooks return synchronous demo data immediately.
+  // Firing API requests would waste HTTP connections that card chunk
+  // downloads need (browser limits to ~6 concurrent connections per origin).
+  if (isDemoMode()) return
 
   // Tier 1: Core data — all in parallel
   Promise.allSettled(

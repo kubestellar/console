@@ -19,6 +19,7 @@ import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { prefetchCardData } from './lib/prefetchCardData'
 import { prefetchDemoCardChunks } from './components/cards/cardRegistry'
+import { isDemoMode } from './lib/demoMode'
 
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
@@ -97,14 +98,23 @@ if (typeof window !== 'undefined') {
       () => import('./components/cicd/CICD'),
       () => import('./components/marketplace/Marketplace'),
     ]
-    // Stagger imports to avoid blocking the main thread
+    // In demo mode, fire all imports immediately (no stagger needed —
+    // demo data is synchronous, so chunk download is the only bottleneck).
+    // In live mode, stagger to avoid blocking the main thread.
+    const demo = isDemoMode()
     chunks.forEach((load, i) => {
-      setTimeout(() => load().catch(() => {}), i * 100)
+      if (demo) {
+        load().catch(() => {})
+      } else {
+        setTimeout(() => load().catch(() => {}), i * 100)
+      }
     })
   }
 
-  // Use requestIdleCallback if available, otherwise setTimeout
-  if ('requestIdleCallback' in window) {
+  // In demo mode, fire immediately. Otherwise wait for idle time.
+  if (isDemoMode()) {
+    prefetchRoutes()
+  } else if ('requestIdleCallback' in window) {
     requestIdleCallback(prefetchRoutes, { timeout: 5000 })
   } else {
     setTimeout(prefetchRoutes, 2000)
