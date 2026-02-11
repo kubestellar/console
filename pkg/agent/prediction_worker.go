@@ -79,7 +79,8 @@ type PredictionWorker struct {
 	broadcast func(msgType string, payload interface{})
 
 	// Token tracking callback
-	trackTokens func(usage *ProviderTokenUsage)
+	trackTokens        func(usage *ProviderTokenUsage)
+	loggedClusterError bool // suppress repeated "no kubeconfig" errors
 }
 
 // NewPredictionWorker creates a new prediction worker
@@ -222,7 +223,10 @@ func (w *PredictionWorker) runAnalysis(specificProviders []string) {
 
 	clusterData, err := w.gatherClusterData(ctx)
 	if err != nil {
-		log.Printf("[PredictionWorker] Error gathering cluster data: %v", err)
+		if !w.loggedClusterError {
+			w.loggedClusterError = true
+			log.Printf("[PredictionWorker] Cluster data unavailable (will retry silently): %v", err)
+		}
 		return
 	}
 
@@ -359,7 +363,8 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 	// Get all cluster health
 	healthList, err := w.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
-		log.Printf("[PredictionWorker] Error getting cluster health: %v", err)
+		// Already logged by runAnalysis caller
+		return nil, err
 	} else {
 		for _, h := range healthList {
 			cpuPercent := 0.0

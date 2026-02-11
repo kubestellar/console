@@ -69,7 +69,8 @@ type DeviceTracker struct {
 	stopCh    chan struct{}
 
 	// Broadcast function for WebSocket updates
-	broadcast func(msgType string, payload interface{})
+	broadcast          func(msgType string, payload interface{})
+	loggedClusterError bool // suppress repeated "no kubeconfig" errors
 }
 
 // NewDeviceTracker creates a new device tracker
@@ -119,7 +120,10 @@ func (t *DeviceTracker) scanDevices() {
 	// using the clusterNameMap pattern (same as ClusterDetailModal and ResourcesDrillDown)
 	clusters, err := t.k8sClient.ListClusters(ctx)
 	if err != nil {
-		log.Printf("[DeviceTracker] Error listing clusters: %v", err)
+		if !t.loggedClusterError {
+			t.loggedClusterError = true
+			log.Printf("[DeviceTracker] Cluster data unavailable (will retry silently): %v", err)
+		}
 		return
 	}
 

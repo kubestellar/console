@@ -59,11 +59,12 @@ type MetricsHistoryResponse struct {
 
 // MetricsHistory manages historical metrics snapshots
 type MetricsHistory struct {
-	k8sClient *k8s.MultiClusterClient
-	snapshots []MetricsSnapshot
-	mu        sync.RWMutex
-	stopCh    chan struct{}
-	dataDir   string
+	k8sClient          *k8s.MultiClusterClient
+	snapshots          []MetricsSnapshot
+	mu                 sync.RWMutex
+	stopCh             chan struct{}
+	dataDir            string
+	loggedClusterError bool // suppress repeated "no kubeconfig" errors
 }
 
 // NewMetricsHistory creates a new metrics history manager
@@ -162,7 +163,10 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	// Get cluster health
 	healthList, err := mh.k8sClient.GetAllClusterHealth(ctx)
 	if err != nil {
-		log.Printf("[MetricsHistory] Error getting cluster health: %v", err)
+		if !mh.loggedClusterError {
+			mh.loggedClusterError = true
+			log.Printf("[MetricsHistory] Cluster data unavailable (will retry silently): %v", err)
+		}
 	} else {
 		for _, h := range healthList {
 			cpuPercent := 0.0

@@ -123,10 +123,10 @@ func NewServer(cfg Config) (*Server, error) {
 	// Initialize Kubernetes multi-cluster client
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
-		log.Printf("Warning: Failed to create k8s client: %v", err)
+		log.Println("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
 	} else {
 		if err := k8sClient.LoadConfig(); err != nil {
-			log.Printf("Warning: Failed to load kubeconfig: %v", err)
+			log.Println("No kubeconfig found — connect clusters via Settings or place a kubeconfig at ~/.kube/config")
 		} else {
 			log.Println("Kubernetes client initialized successfully")
 		}
@@ -138,13 +138,14 @@ func NewServer(cfg Config) (*Server, error) {
 			log.Println("Broadcasted kubeconfig change to all clients")
 		})
 		if err := k8sClient.StartWatching(); err != nil {
-			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
+			// Watcher fails when kubeconfig doesn't exist — already logged above
+			_ = err
 		}
 	}
 
 	// Initialize AI providers
 	if err := agent.InitializeProviders(); err != nil {
-		log.Printf("Warning: %v", err)
+		log.Println("AI features disabled — add API keys in Settings to enable")
 	}
 
 	// Initialize MCP bridge (starts in background)
@@ -159,7 +160,8 @@ func NewServer(cfg Config) (*Server, error) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 			if err := bridge.Start(ctx); err != nil {
-				log.Printf("Warning: MCP bridge failed to start: %v", err)
+				// MCP tools not installed — expected for local binary quickstart
+				log.Printf("MCP bridge not available (install kubestellar-ops/deploy plugins to enable)")
 			} else {
 				log.Println("MCP bridge started successfully")
 			}
