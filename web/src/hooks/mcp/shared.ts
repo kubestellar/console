@@ -829,7 +829,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 35000) // 35s timeout — large clusters can take 10s+ uncached
       const response = await fetch(`${LOCAL_AGENT_URL}/cluster-health?cluster=${encodeURIComponent(context)}`, {
         signal: controller.signal,
         headers: { 'Accept': 'application/json' },
@@ -857,7 +857,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     const response = await fetch(
       `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`,
       {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(35000),
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       }
     )

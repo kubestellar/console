@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState, useCallback } from 'react'
 import { Pencil, Globe, User, ShieldAlert, ChevronRight, Star, WifiOff, RefreshCw, ExternalLink, AlertCircle, Cpu, Box, Server, KeyRound } from 'lucide-react'
 import { FlashingValue } from '../../ui/FlashingValue'
 import { ClusterInfo } from '../../../hooks/useMCP'
@@ -76,6 +76,7 @@ const FullClusterCard = memo(function FullClusterCard({
   const hasCachedData = cluster.nodeCount !== undefined && cluster.nodeCount > 0
   const initialLoading = loading && !hasCachedData
   const refreshing = cluster.refreshing === true
+  const [spinKey, setSpinKey] = useState(0)
 
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
@@ -83,6 +84,12 @@ const FullClusterCard = memo(function FullClusterCard({
   const providerColor = getProviderColor(provider)
   const themeColor = '#9333ea'
   const consoleUrl = getConsoleUrl(provider, cluster.name, cluster.server)
+
+  const handleRefresh = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSpinKey(k => k + 1)
+    onRefreshCluster?.()
+  }, [onRefreshCluster])
 
   return (
     <div
@@ -127,7 +134,7 @@ const FullClusterCard = memo(function FullClusterCard({
               )}
               {onRefreshCluster && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}
+                  onClick={handleRefresh}
                   disabled={refreshing}
                   className={`flex items-center p-1 rounded transition-colors ${
                     refreshing ? 'bg-blue-500/20 text-blue-400' :
@@ -136,7 +143,7 @@ const FullClusterCard = memo(function FullClusterCard({
                   }`}
                   title={refreshing ? 'Refreshing...' : unreachable ? 'Retry connection' : 'Refresh cluster data'}
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                  <RefreshCw key={spinKey} className={`w-3.5 h-3.5 ${spinKey > 0 ? 'animate-spin-once' : ''}`} />
                 </button>
               )}
             </div>
@@ -275,6 +282,13 @@ const ListClusterCard = memo(function ListClusterCard({
   const hasCachedData = cluster.nodeCount !== undefined && cluster.nodeCount > 0
   const initialLoading = loading && !hasCachedData
   const refreshing = cluster.refreshing === true
+  const [spinKey, setSpinKey] = useState(0)
+
+  const handleRefresh = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSpinKey(k => k + 1)
+    onRefreshCluster?.()
+  }, [onRefreshCluster])
 
   const provider = (cluster.distribution as ReturnType<typeof detectCloudProvider>) ||
     detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
@@ -392,7 +406,7 @@ const ListClusterCard = memo(function ListClusterCard({
           <div className="flex items-center gap-1 flex-shrink-0">
             {onRefreshCluster && (
               <button
-                onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}
+                onClick={handleRefresh}
                 disabled={refreshing}
                 className={`p-1.5 rounded transition-colors ${
                   refreshing ? 'text-blue-400' :
@@ -401,7 +415,7 @@ const ListClusterCard = memo(function ListClusterCard({
                 }`}
                 title={refreshing ? 'Refreshing...' : 'Refresh'}
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw key={spinKey} className={`w-3.5 h-3.5 ${spinKey > 0 ? 'animate-spin-once' : ''}`} />
               </button>
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (

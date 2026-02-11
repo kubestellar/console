@@ -466,7 +466,7 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 		dynamicClients: make(map[string]dynamic.Interface),
 		configs:        make(map[string]*rest.Config),
 		healthCache:    make(map[string]*ClusterHealth),
-		cacheTTL:       30 * time.Second,
+		cacheTTL:       60 * time.Second,
 		cacheTime:      make(map[string]time.Time),
 	}
 
