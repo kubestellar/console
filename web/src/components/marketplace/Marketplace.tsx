@@ -235,13 +235,6 @@ export function Marketplace() {
           ))}
         </div>
 
-        <button
-          onClick={refresh}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground bg-card border border-border rounded-md transition-colors ml-auto"
-          title="Refresh registry"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {/* Content */}

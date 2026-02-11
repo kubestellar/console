@@ -73,23 +73,25 @@ export function useMarketplace() {
   const [selectedType, setSelectedType] = useState<MarketplaceItemType | null>(null)
   const [installedItems, setInstalledItems] = useState<InstalledMap>(loadInstalled)
 
-  const fetchRegistry = useCallback(async () => {
+  const fetchRegistry = useCallback(async (skipCache = false) => {
     setIsLoading(true)
     setError(null)
 
-    // Check localStorage cache
-    try {
-      const cached = localStorage.getItem(CACHE_KEY)
-      if (cached) {
-        const parsed: CachedRegistry = JSON.parse(cached)
-        if (Date.now() - parsed.fetchedAt < CACHE_TTL_MS) {
-          setItems(parsed.data.items)
-          setIsLoading(false)
-          return
+    // Check localStorage cache (skip on manual refresh)
+    if (!skipCache) {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const parsed: CachedRegistry = JSON.parse(cached)
+          if (Date.now() - parsed.fetchedAt < CACHE_TTL_MS) {
+            setItems(parsed.data.items)
+            setIsLoading(false)
+            return
+          }
         }
+      } catch {
+        // Cache read failed — continue to fetch
       }
-    } catch {
-      // Cache read failed — continue to fetch
     }
 
     try {
@@ -213,6 +215,6 @@ export function useMarketplace() {
     installItem,
     removeItem,
     isInstalled,
-    refresh: fetchRegistry,
+    refresh: () => fetchRegistry(true),
   }
 }
