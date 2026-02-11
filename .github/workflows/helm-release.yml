@@ -64,12 +64,16 @@ jobs:
 
       - name: Create gh-pages branch if not exists
         run: |
-          if [ ! -d "gh-pages" ]; then
+          if [ ! -d "gh-pages/.git" ]; then
+            rm -rf gh-pages
             mkdir -p gh-pages
             cd gh-pages
             git init
+            git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
             git checkout -b gh-pages
-            echo "# Helm Charts" > README.md
+            echo "# KubeStellar Console Helm Charts" > README.md
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
             git add README.md
             git commit -m "Initialize gh-pages"
           fi
@@ -86,8 +90,6 @@ jobs:
         run: |
           cd gh-pages
           git push origin gh-pages --force
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summary
         run: |
