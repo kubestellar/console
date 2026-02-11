@@ -149,7 +149,6 @@ export function Marketplace() {
     installItem,
     removeItem,
     isInstalled,
-    getInstalledDashboardId,
     refresh,
   } = useMarketplace()
   const { config: sidebarConfig, addItem, removeItem: removeSidebarItem } = useSidebarConfig()
@@ -192,14 +191,13 @@ export function Marketplace() {
 
   const handleRemove = async (item: MarketplaceItem) => {
     try {
-      // Find and remove sidebar entry for dashboards
-      const dashId = getInstalledDashboardId(item.id)
-      if (dashId) {
-        const href = `/custom-dashboard/${dashId}`
-        const sidebarItem = [...sidebarConfig.primaryNav, ...sidebarConfig.secondaryNav]
-          .find(si => si.href === href)
-        if (sidebarItem) removeSidebarItem(sidebarItem.id)
-      }
+      // Find and remove sidebar entry using the marketplace slug (not backend UUID)
+      const href = `/custom-dashboard/${item.id}`
+      const sidebarItem = [...sidebarConfig.primaryNav, ...sidebarConfig.secondaryNav]
+        .find(si => si.href === href)
+      if (sidebarItem) removeSidebarItem(sidebarItem.id)
+      // Clean up localStorage cards
+      try { localStorage.removeItem(`kubestellar-custom-dashboard-${item.id}-cards`) } catch { /* ok */ }
       await removeItem(item)
       showToast(`Removed "${item.name}"`, 'info')
     } catch {
