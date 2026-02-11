@@ -2,8 +2,8 @@ apiVersion: v2
 name: kubestellar-console
 description: KubeStellar Console - AI-powered multi-cluster Kubernetes dashboard
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.0.0
+appVersion: "0.0.0"
 keywords:
   - kubernetes
   - multi-cluster

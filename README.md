@@ -238,7 +238,7 @@ docker run -d \
 1. **Add the Helm repository**
 
 ```bash
-helm repo add kubestellar https://kubestellar.github.io/helm-charts
+helm repo add kubestellar-console https://kubestellar.github.io/console
 helm repo update
 ```
 
@@ -257,7 +257,7 @@ kubectl create secret generic console-secrets \
 3. **Install the chart**
 
 ```bash
-helm install kubestellar-console kubestellar/console \
+helm install kc kubestellar-console/kubestellar-console \
   --namespace kubestellar-console \
   --set ingress.enabled=true \
   --set ingress.host=console.your-domain.com
@@ -266,7 +266,7 @@ helm install kubestellar-console kubestellar/console \
 ### OpenShift Deployment
 
 ```bash
-helm install kubestellar-console kubestellar/console \
+helm install kc kubestellar-console/kubestellar-console \
   --namespace kubestellar-console \
   --create-namespace \
   -f deploy/helm/kubestellar-console/values-openshift.yaml \
@@ -373,7 +373,7 @@ When deploying with Helm, provide GitHub credentials via values or secrets:
 
 ```bash
 # Option 1: Via --set flags
-helm install kubestellar-console kubestellar/console \
+helm install kc kubestellar-console/kubestellar-console \
   --namespace kubestellar-console \
   --set github.clientId=$GITHUB_CLIENT_ID \
   --set github.clientSecret=$GITHUB_CLIENT_SECRET
@@ -385,7 +385,7 @@ github:
   clientSecret: "your-client-secret"
 EOF
 
-helm install kubestellar-console kubestellar/console \
+helm install kc kubestellar-console/kubestellar-console \
   --namespace kubestellar-console \
   -f my-values.yaml
 
@@ -395,7 +395,7 @@ kubectl create secret generic github-oauth \
   --from-literal=client-id=$GITHUB_CLIENT_ID \
   --from-literal=client-secret=$GITHUB_CLIENT_SECRET
 
-helm install kubestellar-console kubestellar/console \
+helm install kc kubestellar-console/kubestellar-console \
   --namespace kubestellar-console \
   --set github.existingSecret=github-oauth
 ```
