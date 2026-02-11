@@ -576,10 +576,6 @@
   animation: spin-min 1s linear infinite;
 }
 
-.animate-spin-once {
-  animation: spin-min 0.6s ease-in-out 1;
-}
-
 /* Rocket launch / blast-off animation */
 @keyframes rocket-launch {
   0%, 100% {
