@@ -1095,25 +1095,34 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
         })
       } else {
         // Cluster reported as unreachable by the agent
-        // Trust the agent's reachable: false immediately - the agent has direct
-        // access to the cluster and knows best. The 5-minute grace period is for
-        // cases where we get no response at all (backend/agent unavailable).
         recordClusterFailure(cluster.name)
 
-        // If agent explicitly says reachable: false, mark offline immediately
-        // This is more reliable than trying to parse error messages
-        const agentSaysUnreachable = health.reachable === false
-
-        // Also check for definitive network errors as a fallback
+        // Distinguish between definitive errors and transient timeouts.
+        // A timeout means the health check took too long (large cluster, slow network)
+        // but does NOT mean the cluster is genuinely unreachable.
         const errorMsg = health.errorMessage?.toLowerCase() || ''
         const isDefinitiveError = errorMsg.includes('connection refused') ||
           errorMsg.includes('connection reset') ||
           errorMsg.includes('no such host') ||
           errorMsg.includes('network is unreachable') ||
-          health.errorType === 'network'
+          errorMsg.includes('certificate') ||
+          errorMsg.includes('unauthorized') ||
+          health.errorType === 'network' ||
+          health.errorType === 'certificate' ||
+          health.errorType === 'auth'
 
-        if (agentSaysUnreachable || isDefinitiveError || shouldMarkOffline(cluster.name)) {
-          // Agent says unreachable, definitive error, or 5+ minutes of failures - mark as unreachable
+        if (isDefinitiveError) {
+          // Definitive error - cluster is genuinely unreachable, mark offline immediately
+          updateSingleClusterInCache(cluster.name, {
+            healthy: false,
+            reachable: false,
+            nodeCount: 0,
+            errorType: health.errorType,
+            errorMessage: health.errorMessage,
+            refreshing: false,
+          })
+        } else if (shouldMarkOffline(cluster.name)) {
+          // Transient errors (timeout) persisting for 5+ minutes - now mark offline
           updateSingleClusterInCache(cluster.name, {
             healthy: false,
             reachable: false,
@@ -1123,7 +1132,7 @@ async function processClusterHealth(cluster: ClusterInfo): Promise<void> {
             refreshing: false,
           })
         } else {
-          // Transient failure - keep existing cached values, just clear refreshing
+          // Transient failure (timeout) - keep existing cached values
           updateSingleClusterInCache(cluster.name, {
             refreshing: false,
           })

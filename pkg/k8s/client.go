@@ -908,15 +908,42 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		CheckedAt: now,
 	}
 
-	// Get nodes
-	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		errMsg := err.Error()
+	// Fetch nodes, pods, and PVCs in parallel to avoid sequential timeout accumulation.
+	// Large clusters (e.g. 18 nodes, 972 pods) can take 10-20s per call sequentially,
+	// exceeding the context deadline. Parallel fetches reduce wall-clock time to max(individual).
+	var (
+		nodes    *corev1.NodeList
+		pods     *corev1.PodList
+		pvcs     *corev1.PersistentVolumeClaimList
+		nodesErr error
+		podsErr  error
+		pvcsErr  error
+		wg       sync.WaitGroup
+	)
+
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		nodes, nodesErr = client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	}()
+	go func() {
+		defer wg.Done()
+		pods, podsErr = client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	}()
+	go func() {
+		defer wg.Done()
+		pvcs, pvcsErr = client.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
+	}()
+	wg.Wait()
+
+	// Process nodes - determines reachability
+	if nodesErr != nil {
+		errMsg := nodesErr.Error()
 		health.Healthy = false
 		health.Reachable = false
 		health.ErrorType = classifyError(errMsg)
 		health.ErrorMessage = errMsg
-		health.Issues = append(health.Issues, fmt.Sprintf("Failed to list nodes: %v", err))
+		health.Issues = append(health.Issues, fmt.Sprintf("Failed to list nodes: %v", nodesErr))
 	} else {
 		health.NodeCount = len(nodes.Items)
 		var totalCPU int64
@@ -930,15 +957,12 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 					break
 				}
 			}
-			// Sum CPU cores from allocatable resources
 			if cpu := node.Status.Allocatable.Cpu(); cpu != nil {
 				totalCPU += cpu.Value()
 			}
-			// Sum memory from allocatable resources
 			if mem := node.Status.Allocatable.Memory(); mem != nil {
 				totalMemory += mem.Value()
 			}
-			// Sum ephemeral storage from allocatable resources
 			if storage, ok := node.Status.Allocatable["ephemeral-storage"]; ok {
 				totalStorage += storage.Value()
 			}
@@ -953,16 +977,12 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		}
 	}
 
-	// Get pod count and resource requests
-	pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	if err == nil {
+	// Process pods - non-fatal, enrichment data only
+	if podsErr == nil {
 		health.PodCount = len(pods.Items)
-
-		// Sum resource requests from all running pods
 		var totalCPURequests int64
 		var totalMemoryRequests int64
 		for _, pod := range pods.Items {
-			// Only count running pods
 			if pod.Status.Phase != corev1.PodRunning {
 				continue
 			}
@@ -983,9 +1003,8 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		health.MemoryRequestsGB = float64(totalMemoryRequests) / (1024 * 1024 * 1024)
 	}
 
-	// Get PVC count
-	pvcs, err := client.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
-	if err == nil {
+	// Process PVCs - non-fatal, enrichment data only
+	if pvcsErr == nil {
 		health.PVCCount = len(pvcs.Items)
 		for _, pvc := range pvcs.Items {
 			if pvc.Status.Phase == corev1.ClaimBound {
