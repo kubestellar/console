@@ -20,6 +20,7 @@ import { DashboardGrid } from './DashboardGrid'
 import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
 import { AddCardModal } from '../../../components/dashboard/AddCardModal'
 import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
+import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
 
 /** Card suggestion type from AddCardModal */
 interface CardSuggestion {
@@ -63,6 +64,11 @@ export function UnifiedDashboard({
     }
     return config.cards
   })
+
+  // Prefetch card chunks for this dashboard so React.lazy() resolves instantly
+  useEffect(() => {
+    prefetchCardChunks(cards.map(c => c.cardType))
+  }, [cards])
 
   // Loading state
   const [isLoading, setIsLoading] = useState(false)

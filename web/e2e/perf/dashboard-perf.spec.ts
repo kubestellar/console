@@ -101,6 +101,15 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
       localStorage.setItem('token', mode === 'demo' ? 'demo-token' : 'test-token')
       localStorage.setItem('kc-demo-mode', String(mode === 'demo'))
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kubestellar-console-tour-completed', 'true')
+      // Clear any stored dashboard card layouts from previous runs
+      // to ensure we test the default config, not stale persisted layouts
+      const keysToRemove: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.endsWith('-dashboard-cards')) keysToRemove.push(key)
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k))
     },
     { mode }
   )
@@ -119,8 +128,29 @@ async function measureDashboard(
   const navStart = Date.now()
   await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
 
-  // Give the page a moment to render its initial card layout
+  // Wait for cards to render (up to 3s for chunks to load)
   await page.waitForTimeout(500)
+  // Try waiting for at least one card, with a fallback
+  try {
+    await page.waitForSelector('[data-card-type]', { timeout: 3000 })
+  } catch {
+    // No cards found — log page state for debugging
+    const debugState = await page.evaluate(() => {
+      const body = document.body
+      const allDataAttrs = body.querySelectorAll('[data-card-type]')
+      const h1 = body.querySelector('h1')?.textContent || 'none'
+      const dialogs = body.querySelectorAll('[role="dialog"]')
+      const tourPrompt = body.querySelector('[data-testid="tour-prompt"]')
+      return {
+        cardTypeCount: allDataAttrs.length,
+        h1,
+        dialogCount: dialogs.length,
+        hasTourPrompt: !!tourPrompt,
+        bodyText: (body.textContent || '').slice(0, 300),
+      }
+    })
+    console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
+  }
 
   // Find all card containers
   const cardElements = await page.$$('[data-card-type]')
@@ -144,6 +174,30 @@ async function measureDashboard(
     )
 
     const timeToFirstContent = Date.now() - navStart
+
+    // Debug: log why a card timed out
+    if (timedOut) {
+      const debugInfo = await page.evaluate((selector: string) => {
+        const card = document.querySelector(selector)
+        if (!card) return { found: false }
+        const isLoading = card.getAttribute('data-loading')
+        const pulseEls = card.querySelectorAll('.animate-pulse')
+        const pulseInfo: { tag: string; classes: string; height: number; width: number }[] = []
+        for (const el of pulseEls) {
+          const rect = el.getBoundingClientRect()
+          pulseInfo.push({ tag: el.tagName, classes: el.className, height: rect.height, width: rect.width })
+        }
+        const text = (card.textContent || '').trim()
+        // Check for hidden content div (CardWrapper hides children when skeleton shows)
+        const hiddenDiv = card.querySelector('.hidden')
+        const contentsDiv = card.querySelector('.contents')
+        // Check if card has Suspense fallback (no real content yet)
+        const childContent = hiddenDiv || contentsDiv
+        const childText = childContent ? (childContent.textContent || '').trim().slice(0, 200) : 'N/A'
+        return { found: true, isLoading, pulseCount: pulseEls.length, pulseInfo, textLength: text.length, textSnippet: text.slice(0, 200), hasHiddenDiv: !!hiddenDiv, hasContentsDiv: !!contentsDiv, childText }
+      }, `[data-card-id="${cardId}"]`)
+      console.log(`  TIMEOUT DEBUG [${cardType}/${cardId}]:`, JSON.stringify(debugInfo, null, 2))
+    }
 
     if (!timedOut) {
       firstCardTime = Math.min(firstCardTime, timeToFirstContent)

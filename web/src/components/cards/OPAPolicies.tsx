@@ -7,6 +7,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useMissions } from '../../hooks/useMissions'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
+import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 
 // Sort options for clusters
@@ -61,6 +62,26 @@ interface OPAClusterItem {
   cluster: string // same as name, required for useCardData cluster filtering
   healthy?: boolean
   reachable?: boolean
+}
+
+/** Generate demo OPA statuses for instant display (no waiting for effects/API) */
+function generateDemoStatuses(): Record<string, GatekeeperStatus> {
+  const demoClusterNames = ['kind-hub', 'kind-worker1', 'kind-worker2']
+  const result: Record<string, GatekeeperStatus> = {}
+  for (const name of demoClusterNames) {
+    result[name] = {
+      cluster: name, installed: true, loading: false, policyCount: 3,
+      violationCount: Math.floor(Math.random() * 5), mode: 'warn',
+      modes: ['warn', 'enforce'],
+      policies: [
+        { name: 'require-labels', kind: 'K8sRequiredLabels', violations: 1, mode: 'warn' },
+        { name: 'allowed-repos', kind: 'K8sAllowedRepos', violations: 0, mode: 'enforce' },
+        { name: 'require-limits', kind: 'K8sRequireResourceLimits', violations: 2, mode: 'warn' },
+      ],
+      violations: [],
+    }
+  }
+  return result
 }
 
 // Common OPA Gatekeeper policy templates
@@ -1073,13 +1094,15 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     return clusters.length > 0 ? clusters : agentClusters
   }, [clusters, agentClusters])
 
-  // Initialize statuses from localStorage cache for instant display
+  // Initialize statuses from demo data or localStorage cache for instant display.
+  // In demo mode, provide synthetic statuses immediately so the card never enters
+  // skeleton state (the chunk load time + useEffect timing can cause 25s+ delays).
   const [statuses, setStatuses] = useState<Record<string, GatekeeperStatus>>(() => {
+    if (checkIsDemoMode()) return generateDemoStatuses()
     try {
       const cached = localStorage.getItem('opa-statuses-cache')
       if (cached) {
         const parsed = JSON.parse(cached)
-        // Check cache age - invalidate after 10 minutes for stale data
         const cacheTime = localStorage.getItem('opa-statuses-cache-time')
         const cacheAge = cacheTime ? Date.now() - parseInt(cacheTime, 10) : Infinity
         if (cacheAge < 10 * 60 * 1000) { // 10 minutes
@@ -1265,10 +1288,39 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     (reachableClusters.length > 0 && Object.keys(statuses).length === 0)
 
   // Report state to CardWrapper for refresh animation and skeleton
+  // In demo mode, report immediately ready to avoid skeleton deadlock
+  // (useClusters may not have populated yet, but demo statuses are provided via useEffect)
   useCardLoadingState({
-    isLoading: isLoading || (isOPAChecking && !hasOPAData),
-    hasAnyData: clusters.length > 0 && hasOPAData,
+    isLoading: shouldUseDemoData ? false : (isLoading || (isOPAChecking && !hasOPAData)),
+    hasAnyData: shouldUseDemoData ? true : (clusters.length > 0 && hasOPAData),
   })
+
+  // In demo mode, update statuses with real cluster names when they become available.
+  // Initial demo statuses are already provided by useState initializer (via checkIsDemoMode).
+  useEffect(() => {
+    if (!shouldUseDemoData) return
+    if (effectiveClusters.length === 0) return
+    // Only update if using the hardcoded demo cluster names
+    const currentNames = Object.keys(statuses)
+    const realNames = effectiveClusters.map(c => c.name)
+    const needsUpdate = currentNames.length === 0 || !realNames.every(n => currentNames.includes(n))
+    if (!needsUpdate) return
+    const demoStatuses: Record<string, GatekeeperStatus> = {}
+    for (const name of realNames) {
+      demoStatuses[name] = {
+        cluster: name, installed: true, loading: false, policyCount: 3,
+        violationCount: Math.floor(Math.random() * 5), mode: 'warn',
+        modes: ['warn', 'enforce'],
+        policies: [
+          { name: 'require-labels', kind: 'K8sRequiredLabels', violations: 1, mode: 'warn' },
+          { name: 'allowed-repos', kind: 'K8sAllowedRepos', violations: 0, mode: 'enforce' },
+          { name: 'require-limits', kind: 'K8sRequireResourceLimits', violations: 2, mode: 'warn' },
+        ],
+        violations: [],
+      }
+    }
+    setStatuses(demoStatuses)
+  }, [shouldUseDemoData, effectiveClusters])
 
   // Initial check - only check reachable clusters without cached data
   // Skip if we've already triggered a check this session
@@ -1362,8 +1414,8 @@ Let's start by discussing what kind of policy I need.`,
     })
   }
 
-  // Show skeleton until OPA checks have populated
-  if ((isLoading && clusters.length === 0) || (isOPAChecking && !hasOPAData)) {
+  // Show skeleton until OPA checks have populated (skip in demo mode — demo statuses are provided)
+  if (!shouldUseDemoData && ((isLoading && clusters.length === 0) || (isOPAChecking && !hasOPAData))) {
     return <CardSkeleton rows={4} type="list" showHeader showSearch />
   }
 

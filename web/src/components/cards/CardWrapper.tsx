@@ -10,6 +10,7 @@ import { cn } from '../../lib/cn'
 import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
@@ -862,7 +863,7 @@ export function CardWrapper({
   // Skeleton timeout: show skeleton for up to 5 seconds while waiting for card to report
   // After timeout, assume card doesn't use reporting and show content
   // IMPORTANT: Don't reset on childDataState change - this allows cached data to show immediately
-  const [skeletonTimedOut, setSkeletonTimedOut] = useState(false)
+  const [skeletonTimedOut, setSkeletonTimedOut] = useState(checkIsDemoMode)
   useEffect(() => {
     // Only run timeout once on mount - don't reset when childDataState changes
     // Cards with cached data will report hasData: true quickly, hiding skeleton
@@ -872,7 +873,7 @@ export function CardWrapper({
 
   // Skeleton delay: don't show skeleton immediately, wait a brief moment
   // This prevents flicker when cache loads quickly from IndexedDB
-  const [skeletonDelayPassed, setSkeletonDelayPassed] = useState(false)
+  const [skeletonDelayPassed, setSkeletonDelayPassed] = useState(checkIsDemoMode)
   useEffect(() => {
     const timer = setTimeout(() => setSkeletonDelayPassed(true), 100)
     return () => clearTimeout(timer)
@@ -881,7 +882,7 @@ export function CardWrapper({
   // Quick initial render timeout for cards that don't report state (static/demo cards)
   // If a card hasn't reported state within 150ms, assume it rendered content immediately
   // This prevents blank cards while still giving reporting cards time to report
-  const [initialRenderTimedOut, setInitialRenderTimedOut] = useState(false)
+  const [initialRenderTimedOut, setInitialRenderTimedOut] = useState(checkIsDemoMode)
   useEffect(() => {
     const timer = setTimeout(() => setInitialRenderTimedOut(true), 150)
     return () => clearTimeout(timer)
@@ -935,8 +936,8 @@ export function CardWrapper({
   const { isCollapsed: hookCollapsed, setCollapsed: hookSetCollapsed } = useCardCollapse(collapseKey)
 
   // Track whether initial data load has completed AND content has been visible
-  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false)
-  const [collapseDelayPassed, setCollapseDelayPassed] = useState(false)
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(checkIsDemoMode)
+  const [collapseDelayPassed, setCollapseDelayPassed] = useState(checkIsDemoMode)
 
   // Allow external control to override hook state
   // IMPORTANT: Don't collapse until initial data load is complete AND a brief delay has passed
@@ -1027,13 +1028,11 @@ export function CardWrapper({
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
-  // Demo/DEMO_DATA_CARDS suppress skeleton only when child has reported having data.
-  // During React.lazy() chunk loading, CardSuspenseFallback reports hasData: false —
-  // in that case, show skeleton even for demo cards so the body isn't blank.
-  // Once the actual card component mounts and reports hasData: true, skeleton is suppressed.
-  // Also delay skeleton display by 100ms to prevent flicker when cache loads quickly
-  // Mode switching forces skeleton to show for smooth transitions (no delay for mode switching)
-  const demoSuppressesSkeleton = (effectiveIsDemoData || isDemoMode) && effectiveHasData
+  // In demo mode, never show skeleton — demo data is synchronous so the card body
+  // will render as soon as the React.lazy() chunk loads. Showing a skeleton during
+  // chunk download adds perceived latency with no benefit.
+  // Mode switching forces skeleton to show for smooth transitions.
+  const demoSuppressesSkeleton = effectiveIsDemoData || isDemoMode
   const wantsToShowSkeleton = !demoSuppressesSkeleton && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline) || forceSkeletonForModeSwitching
   const shouldShowSkeleton = (wantsToShowSkeleton && skeletonDelayPassed) || forceSkeletonForModeSwitching
 

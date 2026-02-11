@@ -27,7 +27,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useDashboardContext } from '../../hooks/useDashboardContext'
 import { DashboardDropZone } from './DashboardDropZone'
 import { useToast } from '../ui/Toast'
-import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../cards/cardRegistry'
+import { CARD_COMPONENTS, DEMO_DATA_CARDS, prefetchCardChunks } from '../cards/cardRegistry'
 import { ROUTES } from '../../config/routes'
 import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { AddCardModal } from './AddCardModal'
@@ -760,6 +760,11 @@ export function Dashboard() {
     }
     return c.card_type
   })
+
+  // Prefetch card chunks for this dashboard so React.lazy() resolves instantly
+  useEffect(() => {
+    prefetchCardChunks(localCards.map(c => c.card_type))
+  }, [localCards])
 
   // Check if any cards are using demo data
   const hasDemoDataCards = localCards.some(c => DEMO_DATA_CARDS.has(c.card_type))

@@ -27,6 +27,7 @@ import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
 import { DashboardHeader } from '../../components/shared/DashboardHeader'
 import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
+import { prefetchCardChunks } from '../../components/cards/cardRegistry'
 
 // ============================================================================
 // Types
@@ -141,6 +142,11 @@ export function DashboardPage({
     defaultCards,
     onRefresh,
   })
+
+  // Prefetch React.lazy() chunks for cards on this dashboard
+  useEffect(() => {
+    prefetchCardChunks(cards.map(c => c.card_type))
+  }, [cards])
 
   // Combined refreshing state
   const isRefreshing = externalRefreshing || showIndicator

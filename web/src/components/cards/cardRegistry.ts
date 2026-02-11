@@ -1,14 +1,26 @@
 import { lazy, Suspense, createElement, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { useReportCardDataState } from './CardDataContext'
+import { isDemoMode } from '../../lib/demoMode'
 
 /**
- * Suspense fallback that reports isLoading: true to CardWrapper.
- * Without this, Suspense renders null while chunks load, causing CardWrapper
- * to assume the card is static (after 150ms timeout) and show an empty body.
+ * Suspense fallback that reports loading state to CardWrapper while chunks load.
+ *
+ * In demo mode: reports hasData=true so CardWrapper skips the skeleton entirely.
+ * Demo data is synchronous — the only delay is chunk download, and showing a
+ * skeleton for that is unnecessary and adds 550ms+ of perceived latency.
+ *
+ * In live mode: reports isLoading=true so CardWrapper shows a proper skeleton
+ * while waiting for the chunk (and subsequent API data).
  */
 function CardSuspenseFallback() {
-  useReportCardDataState({ hasData: false, isFailed: false, consecutiveFailures: 0, isLoading: true })
+  const demo = isDemoMode()
+  useReportCardDataState({
+    hasData: demo,
+    isFailed: false,
+    consecutiveFailures: 0,
+    isLoading: !demo,
+  })
   return null
 }
 
@@ -505,12 +517,152 @@ export const DEMO_EXEMPT_CARDS = new Set([
 ])
 
 /**
- * Prefetch component chunks for demo-only cards so they load instantly
- * when the user navigates to a dashboard that contains them.
- * Without this, React.lazy() shows a skeleton while the chunk downloads.
+ * Map of card type → chunk preload function.
+ * Uses the same import paths as the lazy() declarations above so that
+ * triggering an import here warms the browser's module cache and the
+ * subsequent lazy() render resolves instantly (no skeleton flash).
+ *
+ * Cards that share a module (e.g. ComplianceCards) share one import.
+ */
+const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
+  // Core cards
+  cluster_health: () => import('./ClusterHealth'),
+  event_stream: () => import('./EventStream'),
+  event_summary: () => import('./EventSummary'),
+  warning_events: () => import('./WarningEvents'),
+  recent_events: () => import('./RecentEvents'),
+  pod_issues: () => import('./PodIssues'),
+  top_pods: () => import('./TopPods'),
+  app_status: () => import('./AppStatus'),
+  resource_usage: () => import('./ResourceUsage'),
+  cluster_metrics: () => import('./ClusterMetrics'),
+  deployment_status: () => import('./DeploymentStatus'),
+  deployment_progress: () => import('./DeploymentProgress'),
+  deployment_issues: () => import('./DeploymentIssues'),
+  gitops_drift: () => import('./GitOpsDrift'),
+  upgrade_status: () => import('./UpgradeStatus'),
+  resource_capacity: () => import('./ResourceCapacity'),
+  gpu_inventory: () => import('./GPUInventory'),
+  gpu_status: () => import('./GPUStatus'),
+  gpu_overview: () => import('./GPUOverview'),
+  gpu_workloads: () => import('./GPUWorkloads'),
+  security_issues: () => import('./SecurityIssues'),
+  events_timeline: () => import('./EventsTimeline'),
+  pod_health_trend: () => import('./PodHealthTrend'),
+  resource_trend: () => import('./ResourceTrend'),
+  gpu_utilization: () => import('./GPUUtilization'),
+  gpu_usage_trend: () => import('./GPUUsageTrend'),
+  cluster_resource_tree: () => import('./cluster-resource-tree/ClusterResourceTree'),
+  storage_overview: () => import('./StorageOverview'),
+  pvc_status: () => import('./PVCStatus'),
+  network_overview: () => import('./NetworkOverview'),
+  service_status: () => import('./ServiceStatus'),
+  compute_overview: () => import('./ComputeOverview'),
+  cluster_focus: () => import('./ClusterFocus'),
+  cluster_comparison: () => import('./ClusterComparison'),
+  cluster_costs: () => import('./ClusterCosts'),
+  cluster_network: () => import('./ClusterNetwork'),
+  cluster_locations: () => import('./ClusterLocations'),
+  namespace_overview: () => import('./NamespaceOverview'),
+  namespace_quotas: () => import('./NamespaceQuotas'),
+  namespace_rbac: () => import('./NamespaceRBAC'),
+  namespace_events: () => import('./NamespaceEvents'),
+  namespace_monitor: () => import('./NamespaceMonitor'),
+  operator_status: () => import('./OperatorStatus'),
+  operator_subscriptions: () => import('./OperatorSubscriptions'),
+  crd_health: () => import('./CRDHealth'),
+  helm_release_status: () => import('./HelmReleaseStatus'),
+  helm_values_diff: () => import('./HelmValuesDiff'),
+  helm_history: () => import('./HelmHistory'),
+  chart_versions: () => import('./ChartVersions'),
+  kustomization_status: () => import('./KustomizationStatus'),
+  overlay_comparison: () => import('./OverlayComparison'),
+  argocd_applications: () => import('./ArgoCDApplications'),
+  argocd_sync_status: () => import('./ArgoCDSyncStatus'),
+  argocd_health: () => import('./ArgoCDHealth'),
+  active_alerts: () => import('./ActiveAlerts'),
+  alert_rules: () => import('./AlertRules'),
+  opencost_overview: () => import('./OpenCostOverview'),
+  kubecost_overview: () => import('./KubecostOverview'),
+  // Policy & compliance (shared modules)
+  opa_policies: () => import('./OPAPolicies'),
+  kyverno_policies: () => import('./KyvernoPolicies'),
+  falco_alerts: () => import('./ComplianceCards'),
+  trivy_scan: () => import('./ComplianceCards'),
+  kubescape_scan: () => import('./ComplianceCards'),
+  policy_violations: () => import('./ComplianceCards'),
+  compliance_score: () => import('./ComplianceCards'),
+  vault_secrets: () => import('./DataComplianceCards'),
+  external_secrets: () => import('./DataComplianceCards'),
+  cert_manager: () => import('./DataComplianceCards'),
+  // Workload detection
+  prow_jobs: () => import('./workload-detection/ProwJobs'),
+  prow_status: () => import('./workload-detection/ProwStatus'),
+  prow_history: () => import('./workload-detection/ProwHistory'),
+  llm_inference: () => import('./workload-detection/LLMInference'),
+  llm_models: () => import('./workload-detection/LLMModels'),
+  ml_jobs: () => import('./workload-detection/MLJobs'),
+  ml_notebooks: () => import('./workload-detection/MLNotebooks'),
+  // GitHub & misc
+  github_activity: () => import('./GitHubActivity'),
+  hardware_health: () => import('./HardwareHealthCard'),
+  provider_health: () => import('./ProviderHealth'),
+  // MCS & Gateway
+  service_exports: () => import('./ServiceExports'),
+  service_imports: () => import('./ServiceImports'),
+  gateway_status: () => import('./GatewayStatus'),
+  service_topology: () => import('./ServiceTopology'),
+  // Deploy dashboard
+  workload_deployment: () => import('./WorkloadDeployment'),
+  cluster_groups: () => import('./ClusterGroups'),
+  deployment_missions: () => import('./Missions'),
+  resource_marshall: () => import('./ResourceMarshall'),
+  // Workload monitors
+  workload_monitor: () => import('./workload-monitor/WorkloadMonitor'),
+  llmd_stack_monitor: () => import('./workload-monitor/LLMdStackMonitor'),
+  prow_ci_monitor: () => import('./workload-monitor/ProwCIMonitor'),
+  github_ci_monitor: () => import('./workload-monitor/GitHubCIMonitor'),
+  cluster_health_monitor: () => import('./workload-monitor/ClusterHealthMonitor'),
+  // LLM-d visualization
+  llmd_flow: () => import('./llmd/LLMdFlow'),
+  kvcache_monitor: () => import('./llmd/KVCacheMonitor'),
+  epp_routing: () => import('./llmd/EPPRouting'),
+  pd_disaggregation: () => import('./llmd/PDDisaggregation'),
+  llmd_benchmarks: () => import('./llmd/LLMdBenchmarks'),
+  llmd_ai_insights: () => import('./llmd/LLMdAIInsights'),
+  llmd_configurator: () => import('./llmd/LLMdConfigurator'),
+  // Kagenti AI Agents
+  kagenti_status: () => import('./KagentiStatusCard'),
+  kagenti_agent_fleet: () => import('./kagenti/KagentiAgentFleet'),
+  kagenti_build_pipeline: () => import('./kagenti/KagentiBuildPipeline'),
+  kagenti_tool_registry: () => import('./kagenti/KagentiToolRegistry'),
+  kagenti_agent_discovery: () => import('./kagenti/KagentiAgentDiscovery'),
+  kagenti_security: () => import('./kagenti/KagentiSecurity'),
+  kagenti_security_posture: () => import('./kagenti/KagentiSecurityPosture'),
+  kagenti_topology: () => import('./kagenti/KagentiTopology'),
+}
+
+/**
+ * Prefetch component chunks for specific card types.
+ * Call this when a dashboard mounts to preload its card chunks in parallel,
+ * eliminating the skeleton flash caused by React.lazy() chunk loading.
+ * Repeated calls with the same card types are no-ops (browser caches modules).
+ */
+export function prefetchCardChunks(cardTypes: string[]): void {
+  for (const type of cardTypes) {
+    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => {})
+  }
+}
+
+/**
+ * Prefetch component chunks for demo-only cards at startup.
+ * These are the shared modules behind DEMO_DATA_CARDS entries.
+ * Per-dashboard prefetching (via prefetchCardChunks) handles the rest.
  */
 export function prefetchDemoCardChunks(): void {
-  const chunks = [
+  // Use direct imports (not CARD_CHUNK_PRELOADERS) for the initial startup batch
+  // to ensure fast, deduped chunk loading without flooding the dev server
+  const startupChunks = [
     () => import('./ServiceExports'),
     () => import('./ServiceImports'),
     () => import('./GatewayStatus'),
@@ -536,7 +688,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiSecurity'),
     () => import('./kagenti/KagentiTopology'),
   ]
-  chunks.forEach(load => load().catch(() => {}))
+  startupChunks.forEach(load => load().catch(() => {}))
 }
 
 /**

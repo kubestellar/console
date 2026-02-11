@@ -106,7 +106,15 @@ export async function waitForCardContent(
         const card = document.querySelector(selector)
         if (!card) return false
         const isLoading = card.getAttribute('data-loading') === 'true'
-        const hasSkeleton = card.querySelector('.animate-pulse') !== null
+        // Check for skeleton blocks — large animate-pulse divs (>40px tall)
+        // that are layout placeholders. Small animate-pulse elements (icons,
+        // status dots) are legitimate content and should not count as skeletons.
+        const pulseEls = card.querySelectorAll('.animate-pulse')
+        let hasSkeleton = false
+        for (const el of pulseEls) {
+          const rect = el.getBoundingClientRect()
+          if (rect.height > 40) { hasSkeleton = true; break }
+        }
         const text = card.textContent || ''
         return !isLoading && !hasSkeleton && text.trim().length > 10
       },
