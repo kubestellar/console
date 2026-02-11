@@ -56,6 +56,8 @@ archives:
       - tar.gz
     name_template: "console_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
+      - src: "web/dist/*"
+        dst: "web/dist"
       - src: "web/dist/**/*"
         dst: "web/dist"
 

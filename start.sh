@@ -214,7 +214,7 @@ fi
 # Start console (serves frontend from web/dist at the specified port)
 echo "Starting console on port $PORT..."
 cd "$INSTALL_DIR"
-PORT="$PORT" DEV_MODE="${DEV_MODE:-true}" ./console --port "$PORT" &
+./console --port "$PORT" &
 CONSOLE_PID=$!
 
 # Wait for console to be ready
