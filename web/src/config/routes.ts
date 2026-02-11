@@ -9,8 +9,6 @@ export const ROUTES = {
   // Auth routes
   LOGIN: '/login',
   AUTH_CALLBACK: '/auth/callback',
-  ONBOARDING: '/onboarding',
-  
   // Main routes
   HOME: '/',
   CUSTOM_DASHBOARD: '/custom-dashboard/:id',

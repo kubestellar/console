@@ -207,8 +207,7 @@ export function useLastRoute() {
   useEffect(() => {
     // Don't track auth-related pages
     if (location.pathname.startsWith('/auth') ||
-        location.pathname === '/login' ||
-        location.pathname === '/onboarding') {
+        location.pathname === '/login') {
       return
     }
 

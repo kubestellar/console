@@ -22,7 +22,6 @@ import { prefetchCardData } from './lib/prefetchCardData'
 // Lazy load all page components for better code splitting
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
 const AuthCallback = lazy(() => import('./components/auth/AuthCallback').then(m => ({ default: m.AuthCallback })))
-const Onboarding = lazy(() => import('./components/onboarding/Onboarding').then(m => ({ default: m.Onboarding })))
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(m => ({ default: m.Dashboard })))
 const CustomDashboard = lazy(() => import('./components/dashboard/CustomDashboard').then(m => ({ default: m.CustomDashboard })))
 const Settings = lazy(() => import('./components/settings/Settings').then(m => ({ default: m.Settings })))
@@ -177,16 +176,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function OnboardedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
-
-  if (user && !user.onboarded) {
-    return <Navigate to={ROUTES.ONBOARDING} replace />
-  }
-
-  return <>{children}</>
-}
-
 // Runs usePersistedSettings early to restore settings from ~/.kc/settings.json
 // if localStorage was cleared. Must be inside AuthProvider for API access.
 function SettingsSyncInit() {
@@ -235,22 +224,12 @@ function App() {
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path="/widget" element={<MiniDashboard />} />
         <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute>
-              <Onboarding />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Dashboard />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -258,11 +237,9 @@ function App() {
           path="/custom-dashboard/:id"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <CustomDashboard />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -270,11 +247,9 @@ function App() {
           path="/clusters"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Clusters />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -282,11 +257,9 @@ function App() {
           path="/workloads"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Workloads />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -294,11 +267,9 @@ function App() {
           path="/nodes"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Nodes />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -306,11 +277,9 @@ function App() {
           path="/deployments"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Deployments />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -318,11 +287,9 @@ function App() {
           path="/pods"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Pods />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -330,11 +297,9 @@ function App() {
           path="/services"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Services />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -342,11 +307,9 @@ function App() {
           path="/operators"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Operators />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -354,11 +317,9 @@ function App() {
           path="/helm"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <HelmReleases />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -366,11 +327,9 @@ function App() {
           path="/logs"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Logs />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -378,11 +337,9 @@ function App() {
           path="/compute"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Compute />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -390,11 +347,9 @@ function App() {
           path="/compute/compare"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <ClusterComparisonPage />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -402,11 +357,9 @@ function App() {
           path="/storage"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Storage />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -414,11 +367,9 @@ function App() {
           path="/network"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Network />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -426,11 +377,9 @@ function App() {
           path="/events"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Events />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -438,11 +387,9 @@ function App() {
           path="/security"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Security />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -450,11 +397,9 @@ function App() {
           path="/gitops"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <GitOps />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -462,11 +407,9 @@ function App() {
           path="/alerts"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Alerts />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -474,11 +417,9 @@ function App() {
           path="/cost"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Cost />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -486,11 +427,9 @@ function App() {
           path="/security-posture"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Compliance />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -499,11 +438,9 @@ function App() {
           path="/compliance"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Compliance />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -511,11 +448,9 @@ function App() {
           path="/data-compliance"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <DataCompliance />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -523,11 +458,9 @@ function App() {
           path="/gpu-reservations"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <GPUReservations />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -535,11 +468,9 @@ function App() {
           path="/history"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <CardHistoryWithRestore />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -547,11 +478,9 @@ function App() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Settings />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -559,11 +488,9 @@ function App() {
           path="/users"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <UserManagementPage />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -571,11 +498,9 @@ function App() {
           path="/namespaces"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <NamespaceManager />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -583,11 +508,9 @@ function App() {
           path="/arcade"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Arcade />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -595,11 +518,9 @@ function App() {
           path="/deploy"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <Deploy />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -607,11 +528,9 @@ function App() {
           path="/ai-ml"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <AIML />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -619,11 +538,9 @@ function App() {
           path="/ai-agents"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <AIAgents />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -631,11 +548,9 @@ function App() {
           path="/ci-cd"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <CICD />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -644,11 +559,9 @@ function App() {
           path="/test/unified-card"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <UnifiedCardTest />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -656,11 +569,9 @@ function App() {
           path="/test/unified-stats"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <UnifiedStatsTest />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -668,11 +579,9 @@ function App() {
           path="/test/unified-dashboard"
           element={
             <ProtectedRoute>
-              <OnboardedRoute>
-                <Layout>
+              <Layout>
                   <UnifiedDashboardTest />
-                </Layout>
-              </OnboardedRoute>
+              </Layout>
             </ProtectedRoute>
           }
         />

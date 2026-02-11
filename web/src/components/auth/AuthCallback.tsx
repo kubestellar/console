@@ -17,10 +17,9 @@ export function AuthCallback() {
     hasProcessed.current = true
 
     const token = searchParams.get('token')
-    const onboarded = searchParams.get('onboarded') === 'true'
     const error = searchParams.get('error')
 
-    console.log('[AuthCallback] Starting auth flow', { hasToken: !!token, onboarded, error })
+    console.log('[AuthCallback] Starting auth flow', { hasToken: !!token, error })
 
     if (error) {
       console.error('Auth error:', error)
@@ -29,12 +28,12 @@ export function AuthCallback() {
     }
 
     if (token) {
-      setToken(token, onboarded)
+      setToken(token, true)
       setStatus('Fetching user info...')
 
       // Navigate directly to the last visited dashboard route instead of '/'
       // to avoid a flash of the default dashboard before useLastRoute redirects.
-      const destination = onboarded ? (getLastRoute() || ROUTES.HOME) : ROUTES.ONBOARDING
+      const destination = getLastRoute() || ROUTES.HOME
 
       // Add timeout to prevent hanging forever
       const timeoutId = setTimeout(() => {
