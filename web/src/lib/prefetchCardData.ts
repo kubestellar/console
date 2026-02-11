@@ -2,12 +2,11 @@
  * Prefetch core Kubernetes data at startup so dashboard cards render instantly.
  *
  * Two tiers:
- *  1. Core data (pods, events, deployments, etc.) — most dashboards need these
- *  2. Specialty data (Prow, LLM-d) — niche dashboards, fetched after core completes
+ *  1. Core data (pods, events, deployments, etc.) — all fired in parallel
+ *  2. Specialty data (Prow, LLM-d) — starts 1s after core, also in parallel
  *
  * Safety:
- * - Runs via requestIdleCallback — only when browser is idle
- * - 500ms stagger between fetches — no burst
+ * - Each prefetchCache call is async and non-blocking
  * - Each fetch has built-in timeouts
  * - Failures are silently ignored (cards fall back to on-demand fetch or demo data)
  */
@@ -15,7 +14,7 @@
 import { prefetchCache } from './cache'
 import { coreFetchers, specialtyFetchers } from '../hooks/useCachedData'
 
-const STAGGER_MS = 500
+const SPECIALTY_DELAY_MS = 1000
 
 interface PrefetchEntry {
   key: string
@@ -46,18 +45,19 @@ export function prefetchCardData(): void {
   if (prefetched) return
   prefetched = true
 
-  // Tier 1: Core data — staggered 500ms apart
-  CORE_ENTRIES.forEach((entry, i) => {
-    setTimeout(() => {
-      prefetchCache(entry.key, entry.fetcher, entry.initial).catch(() => {})
-    }, i * STAGGER_MS)
-  })
+  // Tier 1: Core data — all in parallel
+  Promise.allSettled(
+    CORE_ENTRIES.map(entry =>
+      prefetchCache(entry.key, entry.fetcher, entry.initial)
+    )
+  ).catch(() => {})
 
-  // Tier 2: Specialty data — starts after core completes
-  const specialtyDelay = CORE_ENTRIES.length * STAGGER_MS + 1000
-  SPECIALTY_ENTRIES.forEach((entry, i) => {
-    setTimeout(() => {
-      prefetchCache(entry.key, entry.fetcher, entry.initial).catch(() => {})
-    }, specialtyDelay + i * STAGGER_MS)
-  })
+  // Tier 2: Specialty data — starts 1s after core begins
+  setTimeout(() => {
+    Promise.allSettled(
+      SPECIALTY_ENTRIES.map(entry =>
+        prefetchCache(entry.key, entry.fetcher, entry.initial)
+      )
+    ).catch(() => {})
+  }, SPECIALTY_DELAY_MS)
 }

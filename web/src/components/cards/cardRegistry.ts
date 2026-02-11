@@ -505,6 +505,41 @@ export const DEMO_EXEMPT_CARDS = new Set([
 ])
 
 /**
+ * Prefetch component chunks for demo-only cards so they load instantly
+ * when the user navigates to a dashboard that contains them.
+ * Without this, React.lazy() shows a skeleton while the chunk downloads.
+ */
+export function prefetchDemoCardChunks(): void {
+  const chunks = [
+    () => import('./ServiceExports'),
+    () => import('./ServiceImports'),
+    () => import('./GatewayStatus'),
+    () => import('./ServiceTopology'),
+    () => import('./ArgoCDApplications'),
+    () => import('./ArgoCDHealth'),
+    () => import('./ArgoCDSyncStatus'),
+    () => import('./KustomizationStatus'),
+    () => import('./OverlayComparison'),
+    () => import('./OpenCostOverview'),
+    () => import('./KubecostOverview'),
+    () => import('./KyvernoPolicies'),
+    () => import('./ComplianceCards'),
+    () => import('./DataComplianceCards'),
+    () => import('./workload-detection/MLJobs'),
+    () => import('./workload-detection/MLNotebooks'),
+    () => import('./llmd/LLMdConfigurator'),
+    () => import('./KagentiStatusCard'),
+    () => import('./kagenti/KagentiAgentFleet'),
+    () => import('./kagenti/KagentiBuildPipeline'),
+    () => import('./kagenti/KagentiToolRegistry'),
+    () => import('./kagenti/KagentiAgentDiscovery'),
+    () => import('./kagenti/KagentiSecurity'),
+    () => import('./kagenti/KagentiTopology'),
+  ]
+  chunks.forEach(load => load().catch(() => {}))
+}
+
+/**
  * Cards that display live/real-time data streams.
  * These show a "Live" badge in the title when showing real data (not demo).
  * Primarily time-series, trend, and event streaming cards.
