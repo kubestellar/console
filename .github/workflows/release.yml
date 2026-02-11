@@ -284,10 +284,11 @@ jobs:
 
       - name: Update Chart.yaml version
         run: |
-          VERSION="${{ needs.determine-version.outputs.version }}"
-          VERSION="${VERSION#v}"
-          sed -i "s/^version:.*/version: $VERSION/" deploy/helm/kubestellar-console/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" deploy/helm/kubestellar-console/Chart.yaml
+          FULL_VERSION="${{ needs.determine-version.outputs.version }}"
+          CHART_VERSION="${FULL_VERSION#v}"
+          sed -i "s/^version:.*/version: $CHART_VERSION/" deploy/helm/kubestellar-console/Chart.yaml
+          # appVersion keeps "v" prefix to match Docker image tags (v0.3.9, etc.)
+          sed -i "s/^appVersion:.*/appVersion: \"$FULL_VERSION\"/" deploy/helm/kubestellar-console/Chart.yaml
           cat deploy/helm/kubestellar-console/Chart.yaml
 
       - name: Package Helm chart

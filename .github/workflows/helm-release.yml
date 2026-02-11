@@ -47,7 +47,8 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/^version:.*/version: $VERSION/" deploy/helm/kubestellar-console/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" deploy/helm/kubestellar-console/Chart.yaml
+          # appVersion keeps "v" prefix to match Docker image tags (v0.3.9, etc.)
+          sed -i "s/^appVersion:.*/appVersion: \"v$VERSION\"/" deploy/helm/kubestellar-console/Chart.yaml
           cat deploy/helm/kubestellar-console/Chart.yaml
 
       - name: Package Helm chart
