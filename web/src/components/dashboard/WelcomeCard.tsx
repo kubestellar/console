@@ -33,7 +33,7 @@ export function WelcomeCard() {
         </div>
         <div>
           <h3 className="text-base font-semibold text-foreground">Getting Started</h3>
-          <p className="text-sm text-muted-foreground">Set up your console in a few steps</p>
+          <p className="text-sm text-muted-foreground">You're up and running — just a few optional steps left</p>
         </div>
       </div>
 

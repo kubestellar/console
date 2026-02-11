@@ -1,6 +1,7 @@
 #!/bin/bash
 # KubeStellar Console - Quick Start
 #
+# Up and running in under a minute.
 # Downloads pre-built binaries and starts the console locally.
 # No Go, Node.js, or build tools required — just curl.
 #
@@ -123,7 +124,7 @@ open_browser() {
 }
 
 # --- Main ---
-echo "=== KubeStellar Console Quick Start ==="
+echo "=== KubeStellar Console — Up in Under a Minute ==="
 echo ""
 
 # Check prerequisites

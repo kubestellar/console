@@ -41,7 +41,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
       <BaseModal.Header
         title="Run KubeStellar Console Locally"
-        description="Downloads pre-built binaries and starts in seconds"
+        description="Up and running in under a minute — just curl"
         icon={Rocket}
         onClose={onClose}
         showBack={false}
@@ -60,7 +60,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                   <span className="font-medium text-sm text-foreground">Start the console</span>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Downloads binaries, starts the backend + agent, and opens your browser
+                  Downloads binaries, starts the backend + agent, and opens your browser — typically under 45 seconds
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">

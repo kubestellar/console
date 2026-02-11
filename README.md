@@ -139,15 +139,15 @@ The agent implements several security measures:
 
 ## Installation
 
-### Quick Start
+### Quick Start — Up and Running in Under a Minute
 
-Download pre-built binaries and start in seconds (only requires `curl`):
+One command. No dependencies. Just `curl`.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
-This downloads the console and kc-agent binaries, starts both, and opens your browser at http://localhost:8080.
+This downloads the console and kc-agent binaries, starts both, and opens your browser at http://localhost:8080 — typically in under 45 seconds.
 
 **Optional: Enable GitHub OAuth login**
 
@@ -159,7 +159,7 @@ This downloads the console and kc-agent binaries, starts both, and opens your br
    GITHUB_CLIENT_ID=your-client-id
    GITHUB_CLIENT_SECRET=your-client-secret
    ```
-3. Restart with `./startup-oauth.sh`
+3. Restart: `curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash`
 
 ### Claude Code Plugins
 

@@ -74,7 +74,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-foreground">Install KubeStellar Console</h2>
-                <p className="text-sm text-muted-foreground">Run the full console on your machine</p>
+                <p className="text-sm text-muted-foreground">Up and running in under a minute</p>
               </div>
             </div>
           </div>
@@ -92,7 +92,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <CopyCommand command="curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash" />
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Downloads pre-built binaries and starts in seconds. Only requires curl.
+                  One command, no dependencies — up and running in under a minute. Only requires curl.
                 </p>
               </div>
             </div>
