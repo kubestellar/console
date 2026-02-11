@@ -6,29 +6,33 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { isClusterUnreachable, isClusterLoading } from '../utils'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderColor, getConsoleUrl } from '../../ui/CloudProviderIcon'
 
-// Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster
+// Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster.
+// Uses refs for condition checks to avoid stale closure issues when refreshing
+// transitions true→false faster than React can commit the spinning state update.
 function useMinSpin(refreshing: boolean, minDurationMs = 1000): boolean {
   const [spinning, setSpinning] = useState(false)
+  const spinningRef = useRef(false)
   const spinStartRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     if (refreshing) {
-      // Start spinning, record when it began
       clearTimeout(timerRef.current)
-      if (!spinning) {
+      if (!spinningRef.current) {
         spinStartRef.current = Date.now()
+        spinningRef.current = true
         setSpinning(true)
       }
-    } else if (spinning) {
-      // Refreshing ended — ensure we spin for at least minDurationMs total
+    } else if (spinningRef.current) {
       const elapsed = Date.now() - spinStartRef.current
       const remaining = Math.max(0, minDurationMs - elapsed)
-      timerRef.current = setTimeout(() => setSpinning(false), remaining)
+      timerRef.current = setTimeout(() => {
+        spinningRef.current = false
+        setSpinning(false)
+      }, remaining)
     }
-  }, [refreshing]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refreshing, minDurationMs])
 
-  // Cleanup on unmount only
   useEffect(() => {
     return () => clearTimeout(timerRef.current)
   }, [])
