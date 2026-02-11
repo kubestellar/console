@@ -1,8 +1,10 @@
 import { RefreshCw } from 'lucide-react'
+import { Skeleton } from './Skeleton'
 
 /**
  * Skeleton loading card for cluster display
  * Shows placeholder content while cluster data is loading
+ * Uses the shared Skeleton component for consistent styling with dashboard cards
  */
 export function ClusterCardSkeleton() {
   return (
@@ -16,14 +18,14 @@ export function ClusterCardSkeleton() {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           {/* Status indicator placeholder */}
-          <div className="w-4 h-4 rounded-full bg-muted-foreground/20" />
+          <Skeleton variant="circular" width={16} height={16} />
           <div>
             {/* Cluster name */}
-            <div className="h-5 w-32 bg-muted-foreground/20 rounded mb-2" />
+            <Skeleton variant="rounded" width={128} height={20} className="mb-2" />
             {/* Server and user placeholders */}
             <div className="flex flex-col gap-1.5">
-              <div className="h-3 w-48 bg-muted-foreground/10 rounded" />
-              <div className="h-3 w-28 bg-muted-foreground/10 rounded" />
+              <Skeleton variant="text" width={192} height={12} />
+              <Skeleton variant="text" width={112} height={12} />
             </div>
           </div>
         </div>
@@ -33,8 +35,8 @@ export function ClusterCardSkeleton() {
       <div className="grid grid-cols-4 gap-4 text-center">
         {[...Array(4)].map((_, i) => (
           <div key={i}>
-            <div className="h-6 w-10 mx-auto bg-muted-foreground/20 rounded mb-1" />
-            <div className="h-3 w-12 mx-auto bg-muted-foreground/10 rounded" />
+            <Skeleton variant="rounded" width={40} height={24} className="mx-auto mb-1" />
+            <Skeleton variant="text" width={48} height={12} className="mx-auto" />
           </div>
         ))}
       </div>
@@ -42,8 +44,8 @@ export function ClusterCardSkeleton() {
       {/* Footer */}
       <div className="mt-4 pt-4 border-t border-border">
         <div className="flex items-center justify-between">
-          <div className="h-3 w-24 bg-muted-foreground/10 rounded" />
-          <div className="h-3 w-20 bg-muted-foreground/10 rounded" />
+          <Skeleton variant="text" width={96} height={12} />
+          <Skeleton variant="text" width={80} height={12} />
         </div>
       </div>
     </div>
@@ -52,6 +54,7 @@ export function ClusterCardSkeleton() {
 
 /**
  * Stats overview skeleton for the top summary section
+ * Uses the shared Skeleton component for consistent styling with dashboard cards
  */
 export function StatsOverviewSkeleton() {
   return (
@@ -62,8 +65,8 @@ export function StatsOverviewSkeleton() {
           <div className="absolute top-2 right-2">
             <RefreshCw className="w-3 h-3 text-muted-foreground/40 animate-spin" />
           </div>
-          <div className="h-8 w-12 bg-muted-foreground/20 rounded mb-2" />
-          <div className="h-4 w-16 bg-muted-foreground/10 rounded" />
+          <Skeleton variant="rounded" width={48} height={32} className="mb-2" />
+          <Skeleton variant="text" width={64} height={16} />
         </div>
       ))}
     </div>

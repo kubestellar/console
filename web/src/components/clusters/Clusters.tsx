@@ -1741,7 +1741,7 @@ export function Clusters() {
             <>
               <div className="flex gap-2 mb-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-8 w-24 bg-card/50 rounded-lg animate-pulse" />
+                  <div key={i} className="h-8 w-24 bg-secondary/60 rounded-lg animate-pulse" />
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
