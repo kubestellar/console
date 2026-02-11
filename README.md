@@ -161,6 +161,47 @@ This downloads the console and kc-agent binaries, starts both, and opens your br
    ```
 3. Restart: `curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash`
 
+### Deploy to Kubernetes
+
+One command. Requires `helm` and `kubectl`.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh | bash
+```
+
+Options:
+
+| Flag | Description |
+|------|-------------|
+| `--context, -c <name>` | Kubernetes context (default: current) |
+| `--namespace, -n <name>` | Namespace (default: kubestellar-console) |
+| `--openshift` | Enable OpenShift Route |
+| `--ingress <host>` | Enable Ingress with hostname |
+| `--github-oauth` | Prompt for GitHub OAuth credentials |
+| `--uninstall` | Remove the console |
+
+Examples:
+
+```bash
+# Deploy to a specific cluster
+curl -sSL .../deploy.sh | bash -s -- --context my-cluster
+
+# Deploy with OpenShift Route
+curl -sSL .../deploy.sh | bash -s -- --openshift
+
+# Deploy with Ingress
+curl -sSL .../deploy.sh | bash -s -- --ingress console.example.com
+
+# Deploy with GitHub OAuth
+GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy \
+  curl -sSL .../deploy.sh | bash
+
+# Uninstall
+curl -sSL .../deploy.sh | bash -s -- --uninstall
+```
+
+Or manually with Helm — see [Kubernetes Deployment (Helm)](#kubernetes-deployment-helm) below.
+
 ### Claude Code Plugins
 
 For AI-powered operations, install [Claude Code](https://claude.ai/claude-code) and the KubeStellar plugins:

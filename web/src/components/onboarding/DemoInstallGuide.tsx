@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { X, Copy, Check, ExternalLink, Settings, Rocket, Key, Download, ChevronRight, Github } from 'lucide-react'
+import { X, Copy, Check, ExternalLink, Settings, Rocket, Key, Download, ChevronRight, Github, Server } from 'lucide-react'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
 
@@ -135,10 +135,27 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
-            {/* Step 3: Optional - AI keys */}
+            {/* Step 3: Optional - Deploy to Kubernetes */}
             <div className="flex gap-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-dashed border-gray-600 text-gray-500 text-sm font-bold shrink-0">
                 3
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Server className="w-4 h-4 text-green-400" />
+                  <h3 className="text-sm font-semibold text-muted-foreground">Optional: Deploy to Kubernetes</h3>
+                </div>
+                <CopyCommand command="curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh | bash" />
+                <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+                  Requires <code className="font-mono text-gray-400">helm</code> and <code className="font-mono text-gray-400">kubectl</code>. Supports <code className="font-mono text-gray-400">--context</code>, <code className="font-mono text-gray-400">--openshift</code>, and <code className="font-mono text-gray-400">--ingress</code> flags.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4: Optional - AI keys */}
+            <div className="flex gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-dashed border-gray-600 text-gray-500 text-sm font-bold shrink-0">
+                4
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">

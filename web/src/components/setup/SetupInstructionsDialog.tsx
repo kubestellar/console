@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound } from 'lucide-react'
+import { Rocket, Copy, Check, Terminal, ExternalLink, ChevronDown, ChevronRight, KeyRound, Server } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 
 interface SetupInstructionsDialogProps {
@@ -14,6 +14,7 @@ const DOCS_URL = 'https://console-docs.kubestellar.io'
 const CURL_BASE = 'https://raw.githubusercontent.com/kubestellar/console/main'
 
 const QUICKSTART_CMD = `curl -sSL ${CURL_BASE}/start.sh | bash`
+const K8S_DEPLOY_CMD = `curl -sSL ${CURL_BASE}/deploy.sh | bash`
 
 const OAUTH_STEPS = [
   { label: 'Go to', link: 'https://github.com/settings/developers', linkText: 'GitHub Developer Settings' },
@@ -30,6 +31,7 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
   const [copiedStep, setCopiedStep] = useState<number | null>(null)
   const [showOAuthGuide, setShowOAuthGuide] = useState(false)
   const [showDevGuide, setShowDevGuide] = useState(false)
+  const [showK8sGuide, setShowK8sGuide] = useState(false)
 
   const copyToClipboard = async (text: string, stepKey: number) => {
     await navigator.clipboard.writeText(text)
@@ -113,6 +115,48 @@ export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDi
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Requires Go 1.24+ and Node.js 20+. Compiles from source and starts a Vite dev server on port 5174.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kubernetes deploy guide */}
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowK8sGuide(!showK8sGuide)}
+                    className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    {showK8sGuide ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    <Server className="w-3.5 h-3.5" />
+                    Or deploy to a Kubernetes cluster
+                  </button>
+                  {showK8sGuide && (
+                    <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        One command — requires <code className="font-mono text-foreground/70">helm</code> and <code className="font-mono text-foreground/70">kubectl</code>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-muted px-3 py-1.5 text-xs font-mono text-foreground select-all overflow-x-auto">
+                          {K8S_DEPLOY_CMD}
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(K8S_DEPLOY_CMD, 400)}
+                          className="shrink-0 p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Copy command"
+                        >
+                          {copiedStep === 400 ? (
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Supports <code className="font-mono text-foreground/70">--context</code>, <code className="font-mono text-foreground/70">--openshift</code>, <code className="font-mono text-foreground/70">--ingress &lt;host&gt;</code>, and <code className="font-mono text-foreground/70">--github-oauth</code> flags.
                       </p>
                     </div>
                   )}
