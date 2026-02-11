@@ -48,10 +48,7 @@ export function Pods() {
   // Handler for keyboard navigation on pod issue cards
   const handlePodIssueKeyDown = useCallback((e: React.KeyboardEvent, cluster: string | undefined, namespace: string, name: string) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      // Prevent default for Space to avoid scrolling
-      if (e.key === ' ') {
-        e.preventDefault()
-      }
+      e.preventDefault() // Prevent default for both Enter and Space to match button behavior
       if (cluster) {
         drillToPod(cluster, namespace, name)
       }
