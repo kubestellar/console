@@ -35,15 +35,21 @@ function formatMemory(gb: number): string {
   return `${Math.round(gb)}G`
 }
 
+// Accelerator type definition
+interface AccelInfo {
+  key: string
+  label: string
+  color: string
+  data: { total: number; allocated: number }
+}
+
 // Compact sortable cluster row component
 interface SortableClusterRowProps {
   cluster: ClusterInfo
   cpuPercent: number
   memoryPercent: number
   memoryGB: number
-  gpuData: { total: number; allocated: number }
-  gpuPercent: number
-  tpuData: { total: number; allocated: number }
+  accelerators: AccelInfo[]
   onDrillDown: () => void
 }
 
@@ -52,9 +58,7 @@ function SortableClusterRow({
   cpuPercent,
   memoryPercent,
   memoryGB,
-  gpuData,
-  gpuPercent,
-  tpuData,
+  accelerators,
   onDrillDown,
 }: SortableClusterRowProps) {
   const {
@@ -143,49 +147,32 @@ function SortableClusterRow({
         </div>
       </div>
 
-      {/* GPU */}
-      <div className="w-[110px] flex-shrink-0 flex items-center gap-2 justify-center">
-        {gpuData.total > 0 ? (
-          <>
-            <Gauge
-              value={Math.min(gpuPercent, 100)}
-              max={100}
-              size="xs"
-              thresholds={{ warning: 80, critical: 95 }}
-            />
-            <div className="text-right">
-              <div className={`text-xs font-medium ${gpuPercent > 100 ? 'text-red-400' : 'text-foreground'}`}>
-                {gpuPercent}%
-              </div>
-              <div className="text-[10px] text-purple-400">{gpuData.allocated}/{gpuData.total}</div>
-            </div>
-          </>
-        ) : (
-          <span className="text-[10px] text-muted-foreground/50">No GPU</span>
-        )}
-      </div>
-
-      {/* TPU */}
-      <div className="w-[110px] flex-shrink-0 flex items-center gap-2 justify-center">
-        {tpuData.total > 0 ? (
-          <>
-            <Gauge
-              value={tpuData.total > 0 ? Math.round((tpuData.allocated / tpuData.total) * 100) : 0}
-              max={100}
-              size="xs"
-              thresholds={{ warning: 80, critical: 95 }}
-            />
-            <div className="text-right">
-              <div className="text-xs font-medium text-foreground">
-                {tpuData.total > 0 ? Math.round((tpuData.allocated / tpuData.total) * 100) : 0}%
-              </div>
-              <div className="text-[10px] text-cyan-400">{tpuData.allocated}/{tpuData.total}</div>
-            </div>
-          </>
-        ) : (
-          <span className="text-[10px] text-muted-foreground/50">No TPU</span>
-        )}
-      </div>
+      {/* Accelerator columns (GPU, TPU, AIU, XPU — only those with cluster-level data) */}
+      {accelerators.map(accel => {
+        const pct = accel.data.total > 0 ? Math.round((accel.data.allocated / accel.data.total) * 100) : 0
+        return (
+          <div key={accel.key} className="w-[110px] flex-shrink-0 flex items-center gap-2 justify-center">
+            {accel.data.total > 0 ? (
+              <>
+                <Gauge
+                  value={Math.min(pct, 100)}
+                  max={100}
+                  size="xs"
+                  thresholds={{ warning: 80, critical: 95 }}
+                />
+                <div className="text-right">
+                  <div className={`text-xs font-medium ${pct > 100 ? 'text-red-400' : 'text-foreground'}`}>
+                    {pct}%
+                  </div>
+                  <div className={`text-[10px] ${accel.color}`}>{accel.data.allocated}/{accel.data.total}</div>
+                </div>
+              </>
+            ) : (
+              <span className="text-[10px] text-muted-foreground/50">No {accel.label}</span>
+            )}
+          </div>
+        )
+      })}
 
       <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
     </div>
@@ -235,31 +222,54 @@ export function ResourcesDrillDown({ data: _data }: Props) {
     return map
   }, [clusters])
 
-  // Calculate per-cluster GPU data (mapping aliases to primary cluster names)
+  // Accelerator type config
+  const ACCEL_TYPES = [
+    { key: 'GPU', label: 'GPU', color: 'text-purple-400' },
+    { key: 'TPU', label: 'TPU', color: 'text-green-400' },
+    { key: 'AIU', label: 'AIU', color: 'text-cyan-400' },
+    { key: 'XPU', label: 'XPU', color: 'text-orange-400' },
+  ] as const
+
+  // Calculate per-cluster per-accelerator data (mapping aliases to primary cluster names)
   // Also deduplicate GPU nodes by name to avoid counting same physical node twice
-  const clusterGPUs = useMemo(() => {
-    const map: Record<string, { total: number; allocated: number }> = {}
-    const seenNodes = new Set<string>() // Track seen node names to avoid duplicates
+  const clusterAccelerators = useMemo(() => {
+    const map: Record<string, Record<string, { total: number; allocated: number }>> = {}
+    const seenNodes = new Set<string>()
 
     gpuNodes.forEach(node => {
-      // Skip if we've already counted this physical node
       const nodeKey = node.name
       if (seenNodes.has(nodeKey)) return
       seenNodes.add(nodeKey)
 
       const rawCluster = node.cluster || 'unknown'
-      // Map to deduplicated primary name if possible
       const cluster = clusterNameMap[rawCluster] || rawCluster
-      if (!map[cluster]) {
-        map[cluster] = { total: 0, allocated: 0 }
-      }
-      map[cluster].total += node.gpuCount
-      map[cluster].allocated += node.gpuAllocated
+      const accelType = node.acceleratorType || 'GPU'
+
+      if (!map[cluster]) map[cluster] = {}
+      if (!map[cluster][accelType]) map[cluster][accelType] = { total: 0, allocated: 0 }
+      map[cluster][accelType].total += node.gpuCount
+      map[cluster][accelType].allocated += node.gpuAllocated
     })
     return map
   }, [gpuNodes, clusterNameMap])
 
-  // Calculate totals (using deduplicated GPU counts from clusterGPUs map)
+  // Determine which accelerator types have any data globally
+  const activeAccelTypes = useMemo(() => {
+    const globalTotals: Record<string, { total: number; allocated: number }> = {}
+    Object.values(clusterAccelerators).forEach(accelMap => {
+      Object.entries(accelMap).forEach(([type, data]) => {
+        if (!globalTotals[type]) globalTotals[type] = { total: 0, allocated: 0 }
+        globalTotals[type].total += data.total
+        globalTotals[type].allocated += data.allocated
+      })
+    })
+    return ACCEL_TYPES.filter(at => globalTotals[at.key]?.total > 0).map(at => ({
+      ...at,
+      globalData: globalTotals[at.key],
+    }))
+  }, [clusterAccelerators])
+
+  // Calculate totals
   const totals = useMemo(() => {
     const totalCPUs = clusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const totalCPURequests = clusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
@@ -267,13 +277,6 @@ export function ResourcesDrillDown({ data: _data }: Props) {
     const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
     const totalMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
     const totalMemoryRequestsGB = clusters.reduce((sum, c) => sum + (c.memoryRequestsGB || 0), 0)
-    // Use aggregated GPU counts from clusterGPUs (already deduplicated)
-    let totalGPUs = 0
-    let allocatedGPUs = 0
-    Object.values(clusterGPUs).forEach(gpu => {
-      totalGPUs += gpu.total
-      allocatedGPUs += gpu.allocated
-    })
 
     return {
       cpus: totalCPUs,
@@ -282,10 +285,8 @@ export function ResourcesDrillDown({ data: _data }: Props) {
       pods: totalPods,
       memoryGB: totalMemoryGB,
       memoryRequestsGB: totalMemoryRequestsGB,
-      gpus: totalGPUs,
-      gpusAllocated: allocatedGPUs,
     }
-  }, [clusters, clusterGPUs])
+  }, [clusters])
 
   // DnD sensors
   const sensors = useSensors(
@@ -321,9 +322,9 @@ export function ResourcesDrillDown({ data: _data }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Summary Stats - more compact */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="p-3 rounded-lg bg-card/50 border border-border">
+      {/* Summary Stats - dynamic based on active accelerator types */}
+      <div className="flex flex-wrap gap-3">
+        <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
           <div className="flex items-center gap-2 mb-1">
             <Server className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xs text-muted-foreground">Clusters</span>
@@ -331,7 +332,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
           <div className="text-xl font-bold text-foreground">{clusters.length}</div>
         </div>
 
-        <div className="p-3 rounded-lg bg-card/50 border border-border">
+        <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
           <div className="flex items-center gap-2 mb-1">
             <Server className="w-3.5 h-3.5 text-purple-400" />
             <span className="text-xs text-muted-foreground">Nodes</span>
@@ -339,7 +340,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
           <div className="text-xl font-bold text-foreground">{totals.nodes}</div>
         </div>
 
-        <div className="p-3 rounded-lg bg-card/50 border border-border">
+        <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
           <div className="flex items-center gap-2 mb-1">
             <Cpu className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xs text-muted-foreground">CPU Capacity</span>
@@ -347,7 +348,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
           <div className="text-xl font-bold text-foreground">{totals.cpus.toLocaleString()} cores</div>
         </div>
 
-        <div className="p-3 rounded-lg bg-card/50 border border-border">
+        <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
           <div className="flex items-center gap-2 mb-1">
             <MemoryStick className="w-3.5 h-3.5 text-yellow-400" />
             <span className="text-xs text-muted-foreground">Memory Capacity</span>
@@ -359,30 +360,18 @@ export function ResourcesDrillDown({ data: _data }: Props) {
           </div>
         </div>
 
-        {totals.gpus > 0 && (
-          <div className="p-3 rounded-lg bg-card/50 border border-border">
+        {activeAccelTypes.map(at => (
+          <div key={at.key} className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
             <div className="flex items-center gap-2 mb-1">
-              <Cpu className="w-3.5 h-3.5 text-purple-400" />
-              <span className="text-xs text-muted-foreground">GPU Allocated</span>
+              <Cpu className={`w-3.5 h-3.5 ${at.color}`} />
+              <span className="text-xs text-muted-foreground">{at.label} Allocated</span>
             </div>
             <div className="text-xl font-bold text-foreground">
-              <span className="text-purple-400">{totals.gpusAllocated}</span>
-              <span className="text-muted-foreground">/{totals.gpus}</span>
+              <span className={at.color}>{at.globalData.allocated}</span>
+              <span className="text-muted-foreground">/{at.globalData.total}</span>
             </div>
           </div>
-        )}
-
-        {/* TPU - placeholder for future */}
-        <div className="p-3 rounded-lg bg-card/50 border border-border">
-          <div className="flex items-center gap-2 mb-1">
-            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs text-muted-foreground">TPU Allocated</span>
-          </div>
-          <div className="text-xl font-bold text-foreground">
-            <span className="text-cyan-400">0</span>
-            <span className="text-muted-foreground">/0</span>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Cluster List - compact draggable rows */}
@@ -404,14 +393,12 @@ export function ResourcesDrillDown({ data: _data }: Props) {
             <MemoryStick className="w-3 h-3 text-yellow-400 inline mr-1" />
             <span>Memory</span>
           </div>
-          <div className="w-[110px] flex-shrink-0 text-center">
-            <Cpu className="w-3 h-3 text-purple-400 inline mr-1" />
-            <span>GPU</span>
-          </div>
-          <div className="w-[110px] flex-shrink-0 text-center">
-            <Cpu className="w-3 h-3 text-cyan-400 inline mr-1" />
-            <span>TPU</span>
-          </div>
+          {activeAccelTypes.map(at => (
+            <div key={at.key} className="w-[110px] flex-shrink-0 text-center">
+              <Cpu className={`w-3 h-3 ${at.color} inline mr-1`} />
+              <span>{at.label}</span>
+            </div>
+          ))}
           <div className="w-4 flex-shrink-0" /> {/* ChevronRight spacer */}
         </div>
 
@@ -444,13 +431,14 @@ export function ResourcesDrillDown({ data: _data }: Props) {
                   : 0
                 const memoryPercent = Math.min(rawMemoryPercent, 100)
 
-                const gpuData = clusterGPUs[cluster.name] || { total: 0, allocated: 0 }
-                // Cap at 100% - allocated should never exceed total (data issue if it does)
-                const rawGpuPercent = gpuData.total > 0 ? Math.round((gpuData.allocated / gpuData.total) * 100) : 0
-                const gpuPercent = Math.min(rawGpuPercent, 100)
-
-                // TPU data - placeholder for now
-                const tpuData = { total: 0, allocated: 0 }
+                // Build per-cluster accelerator data for active types
+                const clusterAccelMap = clusterAccelerators[cluster.name] || {}
+                const rowAccelerators: AccelInfo[] = activeAccelTypes.map(at => ({
+                  key: at.key,
+                  label: at.label,
+                  color: at.color,
+                  data: clusterAccelMap[at.key] || { total: 0, allocated: 0 },
+                }))
 
                 return (
                   <SortableClusterRow
@@ -459,9 +447,7 @@ export function ResourcesDrillDown({ data: _data }: Props) {
                     cpuPercent={cpuPercent}
                     memoryPercent={memoryPercent}
                     memoryGB={memoryGB}
-                    gpuData={gpuData}
-                    gpuPercent={gpuPercent}
-                    tpuData={tpuData}
+                    accelerators={rowAccelerators}
                     onDrillDown={() => drillToCluster(cluster.name, {
                       healthy: cluster.healthy,
                       nodeCount: cluster.nodeCount,

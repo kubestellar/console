@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
 import { useCachedPodIssues, useCachedDeploymentIssues } from '../../hooks/useCachedData'
@@ -7,6 +7,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface NamespaceOverviewProps {
   config?: {
@@ -45,11 +46,27 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
+  const { isDemoMode: demoMode } = useDemoMode()
+
+  // Auto-select first cluster and namespace in demo mode
+  useEffect(() => {
+    if (demoMode && !selectedCluster && clusters.length > 0) {
+      setSelectedCluster(clusters[0].name)
+    }
+  }, [demoMode, clusters, selectedCluster])
+
   const { issues: allPodIssues } = useCachedPodIssues(selectedCluster)
   const { issues: allDeploymentIssues } = useCachedDeploymentIssues(selectedCluster)
 
   // Fetch namespaces for the selected cluster
   const { namespaces } = useNamespaces(selectedCluster || undefined)
+
+  // Auto-select first namespace in demo mode once namespaces load
+  useEffect(() => {
+    if (demoMode && selectedCluster && !selectedNamespace && namespaces.length > 0) {
+      setSelectedNamespace(namespaces[0])
+    }
+  }, [demoMode, selectedCluster, selectedNamespace, namespaces])
 
   // Filter by namespace
   const podIssues = useMemo(() => {

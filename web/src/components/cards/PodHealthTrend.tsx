@@ -15,6 +15,7 @@ import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards'
+import { isDemoMode } from '../../lib/demoMode'
 
 interface HealthPoint {
   time: string
@@ -190,18 +191,35 @@ export function PodHealthTrend() {
     }
   }, [currentStats, clustersLoading, issuesLoading])
 
-  // Initialize with a single real data point (no synthetic history)
+  // Initialize history — seed multiple points in demo mode for visible chart
   useEffect(() => {
     if (history.length === 0 && currentStats.total > 0) {
       const now = new Date()
-      const initialPoint: HealthPoint = {
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        healthy: currentStats.healthy,
-        issues: currentStats.issues,
-        pending: currentStats.pending,
+      if (isDemoMode()) {
+        // Seed 8 historical points so the time-series chart renders immediately
+        const points: HealthPoint[] = []
+        for (let i = 7; i >= 0; i--) {
+          const t = new Date(now.getTime() - i * 5 * 60000) // 5-min intervals
+          const jitter = Math.floor(Math.random() * 3)
+          points.push({
+            time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            healthy: currentStats.healthy + jitter,
+            issues: Math.max(0, currentStats.issues - jitter + Math.floor(Math.random() * 2)),
+            pending: Math.max(0, currentStats.pending + (i % 3 === 0 ? 1 : 0)),
+          })
+        }
+        historyRef.current = points
+        setHistory(points)
+      } else {
+        const initialPoint: HealthPoint = {
+          time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          healthy: currentStats.healthy,
+          issues: currentStats.issues,
+          pending: currentStats.pending,
+        }
+        historyRef.current = [initialPoint]
+        setHistory([initialPoint])
       }
-      historyRef.current = [initialPoint]
-      setHistory([initialPoint])
     }
   }, [currentStats, history.length])
 

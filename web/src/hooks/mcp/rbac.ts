@@ -8,15 +8,15 @@ import type { K8sRole, K8sRoleBinding, K8sServiceAccountInfo } from './types'
 // Demo RBAC data for when demo mode is enabled
 function getDemoK8sRoles(cluster?: string): K8sRole[] {
   const roles: K8sRole[] = [
-    { name: 'admin', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 12 },
-    { name: 'edit', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 8 },
-    { name: 'view', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 4 },
-    { name: 'pod-reader', cluster: 'prod-east', namespace: 'default', isCluster: false, ruleCount: 2 },
-    { name: 'cluster-admin', cluster: 'prod-east', isCluster: true, ruleCount: 20 },
-    { name: 'cluster-view', cluster: 'prod-east', isCluster: true, ruleCount: 6 },
-    { name: 'admin', cluster: 'staging', namespace: 'default', isCluster: false, ruleCount: 12 },
-    { name: 'developer', cluster: 'staging', namespace: 'development', isCluster: false, ruleCount: 10 },
-    { name: 'cluster-admin', cluster: 'staging', isCluster: true, ruleCount: 20 },
+    { name: 'admin', cluster: 'eks-prod-us-east-1', namespace: 'default', isCluster: false, ruleCount: 12 },
+    { name: 'edit', cluster: 'eks-prod-us-east-1', namespace: 'default', isCluster: false, ruleCount: 8 },
+    { name: 'view', cluster: 'eks-prod-us-east-1', namespace: 'default', isCluster: false, ruleCount: 4 },
+    { name: 'pod-reader', cluster: 'eks-prod-us-east-1', namespace: 'default', isCluster: false, ruleCount: 2 },
+    { name: 'cluster-admin', cluster: 'eks-prod-us-east-1', isCluster: true, ruleCount: 20 },
+    { name: 'cluster-view', cluster: 'eks-prod-us-east-1', isCluster: true, ruleCount: 6 },
+    { name: 'admin', cluster: 'gke-staging', namespace: 'default', isCluster: false, ruleCount: 12 },
+    { name: 'developer', cluster: 'gke-staging', namespace: 'development', isCluster: false, ruleCount: 10 },
+    { name: 'cluster-admin', cluster: 'gke-staging', isCluster: true, ruleCount: 20 },
   ]
   return cluster ? roles.filter(r => r.cluster === cluster) : roles
 }
@@ -25,7 +25,7 @@ function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBi
   const bindings: K8sRoleBinding[] = [
     {
       name: 'admin-binding',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       namespace: 'default',
       isCluster: false,
       roleName: 'admin',
@@ -37,7 +37,7 @@ function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBi
     },
     {
       name: 'developer-binding',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       namespace: 'default',
       isCluster: false,
       roleName: 'edit',
@@ -46,7 +46,7 @@ function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBi
     },
     {
       name: 'readonly-binding',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       namespace: 'default',
       isCluster: false,
       roleName: 'view',
@@ -55,7 +55,7 @@ function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBi
     },
     {
       name: 'cluster-admin-binding',
-      cluster: 'prod-east',
+      cluster: 'eks-prod-us-east-1',
       isCluster: true,
       roleName: 'cluster-admin',
       roleKind: 'ClusterRole',
@@ -63,7 +63,7 @@ function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBi
     },
     {
       name: 'admin-binding',
-      cluster: 'staging',
+      cluster: 'gke-staging',
       namespace: 'default',
       isCluster: false,
       roleName: 'admin',
@@ -80,11 +80,11 @@ function getDemoK8sRoleBindings(cluster?: string, namespace?: string): K8sRoleBi
 
 function getDemoK8sServiceAccounts(cluster?: string, namespace?: string): K8sServiceAccountInfo[] {
   const sas: K8sServiceAccountInfo[] = [
-    { name: 'default', namespace: 'default', cluster: 'prod-east', secrets: ['default-token'] },
-    { name: 'deployer', namespace: 'default', cluster: 'prod-east', secrets: ['deployer-token'], roles: ['admin'] },
-    { name: 'monitoring', namespace: 'monitoring', cluster: 'prod-east', secrets: ['monitoring-token'], roles: ['view'] },
-    { name: 'default', namespace: 'default', cluster: 'staging', secrets: ['default-token'] },
-    { name: 'ci-bot', namespace: 'ci-cd', cluster: 'staging', secrets: ['ci-bot-token'], roles: ['edit'] },
+    { name: 'default', namespace: 'default', cluster: 'eks-prod-us-east-1', secrets: ['default-token'] },
+    { name: 'deployer', namespace: 'default', cluster: 'eks-prod-us-east-1', secrets: ['deployer-token'], roles: ['admin'] },
+    { name: 'monitoring', namespace: 'monitoring', cluster: 'eks-prod-us-east-1', secrets: ['monitoring-token'], roles: ['view'] },
+    { name: 'default', namespace: 'default', cluster: 'gke-staging', secrets: ['default-token'] },
+    { name: 'ci-bot', namespace: 'ci-cd', cluster: 'gke-staging', secrets: ['ci-bot-token'], roles: ['edit'] },
   ]
 
   let result = sas

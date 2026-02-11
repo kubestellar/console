@@ -40,14 +40,24 @@ export function ResourceUsage() {
     const usedCPUs = clusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
     const usedMemoryGB = clusters.reduce((sum, c) => sum + (c.memoryRequestsGB || 0), 0)
 
-    // GPU data from GPU nodes
-    const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-    const allocatedGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+    // Accelerator data by type
+    const gpuOnly = gpuNodes.filter(n => !n.acceleratorType || n.acceleratorType === 'GPU')
+    const tpuOnly = gpuNodes.filter(n => n.acceleratorType === 'TPU')
+    const aiuOnly = gpuNodes.filter(n => n.acceleratorType === 'AIU')
+    const xpuOnly = gpuNodes.filter(n => n.acceleratorType === 'XPU')
+
+    const sumAccel = (nodes: typeof gpuNodes) => ({
+      total: nodes.reduce((s, n) => s + n.gpuCount, 0),
+      used: nodes.reduce((s, n) => s + n.gpuAllocated, 0),
+    })
 
     return {
       cpu: { total: totalCPUs, used: Math.round(usedCPUs) },
       memory: { total: Math.round(totalMemoryGB), used: Math.round(usedMemoryGB) },
-      gpu: { total: totalGPUs, used: allocatedGPUs },
+      gpu: sumAccel(gpuOnly),
+      tpu: sumAccel(tpuOnly),
+      aiu: sumAccel(aiuOnly),
+      xpu: sumAccel(xpuOnly),
     }
   }, [clusters, gpuNodes])
 
@@ -99,6 +109,20 @@ export function ResourceUsage() {
   const cpuPercent = totals.cpu.total > 0 ? Math.round((totals.cpu.used / totals.cpu.total) * 100) : 0
   const memoryPercent = totals.memory.total > 0 ? Math.round((totals.memory.used / totals.memory.total) * 100) : 0
   const gpuPercent = totals.gpu.total > 0 ? Math.round((totals.gpu.used / totals.gpu.total) * 100) : 0
+  const tpuPercent = totals.tpu.total > 0 ? Math.round((totals.tpu.used / totals.tpu.total) * 100) : 0
+  const aiuPercent = totals.aiu.total > 0 ? Math.round((totals.aiu.used / totals.aiu.total) * 100) : 0
+  const xpuPercent = totals.xpu.total > 0 ? Math.round((totals.xpu.used / totals.xpu.total) * 100) : 0
+
+  // Collect active accelerator types for dynamic layout
+  const accelerators = [
+    totals.gpu.total > 0 ? { key: 'gpu', label: 'GPU', percent: gpuPercent, color: 'text-purple-400', data: totals.gpu } : null,
+    totals.tpu.total > 0 ? { key: 'tpu', label: 'TPU', percent: tpuPercent, color: 'text-green-400', data: totals.tpu } : null,
+    totals.aiu.total > 0 ? { key: 'aiu', label: 'AIU', percent: aiuPercent, color: 'text-cyan-400', data: totals.aiu } : null,
+    totals.xpu.total > 0 ? { key: 'xpu', label: 'XPU', percent: xpuPercent, color: 'text-orange-400', data: totals.xpu } : null,
+  ].filter(Boolean) as { key: string; label: string; percent: number; color: string; data: { total: number; used: number } }[]
+
+  // Grid columns for footer: CPU + Memory + each accelerator
+  const footerCols = 2 + accelerators.length
 
   return (
     <div className="h-full flex flex-col">
@@ -135,7 +159,7 @@ export function ResourceUsage() {
       </div>
 
       <div
-        className="flex-1 flex items-center justify-around cursor-pointer hover:opacity-80 transition-opacity"
+        className="flex-1 flex items-center justify-around cursor-pointer hover:opacity-80 transition-opacity flex-wrap gap-2"
         onClick={handleDrillDown}
       >
         <div className="flex flex-col items-center">
@@ -164,23 +188,23 @@ export function ResourceUsage() {
           </div>
         </div>
 
-        {totals.gpu.total > 0 && (
-          <div className="flex flex-col items-center">
+        {accelerators.map(accel => (
+          <div key={accel.key} className="flex flex-col items-center">
             <Gauge
-              value={gpuPercent}
+              value={accel.percent}
               max={100}
               size="md"
               thresholds={{ warning: 80, critical: 95 }}
             />
             <div className="flex items-center gap-1.5 mt-2">
-              <Cpu className="w-4 h-4 text-purple-400" />
-              <span className="text-sm text-muted-foreground">GPU</span>
+              <Cpu className={`w-4 h-4 ${accel.color}`} />
+              <span className="text-sm text-muted-foreground">{accel.label}</span>
             </div>
           </div>
-        )}
+        ))}
       </div>
 
-      <div className={`mt-4 pt-3 border-t border-border/50 grid ${totals.gpu.total > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 text-center`}>
+      <div className={`mt-4 pt-3 border-t border-border/50 grid gap-2 text-center`} style={{ gridTemplateColumns: `repeat(${footerCols}, minmax(0, 1fr))` }}>
         <div>
           <p className="text-xs text-muted-foreground">Total CPU</p>
           <p className="text-sm font-medium text-foreground">{totals.cpu.total} cores</p>
@@ -189,14 +213,14 @@ export function ResourceUsage() {
           <p className="text-xs text-muted-foreground">Total RAM</p>
           <p className="text-sm font-medium text-foreground">{totals.memory.total} GB</p>
         </div>
-        {totals.gpu.total > 0 && (
-          <div>
-            <p className="text-xs text-muted-foreground">Total GPU</p>
+        {accelerators.map(accel => (
+          <div key={accel.key}>
+            <p className="text-xs text-muted-foreground">Total {accel.label}</p>
             <p className="text-sm font-medium text-foreground">
-              <span className="text-purple-400">{totals.gpu.used}</span>/{totals.gpu.total}
+              <span className={accel.color}>{accel.data.used}</span>/{accel.data.total}
             </p>
           </div>
-        )}
+        ))}
       </div>
     </div>
   )

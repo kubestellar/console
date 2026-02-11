@@ -255,17 +255,27 @@ const getDemoPods = (): PodInfo[] => [
   { name: 'cache-redis-6e5d4c3b2-q8rs1', namespace: 'production', status: 'Running', ready: '1/1', restarts: 0, age: '7d', cpuRequestMillis: 250, memoryRequestBytes: 268435456, cpuUsageMillis: 45, memoryUsageBytes: 134217728, metricsAvailable: true },
 ]
 
-const getDemoEvents = (): ClusterEvent[] => [
-  { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available', object: 'pod/test', namespace: 'default', count: 3 },
-  { type: 'Normal', reason: 'Started', message: 'Container started', object: 'pod/web', namespace: 'production', count: 1 },
-]
+const getDemoEvents = (): ClusterEvent[] => {
+  const now = Date.now()
+  const minutesAgo = (m: number) => new Date(now - m * 60000).toISOString()
+  return [
+    { type: 'Warning', reason: 'FailedScheduling', message: 'No nodes available to schedule pod', object: 'Pod/worker-5c6d7e8f9-n3p2q', namespace: 'default', cluster: 'eks-prod-us-east-1', count: 3, firstSeen: minutesAgo(25), lastSeen: minutesAgo(5) },
+    { type: 'Normal', reason: 'Started', message: 'Container started successfully', object: 'Pod/web-frontend-8e9f0a1b2-def34', namespace: 'production', cluster: 'gke-staging', count: 1, firstSeen: minutesAgo(12), lastSeen: minutesAgo(12) },
+    { type: 'Warning', reason: 'BackOff', message: 'Back-off restarting failed container', object: 'Pod/api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'eks-prod-us-east-1', count: 15, firstSeen: minutesAgo(45), lastSeen: minutesAgo(2) },
+    { type: 'Normal', reason: 'Pulled', message: 'Container image pulled successfully', object: 'Pod/frontend-8e9f0a1b2-def34', namespace: 'production', cluster: 'gke-staging', count: 1, firstSeen: minutesAgo(8), lastSeen: minutesAgo(8) },
+    { type: 'Warning', reason: 'Unhealthy', message: 'Readiness probe failed: connection refused', object: 'Pod/cache-redis-0', namespace: 'data', cluster: 'gke-staging', count: 8, firstSeen: minutesAgo(30), lastSeen: minutesAgo(1) },
+    { type: 'Normal', reason: 'ScalingReplicaSet', message: 'Scaled up replica set api-gateway-7d8c to 3', object: 'Deployment/api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', count: 1, firstSeen: minutesAgo(18), lastSeen: minutesAgo(18) },
+    { type: 'Normal', reason: 'SuccessfulCreate', message: 'Created pod: worker-5c6d7e8f9-abc12', object: 'ReplicaSet/worker-5c6d7e8f9', namespace: 'batch', cluster: 'vllm-gpu-cluster', count: 1, firstSeen: minutesAgo(22), lastSeen: minutesAgo(22) },
+    { type: 'Warning', reason: 'FailedMount', message: 'MountVolume.SetUp failed for volume "config": configmap "app-config" not found', object: 'Pod/ml-inference-7f8g9h-xyz99', namespace: 'ml', cluster: 'vllm-gpu-cluster', count: 4, firstSeen: minutesAgo(35), lastSeen: minutesAgo(3) },
+  ]
+}
 
 const getDemoPodIssues = (): PodIssue[] => [
-  { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'prod-east', status: 'CrashLoopBackOff', issues: ['Container restarting', 'OOMKilled'], restarts: 15 },
-  { name: 'worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-d', status: 'ImagePullBackOff', issues: ['Failed to pull image'], restarts: 0 },
-  { name: 'cache-redis-0', namespace: 'data', cluster: 'staging', status: 'Pending', issues: ['Insufficient memory'], restarts: 0 },
-  { name: 'metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'prod-west', status: 'CrashLoopBackOff', issues: ['Exit code 137'], restarts: 8 },
-  { name: 'gpu-scheduler-0', namespace: 'ml-ops', cluster: 'vllm-d', status: 'Pending', issues: ['Insufficient nvidia.com/gpu'], restarts: 0 },
+  { name: 'api-server-7d8f9c6b5-x2k4m', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'CrashLoopBackOff', issues: ['Container restarting', 'OOMKilled'], restarts: 15 },
+  { name: 'worker-5c6d7e8f9-n3p2q', namespace: 'batch', cluster: 'vllm-gpu-cluster', status: 'ImagePullBackOff', issues: ['Failed to pull image'], restarts: 0 },
+  { name: 'cache-redis-0', namespace: 'data', cluster: 'gke-staging', status: 'Pending', issues: ['Insufficient memory'], restarts: 0 },
+  { name: 'metrics-collector-2b4c6-j8k9l', namespace: 'monitoring', cluster: 'aks-dev-westeu', status: 'CrashLoopBackOff', issues: ['Exit code 137'], restarts: 8 },
+  { name: 'gpu-scheduler-0', namespace: 'ml-ops', cluster: 'vllm-gpu-cluster', status: 'Pending', issues: ['Insufficient nvidia.com/gpu'], restarts: 0 },
 ]
 
 const getDemoDeploymentIssues = (): DeploymentIssue[] => [
@@ -273,7 +283,12 @@ const getDemoDeploymentIssues = (): DeploymentIssue[] => [
 ]
 
 const getDemoDeployments = (): Deployment[] => [
-  { name: 'web-frontend', namespace: 'production', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'web-frontend', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'deploying', replicas: 3, readyReplicas: 1, updatedReplicas: 2, availableReplicas: 1, progress: 33 },
+  { name: 'worker-service', namespace: 'batch', cluster: 'gke-staging', status: 'deploying', replicas: 4, readyReplicas: 2, updatedReplicas: 3, availableReplicas: 2, progress: 50 },
+  { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-gpu-cluster', status: 'deploying', replicas: 2, readyReplicas: 0, updatedReplicas: 1, availableReplicas: 0, progress: 0 },
+  { name: 'cache-redis', namespace: 'data', cluster: 'gke-staging', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
+  { name: 'monitoring-stack', namespace: 'monitoring', cluster: 'aks-dev-westeu', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
 ]
 
 const getDemoServices = (): Service[] => [
