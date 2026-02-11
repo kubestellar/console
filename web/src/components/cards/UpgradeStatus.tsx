@@ -5,6 +5,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
@@ -269,11 +270,35 @@ const UPGRADE_SORT_COMPARATORS: Record<SortByOption, (a: UpgradeItem, b: Upgrade
   cluster: commonComparators.string<UpgradeItem>('name'),
 }
 
+// Demo versions keyed by cluster name keywords
+const DEMO_VERSIONS: Record<string, string> = {
+  eks: 'v1.31.2',
+  aks: 'v1.30.4',
+  gke: 'v1.31.0',
+  openshift: 'v1.28.11',
+  oci: 'v1.30.1',
+  kind: 'v1.32.0',
+  k3s: 'v1.31.1',
+  minikube: 'v1.31.3',
+  rancher: 'v1.29.6',
+}
+
+function getDemoVersionForCluster(name: string): string {
+  const lower = name.toLowerCase()
+  for (const [keyword, version] of Object.entries(DEMO_VERSIONS)) {
+    if (lower.includes(keyword)) return version
+  }
+  // Deterministic fallback based on name length
+  const versions = ['v1.30.2', 'v1.31.1', 'v1.29.8', 'v1.32.0', 'v1.30.5']
+  return versions[name.length % versions.length]
+}
+
 export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const { deduplicatedClusters: allClusters, isLoading: isLoadingHook } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
+  const { isDemoMode } = useDemoMode()
   const [clusterVersions, setClusterVersions] = useState<Record<string, string>>({})
   const [fetchCompleted, setFetchCompleted] = useState(false)
 
@@ -310,8 +335,21 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     prevAgentConnectedRef.current = agentConnected
   }, [agentConnected])
 
+  // Populate demo versions when in demo mode
+  useEffect(() => {
+    if (!isDemoMode || allClusters.length === 0) return
+    const demoVersions: Record<string, string> = {}
+    for (const c of allClusters) {
+      demoVersions[c.name] = getDemoVersionForCluster(c.name)
+    }
+    setClusterVersions(demoVersions)
+    setFetchCompleted(true)
+  }, [isDemoMode, allClusters])
+
   // Fetch real versions from clusters via local agent
   useEffect(() => {
+    if (isDemoMode) return // Demo versions handled above
+
     if (!agentConnected || allClusters.length === 0) {
       // If not connected, mark fetch as completed so we show '-' instead of 'loading...'
       // But preserve any cached versions we already have
@@ -376,7 +414,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     }, 15000)
 
     return () => clearInterval(retryInterval)
-  }, [agentConnected, allClusters])
+  }, [isDemoMode, agentConnected, allClusters])
 
   const handleStartUpgrade = (clusterName: string, currentVersion: string, targetVersion: string) => {
     startMission({
