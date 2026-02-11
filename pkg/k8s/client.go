@@ -874,13 +874,15 @@ func classifyError(errMsg string) string {
 
 // GetClusterHealth returns health status for a cluster
 func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName string) (*ClusterHealth, error) {
-	// Check cache
+	// Check cache — also save previous cached data for fallback on partial failures
+	var prevCached *ClusterHealth
 	m.mu.RLock()
 	if health, ok := m.healthCache[contextName]; ok {
 		if time.Since(m.cacheTime[contextName]) < m.cacheTTL {
 			m.mu.RUnlock()
 			return health, nil
 		}
+		prevCached = health
 	}
 	m.mu.RUnlock()
 
@@ -977,7 +979,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		}
 	}
 
-	// Process pods - non-fatal, enrichment data only
+	// Process pods - non-fatal, fall back to cached values on timeout
 	if podsErr == nil {
 		health.PodCount = len(pods.Items)
 		var totalCPURequests int64
@@ -1001,9 +1003,16 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		health.CpuRequestsCores = float64(totalCPURequests) / 1000.0
 		health.MemoryRequestsBytes = totalMemoryRequests
 		health.MemoryRequestsGB = float64(totalMemoryRequests) / (1024 * 1024 * 1024)
+	} else if prevCached != nil {
+		// Pod listing timed out — preserve previous cached pod data instead of showing 0
+		health.PodCount = prevCached.PodCount
+		health.CpuRequestsMillicores = prevCached.CpuRequestsMillicores
+		health.CpuRequestsCores = prevCached.CpuRequestsCores
+		health.MemoryRequestsBytes = prevCached.MemoryRequestsBytes
+		health.MemoryRequestsGB = prevCached.MemoryRequestsGB
 	}
 
-	// Process PVCs - non-fatal, enrichment data only
+	// Process PVCs - non-fatal, fall back to cached values on timeout
 	if pvcsErr == nil {
 		health.PVCCount = len(pvcs.Items)
 		for _, pvc := range pvcs.Items {
@@ -1011,6 +1020,9 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 				health.PVCBoundCount++
 			}
 		}
+	} else if prevCached != nil {
+		health.PVCCount = prevCached.PVCCount
+		health.PVCBoundCount = prevCached.PVCBoundCount
 	}
 
 	// Only cache successful results — don't cache failures (timeout, context canceled)
