@@ -1,6 +1,9 @@
 import { test, type Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import {
   setupNetworkInterceptor,
   waitForCardContent,
@@ -181,8 +184,8 @@ async function measureDashboard(
     route: dashboard.route,
     mode,
     navigationStartMs: navStart,
-    firstCardVisibleMs: firstCardTime === Infinity ? -1 : firstCardTime - navStart,
-    lastCardVisibleMs: lastCardTime === 0 ? -1 : lastCardTime - navStart,
+    firstCardVisibleMs: firstCardTime === Infinity ? -1 : firstCardTime,
+    lastCardVisibleMs: lastCardTime === 0 ? -1 : lastCardTime,
     totalApiRequests: networkTimings.size,
     cards: cardMetrics,
   }
