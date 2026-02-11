@@ -20,15 +20,25 @@ type UserClaims struct {
 func JWTAuth(secret string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			log.Printf("[Auth] Missing authorization header for %s", c.Path())
-			return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization header")
+		var tokenString string
+
+		if authHeader != "" {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				log.Printf("[Auth] Invalid authorization format for %s", c.Path())
+				return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
+			}
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			log.Printf("[Auth] Invalid authorization format for %s", c.Path())
-			return fiber.NewError(fiber.StatusUnauthorized, "Invalid authorization format")
+		// Fallback: accept _token query param for SSE /stream endpoints
+		// (EventSource API does not support custom headers)
+		if tokenString == "" && c.Query("_token") != "" && strings.HasSuffix(c.Path(), "/stream") {
+			tokenString = c.Query("_token")
+		}
+
+		if tokenString == "" {
+			log.Printf("[Auth] Missing authorization for %s", c.Path())
+			return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 		}
 
 		token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {

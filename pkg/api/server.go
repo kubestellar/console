@@ -421,6 +421,15 @@ func (s *Server) setupRoutes() {
 	api.Post("/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
 	api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
 
+	// SSE streaming variants — stream per-cluster results as they arrive
+	api.Get("/mcp/pods/stream", mcpHandlers.GetPodsStream)
+	api.Get("/mcp/pod-issues/stream", mcpHandlers.FindPodIssuesStream)
+	api.Get("/mcp/deployment-issues/stream", mcpHandlers.FindDeploymentIssuesStream)
+	api.Get("/mcp/deployments/stream", mcpHandlers.GetDeploymentsStream)
+	api.Get("/mcp/events/stream", mcpHandlers.GetEventsStream)
+	api.Get("/mcp/services/stream", mcpHandlers.GetServicesStream)
+	api.Get("/mcp/security-issues/stream", mcpHandlers.CheckSecurityIssuesStream)
+
 	// GitOps routes (drift detection and sync)
 	// SECURITY: All GitOps routes require authentication in both dev and production modes
 	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient)

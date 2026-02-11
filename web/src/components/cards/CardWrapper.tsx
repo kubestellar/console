@@ -1181,6 +1181,7 @@ export function CardWrapper({
           data-tour="card"
           data-card-type={cardType}
           data-card-id={cardId}
+          data-loading={shouldShowSkeleton ? 'true' : 'false'}
           className={cn(
             'glass rounded-xl overflow-hidden card-hover',
             'flex flex-col transition-all duration-200',

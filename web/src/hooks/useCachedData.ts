@@ -18,6 +18,7 @@
 import { useCache, type RefreshCategory } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { fetchSSE } from '../lib/sseClient'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import type {
@@ -137,6 +138,40 @@ async function fetchFromAllClusters<T>(
   }
 
   return accumulated
+}
+
+/**
+ * Fetch data from all clusters using SSE streaming.
+ * Each cluster's data arrives as a separate event, allowing progressive rendering.
+ * Falls back to fetchFromAllClusters if SSE fails or is unavailable.
+ */
+async function fetchViaSSE<T>(
+  endpoint: string,
+  resultKey: string,
+  params?: Record<string, string | number | undefined>,
+  onProgress?: (partial: T[]) => void
+): Promise<T[]> {
+  const token = getToken()
+  // SSE only available with real backend token
+  if (!token || token === 'demo-token' || isBackendUnavailable()) {
+    return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress)
+  }
+
+  try {
+    const accumulated: T[] = []
+    return await fetchSSE<T>({
+      url: `/api/mcp/${endpoint}/stream`,
+      params,
+      itemsKey: resultKey,
+      onClusterData: (_cluster, items) => {
+        accumulated.push(...items)
+        onProgress?.([...accumulated])
+      },
+    })
+  } catch {
+    // SSE failed — fall back to per-cluster REST
+    return fetchFromAllClusters<T>(endpoint, resultKey, params, true, onProgress)
+  }
 }
 
 // ============================================================================
@@ -316,7 +351,7 @@ export function useCachedPods(
         .slice(0, limit)
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      const pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace }, true, (partial) => {
+      const pods = await fetchViaSSE<PodInfo>('pods', 'pods', { namespace }, (partial) => {
         onProgress(partial.sort((a, b) => (b.restarts || 0) - (a.restarts || 0)).slice(0, limit))
       })
       return pods
@@ -355,8 +390,14 @@ export function useCachedEvents(
     initialData: [] as ClusterEvent[],
     demoData: getDemoEvents(),
     fetcher: async () => {
-      const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { cluster, namespace, limit })
-      return data.events || []
+      if (cluster) {
+        const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { cluster, namespace, limit })
+        return data.events || []
+      }
+      return await fetchFromAllClusters<ClusterEvent>('events', 'events', { namespace, limit })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<ClusterEvent>('events', 'events', { namespace, limit }, onProgress)
     },
   })
 
@@ -432,17 +473,11 @@ export function useCachedPodIssues(
         return sortIssues(issues)
       }
 
-      // Fall back to REST API
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        const issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', { namespace }, true, (partial) => {
-          onProgress(sortIssues([...partial]))
-        })
-        return sortIssues(issues)
-      }
-
-      return []
+      // Fall back to SSE streaming -> REST per-cluster
+      const issues = await fetchViaSSE<PodIssue>('pod-issues', 'issues', { namespace }, (partial) => {
+        onProgress(sortIssues([...partial]))
+      })
+      return sortIssues(issues)
     },
   })
 
@@ -529,14 +564,9 @@ export function useCachedDeploymentIssues(
         return deriveIssues(deployments)
       }
 
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
-        return data.issues || []
-      }
-
-      return []
+      // Fall back to SSE streaming -> REST per-cluster
+      const issues = await fetchViaSSE<DeploymentIssue>('deployment-issues', 'issues', { namespace }, onProgress)
+      return issues
     },
   })
 
@@ -616,13 +646,8 @@ export function useCachedDeployments(
         return fetchDeploymentsViaAgent(namespace, onProgress)
       }
 
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        return await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace }, true, onProgress)
-      }
-
-      return []
+      // Fall back to SSE streaming -> REST per-cluster
+      return await fetchViaSSE<Deployment>('deployments', 'deployments', { namespace }, onProgress)
     },
   })
 
@@ -656,8 +681,14 @@ export function useCachedServices(
     initialData: [] as Service[],
     demoData: getDemoServices(),
     fetcher: async () => {
-      const data = await fetchAPI<{ services: Service[] }>('services', { cluster, namespace })
-      return data.services || []
+      if (cluster) {
+        const data = await fetchAPI<{ services: Service[] }>('services', { cluster, namespace })
+        return (data.services || []).map(s => ({ ...s, cluster }))
+      }
+      return await fetchFromAllClusters<Service>('services', 'services', { namespace })
+    },
+    progressiveFetcher: cluster ? undefined : async (onProgress) => {
+      return await fetchViaSSE<Service>('services', 'services', { namespace }, onProgress)
     },
   })
 
@@ -1517,30 +1548,8 @@ export function useCachedSecurityIssues(
         }
       }
 
-      // Fall back to REST API (not progressive — single request)
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        try {
-          const params = new URLSearchParams()
-          if (namespace) params.append('namespace', namespace)
-          const response = await fetch(`/api/mcp/security-issues?${params}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          })
-          if (response.ok) {
-            const data = await response.json() as { issues: SecurityIssue[] }
-            if (data.issues && data.issues.length > 0) return data.issues
-          }
-        } catch (err) {
-          console.error('[useCachedSecurityIssues] API fetch failed:', err)
-        }
-      }
-
-      return []
+      // Fall back to SSE streaming -> REST per-cluster
+      return await fetchViaSSE<SecurityIssue>('security-issues', 'issues', { namespace }, onProgress)
     } : undefined,
   })
 
