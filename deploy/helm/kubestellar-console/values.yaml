@@ -85,8 +85,10 @@ ai:
     criticalThreshold: 95 # Percentage at which to restrict AI features
 
 # JWT configuration
+# A random JWT secret is auto-generated if left empty.
+# To provide your own, set jwt.secret or use an existing Kubernetes secret.
 jwt:
-  secret: ""  # Auto-generated if empty
+  secret: ""
   existingSecret: ""
   existingSecretKey: jwt-secret
 

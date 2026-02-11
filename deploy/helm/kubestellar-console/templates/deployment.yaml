@@ -98,13 +98,11 @@ spec:
                   name: {{ .Values.claude.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.claude.existingSecretKey | default "claude-api-key" }}
             {{- end }}
-            {{- if or .Values.jwt.existingSecret .Values.jwt.secret }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.jwt.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.jwt.existingSecretKey | default "jwt-secret" }}
-            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
