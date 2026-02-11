@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react'
-import { Theme, themes, getThemeById, getDefaultTheme } from '../lib/themes'
+import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react'
+import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../lib/themes'
 
 // Legacy type for backwards compatibility
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -155,6 +155,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return 'kubestellar'
   })
 
+  // Reactive custom themes — re-reads from localStorage when marketplace installs/removes
+  const [customThemeVersion, setCustomThemeVersion] = useState(0)
+  const allThemes = useMemo(() => getAllThemes(), [customThemeVersion])
+
+  useEffect(() => {
+    const handler = () => setCustomThemeVersion(v => v + 1)
+    window.addEventListener('kc-custom-themes-changed', handler)
+    return () => window.removeEventListener('kc-custom-themes-changed', handler)
+  }, [])
+
   // Track the last selected dark theme for toggle functionality
   const [lastDarkTheme, setLastDarkTheme] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -227,7 +237,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value: ThemeContextValue = {
     currentTheme,
     themeId,
-    themes,
+    themes: allThemes,
     setTheme,
     // Legacy compatibility - theme returns 'system' when in system mode
     theme: themeId === 'system' ? 'system' : (currentTheme.dark ? 'dark' : 'light'),

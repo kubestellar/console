@@ -1477,8 +1477,34 @@ export const themeGroups = [
   { name: 'Aesthetic', themes: ['kanagawa', 'moonlight', 'horizon'] },
 ]
 
+// Custom themes from marketplace (localStorage)
+const CUSTOM_THEMES_KEY = 'kc-custom-themes'
+
+export function getCustomThemes(): Theme[] {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
+export function addCustomTheme(theme: Theme): void {
+  const customs = getCustomThemes().filter(t => t.id !== theme.id)
+  customs.push(theme)
+  localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customs))
+}
+
+export function removeCustomTheme(themeId: string): void {
+  const customs = getCustomThemes().filter(t => t.id !== themeId)
+  localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customs))
+}
+
+export function getAllThemes(): Theme[] {
+  return [...themes, ...getCustomThemes()]
+}
+
 export function getThemeById(id: string): Theme | undefined {
-  return themes.find(t => t.id === id)
+  return getAllThemes().find(t => t.id === id)
 }
 
 export function getDefaultTheme(): Theme {

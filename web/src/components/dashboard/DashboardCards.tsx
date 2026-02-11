@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout } from 'lucide-react'
 import { CardWrapper } from '../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/cardRegistry'
@@ -49,6 +49,16 @@ export function DashboardCards({
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false)
   const [isConfigureOpen, setIsConfigureOpen] = useState(false)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
+
+  // Listen for marketplace card-preset installs
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { card_type, config, title } = (e as CustomEvent).detail || {}
+      if (card_type) onAddCard(card_type, config || {}, title)
+    }
+    window.addEventListener('kc-add-card-from-marketplace', handler)
+    return () => window.removeEventListener('kc-add-card-from-marketplace', handler)
+  }, [onAddCard])
 
   const handleAddCards = (suggestions: CardSuggestion[]) => {
     suggestions.forEach(card => {
