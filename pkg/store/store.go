@@ -82,6 +82,14 @@ type Store interface {
 	MarkNotificationRead(id uuid.UUID) error
 	MarkAllNotificationsRead(userID uuid.UUID) error
 
+	// GPU Reservations
+	CreateGPUReservation(reservation *models.GPUReservation) error
+	GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error)
+	ListGPUReservations() ([]models.GPUReservation, error)
+	ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error)
+	UpdateGPUReservation(reservation *models.GPUReservation) error
+	DeleteGPUReservation(id uuid.UUID) error
+
 	// Lifecycle
 	Close() error
 }

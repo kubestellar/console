@@ -159,6 +159,29 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_feature_requests_status ON feature_requests(status);
 	CREATE INDEX IF NOT EXISTS idx_pr_feedback_request ON pr_feedback(feature_request_id);
 	CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read);
+
+	-- GPU reservations
+	CREATE TABLE IF NOT EXISTS gpu_reservations (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		user_name TEXT NOT NULL,
+		title TEXT NOT NULL,
+		description TEXT DEFAULT '',
+		cluster TEXT NOT NULL,
+		namespace TEXT NOT NULL,
+		gpu_count INTEGER NOT NULL,
+		gpu_type TEXT DEFAULT '',
+		start_date TEXT NOT NULL,
+		duration_hours INTEGER DEFAULT 24,
+		notes TEXT DEFAULT '',
+		status TEXT DEFAULT 'pending',
+		quota_name TEXT DEFAULT '',
+		quota_enforced INTEGER DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME
+	);
+	CREATE INDEX IF NOT EXISTS idx_gpu_reservations_user ON gpu_reservations(user_id);
+	CREATE INDEX IF NOT EXISTS idx_gpu_reservations_status ON gpu_reservations(status);
 	`
 	_, err := s.db.Exec(schema)
 	if err != nil {
@@ -1191,6 +1214,136 @@ func (s *SQLiteStore) MarkNotificationRead(id uuid.UUID) error {
 func (s *SQLiteStore) MarkAllNotificationsRead(userID uuid.UUID) error {
 	_, err := s.db.Exec(`UPDATE notifications SET read = 1 WHERE user_id = ?`, userID.String())
 	return err
+}
+
+// GPU Reservation methods
+
+func (s *SQLiteStore) CreateGPUReservation(reservation *models.GPUReservation) error {
+	if reservation.ID == uuid.Nil {
+		reservation.ID = uuid.New()
+	}
+	reservation.CreatedAt = time.Now()
+	if reservation.Status == "" {
+		reservation.Status = models.ReservationStatusPending
+	}
+
+	_, err := s.db.Exec(`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		reservation.ID.String(), reservation.UserID.String(), reservation.UserName,
+		reservation.Title, reservation.Description, reservation.Cluster, reservation.Namespace,
+		reservation.GPUCount, reservation.GPUType, reservation.StartDate, reservation.DurationHours,
+		reservation.Notes, string(reservation.Status), reservation.QuotaName,
+		boolToInt(reservation.QuotaEnforced), reservation.CreatedAt)
+	return err
+}
+
+func (s *SQLiteStore) GetGPUReservation(id uuid.UUID) (*models.GPUReservation, error) {
+	row := s.db.QueryRow(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE id = ?`, id.String())
+	return s.scanGPUReservation(row)
+}
+
+func (s *SQLiteStore) ListGPUReservations() ([]models.GPUReservation, error) {
+	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations ORDER BY start_date DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reservations []models.GPUReservation
+	for rows.Next() {
+		r, err := s.scanGPUReservationRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, *r)
+	}
+	return reservations, rows.Err()
+}
+
+func (s *SQLiteStore) ListUserGPUReservations(userID uuid.UUID) ([]models.GPUReservation, error) {
+	rows, err := s.db.Query(`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE user_id = ? ORDER BY start_date DESC`, userID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reservations []models.GPUReservation
+	for rows.Next() {
+		r, err := s.scanGPUReservationRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, *r)
+	}
+	return reservations, rows.Err()
+}
+
+func (s *SQLiteStore) UpdateGPUReservation(reservation *models.GPUReservation) error {
+	now := time.Now()
+	reservation.UpdatedAt = &now
+
+	_, err := s.db.Exec(`UPDATE gpu_reservations SET user_name = ?, title = ?, description = ?, cluster = ?, namespace = ?, gpu_count = ?, gpu_type = ?, start_date = ?, duration_hours = ?, notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ? WHERE id = ?`,
+		reservation.UserName, reservation.Title, reservation.Description,
+		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType,
+		reservation.StartDate, reservation.DurationHours, reservation.Notes,
+		string(reservation.Status), reservation.QuotaName, boolToInt(reservation.QuotaEnforced),
+		reservation.UpdatedAt, reservation.ID.String())
+	return err
+}
+
+func (s *SQLiteStore) DeleteGPUReservation(id uuid.UUID) error {
+	_, err := s.db.Exec(`DELETE FROM gpu_reservations WHERE id = ?`, id.String())
+	return err
+}
+
+func (s *SQLiteStore) scanGPUReservation(row *sql.Row) (*models.GPUReservation, error) {
+	var r models.GPUReservation
+	var idStr, userIDStr, status string
+	var quotaEnforced int
+	var updatedAt sql.NullTime
+
+	err := row.Scan(&idStr, &userIDStr, &r.UserName, &r.Title, &r.Description,
+		&r.Cluster, &r.Namespace, &r.GPUCount, &r.GPUType, &r.StartDate,
+		&r.DurationHours, &r.Notes, &status, &r.QuotaName, &quotaEnforced,
+		&r.CreatedAt, &updatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	r.ID, _ = uuid.Parse(idStr)
+	r.UserID, _ = uuid.Parse(userIDStr)
+	r.Status = models.ReservationStatus(status)
+	r.QuotaEnforced = quotaEnforced == 1
+	if updatedAt.Valid {
+		r.UpdatedAt = &updatedAt.Time
+	}
+	return &r, nil
+}
+
+func (s *SQLiteStore) scanGPUReservationRow(rows *sql.Rows) (*models.GPUReservation, error) {
+	var r models.GPUReservation
+	var idStr, userIDStr, status string
+	var quotaEnforced int
+	var updatedAt sql.NullTime
+
+	err := rows.Scan(&idStr, &userIDStr, &r.UserName, &r.Title, &r.Description,
+		&r.Cluster, &r.Namespace, &r.GPUCount, &r.GPUType, &r.StartDate,
+		&r.DurationHours, &r.Notes, &status, &r.QuotaName, &quotaEnforced,
+		&r.CreatedAt, &updatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	r.ID, _ = uuid.Parse(idStr)
+	r.UserID, _ = uuid.Parse(userIDStr)
+	r.Status = models.ReservationStatus(status)
+	r.QuotaEnforced = quotaEnforced == 1
+	if updatedAt.Valid {
+		r.UpdatedAt = &updatedAt.Time
+	}
+	return &r, nil
 }
 
 // Helper functions

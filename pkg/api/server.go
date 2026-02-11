@@ -558,6 +558,14 @@ func (s *Server) setupRoutes() {
 	api.Post("/notifications/:id/read", feedback.MarkNotificationRead)
 	api.Post("/notifications/read-all", feedback.MarkAllNotificationsRead)
 
+	// GPU reservation routes
+	gpuHandler := handlers.NewGPUHandler(s.store)
+	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
+	api.Get("/gpu/reservations", gpuHandler.ListReservations)
+	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
+	api.Put("/gpu/reservations/:id", gpuHandler.UpdateReservation)
+	api.Delete("/gpu/reservations/:id", gpuHandler.DeleteReservation)
+
 	// Alert notification routes
 	notificationHandler := handlers.NewNotificationHandler(s.store, s.notificationService)
 	api.Post("/notifications/test", notificationHandler.TestNotification)
