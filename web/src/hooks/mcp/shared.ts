@@ -2,7 +2,6 @@ import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { getPresentationMode } from '../usePresentationMode'
 import { registerCacheReset } from '../../lib/modeTransition'
 import { resetFailuresForCluster } from '../../lib/cache'
 import type { ClusterInfo, ClusterHealth } from './types'
@@ -14,11 +13,8 @@ export const REFRESH_INTERVAL_MS = 120000
 export const CLUSTER_POLL_INTERVAL_MS = 60000  // 60 seconds
 export const GPU_POLL_INTERVAL_MS = 30000      // 30 seconds
 
-// Presentation mode multiplier for polling intervals (10 minutes minimum)
-const PRESENTATION_MODE_INTERVAL_MS = 600000
-
 export function getEffectiveInterval(baseInterval: number): number {
-  return getPresentationMode() ? Math.max(baseInterval * 5, PRESENTATION_MODE_INTERVAL_MS) : baseInterval
+  return baseInterval
 }
 
 // Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)

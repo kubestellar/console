@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getPresentationMode } from './usePresentationMode'
 
 // Cache entry stored in localStorage
 interface CacheEntry<T> {
@@ -178,10 +177,7 @@ export function useDataCache<T>({
   const fetchingRef = useRef(false)
 
   // Calculate refresh rate
-  const baseRefreshInterval = refreshInterval ?? REFRESH_RATES[refreshCategory]
-  const effectiveRefreshInterval = getPresentationMode()
-    ? Math.max(baseRefreshInterval * 5, 300000)
-    : baseRefreshInterval
+  const effectiveRefreshInterval = refreshInterval ?? REFRESH_RATES[refreshCategory]
 
   const refetch = useCallback(async () => {
     if (!enabled || fetchingRef.current) return

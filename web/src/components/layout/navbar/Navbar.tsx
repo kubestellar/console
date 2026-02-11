@@ -4,7 +4,6 @@ import { Sun, Moon, Monitor, Menu, X, MoreVertical } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
-import { usePresentationMode } from '../../../hooks/usePresentationMode'
 import { useMobile } from '../../../hooks/useMobile'
 import { TourTrigger } from '../../onboarding/Tour'
 import { UserProfileDropdown } from '../UserProfileDropdown'
@@ -22,7 +21,6 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
-  const { isPresentationMode, togglePresentationMode } = usePresentationMode()
   const location = useLocation()
   const [showFeedback, setShowFeedback] = useState(false)
   const [showMobileMore, setShowMobileMore] = useState(false)
@@ -157,8 +155,6 @@ export function Navbar() {
           onLogout={logout}
           onPreferences={() => navigate(ROUTES.SETTINGS)}
           onFeedback={() => setShowFeedback(true)}
-          isPresentationMode={isPresentationMode}
-          onTogglePresentationMode={togglePresentationMode}
         />
       </div>
 

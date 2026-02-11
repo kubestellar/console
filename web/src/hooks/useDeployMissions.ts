@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
-import { getPresentationMode } from './usePresentationMode'
 import { clusterCacheRef } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
@@ -347,8 +346,7 @@ export function useDeployMissions() {
     // Poll on interval (first poll after 1s delay, then every POLL_INTERVAL_MS)
     const initialTimeout = setTimeout(() => {
       poll()
-      const effectiveInterval = getPresentationMode() ? 300000 : POLL_INTERVAL_MS
-      pollRef.current = setInterval(poll, effectiveInterval)
+      pollRef.current = setInterval(poll, POLL_INTERVAL_MS)
     }, 1000)
 
     return () => {

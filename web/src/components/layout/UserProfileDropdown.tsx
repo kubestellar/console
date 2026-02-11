@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check, Cast } from 'lucide-react'
+import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Linkedin, Globe, Check } from 'lucide-react'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { languages } from '../../lib/i18n'
 
@@ -15,11 +15,9 @@ interface UserProfileDropdownProps {
   onLogout: () => void
   onPreferences?: () => void
   onFeedback?: () => void
-  isPresentationMode?: boolean
-  onTogglePresentationMode?: () => void
 }
 
-export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback, isPresentationMode, onTogglePresentationMode }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [showLanguageSubmenu, setShowLanguageSubmenu] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -178,30 +176,6 @@ export function UserProfileDropdown({ user, onLogout, onPreferences, onFeedback,
                 </div>
               )}
             </div>
-            {/* Presentation Mode toggle */}
-            {onTogglePresentationMode && (
-              <button
-                onClick={onTogglePresentationMode}
-                className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary/50 rounded-lg transition-colors"
-              >
-                <Cast className={`w-4 h-4 ${isPresentationMode ? 'text-blue-400' : 'text-muted-foreground'}`} />
-                <span className="text-muted-foreground">Presentation:</span>
-                <span className={isPresentationMode ? 'text-blue-400' : 'text-foreground'}>
-                  {isPresentationMode ? 'On' : 'Off'}
-                </span>
-                <div
-                  className={`ml-auto w-8 h-4 rounded-full transition-colors ${
-                    isPresentationMode ? 'bg-blue-500' : 'bg-secondary'
-                  }`}
-                >
-                  <div
-                    className={`w-3 h-3 rounded-full bg-white mt-0.5 transition-transform ${
-                      isPresentationMode ? 'ml-4' : 'ml-0.5'
-                    }`}
-                  />
-                </div>
-              </button>
-            )}
           </div>
 
           {/* Actions */}
