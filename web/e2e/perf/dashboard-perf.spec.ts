@@ -128,54 +128,104 @@ async function measureDashboard(
   const navStart = Date.now()
   await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
 
-  // Wait for cards to render (up to 3s for chunks to load)
-  await page.waitForTimeout(500)
-  // Try waiting for at least one card, with a fallback
+  // Wait for at least one card to appear in the DOM.
   try {
-    await page.waitForSelector('[data-card-type]', { timeout: 3000 })
+    await page.waitForSelector('[data-card-type]', { timeout: 5000 })
   } catch {
-    // No cards found — log page state for debugging
     const debugState = await page.evaluate(() => {
       const body = document.body
-      const allDataAttrs = body.querySelectorAll('[data-card-type]')
-      const h1 = body.querySelector('h1')?.textContent || 'none'
-      const dialogs = body.querySelectorAll('[role="dialog"]')
-      const tourPrompt = body.querySelector('[data-testid="tour-prompt"]')
       return {
-        cardTypeCount: allDataAttrs.length,
-        h1,
-        dialogCount: dialogs.length,
-        hasTourPrompt: !!tourPrompt,
+        cardTypeCount: body.querySelectorAll('[data-card-type]').length,
+        h1: body.querySelector('h1')?.textContent || 'none',
+        dialogCount: body.querySelectorAll('[role="dialog"]').length,
+        hasTourPrompt: !!body.querySelector('[data-testid="tour-prompt"]'),
         bodyText: (body.textContent || '').slice(0, 300),
       }
     })
     console.log(`  NO CARDS on ${dashboard.name}: ${JSON.stringify(debugState)}`)
   }
 
-  // Find all card containers
-  const cardElements = await page.$$('[data-card-type]')
-  const cardCount = Math.min(cardElements.length, MAX_CARDS_PER_DASHBOARD)
+  // Find all card containers and collect info in one evaluate call (single CDP round-trip)
+  const cardInfos: { cardType: string; cardId: string; isDemoCard: boolean }[] =
+    await page.evaluate((maxCards: number) => {
+      const els = document.querySelectorAll('[data-card-type]')
+      const infos: { cardType: string; cardId: string; isDemoCard: boolean }[] = []
+      for (let i = 0; i < Math.min(els.length, maxCards); i++) {
+        const el = els[i]
+        infos.push({
+          cardType: el.getAttribute('data-card-type') || `unknown-${i}`,
+          cardId: el.getAttribute('data-card-id') || `card-${i}`,
+          isDemoCard: !!el.querySelector('[data-testid="demo-badge"]'),
+        })
+      }
+      return infos
+    }, MAX_CARDS_PER_DASHBOARD)
+
+  const cardCount = cardInfos.length
+  const cardIds = cardInfos.map(c => c.cardId)
+
+  // Use a SINGLE browser-side polling function to monitor ALL cards simultaneously.
+  // This avoids both sequential bias (checking cards one-by-one from Node) and
+  // CDP contention (N parallel waitForFunction calls overwhelming the connection).
+  // Each card's load time is recorded using performance.now() (time since navigation).
+  let cardLoadTimes: Record<string, number> = {}
+  const timedOutCards = new Set<string>()
+
+  if (cardCount > 0) {
+    try {
+      const handle = await page.waitForFunction(
+        (ids: string[]) => {
+          // Initialize tracking state on first poll
+          const w = window as Window & { __perfCardTimes?: Record<string, number> }
+          if (!w.__perfCardTimes) w.__perfCardTimes = {}
+
+          for (const id of ids) {
+            if (w.__perfCardTimes[id] !== undefined) continue
+            const card = document.querySelector(`[data-card-id="${id}"]`)
+            if (!card) continue
+            if (card.getAttribute('data-loading') === 'true') continue
+            const pulseEls = card.querySelectorAll('.animate-pulse')
+            let hasSkeleton = false
+            for (const el of pulseEls) {
+              if ((el as HTMLElement).getBoundingClientRect().height > 40) {
+                hasSkeleton = true
+                break
+              }
+            }
+            if (hasSkeleton) continue
+            if ((card.textContent || '').trim().length <= 10) continue
+            w.__perfCardTimes[id] = Math.round(performance.now())
+          }
+          // Resolve when ALL cards have loaded
+          return Object.keys(w.__perfCardTimes).length >= ids.length
+            ? w.__perfCardTimes
+            : false
+        },
+        cardIds,
+        { timeout: CARD_CONTENT_TIMEOUT, polling: 100 }
+      )
+      cardLoadTimes = (await handle.jsonValue()) as Record<string, number>
+    } catch {
+      // Some cards timed out — collect what we have
+      cardLoadTimes = await page.evaluate(() => {
+        return (window as Window & { __perfCardTimes?: Record<string, number> }).__perfCardTimes || {}
+      })
+      for (const id of cardIds) {
+        if (cardLoadTimes[id] === undefined) timedOutCards.add(id)
+      }
+    }
+  }
 
   const cardMetrics: CardMetric[] = []
   let firstCardTime = Infinity
   let lastCardTime = 0
 
-  for (let i = 0; i < cardCount; i++) {
-    const el = cardElements[i]
-    const cardType = (await el.getAttribute('data-card-type')) || `unknown-${i}`
-    const cardId = (await el.getAttribute('data-card-id')) || `card-${i}`
-    const isDemoCard = (await el.$('[data-testid="demo-badge"]')) !== null
+  for (const info of cardInfos) {
+    const loadTimeMs = cardLoadTimes[info.cardId]
+    const timedOut = timedOutCards.has(info.cardId)
+    // performance.now() gives ms since navigation — use directly
+    const timeToFirstContent = loadTimeMs !== undefined ? loadTimeMs : Date.now() - navStart
 
-    const contentStart = Date.now()
-    const { skeletonDuration, timedOut } = await waitForCardContent(
-      page,
-      `[data-card-id="${cardId}"]`,
-      CARD_CONTENT_TIMEOUT
-    )
-
-    const timeToFirstContent = Date.now() - navStart
-
-    // Debug: log why a card timed out
     if (timedOut) {
       const debugInfo = await page.evaluate((selector: string) => {
         const card = document.querySelector(selector)
@@ -188,15 +238,13 @@ async function measureDashboard(
           pulseInfo.push({ tag: el.tagName, classes: el.className, height: rect.height, width: rect.width })
         }
         const text = (card.textContent || '').trim()
-        // Check for hidden content div (CardWrapper hides children when skeleton shows)
         const hiddenDiv = card.querySelector('.hidden')
         const contentsDiv = card.querySelector('.contents')
-        // Check if card has Suspense fallback (no real content yet)
         const childContent = hiddenDiv || contentsDiv
         const childText = childContent ? (childContent.textContent || '').trim().slice(0, 200) : 'N/A'
         return { found: true, isLoading, pulseCount: pulseEls.length, pulseInfo, textLength: text.length, textSnippet: text.slice(0, 200), hasHiddenDiv: !!hiddenDiv, hasContentsDiv: !!contentsDiv, childText }
-      }, `[data-card-id="${cardId}"]`)
-      console.log(`  TIMEOUT DEBUG [${cardType}/${cardId}]:`, JSON.stringify(debugInfo, null, 2))
+      }, `[data-card-id="${info.cardId}"]`)
+      console.log(`  TIMEOUT DEBUG [${info.cardType}/${info.cardId}]:`, JSON.stringify(debugInfo, null, 2))
     }
 
     if (!timedOut) {
@@ -205,12 +253,12 @@ async function measureDashboard(
     }
 
     cardMetrics.push({
-      cardType,
-      cardId,
-      isDemoDataCard: isDemoCard || mode === 'demo',
-      apiTimeToFirstByte: null, // Populated below
+      cardType: info.cardType,
+      cardId: info.cardId,
+      isDemoDataCard: info.isDemoCard || mode === 'demo',
+      apiTimeToFirstByte: null,
       apiTotalTime: null,
-      skeletonDuration,
+      skeletonDuration: timedOut ? CARD_CONTENT_TIMEOUT : timeToFirstContent,
       timeToFirstContent,
       timedOut,
     })
@@ -253,6 +301,24 @@ const perfReport: PerfReport = {
   timestamp: new Date().toISOString(),
   dashboards: [],
 }
+
+// ---------------------------------------------------------------------------
+// Warmup — prime Vite module cache so first real test isn't penalized
+// ---------------------------------------------------------------------------
+
+test('warmup — prime Vite module cache', async ({ page }) => {
+  await setupAuth(page)
+  await setMode(page, 'demo')
+  // Navigate through several dashboards to warm up React + card chunk modules.
+  // Each route triggers loading of unique card components not shared by others.
+  const warmupRoutes = ['/', '/deploy', '/ai-ml', '/compliance', '/ci-cd']
+  for (const route of warmupRoutes) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' })
+    try {
+      await page.waitForSelector('[data-card-type]', { timeout: 8_000 })
+    } catch { /* ignore — just warming up */ }
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Test generation

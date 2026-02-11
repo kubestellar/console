@@ -85,6 +85,19 @@ manualChunks: (id) => {
   server: {
     port: 5174,
     strictPort: true, // Fail if port 5174 is already in use
+    warmup: {
+      // Pre-transform card component modules on server start so the first
+      // dashboard load doesn't pay the cold module-transform penalty.
+      clientFiles: [
+        './src/components/cards/cardRegistry.ts',
+        './src/components/cards/deploy-bundle.ts',
+        './src/components/cards/llmd/index.ts',
+        './src/components/cards/workload-detection/index.ts',
+        './src/components/cards/workload-monitor/index.ts',
+        './src/components/cards/kagenti/index.ts',
+        './src/App.tsx',
+      ],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
