@@ -488,6 +488,7 @@ export const DEMO_DATA_CARDS = new Set([
   'kagenti_agent_discovery',
   'kagenti_security',
   'kagenti_topology',
+  'kagenti_security_posture',
 ])
 
 /**
@@ -517,6 +518,8 @@ export const DEMO_EXEMPT_CARDS = new Set([
   'kube_pong',
   'kube_galaga',
   'kube_craft',
+  'kube_doom',
+  'dynamic_card',
 ])
 
 /**

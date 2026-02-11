@@ -7,6 +7,7 @@ import {
 import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
 import { WEATHER_API } from '../../../config/externalApis'
 import { useCardLoadingState } from '../CardDataContext'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -15,6 +16,53 @@ import type {
   WeatherConfig,
   SavedLocation,
 } from './types'
+
+// Demo weather data for demo mode (avoids external API calls)
+function getDemoWeatherData(units: 'F' | 'C'): {
+  current: CurrentWeather
+  forecast: ForecastDay[]
+  hourly: HourlyForecast[]
+} {
+  const isF = units === 'F'
+  const today = new Date()
+  const forecast: ForecastDay[] = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(today)
+    date.setDate(date.getDate() + i)
+    const codes = [0, 1, 2, 3, 61, 80, 95]
+    return {
+      date: date.toISOString().split('T')[0],
+      dayOfWeek: i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' }),
+      weatherCode: codes[i % codes.length],
+      tempHigh: isF ? 72 + Math.round(Math.sin(i) * 8) : 22 + Math.round(Math.sin(i) * 4),
+      tempLow: isF ? 55 + Math.round(Math.sin(i) * 5) : 13 + Math.round(Math.sin(i) * 3),
+      precipitation: [10, 0, 20, 60, 40, 5, 15][i],
+    }
+  })
+
+  const hourly: HourlyForecast[] = Array.from({ length: 24 }, (_, i) => {
+    const hour = (today.getHours() + i) % 24
+    return {
+      hour: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`,
+      time: hour,
+      temperature: isF ? 62 + Math.round(Math.sin(i / 4) * 10) : 17 + Math.round(Math.sin(i / 4) * 5),
+      weatherCode: i < 6 ? 0 : i < 12 ? 2 : i < 18 ? 3 : 1,
+      precipitation: i > 10 && i < 16 ? 30 + i * 2 : 5,
+    }
+  })
+
+  return {
+    current: {
+      temperature: isF ? 68 : 20,
+      weatherCode: 2,
+      humidity: 55,
+      feelsLike: isF ? 66 : 19,
+      windSpeed: isF ? 12 : 19,
+      isDaytime: today.getHours() >= 6 && today.getHours() < 20,
+    },
+    forecast,
+    hourly,
+  }
+}
 
 export function Weather({ config }: { config?: WeatherConfig }) {
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
@@ -26,6 +74,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const hourlyScrollRef = useRef<HTMLDivElement>(null)
+  const { isDemoMode } = useDemoMode()
 
   // Current location state - restore from localStorage
   const [currentLocation, setCurrentLocation] = useState<SavedLocation>(() => {
@@ -73,8 +122,18 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     localStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
   }, [currentLocation])
 
-  // Fetch weather data from Open-Meteo API
+  // Fetch weather data from Open-Meteo API (or use demo data)
   const fetchWeather = useCallback(async (lat: number, lon: number) => {
+    if (isDemoMode) {
+      const demo = getDemoWeatherData(units)
+      setCurrentWeather(demo.current)
+      setForecast(demo.forecast.slice(0, forecastLength))
+      setHourlyForecast(demo.hourly)
+      setIsLoading(false)
+      setLastRefresh(new Date())
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -150,7 +209,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [units, forecastLength])
+  }, [units, forecastLength, isDemoMode])
 
   // Fetch weather when location or settings change
   useEffect(() => {

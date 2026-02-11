@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
 import {
   useCardData,
@@ -199,6 +200,44 @@ function saveRepos(repos: string[]) {
   localStorage.setItem(SAVED_REPOS_KEY, JSON.stringify(repos))
 }
 
+// Demo data for GitHub Activity card
+function getDemoGitHubData(repoName: string) {
+  const now = new Date()
+  const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000).toISOString()
+  const demoUser = { login: 'demo-user', avatar_url: 'https://github.com/ghost.png' }
+  const prs: GitHubPR[] = [
+    { number: 842, title: 'feat: Add multi-cluster GPU scheduling', state: 'open', merged_at: null, created_at: hoursAgo(2), updated_at: hoursAgo(1), user: demoUser, html_url: '#', draft: false, labels: [{ name: 'enhancement', color: 'a2eeef' }] },
+    { number: 841, title: 'fix: Resolve SSE reconnection on timeout', state: 'closed', merged_at: hoursAgo(4), created_at: daysAgo(1), updated_at: hoursAgo(4), user: { login: 'contributor-1', avatar_url: 'https://github.com/ghost.png' }, html_url: '#', draft: false, labels: [{ name: 'bug', color: 'd73a4a' }] },
+    { number: 840, title: 'docs: Update deployment guide for v0.9', state: 'closed', merged_at: hoursAgo(8), created_at: daysAgo(2), updated_at: hoursAgo(8), user: { login: 'doc-writer', avatar_url: 'https://github.com/ghost.png' }, html_url: '#', draft: false, labels: [{ name: 'documentation', color: '0075ca' }] },
+    { number: 839, title: 'feat: Dashboard card preloading optimization', state: 'closed', merged_at: daysAgo(1), created_at: daysAgo(3), updated_at: daysAgo(1), user: demoUser, html_url: '#', draft: false, labels: [{ name: 'performance', color: 'fbca04' }] },
+    { number: 838, title: 'chore: Upgrade React to v19', state: 'open', merged_at: null, created_at: daysAgo(5), updated_at: daysAgo(2), user: { login: 'maintainer', avatar_url: 'https://github.com/ghost.png' }, html_url: '#', draft: true, labels: [{ name: 'dependencies', color: '0366d6' }] },
+  ]
+  const issues: GitHubIssue[] = [
+    { number: 201, title: 'Card skeleton flickers on fast connections', state: 'open', created_at: hoursAgo(6), updated_at: hoursAgo(3), user: demoUser, html_url: '#', labels: [{ name: 'bug', color: 'd73a4a' }], comments: 4 },
+    { number: 200, title: 'Add Prometheus metrics export', state: 'open', created_at: daysAgo(3), updated_at: daysAgo(1), user: { login: 'feature-req', avatar_url: 'https://github.com/ghost.png' }, html_url: '#', labels: [{ name: 'enhancement', color: 'a2eeef' }], comments: 7 },
+    { number: 199, title: 'Dark mode contrast issues on Alerts card', state: 'closed', created_at: daysAgo(7), updated_at: daysAgo(2), closed_at: daysAgo(2), user: { login: 'ui-tester', avatar_url: 'https://github.com/ghost.png' }, html_url: '#', labels: [{ name: 'accessibility', color: 'c5def5' }], comments: 2 },
+  ]
+  const releases: GitHubRelease[] = [
+    { id: 1, tag_name: 'v0.9.0', name: 'v0.9.0 - Multi-Cluster Dashboard', published_at: daysAgo(5), html_url: '#', author: { login: 'release-bot' }, prerelease: false },
+    { id: 2, tag_name: 'v0.9.0-rc.1', name: 'v0.9.0-rc.1', published_at: daysAgo(12), html_url: '#', author: { login: 'release-bot' }, prerelease: true },
+  ]
+  const contributors: GitHubContributor[] = [
+    { login: 'lead-dev', avatar_url: 'https://github.com/ghost.png', contributions: 342, html_url: '#' },
+    { login: 'contributor-1', avatar_url: 'https://github.com/ghost.png', contributions: 128, html_url: '#' },
+    { login: 'demo-user', avatar_url: 'https://github.com/ghost.png', contributions: 85, html_url: '#' },
+    { login: 'doc-writer', avatar_url: 'https://github.com/ghost.png', contributions: 47, html_url: '#' },
+  ]
+  const repoInfo: GitHubRepo = {
+    name: repoName.split('/')[1] || 'console',
+    full_name: repoName,
+    stargazers_count: 1247,
+    open_issues_count: 23,
+    html_url: '#',
+  }
+  return { prs, issues, releases, contributors, repoInfo, openPRCount: 2, openIssueCount: 2 }
+}
+
 // Custom hook for GitHub data fetching
 function useGitHubActivity(config?: GitHubActivityConfig) {
   const [prs, setPRs] = useState<GitHubPR[]>([])
@@ -212,6 +251,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [openPRCount, setOpenPRCount] = useState(0)
   const [openIssueCount, setOpenIssueCount] = useState(0)
+  const { isDemoMode } = useDemoMode()
 
   // Use configured repos or default to kubestellar/console
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
@@ -222,6 +262,22 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
   const reposKey = useMemo(() => repos.join(','), [repos.join(',')])
 
   const fetchGitHubData = async (isManualRefresh = false) => {
+    if (isDemoMode) {
+      const targetRepo = repos[0] || DEFAULT_REPO
+      const demo = getDemoGitHubData(targetRepo)
+      setRepoInfo(demo.repoInfo)
+      setPRs(demo.prs)
+      setIssues(demo.issues)
+      setReleases(demo.releases)
+      setContributors(demo.contributors)
+      setOpenPRCount(demo.openPRCount)
+      setOpenIssueCount(demo.openIssueCount)
+      setIsLoading(false)
+      setLastRefresh(new Date())
+      setError(null)
+      return
+    }
+
     if (repos.length === 0 && !org) {
       setIsLoading(false)
       setError('No repositories or organization configured')
@@ -383,11 +439,13 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
   useEffect(() => {
     fetchGitHubData()
-    // Auto-refresh every 60 seconds (bypasses cache for fresh data)
-    const interval = setInterval(() => fetchGitHubData(true), 60_000)
-    return () => clearInterval(interval)
+    // Auto-refresh every 60 seconds (bypasses cache for fresh data) — skip in demo mode
+    if (!isDemoMode) {
+      const interval = setInterval(() => fetchGitHubData(true), 60_000)
+      return () => clearInterval(interval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reposKey, org])
+  }, [reposKey, org, isDemoMode])
 
   return {
     prs,
