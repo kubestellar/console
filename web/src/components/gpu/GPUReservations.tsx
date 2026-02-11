@@ -17,6 +17,8 @@ import {
   Loader2,
   Server,
   Eye,
+  Filter,
+  User,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -26,7 +28,6 @@ import {
   useNamespaces,
   createOrUpdateResourceQuota,
   deleteResourceQuota,
-  GPU_RESOURCE_TYPES,
   COMMON_RESOURCE_TYPES,
 } from '../../hooks/useMCP'
 import type { ResourceQuota, GPUNode } from '../../hooks/useMCP'
@@ -112,6 +113,8 @@ export function GPUReservations() {
   const [editingQuota, setEditingQuota] = useState<ResourceQuota | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showOnlyMine, setShowOnlyMine] = useState(false)
+  const [prefillDate, setPrefillDate] = useState<string | null>(null)
 
   const showDemoIndicator = demoMode
 
@@ -127,6 +130,18 @@ export function GPUReservations() {
     if (isAllClustersSelected) return filtered
     return filtered.filter(q => q.cluster && selectedClusters.some(c => q.cluster!.startsWith(c)))
   }, [resourceQuotas, selectedClusters, isAllClustersSelected])
+
+  // Filtered quotas respecting "My Reservations" toggle
+  const filteredQuotas = useMemo(() => {
+    if (!showOnlyMine || !user) return gpuQuotas
+    const login = user.github_login?.toLowerCase()
+    const email = user.email?.toLowerCase()
+    return gpuQuotas.filter(q => {
+      const meta = getReservationMeta(q)
+      const qUser = meta.user.toLowerCase()
+      return (login && qUser.includes(login)) || (email && qUser.includes(email))
+    })
+  }, [gpuQuotas, showOnlyMine, user])
 
   // Clusters with GPU info for the dropdown
   const gpuClusters = useMemo((): GPUClusterInfo[] => {
@@ -177,13 +192,13 @@ export function GPUReservations() {
       color: getChartColor((i % 4) + 1),
     }))
 
-    // Usage by namespace from real quotas
+    // Usage by namespace from real quotas (include cluster context)
     const namespaceUsage: Record<string, number> = {}
     for (const q of gpuQuotas) {
-      const ns = q.namespace
+      const label = q.cluster ? `${q.namespace} (${q.cluster})` : q.namespace
       for (const [key, value] of Object.entries(q.used || {})) {
         if (GPU_KEYS.some(gk => key.includes(gk))) {
-          namespaceUsage[ns] = (namespaceUsage[ns] || 0) + (parseInt(value) || 0)
+          namespaceUsage[label] = (namespaceUsage[label] || 0) + (parseInt(value) || 0)
         }
       }
     }
@@ -229,7 +244,7 @@ export function GPUReservations() {
   const getQuotasForDay = (day: number) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     date.setHours(0, 0, 0, 0)
-    return gpuQuotas.filter(q => {
+    return filteredQuotas.filter(q => {
       const meta = getReservationMeta(q)
       if (meta.startDate) {
         const start = new Date(meta.startDate)
@@ -309,7 +324,7 @@ export function GPUReservations() {
         {[
           { id: 'overview' as const, label: 'Overview', icon: TrendingUp },
           { id: 'calendar' as const, label: 'Calendar', icon: Calendar },
-          { id: 'quotas' as const, label: 'GPU Quotas', icon: Settings2, count: gpuQuotas.length },
+          { id: 'quotas' as const, label: 'Reservations', icon: Settings2, count: gpuQuotas.length },
           { id: 'inventory' as const, label: 'Inventory', icon: Server },
         ].map(tab => {
           const Icon = tab.icon
@@ -335,13 +350,28 @@ export function GPUReservations() {
           )
         })}
 
-        <div className="ml-auto pb-2">
+        <div className="ml-auto pb-2 flex items-center gap-3">
+          {/* My Reservations filter */}
+          {user && (
+            <button
+              onClick={() => setShowOnlyMine(!showOnlyMine)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
+                showOnlyMine
+                  ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                  : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {showOnlyMine ? <User className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
+              My Reservations
+            </button>
+          )}
           <button
             onClick={() => { setEditingQuota(null); setShowReservationForm(true) }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Create GPU Quota
+            Create GPU Reservation
           </button>
         </div>
       </div>
@@ -454,11 +484,13 @@ export function GPUReservations() {
             </div>
           )}
 
-          {/* Active GPU Quotas */}
+          {/* Active Reservations */}
           <div className="glass p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-muted-foreground mb-4">Active GPU Quotas</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+              {showOnlyMine ? 'My GPU Reservations' : 'Active GPU Reservations'}
+            </h3>
             <div className="space-y-3">
-              {gpuQuotas.slice(0, 5).map(q => {
+              {filteredQuotas.slice(0, 5).map(q => {
                 const meta = getReservationMeta(q)
                 const gpuCount = getGPUCount(q)
                 return (
@@ -488,9 +520,9 @@ export function GPUReservations() {
                   </div>
                 )
               })}
-              {gpuQuotas.length === 0 && (
+              {filteredQuotas.length === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
-                  No GPU quotas configured. Click "Create GPU Quota" to get started.
+                  {showOnlyMine ? 'No reservations found for your user.' : 'No GPU reservations configured. Click "Create GPU Reservation" to get started.'}
                 </div>
               )}
             </div>
@@ -502,14 +534,14 @@ export function GPUReservations() {
       {activeTab === 'calendar' && (
         <div className="space-y-6">
           <div className="glass p-4 rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-secondary transition-colors">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <h3 className="text-lg font-medium text-foreground">
+              <h3 className="text-lg font-medium text-foreground min-w-[180px] text-center">
                 {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </h3>
-              <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-secondary transition-colors">
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
@@ -521,24 +553,25 @@ export function GPUReservations() {
               ))}
 
               {Array.from({ length: startingDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="p-2 min-h-[80px]" />
+                <div key={`empty-${i}`} className="p-2 min-h-[120px]" />
               ))}
 
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const day = i + 1
                 const dayQuotas = getQuotasForDay(day)
                 const isToday = new Date().toDateString() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString()
+                const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
                 return (
                   <div key={day} className={cn(
-                    'p-2 min-h-[80px] rounded-lg border border-border/50 hover:bg-secondary/30 transition-colors',
+                    'group relative p-2 min-h-[120px] rounded-lg border border-border/50 hover:bg-secondary/30 transition-colors',
                     isToday && 'bg-purple-500/10 border-purple-500/50'
                   )}>
                     <div className={cn('text-sm font-medium mb-1', isToday ? 'text-purple-400' : 'text-foreground')}>
                       {day}
                     </div>
                     <div className="space-y-1">
-                      {dayQuotas.slice(0, 2).map(q => {
+                      {dayQuotas.slice(0, 3).map(q => {
                         const meta = getReservationMeta(q)
                         const gpuCount = getGPUCount(q)
                         return (
@@ -546,14 +579,21 @@ export function GPUReservations() {
                             onClick={() => setSelectedQuota(q)}
                             className="w-full text-left px-1.5 py-0.5 rounded text-xs truncate bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
                           >
-                            {gpuCount}× {meta.title.slice(0, 10)}
+                            {gpuCount}× {meta.title.slice(0, 12)}
                           </button>
                         )
                       })}
-                      {dayQuotas.length > 2 && (
-                        <div className="text-xs text-muted-foreground text-center">+{dayQuotas.length - 2} more</div>
+                      {dayQuotas.length > 3 && (
+                        <div className="text-xs text-muted-foreground text-center">+{dayQuotas.length - 3} more</div>
                       )}
                     </div>
+                    {/* Add reservation button */}
+                    <button
+                      onClick={() => { setPrefillDate(dateStr); setEditingQuota(null); setShowReservationForm(true) }}
+                      className="absolute bottom-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded bg-purple-500/20 text-purple-400 opacity-0 group-hover:opacity-100 hover:bg-purple-500/40 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 )
               })}
@@ -667,18 +707,22 @@ export function GPUReservations() {
       {/* GPU Quotas Tab */}
       {activeTab === 'quotas' && (
         <div className="space-y-6">
-          {gpuQuotas.length === 0 && !quotasLoading && (
+          {filteredQuotas.length === 0 && !quotasLoading && (
             <div className="glass p-8 rounded-lg text-center">
               <Settings2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground mb-4">No GPU quotas configured yet</p>
-              <button onClick={() => { setEditingQuota(null); setShowReservationForm(true) }}
-                className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600">
-                Create GPU Quota
-              </button>
+              <p className="text-muted-foreground mb-4">
+                {showOnlyMine ? 'No reservations found for your user.' : 'No GPU reservations configured yet'}
+              </p>
+              {!showOnlyMine && (
+                <button onClick={() => { setEditingQuota(null); setShowReservationForm(true) }}
+                  className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600">
+                  Create GPU Reservation
+                </button>
+              )}
             </div>
           )}
           <div className="grid gap-4">
-            {gpuQuotas.map(q => {
+            {filteredQuotas.map(q => {
               const meta = getReservationMeta(q)
               return (
                 <div key={`${q.cluster}-${q.namespace}-${q.name}`} className="glass p-4 rounded-lg">
@@ -828,12 +872,13 @@ export function GPUReservations() {
       {showReservationForm && (
         <ReservationFormModal
           isOpen={showReservationForm}
-          onClose={() => { setShowReservationForm(false); setEditingQuota(null) }}
+          onClose={() => { setShowReservationForm(false); setEditingQuota(null); setPrefillDate(null) }}
           editingQuota={editingQuota}
           gpuClusters={gpuClusters}
           allNodes={rawNodes}
           user={user}
-          onSaved={() => { refetchQuotas(); showToast('GPU quota saved successfully', 'success') }}
+          prefillDate={prefillDate}
+          onSaved={() => { refetchQuotas(); showToast('GPU reservation saved successfully', 'success') }}
           onError={(msg) => showToast(msg, 'error')}
         />
       )}
@@ -893,6 +938,7 @@ function ReservationFormModal({
   gpuClusters,
   allNodes,
   user,
+  prefillDate,
   onSaved,
   onError,
 }: {
@@ -902,6 +948,7 @@ function ReservationFormModal({
   gpuClusters: GPUClusterInfo[]
   allNodes: GPUNode[]
   user: { github_login: string; email?: string } | null
+  prefillDate?: string | null
   onSaved: () => void
   onError: (msg: string) => void
 }) {
@@ -912,14 +959,9 @@ function ReservationFormModal({
   const [title, setTitle] = useState(existingMeta?.title || '')
   const [description, setDescription] = useState(existingMeta?.description || '')
   const [gpuCount, setGpuCount] = useState(editingQuota ? String(getGPUCount(editingQuota)) : '')
-  const [gpuResourceKey, setGpuResourceKey] = useState(
-    editingQuota
-      ? Object.keys(editingQuota.hard).find(k => GPU_KEYS.some(gk => k.includes(gk))) || 'limits.nvidia.com/gpu'
-      : 'limits.nvidia.com/gpu'
-  )
-  const [startDate, setStartDate] = useState(existingMeta?.startDate || new Date().toISOString().split('T')[0])
-  const [durationHours, setDurationHours] = useState(existingMeta?.durationHours || '')
   const [gpuPreference, setGpuPreference] = useState(existingMeta?.gpuPreference || '')
+  const [startDate, setStartDate] = useState(existingMeta?.startDate || prefillDate || new Date().toISOString().split('T')[0])
+  const [durationHours, setDurationHours] = useState(existingMeta?.durationHours || '')
   const [notes, setNotes] = useState(existingMeta?.notes || '')
   const [extraResources, setExtraResources] = useState<Array<{ key: string; value: string }>>(
     editingQuota
@@ -931,17 +973,52 @@ function ReservationFormModal({
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { namespaces: clusterNamespaces } = useNamespaces(cluster || undefined)
+  const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined)
+
+  // Filter out system namespaces from the dropdown
+  const FILTERED_NS_PREFIXES = ['openshift-', 'kube-']
+  const FILTERED_NS_EXACT = ['default', 'kube-system', 'kube-public', 'kube-node-lease']
+  const clusterNamespaces = useMemo(() =>
+    rawNamespaces.filter(ns =>
+      !FILTERED_NS_PREFIXES.some(prefix => ns.startsWith(prefix)) &&
+      !FILTERED_NS_EXACT.includes(ns)
+    ),
+  [rawNamespaces])
 
   // Get the selected cluster's GPU info
   const selectedClusterInfo = gpuClusters.find(c => c.name === cluster)
   const maxGPUs = selectedClusterInfo?.availableGPUs ?? 0
 
-  // GPU types available on selected cluster
+  // Auto-detect GPU resource key from cluster's GPU types
+  const gpuResourceKey = useMemo(() => {
+    if (editingQuota) {
+      return Object.keys(editingQuota.hard).find(k => GPU_KEYS.some(gk => k.includes(gk))) || 'limits.nvidia.com/gpu'
+    }
+    if (!cluster) return 'limits.nvidia.com/gpu'
+    const clusterNodes = allNodes.filter(n => n.cluster === cluster)
+    const hasAMD = clusterNodes.some(n => n.gpuType.toLowerCase().includes('amd') || n.manufacturer?.toLowerCase().includes('amd'))
+    const hasIntel = clusterNodes.some(n => n.gpuType.toLowerCase().includes('intel') || n.manufacturer?.toLowerCase().includes('intel'))
+    if (hasAMD) return 'limits.amd.com/gpu'
+    if (hasIntel) return 'gpu.intel.com/i915'
+    return 'limits.nvidia.com/gpu'
+  }, [cluster, allNodes, editingQuota])
+
+  // GPU types available on selected cluster with per-type counts
   const clusterGPUTypes = useMemo(() => {
-    if (!cluster) return []
-    return Array.from(new Set(allNodes.filter(n => n.cluster === cluster).map(n => n.gpuType)))
+    if (!cluster) return [] as Array<{ type: string; total: number; available: number }>
+    const typeMap: Record<string, { total: number; allocated: number }> = {}
+    for (const n of allNodes.filter(n => n.cluster === cluster)) {
+      if (!typeMap[n.gpuType]) typeMap[n.gpuType] = { total: 0, allocated: 0 }
+      typeMap[n.gpuType].total += n.gpuCount
+      typeMap[n.gpuType].allocated += n.gpuAllocated
+    }
+    return Object.entries(typeMap).map(([type, d]) => ({
+      type,
+      total: d.total,
+      available: d.total - d.allocated,
+    }))
   }, [cluster, allNodes])
+
 
   // Auto-generate quota name from title
   const quotaName = editingQuota?.name || (title
@@ -972,7 +1049,7 @@ function ReservationFormModal({
       [`${ANNOTATION_PREFIX}description`]: description,
       [`${ANNOTATION_PREFIX}start-date`]: startDate,
       [`${ANNOTATION_PREFIX}duration-hours`]: durationHours || '24',
-      [`${ANNOTATION_PREFIX}gpu-preference`]: gpuPreference,
+      [`${ANNOTATION_PREFIX}gpu-preference`]: gpuPreference || clusterGPUTypes.join(', '),
       [`${ANNOTATION_PREFIX}notes`]: notes,
       [`${ANNOTATION_PREFIX}created-at`]: editingQuota
         ? (existingMeta?.createdAt || new Date().toISOString())
@@ -1000,7 +1077,7 @@ function ReservationFormModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
       <BaseModal.Header
         title={editingQuota ? 'Edit GPU Reservation' : 'Create GPU Reservation'}
         icon={Calendar}
@@ -1077,52 +1154,50 @@ function ReservationFormModal({
             </select>
           </div>
 
-          {/* GPU Count and Type */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
-                Total GPUs Required *
-                {selectedClusterInfo && (
-                  <span className="text-xs text-green-400 ml-2">
-                    (max {selectedClusterInfo.availableGPUs} available)
-                  </span>
-                )}
-              </label>
-              <input type="number" value={gpuCount} onChange={e => setGpuCount(e.target.value)}
-                min="1" max={maxGPUs || undefined}
-                placeholder="e.g., 4"
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">GPU Resource Type</label>
-              <select value={gpuResourceKey} onChange={e => setGpuResourceKey(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground">
-                {GPU_RESOURCE_TYPES.map(rt => (
-                  <option key={rt.key} value={rt.key}>{rt.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* GPU Count */}
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
+              Total GPUs Required *
+              {selectedClusterInfo && (
+                <span className="text-xs text-green-400 ml-2">
+                  (max {selectedClusterInfo.availableGPUs} available)
+                </span>
+              )}
+            </label>
+            <input type="number" value={gpuCount} onChange={e => setGpuCount(e.target.value)}
+              min="1" max={maxGPUs || undefined}
+              placeholder="e.g., 4"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground" />
           </div>
 
-          {/* GPU Preference (from cluster's available types) */}
-          {clusterGPUTypes.length > 0 && (
+          {/* GPU Type Selection (only when cluster has multiple types) */}
+          {clusterGPUTypes.length > 1 && (
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">GPU Preference</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">GPU Type</label>
               <div className="flex flex-wrap gap-2">
-                {clusterGPUTypes.map(type => (
-                  <label key={type} className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors',
-                    gpuPreference === type
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-                      : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
-                  )}>
-                    <input type="radio" name="gpuPref" value={type} checked={gpuPreference === type}
-                      onChange={e => setGpuPreference(e.target.value)} className="sr-only" />
+                {clusterGPUTypes.map(gt => (
+                  <button key={gt.type} type="button"
+                    onClick={() => setGpuPreference(gt.type)}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors',
+                      gpuPreference === gt.type
+                        ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                        : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
+                    )}>
                     <Zap className="w-3.5 h-3.5" />
-                    <span className="text-sm">{type}</span>
-                  </label>
+                    {gt.type}
+                    <span className="text-xs opacity-70">({gt.available}/{gt.total})</span>
+                  </button>
                 ))}
               </div>
+            </div>
+          )}
+          {/* Single GPU type — show as info */}
+          {clusterGPUTypes.length === 1 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Zap className="w-3.5 h-3.5 text-purple-400" />
+              {clusterGPUTypes[0].type}
+              <span className="text-xs">({clusterGPUTypes[0].available} of {clusterGPUTypes[0].total} available)</span>
             </div>
           )}
 
