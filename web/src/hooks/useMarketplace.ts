@@ -8,6 +8,14 @@ const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 const INSTALLED_KEY = 'kc-marketplace-installed'
 
 export type MarketplaceItemType = 'dashboard' | 'card-preset' | 'theme'
+export type MarketplaceItemStatus = 'available' | 'help-wanted'
+export type MarketplaceDifficulty = 'beginner' | 'intermediate' | 'advanced'
+
+export interface CNCFProjectInfo {
+  maturity: 'graduated' | 'incubating'
+  category: string
+  website?: string
+}
 
 export interface MarketplaceItem {
   id: string
@@ -20,7 +28,20 @@ export interface MarketplaceItem {
   tags: string[]
   cardCount: number
   type: MarketplaceItemType
-  themeColors?: string[] // Preview colors for theme items
+  themeColors?: string[]
+  status?: MarketplaceItemStatus
+  issueUrl?: string
+  difficulty?: MarketplaceDifficulty
+  skills?: string[]
+  cncfProject?: CNCFProjectInfo
+}
+
+export interface CNCFStats {
+  total: number
+  completed: number
+  helpWanted: number
+  graduatedTotal: number
+  incubatingTotal: number
 }
 
 interface MarketplaceRegistry {
@@ -71,6 +92,7 @@ export function useMarketplace() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<MarketplaceItemType | null>(null)
+  const [showHelpWanted, setShowHelpWanted] = useState(false)
   const [installedItems, setInstalledItems] = useState<InstalledMap>(loadInstalled)
 
   const fetchRegistry = useCallback(async (skipCache = false) => {
@@ -191,8 +213,31 @@ export function useMarketplace() {
     markUninstalled(item.id)
   }, [installedItems, markUninstalled])
 
-  // Collect all unique tags
+  // Collect all unique tags (exclude internal tags when not in help-wanted mode)
   const allTags = Array.from(new Set(items.flatMap(i => i.tags))).sort()
+
+  // CNCF stats
+  const cncfItems = items.filter(i => i.cncfProject)
+  const cncfStats: CNCFStats = {
+    total: cncfItems.length,
+    completed: cncfItems.filter(i => (i.status || 'available') === 'available').length,
+    helpWanted: cncfItems.filter(i => i.status === 'help-wanted').length,
+    graduatedTotal: cncfItems.filter(i => i.cncfProject?.maturity === 'graduated').length,
+    incubatingTotal: cncfItems.filter(i => i.cncfProject?.maturity === 'incubating').length,
+  }
+
+  // CNCF categories (for grouping in help-wanted view)
+  const cncfCategories = Array.from(new Set(
+    cncfItems.map(i => i.cncfProject!.category)
+  )).sort()
+
+  // Type counts (for filter badges)
+  const typeCounts: Record<string, number> = {
+    all: items.length,
+    dashboard: items.filter(i => i.type === 'dashboard').length,
+    'card-preset': items.filter(i => i.type === 'card-preset').length,
+    theme: items.filter(i => i.type === 'theme').length,
+  }
 
   // Filter items
   const filteredItems = items.filter(item => {
@@ -201,13 +246,17 @@ export function useMarketplace() {
       item.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesTag = !selectedTag || item.tags.includes(selectedTag)
     const matchesType = !selectedType || item.type === selectedType
-    return matchesSearch && matchesTag && matchesType
+    const matchesStatus = !showHelpWanted || item.status === 'help-wanted'
+    return matchesSearch && matchesTag && matchesType && matchesStatus
   })
 
   return {
     items: filteredItems,
     allItems: items,
     allTags,
+    typeCounts,
+    cncfStats,
+    cncfCategories,
     isLoading,
     error,
     searchQuery,
@@ -216,6 +265,8 @@ export function useMarketplace() {
     setSelectedTag,
     selectedType,
     setSelectedType,
+    showHelpWanted,
+    setShowHelpWanted,
     installItem,
     removeItem,
     isInstalled,
