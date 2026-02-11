@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2 } from 'lucide-react'
+import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw } from 'lucide-react'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import { MissionSidebar, MissionSidebarToggle } from './mission-sidebar'
@@ -41,7 +41,7 @@ export function Layout({ children }: LayoutProps) {
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
   const { isOnline, wasOffline } = useNetworkStatus()
-  const { status: backendStatus } = useBackendHealth()
+  const { status: backendStatus, versionChanged } = useBackendHealth()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
@@ -78,6 +78,20 @@ export function Layout({ children }: LayoutProps) {
       handleCopyFallback()
     }
   }, [handleCopyFallback])
+
+  // Clear stale cache failure metadata on fresh page load so previous-session
+  // "Refresh failed" badges don't persist across restarts.
+  useEffect(() => {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('kc_meta:')) keysToRemove.push(key)
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k))
+  }, [])
+
+  // Startup snackbar — shows while backend health is in initial 'connecting' state
+  const showStartupSnackbar = !isDemoModeForced && backendStatus === 'connecting'
 
   // Show network banner when browser detects no network, or briefly after reconnecting
   const showNetworkBanner = !isOnline || wasOffline
@@ -325,6 +339,31 @@ export function Layout({ children }: LayoutProps) {
                 Reconnected
               </>
             )}
+          </div>
+        </div>
+      )}
+      {/* Startup snackbar — non-blocking info while backend initializes */}
+      {showStartupSnackbar && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+            <span>Starting up&hellip;</span>
+          </div>
+        </div>
+      )}
+
+      {/* Version changed snackbar — persistent until user reloads */}
+      {versionChanged && !showStartupSnackbar && !showBackendBanner && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
+            <RefreshCw className="w-4 h-4 text-blue-400" />
+            <span>A new version is available</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="ml-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition-colors"
+            >
+              Reload
+            </button>
           </div>
         </div>
       )}

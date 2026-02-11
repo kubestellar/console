@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -24,6 +25,10 @@ import (
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// Version is the build version, injected via ldflags at build time.
+// Used in /health response for stale-frontend detection.
+var Version = "dev"
 
 // Config holds server configuration
 type Config struct {
@@ -63,6 +68,7 @@ type Server struct {
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
 	loadingSrv          *http.Server // temporary loading screen server
+	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -281,9 +287,13 @@ setInterval(async function(){try{var r=await fetch('/health');if(r.ok){var d=awa
 </html>`
 
 func (s *Server) setupRoutes() {
-	// Health check
+	// Health check — returns version for stale-frontend detection
+	// and "shutting_down" status during graceful shutdown.
 	s.app.Get("/health", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"status": "ok"})
+		if atomic.LoadInt32(&s.shuttingDown) == 1 {
+			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
+		}
+		return c.JSON(fiber.Map{"status": "ok", "version": Version})
 	})
 
 	// Auth routes (public)
@@ -614,8 +624,11 @@ func (s *Server) Start() error {
 	return s.app.Listen(addr)
 }
 
-// Shutdown gracefully shuts down the server
+// Shutdown gracefully shuts down the server.
+// Sets shuttingDown flag first so /health returns "shutting_down"
+// before services are torn down, giving the frontend time to notice.
 func (s *Server) Shutdown() error {
+	atomic.StoreInt32(&s.shuttingDown, 1)
 	s.hub.Close()
 	if s.k8sClient != nil {
 		s.k8sClient.StopWatching()

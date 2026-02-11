@@ -8,18 +8,21 @@ const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures
 interface BackendState {
   status: BackendStatus
   lastCheck: Date | null
+  versionChanged: boolean
 }
 
 class BackendHealthManager {
   private state: BackendState = {
     status: 'connecting',
     lastCheck: null,
+    versionChanged: false,
   }
   private listeners: Set<(state: BackendState) => void> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private failureCount = 0
   private isStarted = false
   private isChecking = false
+  private initialVersion: string | null = null
 
   start() {
     if (this.isStarted) return
@@ -56,8 +59,9 @@ class BackendHealthManager {
 
   private setState(updates: Partial<BackendState>) {
     const prevStatus = this.state.status
+    const prevVersionChanged = this.state.versionChanged
     this.state = { ...this.state, ...updates }
-    if (prevStatus !== this.state.status) {
+    if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged) {
       this.notify()
     }
   }
@@ -75,10 +79,36 @@ class BackendHealthManager {
 
       if (response.ok) {
         this.failureCount = 0
-        this.setState({
-          status: 'connected',
-          lastCheck: new Date(),
-        })
+
+        // Parse response to check version and status
+        try {
+          const data = await response.json()
+          const version = data.version as string | undefined
+
+          // Track initial version for stale-frontend detection
+          if (version && this.initialVersion === null) {
+            this.initialVersion = version
+          }
+
+          // Detect version change (backend was updated)
+          const versionChanged = !!(
+            version &&
+            this.initialVersion &&
+            version !== this.initialVersion
+          )
+
+          this.setState({
+            status: 'connected',
+            lastCheck: new Date(),
+            versionChanged,
+          })
+        } catch {
+          // JSON parse failed — still mark as connected
+          this.setState({
+            status: 'connected',
+            lastCheck: new Date(),
+          })
+        }
       } else {
         throw new Error(`Backend returned ${response.status}`)
       }
@@ -114,6 +144,7 @@ export function useBackendHealth() {
     status: state.status,
     isConnected: state.status === 'connected',
     lastCheck: state.lastCheck,
+    versionChanged: state.versionChanged,
   }
 }
 
