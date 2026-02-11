@@ -167,6 +167,27 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
   return backendCheckPromise
 }
 
+/**
+ * Check if the backend has OAuth configured by reading the /health endpoint.
+ * Returns { backendUp, oauthConfigured }.
+ */
+export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oauthConfigured: boolean }> {
+  try {
+    const response = await fetch(`${API_BASE}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000),
+    })
+    if (!response.ok) return { backendUp: false, oauthConfigured: false }
+    const data = await response.json()
+    return {
+      backendUp: data.status === 'ok',
+      oauthConfigured: !!data.oauth_configured,
+    }
+  } catch {
+    return { backendUp: false, oauthConfigured: false }
+  }
+}
+
 function markBackendFailure(): void {
   backendAvailable = false
   backendLastCheckTime = Date.now()

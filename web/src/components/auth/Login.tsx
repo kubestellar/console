@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { Github, AlertTriangle } from 'lucide-react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
+import { checkOAuthConfigured } from '../../lib/api'
 import { ROUTES } from '../../config/routes'
 
 // Lazy load the heavy Three.js globe animation
@@ -12,15 +13,26 @@ export function Login() {
   const [searchParams] = useSearchParams()
   const sessionExpired = useMemo(() => searchParams.get('reason') === 'session_expired', [searchParams])
 
-  // Auto-login for Netlify deploy previews
+  // Auto-login for Netlify deploy previews or when backend has no OAuth configured
   useEffect(() => {
+    if (isLoading || isAuthenticated) return
+
     const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
       window.location.hostname.includes('netlify.app')
     const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
-    if ((isNetlifyPreview || isDemoMode) && !isLoading && !isAuthenticated) {
+    if (isNetlifyPreview || isDemoMode) {
       login()
+      return
     }
+
+    // Binary quickstart without OAuth: auto-login to skip the login page
+    // (the backend will create a dev-user JWT automatically)
+    checkOAuthConfigured().then(({ backendUp, oauthConfigured }) => {
+      if (backendUp && !oauthConfigured) {
+        login()
+      }
+    })
   }, [isLoading, isAuthenticated, login])
 
   // Show loading while checking auth status

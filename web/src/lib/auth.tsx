@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { api, checkBackendAvailability } from './api'
+import { api, checkBackendAvailability, checkOAuthConfigured } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 
 interface User {
@@ -93,13 +93,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Demo token — check if the backend has come online since the token was issued.
     // If the user explicitly enabled demo mode (via the toggle), keep it even if
-    // the backend is available. Otherwise, clear the stale demo token so the login
-    // screen appears and the user can authenticate with a real JWT via GitHub OAuth.
+    // the backend is available. Otherwise, clear the stale demo token so the user
+    // can authenticate with a real JWT.
     if (effectiveToken === 'demo-token') {
       const userExplicitlyEnabledDemo = localStorage.getItem('kc-demo-mode') === 'true'
       if (!userExplicitlyEnabledDemo) {
-        const backendUp = await checkBackendAvailability(true)
+        const { backendUp, oauthConfigured } = await checkOAuthConfigured()
         if (backendUp) {
+          if (!oauthConfigured) {
+            // No OAuth — auto-login to get a real dev-user JWT
+            window.location.href = '/auth/github'
+            return
+          }
+          // OAuth configured — clear demo token so login page appears
           localStorage.removeItem('token')
           cacheUser(null)
           setTokenState(null)

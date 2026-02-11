@@ -293,7 +293,11 @@ func (s *Server) setupRoutes() {
 		if atomic.LoadInt32(&s.shuttingDown) == 1 {
 			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
 		}
-		return c.JSON(fiber.Map{"status": "ok", "version": Version})
+		return c.JSON(fiber.Map{
+			"status":           "ok",
+			"version":          Version,
+			"oauth_configured": s.config.GitHubClientID != "",
+		})
 	})
 
 	// Auth routes (public)
