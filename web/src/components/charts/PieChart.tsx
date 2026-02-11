@@ -52,11 +52,14 @@ export function PieChart({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1a1a2e',
-                  border: '1px solid #333',
+                  backgroundColor: '#1e1e2e',
+                  border: '1px solid #444',
                   borderRadius: '8px',
                   fontSize: '12px',
+                  color: '#e0e0e0',
                 }}
+                labelStyle={{ color: '#ccc', fontWeight: 500 }}
+                itemStyle={{ color: '#e0e0e0' }}
               />
             </RechartsPieChart>
           </ResponsiveContainer>
