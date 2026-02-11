@@ -152,7 +152,7 @@ export function CustomDashboard() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const { getDashboardWithCards, deleteDashboard } = useDashboards()
+  const { getDashboardWithCards, deleteDashboard, exportDashboard, importDashboard } = useDashboards()
   const { clusters, deduplicatedClusters, isLoading: isClustersLoading } = useClusters()
   const { config, removeItem } = useSidebarConfig()
   const { drillToAllClusters, drillToAllNodes, drillToAllPods } = useDrillDownActions()
@@ -564,6 +564,29 @@ export function CustomDashboard() {
         onOpenTemplates={() => setIsTemplatesOpen(true)}
         onResetToDefaults={handleReset}
         isCustomized={cards.length > 0}
+        onExport={id ? async () => {
+          try {
+            const data = await exportDashboard(id)
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${(dashboard?.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+            showToast('Dashboard exported', 'success')
+          } catch {
+            showToast('Failed to export dashboard', 'error')
+          }
+        } : undefined}
+        onImport={async (json) => {
+          try {
+            await importDashboard(json)
+            showToast('Dashboard imported', 'success')
+          } catch {
+            showToast('Failed to import dashboard', 'error')
+          }
+        }}
       />
 
       {/* Add Card Modal */}

@@ -114,6 +114,19 @@ export function useDashboards() {
     }
   }, [getDashboardWithCards])
 
+  const exportDashboard = useCallback(async (dashboardId: string) => {
+    const { data } = await api.get(`/api/dashboards/${dashboardId}/export`)
+    return data
+  }, [])
+
+  const importDashboard = useCallback(async (exportJson: unknown) => {
+    const { data } = await api.post<Dashboard>('/api/dashboards/import', exportJson)
+    if (data) {
+      setDashboards((prev) => [...prev, data])
+    }
+    return data
+  }, [])
+
   return {
     dashboards,
     isLoading,
@@ -125,5 +138,7 @@ export function useDashboards() {
     moveCardToDashboard,
     getDashboardWithCards,
     getAllDashboardsWithCards,
+    exportDashboard,
+    importDashboard,
   }
 }

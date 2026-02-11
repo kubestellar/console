@@ -106,7 +106,7 @@ export function Dashboard() {
   } = useDashboardContext()
 
   // Get all dashboards for cross-dashboard dragging
-  const { dashboards, moveCardToDashboard, createDashboard } = useDashboards()
+  const { dashboards, moveCardToDashboard, createDashboard, exportDashboard, importDashboard } = useDashboards()
   const { showToast } = useToast()
   const { recordCardRemoved, recordCardAdded, recordCardReplaced, recordCardConfigured } = useCardHistory()
 
@@ -911,6 +911,29 @@ export function Dashboard() {
         onOpenTemplates={openTemplatesModal}
         onReset={reset}
         isCustomized={isCustomized}
+        onExport={dashboard?.id ? async () => {
+          try {
+            const data = await exportDashboard(dashboard.id)
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+            showToast('Dashboard exported', 'success')
+          } catch {
+            showToast('Failed to export dashboard', 'error')
+          }
+        } : undefined}
+        onImport={async (json) => {
+          try {
+            await importDashboard(json)
+            showToast('Dashboard imported', 'success')
+          } catch {
+            showToast('Failed to import dashboard', 'error')
+          }
+        }}
       />
 
       {/* Add Card Modal */}

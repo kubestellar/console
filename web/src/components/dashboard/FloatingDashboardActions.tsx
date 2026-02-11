@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Layout, RotateCcw } from 'lucide-react'
+import { Plus, Layout, RotateCcw, Download, Upload } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { ResetMode } from '../../hooks/useDashboardReset'
@@ -14,6 +14,10 @@ interface FloatingDashboardActionsProps {
   onResetToDefaults?: () => void
   /** Whether the dashboard has been customized from defaults */
   isCustomized?: boolean
+  /** Export current dashboard as JSON file */
+  onExport?: () => void
+  /** Import a dashboard from JSON file */
+  onImport?: (json: unknown) => void
 }
 
 /**
@@ -26,12 +30,15 @@ export function FloatingDashboardActions({
   onReset,
   onResetToDefaults,
   isCustomized,
+  onExport,
+  onImport,
 }: FloatingDashboardActionsProps) {
   const { isSidebarOpen, isSidebarMinimized } = useMissions()
   const { isMobile } = useMobile()
   const [isOpen, setIsOpen] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -65,18 +72,68 @@ export function FloatingDashboardActions({
     }
   }
 
+  const handleImportClick = () => {
+    setIsOpen(false)
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !onImport) return
+    try {
+      const text = await file.text()
+      const json = JSON.parse(text)
+      onImport(json)
+    } catch {
+      // Invalid JSON — ignore
+    }
+    // Reset input so the same file can be re-selected
+    e.target.value = ''
+  }
+
   const showResetOption = isCustomized && (onReset || onResetToDefaults)
+
+  const menuBtnClass = "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
 
   return (
     <>
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div ref={menuRef} className={`fixed ${positionClasses} z-40 flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {/* Expanded menu items */}
         {isOpen && (
           <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
+            {onImport && (
+              <button
+                onClick={handleImportClick}
+                className={menuBtnClass}
+                title="Import dashboard from JSON file"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Import
+              </button>
+            )}
+            {onExport && (
+              <button
+                onClick={() => { setIsOpen(false); onExport() }}
+                className={menuBtnClass}
+                title="Export dashboard as JSON file"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export
+              </button>
+            )}
             {showResetOption && (
               <button
                 onClick={() => { setIsOpen(false); setShowResetDialog(true) }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+                className={menuBtnClass}
                 title="Reset dashboard cards"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -86,7 +143,7 @@ export function FloatingDashboardActions({
             <button
               onClick={() => { setIsOpen(false); onOpenTemplates() }}
               data-tour="templates"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+              className={menuBtnClass}
               title="Browse dashboard templates"
             >
               <Layout className="w-3.5 h-3.5" />
@@ -95,7 +152,7 @@ export function FloatingDashboardActions({
             <button
               onClick={() => { setIsOpen(false); onAddCard() }}
               data-tour="add-card"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-card/95 hover:bg-card border border-border rounded-md shadow-md backdrop-blur-sm transition-all hover:shadow-lg whitespace-nowrap"
+              className={menuBtnClass}
               title="Add a new card"
             >
               <Plus className="w-3.5 h-3.5" />
