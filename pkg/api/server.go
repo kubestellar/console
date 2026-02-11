@@ -302,7 +302,7 @@ func (s *Server) setupRoutes() {
 		GitHubSecret:     s.config.GitHubSecret,
 		JWTSecret:        s.config.JWTSecret,
 		FrontendURL:      s.config.FrontendURL,
-		BackendURL:       fmt.Sprintf("http://localhost:%d", s.config.Port),
+		BackendURL:       s.backendURL(),
 		DevUserLogin:     s.config.DevUserLogin,
 		DevUserEmail:     s.config.DevUserEmail,
 		DevUserAvatar:    s.config.DevUserAvatar,
@@ -607,6 +607,16 @@ func (s *Server) setupRoutes() {
 			return c.SendFile("./web/dist/index.html")
 		})
 	}
+}
+
+// backendURL returns the URL where the backend is reachable for OAuth callbacks.
+// In production (non-dev), frontend and backend are served from the same origin,
+// so we use FrontendURL. In dev mode, they run on separate ports.
+func (s *Server) backendURL() string {
+	if !s.config.DevMode && s.config.FrontendURL != "" {
+		return s.config.FrontendURL
+	}
+	return fmt.Sprintf("http://localhost:%d", s.config.Port)
 }
 
 // Start shuts down the temporary loading server and starts the real Fiber app.
