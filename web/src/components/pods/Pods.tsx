@@ -47,9 +47,11 @@ export function Pods() {
 
   // Handler for keyboard navigation on pod issue cards
   const handlePodIssueKeyDown = useCallback((e: React.KeyboardEvent, cluster: string | undefined, namespace: string, name: string) => {
-    if ((e.key === 'Enter' || e.key === ' ') && cluster) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      drillToPod(cluster, namespace, name)
+      if (cluster) {
+        drillToPod(cluster, namespace, name)
+      }
     }
   }, [drillToPod])
 
