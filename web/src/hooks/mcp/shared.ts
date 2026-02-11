@@ -1169,6 +1169,11 @@ async function checkHealthProgressively(clusterList: ClusterInfo[]) {
   const processNext = async (): Promise<void> => {
     while (queue.length > 0 && inProgress.size < HEALTH_CHECK_CONCURRENCY) {
       const cluster = queue.shift()!
+      // Skip clusters being manually refreshed to avoid race conditions
+      if (cluster.refreshing) {
+        completed++
+        continue
+      }
       const key = cluster.name
       inProgress.add(key)
 
@@ -1412,11 +1417,12 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
   const clusterInfo = clusterCache.clusters.find(c => c.name === clusterName)
   const kubectlContext = clusterInfo?.context
 
-  // Mark the cluster as refreshing immediately (no debounce - user needs to see the spinner)
+  // Mark the cluster as refreshing immediately and clear stale error state
+  // so it shows as "loading" instead of "offline" while fetching
   clusterCache = {
     ...clusterCache,
     clusters: clusterCache.clusters.map(c =>
-      c.name === clusterName ? { ...c, refreshing: true } : c
+      c.name === clusterName ? { ...c, refreshing: true, reachable: undefined, errorType: undefined, errorMessage: undefined } : c
     ),
   }
   notifyClusterSubscribers() // Immediate notification for user feedback
