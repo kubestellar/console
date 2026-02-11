@@ -125,7 +125,6 @@ jobs:
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ github.sha }} \
             --set github.existingSecret=kc-secrets \
-            --set claude.existingSecret=kc-secrets \
             --set jwt.existingSecret=kc-secrets \
             --set route.enabled=true \
             --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \

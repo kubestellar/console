@@ -48,6 +48,8 @@ func GetSettingsManager() *SettingsManager {
 		}
 		if err := globalSettingsManager.init(); err != nil {
 			log.Printf("[settings] initialization error: %v", err)
+			// Ensure settings is never nil even when init fails
+			globalSettingsManager.settings = DefaultSettings()
 		}
 	})
 	return globalSettingsManager

@@ -49,12 +49,13 @@ COPY --from=backend-builder /app/console .
 # Copy frontend build
 COPY --from=frontend-builder /app/dist ./web/dist
 
-# Create data directory
-RUN mkdir -p /app/data
+# Create data and settings directories
+RUN mkdir -p /app/data /app/.kc
 
 # Environment variables
 ENV PORT=8080
 ENV DATABASE_PATH=/app/data/console.db
+ENV HOME=/app
 
 EXPOSE 8080
 
