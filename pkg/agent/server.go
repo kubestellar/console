@@ -1094,7 +1094,7 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 
 	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)
