@@ -383,6 +383,8 @@ func (s *Server) setupRoutes() {
 	dashboard := handlers.NewDashboardHandler(s.store)
 	api.Get("/dashboards", dashboard.ListDashboards)
 	api.Get("/dashboards/:id", dashboard.GetDashboard)
+	api.Get("/dashboards/:id/export", dashboard.ExportDashboard)
+	api.Post("/dashboards/import", dashboard.ImportDashboard)
 	api.Post("/dashboards", dashboard.CreateDashboard)
 	api.Put("/dashboards/:id", dashboard.UpdateDashboard)
 	api.Delete("/dashboards/:id", dashboard.DeleteDashboard)
