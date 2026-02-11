@@ -139,24 +139,31 @@ The agent implements several security measures:
 
 ## Installation
 
-### Prerequisites
-
-- Go 1.23+
-- Node.js 20+
-- Docker (for containerized deployment)
-- GitHub OAuth App (for authentication)
-- [Claude Code](https://claude.ai/claude-code) CLI installed
-- KubeStellar plugins from the [Claude Code Marketplace](https://marketplace.claude.ai) (source: [claude-plugins](https://github.com/kubestellar/claude-plugins)):
-  - `kubestellar-ops` - Kubernetes operations tools
-  - `kubestellar-deploy` - Multi-cluster deployment tools
-
 ### Quick Start
 
-**1. Install Claude Code** (if not already installed)
+Download pre-built binaries and start in seconds (only requires `curl`):
 
-Follow the installation instructions at [claude.ai/claude-code](https://claude.ai/claude-code)
+```bash
+curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
+```
 
-**2. Install KubeStellar Plugins from Marketplace**
+This downloads the console and kc-agent binaries, starts both, and opens your browser at http://localhost:8080.
+
+**Optional: Enable GitHub OAuth login**
+
+1. Create a [GitHub OAuth App](https://github.com/settings/developers) with:
+   - Homepage URL: `http://localhost:8080`
+   - Callback URL: `http://localhost:8080/auth/github/callback`
+2. Create a `.env` file next to the binaries:
+   ```
+   GITHUB_CLIENT_ID=your-client-id
+   GITHUB_CLIENT_SECRET=your-client-secret
+   ```
+3. Restart with `./startup-oauth.sh`
+
+### Claude Code Plugins
+
+For AI-powered operations, install [Claude Code](https://claude.ai/claude-code) and the KubeStellar plugins:
 
 ```bash
 # Install from Claude Code Marketplace
@@ -164,17 +171,16 @@ claude plugins install kubestellar-ops
 claude plugins install kubestellar-deploy
 ```
 
-**3. Or Install via Homebrew** (alternative method, source: [homebrew-tap](https://github.com/kubestellar/homebrew-tap))
+Or via Homebrew (source: [homebrew-tap](https://github.com/kubestellar/homebrew-tap)):
 
 ```bash
-# Add the KubeStellar tap
 brew tap kubestellar/tap
-
-# Install KubeStellar tools
 brew install kubestellar-ops kubestellar-deploy
 ```
 
 ### Local Development
+
+Prerequisites: Go 1.24+, Node.js 20+
 
 1. **Clone the repository**
 
@@ -183,77 +189,29 @@ git clone https://github.com/kubestellar/console.git
 cd console
 ```
 
-2. **Install KubeStellar tools** (if not already installed via brew)
+2. **Start in dev mode** (no OAuth required)
 
 ```bash
-brew tap kubestellar/tap
-brew install kubestellar-ops kubestellar-deploy
+./start-dev.sh
 ```
 
-3. **Create a GitHub OAuth App**
+Opens frontend at http://localhost:5174, backend at http://localhost:8080. Uses a mock `dev-user` account.
 
-Go to GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
+3. **Or start with GitHub OAuth**
 
-- Application name: `KubeStellar Console (dev)`
+Create a [GitHub OAuth App](https://github.com/settings/developers):
 - Homepage URL: `http://localhost:5174`
-- Authorization callback URL: `http://localhost:8080/auth/github/callback`
-
-4. **Configure environment variables**
-
-Create a `.env` file in the project root:
+- Callback URL: `http://localhost:8080/auth/github/callback`
 
 ```bash
-# .env file (copy from .env.example)
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-DEV_MODE=false
-FRONTEND_URL=http://localhost:5174
-JWT_SECRET=your-secret-key-here
-DATABASE_PATH=./data/console.db
+# Create .env with your credentials
+cat > .env << EOF
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+EOF
+
+./startup-oauth.sh
 ```
-
-**Important**: The `.env` file is gitignored. Never commit credentials.
-
-5. **Start with production mode (recommended)**
-
-Use the `prod.sh` script for real GitHub OAuth:
-
-```bash
-./scripts/prod.sh
-```
-
-This script:
-- Loads credentials from `.env`
-- Builds the backend
-- Starts backend and frontend together
-- Exits with error if `GITHUB_CLIENT_ID` or `GITHUB_CLIENT_SECRET` are missing
-
-6. **Or start manually**
-
-```bash
-# Start backend
-go build -o console-server ./cmd/console
-GITHUB_CLIENT_ID=xxx GITHUB_CLIENT_SECRET=yyy FRONTEND_URL=http://localhost:5174 ./console-server
-
-# Start frontend (in another terminal)
-cd web
-npm install
-npm run dev
-```
-
-7. **Development mode (skip OAuth)**
-
-For quick testing without GitHub OAuth:
-
-```bash
-./scripts/dev.sh
-```
-
-This uses a mock `dev-user` account.
-
-8. **Access the console**
-
-Open http://localhost:5174 and sign in with GitHub.
 
 ### Docker Deployment
 

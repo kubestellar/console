@@ -11,7 +11,7 @@
 # 3. Set:
 #    - Application name: KubeStellar Console (Dev)
 #    - Homepage URL: http://localhost:5174
-#    - Authorization callback URL: http://localhost:5174/auth/github/callback
+#    - Authorization callback URL: http://localhost:8080/auth/github/callback
 # 4. Copy the Client ID and generate a Client Secret
 
 set -e

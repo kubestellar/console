@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { X, Copy, Check, ExternalLink, Settings, Rocket, Terminal, Key, Download, ChevronRight, Github } from 'lucide-react'
+import { X, Copy, Check, ExternalLink, Settings, Rocket, Key, Download, ChevronRight, Github } from 'lucide-react'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
 import { cn } from '../../lib/cn'
 
@@ -82,31 +82,30 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
           {/* Steps */}
           <div className="px-6 space-y-5 pb-2">
 
-            {/* Step 1: Clone & install */}
+            {/* Step 1: Quick Start (binary) */}
             <div className="flex gap-3">
               <StepNumber n={1} />
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Download className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Clone & Install</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Start the Console</h3>
                 </div>
-                <div className="space-y-1.5">
-                  <CopyCommand command="git clone https://github.com/kubestellar/console.git && cd console" />
-                  <CopyCommand command="cd web && npm install && cd .." />
-                </div>
+                <CopyCommand command="curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash" />
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Requires Go 1.23+, Node.js 20+, and npm
+                  Downloads pre-built binaries and starts in seconds. Only requires curl.
                 </p>
               </div>
             </div>
 
-            {/* Step 2: GitHub OAuth App */}
+            {/* Step 2: Optional - GitHub OAuth */}
             <div className="flex gap-3">
-              <StepNumber n={2} />
+              <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-dashed border-gray-600 text-gray-500 text-sm font-bold shrink-0">
+                2
+              </div>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Github className="w-4 h-4 text-blue-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Create a GitHub OAuth App</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground">Optional: Enable GitHub OAuth</h3>
                 </div>
                 <p className="text-xs text-muted-foreground mb-2">
                   Go to{' '}
@@ -123,7 +122,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                 <div className="text-xs space-y-1 bg-black/30 rounded-lg px-3 py-2 border border-gray-700/30">
                   <div className="flex gap-2">
                     <span className="text-muted-foreground/70 shrink-0 w-28">Homepage URL</span>
-                    <span className="text-gray-300 font-mono">http://localhost:5174</span>
+                    <span className="text-gray-300 font-mono">http://localhost:8080</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-muted-foreground/70 shrink-0 w-28">Callback URL</span>
@@ -131,37 +130,15 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Then set your Client ID &amp; Secret as environment variables
+                  Add credentials to a .env file and restart with <code className="font-mono text-gray-400">./startup-oauth.sh</code>
                 </p>
               </div>
             </div>
 
-            {/* Step 3: Run */}
-            <div className="flex gap-3">
-              <StepNumber n={3} />
-              <div className="flex-1 min-w-0 pt-0.5">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Terminal className="w-4 h-4 text-emerald-400" />
-                  <h3 className="text-sm font-semibold text-foreground">Run the Console</h3>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Export your GitHub OAuth credentials, then start:
-                </p>
-                <div className="space-y-1.5">
-                  <CopyCommand command="export GITHUB_CLIENT_ID=<your-client-id>" />
-                  <CopyCommand command="export GITHUB_CLIENT_SECRET=<your-client-secret>" />
-                  <CopyCommand command="./scripts/dev.sh" />
-                </div>
-                <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Starts the backend on :8080 and frontend on :5174
-                </p>
-              </div>
-            </div>
-
-            {/* Step 4: Optional - AI keys */}
+            {/* Step 3: Optional - AI keys */}
             <div className="flex gap-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-dashed border-gray-600 text-gray-500 text-sm font-bold shrink-0">
-                4
+                3
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2 mb-1.5">

@@ -19,7 +19,7 @@
 # Setup:
 #   1. Create a GitHub OAuth App at https://github.com/settings/developers
 #      - Homepage URL: http://localhost:5174
-#      - Callback URL: http://localhost:5174/auth/github/callback
+#      - Callback URL: http://localhost:8080/auth/github/callback
 #   2. Create a .env file:
 #      GITHUB_CLIENT_ID=<your-client-id>
 #      GITHUB_CLIENT_SECRET=<your-client-secret>
