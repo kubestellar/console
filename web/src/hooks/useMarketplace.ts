@@ -142,6 +142,10 @@ export function useMarketplace() {
     return itemId in installedItems
   }, [installedItems])
 
+  const getInstalledDashboardId = useCallback((itemId: string): string | undefined => {
+    return installedItems[itemId]?.dashboardId
+  }, [installedItems])
+
   const installItem = useCallback(async (item: MarketplaceItem): Promise<InstallResult> => {
     const response = await fetch(item.downloadUrl)
     if (!response.ok) throw new Error(`Download failed: ${response.status}`)
@@ -215,6 +219,7 @@ export function useMarketplace() {
     installItem,
     removeItem,
     isInstalled,
+    getInstalledDashboardId,
     refresh: () => fetchRegistry(true),
   }
 }

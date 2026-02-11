@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Store, Search, Download, Tag, RefreshCw, Loader2, AlertCircle, Package, Check, Trash2, LayoutGrid, Puzzle, Palette, ExternalLink, Heart } from 'lucide-react'
 import { useMarketplace, MarketplaceItem, MarketplaceItemType } from '../../hooks/useMarketplace'
+import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { MarketplaceThumbnail } from './MarketplaceThumbnail'
+import { suggestIconSync } from '../../lib/iconSuggester'
 
 const CONTRIBUTE_URL = 'https://github.com/kubestellar/console-marketplace'
 
@@ -147,8 +149,10 @@ export function Marketplace() {
     installItem,
     removeItem,
     isInstalled,
+    getInstalledDashboardId,
     refresh,
   } = useMarketplace()
+  const { config: sidebarConfig, addItem, removeItem: removeSidebarItem } = useSidebarConfig()
   const { showToast } = useToast()
 
   const navigate = useNavigate()
@@ -161,9 +165,23 @@ export function Marketplace() {
       } else if (result.type === 'theme') {
         showToast(`Installed theme "${item.name}" — activate in Settings`, 'success')
       } else if (result.type === 'dashboard' && result.data?.id) {
-        const dashId = result.data.id
+        // Use the marketplace slug as the vanity URL
+        const href = `/custom-dashboard/${item.id}`
+        // Seed localStorage so CustomDashboard loads cards instantly
+        const cards = result.data.cards || []
+        try {
+          localStorage.setItem(`kubestellar-custom-dashboard-${item.id}-cards`, JSON.stringify(cards))
+        } catch { /* non-critical */ }
+        // Add to sidebar so it appears in the left menu
+        addItem({
+          name: item.name,
+          icon: suggestIconSync(item.name),
+          href,
+          type: 'link',
+          description: item.description,
+        }, 'primary')
         showToast(`Installed "${item.name}" — redirecting to dashboard...`, 'success')
-        setTimeout(() => navigate(`/custom-dashboard/${dashId}`), 1500)
+        setTimeout(() => navigate(href), 1500)
       } else {
         showToast(`Installed "${item.name}"`, 'success')
       }
@@ -174,6 +192,14 @@ export function Marketplace() {
 
   const handleRemove = async (item: MarketplaceItem) => {
     try {
+      // Find and remove sidebar entry for dashboards
+      const dashId = getInstalledDashboardId(item.id)
+      if (dashId) {
+        const href = `/custom-dashboard/${dashId}`
+        const sidebarItem = [...sidebarConfig.primaryNav, ...sidebarConfig.secondaryNav]
+          .find(si => si.href === href)
+        if (sidebarItem) removeSidebarItem(sidebarItem.id)
+      }
       await removeItem(item)
       showToast(`Removed "${item.name}"`, 'info')
     } catch {
