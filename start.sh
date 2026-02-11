@@ -211,6 +211,15 @@ if [ -x "$INSTALL_DIR/kc-agent" ]; then
     sleep 1
 fi
 
+# Generate JWT_SECRET if not set (required in production mode)
+if [ -z "$JWT_SECRET" ]; then
+    if command -v openssl &>/dev/null; then
+        export JWT_SECRET=$(openssl rand -hex 32)
+    else
+        export JWT_SECRET=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+    fi
+fi
+
 # Start console (serves frontend from web/dist at the specified port)
 echo "Starting console on port $PORT..."
 cd "$INSTALL_DIR"
