@@ -171,14 +171,18 @@ export function Marketplace() {
         try {
           localStorage.setItem(`kubestellar-custom-dashboard-${item.id}-cards`, JSON.stringify(cards))
         } catch { /* non-critical */ }
-        // Add to sidebar so it appears in the left menu
-        addItem({
-          name: item.name,
-          icon: suggestIconSync(item.name),
-          href,
-          type: 'link',
-          description: item.description,
-        }, 'primary')
+        // Add to sidebar if not already present
+        const alreadyInSidebar = [...sidebarConfig.primaryNav, ...sidebarConfig.secondaryNav]
+          .some(si => si.href === href)
+        if (!alreadyInSidebar) {
+          addItem({
+            name: item.name,
+            icon: suggestIconSync(item.name),
+            href,
+            type: 'link',
+            description: item.description,
+          }, 'primary')
+        }
         showToast(`Installed "${item.name}" — redirecting to dashboard...`, 'success')
         setTimeout(() => navigate(href), 1500)
       } else {
@@ -191,11 +195,11 @@ export function Marketplace() {
 
   const handleRemove = async (item: MarketplaceItem) => {
     try {
-      // Find and remove sidebar entry using the marketplace slug (not backend UUID)
+      // Remove all sidebar entries matching this marketplace dashboard
       const href = `/custom-dashboard/${item.id}`
-      const sidebarItem = [...sidebarConfig.primaryNav, ...sidebarConfig.secondaryNav]
-        .find(si => si.href === href)
-      if (sidebarItem) removeSidebarItem(sidebarItem.id)
+      ;[...sidebarConfig.primaryNav, ...sidebarConfig.secondaryNav]
+        .filter(si => si.href === href)
+        .forEach(si => removeSidebarItem(si.id))
       // Clean up localStorage cards
       try { localStorage.removeItem(`kubestellar-custom-dashboard-${item.id}-cards`) } catch { /* ok */ }
       await removeItem(item)
