@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -61,33 +62,40 @@ type Server struct {
 	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
+	loadingSrv          *http.Server // temporary loading screen server
 }
 
-// NewServer creates a new API server
+// NewServer creates a new API server. It starts a temporary loading page
+// server immediately on the configured port, then performs heavy initialization
+// (DB, k8s, MCP, etc.) while the loading page is shown. Start() shuts down
+// the loading server and starts the real Fiber application.
 func NewServer(cfg Config) (*Server, error) {
 	// Compute default frontend URL if not explicitly set
-	// This must happen here (not in LoadConfigFromEnv) so the --dev flag takes effect
 	if cfg.FrontendURL == "" {
 		if cfg.DevMode {
-			cfg.FrontendURL = "http://localhost:5174" // Vite dev server
+			cfg.FrontendURL = "http://localhost:5174"
 		} else {
-			cfg.FrontendURL = "http://localhost:8080" // Backend serves frontend
+			cfg.FrontendURL = "http://localhost:8080"
 		}
 	}
 
-	// JWT secret handling - CRITICAL SECURITY FIX
-	// This must happen here (not in LoadConfigFromEnv) so the --dev flag takes effect
+	// JWT secret handling
 	if cfg.JWTSecret == "" {
 		if cfg.DevMode {
-			// Only allow default secret in dev mode
 			cfg.JWTSecret = generateDevSecret()
 			log.Println("WARNING: Using dev-mode JWT secret. Set JWT_SECRET env var for production.")
 		} else {
-			// In production, fail fast if JWT_SECRET is not configured
 			log.Fatal("FATAL: JWT_SECRET environment variable is required in production mode. " +
 				"Set JWT_SECRET to a cryptographically secure random string (at least 32 characters).")
 		}
 	}
+
+	// Start a temporary loading page server immediately so the user
+	// sees a loading screen instead of "connection refused" during init.
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	loadingSrv := startLoadingServer(addr)
+
+	// --- Heavy initialization (loading page is already being served) ---
 
 	// Initialize store
 	db, err := store.NewSQLiteStore(cfg.DatabasePath)
@@ -98,12 +106,12 @@ func NewServer(cfg Config) (*Server, error) {
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler:   customErrorHandler,
-		ReadBufferSize: 16384, // Increase from default 4096 to handle larger headers (OAuth tokens)
+		ReadBufferSize: 16384,
 	})
 
-	// WebSocket hub for real-time updates
+	// WebSocket hub
 	hub := handlers.NewHub()
-	hub.SetJWTSecret(cfg.JWTSecret) // Enable JWT auth for WebSocket connections
+	hub.SetJWTSecret(cfg.JWTSecret)
 	go hub.Run()
 
 	// Initialize Kubernetes multi-cluster client
@@ -115,21 +123,7 @@ func NewServer(cfg Config) (*Server, error) {
 			log.Printf("Warning: Failed to load kubeconfig: %v", err)
 		} else {
 			log.Println("Kubernetes client initialized successfully")
-			// Set callback to notify frontend when kubeconfig changes
-			k8sClient.SetOnReload(func() {
-				hub.BroadcastAll(handlers.Message{
-					Type: "kubeconfig_changed",
-					Data: map[string]string{"message": "Kubeconfig updated"},
-				})
-				log.Println("Broadcasted kubeconfig change to all clients")
-			})
-			// Start watching kubeconfig for changes
-			if err := k8sClient.StartWatching(); err != nil {
-				log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
-			}
 		}
-
-		// Set callback to notify frontend when kubeconfig changes
 		k8sClient.SetOnReload(func() {
 			hub.BroadcastAll(handlers.Message{
 				Type: "kubeconfig_changed",
@@ -137,42 +131,24 @@ func NewServer(cfg Config) (*Server, error) {
 			})
 			log.Println("Broadcasted kubeconfig change to all clients")
 		})
-
-		// Start watching kubeconfig for changes
-		if err := k8sClient.StartWatching(); err != nil {
-			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
-		}
-
-		// Set callback to notify frontend when kubeconfig changes
-		k8sClient.SetOnReload(func() {
-			hub.BroadcastAll(handlers.Message{
-				Type: "kubeconfig_changed",
-				Data: map[string]string{"message": "Kubeconfig updated"},
-			})
-			log.Println("Broadcasted kubeconfig change to all clients")
-		})
-
-		// Start watching kubeconfig for changes
 		if err := k8sClient.StartWatching(); err != nil {
 			log.Printf("Warning: Failed to start kubeconfig watcher: %v", err)
 		}
 	}
 
-	// Initialize AI providers (Claude Code CLI, API keys, etc.)
+	// Initialize AI providers
 	if err := agent.InitializeProviders(); err != nil {
 		log.Printf("Warning: %v", err)
-		// Don't fail - core functionality works without AI
 	}
 
-	// Initialize MCP bridge (optional - starts in background)
+	// Initialize MCP bridge (starts in background)
 	var bridge *mcp.Bridge
 	if cfg.KubestellarOpsPath != "" || cfg.KubestellarDeployPath != "" {
 		bridge = mcp.NewBridge(mcp.BridgeConfig{
 			KubestellarOpsPath:    cfg.KubestellarOpsPath,
 			KubestellarDeployPath: cfg.KubestellarDeployPath,
-			Kubeconfig:       cfg.Kubeconfig,
+			Kubeconfig:            cfg.Kubeconfig,
 		})
-		// Start bridge in background
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
@@ -196,7 +172,7 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 	log.Println("Persistence store initialized")
 
-	// Initialize persistent settings manager and migrate from config.yaml
+	// Initialize persistent settings manager
 	settingsManager := settings.GetSettingsManager()
 	if err := settingsManager.MigrateFromConfigYaml(); err != nil {
 		log.Printf("Warning: Failed to migrate settings from config.yaml: %v", err)
@@ -212,12 +188,40 @@ func NewServer(cfg Config) (*Server, error) {
 		k8sClient:           k8sClient,
 		notificationService: notificationService,
 		persistenceStore:    persistenceStore,
+		loadingSrv:          loadingSrv,
 	}
 
 	server.setupMiddleware()
 	server.setupRoutes()
 
+	log.Println("Server initialization complete")
+
 	return server, nil
+}
+
+// startLoadingServer starts a temporary HTTP server that serves a loading page.
+// It returns immediately — the server runs in a background goroutine.
+func startLoadingServer(addr string) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"starting"}`))
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(startupLoadingHTML))
+	})
+
+	srv := &http.Server{Addr: addr, Handler: mux}
+	go func() {
+		log.Printf("Loading page available on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Loading server error: %v", err)
+		}
+	}()
+	// Give the listener time to bind
+	time.Sleep(50 * time.Millisecond)
+	return srv
 }
 
 func (s *Server) setupMiddleware() {
@@ -230,8 +234,7 @@ func (s *Server) setupMiddleware() {
 		TimeFormat: "15:04:05",
 	}))
 
-	// CORS - always enable when frontend URL is configured
-	// Required for local testing where frontend (5174) differs from backend (8080)
+	// CORS
 	s.app.Use(cors.New(cors.Config{
 		AllowOrigins:     s.config.FrontendURL,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
@@ -239,6 +242,43 @@ func (s *Server) setupMiddleware() {
 		AllowCredentials: true,
 	}))
 }
+
+// startupLoadingHTML is a self-contained loading page served while the server initializes.
+// It polls /health and reloads automatically when the server is ready.
+const startupLoadingHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KubeStellar Console</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden}
+.wrap{text-align:center}
+.spinner{width:40px;height:40px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.5rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+h1{font-size:1.25rem;font-weight:500;margin-bottom:.5rem}
+p{color:#94a3b8;font-size:.875rem}
+.stars{position:fixed;inset:0;pointer-events:none}
+.star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;opacity:.3;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.6}}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="wrap">
+<div class="spinner"></div>
+<h1>KubeStellar Console</h1>
+<p>Starting up&hellip;</p>
+</div>
+<script>
+// Star field
+(function(){var s=document.getElementById('stars');for(var i=0;i<30;i++){var d=document.createElement('div');d.className='star';d.style.left=Math.random()*100+'%';d.style.top=Math.random()*100+'%';d.style.animationDelay=Math.random()*3+'s';s.appendChild(d)}})();
+// Poll /health and reload when ready
+setInterval(async function(){try{var r=await fetch('/health');if(r.ok){var d=await r.json();if(d.status==='ok')location.reload()}}catch(e){}},2000);
+</script>
+</body>
+</html>`
 
 func (s *Server) setupRoutes() {
 	// Health check
@@ -548,8 +588,18 @@ func (s *Server) setupRoutes() {
 	}
 }
 
-// Start starts the server
+// Start shuts down the temporary loading server and starts the real Fiber app.
 func (s *Server) Start() error {
+	// Shut down the temporary loading page server to free the port
+	if s.loadingSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		s.loadingSrv.Shutdown(ctx)
+		s.loadingSrv = nil
+		// Brief pause to ensure the port is fully released
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	addr := fmt.Sprintf(":%d", s.config.Port)
 	log.Printf("Starting server on %s (dev=%v)", addr, s.config.DevMode)
 	return s.app.Listen(addr)

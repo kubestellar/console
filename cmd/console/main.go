@@ -40,7 +40,8 @@ func main() {
 		ensureDir(cfg.DatabasePath)
 	}
 
-	// Create and start server
+	// Create and start server — starts HTTP listener immediately with a loading
+	// page, then initializes services (DB, k8s, MCP, etc.) in the background.
 	server, err := api.NewServer(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
@@ -59,7 +60,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// Start server
+	// Block until shutdown (HTTP listener runs in background from NewServer)
 	if err := server.Start(); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
