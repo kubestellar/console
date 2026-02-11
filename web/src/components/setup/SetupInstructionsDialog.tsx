@@ -23,7 +23,7 @@ const OAUTH_STEPS = [
   { label: 'Callback URL:', value: 'http://localhost:8080/auth/github/callback' },
   { label: 'Click "Register application", then copy the Client ID and generate a Client Secret' },
   { label: 'Create a .env file in the project root:', command: 'GITHUB_CLIENT_ID=<your-client-id>\nGITHUB_CLIENT_SECRET=<your-client-secret>' },
-  { label: 'Restart with OAuth enabled:', command: './startup-oauth.sh' },
+  { label: 'Restart the console (Ctrl+C, then re-run):', command: 'curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash' },
 ]
 
 export function SetupInstructionsDialog({ isOpen, onClose }: SetupInstructionsDialogProps) {

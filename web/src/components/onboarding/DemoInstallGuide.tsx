@@ -130,7 +130,7 @@ export function InstallModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground/70 mt-1.5">
-                  Add credentials to a .env file and restart with <code className="font-mono text-gray-400">./startup-oauth.sh</code>
+                  Add credentials to a .env file, then Ctrl+C and re-run <code className="font-mono text-gray-400">start.sh</code>
                 </p>
               </div>
             </div>
