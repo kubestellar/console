@@ -1094,7 +1094,10 @@ func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	// Use background context instead of request context so the health check
+	// continues even if the frontend disconnects. Results are cached, so
+	// completing the check benefits subsequent requests.
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	health, err := s.k8sClient.GetClusterHealth(ctx, cluster)

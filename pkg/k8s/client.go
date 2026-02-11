@@ -771,7 +771,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (*kubernetes.Clientse
 
 	// Set reasonable timeouts — large OpenShift clusters (18+ nodes) can return
 	// 800KB+ node payloads that take >10s over higher-latency links
-	config.Timeout = 30 * time.Second
+	config.Timeout = 45 * time.Second
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -815,7 +815,7 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 				return nil, fmt.Errorf("failed to get config for context %s: %w", contextName, err)
 			}
 		}
-		config.Timeout = 30 * time.Second
+		config.Timeout = 45 * time.Second
 		m.configs[contextName] = config
 	}
 
@@ -1013,11 +1013,14 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 		}
 	}
 
-	// Cache the result
-	m.mu.Lock()
-	m.healthCache[contextName] = health
-	m.cacheTime[contextName] = time.Now()
-	m.mu.Unlock()
+	// Only cache successful results — don't cache failures (timeout, context canceled)
+	// so the next request retries immediately instead of serving stale errors
+	if health.Reachable {
+		m.mu.Lock()
+		m.healthCache[contextName] = health
+		m.cacheTime[contextName] = time.Now()
+		m.mu.Unlock()
+	}
 
 	return health, nil
 }
