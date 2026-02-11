@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
@@ -26,14 +26,22 @@ export function CardConfigModal({
     onSave(config)
   }
 
+  // Handle Escape key at document level
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [onClose])
+
   return (
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
       onClick={onClose}
-      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); onClose() } }}
-      role="button"
-      tabIndex={0}
-      aria-label="Close modal"
     >
       <div className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
