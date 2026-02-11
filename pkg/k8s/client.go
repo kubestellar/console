@@ -421,13 +421,14 @@ type SecurityIssue struct {
 
 // ResourceQuota represents a Kubernetes ResourceQuota
 type ResourceQuota struct {
-	Name      string                 `json:"name"`
-	Namespace string                 `json:"namespace"`
-	Cluster   string                 `json:"cluster,omitempty"`
-	Hard      map[string]string      `json:"hard"`      // Resource limits
-	Used      map[string]string      `json:"used"`      // Current usage
-	Age       string                 `json:"age,omitempty"`
-	Labels    map[string]string      `json:"labels,omitempty"`
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Cluster     string            `json:"cluster,omitempty"`
+	Hard        map[string]string `json:"hard"`                  // Resource limits
+	Used        map[string]string `json:"used"`                  // Current usage
+	Age         string            `json:"age,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"` // Reservation metadata
 }
 
 // LimitRange represents a Kubernetes LimitRange
@@ -2582,13 +2583,14 @@ func (m *MultiClusterClient) GetResourceQuotas(ctx context.Context, contextName,
 		}
 
 		result = append(result, ResourceQuota{
-			Name:      quota.Name,
-			Namespace: quota.Namespace,
-			Cluster:   contextName,
-			Hard:      hard,
-			Used:      used,
-			Age:       age,
-			Labels:    quota.Labels,
+			Name:        quota.Name,
+			Namespace:   quota.Namespace,
+			Cluster:     contextName,
+			Hard:        hard,
+			Used:        used,
+			Age:         age,
+			Labels:      quota.Labels,
+			Annotations: quota.Annotations,
 		})
 	}
 
@@ -2667,10 +2669,11 @@ func (m *MultiClusterClient) GetLimitRanges(ctx context.Context, contextName, na
 
 // ResourceQuotaSpec represents the desired spec for creating/updating a ResourceQuota
 type ResourceQuotaSpec struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	Hard      map[string]string `json:"hard"` // Resource limits to set
-	Labels    map[string]string `json:"labels,omitempty"`
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Hard        map[string]string `json:"hard"` // Resource limits to set
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"` // Reservation metadata
 }
 
 // CreateOrUpdateResourceQuota creates or updates a ResourceQuota in a namespace
@@ -2693,9 +2696,10 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 	// Build the ResourceQuota object
 	quota := &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      spec.Name,
-			Namespace: spec.Namespace,
-			Labels:    spec.Labels,
+			Name:        spec.Name,
+			Namespace:   spec.Namespace,
+			Labels:      spec.Labels,
+			Annotations: spec.Annotations,
 		},
 		Spec: corev1.ResourceQuotaSpec{
 			Hard: hard,
@@ -2709,6 +2713,14 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 		existing.Spec.Hard = hard
 		if spec.Labels != nil {
 			existing.Labels = spec.Labels
+		}
+		if spec.Annotations != nil {
+			if existing.Annotations == nil {
+				existing.Annotations = make(map[string]string)
+			}
+			for k, v := range spec.Annotations {
+				existing.Annotations[k] = v
+			}
 		}
 		updated, err := client.CoreV1().ResourceQuotas(spec.Namespace).Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
@@ -2726,13 +2738,14 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 		}
 
 		return &ResourceQuota{
-			Name:      updated.Name,
-			Namespace: updated.Namespace,
-			Cluster:   contextName,
-			Hard:      resultHard,
-			Used:      used,
-			Age:       formatAge(updated.CreationTimestamp.Time),
-			Labels:    updated.Labels,
+			Name:        updated.Name,
+			Namespace:   updated.Namespace,
+			Cluster:     contextName,
+			Hard:        resultHard,
+			Used:        used,
+			Age:         formatAge(updated.CreationTimestamp.Time),
+			Labels:      updated.Labels,
+			Annotations: updated.Annotations,
 		}, nil
 	}
 
@@ -2749,13 +2762,14 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 	}
 
 	return &ResourceQuota{
-		Name:      created.Name,
-		Namespace: created.Namespace,
-		Cluster:   contextName,
-		Hard:      resultHard,
-		Used:      make(map[string]string), // New quota has no usage yet
-		Age:       formatAge(created.CreationTimestamp.Time),
-		Labels:    created.Labels,
+		Name:        created.Name,
+		Namespace:   created.Namespace,
+		Cluster:     contextName,
+		Hard:        resultHard,
+		Used:        make(map[string]string), // New quota has no usage yet
+		Age:         formatAge(created.CreationTimestamp.Time),
+		Labels:      created.Labels,
+		Annotations: created.Annotations,
 	}, nil
 }
 

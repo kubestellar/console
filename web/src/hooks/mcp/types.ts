@@ -350,6 +350,7 @@ export interface ResourceQuota {
   used: Record<string, string>  // Current usage
   age?: string
   labels?: Record<string, string>
+  annotations?: Record<string, string>  // Reservation metadata
 }
 
 export interface ReplicaSet {
@@ -455,6 +456,7 @@ export interface ResourceQuotaSpec {
   namespace: string
   hard: Record<string, string>
   labels?: Record<string, string>
+  annotations?: Record<string, string>  // Reservation metadata
 }
 
 export interface SecurityIssue {
