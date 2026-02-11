@@ -52,19 +52,20 @@ function showSessionExpiredBanner(): void {
   // Avoid duplicates
   if (document.getElementById('session-expired-banner')) return
 
-  const banner = document.createElement('div')
-  banner.id = 'session-expired-banner'
-  banner.style.cssText = `
-    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    padding: 14px 24px;
-    background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.08));
-    border-bottom: 1px solid rgba(234,179,8,0.4);
+  const toast = document.createElement('div')
+  toast.id = 'session-expired-banner'
+  toast.style.cssText = `
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99999;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    background: rgba(234,179,8,0.15);
+    border: 1px solid rgba(234,179,8,0.4);
+    border-radius: 8px; backdrop-filter: blur(8px);
     color: #fbbf24; font-family: system-ui, sans-serif; font-size: 14px;
-    animation: slideDown 0.3s ease-out;
+    animation: slideUp 0.3s ease-out;
   `
-  banner.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+  toast.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>
       <path d="M12 9v4"/><path d="M12 17h.01"/>
@@ -72,11 +73,10 @@ function showSessionExpiredBanner(): void {
     <span><strong>Session expired</strong> — Redirecting to sign in...</span>
   `
 
-  // Add slide-down animation
   const style = document.createElement('style')
-  style.textContent = `@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }`
+  style.textContent = `@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }`
   document.head.appendChild(style)
-  document.body.appendChild(banner)
+  document.body.appendChild(toast)
 }
 
 // Error class for backend unavailable
