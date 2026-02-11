@@ -27,7 +27,14 @@ export function CardConfigModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); onClose() } }}
+      role="button"
+      tabIndex={0}
+      aria-label="Close modal"
+    >
       <div className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">

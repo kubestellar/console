@@ -158,6 +158,9 @@ export function Pods() {
             <div
               key={i}
               onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name)}
+              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && issue.cluster) { e.preventDefault(); drillToPod(issue.cluster, issue.namespace, issue.name) } }}
+              role="button"
+              tabIndex={0}
               className={`glass p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] border-l-4 ${
                 issue.reason === 'CrashLoopBackOff' || issue.reason === 'OOMKilled' ? 'border-l-red-500' :
                 issue.reason === 'Pending' || issue.reason === 'ContainerCreating' ? 'border-l-yellow-500' :
