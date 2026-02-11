@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
+import { isDemoMode } from '../lib/demoMode'
 
 // Types
 export interface Workload {
@@ -57,6 +58,22 @@ function authHeaders(): Record<string, string> {
 
 
 const AGENT_URL = 'http://127.0.0.1:8585'
+
+function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
+  const workloads: Workload[] = [
+    { name: 'api-server', namespace: 'production', type: 'Deployment', cluster: 'prod-east', replicas: 3, readyReplicas: 3, status: 'Running', image: 'api-server:v2.1.0', createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
+    { name: 'web-frontend', namespace: 'production', type: 'Deployment', cluster: 'prod-east', replicas: 2, readyReplicas: 2, status: 'Running', image: 'web-frontend:v1.8.3', createdAt: new Date(Date.now() - 14 * 86400000).toISOString() },
+    { name: 'worker-service', namespace: 'production', type: 'Deployment', cluster: 'prod-east', replicas: 3, readyReplicas: 2, status: 'Degraded', image: 'worker:v1.5.0', createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
+    { name: 'redis', namespace: 'data', type: 'StatefulSet', cluster: 'prod-east', replicas: 3, readyReplicas: 3, status: 'Running', image: 'redis:7.2', createdAt: new Date(Date.now() - 60 * 86400000).toISOString() },
+    { name: 'prometheus', namespace: 'monitoring', type: 'Deployment', cluster: 'prod-east', replicas: 1, readyReplicas: 1, status: 'Running', image: 'prom/prometheus:v2.48.1', createdAt: new Date(Date.now() - 45 * 86400000).toISOString() },
+    { name: 'api-server', namespace: 'default', type: 'Deployment', cluster: 'staging', replicas: 1, readyReplicas: 1, status: 'Running', image: 'api-server:v2.2.0-rc1', createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+    { name: 'ml-pipeline', namespace: 'default', type: 'Deployment', cluster: 'vllm-d', replicas: 2, readyReplicas: 2, status: 'Running', image: 'ml-pipeline:v3.0.0', createdAt: new Date(Date.now() - 10 * 86400000).toISOString() },
+  ]
+  let result = workloads
+  if (cluster) result = result.filter(w => w.cluster === cluster)
+  if (namespace) result = result.filter(w => w.namespace === namespace)
+  return result
+}
 
 /** Fetch workloads from the local agent (fallback when backend is down) */
 async function fetchWorkloadsViaAgent(opts?: {
@@ -140,6 +157,13 @@ export function useWorkloads(options?: {
     if (!enabled) return
     setIsLoading(true)
     setError(null)
+
+    // Demo mode returns synthetic data immediately
+    if (isDemoMode()) {
+      setData(getDemoWorkloads(options?.cluster, options?.namespace))
+      setIsLoading(false)
+      return
+    }
 
     // Try agent first (fast, no backend needed)
     try {

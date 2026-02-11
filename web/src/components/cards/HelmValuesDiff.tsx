@@ -4,6 +4,7 @@ import { ChevronRight, Plus, Edit, Filter, ChevronDown, Server, RotateCcw } from
 import { useClusters, useHelmReleases, useHelmValues } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -55,6 +56,7 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()
+  const { isDemoMode: demoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
   useCardLoadingState({
@@ -133,6 +135,22 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
   const { releases: allHelmReleases, isLoading: releasesLoading } = useHelmReleases()
+
+  // Auto-select first cluster and release in demo mode
+  useEffect(() => {
+    if (demoMode && allHelmReleases.length > 0 && allClusters.length > 0) {
+      if (!selectedCluster) {
+        const firstCluster = allClusters[0].name
+        setSelectedCluster(firstCluster)
+        const firstRelease = allHelmReleases.find(r => r.cluster === firstCluster)
+        if (firstRelease) setSelectedRelease(firstRelease.name)
+      } else if (!selectedRelease) {
+        const firstRelease = allHelmReleases.find(r => r.cluster === selectedCluster)
+        if (firstRelease) setSelectedRelease(firstRelease.name)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm commands)
   const selectedReleaseNamespace = useMemo(() => {

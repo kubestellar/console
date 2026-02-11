@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { kubectlProxy } from '../../lib/kubectlProxy'
+import { isDemoMode } from '../../lib/demoMode'
 import { LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
 
@@ -27,6 +28,14 @@ export function useNamespaces(cluster?: string) {
     if (!cluster) {
       setNamespaces([])
       setIsLoading(false)
+      return
+    }
+
+    // Demo mode returns synthetic namespaces immediately
+    if (isDemoMode()) {
+      setNamespaces(['default', 'kube-system', 'kube-public', 'monitoring', 'production', 'staging', 'batch', 'data', 'ingress', 'security'])
+      setIsLoading(false)
+      setError(null)
       return
     }
 

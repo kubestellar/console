@@ -417,6 +417,9 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
 }
 
 function getDemoEvents(): ClusterEvent[] {
+  const now = new Date()
+  const minutesAgo = (m: number) => new Date(now.getTime() - m * 60000).toISOString()
+
   return [
     {
       type: 'Warning',
@@ -426,6 +429,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'batch',
       cluster: 'vllm-d',
       count: 3,
+      firstSeen: minutesAgo(25),
+      lastSeen: minutesAgo(5),
     },
     {
       type: 'Normal',
@@ -435,6 +440,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'production',
       cluster: 'prod-east',
       count: 1,
+      firstSeen: minutesAgo(12),
+      lastSeen: minutesAgo(12),
     },
     {
       type: 'Warning',
@@ -444,6 +451,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'production',
       cluster: 'prod-east',
       count: 15,
+      firstSeen: minutesAgo(45),
+      lastSeen: minutesAgo(2),
     },
     {
       type: 'Normal',
@@ -453,6 +462,8 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'web',
       cluster: 'staging',
       count: 1,
+      firstSeen: minutesAgo(8),
+      lastSeen: minutesAgo(8),
     },
     {
       type: 'Warning',
@@ -462,6 +473,41 @@ function getDemoEvents(): ClusterEvent[] {
       namespace: 'data',
       cluster: 'staging',
       count: 8,
+      firstSeen: minutesAgo(30),
+      lastSeen: minutesAgo(1),
+    },
+    {
+      type: 'Normal',
+      reason: 'ScalingReplicaSet',
+      message: 'Scaled up replica set api-gateway-7d8c to 3',
+      object: 'Deployment/api-gateway',
+      namespace: 'production',
+      cluster: 'prod-east',
+      count: 1,
+      firstSeen: minutesAgo(18),
+      lastSeen: minutesAgo(18),
+    },
+    {
+      type: 'Normal',
+      reason: 'SuccessfulCreate',
+      message: 'Created pod: worker-5c6d7e8f9-abc12',
+      object: 'ReplicaSet/worker-5c6d7e8f9',
+      namespace: 'batch',
+      cluster: 'vllm-d',
+      count: 1,
+      firstSeen: minutesAgo(22),
+      lastSeen: minutesAgo(22),
+    },
+    {
+      type: 'Warning',
+      reason: 'FailedMount',
+      message: 'MountVolume.SetUp failed for volume "config": configmap "app-config" not found',
+      object: 'Pod/ml-inference-7f8g9h-xyz99',
+      namespace: 'ml',
+      cluster: 'vllm-d',
+      count: 4,
+      firstSeen: minutesAgo(35),
+      lastSeen: minutesAgo(3),
     },
   ]
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, Minus, Edit, Layers, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -58,6 +58,22 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
 
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  // Auto-select cluster and overlays in demo mode so card shows data immediately
+  useEffect(() => {
+    if (demoMode && clusters.length > 0) {
+      if (!selectedCluster) {
+        setSelectedCluster(clusters[0].name)
+      }
+    }
+  }, [demoMode, clusters, selectedCluster])
+
+  useEffect(() => {
+    if (demoMode && selectedCluster && !selectedBase) {
+      setSelectedBase('base')
+      setSelectedOverlay('production')
+    }
+  }, [demoMode, selectedCluster, selectedBase])
 
   // Only show mock overlays/diffs in demo mode; live mode shows empty until real data source exists
   const overlays = selectedCluster && demoMode ? ['base', 'dev', 'staging', 'production'] : []

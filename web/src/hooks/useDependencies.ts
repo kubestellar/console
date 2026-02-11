@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef } from './mcp/shared'
+import { isDemoMode } from '../lib/demoMode'
 
 const AGENT_URL = 'http://127.0.0.1:8585'
 
@@ -128,6 +129,29 @@ export function useResolveDependencies() {
   ): Promise<DependencyResolution | null> => {
     setIsLoading(true)
     setError(null)
+
+    // Demo mode returns synthetic dependency data
+    if (isDemoMode()) {
+      const demoResult: DependencyResolution = {
+        workload: name,
+        kind: 'Deployment',
+        namespace,
+        cluster,
+        dependencies: [
+          { kind: 'ConfigMap', name: `${name}-config`, namespace, optional: false, order: 0 },
+          { kind: 'Secret', name: `${name}-secrets`, namespace, optional: false, order: 1 },
+          { kind: 'ServiceAccount', name: `${name}-sa`, namespace, optional: false, order: 2 },
+          { kind: 'Service', name: name, namespace, optional: false, order: 3 },
+          { kind: 'HorizontalPodAutoscaler', name: `${name}-hpa`, namespace, optional: true, order: 4 },
+          { kind: 'PersistentVolumeClaim', name: `${name}-data`, namespace, optional: true, order: 5 },
+        ],
+        warnings: [],
+      }
+      setData(demoResult)
+      setIsLoading(false)
+      return demoResult
+    }
+
     // Keep previous data visible while loading (stale-while-revalidate)
     // Clearing data here would collapse the card content, shrinking the
     // grid row and causing the browser to scroll to the top of the page.

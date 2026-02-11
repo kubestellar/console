@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Users, Key, Lock, ChevronRight, AlertCircle } from 'lucide-react'
 import { useClusters, useNamespaces, useK8sRoles, useK8sRoleBindings, useK8sServiceAccounts } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -9,6 +9,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface NamespaceRBACProps {
   config?: {
@@ -36,12 +37,26 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, error } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
+  const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
   const { namespaces } = useNamespaces(selectedCluster || undefined)
+
+  // Auto-select first cluster and namespace in demo mode
+  useEffect(() => {
+    if (demoMode && clusters.length > 0 && !selectedCluster) {
+      setSelectedCluster(clusters[0].name)
+    }
+  }, [demoMode, clusters, selectedCluster])
+
+  useEffect(() => {
+    if (demoMode && selectedCluster && namespaces.length > 0 && !selectedNamespace) {
+      setSelectedNamespace(namespaces[0])
+    }
+  }, [demoMode, selectedCluster, namespaces, selectedNamespace])
 
   // Filter clusters based on global filter
   const filteredClusters = useMemo(() => {

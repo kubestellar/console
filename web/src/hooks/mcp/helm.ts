@@ -5,6 +5,46 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import type { HelmRelease, HelmHistoryEntry } from './types'
 
+// Demo Helm releases shown when in demo mode
+function getDemoHelmReleases(): HelmRelease[] {
+  return [
+    { name: 'prometheus', namespace: 'monitoring', revision: '5', updated: new Date(Date.now() - 2 * 3600000).toISOString(), status: 'deployed', chart: 'prometheus-25.8.0', app_version: '2.48.1', cluster: 'prod-east' },
+    { name: 'grafana', namespace: 'monitoring', revision: '3', updated: new Date(Date.now() - 5 * 3600000).toISOString(), status: 'deployed', chart: 'grafana-7.0.11', app_version: '10.2.3', cluster: 'prod-east' },
+    { name: 'nginx-ingress', namespace: 'ingress', revision: '8', updated: new Date(Date.now() - 24 * 3600000).toISOString(), status: 'deployed', chart: 'ingress-nginx-4.8.3', app_version: '1.9.4', cluster: 'prod-east' },
+    { name: 'cert-manager', namespace: 'cert-manager', revision: '2', updated: new Date(Date.now() - 72 * 3600000).toISOString(), status: 'deployed', chart: 'cert-manager-1.13.3', app_version: '1.13.3', cluster: 'staging' },
+    { name: 'redis', namespace: 'data', revision: '4', updated: new Date(Date.now() - 12 * 3600000).toISOString(), status: 'deployed', chart: 'redis-18.4.0', app_version: '7.2.3', cluster: 'staging' },
+    { name: 'api-gateway', namespace: 'production', revision: '6', updated: new Date(Date.now() - 1 * 3600000).toISOString(), status: 'failed', chart: 'api-gateway-2.1.0', app_version: '3.5.0', cluster: 'prod-east' },
+    { name: 'elasticsearch', namespace: 'logging', revision: '3', updated: new Date(Date.now() - 48 * 3600000).toISOString(), status: 'deployed', chart: 'elasticsearch-8.5.1', app_version: '8.11.1', cluster: 'vllm-d' },
+    { name: 'vault', namespace: 'security', revision: '2', updated: new Date(Date.now() - 168 * 3600000).toISOString(), status: 'deployed', chart: 'vault-0.27.0', app_version: '1.15.4', cluster: 'vllm-d' },
+  ]
+}
+
+// Demo Helm history entries for a release
+function getDemoHelmHistory(): HelmHistoryEntry[] {
+  return [
+    { revision: 6, updated: new Date(Date.now() - 1 * 3600000).toISOString(), status: 'failed', chart: 'api-gateway-2.1.0', app_version: '3.5.0', description: 'Upgrade failed: container crashed' },
+    { revision: 5, updated: new Date(Date.now() - 2 * 3600000).toISOString(), status: 'deployed', chart: 'prometheus-25.8.0', app_version: '2.48.1', description: 'Upgrade complete' },
+    { revision: 4, updated: new Date(Date.now() - 24 * 3600000).toISOString(), status: 'superseded', chart: 'prometheus-25.7.0', app_version: '2.48.0', description: 'Upgrade complete' },
+    { revision: 3, updated: new Date(Date.now() - 72 * 3600000).toISOString(), status: 'superseded', chart: 'prometheus-25.6.0', app_version: '2.47.2', description: 'Upgrade complete' },
+    { revision: 2, updated: new Date(Date.now() - 168 * 3600000).toISOString(), status: 'superseded', chart: 'prometheus-25.5.0', app_version: '2.47.0', description: 'Upgrade complete' },
+    { revision: 1, updated: new Date(Date.now() - 720 * 3600000).toISOString(), status: 'superseded', chart: 'prometheus-25.0.0', app_version: '2.45.0', description: 'Install complete' },
+  ]
+}
+
+// Demo Helm values for a release
+function getDemoHelmValues(): Record<string, unknown> {
+  return {
+    replicaCount: 2,
+    image: { repository: 'prom/prometheus', tag: 'v2.48.1', pullPolicy: 'IfNotPresent' },
+    service: { type: 'ClusterIP', port: 9090 },
+    resources: { limits: { cpu: '500m', memory: '512Mi' }, requests: { cpu: '200m', memory: '256Mi' } },
+    persistence: { enabled: true, size: '50Gi', storageClass: 'gp3' },
+    alertmanager: { enabled: true },
+    nodeExporter: { enabled: true },
+    serverFiles: { 'alerting_rules.yml': {}, 'recording_rules.yml': {} },
+  }
+}
+
 // Helm releases cache with localStorage persistence
 const HELM_RELEASES_CACHE_KEY = 'kc-helm-releases-cache'
 const HELM_HISTORY_CACHE_KEY = 'kc-helm-history-cache'
@@ -120,9 +160,18 @@ export function useHelmReleases(cluster?: string) {
       if (cluster) params.append('cluster', cluster)
       const url = `/api/gitops/helm-releases?${params}`
 
-      // Skip API calls when using demo token
+      // Skip API calls when using demo token — provide demo releases
       const token = localStorage.getItem('token')
       if (isDemoMode()) {
+        const demoReleases = getDemoHelmReleases()
+        if (!cluster) {
+          helmReleasesCache.data = demoReleases
+          helmReleasesCache.timestamp = Date.now()
+          helmReleasesCache.consecutiveFailures = 0
+          helmReleasesCache.lastError = null
+          notifyListeners(false)
+        }
+        setReleases(demoReleases)
         setLastRefresh(Date.now())
         setIsLoading(false)
         if (!silent) {
@@ -296,9 +345,12 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       if (namespace) params.append('namespace', namespace)
       const url = `/api/gitops/helm-history?${params}`
 
-      // Skip API calls when using demo token
+      // Skip API calls when using demo token — provide demo history
       const token = localStorage.getItem('token')
       if (isDemoMode()) {
+        const demoHistory = getDemoHelmHistory()
+        setHistory(demoHistory)
+        setLastRefresh(Date.now())
         setIsLoading(false)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
@@ -443,9 +495,13 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       if (namespace) params.append('namespace', namespace)
       const url = `/api/gitops/helm-values?${params}`
 
-      // Skip API calls when using demo token
+      // Skip API calls when using demo token — provide demo values
       const token = localStorage.getItem('token')
       if (isDemoMode()) {
+        const demoValues = getDemoHelmValues()
+        setValues(demoValues)
+        setFormat('json')
+        setLastRefresh(Date.now())
         setIsLoading(false)
         setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
         return
@@ -543,9 +599,13 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
     } else {
       // No cache - fetch fresh data using direct fetch (bypasses circuit breaker)
       const doFetch = async () => {
-        // Skip API calls when using demo token
+        // Skip API calls when using demo token — provide demo values
         const token = localStorage.getItem('token')
         if (isDemoMode()) {
+          const demoValues = getDemoHelmValues()
+          setValues(demoValues)
+          setFormat('json')
+          setLastRefresh(Date.now())
           setIsLoading(false)
           setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
           return

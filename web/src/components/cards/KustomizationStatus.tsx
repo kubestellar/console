@@ -102,6 +102,13 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
     hasAnyData: kustomizationData.length > 0,
   })
 
+  // Auto-select first cluster in demo mode so card shows data immediately
+  useEffect(() => {
+    if (demoMode && !selectedCluster && allClusters.length > 0) {
+      setSelectedCluster(allClusters[0].name)
+    }
+  }, [demoMode, selectedCluster, allClusters])
+
   // Apply global filters to cluster list for the dropdown
   const clusters = useMemo(() => {
     let result = allClusters

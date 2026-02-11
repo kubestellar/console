@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
 import { useClusters, useHelmReleases, useHelmHistory, type HelmHistoryEntry } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -37,6 +38,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 export function HelmHistory({ config }: HelmHistoryProps) {
   const { deduplicatedClusters: allClusters } = useClusters()
+  const { isDemoMode: demoMode } = useDemoMode()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
 
@@ -82,6 +84,22 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
   const { releases: allHelmReleases, isLoading: releasesLoading } = useHelmReleases()
+
+  // Auto-select cluster and release in demo mode so card shows data immediately
+  useEffect(() => {
+    if (demoMode && allHelmReleases.length > 0 && allClusters.length > 0) {
+      if (!selectedCluster) {
+        const firstCluster = allClusters[0].name
+        setSelectedCluster(firstCluster)
+        const firstRelease = allHelmReleases.find(r => r.cluster === firstCluster)
+        if (firstRelease) setSelectedRelease(firstRelease.name)
+      } else if (!selectedRelease) {
+        const firstRelease = allHelmReleases.find(r => r.cluster === selectedCluster)
+        if (firstRelease) setSelectedRelease(firstRelease.name)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode, allHelmReleases, allClusters])
 
   // Look up namespace from the selected release (required for helm history command)
   const selectedReleaseNamespace = useMemo(() => {

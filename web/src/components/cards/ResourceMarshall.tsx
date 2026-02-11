@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   Package,
   ChevronDown,
@@ -16,6 +16,7 @@ import { cn } from '../../lib/cn'
 import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
 import { useCardLoadingState } from './CardDataContext'
 import { ClusterSelect } from '../ui/ClusterSelect'
+import { useDemoMode } from '../../hooks/useDemoMode'
 
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
@@ -38,6 +39,7 @@ function groupDependencies(deps: ResolvedDependency[]) {
 
 export function ResourceMarshall() {
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { isDemoMode: demoMode } = useDemoMode()
 
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
@@ -64,6 +66,32 @@ export function ResourceMarshall() {
 
   // Dependency resolution
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
+
+  // Auto-select cluster, namespace, and workload in demo mode
+  useEffect(() => {
+    if (demoMode && clusters.length > 0 && !selectedCluster) {
+      setSelectedCluster(clusters[0].name)
+    }
+  }, [demoMode, clusters, selectedCluster])
+
+  useEffect(() => {
+    if (demoMode && selectedCluster && namespaces.length > 0 && !selectedNamespace) {
+      // Prefer 'production' if available, else first namespace
+      const preferred = namespaces.includes('production') ? 'production' : namespaces[0]
+      setSelectedNamespace(preferred)
+    }
+  }, [demoMode, selectedCluster, namespaces, selectedNamespace])
+
+  useEffect(() => {
+    if (demoMode && selectedNamespace && workloads && workloads.length > 0 && !selectedWorkload) {
+      const first = workloads[0]
+      setSelectedWorkload(first.name)
+      if (selectedCluster && selectedNamespace) {
+        resolve(selectedCluster, selectedNamespace, first.name)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode, selectedNamespace, workloads, selectedWorkload])
 
   // Handle cluster change
   const handleClusterChange = useCallback((cluster: string) => {
