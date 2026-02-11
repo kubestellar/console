@@ -1,14 +1,15 @@
-# GoReleaser config for kc-agent
+# GoReleaser config for kc-agent and console
 # Run: goreleaser release --clean
 # Test: goreleaser build --snapshot --clean
 
 version: 2
 
-project_name: kc-agent
+project_name: kubestellar-console
 
 before:
   hooks:
     - go mod tidy
+    - bash -c "cd web && npm ci && npm run build"
 
 builds:
   - id: kc-agent
@@ -26,13 +27,37 @@ builds:
       - -s -w
       - -X github.com/kubestellar/console/pkg/agent.Version={{.Version}}
 
+  - id: console
+    main: ./cmd/console
+    binary: console
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
 archives:
   - id: kc-agent
     builds:
       - kc-agent
     formats:
       - tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "kc-agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: console
+    builds:
+      - console
+    formats:
+      - tar.gz
+    name_template: "console_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - src: "web/dist/**/*"
+        dst: "web/dist"
 
 checksum:
   name_template: "checksums.txt"
@@ -50,6 +75,8 @@ brews:
   - name: kc-agent
     # Skip if token is not set
     skip_upload: '{{ if .Env.HOMEBREW_TAP_TOKEN }}false{{ else }}true{{ end }}'
+    ids:
+      - kc-agent
     repository:
       owner: kubestellar
       name: homebrew-tap
