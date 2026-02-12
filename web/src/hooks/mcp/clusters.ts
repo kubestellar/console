@@ -76,13 +76,15 @@ export function useClusters() {
     }
   }, [])
 
-  // Re-fetch when demo mode changes (not on initial mount)
-  const initialMountRef = useRef(true)
+  // Re-fetch when demo mode actually changes (not on initial mount).
+  // Uses prev-value ref instead of initialMountRef to survive React 18
+  // StrictMode double-mounting, which would otherwise trigger
+  // aggressiveDetect on every navigation and cause a yellow AI flash.
+  const prevDemoModeRef = useRef(isDemoMode)
   useEffect(() => {
-    if (initialMountRef.current) {
-      initialMountRef.current = false
-      return
-    }
+    if (prevDemoModeRef.current === isDemoMode) return
+    prevDemoModeRef.current = isDemoMode
+
     // Reset fetch flag and failure tracking to allow re-fetching
     setInitialFetchStarted(false)
     setHealthCheckFailures(0)
