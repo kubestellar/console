@@ -15,6 +15,12 @@ serviceAccount:
   annotations: {}
   name: ""
 
+# RBAC configuration
+# When deployed in-cluster without the kc-agent, the console uses
+# its ServiceAccount for read-only cluster access + ResourceQuota CRUD
+rbac:
+  create: true
+
 podAnnotations: {}
 podLabels: {}
 

@@ -130,6 +130,8 @@ export function AgentStatusIndicator() {
     ? { bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20', dot: 'bg-green-400', label: 'AI', Icon: Wifi, title: 'Local Agent connected' }
     : stableStatus === 'connecting'
     ? { bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20', dot: 'bg-yellow-400 animate-pulse', label: 'AI', Icon: Wifi, title: 'Connecting to agent...' }
+    : isBackendConnected
+    ? { bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20', dot: 'bg-blue-400', label: 'Cluster', Icon: Server, title: 'In-cluster mode - using ServiceAccount' }
     : { bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20', dot: 'bg-red-400', label: 'Offline', Icon: WifiOff, title: 'Local Agent disconnected' }
 
   return (
@@ -191,10 +193,10 @@ export function AgentStatusIndicator() {
             <div className="flex items-center gap-2">
               <div className={cn(
                 'w-3 h-3 rounded-full',
-                isDemoMode ? 'bg-gray-400' : isDegraded ? 'bg-yellow-400' : isConnected ? 'bg-green-400' : agentStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
+                isDemoMode ? 'bg-gray-400' : isDegraded ? 'bg-yellow-400' : isConnected ? 'bg-green-400' : agentStatus === 'connecting' ? 'bg-yellow-400' : isBackendConnected ? 'bg-blue-400' : 'bg-red-400'
               )} />
               <span className={cn('text-sm font-medium', isDemoMode ? 'text-muted-foreground' : 'text-foreground')}>
-                Local Agent: {isDemoMode ? 'Bypassed' : isDegraded ? 'Degraded' : isConnected ? 'Connected' : agentStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                {isDemoMode ? 'Local Agent: Bypassed' : isDegraded ? 'Local Agent: Degraded' : isConnected ? 'Local Agent: Connected' : agentStatus === 'connecting' ? 'Local Agent: Connecting...' : isBackendConnected ? 'Cluster Mode' : 'Local Agent: Disconnected'}
               </span>
               {isConnected && agentHealth?.version && agentHealth.version !== 'demo' && (
                 <span className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -209,6 +211,8 @@ export function AgentStatusIndicator() {
                 ? `Connected but experiencing data errors (${dataErrorCount} in last minute)`
                 : isConnected
                 ? `Connected to local agent at 127.0.0.1:8585`
+                : isBackendConnected
+                ? 'Using in-cluster ServiceAccount (read-only)'
                 : 'Unable to connect to local agent'
               }
             </p>
