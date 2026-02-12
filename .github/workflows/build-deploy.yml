@@ -141,7 +141,7 @@ jobs:
   deploy-pok-prod:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: [self-hosted, pok-prod]
+    runs-on: [self-hosted, kc-pok]
     environment: pok-prod
 
     steps:
