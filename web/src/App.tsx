@@ -63,9 +63,12 @@ const UnifiedStatsTest = lazy(() => import('./pages/UnifiedStatsTest').then(m =>
 const UnifiedDashboardTest = lazy(() => import('./pages/UnifiedDashboardTest').then(m => ({ default: m.UnifiedDashboardTest })))
 
 // Prefetch all lazy route chunks after initial page load.
-// This runs during idle time so by the time the user navigates,
-// the target chunk is already cached and loads instantly.
+// Batched to avoid overwhelming the Vite dev server with simultaneous
+// module transformation requests (which delays navigation on cold start).
 if (typeof window !== 'undefined') {
+  const PREFETCH_BATCH_SIZE = 3
+  const PREFETCH_BATCH_DELAY = 300
+
   const prefetchRoutes = () => {
     const chunks = [
       () => import('./components/dashboard/Dashboard'),
@@ -88,7 +91,6 @@ if (typeof window !== 'undefined') {
       () => import('./components/helm/HelmReleases'),
       () => import('./components/settings/Settings'),
       () => import('./components/gpu/GPUReservations'),
-      // Previously missing - these were loading slowly on first navigation
       () => import('./components/data-compliance/DataCompliance'),
       () => import('./components/logs/Logs'),
       () => import('./components/arcade/Arcade'),
@@ -98,26 +100,32 @@ if (typeof window !== 'undefined') {
       () => import('./components/cicd/CICD'),
       () => import('./components/marketplace/Marketplace'),
     ]
-    // In demo mode, fire all imports immediately (no stagger needed —
-    // demo data is synchronous, so chunk download is the only bottleneck).
-    // In live mode, stagger to avoid blocking the main thread.
-    const demo = isDemoMode()
-    chunks.forEach((load, i) => {
-      if (demo) {
-        load().catch(() => {})
-      } else {
-        setTimeout(() => load().catch(() => {}), i * 100)
-      }
-    })
+
+    if (isDemoMode()) {
+      // Demo mode: fire all immediately (synchronous data, no server load)
+      chunks.forEach(load => load().catch(() => {}))
+      return
+    }
+
+    // Live mode: batch imports to avoid saturating the dev server
+    let offset = 0
+    const loadBatch = () => {
+      const batch = chunks.slice(offset, offset + PREFETCH_BATCH_SIZE)
+      if (batch.length === 0) return
+      Promise.allSettled(batch.map(load => load().catch(() => {}))).then(() => {
+        offset += PREFETCH_BATCH_SIZE
+        setTimeout(loadBatch, PREFETCH_BATCH_DELAY)
+      })
+    }
+    loadBatch()
   }
 
-  // In demo mode, fire immediately. Otherwise wait for idle time.
+  // In demo mode, fire immediately. Otherwise defer 20s to let
+  // the first page fully load without prefetch traffic competing.
   if (isDemoMode()) {
     prefetchRoutes()
-  } else if ('requestIdleCallback' in window) {
-    requestIdleCallback(prefetchRoutes, { timeout: 5000 })
   } else {
-    setTimeout(prefetchRoutes, 2000)
+    setTimeout(prefetchRoutes, 20_000)
   }
 }
 
@@ -196,15 +204,21 @@ function SettingsSyncInit() {
   return null
 }
 
-// Prefetches core Kubernetes data and demo card component chunks immediately
-// after login so dashboard cards render instantly instead of showing skeletons.
+// Prefetches core Kubernetes data immediately after login so dashboard
+// cards render instantly. Card component chunks are deferred to avoid
+// overwhelming Vite's module transform pipeline on cold start.
 function DataPrefetchInit() {
   const { isAuthenticated } = useAuth()
   useEffect(() => {
     if (!isAuthenticated) return
-    // Fire immediately — all prefetch calls are async and non-blocking
     prefetchCardData()
-    prefetchDemoCardChunks()
+    // Defer card chunk prefetch — in demo mode fire immediately,
+    // otherwise wait 15s so the first page can fully load first.
+    if (isDemoMode()) {
+      prefetchDemoCardChunks()
+    } else {
+      setTimeout(prefetchDemoCardChunks, 15_000)
+    }
   }, [isAuthenticated])
   return null
 }

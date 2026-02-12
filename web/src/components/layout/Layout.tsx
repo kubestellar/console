@@ -1,5 +1,5 @@
-import { ReactNode, useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { ReactNode, Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Box, Wifi, WifiOff, X, Settings, Rocket, RotateCcw, Check, Loader2, RefreshCw } from 'lucide-react'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
@@ -30,6 +30,41 @@ const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
   top: Math.random() * 100 + '%',
   animationDelay: Math.random() * 3 + 's',
 }))
+
+// Thin progress bar shown during route transitions so the user
+// gets immediate visual feedback that navigation is happening.
+function NavigationProgress() {
+  const location = useLocation()
+  const [isNavigating, setIsNavigating] = useState(false)
+  const prevPath = useRef(location.pathname)
+
+  useEffect(() => {
+    if (location.pathname !== prevPath.current) {
+      setIsNavigating(true)
+      prevPath.current = location.pathname
+      const timer = setTimeout(() => setIsNavigating(false), 150)
+      return () => clearTimeout(timer)
+    }
+  }, [location.pathname])
+
+  if (!isNavigating) return null
+  return <div className="absolute top-0 left-0 right-0 h-0.5 bg-purple-500 animate-pulse z-50" />
+}
+
+// Skeleton shown inside the content area while a lazy route chunk loads.
+// Keeps sidebar and navbar visible so the user sees navigation happened.
+function ContentLoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6 p-2">
+      <div className="h-8 w-64 bg-secondary/40 rounded-lg" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="h-48 bg-secondary/30 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 interface LayoutProps {
   children: ReactNode
@@ -318,7 +353,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex flex-1 overflow-hidden transition-[padding-top] duration-300" style={{ paddingTop: NAVBAR_HEIGHT + totalBannerHeight }}>
         <Sidebar />
         <main className={cn(
-          'flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced',
+          'relative flex-1 p-4 md:p-6 transition-[margin] duration-300 overflow-y-auto scroll-enhanced',
           // Mobile: no left margin (sidebar overlays)
           // Desktop: respect collapsed state
           isMobile ? 'ml-0' : (config.collapsed ? 'ml-20' : 'ml-64'),
@@ -326,7 +361,10 @@ export function Layout({ children }: LayoutProps) {
           !isMobile && isMissionSidebarOpen && !isMissionSidebarMinimized && !isMissionFullScreen && 'mr-[500px]',
           !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
-          {children}
+          <NavigationProgress />
+          <Suspense fallback={<ContentLoadingSkeleton />}>
+            {children}
+          </Suspense>
         </main>
       </div>
 
