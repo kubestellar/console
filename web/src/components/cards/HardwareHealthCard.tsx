@@ -1,61 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, CheckCircle, Cpu, HardDrive, Wifi, Server, RefreshCw, XCircle, ChevronRight, List, AlertCircle, BellOff, Clock, MoreVertical } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { useCardDemoState, useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState } from './CardDataContext'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useClusters } from '../../hooks/useMCP'
+import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, type DeviceCounts } from '../../hooks/useCachedData'
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
-
-const AGENT_HTTP_URL = 'http://127.0.0.1:8585'
-
-// Device alert from backend
-interface DeviceAlert {
-  id: string
-  nodeName: string
-  cluster: string
-  deviceType: string // "gpu", "nic", "nvme", "infiniband", "mofed-driver", "gpu-driver", etc.
-  previousCount: number
-  currentCount: number
-  droppedCount: number
-  firstSeen: string
-  lastSeen: string
-  severity: string // "warning", "critical"
-}
-
-interface DeviceAlertsResponse {
-  alerts: DeviceAlert[]
-  nodeCount: number
-  timestamp: string
-}
-
-// Device counts for inventory
-interface DeviceCounts {
-  gpuCount: number
-  nicCount: number
-  nvmeCount: number
-  infinibandCount: number
-  sriovCapable: boolean
-  rdmaAvailable: boolean
-  mellanoxPresent: boolean
-  nvidiaNicPresent: boolean
-  spectrumScale: boolean
-  mofedReady: boolean
-  gpuDriverReady: boolean
-}
-
-interface NodeDeviceInventory {
-  nodeName: string
-  cluster: string
-  devices: DeviceCounts
-  lastSeen: string
-}
-
-interface DeviceInventoryResponse {
-  nodes: NodeDeviceInventory[]
-  timestamp: string
-}
 
 // Sort field options
 type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType'
@@ -65,56 +17,6 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'nodeName', label: 'Node' },
   { value: 'cluster', label: 'Cluster' },
   { value: 'deviceType', label: 'Device' },
-]
-
-// Demo data for when agent is not available
-const DEMO_ALERTS: DeviceAlert[] = [
-  {
-    id: 'demo-1',
-    nodeName: 'gpu-node-1',
-    cluster: 'production',
-    deviceType: 'gpu',
-    previousCount: 8,
-    currentCount: 6,
-    droppedCount: 2,
-    firstSeen: new Date().toISOString(),
-    lastSeen: new Date().toISOString(),
-    severity: 'critical',
-  },
-  {
-    id: 'demo-2',
-    nodeName: 'gpu-node-2',
-    cluster: 'production',
-    deviceType: 'infiniband',
-    previousCount: 2,
-    currentCount: 1,
-    droppedCount: 1,
-    firstSeen: new Date().toISOString(),
-    lastSeen: new Date().toISOString(),
-    severity: 'warning',
-  },
-]
-
-// Demo inventory data
-const DEMO_INVENTORY: NodeDeviceInventory[] = [
-  {
-    nodeName: 'gpu-node-1',
-    cluster: 'production',
-    devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
-    lastSeen: new Date().toISOString(),
-  },
-  {
-    nodeName: 'gpu-node-2',
-    cluster: 'production',
-    devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
-    lastSeen: new Date().toISOString(),
-  },
-  {
-    nodeName: 'compute-node-1',
-    cluster: 'staging',
-    devices: { gpuCount: 0, nicCount: 1, nvmeCount: 2, infinibandCount: 0, sriovCapable: false, rdmaAvailable: false, mellanoxPresent: false, nvidiaNicPresent: false, spectrumScale: false, mofedReady: false, gpuDriverReady: false },
-    lastSeen: new Date().toISOString(),
-  },
 ]
 
 // Get icon for device type
@@ -159,14 +61,22 @@ function getDeviceLabel(deviceType: string): string {
 type ViewMode = 'alerts' | 'inventory'
 
 export function HardwareHealthCard() {
-  const [alerts, setAlerts] = useState<DeviceAlert[]>([])
-  const [inventory, setInventory] = useState<NodeDeviceInventory[]>([])
-  const [nodeCount, setNodeCount] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [fetchError, setFetchError] = useState<string | null>(null)
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  // Use cached hook — persists to IndexedDB, survives navigation, handles demo mode
+  const {
+    data: hwData,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+    error: fetchError,
+    refetch,
+  } = useCachedHardwareHealth()
+
+  const alerts = hwData.alerts
+  const inventory = hwData.inventory
+  const nodeCount = hwData.nodeCount
+  const lastUpdate = hwData.lastUpdate ? new Date(hwData.lastUpdate) : null
+
   const [viewMode, setViewMode] = useState<ViewMode>('alerts')
-  const [endpointAvailable, setEndpointAvailable] = useState<boolean | undefined>(undefined)
   const [showSnoozed, setShowSnoozed] = useState(false)
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState<string | null>(null)
   const [snoozeAllMenuOpen, setSnoozeAllMenuOpen] = useState(false)
@@ -199,105 +109,13 @@ export function HardwareHealthCard() {
 
   const clusterFilterRef = useRef<HTMLDivElement>(null)
 
-  // Centralized demo state decision (handles global demo mode, agent offline, endpoint 404)
-  const { shouldUseDemoData } = useCardDemoState({
-    requires: 'agent',
-    isLiveDataAvailable: endpointAvailable,
-  })
-
-  // Report loading state to CardWrapper
+  // Report loading state to CardWrapper (useCache handles demo mode internally)
   useCardLoadingState({
     isLoading,
     hasAnyData: alerts.length > 0 || inventory.length > 0 || nodeCount > 0,
-    isDemoData: shouldUseDemoData,
+    isFailed,
+    consecutiveFailures,
   })
-
-  // Fetch device alerts and inventory
-  useEffect(() => {
-    // If demo mode is active (global demo, agent offline), use demo data immediately
-    // shouldUseDemoData is checked here but not in deps to avoid infinite loops
-    if (shouldUseDemoData) {
-      setAlerts(DEMO_ALERTS)
-      setInventory(DEMO_INVENTORY)
-      setNodeCount(DEMO_INVENTORY.length)
-      setIsLoading(false)
-      setFetchError(null)
-      setLastUpdate(new Date())
-      setEndpointAvailable(false) // Mark as unavailable so hook reports demo data
-      return
-    }
-
-    const fetchData = async () => {
-      setFetchError(null)
-      try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-        // Fetch both alerts and inventory in parallel
-        const [alertsRes, inventoryRes] = await Promise.all([
-          fetch(`${AGENT_HTTP_URL}/devices/alerts`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            signal: controller.signal,
-          }).catch(() => null),
-          fetch(`${AGENT_HTTP_URL}/devices/inventory`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            signal: controller.signal,
-          }).catch(() => null),
-        ])
-        clearTimeout(timeoutId)
-
-        let gotData = false
-
-        if (alertsRes?.ok) {
-          const data: DeviceAlertsResponse = await alertsRes.json()
-          setAlerts(data.alerts || [])
-          setNodeCount(data.nodeCount)
-          setLastUpdate(new Date(data.timestamp))
-          gotData = true
-        }
-
-        if (inventoryRes?.ok) {
-          const data: DeviceInventoryResponse = await inventoryRes.json()
-          setInventory(data.nodes || [])
-          // Update nodeCount from inventory if alerts returned 0
-          if (data.nodes && data.nodes.length > 0) {
-            setNodeCount(data.nodes.length)
-          }
-          gotData = true
-        }
-
-        // Update endpoint availability (triggers demo badge via hook if false)
-        setEndpointAvailable(gotData)
-
-        // Fall back to demo data if agent doesn't support device endpoints (404)
-        if (!gotData) {
-          setAlerts(DEMO_ALERTS)
-          setInventory(DEMO_INVENTORY)
-          setNodeCount(DEMO_INVENTORY.length)
-          setLastUpdate(new Date())
-        }
-      } catch (error) {
-        // Fall back to demo data on any error
-        setEndpointAvailable(false)
-        setAlerts(DEMO_ALERTS)
-        setInventory(DEMO_INVENTORY)
-        setNodeCount(DEMO_INVENTORY.length)
-        setLastUpdate(new Date())
-        // Also set error message for user visibility
-        const message = error instanceof Error ? error.message : 'Connection failed'
-        setFetchError(message === 'The user aborted a request.' ? 'Request timeout' : message)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-    const interval = setInterval(fetchData, 30000) // Poll every 30 seconds
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- shouldUseDemoData checked inside but not in deps to avoid loops
-  }, [])
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -471,15 +289,16 @@ export function HardwareHealthCard() {
     setLocalClusterFilter([])
   }
 
-  // Clear an alert (after power cycle)
+  // Clear an alert (after power cycle) — triggers refetch to update cached data
   const clearAlert = async (alertId: string) => {
     try {
-      await fetch(`${AGENT_HTTP_URL}/devices/alerts/clear`, {
+      await fetch('http://127.0.0.1:8585/devices/alerts/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ alertId }),
       })
-      setAlerts(prev => prev.filter(a => a.id !== alertId))
+      // Refetch to update cached data (the cleared alert won't be in the response)
+      refetch()
     } catch {
       // Silently fail
     }

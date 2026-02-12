@@ -1698,6 +1698,204 @@ export const coreFetchers = {
   },
 }
 
+// ============================================================================
+// Hardware Health (device alerts + inventory)
+// ============================================================================
+
+// Device alert from agent
+export interface DeviceAlert {
+  id: string
+  nodeName: string
+  cluster: string
+  deviceType: string
+  previousCount: number
+  currentCount: number
+  droppedCount: number
+  firstSeen: string
+  lastSeen: string
+  severity: string
+}
+
+interface DeviceAlertsResponse {
+  alerts: DeviceAlert[]
+  nodeCount: number
+  timestamp: string
+}
+
+export interface DeviceCounts {
+  gpuCount: number
+  nicCount: number
+  nvmeCount: number
+  infinibandCount: number
+  sriovCapable: boolean
+  rdmaAvailable: boolean
+  mellanoxPresent: boolean
+  nvidiaNicPresent: boolean
+  spectrumScale: boolean
+  mofedReady: boolean
+  gpuDriverReady: boolean
+}
+
+export interface NodeDeviceInventory {
+  nodeName: string
+  cluster: string
+  devices: DeviceCounts
+  lastSeen: string
+}
+
+interface DeviceInventoryResponse {
+  nodes: NodeDeviceInventory[]
+  timestamp: string
+}
+
+export interface HardwareHealthData {
+  alerts: DeviceAlert[]
+  inventory: NodeDeviceInventory[]
+  nodeCount: number
+  lastUpdate: string | null
+}
+
+const DEMO_HW_ALERTS: DeviceAlert[] = [
+  {
+    id: 'demo-1',
+    nodeName: 'gpu-node-1',
+    cluster: 'production',
+    deviceType: 'gpu',
+    previousCount: 8,
+    currentCount: 6,
+    droppedCount: 2,
+    firstSeen: new Date().toISOString(),
+    lastSeen: new Date().toISOString(),
+    severity: 'critical',
+  },
+  {
+    id: 'demo-2',
+    nodeName: 'gpu-node-2',
+    cluster: 'production',
+    deviceType: 'infiniband',
+    previousCount: 2,
+    currentCount: 1,
+    droppedCount: 1,
+    firstSeen: new Date().toISOString(),
+    lastSeen: new Date().toISOString(),
+    severity: 'warning',
+  },
+]
+
+const DEMO_HW_INVENTORY: NodeDeviceInventory[] = [
+  {
+    nodeName: 'gpu-node-1',
+    cluster: 'production',
+    devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
+    lastSeen: new Date().toISOString(),
+  },
+  {
+    nodeName: 'gpu-node-2',
+    cluster: 'production',
+    devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
+    lastSeen: new Date().toISOString(),
+  },
+  {
+    nodeName: 'compute-node-1',
+    cluster: 'staging',
+    devices: { gpuCount: 0, nicCount: 1, nvmeCount: 2, infinibandCount: 0, sriovCapable: false, rdmaAvailable: false, mellanoxPresent: false, nvidiaNicPresent: false, spectrumScale: false, mofedReady: false, gpuDriverReady: false },
+    lastSeen: new Date().toISOString(),
+  },
+]
+
+const HW_INITIAL_DATA: HardwareHealthData = {
+  alerts: [],
+  inventory: [],
+  nodeCount: 0,
+  lastUpdate: null,
+}
+
+const HW_DEMO_DATA: HardwareHealthData = {
+  alerts: DEMO_HW_ALERTS,
+  inventory: DEMO_HW_INVENTORY,
+  nodeCount: DEMO_HW_INVENTORY.length,
+  lastUpdate: new Date().toISOString(),
+}
+
+async function fetchHardwareHealth(): Promise<HardwareHealthData> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+  try {
+    const [alertsRes, inventoryRes] = await Promise.all([
+      fetch(`${LOCAL_AGENT_URL}/devices/alerts`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      }).catch(() => null),
+      fetch(`${LOCAL_AGENT_URL}/devices/inventory`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      }).catch(() => null),
+    ])
+    clearTimeout(timeoutId)
+
+    const result: HardwareHealthData = {
+      alerts: [],
+      inventory: [],
+      nodeCount: 0,
+      lastUpdate: new Date().toISOString(),
+    }
+
+    if (alertsRes?.ok) {
+      const data: DeviceAlertsResponse = await alertsRes.json()
+      result.alerts = data.alerts || []
+      result.nodeCount = data.nodeCount
+    }
+
+    if (inventoryRes?.ok) {
+      const data: DeviceInventoryResponse = await inventoryRes.json()
+      result.inventory = data.nodes || []
+      if (data.nodes && data.nodes.length > 0) {
+        result.nodeCount = data.nodes.length
+      }
+    }
+
+    // If neither endpoint returned data, throw so useCache tracks the failure
+    if (!alertsRes?.ok && !inventoryRes?.ok) {
+      throw new Error('Device endpoints unavailable')
+    }
+
+    return result
+  } catch (e) {
+    clearTimeout(timeoutId)
+    throw e
+  }
+}
+
+/**
+ * Hook for fetching hardware health data (device alerts + inventory) with caching.
+ * Uses IndexedDB persistence so data survives navigation.
+ */
+export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> {
+  const result = useCache({
+    key: 'hardware-health',
+    category: 'pods', // 30-second refresh
+    initialData: HW_INITIAL_DATA,
+    demoData: HW_DEMO_DATA,
+    persist: true,
+    enabled: !isAgentUnavailable(),
+    fetcher: fetchHardwareHealth,
+  })
+
+  return {
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
+}
+
 /** Specialty data fetchers — lower priority, prefetched after core data */
 export const specialtyFetchers = {
   prowJobs: () => fetchProwJobs('prow', 'prow'),
