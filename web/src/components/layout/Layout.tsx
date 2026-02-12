@@ -97,7 +97,7 @@ export function Layout({ children }: LayoutProps) {
   const showNetworkBanner = !isOnline || wasOffline
   // Show offline banner only when agent is confirmed disconnected (not during 'connecting' state)
   // This prevents flickering during initial connection attempts
-  const showOfflineBanner = !isDemoMode && agentStatus === 'disconnected' && !offlineBannerDismissed
+  const showOfflineBanner = !isDemoMode && agentStatus === 'disconnected' && backendStatus !== 'connected' && !offlineBannerDismissed
 
   // Banner stacking: each banner's top offset depends on how many banners above it are visible.
   // Navbar is 64px (top-16). Each banner is ~36px tall.

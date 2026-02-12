@@ -615,8 +615,8 @@ export function useCachedDeployments(
     initialData: [] as Deployment[],
     demoData: getDemoDeployments(),
     fetcher: async () => {
-      // Try agent first (fast, no backend needed)
-      if (clusterCacheRef.clusters.length > 0) {
+      // Try agent first (fast, no backend needed) — skip if agent is unavailable
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         if (cluster) {
           const params = new URLSearchParams()
           const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
@@ -657,7 +657,7 @@ export function useCachedDeployments(
       return []
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      if (clusterCacheRef.clusters.length > 0) {
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         return fetchDeploymentsViaAgent(namespace, onProgress)
       }
 
@@ -1515,8 +1515,8 @@ export function useCachedSecurityIssues(
     initialData: [] as SecurityIssue[],
     demoData: getDemoSecurityIssues(),
     fetcher: async () => {
-      // Try kubectl proxy first (uses agent to run kubectl commands)
-      if (clusterCacheRef.clusters.length > 0) {
+      // Try kubectl proxy first (uses agent to run kubectl commands) — skip if agent is unavailable
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         try {
           const issues = await fetchSecurityIssuesViaKubectl(cluster, namespace)
           if (issues.length > 0) return issues
@@ -1553,8 +1553,8 @@ export function useCachedSecurityIssues(
     },
     // Progressive loading: show results as each cluster completes
     progressiveFetcher: !cluster ? async (onProgress) => {
-      // Try kubectl proxy first (progressive)
-      if (clusterCacheRef.clusters.length > 0) {
+      // Try kubectl proxy first (progressive) — skip if agent is unavailable
+      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
         try {
           const issues = await fetchSecurityIssuesViaKubectl(cluster, namespace, onProgress)
           if (issues.length > 0) return issues

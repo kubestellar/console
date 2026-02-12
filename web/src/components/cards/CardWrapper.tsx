@@ -12,6 +12,7 @@ import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { isBackendConnected } from '../../hooks/useBackendHealth'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
@@ -1023,7 +1024,7 @@ export function CardWrapper({
   // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
   // This fixes the race condition where demo data briefly shows before skeleton
   // Cards with effectiveIsDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
-  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isDemoExempt && !effectiveIsDemoData && !isDemoMode
+  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isBackendConnected() && !isDemoExempt && !effectiveIsDemoData && !isDemoMode
   const forceSkeletonForModeSwitching = isModeSwitching && !isDemoExempt
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
