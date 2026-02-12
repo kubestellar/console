@@ -1280,7 +1280,7 @@ function ReservationFormModal({
               <select
                 value={namespace}
                 onChange={e => {
-                  if (e.target.value === '__new__') {
+                  if (e.target.value === '__new__' || e.target.value === '__new_bottom__') {
                     setIsNewNamespace(true)
                     setNamespace('')
                     setTimeout(() => document.getElementById('new-ns-input')?.focus(), 0)
@@ -1292,10 +1292,11 @@ function ReservationFormModal({
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
               >
                 <option value="">Select namespace...</option>
+                <option value="__new__">+ New namespace...</option>
                 {clusterNamespaces.map(ns => (
                   <option key={ns} value={ns}>{ns}</option>
                 ))}
-                <option value="__new__">+ New namespace...</option>
+                <option value="__new_bottom__">+ New namespace...</option>
               </select>
             ) : (
               <div className="flex gap-2">
