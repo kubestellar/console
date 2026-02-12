@@ -8,9 +8,15 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/kubestellar/console/pkg/agent"
 )
+
+// ConfigProvider is an interface for reading API keys from config.yaml.
+// This breaks the circular dependency between settings and agent packages.
+type ConfigProvider interface {
+	GetAPIKey(provider string) string
+	IsFromEnv(provider string) bool
+	GetModel(provider string, defaultModel string) string
+}
 
 const (
 	settingsDirName  = ".kc"
@@ -257,8 +263,9 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	return sm.saveLocked()
 }
 
-// MigrateFromConfigYaml performs a one-time migration of API keys from ~/.kc/config.yaml
-func (sm *SettingsManager) MigrateFromConfigYaml() error {
+// MigrateFromConfigYaml performs a one-time migration of API keys from ~/.kc/config.yaml.
+// Accepts a ConfigProvider to avoid circular dependency with the agent package.
+func (sm *SettingsManager) MigrateFromConfigYaml(cp ConfigProvider) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -267,7 +274,7 @@ func (sm *SettingsManager) MigrateFromConfigYaml() error {
 		return nil
 	}
 
-	cm := agent.GetConfigManager()
+	cm := cp
 
 	// Collect API keys from config.yaml
 	keys := make(map[string]APIKeyEntry)

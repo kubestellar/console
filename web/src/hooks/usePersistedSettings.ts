@@ -9,17 +9,16 @@ import {
 } from '../lib/settingsSync'
 
 const DEBOUNCE_MS = 1000
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 
-/** Direct fetch helper that bypasses the api module's backend availability cache. */
+/** Fetch helper that routes settings calls to the local kc-agent (saves to ~/.kc/settings.json). */
 async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('token')
-  const response = await fetch(path, {
+  const response = await fetch(`${LOCAL_AGENT_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options?.headers,
     },
     signal: options?.signal ?? AbortSignal.timeout(5000),
@@ -29,16 +28,19 @@ async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T>
 }
 
 /**
- * Central hook for persisting settings to ~/.kc/settings.json via the backend API.
+ * Central hook for persisting settings to ~/.kc/settings.json via the local kc-agent.
+ *
+ * Settings are saved on the user's machine (not the cluster) by routing
+ * all settings requests to the kc-agent at 127.0.0.1:8585.
  *
  * On mount:
- * - Fetches settings from backend
- * - If localStorage is empty (cache cleared), restores from backend file
- * - If localStorage has data but backend is empty, syncs localStorage → backend
+ * - Fetches settings from the local agent
+ * - If localStorage is empty (cache cleared), restores from the local settings file
+ * - If localStorage has data but agent settings are empty, syncs localStorage → agent
  *
  * On settings change:
  * - Listens for SETTINGS_CHANGED_EVENT from individual hooks
- * - Debounced PUT to backend (1 second)
+ * - Debounced PUT to agent (1 second)
  */
 export function usePersistedSettings() {
   const { isAuthenticated } = useAuth()
@@ -59,7 +61,7 @@ export function usePersistedSettings() {
     debounceTimer.current = setTimeout(async () => {
       try {
         const current = collectFromLocalStorage()
-        await settingsFetch('/api/settings', {
+        await settingsFetch('/settings', {
           method: 'PUT',
           body: JSON.stringify(current),
         })
@@ -71,7 +73,7 @@ export function usePersistedSettings() {
         if (mountedRef.current) {
           setSyncStatus('error')
         }
-        console.debug('[settings] failed to persist to backend')
+        console.debug('[settings] failed to persist to local agent')
       }
     }, DEBOUNCE_MS)
   }, [])
@@ -79,12 +81,9 @@ export function usePersistedSettings() {
   // Export settings as encrypted backup file
   const exportSettings = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/settings/export', {
+      const response = await fetch(`${LOCAL_AGENT_URL}/settings/export`, {
         method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
+        headers: { 'Content-Type': 'application/json' },
       })
       if (!response.ok) throw new Error('Export failed')
       const blob = await response.blob()
@@ -106,13 +105,13 @@ export function usePersistedSettings() {
   const importSettings = useCallback(async (file: File) => {
     try {
       const text = await file.text()
-      await settingsFetch('/api/settings/import', {
+      await settingsFetch('/settings/import', {
         method: 'PUT',
         body: text,
         signal: AbortSignal.timeout(10000),
       })
       // Reload settings from backend after import
-      const data = await settingsFetch<AllSettings>('/api/settings')
+      const data = await settingsFetch<AllSettings>('/settings')
       if (data) {
         restoreToLocalStorage(data)
       }
@@ -137,7 +136,7 @@ export function usePersistedSettings() {
 
     async function loadSettings() {
       try {
-        const data = await settingsFetch<AllSettings>('/api/settings')
+        const data = await settingsFetch<AllSettings>('/settings')
         if (!mountedRef.current) return
 
         if (isLocalStorageEmpty() && data) {
@@ -154,9 +153,9 @@ export function usePersistedSettings() {
         }
         setSyncStatus('saved')
       } catch {
-        // Backend unavailable — localStorage is sole source
+        // Agent unavailable — localStorage is sole source
         setSyncStatus('offline')
-        console.debug('[settings] backend unavailable, using localStorage only')
+        console.debug('[settings] local agent unavailable, using localStorage only')
       } finally {
         if (mountedRef.current) {
           setLoaded(true)

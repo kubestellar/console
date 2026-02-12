@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/settings"
 )
 
 // Version is set by ldflags during build
@@ -241,6 +242,11 @@ func (s *Server) Start() error {
 	// Settings endpoints for API key management
 	mux.HandleFunc("/settings/keys", s.handleSettingsKeys)
 	mux.HandleFunc("/settings/keys/", s.handleSettingsKeyByProvider)
+
+	// Persistent settings endpoints (saves to ~/.kc/settings.json on the user's machine)
+	mux.HandleFunc("/settings", s.handleSettingsAll)
+	mux.HandleFunc("/settings/export", s.handleSettingsExport)
+	mux.HandleFunc("/settings/import", s.handleSettingsImport)
 
 	// Provider health check (proxies status page checks server-side to avoid CORS)
 	mux.HandleFunc("/providers/health", s.handleProvidersHealth)
@@ -2103,6 +2109,144 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 
 	log.Printf("API key removed for provider: %s", provider)
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
+// handleSettingsAll handles GET and PUT for /settings (persists to ~/.kc/settings.json)
+func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	sm := settings.GetSettingsManager()
+
+	switch r.Method {
+	case "GET":
+		all, err := sm.GetAll()
+		if err != nil {
+			log.Printf("[settings] GetAll error: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "settings_load_failed", Message: "Failed to load settings"})
+			return
+		}
+		json.NewEncoder(w).Encode(all)
+
+	case "PUT":
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "read_error", Message: "Failed to read request body"})
+			return
+		}
+		defer r.Body.Close()
+
+		var all settings.AllSettings
+		if err := json.Unmarshal(body, &all); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_body", Message: "Invalid request body"})
+			return
+		}
+
+		if err := sm.SaveAll(&all); err != nil {
+			log.Printf("[settings] SaveAll error: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "settings_save_failed", Message: "Failed to save settings"})
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "Settings saved"})
+
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "GET or PUT required"})
+	}
+}
+
+// handleSettingsExport handles POST for /settings/export (returns encrypted backup)
+func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		return
+	}
+
+	sm := settings.GetSettingsManager()
+	data, err := sm.ExportEncrypted()
+	if err != nil {
+		log.Printf("[settings] Export error: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "export_failed", Message: "Failed to export settings"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=kc-settings-backup.json")
+	w.Write(data)
+}
+
+// handleSettingsImport handles PUT/POST for /settings/import (imports encrypted backup)
+func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if s.isAllowedOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "PUT" && r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "PUT or POST required"})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil || len(body) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "empty_body", Message: "Empty request body"})
+		return
+	}
+	defer r.Body.Close()
+
+	sm := settings.GetSettingsManager()
+	if err := sm.ImportEncrypted(body); err != nil {
+		log.Printf("[settings] Import error: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "import_failed", Message: err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "Settings imported"})
 }
 
 // handleGetKeysStatus returns the status of all API keys (without exposing the actual keys)
