@@ -76,6 +76,12 @@ enableMocking()
         localStorage.setItem('kc-sqlite-migrated', '2')
       }
 
+      // Seed cache from perf test data if available (set by Playwright addInitScript)
+      const seed = (window as Window & { __CACHE_SEED__?: Array<{ key: string; entry: { data: unknown; timestamp: number; version: number } }> }).__CACHE_SEED__
+      if (seed) {
+        await rpc.seedCache(seed)
+      }
+
       // Preload all metadata into in-memory Map (replaces sync localStorage reads)
       const { meta } = await rpc.preloadAll()
       initPreloadedMeta(meta)

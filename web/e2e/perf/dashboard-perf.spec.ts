@@ -401,6 +401,7 @@ async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache') {
     'kubestellar-console-tour-completed': 'true',
     'kc-user-cache': JSON.stringify(mockUser),
     'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
+    'kc-sqlite-migrated': '2', // Skip migration during perf tests
   }
 
   // Only pre-populate localStorage stack cache in warm mode (live+cache).
@@ -427,22 +428,37 @@ async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache') {
     lsValues,
   )
 
-  // In live mode, pre-populate IndexedDB `kc_cache` so useCache hooks find
-  // valid data on mount.  Without this, hooks like useCachedProwJobs (CI/CD)
-  // and useCachedLLMdModels (AI/ML) start with isLoading=true and must wait
-  // for kubectlProxy WebSocket responses.  With pre-populated cache, useCache
+  // In live+cache mode, pre-populate cache so useCache hooks find valid data
+  // on mount.  Without this, hooks like useCachedProwJobs (CI/CD) and
+  // useCachedLLMdModels (AI/ML) start with isLoading=true and must wait for
+  // kubectlProxy WebSocket responses.  With pre-populated cache, useCache
   // sees hasCachedData=true → isLoading=false → cards render immediately.
   //
-  // This runs as an addInitScript (fires before any page JS).  The async IDB
-  // write completes well before React boots and useCache reads from IDB.
+  // Two strategies:
+  // 1. Set window.__CACHE_SEED__ for SQLite worker (primary path)
+  // 2. Pre-populate IndexedDB as fallback (if SQLite worker fails)
   if (mode === 'live+cache') {
+    const CACHE_VERSION = 4
+    const seedEntries = [
+      { key: 'prowjobs:prow:prow', entry: { data: [], timestamp: Date.now(), version: CACHE_VERSION } },
+      { key: 'llmd-models:vllm-d,platform-eval', entry: { data: [], timestamp: Date.now(), version: CACHE_VERSION } },
+    ]
+
+    // Strategy 1: SQLite seed via window.__CACHE_SEED__ (picked up by main.tsx)
+    await page.addInitScript(
+      (entries: Array<{ key: string; entry: { data: unknown; timestamp: number; version: number } }>) => {
+        (window as Window & { __CACHE_SEED__?: typeof entries }).__CACHE_SEED__ = entries
+      },
+      seedEntries,
+    )
+
+    // Strategy 2: IndexedDB fallback (in case SQLite worker doesn't start)
     await page.addInitScript(() => {
-      const CACHE_VERSION = 4
       const DB_NAME = 'kc_cache'
       const STORE_NAME = 'cache'
       const entries = [
-        { key: 'prowjobs:prow:prow', data: [], timestamp: Date.now(), version: CACHE_VERSION },
-        { key: 'llmd-models:vllm-d,platform-eval', data: [], timestamp: Date.now(), version: CACHE_VERSION },
+        { key: 'prowjobs:prow:prow', data: [], timestamp: Date.now(), version: 4 },
+        { key: 'llmd-models:vllm-d,platform-eval', data: [], timestamp: Date.now(), version: 4 },
       ]
       const request = indexedDB.open(DB_NAME)
       request.onupgradeneeded = () => {
