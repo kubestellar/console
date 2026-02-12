@@ -31,6 +31,7 @@ import { dataComplianceDashboardConfig } from './data-compliance'
 import { arcadeDashboardConfig } from './arcade'
 import { deployDashboardConfig } from './deploy'
 import { aiAgentsDashboardConfig } from './ai-agents'
+import { llmdBenchmarksDashboardConfig } from './llmd-benchmarks'
 
 /**
  * Registry of all unified dashboard configurations
@@ -62,6 +63,7 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   arcade: arcadeDashboardConfig,
   deploy: deployDashboardConfig,
   'ai-agents': aiAgentsDashboardConfig,
+  'llm-d-benchmarks': llmdBenchmarksDashboardConfig,
 }
 
 /**
@@ -149,4 +151,5 @@ export {
   arcadeDashboardConfig,
   deployDashboardConfig,
   aiAgentsDashboardConfig,
+  llmdBenchmarksDashboardConfig,
 }

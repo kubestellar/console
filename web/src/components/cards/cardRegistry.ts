@@ -170,6 +170,14 @@ const PDDisaggregation = lazy(() => _llmdBundle.then(m => ({ default: m.PDDisagg
 const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchmarks })))
 const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
 const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
+// LLM-d benchmark dashboard cards (share the same barrel bundle)
+const BenchmarkHero = lazy(() => _llmdBundle.then(m => ({ default: m.BenchmarkHero })))
+const ParetoFrontier = lazy(() => _llmdBundle.then(m => ({ default: m.ParetoFrontier })))
+const HardwareLeaderboard = lazy(() => _llmdBundle.then(m => ({ default: m.HardwareLeaderboard })))
+const LatencyBreakdown = lazy(() => _llmdBundle.then(m => ({ default: m.LatencyBreakdown })))
+const ThroughputComparison = lazy(() => _llmdBundle.then(m => ({ default: m.ThroughputComparison })))
+const PerformanceTimeline = lazy(() => _llmdBundle.then(m => ({ default: m.PerformanceTimeline })))
+const ResourceUtilization = lazy(() => _llmdBundle.then(m => ({ default: m.ResourceUtilization })))
 const GitHubCIMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.GitHubCIMonitor })))
 const ClusterHealthMonitor = lazy(() => _workloadMonitorBundle.then(m => ({ default: m.ClusterHealthMonitor })))
 const ProviderHealth = lazy(() => import('./ProviderHealth').then(m => ({ default: m.ProviderHealth })))
@@ -406,6 +414,15 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llmd_ai_insights: LLMdAIInsights,
   llmd_configurator: LLMdConfigurator,
 
+  // LLM-d benchmark dashboard cards
+  benchmark_hero: BenchmarkHero,
+  pareto_frontier: ParetoFrontier,
+  hardware_leaderboard: HardwareLeaderboard,
+  latency_breakdown: LatencyBreakdown,
+  throughput_comparison: ThroughputComparison,
+  performance_timeline: PerformanceTimeline,
+  resource_utilization: ResourceUtilization,
+
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
 
@@ -488,6 +505,14 @@ export const DEMO_DATA_CARDS = new Set([
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
   'llmd_configurator',
+  // LLM-d benchmark dashboard cards - demo until live backend exists
+  'benchmark_hero',
+  'pareto_frontier',
+  'hardware_leaderboard',
+  'latency_breakdown',
+  'throughput_comparison',
+  'performance_timeline',
+  'resource_utilization',
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
   // Kagenti cards - demo until kagenti-operator is installed on clusters
@@ -649,6 +674,14 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   llmd_benchmarks: () => import('./llmd'),
   llmd_ai_insights: () => import('./llmd'),
   llmd_configurator: () => import('./llmd'),
+  // LLM-d benchmark dashboard cards — all share the llmd barrel bundle
+  benchmark_hero: () => import('./llmd'),
+  pareto_frontier: () => import('./llmd'),
+  hardware_leaderboard: () => import('./llmd'),
+  latency_breakdown: () => import('./llmd'),
+  throughput_comparison: () => import('./llmd'),
+  performance_timeline: () => import('./llmd'),
+  resource_utilization: () => import('./llmd'),
   // Kagenti AI Agents — all share one chunk via barrel
   kagenti_status: () => import('./KagentiStatusCard'),
   kagenti_agent_fleet: () => import('./kagenti'),
@@ -823,6 +856,15 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   llmd_benchmarks: 6,     // Benchmark charts
   llmd_ai_insights: 6,    // AI insights panel
   llmd_configurator: 4,   // Configurator showcase
+
+  // LLM-d benchmark dashboard cards (all full-width)
+  benchmark_hero: 12,
+  pareto_frontier: 12,
+  hardware_leaderboard: 12,
+  latency_breakdown: 12,
+  throughput_comparison: 12,
+  performance_timeline: 12,
+  resource_utilization: 12,
 
   // Event dashboard cards
   event_summary: 6,
