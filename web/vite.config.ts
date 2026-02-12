@@ -59,6 +59,12 @@ export default defineConfig(({ mode }) => ({
         forceBuildInstrument: true,
       }),
   ].filter(Boolean),
+  worker: {
+    format: 'es',
+  },
+  optimizeDeps: {
+    exclude: ['@sqlite.org/sqlite-wasm'],
+  },
   build: {
     // Enable minification optimizations
     minify: 'terser',
