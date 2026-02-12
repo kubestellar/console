@@ -31,7 +31,7 @@ export interface DashboardMetric {
   dashboardId: string
   dashboardName: string
   route: string
-  mode: 'demo' | 'live'
+  mode: 'demo' | 'live' | 'live+cache'
   navigationStartMs: number
   /** ms from nav to first card showing content */
   firstCardVisibleMs: number
@@ -154,28 +154,19 @@ export function summarizeReport(report: PerfReport): string {
     )
   }
 
-  // Demo vs Live comparison
-  const demoCards = report.dashboards
-    .filter((d) => d.mode === 'demo')
-    .flatMap((d) => d.cards)
-    .filter((c) => !c.timedOut)
-  const liveCards = report.dashboards
-    .filter((d) => d.mode === 'live')
-    .flatMap((d) => d.cards)
-    .filter((c) => !c.timedOut)
-
-  const avgDemo =
-    demoCards.length > 0
-      ? Math.round(demoCards.reduce((s, c) => s + c.timeToFirstContent, 0) / demoCards.length)
-      : -1
-  const avgLive =
-    liveCards.length > 0
-      ? Math.round(liveCards.reduce((s, c) => s + c.timeToFirstContent, 0) / liveCards.length)
-      : -1
-
+  // Per-mode comparison
+  const modes = ['demo', 'live', 'live+cache'] as const
   lines.push('')
-  lines.push(`Demo avg card load: ${avgDemo}ms (${demoCards.length} cards)`)
-  lines.push(`Live avg card load: ${avgLive}ms (${liveCards.length} cards)`)
+  for (const m of modes) {
+    const cards = report.dashboards
+      .filter((d) => d.mode === m)
+      .flatMap((d) => d.cards)
+      .filter((c) => !c.timedOut)
+    if (cards.length === 0) continue
+    const avg = Math.round(cards.reduce((s, c) => s + c.timeToFirstContent, 0) / cards.length)
+    const label = m === 'live+cache' ? 'Live+cache' : m.charAt(0).toUpperCase() + m.slice(1)
+    lines.push(`${label} avg card load: ${avg}ms (${cards.length} cards)`)
+  }
   lines.push('')
 
   return lines.join('\n')

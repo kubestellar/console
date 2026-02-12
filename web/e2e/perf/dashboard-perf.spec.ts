@@ -42,6 +42,7 @@ const DASHBOARDS = [
   { id: 'deploy', name: 'Deploy', route: '/deploy' },
   { id: 'ai-agents', name: 'AI Agents', route: '/ai-agents' },
   { id: 'data-compliance', name: 'Data Compliance', route: '/data-compliance' },
+  { id: 'arcade', name: 'Arcade', route: '/arcade' },
 ]
 
 // Max cards to measure per dashboard (prevent very long tests)
@@ -370,7 +371,7 @@ async function setupLiveMocks(page: Page) {
  * origin to establish localStorage, then the addInitScript re-applies
  * on each subsequent page.goto().
  */
-async function setMode(page: Page, mode: 'demo' | 'live') {
+async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache') {
   // Pre-populate stack cache so useStackDiscovery starts with cached data and
   // isLoading=false.  Without this, the hook fires 7 sequential kubectlProxy
   // WebSocket calls per cluster (max 2 concurrent) which adds 300-500ms to
@@ -391,14 +392,21 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
     timestamp: Date.now(),
   })
 
-  const lsValues = {
-    token: mode === 'demo' ? 'demo-token' : 'test-token',
-    'kc-demo-mode': String(mode === 'demo'),
+  const isLive = mode === 'live' || mode === 'live+cache'
+
+  const lsValues: Record<string, string> = {
+    token: isLive ? 'test-token' : 'demo-token',
+    'kc-demo-mode': String(!isLive),
     'demo-user-onboarded': 'true',
     'kubestellar-console-tour-completed': 'true',
     'kc-user-cache': JSON.stringify(mockUser),
     'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
-    'kubestellar-stack-cache': stackCache,
+  }
+
+  // Only pre-populate localStorage stack cache in warm mode (live+cache).
+  // Cold live mode tests measure worst-case first-visit performance.
+  if (mode === 'live+cache') {
+    lsValues['kubestellar-stack-cache'] = stackCache
   }
 
   // addInitScript fires before any page JS on every navigation,
@@ -418,6 +426,53 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
     },
     lsValues,
   )
+
+  // In live mode, pre-populate IndexedDB `kc_cache` so useCache hooks find
+  // valid data on mount.  Without this, hooks like useCachedProwJobs (CI/CD)
+  // and useCachedLLMdModels (AI/ML) start with isLoading=true and must wait
+  // for kubectlProxy WebSocket responses.  With pre-populated cache, useCache
+  // sees hasCachedData=true → isLoading=false → cards render immediately.
+  //
+  // This runs as an addInitScript (fires before any page JS).  The async IDB
+  // write completes well before React boots and useCache reads from IDB.
+  if (mode === 'live+cache') {
+    await page.addInitScript(() => {
+      const CACHE_VERSION = 4
+      const DB_NAME = 'kc_cache'
+      const STORE_NAME = 'cache'
+      const entries = [
+        { key: 'prowjobs:prow:prow', data: [], timestamp: Date.now(), version: CACHE_VERSION },
+        { key: 'llmd-models:vllm-d,platform-eval', data: [], timestamp: Date.now(), version: CACHE_VERSION },
+      ]
+      const request = indexedDB.open(DB_NAME)
+      request.onupgradeneeded = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'key' })
+        }
+      }
+      request.onsuccess = () => {
+        const db = request.result
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.close()
+          const req2 = indexedDB.open(DB_NAME, db.version + 1)
+          req2.onupgradeneeded = () => req2.result.createObjectStore(STORE_NAME, { keyPath: 'key' })
+          req2.onsuccess = () => {
+            const d = req2.result
+            const t = d.transaction(STORE_NAME, 'readwrite')
+            const s = t.objectStore(STORE_NAME)
+            for (const e of entries) s.put(e)
+            t.oncomplete = () => d.close()
+          }
+          return
+        }
+        const tx = db.transaction(STORE_NAME, 'readwrite')
+        const store = tx.objectStore(STORE_NAME)
+        for (const e of entries) store.put(e)
+        tx.oncomplete = () => db.close()
+      }
+    })
+  }
 }
 
 /**
@@ -431,7 +486,7 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
 async function measureDashboard(
   page: Page,
   dashboard: (typeof DASHBOARDS)[0],
-  mode: 'demo' | 'live'
+  mode: 'demo' | 'live' | 'live+cache'
 ): Promise<DashboardMetric> {
   const networkTimings = setupNetworkInterceptor(page)
 
@@ -683,13 +738,13 @@ const perfReport: PerfReport = {
 // Warmup — prime Vite module cache so first real test isn't penalized
 // ---------------------------------------------------------------------------
 
-test('warmup (demo live) — prime Vite module cache', async ({ page }) => {
+test('warmup (demo live live+cache) — prime Vite module cache', async ({ page }) => {
   await setupAuth(page)
   await setMode(page, 'demo')
   // Navigate through several dashboards to warm up React + card chunk modules.
   // Each route triggers loading of unique card components not shared by others.
   // Test name contains both "demo" and "live" so it runs regardless of grep filter.
-  const warmupRoutes = ['/', '/deploy', '/ai-ml', '/compliance', '/ci-cd']
+  const warmupRoutes = ['/', '/deploy', '/ai-ml', '/compliance', '/ci-cd', '/arcade']
   for (const route of warmupRoutes) {
     await page.goto(route, { waitUntil: 'domcontentloaded' })
     try {
@@ -703,14 +758,14 @@ test('warmup (demo live) — prime Vite module cache', async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 for (const dashboard of DASHBOARDS) {
-  for (const mode of ['demo', 'live'] as const) {
+  for (const mode of ['demo', 'live', 'live+cache'] as const) {
     test(`${dashboard.name} (${mode}) — card loading performance`, async ({ page }) => {
       // Capture uncaught JS errors to debug React crashes
       const pageErrors: string[] = []
       page.on('pageerror', (err) => pageErrors.push(err.message))
 
       await setupAuth(page)
-      if (mode === 'live') await setupLiveMocks(page)
+      if (mode === 'live' || mode === 'live+cache') await setupLiveMocks(page)
       await setMode(page, mode)
 
       const metric = await measureDashboard(page, dashboard, mode)
