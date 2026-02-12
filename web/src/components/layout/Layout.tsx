@@ -94,15 +94,46 @@ export function Layout({ children }: LayoutProps) {
   // Auto-enable demo mode when agent is confirmed disconnected and not in cluster mode.
   // This prevents the "Offline" state on localhost — users get demo data instead of empty screens.
   // When agent comes back online, auto-disable demo (but only if it was auto-enabled, not manual).
+  // Grace period: when user manually toggles demo off, wait 8s for agent to connect before
+  // re-enabling demo. The pill shows "connecting" → "disconnected" during this window.
   const demoAutoEnabledRef = useRef(false)
+  const demoReEnableTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const prevDemoModeRef = useRef(isDemoMode)
+  const userToggledOffRef = useRef(false)
+  const AGENT_CONNECT_GRACE_MS = 8000
+
+  // Detect manual toggle-off: isDemoMode went from true → false while agent is still disconnected
+  useEffect(() => {
+    if (prevDemoModeRef.current && !isDemoMode && agentStatus !== 'connected') {
+      userToggledOffRef.current = true
+    }
+    prevDemoModeRef.current = isDemoMode
+  }, [isDemoMode, agentStatus])
+
   useEffect(() => {
     if (agentStatus === 'disconnected' && !isInClusterMode && !isDemoMode && !isDemoModeForced) {
-      demoAutoEnabledRef.current = true
-      setDemoMode(true)
+      if (userToggledOffRef.current) {
+        // User manually toggled off — give agent time to connect before re-enabling
+        demoReEnableTimerRef.current = setTimeout(() => {
+          userToggledOffRef.current = false
+          demoAutoEnabledRef.current = true
+          setDemoMode(true)
+        }, AGENT_CONNECT_GRACE_MS)
+      } else {
+        // Initial load or agent went offline — enable demo immediately
+        demoAutoEnabledRef.current = true
+        setDemoMode(true)
+      }
     } else if (agentStatus === 'connected' && isDemoMode && demoAutoEnabledRef.current) {
       demoAutoEnabledRef.current = false
+      userToggledOffRef.current = false
+      if (demoReEnableTimerRef.current) clearTimeout(demoReEnableTimerRef.current)
       setDemoMode(false, true)
+    } else {
+      // Agent connected or demo manually re-enabled — cancel pending timer
+      if (demoReEnableTimerRef.current) clearTimeout(demoReEnableTimerRef.current)
     }
+    return () => { if (demoReEnableTimerRef.current) clearTimeout(demoReEnableTimerRef.current) }
   }, [agentStatus, isInClusterMode, isDemoMode])
 
   // Startup snackbar — shows while backend health is in initial 'connecting' state
