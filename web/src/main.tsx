@@ -11,7 +11,13 @@ import './lib/unified/registerHooks'
 import { registerAllDemoGenerators } from './lib/unified/demo'
 registerAllDemoGenerators()
 // Import cache utilities
-import { migrateFromLocalStorage, preloadCacheFromStorage } from './lib/cache'
+import {
+  initCacheWorker,
+  initPreloadedMeta,
+  migrateIDBToSQLite,
+  migrateFromLocalStorage,
+  preloadCacheFromStorage,
+} from './lib/cache'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { registerDynamicCardType } from './components/cards/cardRegistry'
@@ -59,14 +65,27 @@ enableMocking()
     console.error('MSW initialization failed:', error)
   })
   .finally(async () => {
-    // Migrate old localStorage cache to IndexedDB (one-time migration)
+    // Initialize SQLite Web Worker for cache storage (replaces IndexedDB + localStorage)
     try {
-      await migrateFromLocalStorage()
+      const rpc = await initCacheWorker()
+
+      // One-time migration from IndexedDB + localStorage to SQLite
+      if (!localStorage.getItem('kc-sqlite-migrated')) {
+        await migrateFromLocalStorage() // Clean up legacy ksc_ keys first
+        await migrateIDBToSQLite()      // Move IDB data + localStorage meta to SQLite
+        localStorage.setItem('kc-sqlite-migrated', '2')
+      }
+
+      // Preload all metadata into in-memory Map (replaces sync localStorage reads)
+      const { meta } = await rpc.preloadAll()
+      initPreloadedMeta(meta)
     } catch (e) {
-      console.error('[Cache] Migration failed:', e)
+      console.warn('[Cache] SQLite worker init failed, using IndexedDB fallback:', e)
+      // Fallback: run legacy migrations and preload from IndexedDB
+      try { await migrateFromLocalStorage() } catch { /* ignore */ }
     }
 
-    // Preload common cache data from IndexedDB before rendering
+    // Preload cache data from storage before rendering
     // This ensures cached data is available immediately when components mount
     try {
       await preloadCacheFromStorage()
