@@ -115,7 +115,7 @@ export function useOperators(cluster?: string) {
         const allOperators: Operator[] = []
         for (const c of allClusters) {
           try {
-            const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(c.name)}`)
+            const { data } = await api.get<{ operators: Operator[] }>(`/api/gitops/operators?cluster=${encodeURIComponent(c.name)}`)
             allOperators.push(...(data.operators || []).map(op => ({ ...op, cluster: c.name })))
           } catch {
             // Skip clusters where operator API is unavailable
@@ -134,7 +134,7 @@ export function useOperators(cluster?: string) {
       }
 
       try {
-        const { data } = await api.get<{ operators: Operator[] }>(`/api/mcp/operators?cluster=${encodeURIComponent(cluster)}`)
+        const { data } = await api.get<{ operators: Operator[] }>(`/api/gitops/operators?cluster=${encodeURIComponent(cluster)}`)
         if (!cancelled) {
           const newOperators = (data.operators || []).map(op => ({ ...op, cluster }))
           setOperators(newOperators)
