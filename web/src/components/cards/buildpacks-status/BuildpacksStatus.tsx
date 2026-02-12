@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react'
-import { CheckCircle, XCircle, Clock, ChevronRight, Server } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server } from 'lucide-react'
+import { useClusters, useBuildpackImages } from '../../../hooks/useMCP'
+import { Skeleton } from '../../ui/Skeleton'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import {
-  useCardData,
-  CardSearchInput,
-  CardControlsRow,
-  CardPaginationFooter,
-} from '../../../lib/cards'
+import { useCardData, CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../../lib/cards'
+import { useCardLoadingState } from '.././CardDataContext'
 
 interface BuildpacksStatusProps {
   config?: {
@@ -15,13 +13,13 @@ interface BuildpacksStatusProps {
   }
 }
 
-interface BuildpackBuild {
+interface BuildpackDisplay {
   name: string
   namespace: string
   builder: string
   image: string
-  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
-  lastBuildTime: string
+  status: 'succeeded' | 'failed' | 'building' | 'unknown'
+  updated: string
   cluster?: string
 }
 
@@ -34,61 +32,76 @@ const SORT_OPTIONS = [
   { value: 'updated' as const, label: 'Updated' },
 ]
 
+const STATUS_STYLES = {
+  succeeded: {
+    icon: 'text-green-400',
+    badge: 'bg-green-500/20 text-green-400',
+  },
+  failed: {
+    icon: 'text-red-400',
+    badge: 'bg-red-500/20 text-red-400',
+  },
+  building: {
+    icon: 'text-blue-400',
+    badge: 'bg-blue-500/20 text-blue-400',
+  },
+  unknown: {
+    icon: 'text-orange-400',
+    badge: 'bg-orange-500/20 text-orange-400',
+  },
+}
+
 export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
-  const [selectedNamespace, setSelectedNamespace] = useState<string>(
+  const { isLoading: clustersLoading } = useClusters()
+
+  const {
+    images: allImages,
+    isLoading,
+    isFailed,
+    consecutiveFailures,
+    error,
+  } = useBuildpackImages(config?.cluster)
+
+  const [selectedNamespace, setSelectedNamespace] = useState(
     config?.namespace || ''
   )
-  //Demo data - replace with real API call when backend is implemented
-  const demoBuilds: BuildpackBuild[] = [
-    {
-      name: 'frontend-app',
-      namespace: 'apps',
-      builder: 'paketo-builder',
-      image: 'registry.io/frontend:v1.2.0',
-      status: 'succeeded',
-      lastBuildTime: new Date(Date.now() - 3600000).toISOString(),
-      cluster: 'gke-prod',
-    },
-    {
-      name: 'payments-api',
-      namespace: 'backend',
-      builder: 'heroku-builder',
-      image: 'registry.io/payments:v3.4.1',
-      status: 'failed',
-      lastBuildTime: new Date(Date.now() - 7200000).toISOString(),
-      cluster: 'eks-prod-us-east-1',
-    },
-    {
-      name: 'auth-service',
-      namespace: 'security',
-      builder: 'paketo-builder',
-      image: 'registry.io/auth:v2.1.0',
-      status: 'pending',
-      lastBuildTime: new Date(Date.now() - 1800000).toISOString(),
-      cluster: 'gke-prod',
-    },
-  ]
 
-  const clusterFiltered = useMemo(() => {
-    if (!config?.cluster) return demoBuilds
-    return demoBuilds.filter(b => b.cluster === config.cluster)
-  }, [config?.cluster])
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading: clustersLoading || isLoading,
+    hasAnyData: allImages.length > 0,
+    isFailed,
+    consecutiveFailures,
+  })
+
+  const allBuilds: BuildpackDisplay[] = useMemo(
+    () =>
+      allImages.map(img => ({
+        name: img.name,
+        namespace: img.namespace,
+        builder: img.builder,
+        image: img.image,
+        status: img.status,
+        updated: img.updated,
+        cluster: img.cluster,
+      })),
+    [allImages]
+  )
 
   const namespacedBuilds = useMemo(() => {
-    if (!selectedNamespace) return clusterFiltered
-    return clusterFiltered.filter(b => b.namespace === selectedNamespace)
-  }, [clusterFiltered, selectedNamespace])
+    if (!selectedNamespace) return allBuilds
+    return allBuilds.filter(b => b.namespace === selectedNamespace)
+  }, [allBuilds, selectedNamespace])
 
-  const namespaces = useMemo(() => {
-    return Array.from(new Set(clusterFiltered.map(b => b.namespace))).sort()
-  }, [clusterFiltered])
+  const namespaces = useMemo(
+    () => Array.from(new Set(allBuilds.map(b => b.namespace))).sort(),
+    [allBuilds]
+  )
 
-  const statusOrder: Record<BuildpackBuild['status'], number> = {
+  const statusOrder: Record<string, number> = {
     failed: 0,
-    cancelled: 1,
-    pending: 2,
-    running: 3,
-    succeeded: 4,
+    building: 1,
+    unknown: 2,
+    succeeded: 3,
   }
 
   const {
@@ -117,7 +130,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<BuildpackBuild, SortByOption>(namespacedBuilds, {
+  } = useCardData<BuildpackDisplay, SortByOption>(namespacedBuilds, {
     filter: {
       searchFields: ['name', 'namespace', 'builder', 'image'],
       clusterField: 'cluster',
@@ -128,13 +141,12 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       defaultField: 'status',
       defaultDirection: 'asc',
       comparators: {
-        status: (a, b) =>
-          statusOrder[a.status] - statusOrder[b.status],
+        status: (a, b) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5),
         name: (a, b) => a.name.localeCompare(b.name),
         builder: (a, b) => a.builder.localeCompare(b.builder),
         updated: (a, b) =>
-          new Date(b.lastBuildTime).getTime() -
-          new Date(a.lastBuildTime).getTime(),
+          new Date(b.updated).getTime() -
+          new Date(a.updated).getTime(),
       },
     },
     defaultLimit: 5,
@@ -142,31 +154,47 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
 
   const successCount = namespacedBuilds.filter(b => b.status === 'succeeded').length
   const failedCount = namespacedBuilds.filter(b => b.status === 'failed').length
-  const pendingCount = namespacedBuilds.filter(b => b.status === 'pending').length
+  const buildingCount = namespacedBuilds.filter(b => b.status === 'building').length
 
-  const getStatusIcon = (status: BuildpackBuild['status']) => {
-    switch (status) {
-      case 'succeeded': return CheckCircle
-      case 'failed':
-      case 'cancelled': return XCircle
-      default: return Clock
-    }
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const diff = Date.now() - date.getTime()
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+    return `${Math.floor(diff / 86400000)}d ago`
   }
 
-  const getStatusColor = (status: BuildpackBuild['status']) => {
-    switch (status) {
-      case 'succeeded': return 'green'
-      case 'failed':
-      case 'cancelled': return 'red'
-      case 'pending': return 'yellow'
-      case 'running': return 'blue'
-      default: return 'gray'
-    }
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex flex-col min-h-card">
+        <Skeleton variant="rounded" height={60} />
+        <Skeleton variant="rounded" height={60} />
+        <Skeleton variant="rounded" height={60} />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        {error ? (
+          <>
+            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-xs mt-1">Failed to load buildpack images</p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm">No Buildpack images</p>
+            <p className="text-xs mt-1">
+              Create kpack Image resources to track builds
+            </p>
+          </>
+        )}
+      </div>
+    )
   }
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
-
       {/* Controls */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
@@ -219,6 +247,10 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       <div className="flex items-center gap-2 mb-4">
         {localClusterFilter.length === 1 ? (
           <ClusterBadge cluster={localClusterFilter[0]} />
+        ) : localClusterFilter.length > 1 ? (
+          <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">
+            {localClusterFilter.length} clusters
+          </span>
         ) : (
           <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">
             All clusters
@@ -237,48 +269,77 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder="Search builds..."
+        placeholder="Search buildpack images..."
         className="mb-4"
       />
 
       {/* Summary */}
       <div className="flex gap-2 mb-4">
-        <SummaryBlock label="Total" value={totalItems} color="blue" />
-        <SummaryBlock label="Pending" value={pendingCount} color="yellow" />
-        <SummaryBlock label="Success" value={successCount} color="green" />
-        <SummaryBlock label="Failed" value={failedCount} color="red" />
+        <Summary label="Total" value={totalItems} color="blue" />
+        <Summary label="Succeeded" value={successCount} color="green" />
+        <Summary label="Building" value={buildingCount} color="blue" />
+        <Summary label="Failed" value={failedCount} color="red" />
       </div>
 
       {/* List */}
       <div className="flex-1 space-y-2 overflow-y-auto">
         {builds.map(build => {
-          const StatusIcon = getStatusIcon(build.status)
-          const color = getStatusColor(build.status)
+          const Icon =
+            build.status === 'succeeded'
+              ? CheckCircle
+              : build.status === 'failed'
+              ? XCircle
+              : build.status === 'building'
+              ? Clock
+              : AlertTriangle
+
+          const styles = STATUS_STYLES[build.status]
 
           return (
-            <div
-              key={`${build.cluster}-${build.namespace}-${build.name}`}
-              className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+            <div key={`${build.cluster}-${build.namespace}-${build.name}`} className={`p-3 rounded-lg transition-colors cursor-pointer group ${build.status === 'failed' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50`}
             >
+
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <StatusIcon className={`w-4 h-4 text-${color}-400`} />
+                  <Icon className={`w-4 h-4 ${styles.icon}`} />
                   <span className="text-sm font-medium group-hover:text-purple-400">
                     {build.name}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
+                  {build.status !== 'succeeded' && (
+                    <CardAIActions
+                      resource={{
+                        kind: 'BuildpackImage',
+                        name: build.name,
+                        namespace: build.namespace,
+                        cluster: build.cluster,
+                        status: build.status,
+                      }}
+                      issues={[
+                        {
+                          name: `Image ${build.status}`,
+                          message: `Buildpack image ${build.name} is ${build.status}`,
+                        },
+                      ]}
+                    />
+                  )}
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${styles.badge}`}>
                     {build.status}
                   </span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
 
-              <div className="ml-6 text-xs text-muted-foreground flex items-center gap-3">
-                {build.cluster && <ClusterBadge cluster={build.cluster} size="sm" />}
+              <div className="flex items-center gap-4 ml-6 text-xs text-muted-foreground">
+                {build.cluster && (
+                  <ClusterBadge cluster={build.cluster} size="sm" />
+                )}
                 <span>{build.builder}</span>
+                <span className="ml-auto">
+                  {formatTime(build.updated)}
+                </span>
               </div>
             </div>
           )
@@ -295,13 +356,24 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       />
 
       <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {totalItems} build{totalItems !== 1 ? 's' : ''}
+        {totalItems} image{totalItems !== 1 ? 's' : ''}
+        {localClusterFilter.length === 1
+          ? (selectedNamespace
+              ? ` in ${localClusterFilter[0]}/${selectedNamespace}`
+              : ` in ${localClusterFilter[0]}`)
+          : ` across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
       </div>
+
+      {/* {lastRefresh && (
+        <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+          Last updated: {new Date(lastRefresh).toLocaleTimeString()}
+        </div>
+      )} */}
     </div>
   )
 }
 
-function SummaryBlock({
+function Summary({
   label,
   value,
   color,
@@ -310,9 +382,15 @@ function SummaryBlock({
   value: number
   color: string
 }) {
+  const COLORS: Record<string, string> = {
+    blue: 'bg-blue-500/10 text-blue-400',
+    green: 'bg-green-500/10 text-green-400',
+    red: 'bg-red-500/10 text-red-400',
+  }
+
   return (
-    <div className={`flex-1 p-2 rounded-lg bg-${color}-500/10 text-center`}>
-      <span className={`text-lg font-bold text-${color}-400`}>{value}</span>
+    <div className={`flex-1 p-2 rounded-lg text-center ${COLORS[color]}`}>
+      <span className="text-lg font-bold">{value}</span>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   )
