@@ -4,7 +4,7 @@ import { useClusters, useBuildpackImages } from '../../../hooks/useMCP'
 import { Skeleton } from '../../ui/Skeleton'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useCardData, CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../../lib/cards'
-import { useCardLoadingState } from '.././CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 
 interface BuildpacksStatusProps {
   config?: {
@@ -156,11 +156,23 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
   const failedCount = namespacedBuilds.filter(b => b.status === 'failed').length
   const buildingCount = namespacedBuilds.filter(b => b.status === 'building').length
 
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const diff = Date.now() - date.getTime()
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-    return `${Math.floor(diff / 86400000)}d ago`
+  const formatTime = (timestamp: string | number | Date): string => {
+    const time = new Date(timestamp).getTime()
+    if (isNaN(time)) return ''
+
+    const diff = Date.now() - time
+
+    if (diff <= 0) return 'just now'
+
+    const minute = 60 * 1000
+    const hour = 60 * minute
+    const day = 24 * hour
+
+    if (diff < minute) return 'just now'
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`
+
+    return `${Math.floor(diff / day)}d ago`
   }
 
   if (showSkeleton) {
@@ -363,12 +375,6 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
               : ` in ${localClusterFilter[0]}`)
           : ` across ${availableClusters.length} cluster${availableClusters.length !== 1 ? 's' : ''}`}
       </div>
-
-      {/* {lastRefresh && (
-        <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-          Last updated: {new Date(lastRefresh).toLocaleTimeString()}
-        </div>
-      )} */}
     </div>
   )
 }

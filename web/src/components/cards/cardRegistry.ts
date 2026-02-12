@@ -170,7 +170,8 @@ const KagentiAgentDiscovery = lazy(() => _kagentiBundle.then(m => ({ default: m.
 const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurity })))
 const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
 const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
-const BuildpacksStatus = lazy(() =>import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
+// Cloud Native Buildpacks card
+const BuildpacksStatus = lazy(() => import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -708,6 +709,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagenti_security: () => import('./kagenti'),
   kagenti_security_posture: () => import('./kagenti'),
   kagenti_topology: () => import('./kagenti'),
+  // Cloud Native Buildpacks
+  buildpacks_status: () => import('./buildpacks-status'),
 }
 
 /**

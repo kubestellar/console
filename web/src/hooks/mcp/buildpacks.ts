@@ -185,7 +185,9 @@ export function useBuildpackImages(cluster?: string) {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         }
-        headers['Authorization'] = `Bearer ${token}`
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
 
         const response = await fetch(url, { method: 'GET', headers })
         if (!response.ok) {

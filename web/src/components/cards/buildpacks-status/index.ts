@@ -1,1 +1,1 @@
-export { BuildpacksStatus } from './BuildpacksStatus.tsx'
+export { BuildpacksStatus } from './BuildpacksStatus'
