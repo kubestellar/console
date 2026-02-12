@@ -178,6 +178,7 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
     category: 'clusters',
     initialData: [] as KagentiAgent[],
     demoData: getDemoAgents(),
+    demoWhenEmpty: true,
     enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const agents = await agentFetchAllClusters<KagentiAgent>(
@@ -196,6 +197,7 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
     category: 'clusters',
     initialData: [] as KagentiBuild[],
     demoData: getDemoBuilds(),
+    demoWhenEmpty: true,
     enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const builds = await agentFetchAllClusters<KagentiBuild>(
@@ -214,6 +216,7 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
     category: 'clusters',
     initialData: [] as KagentiCard[],
     demoData: getDemoCards(),
+    demoWhenEmpty: true,
     enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const cards = await agentFetchAllClusters<KagentiCard>(
@@ -232,6 +235,7 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
     category: 'clusters',
     initialData: [] as KagentiTool[],
     demoData: getDemoTools(),
+    demoWhenEmpty: true,
     enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const tools = await agentFetchAllClusters<KagentiTool>(

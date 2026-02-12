@@ -708,6 +708,9 @@ export interface UseCacheOptions<T> {
   autoRefresh?: boolean
   /** Whether fetching is enabled (default: true) */
   enabled?: boolean
+  /** When true and demoData is provided, fall back to demoData if live fetch returns empty data.
+   *  Use this for "demo until X is installed" cards that are in DEMO_DATA_CARDS. (default: false) */
+  demoWhenEmpty?: boolean
   /** Merge function for combining old and new data */
   merge?: (oldData: T, newData: T) => T
   /** Share cache across components with same key (default: true) */
@@ -748,6 +751,7 @@ export function useCache<T>({
   persist = true,
   autoRefresh = true,
   enabled = true,
+  demoWhenEmpty = false,
   merge,
   shared = true,
   progressiveFetcher,
@@ -853,9 +857,16 @@ export function useCache<T>({
   // When disabled (demo mode), return demoData (or initialData) instead of cached live data
   // This ensures demo mode shows demo content while preserving cache for live mode
   const demoDisplayData = demoData !== undefined ? demoData : initialData
+
+  // demoWhenEmpty: fall back to demoData when live fetch returned empty results.
+  // This handles "demo until X is installed" cards (e.g., Kagenti) that are in DEMO_DATA_CARDS
+  // but fetch live data that returns empty when the feature isn't installed.
+  const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && demoData !== undefined
+    && !state.isLoading && Array.isArray(state.data) && (state.data as unknown[]).length === 0
+
   return {
-    data: effectiveEnabled ? state.data : demoDisplayData,
-    isLoading: effectiveEnabled ? state.isLoading : false,
+    data: !effectiveEnabled ? demoDisplayData : shouldFallbackToDemo ? demoData : state.data,
+    isLoading: effectiveEnabled ? (state.isLoading && !shouldFallbackToDemo) : false,
     isRefreshing: state.isRefreshing,
     error: state.error,
     isFailed: state.isFailed,

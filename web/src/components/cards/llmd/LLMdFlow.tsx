@@ -1031,7 +1031,7 @@ export function LLMdFlow() {
       {/* SVG Flow Diagram - overflow visible allows labels to extend beyond viewBox */}
       <svg
         viewBox="-5 -5 120 130"
-        className="w-full h-full overflow-visible"
+        className="w-full h-[calc(100%-2rem)] mt-8 overflow-visible"
         preserveAspectRatio="xMidYMid meet"
         style={{ overflow: 'visible' }}
       >
