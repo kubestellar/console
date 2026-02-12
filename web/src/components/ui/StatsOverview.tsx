@@ -9,6 +9,7 @@ import {
 import { StatBlockConfig, DashboardStatsType } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 
@@ -159,7 +160,7 @@ export function StatsOverview({
   // When demo mode is OFF and agent is confirmed disconnected, force skeleton display
   // Don't force skeleton during 'connecting' - show cached data to prevent flicker
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline
+  const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline && !isInClusterMode()
   // Show skeleton during mode switching for smooth transitions
   const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData

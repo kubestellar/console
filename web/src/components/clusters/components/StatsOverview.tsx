@@ -3,6 +3,7 @@ import { WifiOff, HardDrive, Server, CheckCircle2, XCircle, Cpu, MemoryStick, La
 import { formatStat, formatMemoryStat } from '../../../lib/formatStats'
 import { StatsConfigModal, useStatsConfig } from '../../ui/StatsConfig'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { isInClusterMode } from '../../../hooks/useBackendHealth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
 
@@ -218,7 +219,7 @@ export function StatsOverview({
 
   // When demo mode is OFF and agent is not connected, force skeleton display
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceLoadingForOffline = !isDemoMode && isAgentOffline
+  const forceLoadingForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
 
   // Resource data is available if we have reachable clusters with node data
   const hasData = forceLoadingForOffline ? false : stats.hasResourceData !== false

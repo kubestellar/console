@@ -41,6 +41,7 @@ const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
 const DEFAULT_CLUSTERS_CARDS = getDefaultCards('clusters')
 
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -1375,7 +1376,7 @@ export function Clusters() {
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
   const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
   const {
     selectedClusters: globalSelectedClusters,

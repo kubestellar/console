@@ -42,7 +42,7 @@
 import { createContext, useContext, useLayoutEffect, useMemo } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
-import { isBackendConnected } from '../../hooks/useBackendHealth'
+import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useOptionalStack } from '../../contexts/StackContext'
 
 export interface CardDataState {
@@ -278,7 +278,7 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
 
     // 4. Agent-dependent card but agent is offline AND backend is also unavailable
     //    When backend is connected (cluster mode), allow live data via backend API
-    if (requires === 'agent' && isAgentUnavailable() && !isBackendConnected()) {
+    if (requires === 'agent' && isAgentUnavailable() && !isInClusterMode()) {
       return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason, showDemoBadge: true }
     }
 

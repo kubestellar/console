@@ -9,6 +9,7 @@ interface BackendState {
   status: BackendStatus
   lastCheck: Date | null
   versionChanged: boolean
+  inCluster: boolean
 }
 
 class BackendHealthManager {
@@ -16,6 +17,7 @@ class BackendHealthManager {
     status: 'connecting',
     lastCheck: null,
     versionChanged: false,
+    inCluster: false,
   }
   private listeners: Set<(state: BackendState) => void> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
@@ -60,8 +62,9 @@ class BackendHealthManager {
   private setState(updates: Partial<BackendState>) {
     const prevStatus = this.state.status
     const prevVersionChanged = this.state.versionChanged
+    const prevInCluster = this.state.inCluster
     this.state = { ...this.state, ...updates }
-    if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged) {
+    if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged || prevInCluster !== this.state.inCluster) {
       this.notify()
     }
   }
@@ -101,6 +104,7 @@ class BackendHealthManager {
             status: 'connected',
             lastCheck: new Date(),
             versionChanged,
+            inCluster: data.in_cluster === true,
           })
         } catch {
           // JSON parse failed — still mark as connected
@@ -145,9 +149,17 @@ export function useBackendHealth() {
     isConnected: state.status === 'connected',
     lastCheck: state.lastCheck,
     versionChanged: state.versionChanged,
+    inCluster: state.inCluster,
+    isInClusterMode: state.status === 'connected' && state.inCluster,
   }
 }
 
 export function isBackendConnected(): boolean {
   return backendHealthManager.getState().status === 'connected'
+}
+
+/** Returns true only when backend is connected AND running in-cluster (not localhost) */
+export function isInClusterMode(): boolean {
+  const state = backendHealthManager.getState()
+  return state.status === 'connected' && state.inCluster
 }

@@ -40,6 +40,12 @@ type MultiClusterClient struct {
 	inClusterConfig *rest.Config // In-cluster config when running inside k8s
 }
 
+// IsInCluster returns true if the server is running inside a Kubernetes cluster
+// (i.e., has a valid in-cluster ServiceAccount config).
+func (m *MultiClusterClient) IsInCluster() bool {
+	return m.inClusterConfig != nil
+}
+
 // ClusterInfo represents basic cluster information
 type ClusterInfo struct {
 	Name      string `json:"name"`

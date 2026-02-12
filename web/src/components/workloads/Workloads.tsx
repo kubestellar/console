@@ -4,6 +4,7 @@ import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { StatusIndicator } from '../charts/StatusIndicator'
@@ -44,7 +45,7 @@ export function Workloads() {
   const isRefreshing = podIssuesRefreshing || deploymentIssuesRefreshing || deploymentsRefreshing
   // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF OR mode switching
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
   const showSkeletons = ((allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
 
   // Combined refresh
