@@ -37,8 +37,9 @@ var defaultAllowedOrigins = []string{
 	// Known deployment URLs
 	"https://kubestellarconsole.netlify.app",
 	"http://kubestellarconsole.netlify.app",
-	"https://kc.apps.fmaas-vllm-d.fmaas.res.ibm.com",
-	"http://kc.apps.fmaas-vllm-d.fmaas.res.ibm.com",
+	// Wildcard: any *.ibm.com subdomain (OpenShift routes, etc.)
+	"https://*.ibm.com",
+	"http://*.ibm.com",
 }
 
 // Server is the local agent WebSocket server
@@ -167,10 +168,9 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 		return true
 	}
 
-	// Check against allowed origins
+	// Check against allowed origins (supports wildcards like "https://*.ibm.com")
 	for _, allowed := range s.allowedOrigins {
-		// Match origin prefix (e.g., "http://localhost" matches "http://localhost:5174")
-		if strings.HasPrefix(origin, allowed) {
+		if matchOrigin(origin, allowed) {
 			return true
 		}
 	}
@@ -369,17 +369,32 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(payload)
 }
 
-// isAllowedOrigin checks if the origin is in the allowed list
+// isAllowedOrigin checks if the origin is in the allowed list.
+// Supports wildcard entries like "https://*.ibm.com" which match any subdomain.
 func (s *Server) isAllowedOrigin(origin string) bool {
 	if origin == "" {
 		return false
 	}
 	for _, allowed := range s.allowedOrigins {
-		if strings.HasPrefix(origin, allowed) {
+		if matchOrigin(origin, allowed) {
 			return true
 		}
 	}
 	return false
+}
+
+// matchOrigin checks if an origin matches an allowed pattern.
+// Supports prefix matching (e.g. "http://localhost" matches "http://localhost:5174")
+// and wildcard suffix matching (e.g. "https://*.ibm.com" matches "https://kc.apps.example.ibm.com").
+func matchOrigin(origin, allowed string) bool {
+	// Wildcard matching: "https://*.ibm.com" matches any subdomain
+	if idx := strings.Index(allowed, "*."); idx != -1 {
+		scheme := allowed[:idx]       // e.g. "https://"
+		suffix := allowed[idx+1:]     // e.g. ".ibm.com"
+		return strings.HasPrefix(origin, scheme) && strings.HasSuffix(origin, suffix)
+	}
+	// Prefix matching (original behavior)
+	return strings.HasPrefix(origin, allowed)
 }
 
 // handleClustersHTTP returns the list of kubeconfig contexts
