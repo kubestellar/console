@@ -1312,6 +1312,19 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 
 // handleWebSocket handles WebSocket connections
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Handle CORS preflight for Private Network Access (required by Chrome 104+)
+	if r.Method == http.MethodOptions {
+		origin := r.Header.Get("Origin")
+		if s.isAllowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	// SECURITY: Validate token if configured
 	if !s.validateToken(r) {
 		log.Printf("SECURITY: Rejected WebSocket connection - invalid or missing token")
