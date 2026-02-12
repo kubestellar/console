@@ -10,6 +10,7 @@ import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import { useMissions } from '../../hooks/useMissions'
 import { useDemoMode, isDemoModeForced } from '../../hooks/useDemoMode'
+import { setDemoMode } from '../../lib/demoMode'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
@@ -41,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { status: agentStatus } = useLocalAgent()
   const { isOnline, wasOffline } = useNetworkStatus()
-  const { status: backendStatus, versionChanged } = useBackendHealth()
+  const { status: backendStatus, versionChanged, isInClusterMode } = useBackendHealth()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
@@ -89,6 +90,20 @@ export function Layout({ children }: LayoutProps) {
     }
     keysToRemove.forEach(k => localStorage.removeItem(k))
   }, [])
+
+  // Auto-enable demo mode when agent is confirmed disconnected and not in cluster mode.
+  // This prevents the "Offline" state on localhost — users get demo data instead of empty screens.
+  // When agent comes back online, auto-disable demo (but only if it was auto-enabled, not manual).
+  const demoAutoEnabledRef = useRef(false)
+  useEffect(() => {
+    if (agentStatus === 'disconnected' && !isInClusterMode && !isDemoMode && !isDemoModeForced) {
+      demoAutoEnabledRef.current = true
+      setDemoMode(true)
+    } else if (agentStatus === 'connected' && isDemoMode && demoAutoEnabledRef.current) {
+      demoAutoEnabledRef.current = false
+      setDemoMode(false, true)
+    }
+  }, [agentStatus, isInClusterMode, isDemoMode])
 
   // Startup snackbar — shows while backend health is in initial 'connecting' state
   const showStartupSnackbar = !isDemoModeForced && backendStatus === 'connecting'
