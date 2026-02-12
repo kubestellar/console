@@ -27,6 +27,7 @@ import { LogsDrillDown } from './views/LogsDrillDown'
 import { EventsDrillDown } from './views/EventsDrillDown'
 import { NodeDrillDown } from './views/NodeDrillDown'
 import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
+const GPUNamespaceDrillDown = lazy(() => import('./views/GPUNamespaceDrillDown').then(m => ({ default: m.GPUNamespaceDrillDown })))
 import { YAMLDrillDown } from './views/YAMLDrillDown'
 
 // Loading fallback for lazy-loaded drilldown views
@@ -61,6 +62,7 @@ const getViewIcon = (type: string) => {
     case 'serviceaccount': return <User className="w-4 h-4 text-purple-400" />
     case 'node': return <Cpu className="w-4 h-4 text-orange-400" />
     case 'gpu-node': return <Cpu className="w-4 h-4 text-purple-400" />
+    case 'gpu-namespace': return <Box className="w-4 h-4 text-purple-400" />
     case 'logs': return <FileText className="w-4 h-4 text-yellow-400" />
     case 'events': return <Zap className="w-4 h-4 text-amber-400" />
     // Phase 2 view types
@@ -165,6 +167,8 @@ export function DrillDownModal() {
         return <NodeDrillDown data={data} />
       case 'gpu-node':
         return <GPUNodeDrillDown data={data} />
+      case 'gpu-namespace':
+        return <GPUNamespaceDrillDown data={data} />
       case 'yaml':
         return <YAMLDrillDown data={data} />
       case 'resources':

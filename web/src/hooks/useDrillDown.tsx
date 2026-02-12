@@ -18,6 +18,7 @@ export type DrillDownViewType =
   | 'events'
   | 'logs'
   | 'gpu-node'
+  | 'gpu-namespace'
   | 'yaml'
   | 'resources'
   | 'custom'
@@ -196,6 +197,8 @@ function getViewKey(view: DrillDownView): string {
     case 'node':
     case 'gpu-node':
       return `node:${data.cluster}:${data.node}`
+    case 'gpu-namespace':
+      return `gpu-namespace:${data.namespace}`
     case 'logs':
       return `logs:${data.cluster}:${data.namespace}:${data.pod}:${data.container || ''}`
     case 'events':
@@ -352,6 +355,15 @@ export function useDrillDownActions() {
       title: node,
       subtitle: 'GPU Node',
       data: { cluster, node, ...gpuData },
+    })
+  }, [openOrPush])
+
+  const drillToGPUNamespace = useCallback((namespace: string, gpuData?: Record<string, unknown>) => {
+    openOrPush({
+      type: 'gpu-namespace',
+      title: namespace,
+      subtitle: 'GPU Namespace Allocations',
+      data: { namespace, ...gpuData },
     })
   }, [openOrPush])
 
@@ -702,6 +714,7 @@ export function useDrillDownActions() {
     drillToEvents,
     drillToNode,
     drillToGPUNode,
+    drillToGPUNamespace,
     drillToYAML,
     drillToResources,
     drillToConfigMap,

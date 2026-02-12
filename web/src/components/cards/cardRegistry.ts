@@ -45,6 +45,7 @@ const GPUInventory = lazy(() => import('./GPUInventory').then(m => ({ default: m
 const GPUStatus = lazy(() => import('./GPUStatus').then(m => ({ default: m.GPUStatus })))
 const GPUOverview = lazy(() => import('./GPUOverview').then(m => ({ default: m.GPUOverview })))
 const GPUWorkloads = lazy(() => import('./GPUWorkloads').then(m => ({ default: m.GPUWorkloads })))
+const GPUNamespaceAllocations = lazy(() => import('./GPUNamespaceAllocations').then(m => ({ default: m.GPUNamespaceAllocations })))
 const SecurityIssues = lazy(() => import('./SecurityIssues').then(m => ({ default: m.SecurityIssues })))
 const EventSummary = lazy(() => import('./EventSummary').then(m => ({ default: m.EventSummary })))
 const WarningEvents = lazy(() => import('./WarningEvents').then(m => ({ default: m.WarningEvents })))
@@ -231,6 +232,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   gpu_status: GPUStatus,
   gpu_overview: GPUOverview,
   gpu_workloads: GPUWorkloads,
+  gpu_namespace_allocations: GPUNamespaceAllocations,
   security_issues: SecurityIssues,
   // Live data trend cards
   events_timeline: EventsTimeline,
@@ -560,6 +562,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   gpu_status: () => import('./GPUStatus'),
   gpu_overview: () => import('./GPUOverview'),
   gpu_workloads: () => import('./GPUWorkloads'),
+  gpu_namespace_allocations: () => import('./GPUNamespaceAllocations'),
   security_issues: () => import('./SecurityIssues'),
   events_timeline: () => import('./EventsTimeline'),
   pod_health_trend: () => import('./PodHealthTrend'),
@@ -852,6 +855,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   gpu_status: 6,
   gpu_inventory: 6,
   gpu_workloads: 6,
+  gpu_namespace_allocations: 6,
   opa_policies: 6,
   kyverno_policies: 6,
   falco_alerts: 4,
