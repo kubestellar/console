@@ -265,6 +265,7 @@ export const CARD_TITLES: Record<string, string> = {
   gpu_workloads: 'GPU Workloads',
   gpu_utilization: 'GPU Utilization',
   gpu_usage_trend: 'GPU Usage Trend',
+  gpu_namespace_allocations: 'GPU Namespace Allocations',
   hardware_health: 'Hardware Health',
 
   // Security, RBAC, and compliance

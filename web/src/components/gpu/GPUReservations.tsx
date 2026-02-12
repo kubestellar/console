@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Zap,
@@ -19,6 +19,7 @@ import {
   Eye,
   Filter,
   User,
+  LayoutDashboard,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import {
@@ -42,6 +43,10 @@ import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 import { getChartColor, getChartColorByName } from '../../lib/chartColors'
 import { useGPUReservations } from '../../hooks/useGPUReservations'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
+import { CARD_COMPONENTS, getDefaultCardWidth } from '../cards/cardRegistry'
+import { CardWrapper, CARD_TITLES } from '../cards/CardWrapper'
+import { AddCardModal } from '../dashboard/AddCardModal'
+import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 
 // GPU utilization thresholds for visual indicators
 const UTILIZATION_HIGH_THRESHOLD = 80
@@ -50,7 +55,7 @@ const UTILIZATION_MEDIUM_THRESHOLD = 50
 // Display settings
 const MAX_NAME_DISPLAY_LENGTH = 12 // Maximum characters to display before truncating cluster names
 
-type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory'
+type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory' | 'dashboard'
 
 // GPU resource keys used to identify GPU quotas
 const GPU_KEYS = ['nvidia.com/gpu', 'amd.com/gpu', 'gpu.intel.com/i915']
@@ -90,6 +95,48 @@ export function GPUReservations() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showOnlyMine, setShowOnlyMine] = useState(false)
   const [prefillDate, setPrefillDate] = useState<string | null>(null)
+  const [showAddCardModal, setShowAddCardModal] = useState(false)
+
+  // Dashboard tab: customizable GPU cards persisted to localStorage
+  const GPU_DASHBOARD_STORAGE_KEY = 'gpu-dashboard-tab-cards'
+  interface GpuDashCard { type: string; width: number }
+  const DEFAULT_GPU_CARDS: GpuDashCard[] = [
+    'gpu_namespace_allocations', 'gpu_overview', 'gpu_status', 'gpu_inventory',
+    'gpu_utilization', 'gpu_usage_trend', 'gpu_workloads', 'hardware_health',
+  ].map(type => ({ type, width: getDefaultCardWidth(type) }))
+  const [dashboardCards, setDashboardCards] = useState<GpuDashCard[]>(() => {
+    const stored = safeGetJSON<GpuDashCard[] | string[]>(GPU_DASHBOARD_STORAGE_KEY)
+    if (!stored || stored.length === 0) return DEFAULT_GPU_CARDS
+    // Migrate from old string[] format
+    if (typeof stored[0] === 'string') {
+      const migrated = (stored as string[]).map(type => ({ type, width: getDefaultCardWidth(type) }))
+      safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, migrated)
+      return migrated
+    }
+    return stored as GpuDashCard[]
+  })
+  const handleAddDashboardCards = useCallback((suggestions: Array<{ type: string; title: string; visualization: string; config: Record<string, unknown> }>) => {
+    setDashboardCards(prev => {
+      const updated = [...prev, ...suggestions.map(s => ({ type: s.type, width: getDefaultCardWidth(s.type) }))]
+      safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
+      return updated
+    })
+    setShowAddCardModal(false)
+  }, [])
+  const handleRemoveDashboardCard = useCallback((index: number) => {
+    setDashboardCards(prev => {
+      const updated = prev.filter((_, i) => i !== index)
+      safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
+      return updated
+    })
+  }, [])
+  const handleDashCardWidthChange = useCallback((index: number, newWidth: number) => {
+    setDashboardCards(prev => {
+      const updated = prev.map((c, i) => i === index ? { ...c, width: newWidth } : c)
+      safeSetJSON(GPU_DASHBOARD_STORAGE_KEY, updated)
+      return updated
+    })
+  }, [])
 
   const showDemoIndicator = demoMode
 
@@ -420,6 +467,7 @@ export function GPUReservations() {
           { id: 'calendar' as const, label: 'Calendar', icon: Calendar },
           { id: 'quotas' as const, label: 'Reservations', icon: Settings2, count: filteredReservations.length },
           { id: 'inventory' as const, label: 'Inventory', icon: Server },
+          { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
         ].map(tab => {
           const Icon = tab.icon
           return (
@@ -1000,6 +1048,67 @@ export function GPUReservations() {
           })}
         </div>
       )}
+
+      {/* Dashboard Tab — unified card grid with add/remove */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Customizable GPU cards — add, remove, and rearrange to build your view.
+            </p>
+            <button
+              onClick={() => setShowAddCardModal(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Card
+            </button>
+          </div>
+          <div className="grid grid-cols-12 gap-4">
+            {dashboardCards.map((card, index) => {
+              const Component = CARD_COMPONENTS[card.type]
+              if (!Component) return null
+              const colSpan = Math.min(12, Math.max(3, card.width))
+              return (
+                <div key={`${card.type}-${index}`} style={{ gridColumn: `span ${colSpan} / span ${colSpan}` }}>
+                  <Suspense fallback={<div className="h-64 animate-pulse bg-secondary/30 rounded-xl" />}>
+                    <CardWrapper
+                      cardId={`gpu-dash-${card.type}-${index}`}
+                      title={CARD_TITLES[card.type] ?? card.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      cardType={card.type}
+                      cardWidth={card.width}
+                      onRemove={() => handleRemoveDashboardCard(index)}
+                      onWidthChange={(newWidth) => handleDashCardWidthChange(index, newWidth)}
+                    >
+                      <Component />
+                    </CardWrapper>
+                  </Suspense>
+                </div>
+              )
+            })}
+          </div>
+          {dashboardCards.length === 0 && (
+            <div className="p-12 rounded-lg bg-card/50 border border-border text-center">
+              <LayoutDashboard className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">No cards added yet</p>
+              <button
+                onClick={() => setShowAddCardModal(true)}
+                className="mt-3 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600 transition-colors"
+              >
+                Add Your First Card
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add Card Modal */}
+      <AddCardModal
+        isOpen={showAddCardModal}
+        onClose={() => setShowAddCardModal(false)}
+        onAddCards={handleAddDashboardCards}
+        existingCardTypes={dashboardCards.map(c => c.type)}
+      />
 
       {/* Create/Edit Reservation Modal */}
       {showReservationForm && (
