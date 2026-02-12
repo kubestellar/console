@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { X } from 'lucide-react'
 import { DashboardCard } from '../../../lib/dashboards'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
+import { useModalNavigation } from '../../../lib/modals/useModalNavigation'
 
 export interface CardConfigModalCluster {
   name: string
@@ -21,34 +22,20 @@ export function CardConfigModal({
   onClose,
 }: CardConfigModalProps) {
   const [config, setConfig] = useState<Record<string, unknown>>(card.config || {})
-  const onCloseRef = useRef(onClose)
 
-  // Keep ref in sync with latest onClose
-  useEffect(() => {
-    onCloseRef.current = onClose
-  }, [onClose])
+  // Use standardized modal keyboard navigation (Escape to close, body scroll lock)
+  useModalNavigation({ isOpen: true, onClose, enableEscape: true, enableBackspace: false })
 
   const handleSave = () => {
     onSave(config)
   }
-
-  // Handle Escape key at document level
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCloseRef.current()
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, []) // Empty deps - event listener only set up once
 
   return (
     <div 
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
       onClick={onClose}
     >
-      <div className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" className="glass p-6 rounded-lg w-[500px] max-h-[80vh] overflow-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">
             Configure {formatCardTitle(card.card_type)}
