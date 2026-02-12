@@ -236,10 +236,18 @@ async function setupLiveMocks(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clusters: {} }) })
   })
   await page.route('**/api/workloads**', (route) => {
+    // useCachedWorkloads fetcher expects { items: [...] } or a raw array.
+    // Returning { workloads: [...] } causes items.map() to throw because
+    // (data.items || data) resolves to the object, not an array.
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ workloads: MOCK_DATA.pods?.pods || [] }),
+      body: JSON.stringify({
+        items: [
+          { name: 'nginx-deploy', namespace: 'default', type: 'Deployment', cluster: MOCK_CLUSTER, replicas: 2, readyReplicas: 2, status: 'Running', image: 'nginx:1.25' },
+          { name: 'api-gateway', namespace: 'production', type: 'Deployment', cluster: MOCK_CLUSTER, replicas: 3, readyReplicas: 3, status: 'Running', image: 'api:v2' },
+        ],
+      }),
     })
   })
 
@@ -291,6 +299,63 @@ async function setupLiveMocks(page: Page) {
       body: JSON.stringify({ items: [], source: 'mock-catchall' }),
     })
   })
+
+  // 8. Mock ALL requests to the local agent (port 8585).
+  //    Without this, kubectlProxy tries ws://127.0.0.1:8585/ws (30s timeout
+  //    per cluster), kagenti hooks try http://127.0.0.1:8585/kagenti/* (15s
+  //    timeout), and useStackDiscovery chains 7 parallel kubectlProxy.exec()
+  //    calls per cluster.  These are the root cause of 15+ second card loads
+  //    on Clusters, AI/ML, CI/CD, and Compliance dashboards.
+  //
+  //    CRITICAL: /health must return 200 so AgentManager stays 'connected'.
+  //    If it returns 503, AgentManager transitions to 'disconnected', which
+  //    triggers forceSkeletonForOffline in CardWrapper — forcing ALL cards
+  //    into skeleton/loading state regardless of whether they have data.
+  //    All other endpoints return 503 so hooks fail fast and fall through
+  //    to their SSE/REST data paths.
+  //
+  //    This route is registered LAST (Playwright routes are LIFO) so it takes
+  //    priority over the generic **/health handler for agent health requests.
+  await page.route('http://127.0.0.1:8585/**', (route) => {
+    const url = route.request().url()
+    if (url.endsWith('/health') || url.includes('/health?')) {
+      // Return healthy agent response so AgentManager stays 'connected'
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'ok',
+          version: 'perf-test',
+          clusters: 1,
+          hasClaude: false,
+        }),
+      })
+    } else {
+      // Return 503 for data endpoints so hooks fail fast and fall through
+      route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
+    }
+  })
+
+  // 9. Intercept WebSocket connections to the local agent.
+  //    kubectlProxy uses ws://127.0.0.1:8585/ws for kubectl exec commands.
+  //    Instead of closing immediately (which leaves hooks in loading state),
+  //    respond to each kubectl message with an empty result. This lets hooks
+  //    complete their fetch cycle and transition out of loading state.
+  await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
+    ws.onMessage((data) => {
+      try {
+        const msg = JSON.parse(String(data))
+        // Respond with empty kubectl result for each request
+        ws.send(JSON.stringify({
+          id: msg.id,
+          type: 'result',
+          payload: { output: '{"items":[]}', exitCode: 0 },
+        }))
+      } catch {
+        // Ignore parse errors
+      }
+    })
+  })
 }
 
 /**
@@ -306,6 +371,26 @@ async function setupLiveMocks(page: Page) {
  * on each subsequent page.goto().
  */
 async function setMode(page: Page, mode: 'demo' | 'live') {
+  // Pre-populate stack cache so useStackDiscovery starts with cached data and
+  // isLoading=false.  Without this, the hook fires 7 sequential kubectlProxy
+  // WebSocket calls per cluster (max 2 concurrent) which adds 300-500ms to
+  // AI/ML dashboard rendering.  With the cache, the refetch is silent (background)
+  // and doesn't block card rendering.
+  const stackCache = JSON.stringify({
+    stacks: [{
+      id: 'default@perf-test-cluster',
+      name: 'perf-stack',
+      namespace: 'default',
+      cluster: 'perf-test-cluster',
+      components: { prefill: [], decode: [], both: [], epp: null, gateway: null },
+      status: 'healthy',
+      hasDisaggregation: false,
+      totalReplicas: 0,
+      readyReplicas: 0,
+    }],
+    timestamp: Date.now(),
+  })
+
   const lsValues = {
     token: mode === 'demo' ? 'demo-token' : 'test-token',
     'kc-demo-mode': String(mode === 'demo'),
@@ -313,6 +398,7 @@ async function setMode(page: Page, mode: 'demo' | 'live') {
     'kubestellar-console-tour-completed': 'true',
     'kc-user-cache': JSON.stringify(mockUser),
     'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
+    'kubestellar-stack-cache': stackCache,
   }
 
   // addInitScript fires before any page JS on every navigation,
