@@ -9,6 +9,7 @@ import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardAIActions } from '../../../lib/cards'
 import { useCardLoadingState } from '../CardDataContext'
+import { useCache } from '../../../lib/cache'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
@@ -131,33 +132,28 @@ function saveRepos(repos: string[]) {
 
 export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorProps>(function GitHubCIMonitor({ config }, ref) {
   const ghConfig = config as GitHubCIConfig | undefined
-  const [workflows, setWorkflows] = useState<WorkflowRun[]>(DEMO_WORKFLOWS)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isUsingDemoData, setIsUsingDemoData] = useState(true)
-  const [lastFetched, setLastFetched] = useState<Date | null>(null)
 
   // Repo configuration
   const [repos, setRepos] = useState<string[]>(() => ghConfig?.repos || loadRepos())
   const [isEditingRepos, setIsEditingRepos] = useState(false)
   const [newRepoInput, setNewRepoInput] = useState('')
 
-  useCardLoadingState({ isLoading, hasAnyData: workflows.length > 0 })
+  // CI data via useCache (persists across navigation)
+  const reposKey = useMemo(() => [...repos].sort().join(','), [repos])
 
-  const fetchWorkflows = useCallback(async (isRefresh = false) => {
-    const storedToken = localStorage.getItem('github_token')
-    const token = ghConfig?.token || (storedToken ? decodeToken(storedToken) : null)
-    if (!token) {
-      // Use demo data
-      setWorkflows(DEMO_WORKFLOWS)
-      setIsUsingDemoData(true)
-      return
-    }
+  const { data: ciData, isLoading, isFailed, refetch } = useCache<{ workflows: WorkflowRun[], isDemo: boolean }>({
+    key: `github-ci:${reposKey}`,
+    category: 'default',
+    initialData: { workflows: DEMO_WORKFLOWS, isDemo: true },
+    demoData: { workflows: DEMO_WORKFLOWS, isDemo: true },
+    persist: true,
+    fetcher: async () => {
+      const storedToken = localStorage.getItem('github_token')
+      const token = ghConfig?.token || (storedToken ? decodeToken(storedToken) : null)
+      if (!token) {
+        return { workflows: DEMO_WORKFLOWS, isDemo: true }
+      }
 
-    if (!isRefresh) setIsLoading(true)
-    setError(null)
-
-    try {
       const allRuns: WorkflowRun[] = []
       for (const repo of repos) {
         const response = await fetch(`https://api.github.com/repos/${repo}/actions/runs?per_page=10`, {
@@ -180,76 +176,57 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
         }))
         allRuns.push(...runs)
       }
+
       if (allRuns.length > 0) {
-        setWorkflows(allRuns)
-        setIsUsingDemoData(false)
-        setLastFetched(new Date())
-      } else {
-        setWorkflows(DEMO_WORKFLOWS)
-        setIsUsingDemoData(true)
+        return { workflows: allRuns, isDemo: false }
       }
-    } catch (err) {
-      console.error('[GitHubCIMonitor] fetch error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch workflows')
-      setIsUsingDemoData(true)
-      // Keep demo data on error
-    } finally {
-      setIsLoading(false)
-    }
-  }, [repos, ghConfig?.token])
+      return { workflows: DEMO_WORKFLOWS, isDemo: true }
+    },
+  })
+
+  const workflows = ciData.workflows
+  const isUsingDemoData = ciData.isDemo
+  const error = isFailed ? 'Failed to fetch workflows' : null
+
+  useCardLoadingState({ isLoading, hasAnyData: workflows.length > 0 })
 
   // Expose refresh method via ref for CardWrapper
   useImperativeHandle(ref, () => ({
-    refresh: () => fetchWorkflows(true)
-  }), [fetchWorkflows])
+    refresh: () => refetch()
+  }), [refetch])
 
   // Repo management handlers
   const handleAddRepo = useCallback(() => {
     const repo = newRepoInput.trim()
     if (!repo) return
-    // Validate format: owner/repo
-    if (!repo.match(/^[\w-]+\/[\w.-]+$/)) {
-      return // Invalid format
-    }
+    if (!repo.match(/^[\w-]+\/[\w.-]+$/)) return
     if (repos.includes(repo)) {
       setNewRepoInput('')
-      return // Already exists
+      return
     }
     const updatedRepos = [...repos, repo]
     setRepos(updatedRepos)
     saveRepos(updatedRepos)
     setNewRepoInput('')
-    // Refresh to fetch new repo data
-    setTimeout(() => fetchWorkflows(true), 100)
-  }, [newRepoInput, repos, fetchWorkflows])
+  }, [newRepoInput, repos])
 
   const handleRemoveRepo = useCallback((repo: string) => {
     const updatedRepos = repos.filter(r => r !== repo)
-    if (updatedRepos.length === 0) return // Keep at least one repo
+    if (updatedRepos.length === 0) return
     setRepos(updatedRepos)
     saveRepos(updatedRepos)
-    // Immediately filter out workflows from removed repo
-    setWorkflows(prev => prev.filter(w => w.repo !== repo))
-    // Refresh to update data
-    setTimeout(() => fetchWorkflows(true), 100)
-  }, [repos, fetchWorkflows])
-
-  useEffect(() => {
-    fetchWorkflows()
-    const interval = setInterval(() => fetchWorkflows(true), 60_000)
-    return () => clearInterval(interval)
-  }, [fetchWorkflows])
+  }, [repos])
 
   // Listen for token changes in localStorage (e.g., when user adds token in Settings)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'github_token') {
-        fetchWorkflows(true)
+        refetch()
       }
     }
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [fetchWorkflows])
+  }, [refetch])
 
   // Stats
   const stats = useMemo(() => {
@@ -361,11 +338,6 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
           {repos.length} repos
           <Settings className="w-3 h-3" />
         </button>
-        {!isUsingDemoData && lastFetched && (
-          <span className="text-[10px] text-muted-foreground/60">
-            Updated {formatTimeAgo(lastFetched.toISOString())}
-          </span>
-        )}
         <span className={cn(
           'text-xs px-1.5 py-0.5 rounded ml-auto',
           overallHealth === 'healthy' ? 'bg-green-500/20 text-green-400' :

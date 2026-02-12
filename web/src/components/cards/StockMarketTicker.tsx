@@ -11,6 +11,7 @@ import {
   CardPaginationFooter,
 } from '../../lib/cards'
 import { useCardLoadingState } from './CardDataContext'
+import { useCache } from '../../lib/cache'
 
 // Stock search result interface
 interface StockSearchResult {
@@ -516,12 +517,9 @@ function StockRow({
 
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const symbols = config?.symbols || DEFAULT_SYMBOLS
-  const refreshInterval = config?.refreshInterval || 60
   const dataSource = config?.dataSource || 'Yahoo Finance'
 
   const [expandedStocks, setExpandedStocks] = useState<Set<string>>(new Set())
-  const [, setLastRefresh] = useState<Date>(new Date())
-  const [, setIsRefreshing] = useState(false)
   // Default to demo mode - live data uses CORS proxy which may have rate limits
   const [useLiveData, setUseLiveData] = useState(false)
 
@@ -543,10 +541,34 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     localStorage.setItem('stock-ticker-saved-stocks', JSON.stringify(savedStocks))
   }, [savedStocks])
 
-  // Generate stock data
-  const [stockData, setStockData] = useState<StockData[]>([])
-  const [isLoadingData, setIsLoadingData] = useState(true)
+  // Stock data via useCache (persists across navigation)
+  const symbolsKey = useMemo(() => [...activeSymbols].sort().join(','), [activeSymbols])
+  const demoStockData = useMemo(() => generateMockStockData(activeSymbols), [activeSymbols])
+
+  const { data: stockData, isLoading: isLoadingData } = useCache<StockData[]>({
+    key: `stocks:${symbolsKey}:${useLiveData ? 'live' : 'demo'}`,
+    category: 'default',
+    initialData: [],
+    demoData: demoStockData,
+    persist: true,
+    fetcher: async () => {
+      return useLiveData
+        ? await fetchRealStockData(activeSymbols)
+        : generateMockStockData(activeSymbols)
+    },
+  })
+
   useCardLoadingState({ isLoading: isLoadingData, hasAnyData: stockData.length > 0 })
+
+  // Update saved stocks when data changes
+  useEffect(() => {
+    if (stockData.length > 0) {
+      setSavedStocks(prev => prev.map(saved => {
+        const stock = stockData.find(s => s.symbol === saved.symbol)
+        return stock ? { ...saved, price: stock.price, changePercent: stock.changePercent } : saved
+      }))
+    }
+  }, [stockData])
 
   // --- useCardData hook replaces manual sort/pagination state ---
   const {
@@ -571,34 +593,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     },
     defaultLimit: 10,
   })
-
-  // Handle refresh with useCallback to avoid stale closures
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true)
-    setIsLoadingData(true)
-    try {
-      const data = useLiveData
-        ? await fetchRealStockData(activeSymbols)
-        : generateMockStockData(activeSymbols)
-      setStockData(data)
-      setLastRefresh(new Date())
-
-      // Update saved stocks with latest prices
-      setSavedStocks(prev => prev.map(saved => {
-        const stock = data.find(s => s.symbol === saved.symbol)
-        return stock ? {
-          ...saved,
-          price: stock.price,
-          changePercent: stock.changePercent,
-        } : saved
-      }))
-    } catch (error) {
-      console.error('Error refreshing stock data:', error)
-    } finally {
-      setIsRefreshing(false)
-      setIsLoadingData(false)
-    }
-  }, [activeSymbols, useLiveData])
 
   // Search for stocks
   const performStockSearch = useCallback(async (query: string) => {
@@ -644,24 +638,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Add stock from search results
   const addStock = useCallback((stock: StockSearchResult) => {
     if (!activeSymbols.includes(stock.symbol)) {
-      // Optimistically add to stockData for instant visual feedback
-      const placeholderStock: StockData = {
-        symbol: stock.symbol,
-        name: stock.name,
-        price: 0,
-        change: 0,
-        changePercent: 0,
-        dayOpen: 0,
-        dayHigh: 0,
-        dayLow: 0,
-        volume: 0,
-        marketCap: 0,
-        week52High: 0,
-        week52Low: 0,
-        sparklineData: [],
-        lastUpdated: new Date(),
-      }
-      setStockData(prev => [...prev, placeholderStock])
       setActiveSymbols(prev => [...prev, stock.symbol])
 
       // Add to saved stocks if not already there
@@ -683,8 +659,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Remove stock from active list
   const removeStock = useCallback((symbol: string) => {
     setActiveSymbols(prev => prev.filter(s => s !== symbol))
-    // Also remove from stockData immediately for instant visual feedback
-    setStockData(prev => prev.filter(s => s.symbol !== symbol))
   }, [])
 
   // Toggle favorite status
@@ -706,33 +680,6 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
       }])
     }
   }, [savedStocks, stockData])
-
-  // Auto-refresh
-  useEffect(() => {
-    const interval = setInterval(() => {
-      handleRefresh()
-    }, refreshInterval * 1000)
-
-    return () => clearInterval(interval)
-  }, [refreshInterval, handleRefresh])
-
-  // Initial data load
-  useEffect(() => {
-    handleRefresh()
-  }, []) // Only on mount
-
-  // Refresh when active symbols change (for add/remove operations)
-  const prevSymbolsRef = useRef<string[]>(activeSymbols)
-  useEffect(() => {
-    // Only refresh if symbols actually changed (not on initial mount)
-    // Use spread to avoid mutating arrays with sort()
-    const prevSorted = [...prevSymbolsRef.current].sort()
-    const currSorted = [...activeSymbols].sort()
-    if (JSON.stringify(prevSorted) !== JSON.stringify(currSorted)) {
-      handleRefresh()
-    }
-    prevSymbolsRef.current = activeSymbols
-  }, [activeSymbols, handleRefresh])
 
   const toggleExpanded = (symbol: string) => {
     setExpandedStocks(prev => {

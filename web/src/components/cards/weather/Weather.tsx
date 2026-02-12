@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   Cloud, Wind, Droplets, Gauge, Eye,
   MapPin, Calendar, Search as SearchIcon, Star, X,
@@ -7,7 +7,7 @@ import {
 import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
 import { WEATHER_API } from '../../../config/externalApis'
 import { useCardLoadingState } from '../CardDataContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
+import { useCache } from '../../../lib/cache'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -64,17 +64,20 @@ function getDemoWeatherData(units: 'F' | 'C'): {
   }
 }
 
+interface WeatherData {
+  current: CurrentWeather | null
+  forecast: ForecastDay[]
+  hourly: HourlyForecast[]
+}
+
+const INITIAL_WEATHER: WeatherData = { current: null, forecast: [], hourly: [] }
+
 export function Weather({ config }: { config?: WeatherConfig }) {
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
   const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || 7)
-  const [, setIsRefreshing] = useState(false)
-  const [, setLastRefresh] = useState(new Date())
   const [showSettings, setShowSettings] = useState(false)
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const hourlyScrollRef = useRef<HTMLDivElement>(null)
-  const { isDemoMode } = useDemoMode()
 
   // Current location state - restore from localStorage
   const [currentLocation, setCurrentLocation] = useState<SavedLocation>(() => {
@@ -106,72 +109,48 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     return saved ? JSON.parse(saved) : []
   })
 
-  // Weather data state
-  const [currentWeather, setCurrentWeather] = useState<CurrentWeather | null>(null)
-  const [forecast, setForecast] = useState<ForecastDay[]>([])
-  const [hourlyForecast, setHourlyForecast] = useState<HourlyForecast[]>([])
-  useCardLoadingState({ isLoading, hasAnyData: !!currentWeather })
+  // Weather data via useCache (persists across navigation)
+  const demoWeather = useMemo((): WeatherData => {
+    const demo = getDemoWeatherData(units)
+    return { current: demo.current, forecast: demo.forecast.slice(0, forecastLength), hourly: demo.hourly }
+  }, [units, forecastLength])
 
-  // Save locations to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
-  }, [savedLocations])
-
-  // Save current location to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
-  }, [currentLocation])
-
-  // Fetch weather data from Open-Meteo API (or use demo data)
-  const fetchWeather = useCallback(async (lat: number, lon: number) => {
-    if (isDemoMode) {
-      const demo = getDemoWeatherData(units)
-      setCurrentWeather(demo.current)
-      setForecast(demo.forecast.slice(0, forecastLength))
-      setHourlyForecast(demo.hourly)
-      setIsLoading(false)
-      setLastRefresh(new Date())
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
+  const weatherCacheKey = `weather:${currentLocation.latitude}:${currentLocation.longitude}:${units}:${forecastLength}`
+  const { data: weatherData, isLoading, isFailed, refetch } = useCache<WeatherData>({
+    key: weatherCacheKey,
+    category: 'default',
+    initialData: INITIAL_WEATHER,
+    demoData: demoWeather,
+    persist: true,
+    fetcher: async () => {
       const tempUnit = units === 'F' ? 'fahrenheit' : 'celsius'
       const windUnit = units === 'F' ? 'mph' : 'kmh'
 
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+        `https://api.open-meteo.com/v1/forecast?latitude=${currentLocation.latitude}&longitude=${currentLocation.longitude}` +
         `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m` +
         `&hourly=temperature_2m,weather_code,precipitation_probability` +
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
         `&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&forecast_days=${forecastLength}&timezone=auto`
       )
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch weather data')
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch weather data')
       const data = await response.json()
 
-      // Parse current weather
-      setCurrentWeather({
+      const current: CurrentWeather = {
         temperature: Math.round(data.current.temperature_2m),
         weatherCode: data.current.weather_code,
         humidity: data.current.relative_humidity_2m,
         feelsLike: Math.round(data.current.apparent_temperature),
         windSpeed: Math.round(data.current.wind_speed_10m),
         isDaytime: data.current.is_day === 1,
-      })
+      }
 
-      // Parse daily forecast
-      const dailyForecast: ForecastDay[] = data.daily.time.map((date: string, i: number) => {
+      const forecast: ForecastDay[] = data.daily.time.map((date: string, i: number) => {
         const dayDate = new Date(date)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const isToday = dayDate.toDateString() === today.toDateString()
-
         return {
           date,
           dayOfWeek: isToday ? 'Today' : dayDate.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -181,12 +160,10 @@ export function Weather({ config }: { config?: WeatherConfig }) {
           precipitation: data.daily.precipitation_probability_max[i] || 0,
         }
       })
-      setForecast(dailyForecast)
 
-      // Parse hourly forecast (next 24 hours)
       const now = new Date()
       const currentHourIndex = data.hourly.time.findIndex((t: string) => new Date(t) >= now)
-      const hourlyData: HourlyForecast[] = data.hourly.time
+      const hourly: HourlyForecast[] = data.hourly.time
         .slice(currentHourIndex, currentHourIndex + 24)
         .map((time: string, i: number) => {
           const idx = currentHourIndex + i
@@ -199,22 +176,25 @@ export function Weather({ config }: { config?: WeatherConfig }) {
             precipitation: data.hourly.precipitation_probability[idx] || 0,
           }
         })
-      setHourlyForecast(hourlyData)
 
-      setLastRefresh(new Date())
-    } catch (err) {
-      console.error('Weather fetch error:', err)
-      setError('Failed to load weather data')
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [units, forecastLength, isDemoMode])
+      return { current, forecast, hourly }
+    },
+  })
 
-  // Fetch weather when location or settings change
+  const currentWeather = weatherData.current
+  const forecast = weatherData.forecast
+  const hourlyForecast = weatherData.hourly
+  useCardLoadingState({ isLoading, hasAnyData: !!currentWeather })
+
+  // Save locations to localStorage whenever they change
   useEffect(() => {
-    fetchWeather(currentLocation.latitude, currentLocation.longitude)
-  }, [currentLocation, fetchWeather])
+    localStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations))
+  }, [savedLocations])
+
+  // Save current location to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('weather-current-location', JSON.stringify(currentLocation))
+  }, [currentLocation])
 
   // City search with Open-Meteo Geocoding API
   const searchCities = useCallback(async (query: string) => {
@@ -298,12 +278,6 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     setCurrentLocation(location)
   }, [])
 
-  // Refresh weather data
-  const refreshWeather = useCallback(() => {
-    setIsRefreshing(true)
-    fetchWeather(currentLocation.latitude, currentLocation.longitude)
-  }, [currentLocation, fetchWeather])
-
   // Get current weather condition
   const currentCondition = currentWeather ? getWeatherCondition(currentWeather.weatherCode) : null
   const CurrentIcon = currentCondition?.icon || Cloud
@@ -328,13 +302,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     )
   }
 
-  if (error && !currentWeather) {
+  if (isFailed && !currentWeather) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card">
         <Cloud className="w-8 h-8 text-muted-foreground mb-2" />
-        <span className="text-sm text-muted-foreground">{error}</span>
+        <span className="text-sm text-muted-foreground">Failed to load weather data</span>
         <button
-          onClick={refreshWeather}
+          onClick={() => refetch()}
           className="mt-2 px-3 py-1 text-sm rounded-lg bg-primary/20 text-primary hover:bg-primary/30"
         >
           Retry
