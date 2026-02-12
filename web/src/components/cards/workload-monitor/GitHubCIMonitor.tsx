@@ -156,25 +156,34 @@ export const GitHubCIMonitor = forwardRef<GitHubCIMonitorRef, GitHubCIMonitorPro
 
       const allRuns: WorkflowRun[] = []
       for (const repo of repos) {
-        const response = await fetch(`https://api.github.com/repos/${repo}/actions/runs?per_page=10`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
-        })
-        if (!response.ok) throw new Error(`GitHub API error: ${response.status}`)
-        const data = await response.json()
-        const runs = (data.workflow_runs || []).map((run: Record<string, unknown>) => ({
-          id: String(run.id),
-          name: run.name as string,
-          repo,
-          status: run.status as WorkflowRun['status'],
-          conclusion: run.conclusion as WorkflowRun['conclusion'],
-          branch: (run.head_branch || 'unknown') as string,
-          event: (run.event || 'unknown') as string,
-          runNumber: run.run_number as number,
-          createdAt: run.created_at as string,
-          updatedAt: run.updated_at as string,
-          url: (run.html_url || '#') as string,
-        }))
-        allRuns.push(...runs)
+        try {
+          const response = await fetch(`https://api.github.com/repos/${repo}/actions/runs?per_page=10`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+          })
+          if (response.status === 401 || response.status === 403) {
+            // Token lacks actions scope or is invalid — fall back to demo data
+            return { workflows: DEMO_WORKFLOWS, isDemo: true }
+          }
+          if (!response.ok) continue // Skip this repo on other errors
+          const data = await response.json()
+          const runs = (data.workflow_runs || []).map((run: Record<string, unknown>) => ({
+            id: String(run.id),
+            name: run.name as string,
+            repo,
+            status: run.status as WorkflowRun['status'],
+            conclusion: run.conclusion as WorkflowRun['conclusion'],
+            branch: (run.head_branch || 'unknown') as string,
+            event: (run.event || 'unknown') as string,
+            runNumber: run.run_number as number,
+            createdAt: run.created_at as string,
+            updatedAt: run.updated_at as string,
+            url: (run.html_url || '#') as string,
+          }))
+          allRuns.push(...runs)
+        } catch {
+          // Network error for this repo — skip it
+          continue
+        }
       }
 
       if (allRuns.length > 0) {

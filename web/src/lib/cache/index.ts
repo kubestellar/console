@@ -812,6 +812,7 @@ export function useCache<T>({
   // let triggerAllRefetches() handle it after the 500ms skeleton timer.
   const hasMountedRef = useRef(false)
   const prevEnabledRef = useRef(effectiveEnabled)
+  const initialFetchDoneRef = useRef(false)
 
   useEffect(() => {
     if (!effectiveEnabled) {
@@ -819,6 +820,7 @@ export function useCache<T>({
       store.markReady()
       hasMountedRef.current = true
       prevEnabledRef.current = effectiveEnabled
+      initialFetchDoneRef.current = false
       return
     }
 
@@ -827,11 +829,15 @@ export function useCache<T>({
     hasMountedRef.current = true
     prevEnabledRef.current = effectiveEnabled
 
-    if (!isModeTransition) {
+    // Only fetch immediately on initial mount or page navigation, NOT when
+    // the effect re-fires due to consecutiveFailures/backoff interval changes.
+    if (!isModeTransition && !initialFetchDoneRef.current) {
       // Initial mount or page navigation remount — fetch immediately
+      initialFetchDoneRef.current = true
       refetch()
     }
     // else: mode transition — triggerAllRefetches() will call refetch after skeleton timer
+    // else: backoff re-fire — let the interval handle the next retry
 
     // Register for mode-transition refetches so triggerAllRefetches() reaches us
     const unregisterRefetch = registerRefetch(`cache:${key}`, refetch)
