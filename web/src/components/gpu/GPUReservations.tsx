@@ -47,6 +47,9 @@ import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInp
 const UTILIZATION_HIGH_THRESHOLD = 80
 const UTILIZATION_MEDIUM_THRESHOLD = 50
 
+// Display settings
+const MAX_NAME_DISPLAY_LENGTH = 12 // Maximum characters to display before truncating cluster names
+
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory'
 
 // GPU resource keys used to identify GPU quotas
@@ -195,7 +198,7 @@ export function GPUReservations() {
 
     // GPU allocation by cluster
     const clusterUsage = gpuClusters.map(c => ({
-      name: c.name.length > 12 ? c.name.slice(0, 12) + '...' : c.name,
+      name: c.name.length > MAX_NAME_DISPLAY_LENGTH ? c.name.slice(0, MAX_NAME_DISPLAY_LENGTH) + '...' : c.name,
       value: c.allocatedGPUs,
     }))
 

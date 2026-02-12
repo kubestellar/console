@@ -179,10 +179,16 @@ const T2_TEMPLATES: T2Template[] = [
     width: 4,
     source: `export default function GaugeCard({ config }) {
   const [value, setValue] = useState(67)
+  
+  // Gauge dimensions
   const radius = 45
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (value / 100) * circumference
-  const color = value > 80 ? 'text-red-400' : value > 60 ? 'text-yellow-400' : 'text-green-400'
+  
+  // Utilization thresholds for color coding
+  const HIGH_THRESHOLD = 80  // Red: high utilization
+  const MED_THRESHOLD = 60   // Yellow: medium utilization
+  const color = value > HIGH_THRESHOLD ? 'text-red-400' : value > MED_THRESHOLD ? 'text-yellow-400' : 'text-green-400'
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-3">
@@ -213,8 +219,12 @@ const T2_TEMPLATES: T2Template[] = [
     { name: 'ap-south-1', health: 45 }, { name: 'us-west-2', health: 100 },
     { name: 'eu-central-1', health: 72 }, { name: 'ap-east-1', health: 91 },
   ]
-  const getColor = (h) => h >= 90 ? 'bg-green-500/30' : h >= 70 ? 'bg-yellow-500/30' : 'bg-red-500/30'
-  const getTextColor = (h) => h >= 90 ? 'text-green-400' : h >= 70 ? 'text-yellow-400' : 'text-red-400'
+  
+  // Health thresholds for color coding
+  const HEALTHY_THRESHOLD = 90  // Green: healthy
+  const WARNING_THRESHOLD = 70  // Yellow: warning, Red: critical
+  const getColor = (h) => h >= HEALTHY_THRESHOLD ? 'bg-green-500/30' : h >= WARNING_THRESHOLD ? 'bg-yellow-500/30' : 'bg-red-500/30'
+  const getTextColor = (h) => h >= HEALTHY_THRESHOLD ? 'text-green-400' : h >= WARNING_THRESHOLD ? 'text-yellow-400' : 'text-red-400'
 
   return (
     <div className="h-full flex flex-col p-1">
@@ -274,6 +284,8 @@ const T2_TEMPLATES: T2Template[] = [
     { label: 'Unknown', value: 5, color: '#6b7280' },
   ]
   const total = data.reduce((s, d) => s + d.value, 0)
+  
+  // Donut chart dimensions
   const r = 40, cx = 60, cy = 60
   let cumulative = 0
 
