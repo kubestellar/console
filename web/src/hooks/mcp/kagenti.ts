@@ -1,9 +1,7 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from '../useLocalAgent'
-import { clusterCacheRef, LOCAL_AGENT_URL, getEffectiveInterval } from './shared'
-import { isDemoMode, isNetlifyDeployment } from '../../lib/demoMode'
-import { useDemoMode } from '../useDemoMode'
-import { registerRefetch } from '../../lib/modeTransition'
+import { clusterCacheRef, LOCAL_AGENT_URL } from './shared'
+import { useCache } from '../../lib/cache'
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -116,11 +114,6 @@ function getDemoTools(): KagentiTool[] {
 // ─── Agent fetch helper ────────────────────────────────────────────
 
 const AGENT_TIMEOUT = 15000
-const POLL_INTERVAL = 60000
-
-function shouldUseDemoData(): boolean {
-  return isDemoMode() || isNetlifyDeployment
-}
 
 async function agentFetch<T>(path: string, cluster: string, namespace?: string): Promise<T | null> {
   if (isAgentUnavailable()) return null
@@ -151,11 +144,11 @@ async function agentFetchAllClusters<T>(
   key: string,
   namespace?: string,
   specificCluster?: string,
-): Promise<T[] | null> {
-  if (isAgentUnavailable()) return null
+): Promise<T[]> {
+  if (isAgentUnavailable()) return []
 
   const clusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
-  if (clusters.length === 0) return null
+  if (clusters.length === 0) return []
 
   const targets = specificCluster
     ? clusters.filter(c => c.name === specificCluster)
@@ -174,314 +167,77 @@ async function agentFetchAllClusters<T>(
   for (const r of results) {
     if (r.status === 'fulfilled') items.push(...r.value)
   }
-  return items.length > 0 || targets.length > 0 ? items : null
+  return items
 }
 
 // ─── Hooks ─────────────────────────────────────────────────────────
 
 export function useKagentiAgents(options?: { cluster?: string; namespace?: string }) {
-  const [data, setData] = useState<KagentiAgent[]>(() => shouldUseDemoData() ? getDemoAgents() : [])
-  const [isLoading, setIsLoading] = useState(!shouldUseDemoData())
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const mountedRef = useRef(true)
-  const { isDemoMode: demoMode } = useDemoMode()
-  const initialMountRef = useRef(true)
-
-  const fetchData = useCallback(async (silent = false) => {
-    // Demo data is already set in initial state - skip to avoid re-render flicker
-    if (shouldUseDemoData()) return
-
-    if (!silent) setIsLoading(true)
-    else setIsRefreshing(true)
-
-    try {
+  return useCache<KagentiAgent[]>({
+    key: `kagenti-agents:${options?.cluster || 'all'}:${options?.namespace || 'all'}`,
+    category: 'clusters',
+    initialData: [] as KagentiAgent[],
+    demoData: getDemoAgents(),
+    fetcher: async () => {
       const agents = await agentFetchAllClusters<KagentiAgent>(
         '/kagenti/agents', 'agents', options?.namespace, options?.cluster,
       )
-      // Use real data only if non-empty; fallback to demo data for demo-only cards
-      if (agents !== null && agents.length > 0 && mountedRef.current) {
-        setData(agents)
-        setError(null)
-        setConsecutiveFailures(0)
-        reportAgentDataSuccess()
-      } else if (mountedRef.current) {
-        setData(getDemoAgents())
-      }
-    } catch {
-      if (mountedRef.current) {
-        setData(getDemoAgents())
-        setConsecutiveFailures(prev => prev + 1)
-        reportAgentDataError('/kagenti/agents', 'fetch failed')
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-  }, [options?.cluster, options?.namespace])
-
-  useEffect(() => {
-    mountedRef.current = true
-    fetchData()
-    const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`kagenti-agents:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
-
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-      unregisterRefetch()
-    }
-  }, [fetchData, options?.cluster, options?.namespace])
-
-  // Re-fetch when demo mode changes (not on initial mount)
-  useEffect(() => {
-    if (initialMountRef.current) {
-      initialMountRef.current = false
-      return
-    }
-    // Re-set initial data based on current mode
-    if (shouldUseDemoData()) {
-      setData(getDemoAgents())
-      setIsLoading(false)
-    } else {
-      fetchData(false)
-    }
-  }, [demoMode, fetchData])
-
-  return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
+      if (agents.length > 0) reportAgentDataSuccess()
+      else reportAgentDataError('/kagenti/agents', 'empty response')
+      return agents
+    },
+  })
 }
 
 export function useKagentiBuilds(options?: { cluster?: string; namespace?: string }) {
-  const [data, setData] = useState<KagentiBuild[]>(() => shouldUseDemoData() ? getDemoBuilds() : [])
-  const [isLoading, setIsLoading] = useState(!shouldUseDemoData())
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const mountedRef = useRef(true)
-  const { isDemoMode: demoMode } = useDemoMode()
-  const initialMountRef = useRef(true)
-
-  const fetchData = useCallback(async (silent = false) => {
-    // Demo data is already set in initial state - skip to avoid re-render flicker
-    if (shouldUseDemoData()) return
-
-    if (!silent) setIsLoading(true)
-    else setIsRefreshing(true)
-
-    try {
+  return useCache<KagentiBuild[]>({
+    key: `kagenti-builds:${options?.cluster || 'all'}:${options?.namespace || 'all'}`,
+    category: 'clusters',
+    initialData: [] as KagentiBuild[],
+    demoData: getDemoBuilds(),
+    fetcher: async () => {
       const builds = await agentFetchAllClusters<KagentiBuild>(
         '/kagenti/builds', 'builds', options?.namespace, options?.cluster,
       )
-      // Use real data only if non-empty; fallback to demo data for demo-only cards
-      if (builds !== null && builds.length > 0 && mountedRef.current) {
-        setData(builds)
-        setError(null)
-        setConsecutiveFailures(0)
-        reportAgentDataSuccess()
-      } else if (mountedRef.current) {
-        setData(getDemoBuilds())
-      }
-    } catch {
-      if (mountedRef.current) {
-        setData(getDemoBuilds())
-        setConsecutiveFailures(prev => prev + 1)
-        reportAgentDataError('/kagenti/builds', 'fetch failed')
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-  }, [options?.cluster, options?.namespace])
-
-  useEffect(() => {
-    mountedRef.current = true
-    fetchData()
-    const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`kagenti-builds:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
-
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-      unregisterRefetch()
-    }
-  }, [fetchData, options?.cluster, options?.namespace])
-
-  // Re-fetch when demo mode changes (not on initial mount)
-  useEffect(() => {
-    if (initialMountRef.current) {
-      initialMountRef.current = false
-      return
-    }
-    if (shouldUseDemoData()) {
-      setData(getDemoBuilds())
-      setIsLoading(false)
-    } else {
-      fetchData(false)
-    }
-  }, [demoMode, fetchData])
-
-  return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
+      if (builds.length > 0) reportAgentDataSuccess()
+      else reportAgentDataError('/kagenti/builds', 'empty response')
+      return builds
+    },
+  })
 }
 
 export function useKagentiCards(options?: { cluster?: string; namespace?: string }) {
-  const [data, setData] = useState<KagentiCard[]>(() => shouldUseDemoData() ? getDemoCards() : [])
-  const [isLoading, setIsLoading] = useState(!shouldUseDemoData())
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const mountedRef = useRef(true)
-  const { isDemoMode: demoMode } = useDemoMode()
-  const initialMountRef = useRef(true)
-
-  const fetchData = useCallback(async (silent = false) => {
-    // Demo data is already set in initial state - skip to avoid re-render flicker
-    if (shouldUseDemoData()) return
-
-    if (!silent) setIsLoading(true)
-    else setIsRefreshing(true)
-
-    try {
+  return useCache<KagentiCard[]>({
+    key: `kagenti-cards:${options?.cluster || 'all'}:${options?.namespace || 'all'}`,
+    category: 'clusters',
+    initialData: [] as KagentiCard[],
+    demoData: getDemoCards(),
+    fetcher: async () => {
       const cards = await agentFetchAllClusters<KagentiCard>(
         '/kagenti/cards', 'cards', options?.namespace, options?.cluster,
       )
-      // Use real data only if non-empty; fallback to demo data for demo-only cards
-      if (cards !== null && cards.length > 0 && mountedRef.current) {
-        setData(cards)
-        setError(null)
-        setConsecutiveFailures(0)
-        reportAgentDataSuccess()
-      } else if (mountedRef.current) {
-        setData(getDemoCards())
-      }
-    } catch {
-      if (mountedRef.current) {
-        setData(getDemoCards())
-        setConsecutiveFailures(prev => prev + 1)
-        reportAgentDataError('/kagenti/cards', 'fetch failed')
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-  }, [options?.cluster, options?.namespace])
-
-  useEffect(() => {
-    mountedRef.current = true
-    fetchData()
-    const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`kagenti-cards:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
-
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-      unregisterRefetch()
-    }
-  }, [fetchData, options?.cluster, options?.namespace])
-
-  // Re-fetch when demo mode changes (not on initial mount)
-  useEffect(() => {
-    if (initialMountRef.current) {
-      initialMountRef.current = false
-      return
-    }
-    if (shouldUseDemoData()) {
-      setData(getDemoCards())
-      setIsLoading(false)
-    } else {
-      fetchData(false)
-    }
-  }, [demoMode, fetchData])
-
-  return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
+      if (cards.length > 0) reportAgentDataSuccess()
+      else reportAgentDataError('/kagenti/cards', 'empty response')
+      return cards
+    },
+  })
 }
 
 export function useKagentiTools(options?: { cluster?: string; namespace?: string }) {
-  const [data, setData] = useState<KagentiTool[]>(() => shouldUseDemoData() ? getDemoTools() : [])
-  const [isLoading, setIsLoading] = useState(!shouldUseDemoData())
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const mountedRef = useRef(true)
-  const { isDemoMode: demoMode } = useDemoMode()
-  const initialMountRef = useRef(true)
-
-  const fetchData = useCallback(async (silent = false) => {
-    // Demo data is already set in initial state - skip to avoid re-render flicker
-    if (shouldUseDemoData()) return
-
-    if (!silent) setIsLoading(true)
-    else setIsRefreshing(true)
-
-    try {
+  return useCache<KagentiTool[]>({
+    key: `kagenti-tools:${options?.cluster || 'all'}:${options?.namespace || 'all'}`,
+    category: 'clusters',
+    initialData: [] as KagentiTool[],
+    demoData: getDemoTools(),
+    fetcher: async () => {
       const tools = await agentFetchAllClusters<KagentiTool>(
         '/kagenti/tools', 'tools', options?.namespace, options?.cluster,
       )
-      // Use real data only if non-empty; fallback to demo data for demo-only cards
-      if (tools !== null && tools.length > 0 && mountedRef.current) {
-        setData(tools)
-        setError(null)
-        setConsecutiveFailures(0)
-        reportAgentDataSuccess()
-      } else if (mountedRef.current) {
-        setData(getDemoTools())
-      }
-    } catch {
-      if (mountedRef.current) {
-        setData(getDemoTools())
-        setConsecutiveFailures(prev => prev + 1)
-        reportAgentDataError('/kagenti/tools', 'fetch failed')
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-  }, [options?.cluster, options?.namespace])
-
-  useEffect(() => {
-    mountedRef.current = true
-    fetchData()
-    const interval = setInterval(() => fetchData(true), getEffectiveInterval(POLL_INTERVAL))
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`kagenti-tools:${options?.cluster || 'all'}:${options?.namespace || 'all'}`, () => fetchData(false))
-
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-      unregisterRefetch()
-    }
-  }, [fetchData, options?.cluster, options?.namespace])
-
-  // Re-fetch when demo mode changes (not on initial mount)
-  useEffect(() => {
-    if (initialMountRef.current) {
-      initialMountRef.current = false
-      return
-    }
-    if (shouldUseDemoData()) {
-      setData(getDemoTools())
-      setIsLoading(false)
-    } else {
-      fetchData(false)
-    }
-  }, [demoMode, fetchData])
-
-  return { data, isLoading, error, consecutiveFailures, isRefreshing, refetch: fetchData }
+      if (tools.length > 0) reportAgentDataSuccess()
+      else reportAgentDataError('/kagenti/tools', 'empty response')
+      return tools
+    },
+  })
 }
 
 /** Aggregated summary computed from all kagenti sub-hooks */
