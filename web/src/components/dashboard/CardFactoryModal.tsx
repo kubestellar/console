@@ -181,8 +181,10 @@ const T2_TEMPLATES: T2Template[] = [
   const [value, setValue] = useState(67)
   
   // Gauge dimensions
-  const radius = 45
-  const circumference = 2 * Math.PI * radius
+  const GAUGE_RADIUS = 45
+  const GAUGE_CENTER_X = 60
+  const GAUGE_CENTER_Y = 60
+  const circumference = 2 * Math.PI * GAUGE_RADIUS
   const offset = circumference - (value / 100) * circumference
   
   // Utilization thresholds for color coding
@@ -193,9 +195,9 @@ const T2_TEMPLATES: T2Template[] = [
   return (
     <div className="h-full flex flex-col items-center justify-center gap-3">
       <svg width="120" height="120" className="-rotate-90">
-        <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="8"
+        <circle cx={GAUGE_CENTER_X} cy={GAUGE_CENTER_Y} r={GAUGE_RADIUS} fill="none" strokeWidth="8"
           className="stroke-secondary" />
-        <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="8"
+        <circle cx={GAUGE_CENTER_X} cy={GAUGE_CENTER_Y} r={GAUGE_RADIUS} fill="none" strokeWidth="8"
           strokeLinecap="round"
           className={\`\${color.replace('text-', 'stroke-')} transition-all duration-700\`}
           style={{ strokeDasharray: circumference, strokeDashoffset: offset }} />
@@ -286,7 +288,9 @@ const T2_TEMPLATES: T2Template[] = [
   const total = data.reduce((s, d) => s + d.value, 0)
   
   // Donut chart dimensions
-  const r = 40, cx = 60, cy = 60
+  const DONUT_RADIUS = 40
+  const DONUT_CENTER_X = 60
+  const DONUT_CENTER_Y = 60
   let cumulative = 0
 
   return (
@@ -294,17 +298,17 @@ const T2_TEMPLATES: T2Template[] = [
       <svg width="120" height="120" viewBox="0 0 120 120">
         {data.map((d, i) => {
           const pct = d.value / total
-          const dashArray = 2 * Math.PI * r
+          const dashArray = 2 * Math.PI * DONUT_RADIUS
           const dashOffset = dashArray * (1 - pct)
           const rotation = cumulative * 360 - 90
           cumulative += pct
           return (
-            <circle key={i} cx={cx} cy={cy} r={r} fill="none" strokeWidth="16"
+            <circle key={i} cx={DONUT_CENTER_X} cy={DONUT_CENTER_Y} r={DONUT_RADIUS} fill="none" strokeWidth="16"
               stroke={d.color} strokeDasharray={dashArray} strokeDashoffset={dashOffset}
-              transform={\`rotate(\${rotation} \${cx} \${cy})\`} />
+              transform={\`rotate(\${rotation} \${DONUT_CENTER_X} \${DONUT_CENTER_Y})\`} />
           )
         })}
-        <text x={cx} y={cy} textAnchor="middle" dy="0.35em" className="fill-foreground text-lg font-bold">{total}</text>
+        <text x={DONUT_CENTER_X} y={DONUT_CENTER_Y} textAnchor="middle" dy="0.35em" className="fill-foreground text-lg font-bold">{total}</text>
       </svg>
       <div className="flex gap-3">
         {data.map(d => (
