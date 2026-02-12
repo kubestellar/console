@@ -626,13 +626,13 @@ export function GPUReservations() {
         <div className="space-y-6">
           <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
             <div className="flex items-center justify-center gap-4 mb-4">
-              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" aria-label="Previous month">
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <h3 className="text-lg font-medium text-foreground min-w-[180px] text-center">
                 {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </h3>
-              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-secondary transition-colors" aria-label="Next month">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
@@ -751,7 +751,7 @@ export function GPUReservations() {
             <div className={cn('glass p-4 rounded-lg', demoMode && 'border-2 border-yellow-500/50')}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-foreground">Reservation Details</h3>
-                <button onClick={() => setSelectedReservation(null)} className="p-1 rounded hover:bg-secondary transition-colors">
+                <button onClick={() => setSelectedReservation(null)} className="p-1 rounded hover:bg-secondary transition-colors" aria-label="Close reservation details">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -870,15 +870,18 @@ export function GPUReservations() {
                     </span>
                     <ClusterBadge cluster={r.cluster} size="sm" />
                     <button onClick={() => setSelectedReservation(r)}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground">
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+                      aria-label={`View reservation ${r.title}`}>
                       <Eye className="w-4 h-4" />
                     </button>
                     <button onClick={() => { setEditingReservation(r); setShowReservationForm(true) }}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-purple-400">
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-purple-400"
+                      aria-label={`Edit reservation ${r.title}`}>
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button onClick={() => setDeleteConfirmId(r.id)}
-                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-red-400">
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-red-400"
+                      aria-label={`Delete reservation ${r.title}`}>
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
