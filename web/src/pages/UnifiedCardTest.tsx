@@ -8,6 +8,7 @@
 import { UnifiedCard } from '../lib/unified/card/UnifiedCard'
 import { podIssuesConfig } from '../config/cards/pod-issues'
 import { PodIssues } from '../components/cards/PodIssues'
+import { TechnicalAcronym } from '../components/shared/TechnicalAcronym'
 
 export function UnifiedCardTest() {
   return (
@@ -45,7 +46,7 @@ export function UnifiedCardTest() {
         <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
           <li>⚠️ <strong>Header stats badge</strong> - Legacy shows "168 issues" count badge</li>
           <li>⚠️ <strong>Restart count format</strong> - Shows "6.3K" vs legacy "6260 restarts"</li>
-          <li>⚠️ <strong>Multi-status display</strong> - Shows single status vs "CrashLoopBackOff, OOMKilled"</li>
+          <li>⚠️ <strong>Multi-status display</strong> - Shows single status vs "<TechnicalAcronym term="CrashLoopBackOff">CrashLoopBackOff</TechnicalAcronym>, <TechnicalAcronym term="OOMKilled">OOMKilled</TechnicalAcronym>"</li>
           <li>⚠️ <strong>Row layout</strong> - Simpler layout vs legacy CardListItem with metadata</li>
         </ul>
         <h3 className="font-semibold mb-3 mt-4">Working Features (Phase 4 Complete)</h3>

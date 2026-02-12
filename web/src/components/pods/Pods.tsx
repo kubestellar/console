@@ -222,10 +222,14 @@ export function Pods() {
             .map((cluster) => (
             <div key={cluster.name} className="glass p-3 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <StatusIndicator
-                  status={cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'}
-                  size="sm"
-                />
+                <PortalTooltip content={STATUS_TOOLTIPS[cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error']}>
+                  <span>
+                    <StatusIndicator
+                      status={cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'}
+                      size="sm"
+                    />
+                  </span>
+                </PortalTooltip>
                 <span className="font-medium text-foreground text-sm truncate">
                   {cluster.context || cluster.name.split('/').pop()}
                 </span>
