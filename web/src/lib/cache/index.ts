@@ -2,10 +2,11 @@
  * Unified Caching Layer for Dashboard Cards
  *
  * This module provides a single, consistent caching pattern that all cards should use.
- * Uses IndexedDB for large data storage (50MB+ quota) with localStorage fallback.
+ * Uses a SQLite database in a Web Worker for persistent storage, with IndexedDB fallback.
  *
  * Features:
- * - IndexedDB persistence for large data (no more quota issues)
+ * - SQLite WASM persistence via Web Worker (all I/O off main thread)
+ * - Preloaded in-memory metadata (zero-cost Map.get() instead of sync localStorage)
  * - Stale-while-revalidate (show cached data while fetching)
  * - Subscriber pattern for multi-component updates
  * - Configurable refresh rates by data category
@@ -25,6 +26,8 @@
 import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 import { isDemoMode, subscribeDemoMode } from '../demoMode'
 import { registerCacheReset, registerRefetch } from '../modeTransition'
+import { CacheWorkerRpc } from './workerRpc'
+import type { CacheEntry as WorkerCacheEntry, CacheMeta as WorkerCacheMeta } from './workerMessages'
 
 // ============================================================================
 // Configuration
@@ -33,13 +36,13 @@ import { registerCacheReset, registerRefetch } from '../modeTransition'
 /** Cache version - increment when cache structure changes to invalidate old caches */
 const CACHE_VERSION = 4
 
-/** IndexedDB configuration */
+/** Storage key prefixes (for localStorage metadata — legacy, kept for migration) */
+const META_PREFIX = 'kc_meta:'
+
+/** IndexedDB configuration (legacy — kept for migration and fallback) */
 const DB_NAME = 'kc_cache'
 const DB_VERSION = 1
 const STORE_NAME = 'cache'
-
-/** Storage key prefixes (for localStorage metadata only) */
-const META_PREFIX = 'kc_meta:'
 
 /** Maximum consecutive failures before marking as failed */
 const MAX_FAILURES = 3
@@ -131,16 +134,67 @@ interface CacheState<T> {
 type Subscriber = () => void
 
 // ============================================================================
-// IndexedDB Storage Layer
+// Storage Abstraction Layer
 // ============================================================================
 
-class IndexedDBStorage {
+/**
+ * Common interface for cache storage backends (Worker-based or IndexedDB fallback).
+ */
+interface CacheStorage {
+  get<T>(key: string): Promise<CacheEntry<T> | null>
+  set<T>(key: string, data: T): Promise<void>
+  delete(key: string): Promise<void>
+  clear(): Promise<void>
+  getStats(): Promise<{ keys: string[]; count: number }>
+}
+
+// ============================================================================
+// SQLite Worker Storage (Primary)
+// ============================================================================
+
+/**
+ * Cache storage backed by SQLite WASM in a Web Worker.
+ * All I/O happens off the main thread via postMessage RPC.
+ */
+class WorkerStorage implements CacheStorage {
+  constructor(private rpc: CacheWorkerRpc) {}
+
+  async get<T>(key: string): Promise<CacheEntry<T> | null> {
+    const result = await this.rpc.get<T>(key)
+    if (result && result.version === CACHE_VERSION) {
+      return { key, data: result.data, timestamp: result.timestamp, version: result.version }
+    }
+    return null
+  }
+
+  async set<T>(key: string, data: T): Promise<void> {
+    // Fire-and-forget: don't block the fetch cycle on storage I/O
+    this.rpc.set(key, { data, timestamp: Date.now(), version: CACHE_VERSION })
+  }
+
+  async delete(key: string): Promise<void> {
+    this.rpc.deleteKey(key)
+  }
+
+  async clear(): Promise<void> {
+    return this.rpc.clear()
+  }
+
+  async getStats(): Promise<{ keys: string[]; count: number }> {
+    return this.rpc.getStats()
+  }
+}
+
+// ============================================================================
+// IndexedDB Storage (Fallback)
+// ============================================================================
+
+class IndexedDBStorage implements CacheStorage {
   private db: IDBDatabase | null = null
   private dbPromise: Promise<IDBDatabase> | null = null
   private isSupported: boolean = true
 
   constructor() {
-    // Check if IndexedDB is available
     this.isSupported = typeof indexedDB !== 'undefined'
     if (this.isSupported) {
       this.initDB()
@@ -153,169 +207,157 @@ class IndexedDBStorage {
     this.dbPromise = new Promise((resolve, reject) => {
       try {
         const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-        request.onerror = () => {
-          console.warn('[Cache] IndexedDB open failed:', request.error)
-          this.isSupported = false
-          reject(request.error)
-        }
-
-        request.onsuccess = () => {
-          this.db = request.result
-          resolve(this.db)
-        }
-
+        request.onerror = () => { this.isSupported = false; reject(request.error) }
+        request.onsuccess = () => { this.db = request.result; resolve(this.db) }
         request.onupgradeneeded = (event) => {
           const db = (event.target as IDBOpenDBRequest).result
-
-          // Create cache store if it doesn't exist
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             const store = db.createObjectStore(STORE_NAME, { keyPath: 'key' })
             store.createIndex('timestamp', 'timestamp', { unique: false })
           }
         }
-      } catch (e) {
-        console.error('[Cache] IndexedDB not available:', e)
-        this.isSupported = false
-        reject(e)
-      }
+      } catch (e) { this.isSupported = false; reject(e) }
     })
-
     return this.dbPromise
   }
 
   async get<T>(key: string): Promise<CacheEntry<T> | null> {
     if (!this.isSupported) return null
-
     try {
       const db = await this.initDB()
       return new Promise((resolve) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly')
-        const store = transaction.objectStore(STORE_NAME)
-        const request = store.get(key)
-
-        request.onsuccess = () => {
-          const entry = request.result as CacheEntry<T> | undefined
-          if (entry && entry.version === CACHE_VERSION) {
-            resolve(entry)
-          } else {
-            resolve(null)
-          }
+        const tx = db.transaction(STORE_NAME, 'readonly')
+        const req = tx.objectStore(STORE_NAME).get(key)
+        req.onsuccess = () => {
+          const entry = req.result as CacheEntry<T> | undefined
+          resolve(entry && entry.version === CACHE_VERSION ? entry : null)
         }
-
-        request.onerror = () => {
-          console.warn('[Cache] IndexedDB get failed:', request.error)
-          resolve(null)
-        }
+        req.onerror = () => resolve(null)
       })
-    } catch {
-      return null
-    }
+    } catch { return null }
   }
 
   async set<T>(key: string, data: T): Promise<void> {
     if (!this.isSupported) return
-
     try {
       const db = await this.initDB()
-      const entry: CacheEntry<T> = {
-        key,
-        data,
-        timestamp: Date.now(),
-        version: CACHE_VERSION,
-      }
-
+      const entry: CacheEntry<T> = { key, data, timestamp: Date.now(), version: CACHE_VERSION }
       return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite')
-        const store = transaction.objectStore(STORE_NAME)
-        const request = store.put(entry)
-
-        request.onsuccess = () => resolve()
-        request.onerror = () => {
-          console.warn('[Cache] IndexedDB set failed:', request.error)
-          reject(request.error)
-        }
+        const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(entry)
+        req.onsuccess = () => resolve()
+        req.onerror = () => reject(req.error)
       })
-    } catch (e) {
-      console.error('[Cache] IndexedDB set error:', e)
-    }
+    } catch { /* ignore */ }
   }
 
   async delete(key: string): Promise<void> {
     if (!this.isSupported) return
-
     try {
       const db = await this.initDB()
       return new Promise((resolve) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite')
-        const store = transaction.objectStore(STORE_NAME)
-        const request = store.delete(key)
-
-        request.onsuccess = () => resolve()
-        request.onerror = () => {
-          console.warn('[Cache] IndexedDB delete failed:', request.error)
-          resolve()
-        }
+        const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(key)
+        req.onsuccess = () => resolve()
+        req.onerror = () => resolve()
       })
-    } catch {
-      // Ignore
-    }
+    } catch { /* ignore */ }
   }
 
   async clear(): Promise<void> {
     if (!this.isSupported) return
-
     try {
       const db = await this.initDB()
       return new Promise((resolve) => {
-        const transaction = db.transaction(STORE_NAME, 'readwrite')
-        const store = transaction.objectStore(STORE_NAME)
-        const request = store.clear()
-
-        request.onsuccess = () => {
-          console.log('[Cache] IndexedDB cleared')
-          resolve()
-        }
-        request.onerror = () => {
-          console.warn('[Cache] IndexedDB clear failed:', request.error)
-          resolve()
-        }
+        const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).clear()
+        req.onsuccess = () => resolve()
+        req.onerror = () => resolve()
       })
-    } catch {
-      // Ignore
-    }
+    } catch { /* ignore */ }
   }
 
   async getStats(): Promise<{ keys: string[]; count: number }> {
     if (!this.isSupported) return { keys: [], count: 0 }
-
     try {
       const db = await this.initDB()
       return new Promise((resolve) => {
-        const transaction = db.transaction(STORE_NAME, 'readonly')
-        const store = transaction.objectStore(STORE_NAME)
         const keys: string[] = []
-
-        const request = store.openCursor()
-        request.onsuccess = (event) => {
+        const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).openCursor()
+        req.onsuccess = (event) => {
           const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result
-          if (cursor) {
-            keys.push(cursor.key as string)
-            cursor.continue()
-          } else {
-            resolve({ keys, count: keys.length })
-          }
+          if (cursor) { keys.push(cursor.key as string); cursor.continue() }
+          else resolve({ keys, count: keys.length })
         }
-        request.onerror = () => resolve({ keys: [], count: 0 })
+        req.onerror = () => resolve({ keys: [], count: 0 })
       })
-    } catch {
-      return { keys: [], count: 0 }
-    }
+    } catch { return { keys: [], count: 0 } }
   }
 }
 
-// Singleton IndexedDB storage instance
-const idbStorage = new IndexedDBStorage()
+// ============================================================================
+// Preloaded Metadata Map (replaces synchronous localStorage reads)
+// ============================================================================
+
+/**
+ * In-memory map of cache metadata, populated at startup from the SQLite worker.
+ * Replaces synchronous localStorage.getItem(META_PREFIX + key) calls.
+ * All reads are zero-cost Map.get(); writes are fire-and-forget to the worker.
+ */
+const preloadedMetaMap = new Map<string, CacheMeta>()
+
+/** The active worker RPC instance (null if using IndexedDB fallback). */
+let workerRpc: CacheWorkerRpc | null = null
+
+// ============================================================================
+// Storage Singleton
+// ============================================================================
+
+/** The active storage backend — WorkerStorage or IndexedDB fallback. */
+let cacheStorage: CacheStorage = new IndexedDBStorage()
+
+/**
+ * Initialize the SQLite Web Worker cache backend.
+ * Call this early in app startup (main.tsx), before rendering.
+ * Returns the worker RPC instance for migration use.
+ */
+export async function initCacheWorker(): Promise<CacheWorkerRpc> {
+  try {
+    const worker = new Worker(
+      new URL('./worker.ts', import.meta.url),
+      { type: 'module' }
+    )
+    const rpc = new CacheWorkerRpc(worker)
+    await rpc.waitForReady()
+
+    workerRpc = rpc
+    cacheStorage = new WorkerStorage(rpc)
+    console.log('[Cache] SQLite Web Worker initialized')
+    return rpc
+  } catch (e) {
+    console.warn('[Cache] SQLite Worker failed, using IndexedDB fallback:', e)
+    cacheStorage = new IndexedDBStorage()
+    throw e
+  }
+}
+
+/**
+ * Populate the preloaded metadata map from the SQLite worker.
+ * Call after initCacheWorker() succeeds.
+ */
+export function initPreloadedMeta(meta: Record<string, WorkerCacheMeta>): void {
+  preloadedMetaMap.clear()
+  for (const [key, value] of Object.entries(meta)) {
+    preloadedMetaMap.set(key, {
+      consecutiveFailures: value.consecutiveFailures,
+      lastError: value.lastError,
+      lastSuccessfulRefresh: value.lastSuccessfulRefresh,
+    })
+  }
+  console.log(`[Cache] Preloaded ${preloadedMetaMap.size} metadata entries`)
+}
+
+/** Check whether the SQLite worker is active (vs IndexedDB fallback). */
+export function isSQLiteWorkerActive(): boolean {
+  return workerRpc !== null
+}
 
 // ============================================================================
 // Demo Mode Integration - Clear caches on mode toggle
@@ -359,7 +401,7 @@ class CacheStore<T> {
     private initialData: T,
     private persist: boolean = true
   ) {
-    // Initialize with initial data, then async load from IndexedDB
+    // Initialize with initial data, then async load from storage
     const meta = this.loadMeta()
 
     // Always start with isLoading=true until we confirm cached data exists.
@@ -375,18 +417,18 @@ class CacheStore<T> {
       lastRefresh: meta.lastSuccessfulRefresh ?? null,
     }
 
-    // Async load from IndexedDB - store the promise so we can await it before fetching
+    // Async load from storage - store the promise so we can await it before fetching
     if (this.persist) {
       this.storageLoadPromise = this.loadFromStorage()
     }
   }
 
-  // Storage operations (async via IndexedDB)
+  // Storage operations (async via SQLite worker or IndexedDB fallback)
   private async loadFromStorage(): Promise<void> {
     if (!this.persist || this.initialDataLoaded) return
 
     try {
-      const entry = await idbStorage.get<T>(this.key)
+      const entry = await cacheStorage.get<T>(this.key)
       if (entry) {
         // Cache found - show cached data immediately, start background refresh
         this.initialDataLoaded = true
@@ -397,7 +439,6 @@ class CacheStore<T> {
           lastRefresh: entry.timestamp,
         })
       }
-      // If no IDB data, keep isLoading=true - fetch() will handle it
     } catch {
       // Ignore errors, will use initial data with isLoading=true
     }
@@ -406,28 +447,28 @@ class CacheStore<T> {
   private async saveToStorage(data: T): Promise<void> {
     if (!this.persist) return
     try {
-      await idbStorage.set(this.key, data)
+      await cacheStorage.set(this.key, data)
     } catch (e) {
       console.error(`[Cache] Failed to save ${this.key}:`, e)
     }
   }
 
-  // Metadata stored in localStorage (small, sync access needed)
+  // Metadata: read from preloaded in-memory Map (zero-cost), persist via worker
   private loadMeta(): CacheMeta {
-    try {
-      const stored = localStorage.getItem(META_PREFIX + this.key)
-      if (!stored) return { consecutiveFailures: 0 }
-      return JSON.parse(stored) as CacheMeta
-    } catch {
-      return { consecutiveFailures: 0 }
-    }
+    return preloadedMetaMap.get(this.key) ?? { consecutiveFailures: 0 }
   }
 
   private saveMeta(meta: CacheMeta): void {
-    try {
-      localStorage.setItem(META_PREFIX + this.key, JSON.stringify(meta))
-    } catch {
-      // Ignore - localStorage might be full but that's okay for metadata
+    // Update in-memory map immediately (synchronous)
+    preloadedMetaMap.set(this.key, meta)
+    // Fire-and-forget persistence to the SQLite worker
+    if (workerRpc) {
+      workerRpc.setMeta(this.key, meta)
+    } else {
+      // Fallback: write to localStorage if no worker
+      try {
+        localStorage.setItem(META_PREFIX + this.key, JSON.stringify(meta))
+      } catch { /* ignore */ }
     }
   }
 
@@ -457,9 +498,9 @@ class CacheStore<T> {
 
   /**
    * Reset store for mode transition. Sets loading state and reloads any
-   * cached data from IndexedDB (stale-while-revalidate on mode switch).
+   * cached data from storage (stale-while-revalidate on mode switch).
    * In demo mode, useCache returns demoData regardless of state.data,
-   * so the IndexedDB reload only matters for live mode transitions.
+   * so the storage reload only matters for live mode transitions.
    */
   resetToInitialData(): void {
     this.resetVersion++
@@ -473,7 +514,7 @@ class CacheStore<T> {
       isFailed: false,
       consecutiveFailures: 0,
     })
-    // Re-trigger IndexedDB load to recover cached live data
+    // Re-trigger storage load to recover cached live data
     if (this.persist) {
       this.storageLoadPromise = this.loadFromStorage()
     }
@@ -487,7 +528,7 @@ class CacheStore<T> {
     // Capture version to detect concurrent resets (mode transitions)
     const fetchVersion = this.resetVersion
 
-    // Wait for IndexedDB to load before determining if we have cached data
+    // Wait for storage to load before determining if we have cached data
     // This ensures we don't show skeleton when cached data is available
     if (this.storageLoadPromise) {
       const currentPromise = this.storageLoadPromise
@@ -588,8 +629,13 @@ class CacheStore<T> {
 
   // Clear cache
   async clear(): Promise<void> {
-    await idbStorage.delete(this.key)
-    localStorage.removeItem(META_PREFIX + this.key)
+    await cacheStorage.delete(this.key)
+    preloadedMetaMap.delete(this.key)
+    if (workerRpc) {
+      workerRpc.setMeta(this.key, { consecutiveFailures: 0 })
+    } else {
+      localStorage.removeItem(META_PREFIX + this.key)
+    }
     this.initialDataLoaded = false
     this.setState({
       data: this.initialData,
@@ -848,12 +894,15 @@ export function useObjectCache<T extends Record<string, unknown>>(
 // Utilities
 // ============================================================================
 
-/** Clear all caches (both IndexedDB and localStorage metadata) */
+/** Clear all caches (both storage and metadata) */
 export async function clearAllCaches(): Promise<void> {
-  // Clear IndexedDB
-  await idbStorage.clear()
+  // Clear storage backend
+  await cacheStorage.clear()
 
-  // Clear localStorage metadata
+  // Clear preloaded metadata
+  preloadedMetaMap.clear()
+
+  // Clear any remaining localStorage metadata (fallback/legacy)
   const keysToRemove: string[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
@@ -869,7 +918,7 @@ export async function clearAllCaches(): Promise<void> {
 
 /** Get cache statistics */
 export async function getCacheStats(): Promise<{ keys: string[]; count: number; entries: number }> {
-  const stats = await idbStorage.getStats()
+  const stats = await cacheStorage.getStats()
   return { ...stats, entries: cacheRegistry.size }
 }
 
@@ -879,8 +928,8 @@ export async function invalidateCache(key: string): Promise<void> {
   if (store) {
     await (store as CacheStore<unknown>).clear()
   }
-  await idbStorage.delete(key)
-  localStorage.removeItem(META_PREFIX + key)
+  await cacheStorage.delete(key)
+  preloadedMetaMap.delete(key)
 }
 
 /**
@@ -921,19 +970,19 @@ export async function prefetchCache<T>(
 }
 
 /**
- * Preload ALL cache keys from IndexedDB at app startup.
+ * Preload ALL cache keys from storage at app startup.
  * This ensures cached data is available immediately when components mount,
  * eliminating skeleton flashes on page navigation.
  * Call this early in app initialization, before rendering routes.
  */
 export async function preloadCacheFromStorage(): Promise<void> {
-  const stats = await idbStorage.getStats()
+  const stats = await cacheStorage.getStats()
   if (stats.count === 0) return
 
   let loadedCount = 0
   const loadPromises = stats.keys.map(async (key) => {
     try {
-      const entry = await idbStorage.get<unknown>(key)
+      const entry = await cacheStorage.get<unknown>(key)
       if (entry) {
         const store = getOrCreateCache(key, entry.data, true)
         const storeWithState = store as unknown as {
@@ -959,7 +1008,7 @@ export async function preloadCacheFromStorage(): Promise<void> {
   console.log(`[Cache] Preloaded ${loadedCount}/${stats.count} cache entries`)
 }
 
-/** Migrate old localStorage cache to IndexedDB (run once on app startup) */
+/** Migrate old localStorage cache entries (run once on app startup) */
 export async function migrateFromLocalStorage(): Promise<void> {
   // Migrate old ksc_ prefixed keys to kc_ prefix
   const kscKeys: string[] = []
@@ -996,26 +1045,113 @@ export async function migrateFromLocalStorage(): Promise<void> {
       if (stored) {
         const entry = JSON.parse(stored)
         const key = fullKey.replace(OLD_PREFIX, '')
-        // Only migrate if data looks valid
         if (entry.data !== undefined) {
-          await idbStorage.set(key, entry.data)
-          console.log(`[Cache] Migrated ${key} to IndexedDB`)
+          await cacheStorage.set(key, entry.data)
         }
       }
-      // Remove old localStorage entry after migration
       localStorage.removeItem(fullKey)
-    } catch (e) {
-      console.error(`[Cache] Failed to migrate ${fullKey}:`, e)
-      // Remove corrupted entry
+    } catch {
       localStorage.removeItem(fullKey)
     }
   }
 
-  // Also clean up kubectl-history which was a major source of quota issues
+  // Clean up kubectl-history which was a major source of quota issues
   localStorage.removeItem('kubectl-history')
 
   if (keysToMigrate.length > 0) {
-    console.log(`[Cache] Migrated ${keysToMigrate.length} entries from localStorage to IndexedDB`)
+    console.log(`[Cache] Migrated ${keysToMigrate.length} entries from localStorage to storage`)
+  }
+}
+
+/**
+ * Migrate data from IndexedDB to SQLite worker (one-time migration).
+ * Call this after initCacheWorker() succeeds and before preloadCacheFromStorage().
+ */
+export async function migrateIDBToSQLite(): Promise<void> {
+  if (!workerRpc) return
+
+  // Read all entries from the old IndexedDB
+  const idb = new IndexedDBStorage()
+
+  try {
+    const stats = await idb.getStats()
+    if (stats.count === 0) {
+      // Also migrate localStorage metadata
+      await migrateLocalStorageMetaToSQLite()
+      return
+    }
+
+    const cacheEntries: Array<{ key: string; entry: WorkerCacheEntry }> = []
+    for (const key of stats.keys) {
+      const entry = await idb.get<unknown>(key)
+      if (entry) {
+        cacheEntries.push({
+          key,
+          entry: { data: entry.data, timestamp: entry.timestamp, version: entry.version },
+        })
+      }
+    }
+
+    // Collect localStorage metadata
+    const metaEntries: Array<{ key: string; meta: WorkerCacheMeta }> = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const lsKey = localStorage.key(i)
+      if (lsKey?.startsWith(META_PREFIX)) {
+        try {
+          const meta = JSON.parse(localStorage.getItem(lsKey)!) as CacheMeta
+          const cacheKey = lsKey.replace(META_PREFIX, '')
+          metaEntries.push({ key: cacheKey, meta })
+        } catch { /* ignore corrupted entries */ }
+      }
+    }
+
+    // Bulk-insert into SQLite via worker
+    await workerRpc.migrate({ cacheEntries, metaEntries })
+
+    // Clean up old storage
+    await idb.clear()
+    const metaKeysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith(META_PREFIX)) {
+        metaKeysToRemove.push(key)
+      }
+    }
+    metaKeysToRemove.forEach(key => localStorage.removeItem(key))
+
+    // Delete the IndexedDB database entirely
+    try {
+      indexedDB.deleteDatabase(DB_NAME)
+    } catch { /* ignore */ }
+
+    console.log(`[Cache] Migrated ${cacheEntries.length} cache entries and ${metaEntries.length} metadata entries to SQLite`)
+  } catch (e) {
+    console.error('[Cache] IDB→SQLite migration failed:', e)
+  }
+}
+
+/** Migrate localStorage metadata to SQLite (when no IDB data exists). */
+async function migrateLocalStorageMetaToSQLite(): Promise<void> {
+  if (!workerRpc) return
+
+  const metaEntries: Array<{ key: string; meta: WorkerCacheMeta }> = []
+  const keysToRemove: string[] = []
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const lsKey = localStorage.key(i)
+    if (lsKey?.startsWith(META_PREFIX)) {
+      try {
+        const meta = JSON.parse(localStorage.getItem(lsKey)!) as CacheMeta
+        metaEntries.push({ key: lsKey.replace(META_PREFIX, ''), meta })
+        keysToRemove.push(lsKey)
+      } catch { /* ignore */ }
+    }
+  }
+
+  if (metaEntries.length > 0) {
+    await workerRpc.migrate({ cacheEntries: [], metaEntries })
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+    console.log(`[Cache] Migrated ${metaEntries.length} metadata entries to SQLite`)
   }
 }
 
