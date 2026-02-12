@@ -93,8 +93,11 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
     }
   }, [isDemoMode])
 
-  // Loading state (only when NOT in demo mode)
+  // Loading state — only show spinner if we already had agents (reconnecting).
+  // When no agents have loaded yet (e.g. cluster mode with no kc-agent), render nothing
+  // to avoid a perpetual spinner from the reconnect loop.
   if (agentsLoading && !isDemoMode) {
+    if (agents.length === 0) return null
     return (
       <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -102,6 +105,9 @@ export function AgentSelector({ compact = false, className = '' }: AgentSelector
       </div>
     )
   }
+
+  // No agents available and not in demo mode — hide selector entirely (cluster mode)
+  if (agents.length === 0 && !agentsLoading && !isDemoMode) return null
 
   // Only gray out in demo mode - allow interaction during loading/reconnection
   const isGreyedOut = isDemoMode
