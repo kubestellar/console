@@ -1073,6 +1073,7 @@ function ReservationFormModal({
 }) {
   const [cluster, setCluster] = useState(editingReservation?.cluster || '')
   const [namespace, setNamespace] = useState(editingReservation?.namespace || '')
+  const [isNewNamespace, setIsNewNamespace] = useState(false)
   const [title, setTitle] = useState(editingReservation?.title || '')
   const [description, setDescription] = useState(editingReservation?.description || '')
   const [gpuCount, setGpuCount] = useState(editingReservation ? String(editingReservation.gpu_count) : '')
@@ -1257,7 +1258,7 @@ function ReservationFormModal({
           {/* Cluster (GPU-only, with counts) */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">Cluster *</label>
-            <select value={cluster} onChange={e => { setCluster(e.target.value); setNamespace(''); setGpuPreference('') }}
+            <select value={cluster} onChange={e => { setCluster(e.target.value); setNamespace(''); setIsNewNamespace(false); setGpuPreference('') }}
               disabled={!!editingReservation}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50">
               <option value="">Select cluster...</option>
@@ -1275,17 +1276,49 @@ function ReservationFormModal({
           {/* Namespace */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">Namespace *</label>
-            <select
-              value={namespace}
-              onChange={e => setNamespace(e.target.value)}
-              disabled={!!editingReservation || !cluster}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
-            >
-              <option value="">Select namespace...</option>
-              {clusterNamespaces.map(ns => (
-                <option key={ns} value={ns}>{ns}</option>
-              ))}
-            </select>
+            {!isNewNamespace ? (
+              <select
+                value={namespace}
+                onChange={e => {
+                  if (e.target.value === '__new__') {
+                    setIsNewNamespace(true)
+                    setNamespace('')
+                    setTimeout(() => document.getElementById('new-ns-input')?.focus(), 0)
+                  } else {
+                    setNamespace(e.target.value)
+                  }
+                }}
+                disabled={!!editingReservation || !cluster}
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
+              >
+                <option value="">Select namespace...</option>
+                {clusterNamespaces.map(ns => (
+                  <option key={ns} value={ns}>{ns}</option>
+                ))}
+                <option value="__new__">+ New namespace...</option>
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  id="new-ns-input"
+                  type="text"
+                  value={namespace}
+                  onChange={e => setNamespace(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  placeholder="Enter namespace name..."
+                  disabled={!!editingReservation}
+                  className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => { setIsNewNamespace(false); setNamespace('') }}
+                  className="px-3 py-2 rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground"
+                  title="Back to list"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
           </div>
 
           {/* GPU Count */}
