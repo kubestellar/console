@@ -170,6 +170,7 @@ const KagentiAgentDiscovery = lazy(() => _kagentiBundle.then(m => ({ default: m.
 const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurity })))
 const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
 const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
+const BuildpacksStatus = lazy(() =>import('./buildpacks-status').then(m => ({ default: m.BuildpacksStatus })))
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle')
@@ -402,6 +403,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   maintenance_windows: MaintenanceWindows,
   cluster_changelog: ClusterChangelog,
   quota_heatmap: QuotaHeatmap,
+  // Cloud Native Buildpacks
+  buildpacks_status: BuildpacksStatus,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -467,6 +470,8 @@ export const DEMO_DATA_CARDS = new Set([
   'gateway_status',
   // Service Topology - demo visualization
   'service_topology',
+  'buildpacks_status',
+
   // Workload Deployment - uses real data when backend is running, falls back to demo internally
   // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
   // ArgoCD cards - all use mock data
@@ -831,6 +836,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   active_alerts: 4,
   security_issues: 4,
   upgrade_status: 4,
+  buildpacks_status: 6,
 
   // MCS cards
   service_exports: 6,
