@@ -6,7 +6,6 @@
  */
 
 import type {
-  WorkerRequest,
   WorkerResponse,
   CacheEntry,
   CacheMeta,
@@ -18,6 +17,9 @@ type PendingCall = {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
 }
+
+/** Message body sent to the worker (id is added by call/send). */
+type RequestBody = Record<string, unknown> & { type: string }
 
 export class CacheWorkerRpc {
   private worker: Worker
@@ -47,7 +49,7 @@ export class CacheWorkerRpc {
       this.pending.delete(msg.id)
       if (msg.type === 'error') {
         pending.reject(new Error(msg.message))
-      } else {
+      } else if (msg.type === 'result') {
         pending.resolve(msg.value)
       }
     }
@@ -63,7 +65,7 @@ export class CacheWorkerRpc {
   }
 
   /** Send a request and wait for the response. */
-  private call<R>(msg: Omit<WorkerRequest, 'id'>): Promise<R> {
+  private call<R>(msg: RequestBody): Promise<R> {
     const id = this.nextId++
     return new Promise<R>((resolve, reject) => {
       this.pending.set(id, {
@@ -75,7 +77,7 @@ export class CacheWorkerRpc {
   }
 
   /** Send a request without waiting for a response (fire-and-forget). */
-  private send(msg: Omit<WorkerRequest, 'id'>): void {
+  private send(msg: RequestBody): void {
     const id = this.nextId++
     // We still assign an ID but don't track the promise
     this.worker.postMessage({ ...msg, id })

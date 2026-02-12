@@ -33,11 +33,15 @@ async function initDatabase(): Promise<void> {
 
     // Try OPFS-backed database first (persistent, fast)
     // Fall back to in-memory if OPFS is not available
+    // Note: OpfsSAHPoolDb may exist at runtime but isn't in the TS type defs
+    const oo1 = sqlite3.oo1 as Record<string, unknown>
     try {
-      if (sqlite3.oo1.OpfsSAHPoolDb) {
-        db = new sqlite3.oo1.OpfsSAHPoolDb('/kc-cache.sqlite3') as unknown as DatabaseHandle
-      } else if (sqlite3.oo1.OpfsDb) {
-        db = new sqlite3.oo1.OpfsDb('/kc-cache.sqlite3') as unknown as DatabaseHandle
+      if (oo1['OpfsSAHPoolDb']) {
+        const Ctor = oo1['OpfsSAHPoolDb'] as new (name: string) => DatabaseHandle
+        db = new Ctor('/kc-cache.sqlite3')
+      } else if (oo1['OpfsDb']) {
+        const Ctor = oo1['OpfsDb'] as new (name: string) => DatabaseHandle
+        db = new Ctor('/kc-cache.sqlite3')
       } else {
         // No OPFS support — use in-memory database
         db = new sqlite3.oo1.DB(':memory:') as unknown as DatabaseHandle
@@ -318,8 +322,10 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
         handleSetPreference(msg.key, msg.value)
         respond(msg.id, undefined)
         break
-      default:
-        respondError(msg.id, `Unknown message type: ${(msg as { type: string }).type}`)
+      default: {
+        const unknown = msg as { id: number; type: string }
+        respondError(unknown.id, `Unknown message type: ${unknown.type}`)
+      }
     }
   } catch (e) {
     respondError(msg.id, e instanceof Error ? e.message : String(e))
