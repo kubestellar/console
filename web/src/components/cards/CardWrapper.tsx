@@ -250,6 +250,7 @@ export const CARD_TITLES: Record<string, string> = {
   helm_history: 'Helm History',
   helm_values_diff: 'Helm Values Diff',
   kustomization_status: 'Kustomization Status',
+  buildpacks_status: 'Buildpacks Status',
   overlay_comparison: 'Overlay Comparison',
   chart_versions: 'Helm Chart Versions',
 
@@ -591,6 +592,7 @@ const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, 
   helm_history: { icon: Clock, color: 'text-purple-400' },
   helm_values_diff: { icon: FileCode, color: 'text-yellow-400' },
   kustomization_status: { icon: Layers, color: 'text-purple-400' },
+  buildpacks_status: { icon: Package, color: 'text-purple-400' },
   overlay_comparison: { icon: Layers, color: 'text-blue-400' },
   chart_versions: { icon: Package, color: 'text-emerald-400' },
 

@@ -5,6 +5,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useCardData, CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../../lib/cards'
 import { useCardLoadingState } from '../CardDataContext'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
 
 interface BuildpacksStatusProps {
   config?: {
@@ -12,6 +13,12 @@ interface BuildpacksStatusProps {
     namespace?: string
   }
 }
+
+export type BuildpackStatus =
+  | 'succeeded'
+  | 'failed'
+  | 'building'
+  | 'unknown'
 
 interface BuildpackDisplay {
   name: string
@@ -61,6 +68,8 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
     consecutiveFailures,
     error,
   } = useBuildpackImages(config?.cluster)
+
+  const { drillToBuildpack } = useDrillDownActions()
 
   const [selectedNamespace, setSelectedNamespace] = useState(
     config?.namespace || ''
@@ -308,8 +317,26 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
           const styles = STATUS_STYLES[build.status]
 
           return (
-            <div key={`${build.cluster}-${build.namespace}-${build.name}`} className={`p-3 rounded-lg transition-colors cursor-pointer group ${build.status === 'failed' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50`}
+            <div key={`${build.cluster}-${build.namespace}-${build.name}`}
+              onClick={() =>
+                drillToBuildpack(build.cluster || '',
+                  build.namespace,
+                  build.name,
+                  {
+                    builder: build.builder,
+                    image: build.image,
+                    status: build.status,
+                    updated: build.updated,
+                  }
+                )
+              }
+              className={`p-3 rounded-lg transition-colors cursor-pointer group ${
+                build.status === 'failed'
+                  ? 'bg-red-500/10 border border-red-500/20'
+                  : 'bg-secondary/30'
+              } hover:bg-secondary/50`}
             >
+
 
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
