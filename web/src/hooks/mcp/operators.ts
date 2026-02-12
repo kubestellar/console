@@ -100,43 +100,20 @@ export function useOperators(cluster?: string) {
 
       setIsRefreshing(true)
 
-      // If no cluster specified, fetch from all clusters
-      if (!cluster) {
-        const allClusters = clusterCacheRef.clusters
-        if (allClusters.length === 0) {
-          if (!cancelled) {
-            setOperators([])
-            setIsLoading(false)
-            setIsRefreshing(false)
-          }
-          return
-        }
-
-        const allOperators: Operator[] = []
-        for (const c of allClusters) {
-          try {
-            const { data } = await api.get<{ operators: Operator[] }>(`/api/gitops/operators?cluster=${encodeURIComponent(c.name)}`)
-            allOperators.push(...(data.operators || []).map(op => ({ ...op, cluster: c.name })))
-          } catch {
-            // Skip clusters where operator API is unavailable
-          }
-        }
-        if (!cancelled) {
-          setOperators(allOperators)
-          saveOperatorsCacheToStorage(allOperators, cacheKey)
-          setError(null)
-          setConsecutiveFailures(0)
-          setLastRefresh(Date.now())
-          setIsLoading(false)
-          setIsRefreshing(false)
-        }
-        return
-      }
+      // Build URL — backend handles parallel cluster queries when no cluster specified
+      const url = cluster
+        ? `/api/gitops/operators?cluster=${encodeURIComponent(cluster)}`
+        : '/api/gitops/operators'
 
       try {
-        const { data } = await api.get<{ operators: Operator[] }>(`/api/gitops/operators?cluster=${encodeURIComponent(cluster)}`)
+        const { data } = await api.get<{ operators: Array<Operator & { phase?: string }> }>(url)
         if (!cancelled) {
-          const newOperators = (data.operators || []).map(op => ({ ...op, cluster }))
+          // Map backend `phase` field to frontend `status` field
+          const newOperators = (data.operators || []).map(op => ({
+            ...op,
+            status: (op.status || op.phase || 'Unknown') as Operator['status'],
+            cluster: op.cluster || cluster || '',
+          }))
           setOperators(newOperators)
           saveOperatorsCacheToStorage(newOperators, cacheKey)
           setError(null)
