@@ -171,7 +171,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		var allReleases []HelmRelease
-		clusterTimeout := 5 * time.Second
+		clusterTimeout := 15 * time.Second
 
 		for _, cl := range clusters {
 			wg.Add(1)
@@ -254,7 +254,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		var allKustomizations []Kustomization
-		clusterTimeout := 5 * time.Second
+		clusterTimeout := 15 * time.Second
 
 		for _, cl := range clusters {
 			wg.Add(1)
@@ -375,7 +375,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		var allOperators []Operator
-		clusterTimeout := 5 * time.Second
+		clusterTimeout := 15 * time.Second
 
 		for _, cl := range clusters {
 			wg.Add(1)

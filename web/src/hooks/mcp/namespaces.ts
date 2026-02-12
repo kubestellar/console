@@ -6,6 +6,10 @@ import { isDemoMode } from '../../lib/demoMode'
 import { LOCAL_AGENT_URL, clusterCacheRef } from './shared'
 import type { PodInfo, NamespaceStats } from './types'
 
+// Large clusters (100+ namespaces) can take 30s+ to list all namespaces.
+// Use a generous timeout to avoid aborting valid but slow requests.
+const NAMESPACE_FETCH_TIMEOUT_MS = 45000
+
 export function useNamespaces(cluster?: string) {
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -15,10 +19,18 @@ export function useNamespaces(cluster?: string) {
   const prevClusterRef = useRef<string | undefined>(cluster)
 
   // Reset state only when cluster actually CHANGES (not on initial mount)
+  // Use cached namespaces immediately if available (avoids empty dropdown on slow clusters)
   useEffect(() => {
     if (prevClusterRef.current !== cluster) {
-      setNamespaces([])
-      setIsLoading(true)
+      // Check cluster cache for pre-fetched namespaces (populated by health checks)
+      const cachedCluster = cluster ? clusterCacheRef.clusters.find(c => c.name === cluster) : undefined
+      if (cachedCluster?.namespaces && cachedCluster.namespaces.length > 0) {
+        setNamespaces(cachedCluster.namespaces)
+        setIsLoading(true) // Still loading fresh data in background
+      } else {
+        setNamespaces([])
+        setIsLoading(true)
+      }
       setError(null)
       prevClusterRef.current = cluster
     }
@@ -46,7 +58,7 @@ export function useNamespaces(cluster?: string) {
       try {
         console.log(`[useNamespaces] Fetching from local agent for ${cluster}`)
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000)
+        const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_FETCH_TIMEOUT_MS)
         const response = await fetch(`${LOCAL_AGENT_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
@@ -80,10 +92,9 @@ export function useNamespaces(cluster?: string) {
         const kubectlContext = clusterInfo?.context || cluster
         console.log(`[useNamespaces] Fetching via kubectl proxy for ${cluster}`)
 
-        // Add timeout to prevent hanging
         const nsPromise = kubectlProxy.getNamespaces(kubectlContext)
         const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 15000)
+          setTimeout(() => resolve(null), NAMESPACE_FETCH_TIMEOUT_MS)
         )
         const nsData = await Promise.race([nsPromise, timeoutPromise])
 
@@ -117,7 +128,6 @@ export function useNamespaces(cluster?: string) {
         setNamespaces(cachedCluster.namespaces)
         setError(null)
       } else {
-        // Provide default namespaces as fallback
         console.log(`[useNamespaces] Using default namespaces for ${cluster}`)
         setNamespaces(['default', 'kube-system'])
         setError(null)

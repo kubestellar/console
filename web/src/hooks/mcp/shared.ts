@@ -947,7 +947,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     try {
       const response = await kubectlProxy.exec(
         ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-        { context: kubectlContext || clusterName, timeout: 10000 }
+        { context: kubectlContext || clusterName, timeout: 45000 }
       )
       if (response.exitCode === 0 && response.output) {
         const namespaces = response.output.split(/\s+/).filter(Boolean)

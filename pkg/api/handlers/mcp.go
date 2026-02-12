@@ -187,7 +187,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allPods []k8s.PodInfo
-			clusterTimeout := 10 * time.Second
+			clusterTimeout := 30 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -250,7 +250,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allIssues []k8s.PodIssue
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 30 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -354,7 +354,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allStatus []*k8s.NVIDIAOperatorStatus
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -406,7 +406,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allNodes []k8s.NodeInfo
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -460,7 +460,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allIssues []k8s.DeploymentIssue
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -513,7 +513,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allDeployments []k8s.Deployment
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -565,7 +565,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allServices []k8s.Service
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -617,7 +617,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allJobs []k8s.Job
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -669,7 +669,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allHPAs []k8s.HPA
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -721,7 +721,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allConfigMaps []k8s.ConfigMap
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -773,7 +773,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allSecrets []k8s.Secret
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -825,7 +825,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allServiceAccounts []k8s.ServiceAccount
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -877,7 +877,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allPVCs []k8s.PVC
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -928,7 +928,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allPVs []k8s.PV
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -980,7 +980,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allQuotas []k8s.ResourceQuota
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -1032,7 +1032,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allRanges []k8s.LimitRange
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -1197,7 +1197,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allEvents []k8s.Event
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -1271,7 +1271,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allEvents []k8s.Event
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)
@@ -1330,7 +1330,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			var allIssues []k8s.SecurityIssue
-			clusterTimeout := 5 * time.Second
+			clusterTimeout := 15 * time.Second
 
 			for _, cl := range clusters {
 				wg.Add(1)

@@ -236,7 +236,7 @@ class KubectlProxy {
    * Get nodes for a cluster (used for health checks)
    */
   async getNodes(context: string): Promise<NodeInfo[]> {
-    const response = await this.exec(['get', 'nodes', '-o', 'json'], { context, timeout: 20000 })
+    const response = await this.exec(['get', 'nodes', '-o', 'json'], { context, timeout: 45000 })
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get nodes')
     }
@@ -271,7 +271,7 @@ class KubectlProxy {
    * Get pod count and resource requests for a cluster
    */
   async getPodMetrics(context: string): Promise<{ count: number; cpuRequestsMillicores: number; memoryRequestsBytes: number }> {
-    const response = await this.exec(['get', 'pods', '-A', '-o', 'json'], { context, timeout: 20000 })
+    const response = await this.exec(['get', 'pods', '-A', '-o', 'json'], { context, timeout: 45000 })
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get pods')
     }
@@ -317,7 +317,7 @@ class KubectlProxy {
   async getNamespaces(context: string): Promise<string[]> {
     const response = await this.exec(
       ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-      { context, timeout: 10000 }
+      { context, timeout: 45000 }
     )
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get namespaces')
@@ -330,7 +330,7 @@ class KubectlProxy {
    */
   async getServices(context: string, namespace?: string): Promise<{ name: string; namespace: string; type: string; clusterIP: string; ports: string }[]> {
     const nsArg = namespace ? ['-n', namespace] : ['-A']
-    const response = await this.exec(['get', 'services', ...nsArg, '-o', 'json'], { context, timeout: 15000 })
+    const response = await this.exec(['get', 'services', ...nsArg, '-o', 'json'], { context, timeout: 30000 })
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get services')
     }
@@ -349,7 +349,7 @@ class KubectlProxy {
    */
   async getPVCs(context: string, namespace?: string): Promise<{ name: string; namespace: string; status: string; capacity: string; storageClass: string }[]> {
     const nsArg = namespace ? ['-n', namespace] : ['-A']
-    const response = await this.exec(['get', 'pvc', ...nsArg, '-o', 'json'], { context, timeout: 15000 })
+    const response = await this.exec(['get', 'pvc', ...nsArg, '-o', 'json'], { context, timeout: 30000 })
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get PVCs')
     }
@@ -489,7 +489,7 @@ class KubectlProxy {
    */
   async getPodIssues(context: string, namespace?: string): Promise<PodIssue[]> {
     const nsArg = namespace ? ['-n', namespace] : ['-A']
-    const response = await this.exec(['get', 'pods', ...nsArg, '-o', 'json'], { context, timeout: 15000 })
+    const response = await this.exec(['get', 'pods', ...nsArg, '-o', 'json'], { context, timeout: 30000 })
 
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get pods')
@@ -562,7 +562,7 @@ class KubectlProxy {
     const nsArg = namespace ? ['-n', namespace] : ['-A']
     const response = await this.exec(
       ['get', 'events', ...nsArg, '--sort-by=.lastTimestamp', '-o', 'json'],
-      { context, timeout: 15000 }
+      { context, timeout: 30000 }
     )
 
     if (response.exitCode !== 0) {
@@ -590,7 +590,7 @@ class KubectlProxy {
    */
   async getDeployments(context: string, namespace?: string): Promise<Deployment[]> {
     const nsArg = namespace ? ['-n', namespace] : ['-A']
-    const response = await this.exec(['get', 'deployments', ...nsArg, '-o', 'json'], { context, timeout: 15000 })
+    const response = await this.exec(['get', 'deployments', ...nsArg, '-o', 'json'], { context, timeout: 30000 })
 
     if (response.exitCode !== 0) {
       throw new Error(response.error || 'Failed to get deployments')

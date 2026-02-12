@@ -454,7 +454,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
-				clusterCtx, clusterCancel := context.WithTimeout(ctx, 15*time.Second)
+				clusterCtx, clusterCancel := context.WithTimeout(ctx, 30*time.Second)
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
 				if err == nil && len(nodes) > 0 {
@@ -519,7 +519,7 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
-				clusterCtx, clusterCancel := context.WithTimeout(ctx, 15*time.Second)
+				clusterCtx, clusterCancel := context.WithTimeout(ctx, 30*time.Second)
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetNodes(clusterCtx, clusterName)
 				if err == nil && len(nodes) > 0 {
@@ -614,7 +614,7 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)
@@ -1056,7 +1056,7 @@ func (s *Server) handlePodsHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
 	defer cancel()
 
 	pods, err := s.k8sClient.GetPods(ctx, cluster, namespace)
