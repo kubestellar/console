@@ -178,6 +178,7 @@ export function useKagentiAgents(options?: { cluster?: string; namespace?: strin
     category: 'clusters',
     initialData: [] as KagentiAgent[],
     demoData: getDemoAgents(),
+    enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const agents = await agentFetchAllClusters<KagentiAgent>(
         '/kagenti/agents', 'agents', options?.namespace, options?.cluster,
@@ -195,6 +196,7 @@ export function useKagentiBuilds(options?: { cluster?: string; namespace?: strin
     category: 'clusters',
     initialData: [] as KagentiBuild[],
     demoData: getDemoBuilds(),
+    enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const builds = await agentFetchAllClusters<KagentiBuild>(
         '/kagenti/builds', 'builds', options?.namespace, options?.cluster,
@@ -212,6 +214,7 @@ export function useKagentiCards(options?: { cluster?: string; namespace?: string
     category: 'clusters',
     initialData: [] as KagentiCard[],
     demoData: getDemoCards(),
+    enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const cards = await agentFetchAllClusters<KagentiCard>(
         '/kagenti/cards', 'cards', options?.namespace, options?.cluster,
@@ -229,6 +232,7 @@ export function useKagentiTools(options?: { cluster?: string; namespace?: string
     category: 'clusters',
     initialData: [] as KagentiTool[],
     demoData: getDemoTools(),
+    enabled: !isAgentUnavailable(),
     fetcher: async () => {
       const tools = await agentFetchAllClusters<KagentiTool>(
         '/kagenti/tools', 'tools', options?.namespace, options?.cluster,
