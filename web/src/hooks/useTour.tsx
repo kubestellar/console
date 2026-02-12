@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useMobile } from './useMobile'
+import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 
 export interface TourStep {
   id: string
@@ -149,10 +150,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const [hasCompletedTour, setHasCompletedTour] = useState(true) // Default to true until we check
   const { isMobile } = useMobile()
 
-  // Check localStorage on mount
+  // Check localStorage on mount and when settings are restored from file
   useEffect(() => {
-    const completed = localStorage.getItem(TOUR_STORAGE_KEY)
-    setHasCompletedTour(completed === 'true')
+    const readFromStorage = () => {
+      const completed = localStorage.getItem(TOUR_STORAGE_KEY)
+      setHasCompletedTour(completed === 'true')
+    }
+    readFromStorage()
+    window.addEventListener(SETTINGS_RESTORED_EVENT, readFromStorage)
+    return () => window.removeEventListener(SETTINGS_RESTORED_EVENT, readFromStorage)
   }, [])
 
   // Auto-skip tour on mobile - tour is desktop-only
@@ -179,6 +185,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       setIsActive(false)
       setHasCompletedTour(true)
       localStorage.setItem(TOUR_STORAGE_KEY, 'true')
+      window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
     }
   }, [currentStepIndex])
 
@@ -192,11 +199,13 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setIsActive(false)
     setHasCompletedTour(true)
     localStorage.setItem(TOUR_STORAGE_KEY, 'true')
+    window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
   }, [])
 
   const resetTour = useCallback(() => {
     localStorage.removeItem(TOUR_STORAGE_KEY)
     setHasCompletedTour(false)
+    window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
   }, [])
 
   const goToStep = useCallback((stepId: string) => {

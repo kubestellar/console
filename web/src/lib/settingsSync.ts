@@ -20,6 +20,7 @@ const LS_KEYS = {
   'accessibility-settings': 'accessibility',
   'github_token': 'githubToken',
   'kc_notification_config': 'notifications',
+  'kubestellar-console-tour-completed': 'tourCompleted',
 } as const
 
 /**
@@ -67,6 +68,10 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
     try { result.notifications = JSON.parse(notifications) } catch { /* skip */ }
   }
 
+  // Tour completed (plain string 'true'/'false')
+  const tourCompleted = localStorage.getItem('kubestellar-console-tour-completed')
+  if (tourCompleted !== null) result.tourCompleted = tourCompleted === 'true'
+
   return result
 }
 
@@ -101,6 +106,10 @@ export function restoreToLocalStorage(settings: AllSettings): void {
 
   if (settings.notifications) {
     localStorage.setItem('kc_notification_config', JSON.stringify(settings.notifications))
+  }
+
+  if (settings.tourCompleted !== undefined) {
+    localStorage.setItem('kubestellar-console-tour-completed', String(settings.tourCompleted))
   }
 
   // Notify hooks to re-read from localStorage

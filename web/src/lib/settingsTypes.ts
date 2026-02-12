@@ -68,6 +68,7 @@ export interface AllSettings {
   accessibility: AccessibilitySettingsData
   profile: ProfileSettingsData
   widget: WidgetSettingsData
+  tourCompleted: boolean
 
   // Sensitive (decrypted in transit over localhost)
   apiKeys: Record<string, APIKeyEntry>
