@@ -1275,22 +1275,17 @@ function ReservationFormModal({
           {/* Namespace */}
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">Namespace *</label>
-            <input
-              list="ns-options"
+            <select
               value={namespace}
               onChange={e => setNamespace(e.target.value)}
-              placeholder={clusterNamespaces.length > 0 ? 'Select or type a namespace...' : 'Type a namespace name...'}
               disabled={!!editingReservation || !cluster}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-            />
-            <datalist id="ns-options">
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
+            >
+              <option value="">Select namespace...</option>
               {clusterNamespaces.map(ns => (
-                <option key={ns} value={ns} />
+                <option key={ns} value={ns}>{ns}</option>
               ))}
-            </datalist>
-            {namespace && !clusterNamespaces.includes(namespace) && (
-              <p className="text-xs text-yellow-400 mt-1">New namespace — a ResourceQuota will be created in &quot;{namespace}&quot;</p>
-            )}
+            </select>
           </div>
 
           {/* GPU Count */}
