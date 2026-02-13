@@ -44,7 +44,7 @@ let streamState: StreamState = {
   isDone: false,
   status: '',
   error: null,
-  since: '30d',
+  since: '0',
 }
 
 const subscribers = new Set<() => void>()

@@ -443,7 +443,7 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 		})
 	}
 
-	since := c.Query("since", "30d")
+	since := c.Query("since", "0")
 
 	// Try cache first
 	if reports, ok := h.cache.get(since); ok {
@@ -489,7 +489,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		})
 	}
 
-	since := c.Query("since", "30d")
+	since := c.Query("since", "0")
 
 	// If cache is fresh, send it all at once
 	if reports, ok := h.cache.get(since); ok {
