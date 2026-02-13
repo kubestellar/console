@@ -379,6 +379,11 @@ func (s *Server) setupRoutes() {
 		})
 	})
 
+	// Public API routes (no auth — only non-sensitive, publicly-available data)
+	// Nightly E2E status is public GitHub Actions data, safe for desktop widgets
+	nightlyE2EPublic := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
+	s.app.Get("/api/public/nightly-e2e/runs", nightlyE2EPublic.GetRuns)
+
 	// MCP handlers (used in protected routes below)
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient)
 	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
