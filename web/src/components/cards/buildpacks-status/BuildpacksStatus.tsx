@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server } from 'lucide-react'
-import { useClusters, useBuildpackImages } from '../../../hooks/useMCP'
+import { useClusters, useBuildpackImages, BuildpackImage } from '../../../hooks/useMCP'
 import { Skeleton } from '../../ui/Skeleton'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useCardData, CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../../lib/cards'
@@ -19,16 +19,6 @@ export type BuildpackStatus =
   | 'failed'
   | 'building'
   | 'unknown'
-
-interface BuildpackDisplay {
-  name: string
-  namespace: string
-  builder: string
-  image: string
-  status: 'succeeded' | 'failed' | 'building' | 'unknown'
-  updated: string
-  cluster?: string
-}
 
 type SortByOption = 'status' | 'name' | 'builder' | 'updated'
 
@@ -58,7 +48,7 @@ const STATUS_STYLES = {
   },
 }
 
-const statusOrder: Record<string, number> = {
+const STATUS_ORDER: Record<string, number> = {
   failed: 0,
   building: 1,
   unknown: 2,
@@ -89,19 +79,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
     consecutiveFailures,
   })
 
-  const allBuilds: BuildpackDisplay[] = useMemo(
-    () =>
-      allImages.map(img => ({
-        name: img.name,
-        namespace: img.namespace,
-        builder: img.builder,
-        image: img.image,
-        status: img.status,
-        updated: img.updated,
-        cluster: img.cluster,
-      })),
-    [allImages]
-  )
+  const allBuilds = allImages
 
   const namespacedBuilds = useMemo(() => {
     if (!selectedNamespace) return allBuilds
@@ -139,7 +117,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       sortDirection,
       setSortDirection,
     },
-  } = useCardData<BuildpackDisplay, SortByOption>(namespacedBuilds, {
+  } = useCardData<BuildpackImage, SortByOption>(namespacedBuilds, {
     filter: {
       searchFields: ['name', 'namespace', 'builder', 'image'],
       clusterField: 'cluster',
@@ -150,7 +128,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
       defaultField: 'status',
       defaultDirection: 'asc',
       comparators: {
-        status: (a, b) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5),
+        status: (a, b) => (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5),
         name: (a, b) => a.name.localeCompare(b.name),
         builder: (a, b) => a.builder.localeCompare(b.builder),
         updated: (a, b) =>
@@ -336,8 +314,6 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
                   : 'bg-secondary/30'
               } hover:bg-secondary/50`}
             >
-
-
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <Icon className={`w-4 h-4 ${styles.icon}`} />

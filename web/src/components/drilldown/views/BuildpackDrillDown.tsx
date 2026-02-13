@@ -13,6 +13,8 @@ import {
   type ResourceContext,
 } from '../../modals'
 
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585'
+
 interface Props {
   data: Record<string, unknown>
 }
@@ -135,52 +137,32 @@ export function BuildpackDrillDown({ data }: Props) {
     issues,
   })
 
-  /* ----------------------------------------
-     Agent Command Runner
-  ---------------------------------------- */
+  const runKubectl = async (args: string[]): Promise<string> => {
+    if (!agentConnected) return ''
 
-  const runKubectl = (args: string[]): Promise<string> => {
-    return new Promise(resolve => {
-      const ws = new WebSocket('ws://127.0.0.1:8585/ws')
-      const requestId = `kpack-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      let output = ''
+    try {
+      const response = await fetch(`${LOCAL_AGENT_URL}/kubectl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          context: cluster,
+          args,
+        }),
+      })
 
-      const timeout = setTimeout(() => {
-        ws.close()
-        resolve(output)
-      }, 15000)
-
-      ws.onopen = () => {
-        ws.send(
-          JSON.stringify({
-            id: requestId,
-            type: 'kubectl',
-            payload: { context: cluster, args },
-          })
-        )
+      if (!response.ok) {
+        throw new Error(`Agent returned ${response.status}`)
       }
 
-      ws.onmessage = event => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
-        }
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output)
-      }
-
-      ws.onerror = () => {
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output)
-      }
-    })
+      const data = await response.json()
+      return data?.output || ''
+    } catch (error) {
+      console.error('kubectl command failed:', error)
+      return ''
+    }
   }
-
-  /* ----------------------------------------
-     Fetchers
-  ---------------------------------------- */
 
   const fetchImageInfo = async () => {
     if (!agentConnected) return
@@ -305,10 +287,6 @@ export function BuildpackDrillDown({ data }: Props) {
     setLogsLoading(false)
   }
 
-  /* ----------------------------------------
-     Initial Load
-  ---------------------------------------- */
-
   useEffect(() => {
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
@@ -324,10 +302,6 @@ export function BuildpackDrillDown({ data }: Props) {
     if (activeTab === 'yaml' && !imageYAML) fetchYAML()
     if (activeTab === 'logs' && !logs) fetchLogs()
   }, [activeTab])
-
-  /* ----------------------------------------
-     Mission AI
-  ---------------------------------------- */
 
   const handleDiagnose = () => {
     startMission({

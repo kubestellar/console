@@ -4,10 +4,6 @@ import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 
-/* ================================
-   Types
-================================ */
-
 export interface BuildpackImage {
   name: string
   namespace: string
@@ -158,7 +154,8 @@ export function useBuildpackImages(cluster?: string) {
       try {
         const params = new URLSearchParams()
         if (cluster) params.append('cluster', cluster)
-
+        
+          // TODO: backend endpoint not yet implemented — returns 404 in live mode
         const url = `/api/gitops/buildpack-images?${params}`
 
         if (isDemoMode()) {
