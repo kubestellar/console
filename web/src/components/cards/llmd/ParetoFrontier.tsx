@@ -32,7 +32,7 @@ interface ScatterDot {
 
 const CONFIG_SHAPES: Record<string, string> = {
   standalone: 'circle',
-  'llm-d': 'diamond',
+  scheduling: 'diamond',
   disaggregated: 'star',
 }
 

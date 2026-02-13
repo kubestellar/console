@@ -155,7 +155,7 @@ export interface ParetoPoint {
   hardware: string
   hardwareMemory: number
   gpuCount: number
-  config: 'standalone' | 'llm-d' | 'disaggregated'
+  config: 'standalone' | 'scheduling' | 'disaggregated'
   framework: string
   seqLen: string
   throughputPerGpu: number
@@ -169,7 +169,7 @@ export interface LeaderboardRow {
   rank: number
   hardware: string
   model: string
-  config: 'standalone' | 'llm-d' | 'disaggregated'
+  config: 'standalone' | 'scheduling' | 'disaggregated'
   framework: string
   throughputPerGpu: number
   ttftP50Ms: number
@@ -532,9 +532,18 @@ export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
     const tpot = (r.results.request_performance.aggregate.latency.time_per_output_token?.p50 ?? 0) * 1000
     const p99 = (r.results.request_performance.aggregate.latency.request_latency?.p99 ?? 0) * 1000
 
-    const config: ParetoPoint['config'] = r.scenario.stack.some(c => c.standardized.role === 'prefill')
-      ? 'disaggregated'
-      : engine.standardized.tool === 'llm-d' ? 'llm-d' : 'standalone'
+    // Classify config by stack roles and experiment ID
+    const roles = r.scenario.stack.map(c => c.standardized.role).filter(Boolean)
+    const eid = r.run.eid ?? ''
+    const roleStrings = roles as string[]
+    const hasPrefill = roleStrings.includes('prefill')
+    const hasReplica = roleStrings.includes('replica')
+    let config: ParetoPoint['config'] = 'scheduling'
+    if (hasReplica || eid.includes('standalone')) {
+      config = 'standalone'
+    } else if (hasPrefill || eid.includes('modelservice')) {
+      config = 'disaggregated'
+    }
 
     return {
       uid: r.run.uid,
@@ -642,7 +651,7 @@ export const HARDWARE_COLORS: Record<string, string> = {
 
 /** Color palette for config types. */
 export const CONFIG_COLORS: Record<string, string> = {
-  'standalone': '#6b7280',
-  'llm-d': '#3b82f6',
+  'standalone': '#f59e0b',
+  'scheduling': '#3b82f6',
   'disaggregated': '#10b981',
 }

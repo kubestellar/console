@@ -505,9 +505,7 @@ export const DEMO_DATA_CARDS = new Set([
   // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
   // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
   'llmd_configurator',
-  // LLM-d benchmark dashboard cards — most now use live data via useCachedBenchmarkReports()
-  // Only performance_timeline stays demo-only (needs historical time-series data)
-  'performance_timeline',
+  // LLM-d benchmark dashboard cards — all now use live data via useCachedBenchmarkReports()
   // Provider health card uses real data from /settings/keys + useClusters()
   // Only shows demo data when getDemoMode() is true (handled inside the hook)
   // Kagenti cards - demo until kagenti-operator is installed on clusters

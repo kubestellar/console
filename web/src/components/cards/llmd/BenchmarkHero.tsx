@@ -131,9 +131,16 @@ export function BenchmarkHero() {
 
   const hw = getHardwareShort(engine?.standardized.accelerator?.model ?? '')
   const model = getModelShort(engine?.standardized.model?.name ?? '')
-  const config = latest.scenario.stack.some(c => c.standardized.role === 'prefill')
-    ? 'disaggregated'
-    : engine?.standardized.tool === 'llm-d' ? 'llm-d' : 'standalone'
+  const roles = latest.scenario.stack.map(c => c.standardized.role).filter(Boolean)
+  const eid = latest.run.eid ?? ''
+  const roleStrings = roles as string[]
+  const hasPrefill = roleStrings.includes('prefill')
+  const hasReplica = roleStrings.includes('replica')
+  const config = hasReplica || eid.includes('standalone')
+    ? 'standalone'
+    : hasPrefill || eid.includes('modelservice')
+      ? 'disaggregated'
+      : 'scheduling'
 
   const gpuUtil = gpuMetrics.find(m => m.name.includes('gpu_util'))?.samples?.[0]?.value ?? 0
   const gpuPower = gpuMetrics.find(m => m.name.includes('gpu_power'))?.samples?.[0]?.value ?? 0
