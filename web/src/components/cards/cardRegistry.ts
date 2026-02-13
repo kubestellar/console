@@ -147,6 +147,8 @@ const PDDisaggregation = lazy(() => _llmdBundle.then(m => ({ default: m.PDDisagg
 const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchmarks })))
 const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
 const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
+// Nightly E2E status card (shares the llmd barrel bundle)
+const NightlyE2EStatus = lazy(() => _llmdBundle.then(m => ({ default: m.NightlyE2EStatus })))
 // LLM-d benchmark dashboard cards (share the same barrel bundle)
 const BenchmarkHero = lazy(() => _llmdBundle.then(m => ({ default: m.BenchmarkHero })))
 const ParetoFrontier = lazy(() => _llmdBundle.then(m => ({ default: m.ParetoFrontier })))
@@ -381,6 +383,9 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llmd_benchmarks: LLMdBenchmarks,
   llmd_ai_insights: LLMdAIInsights,
   llmd_configurator: LLMdConfigurator,
+
+  // Nightly E2E status card
+  nightly_e2e_status: NightlyE2EStatus,
 
   // LLM-d benchmark dashboard cards
   benchmark_hero: BenchmarkHero,
@@ -636,6 +641,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   llmd_benchmarks: () => import('./llmd'),
   llmd_ai_insights: () => import('./llmd'),
   llmd_configurator: () => import('./llmd'),
+  // Nightly E2E status card — shares the llmd barrel bundle
+  nightly_e2e_status: () => import('./llmd'),
   // LLM-d benchmark dashboard cards — all share the llmd barrel bundle
   benchmark_hero: () => import('./llmd'),
   pareto_frontier: () => import('./llmd'),
@@ -745,6 +752,8 @@ export const LIVE_DATA_CARDS = new Set([
   'prow_ci_monitor',
   'github_ci_monitor',
   'cluster_health_monitor',
+  // Nightly E2E status card
+  'nightly_e2e_status',
   // Kagenti AI agent cards
   'kagenti_status',
   'kagenti_agent_fleet',
@@ -818,6 +827,9 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   llmd_benchmarks: 6,     // Benchmark charts
   llmd_ai_insights: 6,    // AI insights panel
   llmd_configurator: 4,   // Configurator showcase
+
+  // Nightly E2E status card (full-width)
+  nightly_e2e_status: 12,
 
   // LLM-d benchmark dashboard cards (all full-width)
   benchmark_hero: 12,

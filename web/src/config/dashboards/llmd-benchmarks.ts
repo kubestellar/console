@@ -13,6 +13,7 @@ export const llmdBenchmarksDashboardConfig: UnifiedDashboardConfig = {
   route: '/llm-d-benchmarks',
   statsType: 'ai-ml',
   cards: [
+    { id: 'bench-nightly-1', cardType: 'nightly_e2e_status', title: 'Nightly E2E Report', position: { w: 12, h: 4 } },
     { id: 'bench-hero-1', cardType: 'benchmark_hero', title: 'Latest Benchmark', position: { w: 12, h: 3 } },
     { id: 'bench-pareto-1', cardType: 'pareto_frontier', title: 'Pareto Frontier', position: { w: 12, h: 5 } },
     { id: 'bench-leaderboard-1', cardType: 'hardware_leaderboard', title: 'Hardware Leaderboard', position: { w: 12, h: 5 } },
