@@ -572,6 +572,7 @@ func (s *Server) setupRoutes() {
 	// Benchmark data routes (llm-d benchmark results from Google Drive)
 	benchmarkHandlers := handlers.NewBenchmarkHandlers(s.config.BenchmarkGoogleDriveAPIKey, s.config.BenchmarkFolderID)
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
+	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
 	// GPU reservation routes
 	gpuHandler := handlers.NewGPUHandler(s.store)

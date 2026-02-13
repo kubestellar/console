@@ -7,7 +7,7 @@
  */
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
-import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
@@ -82,10 +82,9 @@ function ImprovementLabel({ x, y, width, value }: { x?: string | number; y?: str
 }
 
 export function ThroughputComparison() {
-  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
-  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend', isLiveDataAvailable: !isFailed })
-  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
+  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [mode, setMode] = useState<MetricMode>('output')
   const [modelFilter, setModelFilter] = useState<string>('all')

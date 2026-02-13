@@ -739,6 +739,8 @@ export interface UseCacheResult<T> {
   refetch: () => Promise<void>
   /** Clear cache and refetch */
   clearAndRefetch: () => Promise<void>
+  /** Whether demoWhenEmpty fallback is active (live data returned empty, showing demo data) */
+  isDemoFallback: boolean
 }
 
 export function useCache<T>({
@@ -878,6 +880,7 @@ export function useCache<T>({
     isFailed: state.isFailed,
     consecutiveFailures: state.consecutiveFailures,
     lastRefresh: state.lastRefresh,
+    isDemoFallback: shouldFallbackToDemo || !effectiveEnabled,
     refetch,
     clearAndRefetch,
   }

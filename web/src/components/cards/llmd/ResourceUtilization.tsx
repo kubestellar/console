@@ -7,7 +7,7 @@
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Cpu, Zap, HardDrive } from 'lucide-react'
-import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
@@ -75,10 +75,9 @@ function MiniBar({ label, items, dataKey, unit, icon: Icon, color }: {
 }
 
 export function ResourceUtilization() {
-  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
-  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend', isLiveDataAvailable: !isFailed })
-  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
+  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [view, setView] = useState<ViewMode>('overview')
   const entries = useMemo(() => {

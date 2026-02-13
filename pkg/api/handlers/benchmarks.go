@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -301,10 +302,11 @@ func (c *benchmarkCache) set(reports []BenchmarkReport) {
 // ---------------------------------------------------------------------------
 
 const (
-	driveAPIBase       = "https://www.googleapis.com/drive/v3/files"
-	driveFolderMIME    = "application/vnd.google-apps.folder"
-	defaultCacheTTL    = 1 * time.Hour
-	benchmarkFilePrefix = "benchmark_report_stage_"
+	driveAPIBase        = "https://www.googleapis.com/drive/v3/files"
+	driveFolderMIME     = "application/vnd.google-apps.folder"
+	defaultCacheTTL     = 1 * time.Hour
+	benchmarkFilePrefix = "benchmark_report"
+	benchmarkFileSuffix = ".yaml"
 )
 
 // BenchmarkHandlers provides endpoints for llm-d benchmark data from Google Drive.
@@ -346,10 +348,9 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 	}
 
 	// Fetch from Google Drive
-	reports, err := h.fetchFromGoogleDrive()
+	reports, err := h.fetchAllReports()
 	if err != nil {
 		log.Printf("[benchmarks] Google Drive fetch error: %v", err)
-		// Return stale cache if available
 		h.cache.mu.RLock()
 		stale := h.cache.reports
 		h.cache.mu.RUnlock()
@@ -364,76 +365,211 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"reports": reports, "source": "live"})
 }
 
-// fetchFromGoogleDrive lists the folder hierarchy and downloads benchmark YAML files.
-func (h *BenchmarkHandlers) fetchFromGoogleDrive() ([]BenchmarkReport, error) {
-	// List top-level items in the folder
+// StreamReports streams benchmark reports via SSE as they are fetched from Google Drive.
+// Each SSE event contains a batch of reports from one run folder so cards render progressively.
+// Events: "batch" (reports array), "done" (final summary), "error".
+func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return c.JSON(fiber.Map{"reports": []interface{}{}, "source": "demo"})
+	}
+	if h.apiKey == "" {
+		return c.Status(503).JSON(fiber.Map{
+			"error":  "benchmark data not configured — set GOOGLE_DRIVE_API_KEY",
+			"source": "unavailable",
+		})
+	}
+
+	// If cache is fresh, send it all at once
+	if reports, ok := h.cache.get(); ok {
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		batch, _ := json.Marshal(reports)
+		fmt.Fprintf(c, "event: batch\ndata: %s\n\n", batch)
+		fmt.Fprintf(c, "event: done\ndata: {\"total\":%d,\"source\":\"cache\"}\n\n", len(reports))
+		return nil
+	}
+
+	// Stream from Google Drive
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		var allReports []BenchmarkReport
+		totalSent := 0
+
+		topLevel, err := h.listDriveFolder(h.folderID)
+		if err != nil {
+			fmt.Fprintf(w, "event: error\ndata: {\"error\":%q}\n\n", err.Error())
+			w.Flush()
+			return
+		}
+
+		for _, item := range topLevel {
+			if item.MimeType != driveFolderMIME {
+				continue
+			}
+			runFolders, err := h.listDriveFolder(item.ID)
+			if err != nil {
+				log.Printf("[benchmarks] Error listing experiment %q: %v", item.Name, err)
+				continue
+			}
+			for _, runItem := range runFolders {
+				if runItem.MimeType != driveFolderMIME {
+					continue
+				}
+				reports, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
+				if err != nil {
+					log.Printf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err)
+					continue
+				}
+				if len(reports) == 0 {
+					continue
+				}
+				allReports = append(allReports, reports...)
+				totalSent += len(reports)
+
+				batch, _ := json.Marshal(reports)
+				fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
+				w.Flush()
+				log.Printf("[benchmarks] Streamed %d from %q/%q (total: %d)", len(reports), item.Name, runItem.Name, totalSent)
+			}
+		}
+
+		h.cache.set(allReports)
+		log.Printf("[benchmarks] Stream complete: %d total reports", totalSent)
+		fmt.Fprintf(w, "event: done\ndata: {\"total\":%d,\"source\":\"live\"}\n\n", totalSent)
+		w.Flush()
+	})
+
+	return nil
+}
+
+// fetchAllReports is the non-streaming version for the standard endpoint.
+func (h *BenchmarkHandlers) fetchAllReports() ([]BenchmarkReport, error) {
 	topLevel, err := h.listDriveFolder(h.folderID)
 	if err != nil {
 		return nil, fmt.Errorf("listing top-level folder: %w", err)
 	}
 
 	var allReports []BenchmarkReport
-
 	for _, item := range topLevel {
-		if item.MimeType == driveFolderMIME {
-			// This is an experiment subfolder — list its contents (run folders)
-			runFolders, err := h.listDriveFolder(item.ID)
-			if err != nil {
-				log.Printf("[benchmarks] Error listing experiment folder %q: %v", item.Name, err)
+		if item.MimeType != driveFolderMIME {
+			continue
+		}
+		runFolders, err := h.listDriveFolder(item.ID)
+		if err != nil {
+			log.Printf("[benchmarks] Error listing experiment %q: %v", item.Name, err)
+			continue
+		}
+		for _, runItem := range runFolders {
+			if runItem.MimeType != driveFolderMIME {
 				continue
 			}
-			for _, runItem := range runFolders {
-				if runItem.MimeType == driveFolderMIME {
-					// This is a run folder — look for benchmark_report_stage_*.yaml files
-					reports, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
-					if err != nil {
-						log.Printf("[benchmarks] Error fetching run folder %q/%q: %v", item.Name, runItem.Name, err)
-						continue
-					}
-					allReports = append(allReports, reports...)
-				}
+			reports, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
+			if err != nil {
+				log.Printf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err)
+				continue
 			}
+			allReports = append(allReports, reports...)
 		}
 	}
-
 	return allReports, nil
 }
 
-// fetchRunFolder downloads and parses all benchmark stage YAML files from a run folder.
+// fetchRunFolder downloads benchmark YAML files from a run folder.
+// Handles nested layouts: run → results → individual-result → benchmark_report*.yaml
 func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName string) ([]BenchmarkReport, error) {
-	files, err := h.listDriveFolder(folderID)
+	items, err := h.listDriveFolder(folderID)
 	if err != nil {
 		return nil, err
 	}
 
+	// First: look for benchmark YAML files directly in this folder
 	var reports []BenchmarkReport
-	for _, f := range files {
-		if !strings.HasPrefix(f.Name, benchmarkFilePrefix) || !strings.HasSuffix(f.Name, ".yaml") {
+	var subfolders []driveFile
+	for _, f := range items {
+		if f.MimeType == driveFolderMIME {
+			subfolders = append(subfolders, f)
 			continue
 		}
-
-		data, err := h.downloadDriveFile(f.ID)
-		if err != nil {
-			log.Printf("[benchmarks] Error downloading %q: %v", f.Name, err)
-			continue
+		if strings.HasPrefix(f.Name, benchmarkFilePrefix) && strings.HasSuffix(f.Name, benchmarkFileSuffix) {
+			report, err := h.downloadAndParseReport(f, experimentName, runName)
+			if err != nil {
+				continue
+			}
+			reports = append(reports, report)
 		}
-
-		var raw rawV1Report
-		if err := yaml.Unmarshal(data, &raw); err != nil {
-			log.Printf("[benchmarks] Error parsing %q: %v", f.Name, err)
-			continue
-		}
-
-		report := adaptV1ToV2(raw, experimentName, runName)
-		reports = append(reports, report)
+	}
+	if len(reports) > 0 {
+		return reports, nil
 	}
 
+	// No direct files — look for "results" subfolder containing individual result folders
+	for _, sub := range subfolders {
+		if !strings.EqualFold(sub.Name, "results") {
+			continue
+		}
+		resultFolders, err := h.listDriveFolder(sub.ID)
+		if err != nil {
+			log.Printf("[benchmarks] Error listing results in %q/%q: %v", experimentName, runName, err)
+			continue
+		}
+		for _, rf := range resultFolders {
+			if rf.MimeType != driveFolderMIME {
+				continue
+			}
+			r, err := h.collectBenchmarkFiles(rf.ID, experimentName, runName)
+			if err != nil {
+				continue
+			}
+			reports = append(reports, r...)
+		}
+	}
 	return reports, nil
+}
+
+// collectBenchmarkFiles finds and parses benchmark YAML files in a single folder.
+func (h *BenchmarkHandlers) collectBenchmarkFiles(folderID, experimentName, runName string) ([]BenchmarkReport, error) {
+	files, err := h.listDriveFolder(folderID)
+	if err != nil {
+		return nil, err
+	}
+	var reports []BenchmarkReport
+	for _, f := range files {
+		if f.MimeType == driveFolderMIME {
+			continue
+		}
+		if strings.HasPrefix(f.Name, benchmarkFilePrefix) && strings.HasSuffix(f.Name, benchmarkFileSuffix) {
+			report, err := h.downloadAndParseReport(f, experimentName, runName)
+			if err != nil {
+				continue
+			}
+			reports = append(reports, report)
+		}
+	}
+	return reports, nil
+}
+
+// downloadAndParseReport downloads a single benchmark YAML file and parses it.
+func (h *BenchmarkHandlers) downloadAndParseReport(f driveFile, experimentName, runName string) (BenchmarkReport, error) {
+	data, err := h.downloadDriveFile(f.ID)
+	if err != nil {
+		log.Printf("[benchmarks] Error downloading %q: %v", f.Name, err)
+		return BenchmarkReport{}, err
+	}
+	var raw rawV1Report
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		log.Printf("[benchmarks] Error parsing %q: %v", f.Name, err)
+		return BenchmarkReport{}, err
+	}
+	return adaptV1ToV2(raw, experimentName, runName), nil
 }
 
 // listDriveFolder lists files in a Google Drive folder.
 func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error) {
-	url := fmt.Sprintf("%s?q='%s'+in+parents&key=%s&fields=files(id,name,mimeType)&pageSize=1000",
+	url := fmt.Sprintf("%s?q='%s'+in+parents&key=%s&fields=files(id,name,mimeType)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true",
 		driveAPIBase, folderID, h.apiKey)
 
 	resp, err := h.client.Get(url)
@@ -457,7 +593,7 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 
 // downloadDriveFile downloads file content from Google Drive.
 func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
-	url := fmt.Sprintf("%s/%s?alt=media&key=%s", driveAPIBase, fileID, h.apiKey)
+	url := fmt.Sprintf("%s/%s?alt=media&key=%s&supportsAllDrives=true", driveAPIBase, fileID, h.apiKey)
 
 	resp, err := h.client.Get(url)
 	if err != nil {

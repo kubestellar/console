@@ -7,7 +7,7 @@
  */
 import { useState, useMemo } from 'react'
 import { Trophy, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react'
-import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
@@ -38,10 +38,9 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 }
 
 export function HardwareLeaderboard() {
-  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
-  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend', isLiveDataAvailable: !isFailed })
-  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
+  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')

@@ -6,7 +6,7 @@
  */
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
-import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
@@ -72,10 +72,9 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 }
 
 export function LatencyBreakdown() {
-  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
-  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend', isLiveDataAvailable: !isFailed })
-  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
-  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
+  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [tab, setTab] = useState<MetricTab>('ttft')
   const [modelFilter, setModelFilter] = useState<string>('all')
