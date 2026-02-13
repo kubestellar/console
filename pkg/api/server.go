@@ -742,7 +742,7 @@ func LoadConfigFromEnv() Config {
 		// Skip onboarding questionnaire for new users
 		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
 		// Benchmark data from Google Drive
-		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
+		BenchmarkGoogleDriveAPIKey: getEnvOrDefault("GOOGLE_DRIVE_API_KEY", "AIzaSyADkXfBwkPkDOfYVtsKC_KNtM3B0P59BSQ"),
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
 	}
 }

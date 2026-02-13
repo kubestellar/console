@@ -89,6 +89,8 @@ export function BenchmarkHero() {
 
   const { latest, prev, engine, gpuMetrics } = useMemo(() => {
     const reports = effectiveReports
+    if (reports.length === 0) return { latest: null, prev: null, engine: null, gpuMetrics: [] }
+
     // Pick the best llm-d disaggregated result as "latest"
     const llmdReports = reports.filter(r =>
       r.scenario.stack.some(c => c.standardized.role === 'prefill')
@@ -98,6 +100,8 @@ export function BenchmarkHero() {
       const tb = b.results.request_performance.aggregate.throughput.output_token_rate?.mean ?? 0
       return tb - ta
     })[0] ?? reports[0]
+
+    if (!best) return { latest: null, prev: null, engine: null, gpuMetrics: [] }
 
     // Find a standalone baseline as "previous"
     const eng = best.scenario.stack.find(c => c.standardized.kind === 'inference_engine')
@@ -111,6 +115,8 @@ export function BenchmarkHero() {
     const gpuM = best.results.observability?.metrics ?? []
     return { latest: best, prev: baseline, engine: eng, gpuMetrics: gpuM }
   }, [effectiveReports])
+
+  if (!latest) return <div className="p-5 h-full flex items-center justify-center text-slate-400 text-sm">No benchmark data available</div>
 
   const agg = latest.results.request_performance.aggregate
   const prevAgg = prev?.results.request_performance.aggregate
