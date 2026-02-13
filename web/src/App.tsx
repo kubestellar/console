@@ -55,6 +55,7 @@ const Arcade = lazy(() => import('./components/arcade/Arcade').then(m => ({ defa
 const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ default: m.Deploy })))
 const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
 const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => ({ default: m.AIAgents })))
+const LLMdBenchmarks = lazy(() => import('./components/llmd-benchmarks/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
 const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
 const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
@@ -97,6 +98,7 @@ if (typeof window !== 'undefined') {
       () => import('./components/deploy/Deploy'),
       () => import('./components/aiml/AIML'),
       () => import('./components/aiagents/AIAgents'),
+      () => import('./components/llmd-benchmarks/LLMdBenchmarks'),
       () => import('./components/cicd/CICD'),
       () => import('./components/marketplace/Marketplace'),
     ]
@@ -563,6 +565,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                   <AIAgents />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/llm-d-benchmarks"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                  <LLMdBenchmarks />
               </Layout>
             </ProtectedRoute>
           }
