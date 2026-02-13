@@ -189,7 +189,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 			}(cl.Name)
 		}
 
-		wg.Wait()
+		waitWithDeadline(&wg, maxResponseDeadline)
 		return c.JSON(fiber.Map{"releases": allReleases})
 	}
 
@@ -272,7 +272,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			}(cl.Name)
 		}
 
-		wg.Wait()
+		waitWithDeadline(&wg, maxResponseDeadline)
 		return c.JSON(fiber.Map{"kustomizations": allKustomizations})
 	}
 
@@ -393,7 +393,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 			}(cl.Name)
 		}
 
-		wg.Wait()
+		waitWithDeadline(&wg, maxResponseDeadline)
 		return c.JSON(fiber.Map{"operators": allOperators})
 	}
 

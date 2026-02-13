@@ -11,6 +11,32 @@ import (
 	"github.com/kubestellar/console/pkg/mcp"
 )
 
+// maxResponseDeadline is the maximum time any multi-cluster API handler will
+// wait before returning whatever data has been collected from responsive
+// clusters. Individual per-cluster timeouts (15-45s) are kept so that slow
+// but reachable clusters still get their full allotment; this deadline only
+// caps the total wall-clock time the HTTP response is held open.
+const maxResponseDeadline = 5 * time.Second
+
+// waitWithDeadline waits for all goroutines in wg to finish, but returns
+// early if the deadline is reached. Goroutines that haven't finished
+// continue running in the background (their results are simply not
+// included in the current response). Returns true if the deadline was
+// hit (partial results), false if all goroutines completed in time.
+func waitWithDeadline(wg *sync.WaitGroup, deadline time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return false
+	case <-time.After(deadline):
+		return true
+	}
+}
+
 // MCPHandlers handles MCP-related API endpoints
 type MCPHandlers struct {
 	bridge    *mcp.Bridge
@@ -84,14 +110,10 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 
-		// Enrich with health data (parallel fetch)
-		healthData, _ := h.k8sClient.GetAllClusterHealth(c.Context())
-		healthMap := make(map[string]*k8s.ClusterHealth)
-		for i := range healthData {
-			healthMap[healthData[i].Cluster] = &healthData[i]
-		}
-
-		// Merge health data into clusters
+		// Enrich with cached health data only — never block on live health
+		// checks here. The background health refresh (or explicit
+		// /api/mcp/health/all calls) populates the cache asynchronously.
+		healthMap := h.k8sClient.GetCachedHealth()
 		for i := range clusters {
 			if health, ok := healthMap[clusters[i].Name]; ok {
 				clusters[i].Healthy = health.Healthy
@@ -99,6 +121,13 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 				clusters[i].PodCount = health.PodCount
 			}
 		}
+
+		// Kick off a background health refresh so subsequent calls get fresh data
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			h.k8sClient.GetAllClusterHealth(ctx)
+		}()
 
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}
@@ -205,7 +234,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"pods": allPods, "source": "k8s"})
 		}
 
@@ -268,7 +297,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
@@ -320,7 +349,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
@@ -372,7 +401,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"operators": allStatus, "source": "k8s"})
 		}
 
@@ -424,7 +453,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"nodes": allNodes, "source": "k8s"})
 		}
 
@@ -478,7 +507,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 
@@ -531,7 +560,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"deployments": allDeployments, "source": "k8s"})
 		}
 
@@ -583,7 +612,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"services": allServices, "source": "k8s"})
 		}
 
@@ -635,7 +664,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"jobs": allJobs, "source": "k8s"})
 		}
 
@@ -687,7 +716,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"hpas": allHPAs, "source": "k8s"})
 		}
 
@@ -739,7 +768,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"configmaps": allConfigMaps, "source": "k8s"})
 		}
 
@@ -791,7 +820,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"secrets": allSecrets, "source": "k8s"})
 		}
 
@@ -843,7 +872,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"serviceAccounts": allServiceAccounts, "source": "k8s"})
 		}
 
@@ -895,7 +924,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"pvcs": allPVCs, "source": "k8s"})
 		}
 
@@ -946,7 +975,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"pvs": allPVs, "source": "k8s"})
 		}
 
@@ -998,7 +1027,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"resourceQuotas": allQuotas, "source": "k8s"})
 		}
 
@@ -1050,7 +1079,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"limitRanges": allRanges, "source": "k8s"})
 		}
 
@@ -1215,7 +1244,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 
 			// Sort by timestamp (most recent first) and limit total
 			if len(allEvents) > limit {
@@ -1289,7 +1318,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 
 			// Limit total
 			if len(allEvents) > limit {
@@ -1348,7 +1377,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 				}(cl.Name)
 			}
 
-			wg.Wait()
+			waitWithDeadline(&wg, maxResponseDeadline)
 			return c.JSON(fiber.Map{"issues": allIssues, "source": "k8s"})
 		}
 

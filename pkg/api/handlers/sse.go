@@ -89,7 +89,7 @@ func streamClusters(
 			}(cl.Name)
 		}
 
-		wg.Wait()
+		waitWithDeadline(&wg, maxResponseDeadline)
 
 		writeSSEEvent(w, "done", fiber.Map{
 			"totalClusters":     totalClusters,

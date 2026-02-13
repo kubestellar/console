@@ -2868,6 +2868,19 @@ func formatAge(t time.Time) string {
 	}
 }
 
+// GetCachedHealth returns all cached cluster health data without making any
+// network calls. Returns a map of context-name → *ClusterHealth. Entries that
+// have never been checked are simply absent from the map.
+func (m *MultiClusterClient) GetCachedHealth() map[string]*ClusterHealth {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	result := make(map[string]*ClusterHealth, len(m.healthCache))
+	for k, v := range m.healthCache {
+		result[k] = v
+	}
+	return result
+}
+
 // GetAllClusterHealth returns health status for all clusters
 func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]ClusterHealth, error) {
 	clusters, err := m.ListClusters(ctx)
