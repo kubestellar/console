@@ -1,14 +1,14 @@
 {
-  "timestamp": "2026-02-12T04:37:08.158Z",
+  "timestamp": "2026-02-13T06:05:38.581Z",
   "dashboards": [
     {
       "dashboardId": "main",
       "dashboardName": "Dashboard",
       "route": "/",
       "mode": "demo",
-      "navigationStartMs": 1770871031973,
-      "firstCardVisibleMs": 832,
-      "lastCardVisibleMs": 832,
+      "navigationStartMs": 1770962746200,
+      "firstCardVisibleMs": 1109,
+      "lastCardVisibleMs": 1109,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -17,8 +17,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -27,8 +27,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -37,8 +37,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -47,8 +47,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -57,8 +57,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -67,8 +67,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -77,8 +77,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -87,8 +87,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
           "timedOut": false
         },
         {
@@ -97,8 +97,352 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 832,
-          "timeToFirstContent": 832,
+          "skeletonDuration": 1109,
+          "timeToFirstContent": 1109,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "main",
+      "dashboardName": "Dashboard",
+      "route": "/",
+      "mode": "live",
+      "navigationStartMs": 1770962748048,
+      "firstCardVisibleMs": 939,
+      "lastCardVisibleMs": 1309,
+      "totalApiRequests": 24,
+      "cards": [
+        {
+          "cardType": "console_ai_offline_detection",
+          "cardId": "default-offline",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 939,
+          "timeToFirstContent": 939,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 939,
+          "timeToFirstContent": 939,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30717,
+          "timedOut": true
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30724,
+          "timedOut": true
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 939,
+          "timeToFirstContent": 939,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 939,
+          "timeToFirstContent": 939,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "default-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30741,
+          "timedOut": true
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30750,
+          "timedOut": true
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30756,
+          "timedOut": true
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "demo-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1086,
+          "timeToFirstContent": 1086,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "demo-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1086,
+          "timeToFirstContent": 1086,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "demo-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1086,
+          "timeToFirstContent": 1086,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "demo-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1086,
+          "timeToFirstContent": 1086,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "demo-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1309,
+          "timeToFirstContent": 1309,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "demo-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1086,
+          "timeToFirstContent": 1086,
+          "timedOut": false
+        },
+        {
+          "cardType": "app_status",
+          "cardId": "demo-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 130,
+          "apiTotalTime": 202,
+          "skeletonDuration": 1086,
+          "timeToFirstContent": 1086,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "main",
+      "dashboardName": "Dashboard",
+      "route": "/",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962779075,
+      "firstCardVisibleMs": 1075,
+      "lastCardVisibleMs": 1213,
+      "totalApiRequests": 23,
+      "cards": [
+        {
+          "cardType": "console_ai_offline_detection",
+          "cardId": "default-offline",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1075,
+          "timeToFirstContent": 1075,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1075,
+          "timeToFirstContent": 1075,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30837,
+          "timedOut": true
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30850,
+          "timedOut": true
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30859,
+          "timedOut": true
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1075,
+          "timeToFirstContent": 1075,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "default-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1075,
+          "timeToFirstContent": 1075,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 25000,
+          "timeToFirstContent": 30865,
+          "timedOut": true
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1075,
+          "timeToFirstContent": 1075,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "demo-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "demo-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "demo-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "demo-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "demo-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "demo-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
+          "timedOut": false
+        },
+        {
+          "cardType": "app_status",
+          "cardId": "demo-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 216,
+          "skeletonDuration": 1213,
+          "timeToFirstContent": 1213,
           "timedOut": false
         }
       ]
@@ -108,9 +452,9 @@
       "dashboardName": "Clusters",
       "route": "/clusters",
       "mode": "demo",
-      "navigationStartMs": 1770871033435,
-      "firstCardVisibleMs": 1106,
-      "lastCardVisibleMs": 1106,
+      "navigationStartMs": 1770962810077,
+      "firstCardVisibleMs": 747,
+      "lastCardVisibleMs": 747,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -119,8 +463,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -129,8 +473,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -139,8 +483,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -149,8 +493,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -159,8 +503,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -169,8 +513,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -179,8 +523,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -189,8 +533,192 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1106,
-          "timeToFirstContent": 1106,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "clusters",
+      "dashboardName": "Clusters",
+      "route": "/clusters",
+      "mode": "live",
+      "navigationStartMs": 1770962811529,
+      "firstCardVisibleMs": 849,
+      "lastCardVisibleMs": 1053,
+      "totalApiRequests": 17,
+      "cards": [
+        {
+          "cardType": "console_ai_offline_detection",
+          "cardId": "default-console_ai_offline_detection-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware_health-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-cluster_health-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 1053,
+          "timeToFirstContent": 1053,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_groups",
+          "cardId": "default-cluster_groups-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-cluster_metrics-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_comparison",
+          "cardId": "default-cluster_comparison-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 1053,
+          "timeToFirstContent": 1053,
+          "timedOut": false
+        },
+        {
+          "cardType": "provider_health",
+          "cardId": "default-provider_health-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_locations",
+          "cardId": "default-cluster_locations-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 199,
+          "skeletonDuration": 1053,
+          "timeToFirstContent": 1053,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "clusters",
+      "dashboardName": "Clusters",
+      "route": "/clusters",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962813033,
+      "firstCardVisibleMs": 920,
+      "lastCardVisibleMs": 1035,
+      "totalApiRequests": 17,
+      "cards": [
+        {
+          "cardType": "console_ai_offline_detection",
+          "cardId": "default-console_ai_offline_detection-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 920,
+          "timeToFirstContent": 920,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware_health-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 920,
+          "timeToFirstContent": 920,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-cluster_health-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 1035,
+          "timeToFirstContent": 1035,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_groups",
+          "cardId": "default-cluster_groups-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 920,
+          "timeToFirstContent": 920,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-cluster_metrics-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 920,
+          "timeToFirstContent": 920,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_comparison",
+          "cardId": "default-cluster_comparison-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 1035,
+          "timeToFirstContent": 1035,
+          "timedOut": false
+        },
+        {
+          "cardType": "provider_health",
+          "cardId": "default-provider_health-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 920,
+          "timeToFirstContent": 920,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_locations",
+          "cardId": "default-cluster_locations-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 186,
+          "apiTotalTime": 224,
+          "skeletonDuration": 1035,
+          "timeToFirstContent": 1035,
           "timedOut": false
         }
       ]
@@ -200,9 +728,9 @@
       "dashboardName": "Compute",
       "route": "/compute",
       "mode": "demo",
-      "navigationStartMs": 1770871035177,
-      "firstCardVisibleMs": 833,
-      "lastCardVisibleMs": 833,
+      "navigationStartMs": 1770962814614,
+      "firstCardVisibleMs": 728,
+      "lastCardVisibleMs": 728,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -211,8 +739,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 833,
-          "timeToFirstContent": 833,
+          "skeletonDuration": 728,
+          "timeToFirstContent": 728,
           "timedOut": false
         },
         {
@@ -221,8 +749,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 833,
-          "timeToFirstContent": 833,
+          "skeletonDuration": 728,
+          "timeToFirstContent": 728,
           "timedOut": false
         },
         {
@@ -231,8 +759,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 833,
-          "timeToFirstContent": 833,
+          "skeletonDuration": 728,
+          "timeToFirstContent": 728,
           "timedOut": false
         },
         {
@@ -241,8 +769,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 833,
-          "timeToFirstContent": 833,
+          "skeletonDuration": 728,
+          "timeToFirstContent": 728,
           "timedOut": false
         },
         {
@@ -251,8 +779,132 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 833,
-          "timeToFirstContent": 833,
+          "skeletonDuration": 728,
+          "timeToFirstContent": 728,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "compute",
+      "dashboardName": "Compute",
+      "route": "/compute",
+      "mode": "live",
+      "navigationStartMs": 1770962816017,
+      "firstCardVisibleMs": 778,
+      "lastCardVisibleMs": 1105,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-cluster_health-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 127,
+          "apiTotalTime": 218,
+          "skeletonDuration": 999,
+          "timeToFirstContent": 999,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 127,
+          "apiTotalTime": 218,
+          "skeletonDuration": 999,
+          "timeToFirstContent": 999,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 127,
+          "apiTotalTime": 218,
+          "skeletonDuration": 999,
+          "timeToFirstContent": 999,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-cluster_metrics-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 127,
+          "apiTotalTime": 218,
+          "skeletonDuration": 778,
+          "timeToFirstContent": 778,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-pod_issues-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 127,
+          "apiTotalTime": 218,
+          "skeletonDuration": 1105,
+          "timeToFirstContent": 1105,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "compute",
+      "dashboardName": "Compute",
+      "route": "/compute",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962817473,
+      "firstCardVisibleMs": 758,
+      "lastCardVisibleMs": 1095,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-cluster_health-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 167,
+          "apiTotalTime": 240,
+          "skeletonDuration": 991,
+          "timeToFirstContent": 991,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 167,
+          "apiTotalTime": 240,
+          "skeletonDuration": 991,
+          "timeToFirstContent": 991,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 167,
+          "apiTotalTime": 240,
+          "skeletonDuration": 1095,
+          "timeToFirstContent": 1095,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-cluster_metrics-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 167,
+          "apiTotalTime": 240,
+          "skeletonDuration": 758,
+          "timeToFirstContent": 758,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-pod_issues-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 167,
+          "apiTotalTime": 240,
+          "skeletonDuration": 991,
+          "timeToFirstContent": 991,
           "timedOut": false
         }
       ]
@@ -262,9 +914,9 @@
       "dashboardName": "Security",
       "route": "/security",
       "mode": "demo",
-      "navigationStartMs": 1770871036636,
-      "firstCardVisibleMs": 835,
-      "lastCardVisibleMs": 835,
+      "navigationStartMs": 1770962818892,
+      "firstCardVisibleMs": 786,
+      "lastCardVisibleMs": 786,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -273,8 +925,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 835,
-          "timeToFirstContent": 835,
+          "skeletonDuration": 786,
+          "timeToFirstContent": 786,
           "timedOut": false
         },
         {
@@ -283,8 +935,72 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 835,
-          "timeToFirstContent": 835,
+          "skeletonDuration": 786,
+          "timeToFirstContent": 786,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "security",
+      "dashboardName": "Security",
+      "route": "/security",
+      "mode": "live",
+      "navigationStartMs": 1770962820310,
+      "firstCardVisibleMs": 665,
+      "lastCardVisibleMs": 665,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "security_issues",
+          "cardId": "default-security_issues-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 237,
+          "skeletonDuration": 665,
+          "timeToFirstContent": 665,
+          "timedOut": false
+        },
+        {
+          "cardType": "active_alerts",
+          "cardId": "default-active_alerts-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 155,
+          "apiTotalTime": 237,
+          "skeletonDuration": 665,
+          "timeToFirstContent": 665,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "security",
+      "dashboardName": "Security",
+      "route": "/security",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962821638,
+      "firstCardVisibleMs": 766,
+      "lastCardVisibleMs": 766,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "security_issues",
+          "cardId": "default-security_issues-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 123,
+          "apiTotalTime": 217,
+          "skeletonDuration": 766,
+          "timeToFirstContent": 766,
+          "timedOut": false
+        },
+        {
+          "cardType": "active_alerts",
+          "cardId": "default-active_alerts-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 123,
+          "apiTotalTime": 217,
+          "skeletonDuration": 766,
+          "timeToFirstContent": 766,
           "timedOut": false
         }
       ]
@@ -294,9 +1010,9 @@
       "dashboardName": "GitOps",
       "route": "/gitops",
       "mode": "demo",
-      "navigationStartMs": 1770871038104,
-      "firstCardVisibleMs": 809,
-      "lastCardVisibleMs": 809,
+      "navigationStartMs": 1770962823029,
+      "firstCardVisibleMs": 720,
+      "lastCardVisibleMs": 720,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -305,8 +1021,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 809,
-          "timeToFirstContent": 809,
+          "skeletonDuration": 720,
+          "timeToFirstContent": 720,
           "timedOut": false
         },
         {
@@ -315,8 +1031,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 809,
-          "timeToFirstContent": 809,
+          "skeletonDuration": 720,
+          "timeToFirstContent": 720,
           "timedOut": false
         },
         {
@@ -325,8 +1041,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 809,
-          "timeToFirstContent": 809,
+          "skeletonDuration": 720,
+          "timeToFirstContent": 720,
           "timedOut": false
         },
         {
@@ -335,8 +1051,112 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 809,
-          "timeToFirstContent": 809,
+          "skeletonDuration": 720,
+          "timeToFirstContent": 720,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "gitops",
+      "dashboardName": "GitOps",
+      "route": "/gitops",
+      "mode": "live",
+      "navigationStartMs": 1770962824407,
+      "firstCardVisibleMs": 754,
+      "lastCardVisibleMs": 987,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 152,
+          "apiTotalTime": 237,
+          "skeletonDuration": 987,
+          "timeToFirstContent": 987,
+          "timedOut": false
+        },
+        {
+          "cardType": "gitops_drift",
+          "cardId": "default-gitops_drift-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 152,
+          "apiTotalTime": 237,
+          "skeletonDuration": 754,
+          "timeToFirstContent": 754,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 152,
+          "apiTotalTime": 237,
+          "skeletonDuration": 869,
+          "timeToFirstContent": 869,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 152,
+          "apiTotalTime": 237,
+          "skeletonDuration": 869,
+          "timeToFirstContent": 869,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "gitops",
+      "dashboardName": "GitOps",
+      "route": "/gitops",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962825874,
+      "firstCardVisibleMs": 1009,
+      "lastCardVisibleMs": 1125,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 1125,
+          "timeToFirstContent": 1125,
+          "timedOut": false
+        },
+        {
+          "cardType": "gitops_drift",
+          "cardId": "default-gitops_drift-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 1009,
+          "timeToFirstContent": 1009,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 1125,
+          "timeToFirstContent": 1125,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 1125,
+          "timeToFirstContent": 1125,
           "timedOut": false
         }
       ]
@@ -346,9 +1166,9 @@
       "dashboardName": "Pods",
       "route": "/pods",
       "mode": "demo",
-      "navigationStartMs": 1770871039564,
-      "firstCardVisibleMs": 1010,
-      "lastCardVisibleMs": 1010,
+      "navigationStartMs": 1770962827559,
+      "firstCardVisibleMs": 860,
+      "lastCardVisibleMs": 860,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -357,8 +1177,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1010,
-          "timeToFirstContent": 1010,
+          "skeletonDuration": 860,
+          "timeToFirstContent": 860,
           "timedOut": false
         },
         {
@@ -367,8 +1187,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1010,
-          "timeToFirstContent": 1010,
+          "skeletonDuration": 860,
+          "timeToFirstContent": 860,
           "timedOut": false
         },
         {
@@ -377,8 +1197,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1010,
-          "timeToFirstContent": 1010,
+          "skeletonDuration": 860,
+          "timeToFirstContent": 860,
           "timedOut": false
         },
         {
@@ -387,8 +1207,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1010,
-          "timeToFirstContent": 1010,
+          "skeletonDuration": 860,
+          "timeToFirstContent": 860,
           "timedOut": false
         },
         {
@@ -397,8 +1217,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1010,
-          "timeToFirstContent": 1010,
+          "skeletonDuration": 860,
+          "timeToFirstContent": 860,
           "timedOut": false
         },
         {
@@ -407,8 +1227,152 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1010,
-          "timeToFirstContent": 1010,
+          "skeletonDuration": 860,
+          "timeToFirstContent": 860,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "pods",
+      "dashboardName": "Pods",
+      "route": "/pods",
+      "mode": "live",
+      "navigationStartMs": 1770962829089,
+      "firstCardVisibleMs": 854,
+      "lastCardVisibleMs": 1081,
+      "totalApiRequests": 24,
+      "cards": [
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-pod_issues-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 157,
+          "apiTotalTime": 222,
+          "skeletonDuration": 854,
+          "timeToFirstContent": 854,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_health_trend",
+          "cardId": "default-pod_health_trend-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 157,
+          "apiTotalTime": 222,
+          "skeletonDuration": 854,
+          "timeToFirstContent": 854,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 157,
+          "apiTotalTime": 222,
+          "skeletonDuration": 970,
+          "timeToFirstContent": 970,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 157,
+          "apiTotalTime": 222,
+          "skeletonDuration": 854,
+          "timeToFirstContent": 854,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 157,
+          "apiTotalTime": 222,
+          "skeletonDuration": 1081,
+          "timeToFirstContent": 1081,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_overview",
+          "cardId": "default-namespace_overview-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 157,
+          "apiTotalTime": 222,
+          "skeletonDuration": 1081,
+          "timeToFirstContent": 1081,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "pods",
+      "dashboardName": "Pods",
+      "route": "/pods",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962830610,
+      "firstCardVisibleMs": 754,
+      "lastCardVisibleMs": 981,
+      "totalApiRequests": 24,
+      "cards": [
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-pod_issues-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 139,
+          "apiTotalTime": 216,
+          "skeletonDuration": 981,
+          "timeToFirstContent": 981,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_health_trend",
+          "cardId": "default-pod_health_trend-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 139,
+          "apiTotalTime": 216,
+          "skeletonDuration": 754,
+          "timeToFirstContent": 754,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 139,
+          "apiTotalTime": 216,
+          "skeletonDuration": 981,
+          "timeToFirstContent": 981,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 139,
+          "apiTotalTime": 216,
+          "skeletonDuration": 754,
+          "timeToFirstContent": 754,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 139,
+          "apiTotalTime": 216,
+          "skeletonDuration": 981,
+          "timeToFirstContent": 981,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_overview",
+          "cardId": "default-namespace_overview-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 139,
+          "apiTotalTime": 216,
+          "skeletonDuration": 981,
+          "timeToFirstContent": 981,
           "timedOut": false
         }
       ]
@@ -418,9 +1382,9 @@
       "dashboardName": "Deployments",
       "route": "/deployments",
       "mode": "demo",
-      "navigationStartMs": 1770871041212,
-      "firstCardVisibleMs": 945,
-      "lastCardVisibleMs": 945,
+      "navigationStartMs": 1770962832042,
+      "firstCardVisibleMs": 730,
+      "lastCardVisibleMs": 730,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -429,8 +1393,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 945,
-          "timeToFirstContent": 945,
+          "skeletonDuration": 730,
+          "timeToFirstContent": 730,
           "timedOut": false
         },
         {
@@ -439,8 +1403,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 945,
-          "timeToFirstContent": 945,
+          "skeletonDuration": 730,
+          "timeToFirstContent": 730,
           "timedOut": false
         },
         {
@@ -449,8 +1413,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 945,
-          "timeToFirstContent": 945,
+          "skeletonDuration": 730,
+          "timeToFirstContent": 730,
           "timedOut": false
         },
         {
@@ -459,8 +1423,112 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 945,
-          "timeToFirstContent": 945,
+          "skeletonDuration": 730,
+          "timeToFirstContent": 730,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "deployments",
+      "dashboardName": "Deployments",
+      "route": "/deployments",
+      "mode": "live",
+      "navigationStartMs": 1770962833414,
+      "firstCardVisibleMs": 676,
+      "lastCardVisibleMs": 1005,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 174,
+          "apiTotalTime": 238,
+          "skeletonDuration": 1005,
+          "timeToFirstContent": 1005,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 174,
+          "apiTotalTime": 238,
+          "skeletonDuration": 801,
+          "timeToFirstContent": 801,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_progress",
+          "cardId": "default-deployment_progress-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 174,
+          "apiTotalTime": 238,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        },
+        {
+          "cardType": "workload_deployment",
+          "cardId": "default-workload_deployment-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 174,
+          "apiTotalTime": 238,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "deployments",
+      "dashboardName": "Deployments",
+      "route": "/deployments",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962834761,
+      "firstCardVisibleMs": 667,
+      "lastCardVisibleMs": 882,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 133,
+          "apiTotalTime": 220,
+          "skeletonDuration": 882,
+          "timeToFirstContent": 882,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 133,
+          "apiTotalTime": 220,
+          "skeletonDuration": 769,
+          "timeToFirstContent": 769,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_progress",
+          "cardId": "default-deployment_progress-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 133,
+          "apiTotalTime": 220,
+          "skeletonDuration": 667,
+          "timeToFirstContent": 667,
+          "timedOut": false
+        },
+        {
+          "cardType": "workload_deployment",
+          "cardId": "default-workload_deployment-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 133,
+          "apiTotalTime": 220,
+          "skeletonDuration": 667,
+          "timeToFirstContent": 667,
           "timedOut": false
         }
       ]
@@ -470,9 +1538,9 @@
       "dashboardName": "Services",
       "route": "/services",
       "mode": "demo",
-      "navigationStartMs": 1770871042796,
-      "firstCardVisibleMs": 924,
-      "lastCardVisibleMs": 924,
+      "navigationStartMs": 1770962836089,
+      "firstCardVisibleMs": 753,
+      "lastCardVisibleMs": 753,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -481,8 +1549,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 924,
-          "timeToFirstContent": 924,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -491,8 +1559,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 924,
-          "timeToFirstContent": 924,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -501,8 +1569,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 924,
-          "timeToFirstContent": 924,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -511,8 +1579,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 924,
-          "timeToFirstContent": 924,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -521,8 +1589,132 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 924,
-          "timeToFirstContent": 924,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "services",
+      "dashboardName": "Services",
+      "route": "/services",
+      "mode": "live",
+      "navigationStartMs": 1770962837493,
+      "firstCardVisibleMs": 798,
+      "lastCardVisibleMs": 798,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "service_status",
+          "cardId": "default-service_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 245,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
+          "timedOut": false
+        },
+        {
+          "cardType": "gateway_status",
+          "cardId": "default-gateway_status-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 245,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_exports",
+          "cardId": "default-service_exports-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 245,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_imports",
+          "cardId": "default-service_imports-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 245,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_topology",
+          "cardId": "default-service_topology-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 245,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "services",
+      "dashboardName": "Services",
+      "route": "/services",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962839005,
+      "firstCardVisibleMs": 760,
+      "lastCardVisibleMs": 872,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "service_status",
+          "cardId": "default-service_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 232,
+          "skeletonDuration": 872,
+          "timeToFirstContent": 872,
+          "timedOut": false
+        },
+        {
+          "cardType": "gateway_status",
+          "cardId": "default-gateway_status-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 232,
+          "skeletonDuration": 760,
+          "timeToFirstContent": 760,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_exports",
+          "cardId": "default-service_exports-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 232,
+          "skeletonDuration": 760,
+          "timeToFirstContent": 760,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_imports",
+          "cardId": "default-service_imports-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 232,
+          "skeletonDuration": 760,
+          "timeToFirstContent": 760,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_topology",
+          "cardId": "default-service_topology-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 232,
+          "skeletonDuration": 760,
+          "timeToFirstContent": 760,
           "timedOut": false
         }
       ]
@@ -532,9 +1724,9 @@
       "dashboardName": "Events",
       "route": "/events",
       "mode": "demo",
-      "navigationStartMs": 1770871044354,
-      "firstCardVisibleMs": 1014,
-      "lastCardVisibleMs": 1014,
+      "navigationStartMs": 1770962840421,
+      "firstCardVisibleMs": 806,
+      "lastCardVisibleMs": 806,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -543,8 +1735,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1014,
-          "timeToFirstContent": 1014,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
           "timedOut": false
         },
         {
@@ -553,8 +1745,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1014,
-          "timeToFirstContent": 1014,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
           "timedOut": false
         },
         {
@@ -563,8 +1755,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1014,
-          "timeToFirstContent": 1014,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
           "timedOut": false
         },
         {
@@ -573,8 +1765,112 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1014,
-          "timeToFirstContent": 1014,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "events",
+      "dashboardName": "Events",
+      "route": "/events",
+      "mode": "live",
+      "navigationStartMs": 1770962841900,
+      "firstCardVisibleMs": 905,
+      "lastCardVisibleMs": 905,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 164,
+          "apiTotalTime": 266,
+          "skeletonDuration": 905,
+          "timeToFirstContent": 905,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 164,
+          "apiTotalTime": 266,
+          "skeletonDuration": 905,
+          "timeToFirstContent": 905,
+          "timedOut": false
+        },
+        {
+          "cardType": "recent_events",
+          "cardId": "default-recent_events-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 164,
+          "apiTotalTime": 266,
+          "skeletonDuration": 905,
+          "timeToFirstContent": 905,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 164,
+          "apiTotalTime": 266,
+          "skeletonDuration": 905,
+          "timeToFirstContent": 905,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "events",
+      "dashboardName": "Events",
+      "route": "/events",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962843597,
+      "firstCardVisibleMs": 1008,
+      "lastCardVisibleMs": 1008,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 254,
+          "skeletonDuration": 1008,
+          "timeToFirstContent": 1008,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 254,
+          "skeletonDuration": 1008,
+          "timeToFirstContent": 1008,
+          "timedOut": false
+        },
+        {
+          "cardType": "recent_events",
+          "cardId": "default-recent_events-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 254,
+          "skeletonDuration": 1008,
+          "timeToFirstContent": 1008,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 254,
+          "skeletonDuration": 1008,
+          "timeToFirstContent": 1008,
           "timedOut": false
         }
       ]
@@ -584,9 +1880,9 @@
       "dashboardName": "Storage",
       "route": "/storage",
       "mode": "demo",
-      "navigationStartMs": 1770871045997,
-      "firstCardVisibleMs": 707,
-      "lastCardVisibleMs": 707,
+      "navigationStartMs": 1770962845287,
+      "firstCardVisibleMs": 738,
+      "lastCardVisibleMs": 738,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -595,8 +1891,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 707,
-          "timeToFirstContent": 707,
+          "skeletonDuration": 738,
+          "timeToFirstContent": 738,
           "timedOut": false
         },
         {
@@ -605,8 +1901,72 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 707,
-          "timeToFirstContent": 707,
+          "skeletonDuration": 738,
+          "timeToFirstContent": 738,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "storage",
+      "dashboardName": "Storage",
+      "route": "/storage",
+      "mode": "live",
+      "navigationStartMs": 1770962846670,
+      "firstCardVisibleMs": 655,
+      "lastCardVisibleMs": 655,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "storage_overview",
+          "cardId": "default-storage_overview-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 149,
+          "apiTotalTime": 222,
+          "skeletonDuration": 655,
+          "timeToFirstContent": 655,
+          "timedOut": false
+        },
+        {
+          "cardType": "pvc_status",
+          "cardId": "default-pvc_status-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 149,
+          "apiTotalTime": 222,
+          "skeletonDuration": 655,
+          "timeToFirstContent": 655,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "storage",
+      "dashboardName": "Storage",
+      "route": "/storage",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962848137,
+      "firstCardVisibleMs": 650,
+      "lastCardVisibleMs": 650,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "storage_overview",
+          "cardId": "default-storage_overview-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 223,
+          "skeletonDuration": 650,
+          "timeToFirstContent": 650,
+          "timedOut": false
+        },
+        {
+          "cardType": "pvc_status",
+          "cardId": "default-pvc_status-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 223,
+          "skeletonDuration": 650,
+          "timeToFirstContent": 650,
           "timedOut": false
         }
       ]
@@ -616,9 +1976,9 @@
       "dashboardName": "Network",
       "route": "/network",
       "mode": "demo",
-      "navigationStartMs": 1770871047327,
-      "firstCardVisibleMs": 892,
-      "lastCardVisibleMs": 892,
+      "navigationStartMs": 1770962849410,
+      "firstCardVisibleMs": 748,
+      "lastCardVisibleMs": 748,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -627,8 +1987,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 892,
-          "timeToFirstContent": 892,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
           "timedOut": false
         },
         {
@@ -637,8 +1997,72 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 892,
-          "timeToFirstContent": 892,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "network",
+      "dashboardName": "Network",
+      "route": "/network",
+      "mode": "live",
+      "navigationStartMs": 1770962850807,
+      "firstCardVisibleMs": 776,
+      "lastCardVisibleMs": 776,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "network_overview",
+          "cardId": "default-network_overview-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 210,
+          "skeletonDuration": 776,
+          "timeToFirstContent": 776,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_status",
+          "cardId": "default-service_status-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 210,
+          "skeletonDuration": 776,
+          "timeToFirstContent": 776,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "network",
+      "dashboardName": "Network",
+      "route": "/network",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962852255,
+      "firstCardVisibleMs": 622,
+      "lastCardVisibleMs": 622,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "network_overview",
+          "cardId": "default-network_overview-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 220,
+          "skeletonDuration": 622,
+          "timeToFirstContent": 622,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_status",
+          "cardId": "default-service_status-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 220,
+          "skeletonDuration": 622,
+          "timeToFirstContent": 622,
           "timedOut": false
         }
       ]
@@ -648,9 +2072,9 @@
       "dashboardName": "Nodes",
       "route": "/nodes",
       "mode": "demo",
-      "navigationStartMs": 1770871048865,
-      "firstCardVisibleMs": 1178,
-      "lastCardVisibleMs": 1178,
+      "navigationStartMs": 1770962853504,
+      "firstCardVisibleMs": 745,
+      "lastCardVisibleMs": 745,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -659,8 +2083,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1178,
-          "timeToFirstContent": 1178,
+          "skeletonDuration": 745,
+          "timeToFirstContent": 745,
           "timedOut": false
         },
         {
@@ -669,8 +2093,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1178,
-          "timeToFirstContent": 1178,
+          "skeletonDuration": 745,
+          "timeToFirstContent": 745,
           "timedOut": false
         },
         {
@@ -679,8 +2103,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1178,
-          "timeToFirstContent": 1178,
+          "skeletonDuration": 745,
+          "timeToFirstContent": 745,
           "timedOut": false
         },
         {
@@ -689,8 +2113,112 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1178,
-          "timeToFirstContent": 1178,
+          "skeletonDuration": 745,
+          "timeToFirstContent": 745,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "nodes",
+      "dashboardName": "Nodes",
+      "route": "/nodes",
+      "mode": "live",
+      "navigationStartMs": 1770962854903,
+      "firstCardVisibleMs": 635,
+      "lastCardVisibleMs": 952,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 140,
+          "apiTotalTime": 226,
+          "skeletonDuration": 952,
+          "timeToFirstContent": 952,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_capacity",
+          "cardId": "default-resource_capacity-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 140,
+          "apiTotalTime": 226,
+          "skeletonDuration": 952,
+          "timeToFirstContent": 952,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 140,
+          "apiTotalTime": 226,
+          "skeletonDuration": 851,
+          "timeToFirstContent": 851,
+          "timedOut": false
+        },
+        {
+          "cardType": "upgrade_status",
+          "cardId": "default-upgrade_status-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 140,
+          "apiTotalTime": 226,
+          "skeletonDuration": 635,
+          "timeToFirstContent": 635,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "nodes",
+      "dashboardName": "Nodes",
+      "route": "/nodes",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962856187,
+      "firstCardVisibleMs": 716,
+      "lastCardVisibleMs": 932,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 236,
+          "skeletonDuration": 932,
+          "timeToFirstContent": 932,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_capacity",
+          "cardId": "default-resource_capacity-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 236,
+          "skeletonDuration": 932,
+          "timeToFirstContent": 932,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 236,
+          "skeletonDuration": 932,
+          "timeToFirstContent": 932,
+          "timedOut": false
+        },
+        {
+          "cardType": "upgrade_status",
+          "cardId": "default-upgrade_status-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 236,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
           "timedOut": false
         }
       ]
@@ -700,9 +2228,9 @@
       "dashboardName": "Workloads",
       "route": "/workloads",
       "mode": "demo",
-      "navigationStartMs": 1770871050706,
-      "firstCardVisibleMs": 1433,
-      "lastCardVisibleMs": 1433,
+      "navigationStartMs": 1770962857575,
+      "firstCardVisibleMs": 886,
+      "lastCardVisibleMs": 886,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -711,8 +2239,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1433,
-          "timeToFirstContent": 1433,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
           "timedOut": false
         },
         {
@@ -721,8 +2249,72 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1433,
-          "timeToFirstContent": 1433,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "workloads",
+      "dashboardName": "Workloads",
+      "route": "/workloads",
+      "mode": "live",
+      "navigationStartMs": 1770962860502,
+      "firstCardVisibleMs": 664,
+      "lastCardVisibleMs": 866,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 221,
+          "skeletonDuration": 866,
+          "timeToFirstContent": 866,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 221,
+          "skeletonDuration": 664,
+          "timeToFirstContent": 664,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "workloads",
+      "dashboardName": "Workloads",
+      "route": "/workloads",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962862145,
+      "firstCardVisibleMs": 767,
+      "lastCardVisibleMs": 886,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 204,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 204,
+          "skeletonDuration": 767,
+          "timeToFirstContent": 767,
           "timedOut": false
         }
       ]
@@ -732,10 +2324,32 @@
       "dashboardName": "GPU",
       "route": "/gpu-reservations",
       "mode": "demo",
-      "navigationStartMs": 1770871052802,
+      "navigationStartMs": 1770962863556,
       "firstCardVisibleMs": -1,
       "lastCardVisibleMs": -1,
       "totalApiRequests": 0,
+      "cards": []
+    },
+    {
+      "dashboardId": "gpu",
+      "dashboardName": "GPU",
+      "route": "/gpu-reservations",
+      "mode": "live",
+      "navigationStartMs": 1770962872067,
+      "firstCardVisibleMs": -1,
+      "lastCardVisibleMs": -1,
+      "totalApiRequests": 17,
+      "cards": []
+    },
+    {
+      "dashboardId": "gpu",
+      "dashboardName": "GPU",
+      "route": "/gpu-reservations",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962880464,
+      "firstCardVisibleMs": -1,
+      "lastCardVisibleMs": -1,
+      "totalApiRequests": 17,
       "cards": []
     },
     {
@@ -743,9 +2357,9 @@
       "dashboardName": "Alerts",
       "route": "/alerts",
       "mode": "demo",
-      "navigationStartMs": 1770871061715,
-      "firstCardVisibleMs": 886,
-      "lastCardVisibleMs": 886,
+      "navigationStartMs": 1770962888941,
+      "firstCardVisibleMs": 798,
+      "lastCardVisibleMs": 798,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -754,8 +2368,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 886,
-          "timeToFirstContent": 886,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
           "timedOut": false
         },
         {
@@ -764,8 +2378,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 886,
-          "timeToFirstContent": 886,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
           "timedOut": false
         },
         {
@@ -774,8 +2388,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 886,
-          "timeToFirstContent": 886,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
           "timedOut": false
         },
         {
@@ -784,8 +2398,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 886,
-          "timeToFirstContent": 886,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
           "timedOut": false
         },
         {
@@ -794,8 +2408,132 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 886,
-          "timeToFirstContent": 886,
+          "skeletonDuration": 798,
+          "timeToFirstContent": 798,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "alerts",
+      "dashboardName": "Alerts",
+      "route": "/alerts",
+      "mode": "live",
+      "navigationStartMs": 1770962890392,
+      "firstCardVisibleMs": 676,
+      "lastCardVisibleMs": 676,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "active_alerts",
+          "cardId": "default-active_alerts-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 215,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        },
+        {
+          "cardType": "alert_rules",
+          "cardId": "default-alert_rules-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 215,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        },
+        {
+          "cardType": "falco_alerts",
+          "cardId": "default-falco_alerts-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 215,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 215,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_summary",
+          "cardId": "default-event_summary-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 215,
+          "skeletonDuration": 676,
+          "timeToFirstContent": 676,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "alerts",
+      "dashboardName": "Alerts",
+      "route": "/alerts",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962891735,
+      "firstCardVisibleMs": 773,
+      "lastCardVisibleMs": 773,
+      "totalApiRequests": 22,
+      "cards": [
+        {
+          "cardType": "active_alerts",
+          "cardId": "default-active_alerts-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 122,
+          "apiTotalTime": 216,
+          "skeletonDuration": 773,
+          "timeToFirstContent": 773,
+          "timedOut": false
+        },
+        {
+          "cardType": "alert_rules",
+          "cardId": "default-alert_rules-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 122,
+          "apiTotalTime": 216,
+          "skeletonDuration": 773,
+          "timeToFirstContent": 773,
+          "timedOut": false
+        },
+        {
+          "cardType": "falco_alerts",
+          "cardId": "default-falco_alerts-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 122,
+          "apiTotalTime": 216,
+          "skeletonDuration": 773,
+          "timeToFirstContent": 773,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 122,
+          "apiTotalTime": 216,
+          "skeletonDuration": 773,
+          "timeToFirstContent": 773,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_summary",
+          "cardId": "default-event_summary-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 122,
+          "apiTotalTime": 216,
+          "skeletonDuration": 773,
+          "timeToFirstContent": 773,
           "timedOut": false
         }
       ]
@@ -805,9 +2543,9 @@
       "dashboardName": "Helm",
       "route": "/helm",
       "mode": "demo",
-      "navigationStartMs": 1770871063225,
-      "firstCardVisibleMs": 965,
-      "lastCardVisibleMs": 965,
+      "navigationStartMs": 1770962893175,
+      "firstCardVisibleMs": 643,
+      "lastCardVisibleMs": 643,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -816,8 +2554,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 965,
-          "timeToFirstContent": 965,
+          "skeletonDuration": 643,
+          "timeToFirstContent": 643,
           "timedOut": false
         },
         {
@@ -826,8 +2564,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 965,
-          "timeToFirstContent": 965,
+          "skeletonDuration": 643,
+          "timeToFirstContent": 643,
           "timedOut": false
         },
         {
@@ -836,8 +2574,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 965,
-          "timeToFirstContent": 965,
+          "skeletonDuration": 643,
+          "timeToFirstContent": 643,
           "timedOut": false
         },
         {
@@ -846,8 +2584,112 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 965,
-          "timeToFirstContent": 965,
+          "skeletonDuration": 643,
+          "timeToFirstContent": 643,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "helm",
+      "dashboardName": "Helm",
+      "route": "/helm",
+      "mode": "live",
+      "navigationStartMs": 1770962894457,
+      "firstCardVisibleMs": 642,
+      "lastCardVisibleMs": 951,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 216,
+          "skeletonDuration": 951,
+          "timeToFirstContent": 951,
+          "timedOut": false
+        },
+        {
+          "cardType": "chart_versions",
+          "cardId": "default-chart_versions-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 216,
+          "skeletonDuration": 951,
+          "timeToFirstContent": 951,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_history",
+          "cardId": "default-helm_history-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 216,
+          "skeletonDuration": 642,
+          "timeToFirstContent": 642,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_values_diff",
+          "cardId": "default-helm_values_diff-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 216,
+          "skeletonDuration": 642,
+          "timeToFirstContent": 642,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "helm",
+      "dashboardName": "Helm",
+      "route": "/helm",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962895732,
+      "firstCardVisibleMs": 651,
+      "lastCardVisibleMs": 964,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 220,
+          "skeletonDuration": 964,
+          "timeToFirstContent": 964,
+          "timedOut": false
+        },
+        {
+          "cardType": "chart_versions",
+          "cardId": "default-chart_versions-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 220,
+          "skeletonDuration": 964,
+          "timeToFirstContent": 964,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_history",
+          "cardId": "default-helm_history-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 220,
+          "skeletonDuration": 651,
+          "timeToFirstContent": 651,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_values_diff",
+          "cardId": "default-helm_values_diff-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 146,
+          "apiTotalTime": 220,
+          "skeletonDuration": 651,
+          "timeToFirstContent": 651,
           "timedOut": false
         }
       ]
@@ -857,9 +2699,9 @@
       "dashboardName": "Operators",
       "route": "/operators",
       "mode": "demo",
-      "navigationStartMs": 1770871064816,
-      "firstCardVisibleMs": 712,
-      "lastCardVisibleMs": 712,
+      "navigationStartMs": 1770962897012,
+      "firstCardVisibleMs": 744,
+      "lastCardVisibleMs": 744,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -868,8 +2710,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 712,
-          "timeToFirstContent": 712,
+          "skeletonDuration": 744,
+          "timeToFirstContent": 744,
           "timedOut": false
         },
         {
@@ -878,8 +2720,72 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 712,
-          "timeToFirstContent": 712,
+          "skeletonDuration": 744,
+          "timeToFirstContent": 744,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "operators",
+      "dashboardName": "Operators",
+      "route": "/operators",
+      "mode": "live",
+      "navigationStartMs": 1770962898407,
+      "firstCardVisibleMs": 918,
+      "lastCardVisibleMs": 918,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "operator_status",
+          "cardId": "default-operator_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 232,
+          "skeletonDuration": 918,
+          "timeToFirstContent": 918,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 232,
+          "skeletonDuration": 918,
+          "timeToFirstContent": 918,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "operators",
+      "dashboardName": "Operators",
+      "route": "/operators",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962899652,
+      "firstCardVisibleMs": 965,
+      "lastCardVisibleMs": 965,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "operator_status",
+          "cardId": "default-operator_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 134,
+          "apiTotalTime": 220,
+          "skeletonDuration": 965,
+          "timeToFirstContent": 965,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 134,
+          "apiTotalTime": 220,
+          "skeletonDuration": 965,
+          "timeToFirstContent": 965,
           "timedOut": false
         }
       ]
@@ -889,9 +2795,9 @@
       "dashboardName": "Compliance",
       "route": "/compliance",
       "mode": "demo",
-      "navigationStartMs": 1770871066160,
-      "firstCardVisibleMs": 810,
-      "lastCardVisibleMs": 810,
+      "navigationStartMs": 1770962900931,
+      "firstCardVisibleMs": 731,
+      "lastCardVisibleMs": 731,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -900,8 +2806,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 810,
-          "timeToFirstContent": 810,
+          "skeletonDuration": 731,
+          "timeToFirstContent": 731,
           "timedOut": false
         },
         {
@@ -910,8 +2816,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 810,
-          "timeToFirstContent": 810,
+          "skeletonDuration": 731,
+          "timeToFirstContent": 731,
           "timedOut": false
         },
         {
@@ -920,8 +2826,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 810,
-          "timeToFirstContent": 810,
+          "skeletonDuration": 731,
+          "timeToFirstContent": 731,
           "timedOut": false
         },
         {
@@ -930,8 +2836,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 810,
-          "timeToFirstContent": 810,
+          "skeletonDuration": 731,
+          "timeToFirstContent": 731,
           "timedOut": false
         },
         {
@@ -940,8 +2846,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 810,
-          "timeToFirstContent": 810,
+          "skeletonDuration": 731,
+          "timeToFirstContent": 731,
           "timedOut": false
         },
         {
@@ -950,8 +2856,152 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 810,
-          "timeToFirstContent": 810,
+          "skeletonDuration": 731,
+          "timeToFirstContent": 731,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "compliance",
+      "dashboardName": "Compliance",
+      "route": "/compliance",
+      "mode": "live",
+      "navigationStartMs": 1770962902286,
+      "firstCardVisibleMs": 748,
+      "lastCardVisibleMs": 967,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "compliance_score",
+          "cardId": "default-compliance_score-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 232,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
+          "timedOut": false
+        },
+        {
+          "cardType": "policy_violations",
+          "cardId": "default-policy_violations-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 232,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
+          "timedOut": false
+        },
+        {
+          "cardType": "opa_policies",
+          "cardId": "default-opa_policies-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 232,
+          "skeletonDuration": 967,
+          "timeToFirstContent": 967,
+          "timedOut": false
+        },
+        {
+          "cardType": "kyverno_policies",
+          "cardId": "default-kyverno_policies-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 232,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubescape_scan",
+          "cardId": "default-kubescape_scan-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 232,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
+          "timedOut": false
+        },
+        {
+          "cardType": "trivy_scan",
+          "cardId": "default-trivy_scan-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 232,
+          "skeletonDuration": 748,
+          "timeToFirstContent": 748,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "compliance",
+      "dashboardName": "Compliance",
+      "route": "/compliance",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962903736,
+      "firstCardVisibleMs": 801,
+      "lastCardVisibleMs": 1019,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "compliance_score",
+          "cardId": "default-compliance_score-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 227,
+          "skeletonDuration": 801,
+          "timeToFirstContent": 801,
+          "timedOut": false
+        },
+        {
+          "cardType": "policy_violations",
+          "cardId": "default-policy_violations-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 227,
+          "skeletonDuration": 801,
+          "timeToFirstContent": 801,
+          "timedOut": false
+        },
+        {
+          "cardType": "opa_policies",
+          "cardId": "default-opa_policies-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 227,
+          "skeletonDuration": 1019,
+          "timeToFirstContent": 1019,
+          "timedOut": false
+        },
+        {
+          "cardType": "kyverno_policies",
+          "cardId": "default-kyverno_policies-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 227,
+          "skeletonDuration": 801,
+          "timeToFirstContent": 801,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubescape_scan",
+          "cardId": "default-kubescape_scan-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 227,
+          "skeletonDuration": 801,
+          "timeToFirstContent": 801,
+          "timedOut": false
+        },
+        {
+          "cardType": "trivy_scan",
+          "cardId": "default-trivy_scan-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 147,
+          "apiTotalTime": 227,
+          "skeletonDuration": 801,
+          "timeToFirstContent": 801,
           "timedOut": false
         }
       ]
@@ -961,9 +3011,9 @@
       "dashboardName": "Cost",
       "route": "/cost",
       "mode": "demo",
-      "navigationStartMs": 1770871067593,
-      "firstCardVisibleMs": 774,
-      "lastCardVisibleMs": 774,
+      "navigationStartMs": 1770962905175,
+      "firstCardVisibleMs": 753,
+      "lastCardVisibleMs": 753,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -972,8 +3022,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 774,
-          "timeToFirstContent": 774,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -982,8 +3032,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 774,
-          "timeToFirstContent": 774,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -992,8 +3042,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 774,
-          "timeToFirstContent": 774,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -1002,8 +3052,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 774,
-          "timeToFirstContent": 774,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
           "timedOut": false
         },
         {
@@ -1012,8 +3062,132 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 774,
-          "timeToFirstContent": 774,
+          "skeletonDuration": 753,
+          "timeToFirstContent": 753,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "cost",
+      "dashboardName": "Cost",
+      "route": "/cost",
+      "mode": "live",
+      "navigationStartMs": 1770962906571,
+      "firstCardVisibleMs": 669,
+      "lastCardVisibleMs": 990,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "cluster_costs",
+          "cardId": "default-cluster_costs-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 228,
+          "skeletonDuration": 990,
+          "timeToFirstContent": 990,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubecost_overview",
+          "cardId": "default-kubecost_overview-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 228,
+          "skeletonDuration": 669,
+          "timeToFirstContent": 669,
+          "timedOut": false
+        },
+        {
+          "cardType": "opencost_overview",
+          "cardId": "default-opencost_overview-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 228,
+          "skeletonDuration": 669,
+          "timeToFirstContent": 669,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_capacity",
+          "cardId": "default-resource_capacity-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 228,
+          "skeletonDuration": 990,
+          "timeToFirstContent": 990,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_trend",
+          "cardId": "default-resource_trend-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 136,
+          "apiTotalTime": 228,
+          "skeletonDuration": 669,
+          "timeToFirstContent": 669,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "cost",
+      "dashboardName": "Cost",
+      "route": "/cost",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962907901,
+      "firstCardVisibleMs": 743,
+      "lastCardVisibleMs": 960,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "cluster_costs",
+          "cardId": "default-cluster_costs-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 218,
+          "skeletonDuration": 960,
+          "timeToFirstContent": 960,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubecost_overview",
+          "cardId": "default-kubecost_overview-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 218,
+          "skeletonDuration": 743,
+          "timeToFirstContent": 743,
+          "timedOut": false
+        },
+        {
+          "cardType": "opencost_overview",
+          "cardId": "default-opencost_overview-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 218,
+          "skeletonDuration": 743,
+          "timeToFirstContent": 743,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_capacity",
+          "cardId": "default-resource_capacity-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 218,
+          "skeletonDuration": 960,
+          "timeToFirstContent": 960,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_trend",
+          "cardId": "default-resource_trend-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 132,
+          "apiTotalTime": 218,
+          "skeletonDuration": 743,
+          "timeToFirstContent": 743,
           "timedOut": false
         }
       ]
@@ -1023,9 +3197,9 @@
       "dashboardName": "AI/ML",
       "route": "/ai-ml",
       "mode": "demo",
-      "navigationStartMs": 1770871069008,
-      "firstCardVisibleMs": 1160,
-      "lastCardVisibleMs": 1160,
+      "navigationStartMs": 1770962909298,
+      "firstCardVisibleMs": 916,
+      "lastCardVisibleMs": 916,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1034,8 +3208,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1044,8 +3218,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1054,8 +3228,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1064,8 +3238,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1074,8 +3248,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1084,8 +3258,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1094,8 +3268,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1104,8 +3278,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1114,8 +3288,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1124,8 +3298,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1134,8 +3308,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1144,8 +3318,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1154,8 +3328,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
           "timedOut": false
         },
         {
@@ -1164,8 +3338,312 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1160,
-          "timeToFirstContent": 1160,
+          "skeletonDuration": 916,
+          "timeToFirstContent": 916,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ai-ml",
+      "dashboardName": "AI/ML",
+      "route": "/ai-ml",
+      "mode": "live",
+      "navigationStartMs": 1770962910959,
+      "firstCardVisibleMs": 950,
+      "lastCardVisibleMs": 1170,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "llmd_flow",
+          "cardId": "default-llmd_flow-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "kvcache_monitor",
+          "cardId": "default-kvcache_monitor-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "epp_routing",
+          "cardId": "default-epp_routing-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "pd_disaggregation",
+          "cardId": "default-pd_disaggregation-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_benchmarks",
+          "cardId": "default-llmd_benchmarks-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_ai_insights",
+          "cardId": "default-llmd_ai_insights-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_configurator",
+          "cardId": "default-llmd_configurator-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "llm_models",
+          "cardId": "default-llm_models-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "llm_inference",
+          "cardId": "default-llm_inference-8",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 1170,
+          "timeToFirstContent": 1170,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_stack_monitor",
+          "cardId": "default-llmd_stack_monitor-9",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "ml_jobs",
+          "cardId": "default-ml_jobs-10",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "ml_notebooks",
+          "cardId": "default-ml_notebooks-11",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "gpu_overview",
+          "cardId": "default-gpu_overview-12",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware_health-13",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 216,
+          "apiTotalTime": 287,
+          "skeletonDuration": 950,
+          "timeToFirstContent": 950,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ai-ml",
+      "dashboardName": "AI/ML",
+      "route": "/ai-ml",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962912691,
+      "firstCardVisibleMs": 956,
+      "lastCardVisibleMs": 1174,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "llmd_flow",
+          "cardId": "default-llmd_flow-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "kvcache_monitor",
+          "cardId": "default-kvcache_monitor-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "epp_routing",
+          "cardId": "default-epp_routing-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "pd_disaggregation",
+          "cardId": "default-pd_disaggregation-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_benchmarks",
+          "cardId": "default-llmd_benchmarks-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_ai_insights",
+          "cardId": "default-llmd_ai_insights-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_configurator",
+          "cardId": "default-llmd_configurator-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "llm_models",
+          "cardId": "default-llm_models-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "llm_inference",
+          "cardId": "default-llm_inference-8",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 1174,
+          "timeToFirstContent": 1174,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_stack_monitor",
+          "cardId": "default-llmd_stack_monitor-9",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "ml_jobs",
+          "cardId": "default-ml_jobs-10",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "ml_notebooks",
+          "cardId": "default-ml_notebooks-11",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "gpu_overview",
+          "cardId": "default-gpu_overview-12",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware_health-13",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 210,
+          "apiTotalTime": 284,
+          "skeletonDuration": 956,
+          "timeToFirstContent": 956,
           "timedOut": false
         }
       ]
@@ -1175,9 +3653,9 @@
       "dashboardName": "CI/CD",
       "route": "/ci-cd",
       "mode": "demo",
-      "navigationStartMs": 1770871070915,
-      "firstCardVisibleMs": 765,
-      "lastCardVisibleMs": 765,
+      "navigationStartMs": 1770962914384,
+      "firstCardVisibleMs": 747,
+      "lastCardVisibleMs": 747,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1186,8 +3664,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 765,
-          "timeToFirstContent": 765,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -1196,8 +3674,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 765,
-          "timeToFirstContent": 765,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -1206,8 +3684,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 765,
-          "timeToFirstContent": 765,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -1216,8 +3694,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 765,
-          "timeToFirstContent": 765,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -1226,8 +3704,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 765,
-          "timeToFirstContent": 765,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
           "timedOut": false
         },
         {
@@ -1236,8 +3714,152 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 765,
-          "timeToFirstContent": 765,
+          "skeletonDuration": 747,
+          "timeToFirstContent": 747,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ci-cd",
+      "dashboardName": "CI/CD",
+      "route": "/ci-cd",
+      "mode": "live",
+      "navigationStartMs": 1770962915758,
+      "firstCardVisibleMs": 726,
+      "lastCardVisibleMs": 1562,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "prow_status",
+          "cardId": "default-prow_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 828,
+          "timeToFirstContent": 828,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_jobs",
+          "cardId": "default-prow_jobs-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 828,
+          "timeToFirstContent": 828,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_ci_monitor",
+          "cardId": "default-prow_ci_monitor-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 828,
+          "timeToFirstContent": 828,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_history",
+          "cardId": "default-prow_history-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 726,
+          "timeToFirstContent": 726,
+          "timedOut": false
+        },
+        {
+          "cardType": "github_ci_monitor",
+          "cardId": "default-github_ci_monitor-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 726,
+          "timeToFirstContent": 726,
+          "timedOut": false
+        },
+        {
+          "cardType": "github_activity",
+          "cardId": "default-github_activity-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 162,
+          "apiTotalTime": 244,
+          "skeletonDuration": 1562,
+          "timeToFirstContent": 1562,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ci-cd",
+      "dashboardName": "CI/CD",
+      "route": "/ci-cd",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962917488,
+      "firstCardVisibleMs": 878,
+      "lastCardVisibleMs": 2345,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "prow_status",
+          "cardId": "default-prow_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 220,
+          "skeletonDuration": 878,
+          "timeToFirstContent": 878,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_jobs",
+          "cardId": "default-prow_jobs-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 220,
+          "skeletonDuration": 878,
+          "timeToFirstContent": 878,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_ci_monitor",
+          "cardId": "default-prow_ci_monitor-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 220,
+          "skeletonDuration": 878,
+          "timeToFirstContent": 878,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_history",
+          "cardId": "default-prow_history-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 220,
+          "skeletonDuration": 878,
+          "timeToFirstContent": 878,
+          "timedOut": false
+        },
+        {
+          "cardType": "github_ci_monitor",
+          "cardId": "default-github_ci_monitor-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 220,
+          "skeletonDuration": 878,
+          "timeToFirstContent": 878,
+          "timedOut": false
+        },
+        {
+          "cardType": "github_activity",
+          "cardId": "default-github_activity-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 220,
+          "skeletonDuration": 2345,
+          "timeToFirstContent": 2345,
           "timedOut": false
         }
       ]
@@ -1247,9 +3869,9 @@
       "dashboardName": "Logs",
       "route": "/logs",
       "mode": "demo",
-      "navigationStartMs": 1770871072312,
-      "firstCardVisibleMs": 824,
-      "lastCardVisibleMs": 824,
+      "navigationStartMs": 1770962920251,
+      "firstCardVisibleMs": 890,
+      "lastCardVisibleMs": 890,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1258,8 +3880,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 824,
-          "timeToFirstContent": 824,
+          "skeletonDuration": 890,
+          "timeToFirstContent": 890,
           "timedOut": false
         },
         {
@@ -1268,8 +3890,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 824,
-          "timeToFirstContent": 824,
+          "skeletonDuration": 890,
+          "timeToFirstContent": 890,
           "timedOut": false
         },
         {
@@ -1278,8 +3900,92 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 824,
-          "timeToFirstContent": 824,
+          "skeletonDuration": 890,
+          "timeToFirstContent": 890,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "logs",
+      "dashboardName": "Logs",
+      "route": "/logs",
+      "mode": "live",
+      "navigationStartMs": 1770962921807,
+      "firstCardVisibleMs": 745,
+      "lastCardVisibleMs": 849,
+      "totalApiRequests": 24,
+      "cards": [
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 227,
+          "skeletonDuration": 745,
+          "timeToFirstContent": 745,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_events",
+          "cardId": "default-namespace_events-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 227,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 138,
+          "apiTotalTime": 227,
+          "skeletonDuration": 745,
+          "timeToFirstContent": 745,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "logs",
+      "dashboardName": "Logs",
+      "route": "/logs",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962923099,
+      "firstCardVisibleMs": 765,
+      "lastCardVisibleMs": 874,
+      "totalApiRequests": 23,
+      "cards": [
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 229,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_events",
+          "cardId": "default-namespace_events-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 229,
+          "skeletonDuration": 874,
+          "timeToFirstContent": 874,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 150,
+          "apiTotalTime": 229,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
           "timedOut": false
         }
       ]
@@ -1289,9 +3995,9 @@
       "dashboardName": "Deploy",
       "route": "/deploy",
       "mode": "demo",
-      "navigationStartMs": 1770871073771,
-      "firstCardVisibleMs": 900,
-      "lastCardVisibleMs": 900,
+      "navigationStartMs": 1770962924424,
+      "firstCardVisibleMs": 888,
+      "lastCardVisibleMs": 888,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1300,8 +4006,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1310,8 +4016,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1320,8 +4026,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1330,8 +4036,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1340,8 +4046,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1350,8 +4056,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1360,8 +4066,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1370,8 +4076,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1380,8 +4086,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1390,8 +4096,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1400,8 +4106,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1410,8 +4116,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1420,8 +4126,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1430,8 +4136,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1440,8 +4146,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1450,8 +4156,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
           "timedOut": false
         },
         {
@@ -1460,8 +4166,372 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 900,
-          "timeToFirstContent": 900,
+          "skeletonDuration": 888,
+          "timeToFirstContent": 888,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "deploy",
+      "dashboardName": "Deploy",
+      "route": "/deploy",
+      "mode": "live",
+      "navigationStartMs": 1770962925969,
+      "firstCardVisibleMs": 852,
+      "lastCardVisibleMs": 1001,
+      "totalApiRequests": 23,
+      "cards": [
+        {
+          "cardType": "workload_deployment",
+          "cardId": "default-workload_deployment-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_groups",
+          "cardId": "default-cluster_groups-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_missions",
+          "cardId": "default-deployment_missions-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_marshall",
+          "cardId": "default-resource_marshall-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_progress",
+          "cardId": "default-deployment_progress-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "gitops_drift",
+          "cardId": "default-gitops_drift-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_applications",
+          "cardId": "default-argocd_applications-8",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_sync_status",
+          "cardId": "default-argocd_sync_status-9",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_health",
+          "cardId": "default-argocd_health-10",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-11",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_history",
+          "cardId": "default-helm_history-12",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        },
+        {
+          "cardType": "chart_versions",
+          "cardId": "default-chart_versions-13",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "kustomization_status",
+          "cardId": "default-kustomization_status-14",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "overlay_comparison",
+          "cardId": "default-overlay_comparison-15",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1001,
+          "timeToFirstContent": 1001,
+          "timedOut": false
+        },
+        {
+          "cardType": "upgrade_status",
+          "cardId": "default-upgrade_status-16",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 160,
+          "apiTotalTime": 203,
+          "skeletonDuration": 852,
+          "timeToFirstContent": 852,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "deploy",
+      "dashboardName": "Deploy",
+      "route": "/deploy",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962927572,
+      "firstCardVisibleMs": 936,
+      "lastCardVisibleMs": 1204,
+      "totalApiRequests": 23,
+      "cards": [
+        {
+          "cardType": "workload_deployment",
+          "cardId": "default-workload_deployment-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_groups",
+          "cardId": "default-cluster_groups-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_missions",
+          "cardId": "default-deployment_missions-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_marshall",
+          "cardId": "default-resource_marshall-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1072,
+          "timeToFirstContent": 1072,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_progress",
+          "cardId": "default-deployment_progress-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "gitops_drift",
+          "cardId": "default-gitops_drift-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_applications",
+          "cardId": "default-argocd_applications-8",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1204,
+          "timeToFirstContent": 1204,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_sync_status",
+          "cardId": "default-argocd_sync_status-9",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1204,
+          "timeToFirstContent": 1204,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_health",
+          "cardId": "default-argocd_health-10",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1204,
+          "timeToFirstContent": 1204,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-11",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1072,
+          "timeToFirstContent": 1072,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_history",
+          "cardId": "default-helm_history-12",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
+          "timedOut": false
+        },
+        {
+          "cardType": "chart_versions",
+          "cardId": "default-chart_versions-13",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1072,
+          "timeToFirstContent": 1072,
+          "timedOut": false
+        },
+        {
+          "cardType": "kustomization_status",
+          "cardId": "default-kustomization_status-14",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1072,
+          "timeToFirstContent": 1072,
+          "timedOut": false
+        },
+        {
+          "cardType": "overlay_comparison",
+          "cardId": "default-overlay_comparison-15",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 1072,
+          "timeToFirstContent": 1072,
+          "timedOut": false
+        },
+        {
+          "cardType": "upgrade_status",
+          "cardId": "default-upgrade_status-16",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 163,
+          "apiTotalTime": 203,
+          "skeletonDuration": 936,
+          "timeToFirstContent": 936,
           "timedOut": false
         }
       ]
@@ -1471,9 +4541,9 @@
       "dashboardName": "AI Agents",
       "route": "/ai-agents",
       "mode": "demo",
-      "navigationStartMs": 1770871075331,
-      "firstCardVisibleMs": 1263,
-      "lastCardVisibleMs": 1263,
+      "navigationStartMs": 1770962929235,
+      "firstCardVisibleMs": 783,
+      "lastCardVisibleMs": 783,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1482,8 +4552,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
           "timedOut": false
         },
         {
@@ -1492,8 +4562,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
           "timedOut": false
         },
         {
@@ -1502,8 +4572,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
           "timedOut": false
         },
         {
@@ -1512,8 +4582,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
           "timedOut": false
         },
         {
@@ -1522,8 +4592,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
           "timedOut": false
         },
         {
@@ -1532,8 +4602,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
           "timedOut": false
         },
         {
@@ -1542,8 +4612,172 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1263,
-          "timeToFirstContent": 1263,
+          "skeletonDuration": 783,
+          "timeToFirstContent": 783,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ai-agents",
+      "dashboardName": "AI Agents",
+      "route": "/ai-agents",
+      "mode": "live",
+      "navigationStartMs": 1770962930660,
+      "firstCardVisibleMs": 735,
+      "lastCardVisibleMs": 735,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "kagenti_status",
+          "cardId": "default-kagenti_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_agent_fleet",
+          "cardId": "default-kagenti_agent_fleet-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_build_pipeline",
+          "cardId": "default-kagenti_build_pipeline-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_tool_registry",
+          "cardId": "default-kagenti_tool_registry-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_agent_discovery",
+          "cardId": "default-kagenti_agent_discovery-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_security",
+          "cardId": "default-kagenti_security-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_topology",
+          "cardId": "default-kagenti_topology-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 135,
+          "apiTotalTime": 213,
+          "skeletonDuration": 735,
+          "timeToFirstContent": 735,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ai-agents",
+      "dashboardName": "AI Agents",
+      "route": "/ai-agents",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962932062,
+      "firstCardVisibleMs": 716,
+      "lastCardVisibleMs": 716,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "kagenti_status",
+          "cardId": "default-kagenti_status-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_agent_fleet",
+          "cardId": "default-kagenti_agent_fleet-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_build_pipeline",
+          "cardId": "default-kagenti_build_pipeline-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_tool_registry",
+          "cardId": "default-kagenti_tool_registry-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_agent_discovery",
+          "cardId": "default-kagenti_agent_discovery-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_security",
+          "cardId": "default-kagenti_security-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_topology",
+          "cardId": "default-kagenti_topology-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 233,
+          "skeletonDuration": 716,
+          "timeToFirstContent": 716,
           "timedOut": false
         }
       ]
@@ -1553,9 +4787,9 @@
       "dashboardName": "Data Compliance",
       "route": "/data-compliance",
       "mode": "demo",
-      "navigationStartMs": 1770871077228,
-      "firstCardVisibleMs": 733,
-      "lastCardVisibleMs": 733,
+      "navigationStartMs": 1770962933432,
+      "firstCardVisibleMs": 817,
+      "lastCardVisibleMs": 817,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1564,8 +4798,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 733,
-          "timeToFirstContent": 733,
+          "skeletonDuration": 817,
+          "timeToFirstContent": 817,
           "timedOut": false
         },
         {
@@ -1574,8 +4808,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 733,
-          "timeToFirstContent": 733,
+          "skeletonDuration": 817,
+          "timeToFirstContent": 817,
           "timedOut": false
         },
         {
@@ -1584,8 +4818,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 733,
-          "timeToFirstContent": 733,
+          "skeletonDuration": 817,
+          "timeToFirstContent": 817,
           "timedOut": false
         },
         {
@@ -1594,8 +4828,112 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 733,
-          "timeToFirstContent": 733,
+          "skeletonDuration": 817,
+          "timeToFirstContent": 817,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "data-compliance",
+      "dashboardName": "Data Compliance",
+      "route": "/data-compliance",
+      "mode": "live",
+      "navigationStartMs": 1770962934899,
+      "firstCardVisibleMs": 650,
+      "lastCardVisibleMs": 650,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "vault_secrets",
+          "cardId": "default-vault_secrets-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 215,
+          "skeletonDuration": 650,
+          "timeToFirstContent": 650,
+          "timedOut": false
+        },
+        {
+          "cardType": "external_secrets",
+          "cardId": "default-external_secrets-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 215,
+          "skeletonDuration": 650,
+          "timeToFirstContent": 650,
+          "timedOut": false
+        },
+        {
+          "cardType": "cert_manager",
+          "cardId": "default-cert_manager-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 215,
+          "skeletonDuration": 650,
+          "timeToFirstContent": 650,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_rbac",
+          "cardId": "default-namespace_rbac-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 141,
+          "apiTotalTime": 215,
+          "skeletonDuration": 650,
+          "timeToFirstContent": 650,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "data-compliance",
+      "dashboardName": "Data Compliance",
+      "route": "/data-compliance",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962936215,
+      "firstCardVisibleMs": 758,
+      "lastCardVisibleMs": 758,
+      "totalApiRequests": 21,
+      "cards": [
+        {
+          "cardType": "vault_secrets",
+          "cardId": "default-vault_secrets-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 226,
+          "skeletonDuration": 758,
+          "timeToFirstContent": 758,
+          "timedOut": false
+        },
+        {
+          "cardType": "external_secrets",
+          "cardId": "default-external_secrets-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 226,
+          "skeletonDuration": 758,
+          "timeToFirstContent": 758,
+          "timedOut": false
+        },
+        {
+          "cardType": "cert_manager",
+          "cardId": "default-cert_manager-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 226,
+          "skeletonDuration": 758,
+          "timeToFirstContent": 758,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_rbac",
+          "cardId": "default-namespace_rbac-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 142,
+          "apiTotalTime": 226,
+          "skeletonDuration": 758,
+          "timeToFirstContent": 758,
           "timedOut": false
         }
       ]
@@ -1605,9 +4943,9 @@
       "dashboardName": "Arcade",
       "route": "/arcade",
       "mode": "demo",
-      "navigationStartMs": 1770871078588,
-      "firstCardVisibleMs": 1029,
-      "lastCardVisibleMs": 1029,
+      "navigationStartMs": 1770962937627,
+      "firstCardVisibleMs": 693,
+      "lastCardVisibleMs": 908,
       "totalApiRequests": 0,
       "cards": [
         {
@@ -1616,8 +4954,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1626,8 +4964,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
           "timedOut": false
         },
         {
@@ -1636,8 +4974,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1646,8 +4984,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1656,8 +4994,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1666,8 +5004,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
           "timedOut": false
         },
         {
@@ -1676,8 +5014,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 806,
+          "timeToFirstContent": 806,
           "timedOut": false
         },
         {
@@ -1686,8 +5024,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1696,8 +5034,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1706,8 +5044,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1716,8 +5054,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1726,8 +5064,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
           "timedOut": false
         },
         {
@@ -1736,8 +5074,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
           "timedOut": false
         },
         {
@@ -1746,8 +5084,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
           "timedOut": false
         },
         {
@@ -1756,8 +5094,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
           "timedOut": false
         },
         {
@@ -1766,8 +5104,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1776,8 +5114,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
           "timedOut": false
         },
         {
@@ -1786,8 +5124,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
           "timedOut": false
         },
         {
@@ -1796,8 +5134,8 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 693,
+          "timeToFirstContent": 693,
           "timedOut": false
         },
         {
@@ -1806,8 +5144,432 @@
           "isDemoDataCard": true,
           "apiTimeToFirstByte": null,
           "apiTotalTime": null,
-          "skeletonDuration": 1029,
-          "timeToFirstContent": 1029,
+          "skeletonDuration": 908,
+          "timeToFirstContent": 908,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "arcade",
+      "dashboardName": "Arcade",
+      "route": "/arcade",
+      "mode": "live",
+      "navigationStartMs": 1770962938972,
+      "firstCardVisibleMs": 825,
+      "lastCardVisibleMs": 825,
+      "totalApiRequests": 16,
+      "cards": [
+        {
+          "cardType": "checkers",
+          "cardId": "default-checkers-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_chess",
+          "cardId": "default-kube_chess-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "sudoku_game",
+          "cardId": "default-sudoku_game-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "container_tetris",
+          "cardId": "default-container_tetris-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "node_invaders",
+          "cardId": "default-node_invaders-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_man",
+          "cardId": "default-kube_man-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_kong",
+          "cardId": "default-kube_kong-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_crosser",
+          "cardId": "default-pod_crosser-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_pitfall",
+          "cardId": "default-pod_pitfall-8",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_brothers",
+          "cardId": "default-pod_brothers-9",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_galaga",
+          "cardId": "default-kube_galaga-10",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_pong",
+          "cardId": "default-kube_pong-11",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_snake",
+          "cardId": "default-kube_snake-12",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_kart",
+          "cardId": "default-kube_kart-13",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "game_2048",
+          "cardId": "default-game_2048-14",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_sweeper",
+          "cardId": "default-pod_sweeper-15",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "match_game",
+          "cardId": "default-match_game-16",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubedle",
+          "cardId": "default-kubedle-17",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "solitaire",
+          "cardId": "default-solitaire-18",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_craft",
+          "cardId": "default-kube_craft-19",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 145,
+          "apiTotalTime": 190,
+          "skeletonDuration": 825,
+          "timeToFirstContent": 825,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "arcade",
+      "dashboardName": "Arcade",
+      "route": "/arcade",
+      "mode": "live+cache",
+      "navigationStartMs": 1770962940465,
+      "firstCardVisibleMs": 849,
+      "lastCardVisibleMs": 849,
+      "totalApiRequests": 16,
+      "cards": [
+        {
+          "cardType": "checkers",
+          "cardId": "default-checkers-0",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_chess",
+          "cardId": "default-kube_chess-1",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "sudoku_game",
+          "cardId": "default-sudoku_game-2",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "container_tetris",
+          "cardId": "default-container_tetris-3",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "node_invaders",
+          "cardId": "default-node_invaders-4",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_man",
+          "cardId": "default-kube_man-5",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_kong",
+          "cardId": "default-kube_kong-6",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_crosser",
+          "cardId": "default-pod_crosser-7",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_pitfall",
+          "cardId": "default-pod_pitfall-8",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_brothers",
+          "cardId": "default-pod_brothers-9",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_galaga",
+          "cardId": "default-kube_galaga-10",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_pong",
+          "cardId": "default-kube_pong-11",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_snake",
+          "cardId": "default-kube_snake-12",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_kart",
+          "cardId": "default-kube_kart-13",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "game_2048",
+          "cardId": "default-game_2048-14",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_sweeper",
+          "cardId": "default-pod_sweeper-15",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "match_game",
+          "cardId": "default-match_game-16",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubedle",
+          "cardId": "default-kubedle-17",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "solitaire",
+          "cardId": "default-solitaire-18",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_craft",
+          "cardId": "default-kube_craft-19",
+          "isDemoDataCard": false,
+          "apiTimeToFirstByte": 171,
+          "apiTotalTime": 204,
+          "skeletonDuration": 849,
+          "timeToFirstContent": 849,
           "timedOut": false
         }
       ]

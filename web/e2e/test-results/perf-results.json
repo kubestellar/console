@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/private/tmp/kubestellar-console/web/e2e/perf/perf.config.ts",
-    "rootDir": "/private/tmp/kubestellar-console/web/e2e/perf",
+    "configFile": "/private/tmp/ks-instant-cards/web/e2e/perf/perf.config.ts",
+    "rootDir": "/private/tmp/ks-instant-cards/web/e2e/perf",
     "forbidOnly": false,
     "fullyParallel": false,
     "globalSetup": null,
@@ -16,7 +16,7 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/private/tmp/kubestellar-console/web/e2e/test-results/perf",
+        "outputDir": "/private/tmp/ks-instant-cards/web/e2e/test-results/perf",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -24,7 +24,7 @@
         },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/private/tmp/kubestellar-console/web/e2e/perf",
+        "testDir": "/private/tmp/ks-instant-cards/web/e2e/perf",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -88,12 +88,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 3986,
+                  "duration": 7034,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:09.253Z",
+                  "startTime": "2026-02-13T06:05:38.605Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -103,7 +103,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-7fdc9a047fe2e5a2b831",
           "file": "dashboard-perf.spec.ts",
-          "line": 741,
+          "line": 757,
           "column": 1
         },
         {
@@ -122,16 +122,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1444,
+                  "duration": 1829,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Dashboard (demo): cards=9 first=815ms avg=815ms api_reqs=0\n"
+                      "text": "  Dashboard (demo): cards=9 first=1109ms avg=1109ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:13.737Z",
+                  "startTime": "2026-02-13T06:05:46.102Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -141,7 +141,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-e1e68458d6a02d15aa32",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -160,16 +160,31 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1475,
+                  "duration": 30936,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Dashboard (live): cards=7 first=834ms avg=969ms api_reqs=24\n"
+                      "text": "  TIMEOUT DEBUG [cluster_health/default-1]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [resource_usage/default-2]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [event_stream/default-5]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [deployment_status/default-6]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [events_timeline/default-7]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  Dashboard (live): cards=16 first=939ms avg=1053ms api_reqs=24\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:15.187Z",
+                  "startTime": "2026-02-13T06:05:47.943Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -179,7 +194,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-990eb7432e13b7f73ebe",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -198,16 +213,28 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1460,
+                  "duration": 31115,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Dashboard (live+cache): cards=7 first=826ms avg=970ms api_reqs=24\n"
+                      "text": "  TIMEOUT DEBUG [cluster_health/default-1]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [resource_usage/default-2]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [pod_issues/default-3]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  TIMEOUT DEBUG [deployment_status/default-6]: {\n  \"found\": false\n}\n"
+                    },
+                    {
+                      "text": "  Dashboard (live+cache): cards=16 first=1075ms avg=1156ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:16.667Z",
+                  "startTime": "2026-02-13T06:06:18.888Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -217,7 +244,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-7dcbf0806cf7a4096fdb",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -236,16 +263,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1588,
+                  "duration": 1446,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Clusters (demo): cards=8 first=965ms avg=965ms api_reqs=0\n"
+                      "text": "  Clusters (demo): cards=8 first=747ms avg=747ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:18.132Z",
+                  "startTime": "2026-02-13T06:06:50.012Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -255,7 +282,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-d04fe0e876cafd21b196",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -274,16 +301,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1383,
+                  "duration": 1493,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Clusters (live): cards=8 first=726ms avg=916ms api_reqs=17\n"
+                      "text": "  Clusters (live): cards=8 first=849ms avg=926ms api_reqs=17\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:19.725Z",
+                  "startTime": "2026-02-13T06:06:51.464Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -293,7 +320,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-dfefbb9e9ad7ac941e52",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -312,16 +339,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1536,
+                  "duration": 1588,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Clusters (live+cache): cards=8 first=891ms avg=1080ms api_reqs=17\n"
+                      "text": "  Clusters (live+cache): cards=8 first=920ms avg=963ms api_reqs=17\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:21.113Z",
+                  "startTime": "2026-02-13T06:06:52.963Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -331,7 +358,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-8d37b27fbaff86e42ed3",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -350,16 +377,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1518,
+                  "duration": 1391,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compute (demo): cards=5 first=892ms avg=892ms api_reqs=0\n"
+                      "text": "  Compute (demo): cards=5 first=728ms avg=728ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:22.654Z",
+                  "startTime": "2026-02-13T06:06:54.556Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -369,7 +396,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-55fbc033d6794b375e64",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -388,16 +415,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1414,
+                  "duration": 1448,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compute (live): cards=5 first=964ms avg=1046ms api_reqs=22\n"
+                      "text": "  Compute (live): cards=5 first=778ms avg=976ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:24.178Z",
+                  "startTime": "2026-02-13T06:06:55.952Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -407,7 +434,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-5eb8924b660279052fc6",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -426,16 +453,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1350,
+                  "duration": 1422,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compute (live+cache): cards=5 first=701ms avg=964ms api_reqs=22\n"
+                      "text": "  Compute (live+cache): cards=5 first=758ms avg=965ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:25.598Z",
+                  "startTime": "2026-02-13T06:06:57.407Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -445,7 +472,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-7d587b9bb94b6831cbee",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -464,16 +491,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1395,
+                  "duration": 1406,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Security (demo): cards=2 first=779ms avg=779ms api_reqs=0\n"
+                      "text": "  Security (demo): cards=2 first=786ms avg=786ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:26.953Z",
+                  "startTime": "2026-02-13T06:06:58.838Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -483,7 +510,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-24ff050ac5841f34709f",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -502,16 +529,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1376,
+                  "duration": 1319,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Security (live): cards=2 first=736ms avg=787ms api_reqs=22\n"
+                      "text": "  Security (live): cards=2 first=665ms avg=665ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:28.354Z",
+                  "startTime": "2026-02-13T06:07:00.249Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -521,7 +548,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-511b5301fe9747656171",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -540,16 +567,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1369,
+                  "duration": 1395,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Security (live+cache): cards=2 first=732ms avg=732ms api_reqs=22\n"
+                      "text": "  Security (live+cache): cards=2 first=766ms avg=766ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:29.735Z",
+                  "startTime": "2026-02-13T06:07:01.572Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -559,7 +586,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-30de1fe0dd29d8d03179",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -578,16 +605,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1663,
+                  "duration": 1364,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  GitOps (demo): cards=4 first=1021ms avg=1021ms api_reqs=0\n"
+                      "text": "  GitOps (demo): cards=4 first=720ms avg=720ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:31.109Z",
+                  "startTime": "2026-02-13T06:07:02.973Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -597,7 +624,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-f50aa5e2c3c54cecd778",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -616,16 +643,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1401,
+                  "duration": 1442,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  GitOps (live): cards=4 first=751ms avg=853ms api_reqs=23\n"
+                      "text": "  GitOps (live): cards=4 first=754ms avg=870ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:32.776Z",
+                  "startTime": "2026-02-13T06:07:04.341Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -635,7 +662,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-6f680e8e6a6a72fcf94e",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -654,16 +681,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1521,
+                  "duration": 1706,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  GitOps (live+cache): cards=4 first=892ms avg=968ms api_reqs=23\n"
+                      "text": "  GitOps (live+cache): cards=4 first=1009ms avg=1096ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:34.183Z",
+                  "startTime": "2026-02-13T06:07:05.788Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -673,7 +700,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-fa6e78e5cd1649b1b931",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -692,16 +719,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1499,
+                  "duration": 1516,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Pods (demo): cards=6 first=845ms avg=845ms api_reqs=0\n"
+                      "text": "  Pods (demo): cards=6 first=860ms avg=860ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:35.709Z",
+                  "startTime": "2026-02-13T06:07:07.499Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -711,7 +738,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-6614383283246aff11a5",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -730,16 +757,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1575,
+                  "duration": 1514,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Pods (live): cards=6 first=930ms avg=1147ms api_reqs=23\n"
+                      "text": "  Pods (live): cards=6 first=854ms avg=949ms api_reqs=24\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:37.215Z",
+                  "startTime": "2026-02-13T06:07:09.019Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -749,7 +776,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-a51eaef8c5f8baeb926d",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -768,16 +795,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1355,
+                  "duration": 1437,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Pods (live+cache): cards=6 first=720ms avg=960ms api_reqs=23\n"
+                      "text": "  Pods (live+cache): cards=6 first=754ms avg=905ms api_reqs=24\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:38.798Z",
+                  "startTime": "2026-02-13T06:07:10.538Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -787,7 +814,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-91eb9be12b722e16b1b9",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -806,16 +833,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1321,
+                  "duration": 1356,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deployments (demo): cards=4 first=719ms avg=719ms api_reqs=0\n"
+                      "text": "  Deployments (demo): cards=4 first=730ms avg=730ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:40.157Z",
+                  "startTime": "2026-02-13T06:07:11.981Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -825,7 +852,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-e5bb57c1b1f04b33a6d5",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -844,16 +871,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1347,
+                  "duration": 1345,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deployments (live): cards=4 first=714ms avg=790ms api_reqs=22\n"
+                      "text": "  Deployments (live): cards=4 first=676ms avg=790ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:41.484Z",
+                  "startTime": "2026-02-13T06:07:13.341Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -863,7 +890,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-4964b58e0e82291f3f3e",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -882,16 +909,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1375,
+                  "duration": 1337,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deployments (live+cache): cards=4 first=734ms avg=886ms api_reqs=22\n"
+                      "text": "  Deployments (live+cache): cards=4 first=667ms avg=746ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:42.836Z",
+                  "startTime": "2026-02-13T06:07:14.691Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -901,7 +928,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-a057ca40cd084a5fceb7",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -920,16 +947,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1415,
+                  "duration": 1386,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Services (demo): cards=5 first=777ms avg=777ms api_reqs=0\n"
+                      "text": "  Services (demo): cards=5 first=753ms avg=753ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:44.220Z",
+                  "startTime": "2026-02-13T06:07:16.032Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -939,7 +966,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-a2eb5be3f8be7f0594ed",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -958,16 +985,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1366,
+                  "duration": 1492,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Services (live): cards=5 first=745ms avg=745ms api_reqs=22\n"
+                      "text": "  Services (live): cards=5 first=798ms avg=798ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:45.641Z",
+                  "startTime": "2026-02-13T06:07:17.423Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -977,7 +1004,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-c087f1c71fc2c8eb03ca",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -996,16 +1023,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1354,
+                  "duration": 1436,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Services (live+cache): cards=5 first=717ms avg=737ms api_reqs=22\n"
+                      "text": "  Services (live+cache): cards=5 first=760ms avg=782ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:47.014Z",
+                  "startTime": "2026-02-13T06:07:18.919Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1015,7 +1042,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-9a79c4c5c70d684272fe",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1034,16 +1061,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1534,
+                  "duration": 1462,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Events (demo): cards=4 first=911ms avg=911ms api_reqs=0\n"
+                      "text": "  Events (demo): cards=4 first=806ms avg=806ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:48.373Z",
+                  "startTime": "2026-02-13T06:07:20.360Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1053,7 +1080,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-60196fc112d79e0608bf",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1072,16 +1099,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1496,
+                  "duration": 1645,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Events (live): cards=4 first=850ms avg=850ms api_reqs=23\n"
+                      "text": "  Events (live): cards=4 first=905ms avg=905ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:49.912Z",
+                  "startTime": "2026-02-13T06:07:21.827Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1091,7 +1118,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-be499e14e20a2d14f79f",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1110,16 +1137,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1583,
+                  "duration": 1728,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Events (live+cache): cards=4 first=866ms avg=866ms api_reqs=23\n"
+                      "text": "  Events (live+cache): cards=4 first=1008ms avg=1008ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:51.413Z",
+                  "startTime": "2026-02-13T06:07:23.479Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1129,7 +1156,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-733abdf1d28bb90f3100",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1148,16 +1175,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1950,
+                  "duration": 1377,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Storage (demo): cards=2 first=1137ms avg=1137ms api_reqs=0\n"
+                      "text": "  Storage (demo): cards=2 first=738ms avg=738ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:53.003Z",
+                  "startTime": "2026-02-13T06:07:25.214Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1167,7 +1194,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-6d60fec34d8c3be8de55",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1186,16 +1213,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1782,
+                  "duration": 1459,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Storage (live): cards=2 first=1148ms avg=1148ms api_reqs=22\n"
+                      "text": "  Storage (live): cards=2 first=655ms avg=655ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:54.958Z",
+                  "startTime": "2026-02-13T06:07:26.596Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1205,7 +1232,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-28a433ae92ba3e9160cf",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1224,16 +1251,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1836,
+                  "duration": 1291,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Storage (live+cache): cards=2 first=783ms avg=783ms api_reqs=22\n"
+                      "text": "  Storage (live+cache): cards=2 first=650ms avg=650ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:56.747Z",
+                  "startTime": "2026-02-13T06:07:28.059Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1243,7 +1270,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-919bfe26357af860c728",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1262,16 +1289,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1755,
+                  "duration": 1383,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Network (demo): cards=2 first=1138ms avg=1138ms api_reqs=0\n"
+                      "text": "  Network (demo): cards=2 first=748ms avg=748ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:00:58.589Z",
+                  "startTime": "2026-02-13T06:07:29.356Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1281,7 +1308,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-5c7fc1c0242753a59e0a",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1300,16 +1327,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1531,
+                  "duration": 1422,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Network (live): cards=2 first=882ms avg=882ms api_reqs=22\n"
+                      "text": "  Network (live): cards=2 first=776ms avg=776ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:00.349Z",
+                  "startTime": "2026-02-13T06:07:30.744Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1319,7 +1346,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-7d102173b8381187c6b6",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1338,16 +1365,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1521,
+                  "duration": 1276,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Network (live+cache): cards=2 first=880ms avg=930ms api_reqs=22\n"
+                      "text": "  Network (live+cache): cards=2 first=622ms avg=622ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:01.886Z",
+                  "startTime": "2026-02-13T06:07:32.171Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1357,7 +1384,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-829fd6ec2aca3d676a5d",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1376,16 +1403,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1381,
+                  "duration": 1384,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Nodes (demo): cards=4 first=761ms avg=761ms api_reqs=0\n"
+                      "text": "  Nodes (demo): cards=4 first=745ms avg=745ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:03.413Z",
+                  "startTime": "2026-02-13T06:07:33.452Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1395,7 +1422,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-9047afe673b42a757b23",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1414,16 +1441,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1361,
+                  "duration": 1281,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Nodes (live): cards=4 first=823ms avg=975ms api_reqs=22\n"
+                      "text": "  Nodes (live): cards=4 first=635ms avg=848ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:04.803Z",
+                  "startTime": "2026-02-13T06:07:34.840Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1433,7 +1460,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-0437b817c36aff2e2ae3",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1452,16 +1479,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1376,
+                  "duration": 1374,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Nodes (live+cache): cards=4 first=750ms avg=1002ms api_reqs=22\n"
+                      "text": "  Nodes (live+cache): cards=4 first=716ms avg=878ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:06.168Z",
+                  "startTime": "2026-02-13T06:07:36.126Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1471,7 +1498,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-b71f27e7da8023a44a51",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1490,16 +1517,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1323,
+                  "duration": 2926,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Workloads (demo): cards=2 first=701ms avg=701ms api_reqs=0\n"
+                      "text": "  Workloads (demo): cards=2 first=886ms avg=886ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:07.550Z",
+                  "startTime": "2026-02-13T06:07:37.504Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1509,7 +1536,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-cf5116a6437a5cad78f5",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1528,16 +1555,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1315,
+                  "duration": 1636,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Workloads (live): cards=2 first=897ms avg=947ms api_reqs=22\n"
+                      "text": "  Workloads (live): cards=2 first=664ms avg=765ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:08.877Z",
+                  "startTime": "2026-02-13T06:07:40.437Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1547,7 +1574,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-a9952f3990ff17cc5953",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1566,16 +1593,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1310,
+                  "duration": 1418,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Workloads (live+cache): cards=2 first=792ms avg=944ms api_reqs=22\n"
+                      "text": "  Workloads (live+cache): cards=2 first=767ms avg=827ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:10.199Z",
+                  "startTime": "2026-02-13T06:07:42.078Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1585,7 +1612,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-07c6a72fd84cb10acae7",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1604,11 +1631,11 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 8748,
+                  "duration": 8482,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770868871566}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllDemo0%13demo-userDemo ModeShowing sample data from all cloud providersWant your own local KubeStellar Console?Get ConsoleDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardC\"}\n"
+                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770962863555}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllDemo0%13demo-userDemo ModeShowing sample data from all cloud providersWant your own local KubeStellar Console?Get ConsoleDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see th\"}\n"
                     },
                     {
                       "text": "  GPU (demo): cards=0 first=-1ms avg=-1ms api_reqs=0\n"
@@ -1616,7 +1643,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:11.514Z",
+                  "startTime": "2026-02-13T06:07:43.501Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1626,7 +1653,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-90830f4a877e7cd20641",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1645,11 +1672,11 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 8847,
+                  "duration": 8399,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770868881232}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0CustomizeNaNGPU ReservationsSchedule and manage GPU resources across \"}\n"
+                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770962872836}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0NaNGPU ReservationsSchedule and manage GPU resources \"}\n"
                     },
                     {
                       "text": "  GPU (live): cards=0 first=-1ms avg=-1ms api_reqs=17\n"
@@ -1657,7 +1684,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:20.268Z",
+                  "startTime": "2026-02-13T06:07:51.987Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1667,7 +1694,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-10f71915a02fd4c07c36",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1686,11 +1713,11 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 8788,
+                  "duration": 8479,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770868890040}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0CustomizeNaNGPU ReservationsSchedule and manage GPU resources across \"}\n"
+                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770962881267}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0NaNGPU ReservationsSchedule and manage GPU resources \"}\n"
                     },
                     {
                       "text": "  GPU (live+cache): cards=0 first=-1ms avg=-1ms api_reqs=17\n"
@@ -1698,7 +1725,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:29.121Z",
+                  "startTime": "2026-02-13T06:08:00.392Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1708,7 +1735,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-8cb361557a0580b3c218",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1727,7 +1754,7 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1418,
+                  "duration": 1448,
                   "errors": [],
                   "stdout": [
                     {
@@ -1736,7 +1763,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:37.915Z",
+                  "startTime": "2026-02-13T06:08:08.876Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1746,7 +1773,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-7dcd1b28e238db46e99d",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1765,16 +1792,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1354,
+                  "duration": 1337,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Alerts (live): cards=5 first=711ms avg=711ms api_reqs=23\n"
+                      "text": "  Alerts (live): cards=5 first=676ms avg=676ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:39.341Z",
+                  "startTime": "2026-02-13T06:08:10.328Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1784,7 +1811,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-af7666a6c7d3b860b491",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1803,16 +1830,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1352,
+                  "duration": 1445,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Alerts (live+cache): cards=5 first=718ms avg=718ms api_reqs=23\n"
+                      "text": "  Alerts (live+cache): cards=5 first=773ms avg=773ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:40.701Z",
+                  "startTime": "2026-02-13T06:08:11.670Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1822,7 +1849,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-48b3dc44e382392883af",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1841,16 +1868,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1335,
+                  "duration": 1265,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Helm (demo): cards=4 first=717ms avg=717ms api_reqs=0\n"
+                      "text": "  Helm (demo): cards=4 first=643ms avg=643ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:42.060Z",
+                  "startTime": "2026-02-13T06:08:13.124Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1860,7 +1887,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-9e3e4f5bf041644cc655",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1879,16 +1906,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1384,
+                  "duration": 1269,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Helm (live): cards=4 first=750ms avg=952ms api_reqs=22\n"
+                      "text": "  Helm (live): cards=4 first=642ms avg=797ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:43.400Z",
+                  "startTime": "2026-02-13T06:08:14.395Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1898,7 +1925,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-747f7e153ab0cb7639f4",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1917,16 +1944,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1354,
+                  "duration": 1288,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Helm (live+cache): cards=4 first=731ms avg=1034ms api_reqs=22\n"
+                      "text": "  Helm (live+cache): cards=4 first=651ms avg=808ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:44.789Z",
+                  "startTime": "2026-02-13T06:08:15.668Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1936,7 +1963,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-9a75148e75bdde626bb1",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1955,16 +1982,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1413,
+                  "duration": 1363,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Operators (demo): cards=2 first=693ms avg=693ms api_reqs=0\n"
+                      "text": "  Operators (demo): cards=2 first=744ms avg=744ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:46.147Z",
+                  "startTime": "2026-02-13T06:08:16.961Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1974,7 +2001,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-d40960adbd3513bd72d5",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -1993,16 +2020,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1802,
+                  "duration": 1249,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Operators (live): cards=2 first=1096ms avg=1096ms api_reqs=22\n"
+                      "text": "  Operators (live): cards=2 first=918ms avg=918ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:47.567Z",
+                  "startTime": "2026-02-13T06:08:18.328Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2012,7 +2039,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-b2e6f9bb240732d72168",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2031,16 +2058,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2134,
+                  "duration": 1288,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Operators (live+cache): cards=2 first=1767ms avg=1767ms api_reqs=22\n"
+                      "text": "  Operators (live+cache): cards=2 first=965ms avg=965ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:49.384Z",
+                  "startTime": "2026-02-13T06:08:19.582Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2050,7 +2077,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-c30d75159689927847e9",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2069,16 +2096,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2164,
+                  "duration": 1341,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compliance (demo): cards=6 first=1275ms avg=1275ms api_reqs=0\n"
+                      "text": "  Compliance (demo): cards=6 first=731ms avg=731ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:51.522Z",
+                  "startTime": "2026-02-13T06:08:20.874Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2088,7 +2115,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-fa7b476bebc552925a47",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2107,16 +2134,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1645,
+                  "duration": 1428,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compliance (live): cards=6 first=990ms avg=1040ms api_reqs=22\n"
+                      "text": "  Compliance (live): cards=6 first=748ms avg=785ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:53.691Z",
+                  "startTime": "2026-02-13T06:08:22.220Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2126,7 +2153,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-66431e61d0ed1c956942",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2145,16 +2172,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2136,
+                  "duration": 1462,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compliance (live+cache): cards=6 first=1441ms avg=1492ms api_reqs=22\n"
+                      "text": "  Compliance (live+cache): cards=6 first=801ms avg=837ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:55.343Z",
+                  "startTime": "2026-02-13T06:08:23.653Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2164,7 +2191,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-be7fb579529e59339bac",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2183,16 +2210,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2206,
+                  "duration": 1383,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Cost (demo): cards=5 first=1425ms avg=1425ms api_reqs=0\n"
+                      "text": "  Cost (demo): cards=5 first=753ms avg=753ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:57.490Z",
+                  "startTime": "2026-02-13T06:08:25.120Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2202,7 +2229,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-3aceecd3103edd942ebf",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2221,16 +2248,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2144,
+                  "duration": 1325,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Cost (live): cards=5 first=1138ms avg=1319ms api_reqs=22\n"
+                      "text": "  Cost (live): cards=5 first=669ms avg=797ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:01:59.703Z",
+                  "startTime": "2026-02-13T06:08:26.507Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2240,7 +2267,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-311bad8c35dcd125e665",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2259,16 +2286,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1812,
+                  "duration": 1402,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Cost (live+cache): cards=5 first=947ms avg=1129ms api_reqs=22\n"
+                      "text": "  Cost (live+cache): cards=5 first=743ms avg=830ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:01.853Z",
+                  "startTime": "2026-02-13T06:08:27.837Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2278,7 +2305,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-abd6e06b430d9c6fff87",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2297,16 +2324,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2333,
+                  "duration": 1625,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI/ML (demo): cards=14 first=1499ms avg=1499ms api_reqs=0\n"
+                      "text": "  AI/ML (demo): cards=14 first=916ms avg=916ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:03.672Z",
+                  "startTime": "2026-02-13T06:08:29.243Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2316,7 +2343,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-62dcc2af830be1b96ab8",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2335,16 +2362,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1940,
+                  "duration": 1750,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI/ML (live): cards=14 first=1081ms avg=1114ms api_reqs=22\n"
+                      "text": "  AI/ML (live): cards=14 first=950ms avg=966ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:06.011Z",
+                  "startTime": "2026-02-13T06:08:30.873Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2354,7 +2381,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-10430f1bbae59f264382",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2373,16 +2400,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2219,
+                  "duration": 1697,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI/ML (live+cache): cards=14 first=1497ms avg=1521ms api_reqs=22\n"
+                      "text": "  AI/ML (live+cache): cards=14 first=956ms avg=972ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:07.964Z",
+                  "startTime": "2026-02-13T06:08:32.628Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2392,7 +2419,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-0c318d543fcadd0bfa3a",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2411,16 +2438,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1710,
+                  "duration": 1360,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  CI/CD (demo): cards=6 first=1077ms avg=1077ms api_reqs=0\n"
+                      "text": "  CI/CD (demo): cards=6 first=747ms avg=747ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:10.189Z",
+                  "startTime": "2026-02-13T06:08:34.329Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2430,7 +2457,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-2cf095fab1c7d6db9124",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2449,16 +2476,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1515,
+                  "duration": 1693,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  CI/CD (live): cards=6 first=877ms avg=944ms api_reqs=22\n"
+                      "text": "  CI/CD (live): cards=6 first=726ms avg=916ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:11.904Z",
+                  "startTime": "2026-02-13T06:08:35.695Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2468,7 +2495,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-0e5dd3bac16d2e4005fb",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2487,16 +2514,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1494,
+                  "duration": 2788,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  CI/CD (live+cache): cards=6 first=832ms avg=899ms api_reqs=22\n"
+                      "text": "  CI/CD (live+cache): cards=6 first=878ms avg=1123ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:13.425Z",
+                  "startTime": "2026-02-13T06:08:37.393Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2506,7 +2533,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-33542e5720955902cf15",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2525,16 +2552,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1470,
+                  "duration": 1546,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Logs (demo): cards=3 first=828ms avg=828ms api_reqs=0\n"
+                      "text": "  Logs (demo): cards=3 first=890ms avg=890ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:14.924Z",
+                  "startTime": "2026-02-13T06:08:40.189Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2544,7 +2571,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-593aefc0ca1cc7fc79ad",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2563,16 +2590,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1391,
+                  "duration": 1289,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Logs (live): cards=3 first=747ms avg=747ms api_reqs=24\n"
+                      "text": "  Logs (live): cards=3 first=745ms avg=780ms api_reqs=24\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:16.399Z",
+                  "startTime": "2026-02-13T06:08:41.741Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2582,7 +2609,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-162d6bea7a2b32cb7535",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2601,16 +2628,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1590,
+                  "duration": 1313,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Logs (live+cache): cards=3 first=964ms avg=1031ms api_reqs=24\n"
+                      "text": "  Logs (live+cache): cards=3 first=765ms avg=801ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:17.796Z",
+                  "startTime": "2026-02-13T06:08:43.035Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2620,7 +2647,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-eedab99b4a623aa78e97",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2639,16 +2666,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1591,
+                  "duration": 1536,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deploy (demo): cards=17 first=945ms avg=945ms api_reqs=0\n"
+                      "text": "  Deploy (demo): cards=17 first=888ms avg=888ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:19.391Z",
+                  "startTime": "2026-02-13T06:08:44.352Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2658,7 +2685,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-198bddb42534f23917af",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2677,16 +2704,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1427,
+                  "duration": 1607,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deploy (live): cards=17 first=764ms avg=992ms api_reqs=22\n"
+                      "text": "  Deploy (live): cards=17 first=852ms avg=922ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:20.989Z",
+                  "startTime": "2026-02-13T06:08:45.893Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2696,7 +2723,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-4df91a68353157efb864",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2715,16 +2742,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1708,
+                  "duration": 1663,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deploy (live+cache): cards=17 first=1033ms avg=1253ms api_reqs=22\n"
+                      "text": "  Deploy (live+cache): cards=17 first=936ms avg=1023ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:22.422Z",
+                  "startTime": "2026-02-13T06:08:47.505Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2734,7 +2761,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-2feff3888a04bc046c0f",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2753,16 +2780,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1392,
+                  "duration": 1417,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI Agents (demo): cards=7 first=779ms avg=779ms api_reqs=0\n"
+                      "text": "  AI Agents (demo): cards=7 first=783ms avg=783ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:24.136Z",
+                  "startTime": "2026-02-13T06:08:49.174Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2772,7 +2799,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-4f6174c4d7e358b83a37",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2791,16 +2818,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1523,
+                  "duration": 1400,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI Agents (live): cards=7 first=888ms avg=888ms api_reqs=22\n"
+                      "text": "  AI Agents (live): cards=7 first=735ms avg=735ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:25.535Z",
+                  "startTime": "2026-02-13T06:08:50.596Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2810,7 +2837,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-39682d381a1accd4d44a",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2829,16 +2856,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1394,
+                  "duration": 1367,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI Agents (live+cache): cards=7 first=764ms avg=764ms api_reqs=22\n"
+                      "text": "  AI Agents (live+cache): cards=7 first=716ms avg=716ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:27.064Z",
+                  "startTime": "2026-02-13T06:08:52.001Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2848,7 +2875,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-01aaa2b1727459e0a06f",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2867,16 +2894,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1551,
+                  "duration": 1435,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Data Compliance (demo): cards=4 first=894ms avg=894ms api_reqs=0\n"
+                      "text": "  Data Compliance (demo): cards=4 first=817ms avg=817ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:28.463Z",
+                  "startTime": "2026-02-13T06:08:53.373Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2886,7 +2913,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-1bdb7152e11cfc25fa2a",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2905,16 +2932,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1449,
+                  "duration": 1331,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Data Compliance (live): cards=4 first=810ms avg=911ms api_reqs=22\n"
+                      "text": "  Data Compliance (live): cards=4 first=650ms avg=650ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:30.021Z",
+                  "startTime": "2026-02-13T06:08:54.814Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2924,7 +2951,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-b45dbe4120e6800918fc",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2943,16 +2970,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1513,
+                  "duration": 1412,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Data Compliance (live+cache): cards=4 first=869ms avg=869ms api_reqs=22\n"
+                      "text": "  Data Compliance (live+cache): cards=4 first=758ms avg=758ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:31.477Z",
+                  "startTime": "2026-02-13T06:08:56.150Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2962,7 +2989,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-745b7ff0f41070c3616d",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -2981,16 +3008,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1482,
+                  "duration": 1330,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Arcade (demo): cards=20 first=871ms avg=871ms api_reqs=0\n"
+                      "text": "  Arcade (demo): cards=20 first=693ms avg=785ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:32.996Z",
+                  "startTime": "2026-02-13T06:08:57.568Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3000,7 +3027,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-d62208af58ac0f40283a",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -3019,16 +3046,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1429,
+                  "duration": 1472,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Arcade (live): cards=20 first=790ms avg=790ms api_reqs=16\n"
+                      "text": "  Arcade (live): cards=20 first=825ms avg=825ms api_reqs=16\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:34.487Z",
+                  "startTime": "2026-02-13T06:08:58.907Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3038,7 +3065,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-89637cce571d42062acd",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         },
         {
@@ -3057,19 +3084,19 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1462,
+                  "duration": 1511,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Arcade (live+cache): cards=20 first=835ms avg=835ms api_reqs=16\n"
+                      "text": "  Arcade (live+cache): cards=20 first=849ms avg=849ms api_reqs=16\n"
                     },
                     {
-                      "text": "\n=== Performance Report Summary ===\n\nDashboard              Mode   Cards  First(ms)  Last(ms)   AvgCard(ms)  API Reqs\n--------------------------------------------------------------------------------\nDashboard              demo   9      815        815        815          0       \nDashboard              live   7      834        1146       969          24      \nDashboard              live+cache 7      826        1129       970          24      \nClusters               demo   8      965        965        965          0       \nClusters               live   8      726        1030       916          17      \nClusters               live+cache 8      891        1193       1080         17      \nCompute                demo   5      892        892        892          0       \nCompute                live   5      964        1067       1046         22      \nCompute                live+cache 5      701        1106       964          22      \nSecurity               demo   2      779        779        779          0       \nSecurity               live   2      736        837        787          22      \nSecurity               live+cache 2      732        732        732          22      \nGitOps                 demo   4      1021       1021       1021         0       \nGitOps                 live   4      751        1158       853          23      \nGitOps                 live+cache 4      892        1194       968          23      \nPods                   demo   6      845        845        845          0       \nPods                   live   6      930        1231       1147         23      \nPods                   live+cache 6      720        1030       960          23      \nDeployments            demo   4      719        719        719          0       \nDeployments            live   4      714        916        790          22      \nDeployments            live+cache 4      734        937        886          22      \nServices               demo   5      777        777        777          0       \nServices               live   5      745        745        745          22      \nServices               live+cache 5      717        819        737          22      \nEvents                 demo   4      911        911        911          0       \nEvents                 live   4      850        850        850          23      \nEvents                 live+cache 4      866        866        866          23      \nStorage                demo   2      1137       1137       1137         0       \nStorage                live   2      1148       1148       1148         22      \nStorage                live+cache 2      783        783        783          22      \nNetwork                demo   2      1138       1138       1138         0       \nNetwork                live   2      882        882        882          22      \nNetwork                live+cache 2      880        980        930          22      \nNodes                  demo   4      761        761        761          0       \nNodes                  live   4      823        1025       975          22      \nNodes                  live+cache 4      750        1153       1002         22      \nWorkloads              demo   2      701        701        701          0       \nWorkloads              live   2      897        997        947          22      \nWorkloads              live+cache 2      792        1096       944          22      \nGPU                    demo   0      -1         -1         -1           0       \nGPU                    live   0      -1         -1         -1           17      \nGPU                    live+cache 0      -1         -1         -1           17      \nAlerts                 demo   5      798        798        798          0       \nAlerts                 live   5      711        711        711          23      \nAlerts                 live+cache 5      718        718        718          23      \nHelm                   demo   4      717        717        717          0       \nHelm                   live   4      750        1154       952          22      \nHelm                   live+cache 4      731        1135       1034         22      \nOperators              demo   2      693        693        693          0       \nOperators              live   2      1096       1096       1096         22      \nOperators              live+cache 2      1767       1767       1767         22      \nCompliance             demo   6      1275       1275       1275         0       \nCompliance             live   6      990        1292       1040         22      \nCompliance             live+cache 6      1441       1749       1492         22      \nCost                   demo   5      1425       1425       1425         0       \nCost                   live   5      1138       1440       1319         22      \nCost                   live+cache 5      947        1250       1129         22      \nAI/ML                  demo   14     1499       1499       1499         0       \nAI/ML                  live   14     1081       1233       1114         22      \nAI/ML                  live+cache 14     1497       1607       1521         22      \nCI/CD                  demo   6      1077       1077       1077         0       \nCI/CD                  live   6      877        1280       944          22      \nCI/CD                  live+cache 6      832        1235       899          22      \nLogs                   demo   3      828        828        828          0       \nLogs                   live   3      747        747        747          24      \nLogs                   live+cache 3      964        1165       1031         24      \nDeploy                 demo   17     945        945        945          0       \nDeploy                 live   17     764        1070       992          22      \nDeploy                 live+cache 17     1033       1344       1253         22      \nAI Agents              demo   7      779        779        779          0       \nAI Agents              live   7      888        888        888          22      \nAI Agents              live+cache 7      764        764        764          22      \nData Compliance        demo   4      894        894        894          0       \nData Compliance        live   4      810        1214       911          22      \nData Compliance        live+cache 4      869        869        869          22      \nArcade                 demo   20     871        871        871          0       \nArcade                 live   20     790        790        790          16      \nArcade                 live+cache 20     835        835        835          16      \n\nDemo avg card load: 967ms (150 cards)\nLive avg card load: 944ms (148 cards)\nLive+cache avg card load: 1039ms (148 cards)\n\n"
+                      "text": "\n=== Performance Report Summary ===\n\nDashboard              Mode   Cards  First(ms)  Last(ms)   AvgCard(ms)  API Reqs\n--------------------------------------------------------------------------------\nDashboard              demo   9      1109       1109       1109         0       \nDashboard              live   16     939        1309       1053         24      \nDashboard              live+cache 16     1075       1213       1156         23      \nClusters               demo   8      747        747        747          0       \nClusters               live   8      849        1053       926          17      \nClusters               live+cache 8      920        1035       963          17      \nCompute                demo   5      728        728        728          0       \nCompute                live   5      778        1105       976          21      \nCompute                live+cache 5      758        1095       965          21      \nSecurity               demo   2      786        786        786          0       \nSecurity               live   2      665        665        665          21      \nSecurity               live+cache 2      766        766        766          22      \nGitOps                 demo   4      720        720        720          0       \nGitOps                 live   4      754        987        870          22      \nGitOps                 live+cache 4      1009       1125       1096         22      \nPods                   demo   6      860        860        860          0       \nPods                   live   6      854        1081       949          24      \nPods                   live+cache 6      754        981        905          24      \nDeployments            demo   4      730        730        730          0       \nDeployments            live   4      676        1005       790          21      \nDeployments            live+cache 4      667        882        746          21      \nServices               demo   5      753        753        753          0       \nServices               live   5      798        798        798          22      \nServices               live+cache 5      760        872        782          21      \nEvents                 demo   4      806        806        806          0       \nEvents                 live   4      905        905        905          22      \nEvents                 live+cache 4      1008       1008       1008         22      \nStorage                demo   2      738        738        738          0       \nStorage                live   2      655        655        655          21      \nStorage                live+cache 2      650        650        650          21      \nNetwork                demo   2      748        748        748          0       \nNetwork                live   2      776        776        776          22      \nNetwork                live+cache 2      622        622        622          22      \nNodes                  demo   4      745        745        745          0       \nNodes                  live   4      635        952        848          21      \nNodes                  live+cache 4      716        932        878          21      \nWorkloads              demo   2      886        886        886          0       \nWorkloads              live   2      664        866        765          21      \nWorkloads              live+cache 2      767        886        827          21      \nGPU                    demo   0      -1         -1         -1           0       \nGPU                    live   0      -1         -1         -1           17      \nGPU                    live+cache 0      -1         -1         -1           17      \nAlerts                 demo   5      798        798        798          0       \nAlerts                 live   5      676        676        676          22      \nAlerts                 live+cache 5      773        773        773          22      \nHelm                   demo   4      643        643        643          0       \nHelm                   live   4      642        951        797          21      \nHelm                   live+cache 4      651        964        808          21      \nOperators              demo   2      744        744        744          0       \nOperators              live   2      918        918        918          21      \nOperators              live+cache 2      965        965        965          21      \nCompliance             demo   6      731        731        731          0       \nCompliance             live   6      748        967        785          21      \nCompliance             live+cache 6      801        1019       837          21      \nCost                   demo   5      753        753        753          0       \nCost                   live   5      669        990        797          21      \nCost                   live+cache 5      743        960        830          21      \nAI/ML                  demo   14     916        916        916          0       \nAI/ML                  live   14     950        1170       966          21      \nAI/ML                  live+cache 14     956        1174       972          21      \nCI/CD                  demo   6      747        747        747          0       \nCI/CD                  live   6      726        1562       916          21      \nCI/CD                  live+cache 6      878        2345       1123         21      \nLogs                   demo   3      890        890        890          0       \nLogs                   live   3      745        849        780          24      \nLogs                   live+cache 3      765        874        801          23      \nDeploy                 demo   17     888        888        888          0       \nDeploy                 live   17     852        1001       922          23      \nDeploy                 live+cache 17     936        1204       1023         23      \nAI Agents              demo   7      783        783        783          0       \nAI Agents              live   7      735        735        735          21      \nAI Agents              live+cache 7      716        716        716          21      \nData Compliance        demo   4      817        817        817          0       \nData Compliance        live   4      650        650        650          21      \nData Compliance        live+cache 4      758        758        758          21      \nArcade                 demo   20     693        908        785          0       \nArcade                 live   20     825        825        825          16      \nArcade                 live+cache 20     849        849        849          16      \n\nDemo avg card load: 817ms (150 cards)\nLive avg card load: 864ms (152 cards)\nLive+cache avg card load: 913ms (153 cards)\n\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-12T04:02:35.921Z",
+                  "startTime": "2026-02-13T06:09:00.383Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3079,7 +3106,7 @@
           ],
           "id": "4dfd87884dfe6763d2cd-2905520da09032facff2",
           "file": "dashboard-perf.spec.ts",
-          "line": 762,
+          "line": 778,
           "column": 5
         }
       ]
@@ -3087,8 +3114,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-02-12T04:00:08.501Z",
-    "duration": 149177.924,
+    "startTime": "2026-02-13T06:05:37.942Z",
+    "duration": 204385.19900000002,
     "expected": 79,
     "skipped": 0,
     "unexpected": 0,

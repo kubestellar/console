@@ -3,31 +3,85 @@
 
 Dashboard              Mode   Cards  First(ms)  Last(ms)   AvgCard(ms)  API Reqs
 --------------------------------------------------------------------------------
-Dashboard              demo   9      832        832        832          0       
-Clusters               demo   8      1106       1106       1106         0       
-Compute                demo   5      833        833        833          0       
-Security               demo   2      835        835        835          0       
-GitOps                 demo   4      809        809        809          0       
-Pods                   demo   6      1010       1010       1010         0       
-Deployments            demo   4      945        945        945          0       
-Services               demo   5      924        924        924          0       
-Events                 demo   4      1014       1014       1014         0       
-Storage                demo   2      707        707        707          0       
-Network                demo   2      892        892        892          0       
-Nodes                  demo   4      1178       1178       1178         0       
-Workloads              demo   2      1433       1433       1433         0       
+Dashboard              demo   9      1109       1109       1109         0       
+Dashboard              live   16     939        1309       1053         24      
+Dashboard              live+cache 16     1075       1213       1156         23      
+Clusters               demo   8      747        747        747          0       
+Clusters               live   8      849        1053       926          17      
+Clusters               live+cache 8      920        1035       963          17      
+Compute                demo   5      728        728        728          0       
+Compute                live   5      778        1105       976          21      
+Compute                live+cache 5      758        1095       965          21      
+Security               demo   2      786        786        786          0       
+Security               live   2      665        665        665          21      
+Security               live+cache 2      766        766        766          22      
+GitOps                 demo   4      720        720        720          0       
+GitOps                 live   4      754        987        870          22      
+GitOps                 live+cache 4      1009       1125       1096         22      
+Pods                   demo   6      860        860        860          0       
+Pods                   live   6      854        1081       949          24      
+Pods                   live+cache 6      754        981        905          24      
+Deployments            demo   4      730        730        730          0       
+Deployments            live   4      676        1005       790          21      
+Deployments            live+cache 4      667        882        746          21      
+Services               demo   5      753        753        753          0       
+Services               live   5      798        798        798          22      
+Services               live+cache 5      760        872        782          21      
+Events                 demo   4      806        806        806          0       
+Events                 live   4      905        905        905          22      
+Events                 live+cache 4      1008       1008       1008         22      
+Storage                demo   2      738        738        738          0       
+Storage                live   2      655        655        655          21      
+Storage                live+cache 2      650        650        650          21      
+Network                demo   2      748        748        748          0       
+Network                live   2      776        776        776          22      
+Network                live+cache 2      622        622        622          22      
+Nodes                  demo   4      745        745        745          0       
+Nodes                  live   4      635        952        848          21      
+Nodes                  live+cache 4      716        932        878          21      
+Workloads              demo   2      886        886        886          0       
+Workloads              live   2      664        866        765          21      
+Workloads              live+cache 2      767        886        827          21      
 GPU                    demo   0      -1         -1         -1           0       
-Alerts                 demo   5      886        886        886          0       
-Helm                   demo   4      965        965        965          0       
-Operators              demo   2      712        712        712          0       
-Compliance             demo   6      810        810        810          0       
-Cost                   demo   5      774        774        774          0       
-AI/ML                  demo   14     1160       1160       1160         0       
-CI/CD                  demo   6      765        765        765          0       
-Logs                   demo   3      824        824        824          0       
-Deploy                 demo   17     900        900        900          0       
-AI Agents              demo   7      1263       1263       1263         0       
-Data Compliance        demo   4      733        733        733          0       
-Arcade                 demo   20     1029       1029       1029         0       
+GPU                    live   0      -1         -1         -1           17      
+GPU                    live+cache 0      -1         -1         -1           17      
+Alerts                 demo   5      798        798        798          0       
+Alerts                 live   5      676        676        676          22      
+Alerts                 live+cache 5      773        773        773          22      
+Helm                   demo   4      643        643        643          0       
+Helm                   live   4      642        951        797          21      
+Helm                   live+cache 4      651        964        808          21      
+Operators              demo   2      744        744        744          0       
+Operators              live   2      918        918        918          21      
+Operators              live+cache 2      965        965        965          21      
+Compliance             demo   6      731        731        731          0       
+Compliance             live   6      748        967        785          21      
+Compliance             live+cache 6      801        1019       837          21      
+Cost                   demo   5      753        753        753          0       
+Cost                   live   5      669        990        797          21      
+Cost                   live+cache 5      743        960        830          21      
+AI/ML                  demo   14     916        916        916          0       
+AI/ML                  live   14     950        1170       966          21      
+AI/ML                  live+cache 14     956        1174       972          21      
+CI/CD                  demo   6      747        747        747          0       
+CI/CD                  live   6      726        1562       916          21      
+CI/CD                  live+cache 6      878        2345       1123         21      
+Logs                   demo   3      890        890        890          0       
+Logs                   live   3      745        849        780          24      
+Logs                   live+cache 3      765        874        801          23      
+Deploy                 demo   17     888        888        888          0       
+Deploy                 live   17     852        1001       922          23      
+Deploy                 live+cache 17     936        1204       1023         23      
+AI Agents              demo   7      783        783        783          0       
+AI Agents              live   7      735        735        735          21      
+AI Agents              live+cache 7      716        716        716          21      
+Data Compliance        demo   4      817        817        817          0       
+Data Compliance        live   4      650        650        650          21      
+Data Compliance        live+cache 4      758        758        758          21      
+Arcade                 demo   20     693        908        785          0       
+Arcade                 live   20     825        825        825          16      
+Arcade                 live+cache 20     849        849        849          16      
 
-Demo avg card load: 961ms (150 cards)
+Demo avg card load: 817ms (150 cards)
+Live avg card load: 864ms (152 cards)
+Live+cache avg card load: 913ms (153 cards)
