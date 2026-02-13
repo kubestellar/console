@@ -124,6 +124,14 @@ const CARD_CATALOG = {
     { type: 'namespace_rbac', title: 'Namespace RBAC', description: 'Roles, bindings, service accounts', visualization: 'table' },
     { type: 'namespace_events', title: 'Namespace Events', description: 'Events in namespace', visualization: 'events' },
   ],
+  'Crossplane': [
+    {
+      type: 'crossplane_managed_resources',
+      title: 'Crossplane Managed Resources',
+      description: 'View all Crossplane managed resources including status, provider, and sync conditions',
+      visualization: 'table',
+    },
+  ],
   'Security & Events': [
     { type: 'security_issues', title: 'Security Issues', description: 'Security findings and vulnerabilities', visualization: 'table' },
     { type: 'event_stream', title: 'Event Stream', description: 'Live Kubernetes event feed', visualization: 'events' },

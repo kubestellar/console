@@ -192,6 +192,7 @@ const KagentiAgentDiscovery = lazy(() => _kagentiBundle.then(m => ({ default: m.
 const KagentiSecurity = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurity })))
 const KagentiSecurityPosture = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiSecurityPosture })))
 const KagentiTopology = lazy(() => _kagentiBundle.then(m => ({ default: m.KagentiTopology })))
+const CrossplaneManagedResources = lazy(() => import('./crossplane_status/CrossplaneManagedResources').then(m => ({ default: m.CrossplaneManagedResources })))
 
 // Type for card component props
 export type CardComponentProps = { config?: Record<string, unknown> }
@@ -404,6 +405,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kagenti_security: KagentiSecurity,
   kagenti_security_posture: KagentiSecurityPosture,
   kagenti_topology: KagentiTopology,
+  // Crossplane cards
+  crossplane_managed_resources: CrossplaneManagedResources,
 
   // LLM-d stunning visualization cards
   llmd_flow: LLMdFlow,
@@ -686,6 +689,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagenti_security: () => import('./kagenti'),
   kagenti_security_posture: () => import('./kagenti'),
   kagenti_topology: () => import('./kagenti'),
+  // Crossplane cards
+  crossplane_managed_resources: () => import('./crossplane_status'),
 }
 
 /**
@@ -733,6 +738,7 @@ export function prefetchDemoCardChunks(): void {
     () => import('./kagenti/KagentiAgentDiscovery'),
     () => import('./kagenti/KagentiSecurity'),
     () => import('./kagenti/KagentiTopology'),
+    () => import('./crossplane_status/CrossplaneManagedResources'),
   ]
   startupChunks.forEach(load => load().catch(() => {}))
 }
@@ -786,6 +792,8 @@ export const LIVE_DATA_CARDS = new Set([
   'kagenti_agent_discovery',
   'kagenti_security',
   'kagenti_topology',
+  // crossplane cards
+  'crossplane_managed_resources',
 ])
 
 /**
@@ -804,7 +812,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   active_alerts: 4,
   security_issues: 4,
   upgrade_status: 4,
-
+  crossplane_managed_resources: 4,
   // MCS cards
   service_exports: 6,
   service_imports: 6,
