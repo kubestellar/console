@@ -467,11 +467,13 @@ export function generateBenchmarkReports(): BenchmarkReport[] {
   for (const hw of HARDWARE_CONFIGS) {
     for (const model of MODELS) {
       for (const config of CONFIGS) {
-        // Skip unrealistic combos: large models on small GPUs
-        if (model.name.includes('70B') && hw.model.includes('L40S')) continue
-        if (model.name.includes('R1') && !hw.model.includes('H100') && !hw.model.includes('H200')) continue
+        for (const seqLen of SEQ_LENS) {
+          // Skip unrealistic combos: large models on small GPUs
+          if (model.name.includes('70B') && hw.model.includes('L40S')) continue
+          if (model.name.includes('R1') && !hw.model.includes('H100') && !hw.model.includes('H200')) continue
 
-        reports.push(generateBenchmarkReport(hw, model, config, SEQ_LENS[0], dateStr, rand))
+          reports.push(generateBenchmarkReport(hw, model, config, seqLen, dateStr, rand))
+        }
       }
     }
   }

@@ -1,9 +1,9 @@
 /**
  * ParetoFrontier — Interactive performance frontier chart
  *
- * Single card with 4 chart type tabs. White chart area, right-side scrollable
- * legend, connected scatter lines, GPU count labels, toggle switches.
- * Built with ECharts for zoom/pan and dense-data handling.
+ * Dropdown filters (Model, ISL/OSL, Framework, X-Axis Metric) control the data
+ * and chart view. Right-side legend with hardware-colored dots and Reset filter.
+ * Connected smooth scatter lines with GPU count labels. Built with ECharts.
  */
 import { useState, useMemo, useCallback, useRef } from 'react'
 import ReactECharts from 'echarts-for-react'
@@ -21,7 +21,7 @@ import {
 } from '../../../lib/llmd/benchmarkMockData'
 
 // ---------------------------------------------------------------------------
-// Metrics — Y is always throughput/GPU, X varies by chart tab
+// Metrics — X-axis choices (Y is always throughput/GPU)
 // ---------------------------------------------------------------------------
 
 interface AxisMetric {
@@ -30,12 +30,7 @@ interface AxisMetric {
   getValue: (p: ParetoPoint) => number
 }
 
-const METRICS: Record<string, AxisMetric> = {
-  throughputPerGpu: {
-    label: 'Token Throughput per GPU',
-    unit: 'tok/s/gpu',
-    getValue: (p) => p.throughputPerGpu,
-  },
+const X_METRICS: Record<string, AxisMetric> = {
   e2eLatency: {
     label: 'End-to-end Latency',
     unit: 'ms',
@@ -58,38 +53,10 @@ const METRICS: Record<string, AxisMetric> = {
   },
 }
 
-// ---------------------------------------------------------------------------
-// Chart type tabs — 4 views in one card
-// ---------------------------------------------------------------------------
-
-interface ChartTab {
-  id: string
-  label: string
-  title: string
-  xKey: string
-}
-
-const CHART_TABS: ChartTab[] = [
-  { id: 'latency', label: 'E2E Latency', title: 'Token Throughput per GPU vs. End-to-end Latency', xKey: 'e2eLatency' },
-  { id: 'interactivity', label: 'Interactivity', title: 'Token Throughput per GPU vs. Interactivity', xKey: 'interactivity' },
-  { id: 'p99', label: 'p99 Latency', title: 'Token Throughput per GPU vs. p99 Latency', xKey: 'p99Latency' },
-  { id: 'tpot', label: 'TPOT', title: 'Token Throughput per GPU vs. Time per Output Token', xKey: 'tpot' },
-]
-
-// ---------------------------------------------------------------------------
-// Config symbols — deployment configuration shapes
-// ---------------------------------------------------------------------------
-
-const CONFIG_SYMBOLS: Record<string, string> = {
-  standalone: 'circle',
-  scheduling: 'rect',
-  disaggregated: 'triangle',
-}
-
-const CONFIG_LABEL: Record<string, string> = {
-  standalone: '\u25CF',
-  scheduling: '\u25A0',
-  disaggregated: '\u25B2',
+const Y_METRIC: AxisMetric = {
+  label: 'Token Throughput per GPU',
+  unit: 'tok/s/gpu',
+  getValue: (p) => p.throughputPerGpu,
 }
 
 // ---------------------------------------------------------------------------
@@ -117,39 +84,46 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     hasData: effectiveReports.length > 0,
   })
 
-  // ---- Chart type selection ----
-  const initialTab = useMemo(() => {
+  // ---- All Pareto points ----
+  const allPoints = useMemo(() => extractParetoPoints(effectiveReports), [effectiveReports])
+
+  // ---- Extract unique filter values ----
+  const filterOptions = useMemo(() => {
+    const models = [...new Set(allPoints.map(p => getModelShort(p.model)))]
+    const seqLens = [...new Set(allPoints.map(p => p.seqLen))]
+    const frameworks = [...new Set(allPoints.map(p => p.framework).filter(Boolean))]
+    return { models, seqLens, frameworks }
+  }, [allPoints])
+
+  // ---- Filter state ----
+  const initialXMetric = useMemo(() => {
     const ct = config?.chartType
-    if (!ct) return 0
-    const idx = CHART_TABS.findIndex(t => ct.includes(t.id))
-    return idx >= 0 ? idx : 0
+    if (!ct) return 'e2eLatency'
+    const found = Object.keys(X_METRICS).find(k => ct.includes(k))
+    return found ?? 'e2eLatency'
   }, [config?.chartType])
 
-  const [activeTab, setActiveTab] = useState(initialTab)
-  const tab = CHART_TABS[activeTab]
-  const xAxis = METRICS[tab.xKey]
-  const yAxis = METRICS.throughputPerGpu
+  const [modelFilter, setModelFilter] = useState('all')
+  const [seqLenFilter, setSeqLenFilter] = useState('all')
+  const [frameworkFilter, setFrameworkFilter] = useState('all')
+  const [xMetricKey, setXMetricKey] = useState(initialXMetric)
+  const [hiddenHw, setHiddenHw] = useState<Set<string>>(new Set())
+
+  const xAxis = X_METRICS[xMetricKey]
 
   // ---- Toggles ----
   const [hideNonOptimal, setHideNonOptimal] = useState(false)
   const [hideLabels, setHideLabels] = useState(false)
   const [highContrast, setHighContrast] = useState(true)
 
-  // ---- Filters ----
-  const [modelFilter, setModelFilter] = useState('all')
-  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set())
-
-  // ---- Processed data ----
-  const { allPoints, models } = useMemo(() => {
-    const pts = extractParetoPoints(effectiveReports)
-    const mdls = [...new Set(pts.map(p => getModelShort(p.model)))]
-    return { allPoints: pts, models: mdls }
-  }, [effectiveReports])
-
+  // ---- Filtered data ----
   const filtered = useMemo(() => {
-    if (modelFilter === 'all') return allPoints
-    return allPoints.filter(p => getModelShort(p.model) === modelFilter)
-  }, [allPoints, modelFilter])
+    let pts = allPoints
+    if (modelFilter !== 'all') pts = pts.filter(p => getModelShort(p.model) === modelFilter)
+    if (seqLenFilter !== 'all') pts = pts.filter(p => p.seqLen === seqLenFilter)
+    if (frameworkFilter !== 'all') pts = pts.filter(p => p.framework === frameworkFilter)
+    return pts
+  }, [allPoints, modelFilter, seqLenFilter, frameworkFilter])
 
   const frontier = useMemo(() => computeParetoFrontier(filtered), [filtered])
   const frontierUids = useMemo(() => new Set(frontier.map(p => p.uid)), [frontier])
@@ -159,29 +133,35 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     return filtered.filter(p => frontierUids.has(p.uid))
   }, [filtered, hideNonOptimal, frontierUids])
 
-  // ---- Series grouping ----
+  // ---- Series grouped by hardware ----
   const seriesMap = useMemo(() => {
-    const map = new Map<string, { hw: string; cfg: string; pts: ParetoPoint[] }>()
+    const map = new Map<string, ParetoPoint[]>()
     for (const pt of displayPoints) {
       const hw = getHardwareShort(pt.hardware)
-      const name = `${hw} (${pt.config})`
-      if (!map.has(name)) map.set(name, { hw, cfg: pt.config, pts: [] })
-      map.get(name)!.pts.push(pt)
+      if (!map.has(hw)) map.set(hw, [])
+      map.get(hw)!.push(pt)
     }
-    for (const s of map.values()) {
-      s.pts.sort((a, b) => xAxis.getValue(a) - xAxis.getValue(b))
+    for (const pts of map.values()) {
+      pts.sort((a, b) => xAxis.getValue(a) - xAxis.getValue(b))
     }
     return map
   }, [displayPoints, xAxis])
 
   // ---- Callbacks ----
-  const toggleSeries = useCallback((name: string) => {
-    setHiddenSeries(prev => {
+  const toggleHw = useCallback((hw: string) => {
+    setHiddenHw(prev => {
       const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
+      if (next.has(hw)) next.delete(hw)
+      else next.add(hw)
       return next
     })
+  }, [])
+
+  const resetFilters = useCallback(() => {
+    setModelFilter('all')
+    setSeqLenFilter('all')
+    setFrameworkFilter('all')
+    setHiddenHw(new Set())
   }, [])
 
   const handleDownload = useCallback(() => {
@@ -190,28 +170,38 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
     const a = document.createElement('a')
     a.href = url
-    a.download = `pareto-${tab.id}.png`
+    a.download = `pareto-${xMetricKey}.png`
     a.click()
-  }, [tab.id])
+  }, [xMetricKey])
 
   const handleResetZoom = useCallback(() => {
     chartRef.current?.getEchartsInstance()?.dispatchAction({ type: 'dataZoom', start: 0, end: 100 })
   }, [])
 
+  // ---- Chart title + subtitle ----
+  const chartTitle = `Token Throughput per GPU vs. ${xAxis.label}`
+  const subtitle = useMemo(() => {
+    const parts: string[] = []
+    if (modelFilter !== 'all') parts.push(modelFilter)
+    if (frameworkFilter !== 'all') parts.push(frameworkFilter)
+    if (seqLenFilter !== 'all') parts.push(seqLenFilter)
+    return parts.length > 0 ? parts.join(' \u2022 ') : 'All configurations'
+  }, [modelFilter, seqLenFilter, frameworkFilter])
+
   // ---- ECharts option ----
   const option = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allSeries: any[] = [...seriesMap.entries()]
-      .filter(([name]) => !hiddenSeries.has(name))
-      .map(([name, { hw, cfg, pts }]) => {
+      .filter(([hw]) => !hiddenHw.has(hw))
+      .map(([hw, pts]) => {
         const color = HARDWARE_COLORS[hw] ?? '#6b7280'
         return {
-          name,
+          name: hw,
           type: 'line',
           smooth: true,
-          symbol: CONFIG_SYMBOLS[cfg] ?? 'circle',
+          symbol: 'circle',
           symbolSize: highContrast ? 10 : 7,
-          data: pts.map(p => ({ value: [xAxis.getValue(p), yAxis.getValue(p)], point: p })),
+          data: pts.map(p => ({ value: [xAxis.getValue(p), Y_METRIC.getValue(p)], point: p })),
           lineStyle: { color, width: highContrast ? 2 : 1.5, opacity: highContrast ? 0.85 : 0.55 },
           itemStyle: {
             color,
@@ -245,7 +235,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
         name: 'Pareto Frontier',
         type: 'line',
         smooth: true,
-        data: sorted.map(p => [xAxis.getValue(p), yAxis.getValue(p)]),
+        data: sorted.map(p => [xAxis.getValue(p), Y_METRIC.getValue(p)]),
         lineStyle: { color: '#ef4444', width: 2, type: 'dashed', opacity: 0.8 },
         itemStyle: { color: '#ef4444' },
         symbol: 'none',
@@ -255,7 +245,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     }
 
     return {
-      backgroundColor: '#f0f0ee',
+      backgroundColor: '#e8e8e4',
       grid: { top: 16, right: 16, bottom: 42, left: 60 },
       tooltip: {
         trigger: 'item',
@@ -282,6 +272,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
             `<span style="color:#888">TPOT p50:</span><span style="font-family:monospace;color:#111">${pt.tpotP50Ms.toFixed(2)} ms/tok</span>` +
             `<span style="color:#888">p99 Latency:</span><span style="font-family:monospace;color:#111">${pt.p99LatencyMs.toFixed(0)} ms</span>` +
             `<span style="color:#888">GPUs:</span><span style="font-family:monospace;color:#111">${pt.gpuCount}\u00d7</span>` +
+            `<span style="color:#888">ISL/OSL:</span><span style="font-family:monospace;color:#111">${pt.seqLen}</span>` +
             `</div>`
           )
         },
@@ -299,7 +290,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       },
       yAxis: {
         type: 'value',
-        name: `${yAxis.label} (${yAxis.unit})`,
+        name: `${Y_METRIC.label} (${Y_METRIC.unit})`,
         nameLocation: 'middle',
         nameGap: 48,
         nameTextStyle: { color: '#555', fontSize: 11, fontWeight: 500 },
@@ -317,32 +308,38 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       ],
       series: allSeries,
     }
-  }, [seriesMap, frontier, hideNonOptimal, hideLabels, highContrast, hiddenSeries, xAxis, yAxis])
+  }, [seriesMap, frontier, hideNonOptimal, hideLabels, highContrast, hiddenHw, xAxis])
 
-  // ---- Legend items ----
+  // ---- Legend items (hardware only) ----
   const legendItems = useMemo(
-    () => [...seriesMap.entries()].map(([name, { hw, cfg }]) => ({
-      name,
+    () => [...seriesMap.keys()].map(hw => ({
       hw,
-      cfg,
       color: HARDWARE_COLORS[hw] ?? '#6b7280',
     })),
     [seriesMap],
   )
 
-  // Subtitle
-  const subtitle = useMemo(() => {
-    if (modelFilter !== 'all') return `${modelFilter} \u2022 llm-d benchmarks`
-    const list = models.slice(0, 3).join(', ')
-    return `${list}${models.length > 3 ? ` +${models.length - 3}` : ''} \u2022 llm-d benchmarks`
-  }, [modelFilter, models])
-
   return (
     <div className="h-full flex flex-col" style={{ padding: '12px 14px 8px' }}>
+      {/* Dropdown filters row */}
+      <div className="flex items-end gap-3 mb-2 flex-shrink-0 flex-wrap">
+        <FilterDropdown label="Model" value={modelFilter} onChange={setModelFilter} options={filterOptions.models} />
+        <FilterDropdown label="ISL / OSL" value={seqLenFilter} onChange={setSeqLenFilter} options={filterOptions.seqLens} />
+        <FilterDropdown label="Framework" value={frameworkFilter} onChange={setFrameworkFilter} options={filterOptions.frameworks} />
+        <FilterDropdown
+          label="X-Axis Metric"
+          value={xMetricKey}
+          onChange={setXMetricKey}
+          options={Object.keys(X_METRICS)}
+          optionLabels={Object.fromEntries(Object.entries(X_METRICS).map(([k, v]) => [k, v.label]))}
+          noAllOption
+        />
+      </div>
+
       {/* Title + action buttons */}
-      <div className="flex items-start justify-between mb-1.5 flex-shrink-0">
+      <div className="flex items-start justify-between mb-1 flex-shrink-0">
         <div className="min-w-0">
-          <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{tab.title}</h3>
+          <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{chartTitle}</h3>
           <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ml-3">
@@ -363,35 +360,9 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
         </div>
       </div>
 
-      {/* Chart type tabs + model filter */}
-      <div className="flex items-center gap-1 mb-2 flex-shrink-0">
-        {CHART_TABS.map((ct, i) => (
-          <button
-            key={ct.id}
-            onClick={() => setActiveTab(i)}
-            className={`px-2.5 py-1 rounded text-[10px] font-medium transition-colors ${
-              activeTab === i
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-            }`}
-          >
-            {ct.label}
-          </button>
-        ))}
-        <div className="flex-1" />
-        <select
-          value={modelFilter}
-          onChange={e => setModelFilter(e.target.value)}
-          className="bg-secondary border border-border rounded px-2 py-0.5 text-[10px] text-foreground"
-        >
-          <option value="all">All Models</option>
-          {models.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-      </div>
-
       {/* Chart area + right legend */}
       <div className="flex flex-1 min-h-0 gap-2">
-        {/* ECharts white chart */}
+        {/* ECharts chart */}
         <div className="flex-1 min-w-0 rounded overflow-hidden" style={{ minHeight: 200 }}>
           <ReactECharts
             ref={chartRef}
@@ -403,22 +374,22 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
         </div>
 
         {/* Right legend panel */}
-        <div className="flex-shrink-0 flex flex-col" style={{ width: 148 }}>
-          {/* Series list */}
+        <div className="flex-shrink-0 flex flex-col" style={{ width: 130 }}>
+          {/* Hardware series list */}
           <div className="flex-1 overflow-y-auto space-y-px" style={{ scrollbarWidth: 'thin' }}>
-            {legendItems.map(({ name, cfg, color }) => {
-              const hidden = hiddenSeries.has(name)
+            {legendItems.map(({ hw, color }) => {
+              const hidden = hiddenHw.has(hw)
               return (
                 <button
-                  key={name}
-                  onClick={() => toggleSeries(name)}
-                  className={`flex items-center gap-1.5 w-full text-left px-1 py-0.5 rounded text-[10px] hover:bg-secondary/60 transition-opacity ${
+                  key={hw}
+                  onClick={() => toggleHw(hw)}
+                  className={`flex items-center gap-1.5 w-full text-left px-1 py-0.5 rounded text-[11px] hover:bg-secondary/60 transition-opacity ${
                     hidden ? 'opacity-25' : ''
                   }`}
-                  title={`${hidden ? 'Show' : 'Hide'} ${name}`}
+                  title={`${hidden ? 'Show' : 'Hide'} ${hw}`}
                 >
-                  <span style={{ color, fontSize: 11 }}>{CONFIG_LABEL[cfg] ?? '\u25CF'}</span>
-                  <span className="text-muted-foreground truncate">{name}</span>
+                  <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-foreground truncate">{hw}</span>
                 </button>
               )
             })}
@@ -430,21 +401,19 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
             )}
           </div>
 
+          {/* Reset filter link */}
+          <button
+            onClick={resetFilters}
+            className="text-[10px] text-muted-foreground hover:text-foreground px-1 py-0.5 text-left transition-colors"
+          >
+            Reset filter &rarr;|
+          </button>
+
           {/* Toggle controls */}
           <div className="border-t border-border/50 mt-1 pt-1.5 space-y-1 flex-shrink-0">
             <Toggle label="Hide Non-Optimal" active={hideNonOptimal} onChange={setHideNonOptimal} />
             <Toggle label="Hide Labels" active={hideLabels} onChange={setHideLabels} />
             <Toggle label="High Contrast" active={highContrast} onChange={setHighContrast} />
-          </div>
-
-          {/* Config shape key */}
-          <div className="border-t border-border/50 mt-1.5 pt-1 flex-shrink-0">
-            {Object.entries(CONFIG_LABEL).map(([cfg, sym]) => (
-              <div key={cfg} className="flex items-center gap-1.5 text-[10px] text-muted-foreground py-px">
-                <span>{sym}</span>
-                <span className="capitalize">{cfg}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -453,6 +422,42 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       <p className="text-center text-[9px] text-muted-foreground/50 mt-1 flex-shrink-0">
         Scroll to zoom &middot; Drag to pan &middot; Double-click to reset
       </p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// FilterDropdown — labeled select dropdown
+// ---------------------------------------------------------------------------
+
+function FilterDropdown({
+  label,
+  value,
+  onChange,
+  options,
+  optionLabels,
+  noAllOption,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+  optionLabels?: Record<string, string>
+  noAllOption?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] text-muted-foreground font-medium">{label}</span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="bg-secondary border border-border rounded px-2 py-1 text-[11px] text-foreground min-w-[100px]"
+      >
+        {!noAllOption && <option value="all">All</option>}
+        {options.map(o => (
+          <option key={o} value={o}>{optionLabels?.[o] ?? o}</option>
+        ))}
+      </select>
     </div>
   )
 }
