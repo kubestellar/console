@@ -456,6 +456,21 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		var allReports []BenchmarkReport
 		totalSent := 0
 
+		// Accumulate reports into a pending batch and flush every batchSize reports.
+		const batchSize = 8
+		var pendingBatch []BenchmarkReport
+
+		flushBatch := func() {
+			if len(pendingBatch) == 0 {
+				return
+			}
+			batch, _ := json.Marshal(pendingBatch)
+			fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
+			w.Flush()
+			log.Printf("[benchmarks] Flushed batch of %d (total: %d)", len(pendingBatch), totalSent)
+			pendingBatch = pendingBatch[:0]
+		}
+
 		// Send immediate progress event so the client knows we're connected
 		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"connecting\",\"total\":0}\n\n")
 		w.Flush()
@@ -505,23 +520,30 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 				if runItem.MimeType != driveFolderMIME {
 					continue
 				}
-				// Fetch per-file and stream each report individually for fast first paint
 				reports, err := h.fetchRunFolderStreaming(runItem.ID, item.Name, runItem.Name, func(report BenchmarkReport) {
 					allReports = append(allReports, report)
 					totalSent++
-					batch, _ := json.Marshal([]BenchmarkReport{report})
-					fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
-					w.Flush()
+					pendingBatch = append(pendingBatch, report)
+					if len(pendingBatch) >= batchSize {
+						flushBatch()
+					}
 				})
 				if err != nil {
 					log.Printf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err)
 					continue
+				}
+				// Flush any remaining reports after each run folder for timely delivery
+				if len(pendingBatch) > 0 {
+					flushBatch()
 				}
 				if len(reports) > 0 {
 					log.Printf("[benchmarks] Streamed %d from %q/%q (total: %d)", len(reports), item.Name, runItem.Name, totalSent)
 				}
 			}
 		}
+
+		// Flush any final remaining reports
+		flushBatch()
 
 		h.cache.set(allReports)
 		log.Printf("[benchmarks] Stream complete: %d total reports", totalSent)

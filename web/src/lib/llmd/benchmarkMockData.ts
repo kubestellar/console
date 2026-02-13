@@ -522,28 +522,39 @@ export function generateTimelineReports(days = 90): TimelinePoint[] {
 /** Extract Pareto-plottable points from a set of reports. */
 export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
   return reports.map(r => {
-    const engine = r.scenario.stack.find(c => c.standardized.kind === 'inference_engine')
+    const engine = r.scenario.stack?.find(c => c.standardized?.kind === 'inference_engine')
     if (!engine) return null
+
+    const agg = r.results?.request_performance?.aggregate
+    if (!agg) return null
 
     const acc = engine.standardized.accelerator
     const gpuCount = acc?.count ?? 1
-    const outputRate = r.results.request_performance.aggregate.throughput.output_token_rate?.mean ?? 0
-    const ttft = (r.results.request_performance.aggregate.latency.time_to_first_token?.p50 ?? 0) * 1000
-    const tpot = (r.results.request_performance.aggregate.latency.time_per_output_token?.p50 ?? 0) * 1000
-    const p99 = (r.results.request_performance.aggregate.latency.request_latency?.p99 ?? 0) * 1000
+    const outputRate = agg.throughput?.output_token_rate?.mean ?? 0
+    const ttft = (agg.latency?.time_to_first_token?.p50 ?? 0) * 1000
+    const tpot = (agg.latency?.time_per_output_token?.p50 ?? 0) * 1000
+    const p99 = (agg.latency?.request_latency?.p99 ?? 0) * 1000
 
-    // Classify config by stack roles and experiment ID
-    const roles = r.scenario.stack.map(c => c.standardized.role).filter(Boolean)
-    const eid = r.run.eid ?? ''
-    const roleStrings = roles as string[]
-    const hasPrefill = roleStrings.includes('prefill')
-    const hasReplica = roleStrings.includes('replica')
+    // Skip points with zero throughput (invalid data)
+    if (outputRate === 0) return null
+
+    // Classify config by stack roles, tool name, and experiment ID
+    const roles = (r.scenario.stack ?? []).map(c => c.standardized?.role).filter(Boolean) as string[]
+    const eid = r.run?.eid ?? ''
+    const tool = engine.standardized.tool ?? ''
+    const hasPrefill = roles.includes('prefill')
+    const hasDecode = roles.includes('decode')
+    const hasReplica = roles.includes('replica')
+
     let config: ParetoPoint['config'] = 'scheduling'
-    if (hasReplica || eid.includes('standalone')) {
+    if (hasReplica || eid.includes('standalone') || tool === 'vllm') {
       config = 'standalone'
-    } else if (hasPrefill || eid.includes('modelservice')) {
+    } else if ((hasPrefill && hasDecode) || eid.includes('modelservice')) {
       config = 'disaggregated'
     }
+
+    const isl = r.scenario.load?.standardized?.input_seq_len?.value ?? 0
+    const osl = r.scenario.load?.standardized?.output_seq_len?.value
 
     return {
       uid: r.run.uid,
@@ -552,13 +563,13 @@ export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
       hardwareMemory: acc?.memory ?? 0,
       gpuCount,
       config,
-      framework: engine.standardized.tool,
-      seqLen: `${r.scenario.load.standardized.input_seq_len.value}/${r.scenario.load.standardized.output_seq_len?.value ?? '?'}`,
+      framework: tool,
+      seqLen: `${isl}/${osl ?? '?'}`,
       throughputPerGpu: outputRate / gpuCount,
       ttftP50Ms: ttft,
       tpotP50Ms: tpot,
       p99LatencyMs: p99,
-      requestRate: r.results.request_performance.aggregate.throughput.request_rate?.mean ?? 0,
+      requestRate: agg.throughput?.request_rate?.mean ?? 0,
     }
   }).filter((p): p is ParetoPoint => p !== null)
 }
