@@ -1,53 +1,32 @@
 /**
- * Hook for fetching nightly E2E workflow run status from GitHub Actions API.
+ * Hook for fetching nightly E2E workflow run status.
  *
- * Fetches the last 7 runs for each of the 10 nightly E2E workflows across
- * llm-d/llm-d and llm-d/llm-d-workload-variant-autoscaler. Uses the GitHub
- * token from localStorage (base64-encoded, same as GitHubCIMonitor).
+ * Primary: fetches from backend proxy (/api/nightly-e2e/runs) which uses a
+ * server-side GitHub token and caches results for 5 minutes.
  *
- * Falls back to demo data when no token is available or the API is unreachable.
+ * Fallback: if the backend is unavailable, tries direct GitHub API calls
+ * using the user's localStorage token. Falls back to demo data when neither
+ * source is available.
  */
 import { useCache } from '../lib/cache'
 import {
-  NIGHTLY_WORKFLOWS,
   generateDemoNightlyData,
   type NightlyGuideStatus,
-  type NightlyRun,
 } from '../lib/llmd/nightlyE2EDemoData'
 
-const RUNS_PER_WORKFLOW = 7
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
 const DEMO_DATA = generateDemoNightlyData()
 
-function decodeToken(encoded: string): string {
-  try {
-    return atob(encoded)
-  } catch {
-    return encoded
-  }
-}
-
-function computeTrend(runs: NightlyRun[]): 'up' | 'down' | 'steady' {
-  if (runs.length < 4) return 'steady'
-  const recent = runs.slice(0, 3)
-  const older = runs.slice(3)
-  const recentPass = recent.filter(r => r.conclusion === 'success').length / recent.length
-  const olderPass = older.filter(r => r.conclusion === 'success').length / older.length
-  if (recentPass > olderPass + 0.1) return 'up'
-  if (recentPass < olderPass - 0.1) return 'down'
-  return 'steady'
-}
-
-function computePassRate(runs: NightlyRun[]): number {
-  const completed = runs.filter(r => r.status === 'completed')
-  if (completed.length === 0) return 0
-  return Math.round((completed.filter(r => r.conclusion === 'success').length / completed.length) * 100)
-}
-
 export interface NightlyE2EData {
   guides: NightlyGuideStatus[]
   isDemo: boolean
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const jwt = localStorage.getItem('token')
+  if (!jwt) return {}
+  return { Authorization: `Bearer ${jwt}` }
 }
 
 export function useNightlyE2EData() {
@@ -59,72 +38,55 @@ export function useNightlyE2EData() {
     persist: true,
     refreshInterval: REFRESH_INTERVAL_MS,
     fetcher: async () => {
-      const storedToken = localStorage.getItem('github_token')
-      const token = storedToken ? decodeToken(storedToken) : null
-      if (!token) {
-        return { guides: DEMO_DATA, isDemo: true }
-      }
-
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-      }
-
-      const results = await Promise.allSettled(
-        NIGHTLY_WORKFLOWS.map(async (wf) => {
-          const url = `https://api.github.com/repos/${wf.repo}/actions/workflows/${wf.workflowFile}/runs?per_page=${RUNS_PER_WORKFLOW}`
-          const res = await fetch(url, { headers })
-          if (res.status === 401 || res.status === 403) {
-            throw new Error('AUTH_FAILED')
-          }
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`)
-          }
-          const data = await res.json()
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const runs: NightlyRun[] = (data.workflow_runs ?? []).map((r: any) => ({
-            id: r.id,
-            status: r.status,
-            conclusion: r.conclusion,
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-            htmlUrl: r.html_url,
-            runNumber: r.run_number,
-          }))
-          return { wf, runs }
+      // Try backend proxy first (uses server-side GitHub token)
+      try {
+        const res = await fetch('/api/nightly-e2e/runs', {
+          headers: {
+            ...getAuthHeaders(),
+            Accept: 'application/json',
+          },
         })
-      )
-
-      // If any request got auth failure, fall back to demo
-      const authFailed = results.some(
-        r => r.status === 'rejected' && r.reason?.message === 'AUTH_FAILED'
-      )
-      if (authFailed) {
-        return { guides: DEMO_DATA, isDemo: true }
-      }
-
-      const guides: NightlyGuideStatus[] = NIGHTLY_WORKFLOWS.map((wf, i) => {
-        const result = results[i]
-        const runs = result.status === 'fulfilled' ? result.value.runs : []
-        return {
-          guide: wf.guide,
-          acronym: wf.acronym,
-          platform: wf.platform,
-          repo: wf.repo,
-          workflowFile: wf.workflowFile,
-          runs,
-          passRate: computePassRate(runs),
-          trend: computeTrend(runs),
-          latestConclusion: runs[0]?.conclusion ?? runs[0]?.status ?? null,
+        if (res.ok) {
+          const data = await res.json()
+          if (data.guides && data.guides.length > 0) {
+            const hasAnyRuns = data.guides.some(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (g: any) => g.runs && g.runs.length > 0
+            )
+            if (hasAnyRuns) {
+              // Map backend response to frontend types
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const guides: NightlyGuideStatus[] = data.guides.map((g: any) => ({
+                guide: g.guide,
+                acronym: g.acronym,
+                platform: g.platform,
+                repo: g.repo,
+                workflowFile: g.workflowFile,
+                runs: (g.runs ?? []).map(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (r: any) => ({
+                    id: r.id,
+                    status: r.status,
+                    conclusion: r.conclusion,
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                    htmlUrl: r.htmlUrl,
+                    runNumber: r.runNumber,
+                  })
+                ),
+                passRate: g.passRate,
+                trend: g.trend,
+                latestConclusion: g.latestConclusion,
+              }))
+              return { guides, isDemo: false }
+            }
+          }
         }
-      })
-
-      const hasAnyData = guides.some(g => g.runs.length > 0)
-      if (!hasAnyData) {
-        return { guides: DEMO_DATA, isDemo: true }
+      } catch {
+        // Backend unavailable — fall through to demo
       }
 
-      return { guides, isDemo: false }
+      return { guides: DEMO_DATA, isDemo: true }
     },
   })
 

@@ -1,0 +1,295 @@
+// Package handlers provides HTTP handlers for the console API.
+package handlers
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+const (
+	nightlyCacheTTL    = 5 * time.Minute
+	nightlyRunsPerPage = 7
+	githubAPIBase      = "https://api.github.com"
+)
+
+// NightlyWorkflow defines a GitHub Actions workflow to monitor.
+type NightlyWorkflow struct {
+	Repo         string `json:"repo"`
+	WorkflowFile string `json:"workflowFile"`
+	Guide        string `json:"guide"`
+	Acronym      string `json:"acronym"`
+	Platform     string `json:"platform"`
+}
+
+// NightlyRun represents a single workflow run from the GitHub Actions API.
+type NightlyRun struct {
+	ID         int64   `json:"id"`
+	Status     string  `json:"status"`
+	Conclusion *string `json:"conclusion"`
+	CreatedAt  string  `json:"createdAt"`
+	UpdatedAt  string  `json:"updatedAt"`
+	HTMLURL    string  `json:"htmlUrl"`
+	RunNumber  int     `json:"runNumber"`
+}
+
+// NightlyGuideStatus holds runs and computed stats for a single guide.
+type NightlyGuideStatus struct {
+	Guide            string       `json:"guide"`
+	Acronym          string       `json:"acronym"`
+	Platform         string       `json:"platform"`
+	Repo             string       `json:"repo"`
+	WorkflowFile     string       `json:"workflowFile"`
+	Runs             []NightlyRun `json:"runs"`
+	PassRate         int          `json:"passRate"`
+	Trend            string       `json:"trend"`
+	LatestConclusion *string      `json:"latestConclusion"`
+}
+
+// NightlyE2EResponse is the JSON response from the /api/nightly-e2e/runs endpoint.
+type NightlyE2EResponse struct {
+	Guides    []NightlyGuideStatus `json:"guides"`
+	CachedAt  string               `json:"cachedAt"`
+	FromCache bool                 `json:"fromCache"`
+}
+
+// NightlyE2EHandler serves nightly E2E workflow data proxied from GitHub.
+type NightlyE2EHandler struct {
+	githubToken string
+	httpClient  *http.Client
+
+	mu       sync.RWMutex
+	cache    *NightlyE2EResponse
+	cacheExp time.Time
+}
+
+// nightlyWorkflows is the canonical list of nightly E2E workflows to monitor.
+var nightlyWorkflows = []NightlyWorkflow{
+	// OCP
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "OCP"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "OCP"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-precise-prefix-cache.yaml", Guide: "Precise Prefix Cache", Acronym: "PPC", Platform: "OCP"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-simulated-accelerators.yaml", Guide: "Simulated Accelerators", Acronym: "SA", Platform: "OCP"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-tiered-prefix-cache.yaml", Guide: "Tiered Prefix Cache", Acronym: "TPC", Platform: "OCP"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "OCP"},
+	{Repo: "llm-d/llm-d-workload-variant-autoscaler", WorkflowFile: "nightly-e2e-openshift.yaml", Guide: "WVA", Acronym: "WVA", Platform: "OCP"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-benchmarking.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "OCP"},
+	// GKE
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-gke.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "GKE"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "GKE"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "GKE"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-benchmarking-gke.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "GKE"},
+	// CKS (same tests as GKE — workflows not yet created)
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-inference-scheduling-cks.yaml", Guide: "Inference Scheduling", Acronym: "IS", Platform: "CKS"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", Guide: "PD Disaggregation", Acronym: "PD", Platform: "CKS"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", Guide: "Wide EP + LWS", Acronym: "WEP", Platform: "CKS"},
+	{Repo: "llm-d/llm-d", WorkflowFile: "nightly-e2e-benchmarking-cks.yaml", Guide: "Benchmarking", Acronym: "BM", Platform: "CKS"},
+}
+
+// NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
+func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
+	return &NightlyE2EHandler{
+		githubToken: githubToken,
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+// GetRuns returns aggregated nightly E2E workflow data, cached for 5 minutes.
+func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
+	// Check cache
+	h.mu.RLock()
+	if h.cache != nil && time.Now().Before(h.cacheExp) {
+		resp := *h.cache
+		resp.FromCache = true
+		h.mu.RUnlock()
+		return c.JSON(resp)
+	}
+	h.mu.RUnlock()
+
+	// Fetch fresh data
+	resp, err := h.fetchAll()
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error": fmt.Sprintf("failed to fetch nightly E2E data: %v", err),
+		})
+	}
+
+	// Update cache
+	h.mu.Lock()
+	h.cache = resp
+	h.cacheExp = time.Now().Add(nightlyCacheTTL)
+	h.mu.Unlock()
+
+	return c.JSON(resp)
+}
+
+func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
+	type result struct {
+		idx  int
+		runs []NightlyRun
+		err  error
+	}
+
+	ch := make(chan result, len(nightlyWorkflows))
+	for i, wf := range nightlyWorkflows {
+		go func(idx int, wf NightlyWorkflow) {
+			runs, err := h.fetchWorkflowRuns(wf)
+			ch <- result{idx: idx, runs: runs, err: err}
+		}(i, wf)
+	}
+
+	// Collect results
+	runsByIdx := make(map[int][]NightlyRun, len(nightlyWorkflows))
+	for range nightlyWorkflows {
+		r := <-ch
+		if r.err == nil {
+			runsByIdx[r.idx] = r.runs
+		}
+		// Workflows that 404 (not yet created) just get empty runs
+	}
+
+	guides := make([]NightlyGuideStatus, len(nightlyWorkflows))
+	for i, wf := range nightlyWorkflows {
+		runs := runsByIdx[i]
+		if runs == nil {
+			runs = []NightlyRun{}
+		}
+		var latest *string
+		if len(runs) > 0 {
+			if runs[0].Conclusion != nil {
+				latest = runs[0].Conclusion
+			} else {
+				s := runs[0].Status
+				latest = &s
+			}
+		}
+		guides[i] = NightlyGuideStatus{
+			Guide:            wf.Guide,
+			Acronym:          wf.Acronym,
+			Platform:         wf.Platform,
+			Repo:             wf.Repo,
+			WorkflowFile:     wf.WorkflowFile,
+			Runs:             runs,
+			PassRate:         computePassRate(runs),
+			Trend:            computeTrend(runs),
+			LatestConclusion: latest,
+		}
+	}
+
+	return &NightlyE2EResponse{
+		Guides:    guides,
+		CachedAt:  time.Now().UTC().Format(time.RFC3339),
+		FromCache: false,
+	}, nil
+}
+
+func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun, error) {
+	url := fmt.Sprintf("%s/repos/%s/actions/workflows/%s/runs?per_page=%d",
+		githubAPIBase, wf.Repo, wf.WorkflowFile, nightlyRunsPerPage)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		// Workflow doesn't exist yet — return empty
+		return []NightlyRun{}, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var data struct {
+		WorkflowRuns []struct {
+			ID         int64   `json:"id"`
+			Status     string  `json:"status"`
+			Conclusion *string `json:"conclusion"`
+			CreatedAt  string  `json:"created_at"`
+			UpdatedAt  string  `json:"updated_at"`
+			HTMLURL    string  `json:"html_url"`
+			RunNumber  int     `json:"run_number"`
+		} `json:"workflow_runs"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	runs := make([]NightlyRun, len(data.WorkflowRuns))
+	for i, r := range data.WorkflowRuns {
+		runs[i] = NightlyRun{
+			ID:         r.ID,
+			Status:     r.Status,
+			Conclusion: r.Conclusion,
+			CreatedAt:  r.CreatedAt,
+			UpdatedAt:  r.UpdatedAt,
+			HTMLURL:    r.HTMLURL,
+			RunNumber:  r.RunNumber,
+		}
+	}
+	return runs, nil
+}
+
+func computePassRate(runs []NightlyRun) int {
+	var completed, passed int
+	for _, r := range runs {
+		if r.Status == "completed" {
+			completed++
+			if r.Conclusion != nil && *r.Conclusion == "success" {
+				passed++
+			}
+		}
+	}
+	if completed == 0 {
+		return 0
+	}
+	return int(float64(passed) / float64(completed) * 100)
+}
+
+func computeTrend(runs []NightlyRun) string {
+	if len(runs) < 4 {
+		return "steady"
+	}
+	recent := runs[:3]
+	older := runs[3:]
+
+	recentPass := successRate(recent)
+	olderPass := successRate(older)
+
+	if recentPass > olderPass+0.1 {
+		return "up"
+	}
+	if recentPass < olderPass-0.1 {
+		return "down"
+	}
+	return "steady"
+}
+
+func successRate(runs []NightlyRun) float64 {
+	if len(runs) == 0 {
+		return 0
+	}
+	var passed int
+	for _, r := range runs {
+		if r.Conclusion != nil && *r.Conclusion == "success" {
+			passed++
+		}
+	}
+	return float64(passed) / float64(len(runs))
+}

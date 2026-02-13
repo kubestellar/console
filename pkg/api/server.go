@@ -577,6 +577,10 @@ func (s *Server) setupRoutes() {
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
+	// Nightly E2E status (GitHub Actions proxy with server-side token + cache)
+	nightlyE2E := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
+	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
+
 	// GPU reservation routes
 	gpuHandler := handlers.NewGPUHandler(s.store)
 	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
