@@ -69,6 +69,19 @@ github:
     clientId: github-client-id
     clientSecret: github-client-secret
 
+# GitHub token for server-side API access (nightly E2E status, etc.)
+githubToken:
+  token: ""
+  existingSecret: ""
+  existingSecretKey: github-token
+
+# Google Drive API key for benchmark data
+googleDrive:
+  apiKey: ""
+  existingSecret: ""
+  existingSecretKey: google-drive-api-key
+  folderId: "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"
+
 # Claude AI configuration (optional)
 claude:
   apiKey: ""

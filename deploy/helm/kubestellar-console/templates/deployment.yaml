@@ -98,6 +98,22 @@ spec:
                   name: {{ .Values.claude.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.claude.existingSecretKey | default "claude-api-key" }}
             {{- end }}
+            {{- if or .Values.githubToken.existingSecret .Values.githubToken.token }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.githubToken.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.githubToken.existingSecretKey | default "github-token" }}
+            {{- end }}
+            {{- if or .Values.googleDrive.existingSecret .Values.googleDrive.apiKey }}
+            - name: GOOGLE_DRIVE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.googleDrive.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.googleDrive.existingSecretKey | default "google-drive-api-key" }}
+            - name: BENCHMARK_FOLDER_ID
+              value: {{ .Values.googleDrive.folderId | quote }}
+            {{- end }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
