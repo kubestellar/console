@@ -51,16 +51,45 @@ function NavigationProgress() {
   return <div className="absolute top-0 left-0 right-0 h-0.5 bg-purple-500 animate-pulse z-50" />
 }
 
-// Skeleton shown inside the content area while a lazy route chunk loads.
-// Keeps sidebar and navbar visible so the user sees navigation happened.
+// Lightweight fallback shown while a lazy route chunk loads.
+const LOADING_STAGES = [
+  'Loading application modules…',
+  'Initializing React components…',
+  'Preparing dashboard layout…',
+  'Connecting to backend API…',
+  'Discovering Kubernetes clusters…',
+  'Loading card components…',
+  'Fetching cluster health data…',
+  'Resolving MCP agent connection…',
+  'Hydrating cached state…',
+  'Rendering dashboard cards…',
+  'Finalizing layout…',
+]
+
 function ContentLoadingSkeleton() {
+  const [elapsed, setElapsed] = useState(0)
+  const [stageIndex, setStageIndex] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed(t => t + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (stageIndex < LOADING_STAGES.length - 1) {
+      const timer = setTimeout(() => setStageIndex(i => i + 1), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [stageIndex])
+
   return (
-    <div className="animate-pulse space-y-6 p-2">
-      <div className="h-8 w-64 bg-secondary/40 rounded-lg" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="h-48 bg-secondary/30 rounded-xl" />
-        ))}
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+        <span className="text-sm text-muted-foreground transition-opacity duration-300">
+          {LOADING_STAGES[stageIndex]}
+        </span>
+        <span className="text-xs text-muted-foreground/50 tabular-nums">{elapsed}s</span>
       </div>
     </div>
   )

@@ -92,9 +92,41 @@ manualChunks: (id) => {
     port: 5174,
     strictPort: true, // Fail if port 5174 is already in use
     warmup: {
-      // Pre-transform card component modules on server start so the first
-      // dashboard load doesn't pay the cold module-transform penalty.
+      // Pre-transform route and card modules on server start so navigation
+      // doesn't pay the cold module-transform penalty.
       clientFiles: [
+        // Route components
+        './src/components/dashboard/Dashboard.tsx',
+        './src/components/dashboard/CustomDashboard.tsx',
+        './src/components/clusters/Clusters.tsx',
+        './src/components/events/Events.tsx',
+        './src/components/workloads/Workloads.tsx',
+        './src/components/compute/Compute.tsx',
+        './src/components/nodes/Nodes.tsx',
+        './src/components/deployments/Deployments.tsx',
+        './src/components/pods/Pods.tsx',
+        './src/components/services/Services.tsx',
+        './src/components/storage/Storage.tsx',
+        './src/components/network/Network.tsx',
+        './src/components/security/Security.tsx',
+        './src/components/gitops/GitOps.tsx',
+        './src/components/alerts/Alerts.tsx',
+        './src/components/cost/Cost.tsx',
+        './src/components/compliance/Compliance.tsx',
+        './src/components/operators/Operators.tsx',
+        './src/components/helm/HelmReleases.tsx',
+        './src/components/gpu/GPUReservations.tsx',
+        './src/components/data-compliance/DataCompliance.tsx',
+        './src/components/logs/Logs.tsx',
+        './src/components/deploy/Deploy.tsx',
+        './src/components/aiml/AIML.tsx',
+        './src/components/aiagents/AIAgents.tsx',
+        './src/components/cicd/CICD.tsx',
+        './src/components/arcade/Arcade.tsx',
+        './src/components/marketplace/Marketplace.tsx',
+        './src/components/llmd-benchmarks/LLMdBenchmarks.tsx',
+        './src/components/settings/Settings.tsx',
+        // Card registries and bundles
         './src/components/cards/cardRegistry.ts',
         './src/components/cards/deploy-bundle.ts',
         './src/components/cards/llmd/index.ts',
