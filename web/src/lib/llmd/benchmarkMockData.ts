@@ -163,6 +163,8 @@ export interface ParetoPoint {
   tpotP50Ms: number
   p99LatencyMs: number
   requestRate: number
+  powerPerGpuKw: number
+  tcoPerGpuHr: number
 }
 
 export interface LeaderboardRow {
@@ -195,12 +197,17 @@ export interface TimelinePoint {
 // Constants
 // ---------------------------------------------------------------------------
 
-const HARDWARE_CONFIGS: { model: string; memory: number; costPerHr: number }[] = [
-  { model: 'NVIDIA-H100-80GB-HBM3', memory: 80, costPerHr: 2.50 },
-  { model: 'NVIDIA-A100-SXM4-80GB', memory: 80, costPerHr: 1.50 },
-  { model: 'NVIDIA-L40S', memory: 48, costPerHr: 1.00 },
-  { model: 'NVIDIA-H200-141GB', memory: 141, costPerHr: 3.80 },
+const HARDWARE_CONFIGS: { model: string; memory: number; costPerHr: number; powerKw: number }[] = [
+  { model: 'NVIDIA-H100-80GB-HBM3', memory: 80, costPerHr: 2.50, powerKw: 0.70 },
+  { model: 'NVIDIA-A100-SXM4-80GB', memory: 80, costPerHr: 1.50, powerKw: 0.40 },
+  { model: 'NVIDIA-L40S', memory: 48, costPerHr: 1.00, powerKw: 0.35 },
+  { model: 'NVIDIA-H200-141GB', memory: 141, costPerHr: 3.80, powerKw: 0.70 },
 ]
+
+/** Hardware specs lookup by model name (power and cost). */
+export const HARDWARE_SPECS: Record<string, { powerKw: number; costPerHr: number }> = Object.fromEntries(
+  HARDWARE_CONFIGS.map(hw => [hw.model, { powerKw: hw.powerKw, costPerHr: hw.costPerHr }])
+)
 
 const MODELS = [
   { name: 'meta-llama/Llama-3-70B-Instruct', short: 'Llama-3-70B' },
@@ -558,6 +565,8 @@ export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
     const isl = r.scenario.load?.standardized?.input_seq_len?.value ?? 0
     const osl = r.scenario.load?.standardized?.output_seq_len?.value
 
+    const hwSpecs = HARDWARE_SPECS[acc?.model ?? ''] ?? { powerKw: 0.5, costPerHr: 2.00 }
+
     return {
       uid: r.run.uid,
       model: engine.standardized.model?.name ?? 'unknown',
@@ -572,6 +581,8 @@ export function extractParetoPoints(reports: BenchmarkReport[]): ParetoPoint[] {
       tpotP50Ms: tpot,
       p99LatencyMs: p99,
       requestRate: agg.throughput?.request_rate?.mean ?? 0,
+      powerPerGpuKw: hwSpecs.powerKw,
+      tcoPerGpuHr: hwSpecs.costPerHr,
     }
   }).filter((p): p is ParetoPoint => p !== null)
 }

@@ -1,8 +1,10 @@
 /**
  * ParetoFrontier — Interactive performance frontier chart
  *
- * Dropdown filters (Model, ISL/OSL, Framework, X-Axis Metric) control the data
- * and chart view. Right-side legend with hardware-colored dots and Reset filter.
+ * Dropdown filters (Model, ISL/OSL, Framework, Chart) control the data
+ * and chart view. Ten chart presets covering throughput, cost, power, latency,
+ * interactivity, GPU scaling, and efficiency dimensions.
+ * Right-side legend with hardware-colored dots, info pills, and Reset filter.
  * Connected smooth scatter lines with GPU count labels. Built with ECharts.
  */
 import { useState, useMemo, useCallback, useRef } from 'react'
@@ -21,42 +23,200 @@ import {
 } from '../../../lib/llmd/benchmarkMockData'
 
 // ---------------------------------------------------------------------------
-// Metrics — X-axis choices (Y is always throughput/GPU)
+// Chart presets — each defines X-axis, Y-axis, title, and optional info pills
 // ---------------------------------------------------------------------------
 
-interface AxisMetric {
+interface ChartPreset {
   label: string
-  unit: string
-  getValue: (p: ParetoPoint) => number
+  title: string
+  xAxis: { label: string; unit: string; getValue: (p: ParetoPoint) => number }
+  yAxis: {
+    label: string
+    unit: string
+    getValue: (p: ParetoPoint) => number
+    formatter?: (v: number) => string
+  }
+  infoPills?: (points: ParetoPoint[]) => { label: string; items: { hw: string; value: string }[] } | null
 }
 
-const X_METRICS: Record<string, AxisMetric> = {
-  e2eLatency: {
-    label: 'End-to-end Latency',
-    unit: 'ms',
-    getValue: (p) => p.ttftP50Ms,
+const CHART_PRESETS: Record<string, ChartPreset> = {
+  throughputVsLatency: {
+    label: 'Throughput vs E2E Latency',
+    title: 'Token Throughput per GPU vs. End-to-end Latency',
+    xAxis: { label: 'End-to-end Latency', unit: 'ms', getValue: (p) => p.ttftP50Ms },
+    yAxis: {
+      label: 'Token Throughput per GPU',
+      unit: 'tok/s/gpu',
+      getValue: (p) => p.throughputPerGpu,
+      formatter: (v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+    },
   },
-  interactivity: {
-    label: 'Interactivity',
-    unit: 'tok/s/user',
-    getValue: (p) => p.tpotP50Ms > 0 ? 1000 / p.tpotP50Ms : 0,
+  throughputVsInteractivity: {
+    label: 'Throughput vs Interactivity',
+    title: 'Token Throughput per GPU vs. Interactivity',
+    xAxis: { label: 'Interactivity', unit: 'tok/s/user', getValue: (p) => p.tpotP50Ms > 0 ? 1000 / p.tpotP50Ms : 0 },
+    yAxis: {
+      label: 'Token Throughput per GPU',
+      unit: 'tok/s/gpu',
+      getValue: (p) => p.throughputPerGpu,
+      formatter: (v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+    },
   },
-  p99Latency: {
-    label: 'p99 Latency',
-    unit: 'ms',
-    getValue: (p) => p.p99LatencyMs,
+  throughputPerMw: {
+    label: 'Throughput/MW vs Interactivity',
+    title: 'Token Throughput per All in Utility MW vs. Interactivity',
+    xAxis: { label: 'Interactivity', unit: 'tok/s/user', getValue: (p) => p.tpotP50Ms > 0 ? 1000 / p.tpotP50Ms : 0 },
+    yAxis: {
+      label: 'Token Throughput per All in Utility MW',
+      unit: 'tok/s/MW',
+      getValue: (p) => p.powerPerGpuKw > 0 ? p.throughputPerGpu / (p.powerPerGpuKw * 0.001) : 0,
+      formatter: (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+    },
+    infoPills: (points) => {
+      const hwPower = new Map<string, number>()
+      for (const p of points) {
+        const hw = getHardwareShort(p.hardware)
+        if (!hwPower.has(hw)) hwPower.set(hw, p.powerPerGpuKw)
+      }
+      return {
+        label: 'All in Power/GPU:',
+        items: [...hwPower.entries()].map(([hw, kw]) => ({ hw, value: `${kw.toFixed(2)}kW` })),
+      }
+    },
   },
-  tpot: {
-    label: 'Time per Output Token',
-    unit: 'ms/tok',
-    getValue: (p) => p.tpotP50Ms,
+  costPerMTok: {
+    label: 'Cost/MTok vs Interactivity',
+    title: 'Cost per Million Tokens (Owning) vs. Interactivity',
+    xAxis: { label: 'Interactivity', unit: 'tok/s/user', getValue: (p) => p.tpotP50Ms > 0 ? 1000 / p.tpotP50Ms : 0 },
+    yAxis: {
+      label: 'Cost per Million Tokens',
+      unit: '$',
+      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * 3600)) * 1_000_000 : 0,
+      formatter: (v) => `$${v.toFixed(2)}`,
+    },
+    infoPills: (points) => {
+      const hwCost = new Map<string, number>()
+      for (const p of points) {
+        const hw = getHardwareShort(p.hardware)
+        if (!hwCost.has(hw)) hwCost.set(hw, p.tcoPerGpuHr)
+      }
+      return {
+        label: 'TCO $/GPU/hr:',
+        items: [...hwCost.entries()].map(([hw, cost]) => ({ hw, value: cost.toFixed(2) })),
+      }
+    },
   },
-}
-
-const Y_METRIC: AxisMetric = {
-  label: 'Token Throughput per GPU',
-  unit: 'tok/s/gpu',
-  getValue: (p) => p.throughputPerGpu,
+  costVsLatency: {
+    label: 'Cost/MTok vs E2E Latency',
+    title: 'Cost per Million Tokens vs. End-to-end Latency',
+    xAxis: { label: 'End-to-end Latency', unit: 'ms', getValue: (p) => p.ttftP50Ms },
+    yAxis: {
+      label: 'Cost per Million Tokens',
+      unit: '$',
+      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * 3600)) * 1_000_000 : 0,
+      formatter: (v) => `$${v.toFixed(2)}`,
+    },
+    infoPills: (points) => {
+      const hwCost = new Map<string, number>()
+      for (const p of points) {
+        const hw = getHardwareShort(p.hardware)
+        if (!hwCost.has(hw)) hwCost.set(hw, p.tcoPerGpuHr)
+      }
+      return {
+        label: 'TCO $/GPU/hr:',
+        items: [...hwCost.entries()].map(([hw, cost]) => ({ hw, value: cost.toFixed(2) })),
+      }
+    },
+  },
+  throughputPerDollar: {
+    label: 'Throughput/$ vs Interactivity',
+    title: 'Throughput per Dollar vs. Interactivity',
+    xAxis: { label: 'Interactivity', unit: 'tok/s/user', getValue: (p) => p.tpotP50Ms > 0 ? 1000 / p.tpotP50Ms : 0 },
+    yAxis: {
+      label: 'Throughput per Dollar',
+      unit: 'tok/s/$',
+      getValue: (p) => p.tcoPerGpuHr > 0 ? p.throughputPerGpu / p.tcoPerGpuHr : 0,
+      formatter: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)),
+    },
+    infoPills: (points) => {
+      const hwCost = new Map<string, number>()
+      for (const p of points) {
+        const hw = getHardwareShort(p.hardware)
+        if (!hwCost.has(hw)) hwCost.set(hw, p.tcoPerGpuHr)
+      }
+      return {
+        label: 'TCO $/GPU/hr:',
+        items: [...hwCost.entries()].map(([hw, cost]) => ({ hw, value: cost.toFixed(2) })),
+      }
+    },
+  },
+  p99VsThroughput: {
+    label: 'p99 Latency vs Throughput',
+    title: 'p99 Latency vs. Token Throughput per GPU',
+    xAxis: {
+      label: 'Token Throughput per GPU',
+      unit: 'tok/s/gpu',
+      getValue: (p) => p.throughputPerGpu,
+    },
+    yAxis: {
+      label: 'p99 Latency',
+      unit: 'ms',
+      getValue: (p) => p.p99LatencyMs,
+      formatter: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}`,
+    },
+  },
+  tpotVsThroughput: {
+    label: 'TPOT vs Throughput',
+    title: 'Time per Output Token vs. Token Throughput per GPU',
+    xAxis: {
+      label: 'Token Throughput per GPU',
+      unit: 'tok/s/gpu',
+      getValue: (p) => p.throughputPerGpu,
+    },
+    yAxis: {
+      label: 'Time per Output Token (p50)',
+      unit: 'ms/tok',
+      getValue: (p) => p.tpotP50Ms,
+      formatter: (v) => v.toFixed(1),
+    },
+  },
+  gpuScaling: {
+    label: 'GPU Scaling Efficiency',
+    title: 'GPU Scaling: Throughput per GPU vs. GPU Count',
+    xAxis: {
+      label: 'GPU Count',
+      unit: 'GPUs',
+      getValue: (p) => p.gpuCount,
+    },
+    yAxis: {
+      label: 'Token Throughput per GPU',
+      unit: 'tok/s/gpu',
+      getValue: (p) => p.throughputPerGpu,
+      formatter: (v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+    },
+  },
+  throughputPerMwVsLatency: {
+    label: 'Throughput/MW vs E2E Latency',
+    title: 'Token Throughput per MW vs. End-to-end Latency',
+    xAxis: { label: 'End-to-end Latency', unit: 'ms', getValue: (p) => p.ttftP50Ms },
+    yAxis: {
+      label: 'Token Throughput per All in Utility MW',
+      unit: 'tok/s/MW',
+      getValue: (p) => p.powerPerGpuKw > 0 ? p.throughputPerGpu / (p.powerPerGpuKw * 0.001) : 0,
+      formatter: (v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+    },
+    infoPills: (points) => {
+      const hwPower = new Map<string, number>()
+      for (const p of points) {
+        const hw = getHardwareShort(p.hardware)
+        if (!hwPower.has(hw)) hwPower.set(hw, p.powerPerGpuKw)
+      }
+      return {
+        label: 'All in Power/GPU:',
+        items: [...hwPower.entries()].map(([hw, kw]) => ({ hw, value: `${kw.toFixed(2)}kW` })),
+      }
+    },
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -96,20 +256,20 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
   }, [allPoints])
 
   // ---- Filter state ----
-  const initialXMetric = useMemo(() => {
+  const initialChart = useMemo(() => {
     const ct = config?.chartType
-    if (!ct) return 'e2eLatency'
-    const found = Object.keys(X_METRICS).find(k => ct.includes(k))
-    return found ?? 'e2eLatency'
+    if (!ct) return 'throughputVsLatency'
+    const found = Object.keys(CHART_PRESETS).find(k => ct.includes(k))
+    return found ?? 'throughputVsLatency'
   }, [config?.chartType])
 
   const [modelFilter, setModelFilter] = useState('all')
   const [seqLenFilter, setSeqLenFilter] = useState('all')
   const [frameworkFilter, setFrameworkFilter] = useState('all')
-  const [xMetricKey, setXMetricKey] = useState(initialXMetric)
+  const [chartKey, setChartKey] = useState(initialChart)
   const [hiddenHw, setHiddenHw] = useState<Set<string>>(new Set())
 
-  const xAxis = X_METRICS[xMetricKey]
+  const preset = CHART_PRESETS[chartKey] ?? CHART_PRESETS.throughputVsLatency
 
   // ---- Toggles ----
   const [hideNonOptimal, setHideNonOptimal] = useState(false)
@@ -133,6 +293,12 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     return filtered.filter(p => frontierUids.has(p.uid))
   }, [filtered, hideNonOptimal, frontierUids])
 
+  // ---- Info pills for current chart preset ----
+  const infoPills = useMemo(() => {
+    if (!preset.infoPills) return null
+    return preset.infoPills(displayPoints)
+  }, [preset, displayPoints])
+
   // ---- Series grouped by hardware ----
   const seriesMap = useMemo(() => {
     const map = new Map<string, ParetoPoint[]>()
@@ -142,10 +308,10 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       map.get(hw)!.push(pt)
     }
     for (const pts of map.values()) {
-      pts.sort((a, b) => xAxis.getValue(a) - xAxis.getValue(b))
+      pts.sort((a, b) => preset.xAxis.getValue(a) - preset.xAxis.getValue(b))
     }
     return map
-  }, [displayPoints, xAxis])
+  }, [displayPoints, preset])
 
   // ---- Callbacks ----
   const toggleHw = useCallback((hw: string) => {
@@ -170,16 +336,15 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     const url = inst.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
     const a = document.createElement('a')
     a.href = url
-    a.download = `pareto-${xMetricKey}.png`
+    a.download = `pareto-${chartKey}.png`
     a.click()
-  }, [xMetricKey])
+  }, [chartKey])
 
   const handleResetZoom = useCallback(() => {
     chartRef.current?.getEchartsInstance()?.dispatchAction({ type: 'dataZoom', start: 0, end: 100 })
   }, [])
 
-  // ---- Chart title + subtitle ----
-  const chartTitle = `Token Throughput per GPU vs. ${xAxis.label}`
+  // ---- Chart subtitle ----
   const subtitle = useMemo(() => {
     const parts: string[] = []
     if (modelFilter !== 'all') parts.push(modelFilter)
@@ -201,7 +366,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
           smooth: true,
           symbol: 'circle',
           symbolSize: highContrast ? 10 : 7,
-          data: pts.map(p => ({ value: [xAxis.getValue(p), Y_METRIC.getValue(p)], point: p })),
+          data: pts.map(p => ({ value: [preset.xAxis.getValue(p), preset.yAxis.getValue(p)], point: p })),
           lineStyle: { color, width: highContrast ? 2 : 1.5, opacity: highContrast ? 0.85 : 0.55 },
           itemStyle: {
             color,
@@ -230,12 +395,12 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
 
     // Pareto frontier dashed line
     if (frontier.length > 1 && !hideNonOptimal) {
-      const sorted = [...frontier].sort((a, b) => xAxis.getValue(a) - xAxis.getValue(b))
+      const sorted = [...frontier].sort((a, b) => preset.xAxis.getValue(a) - preset.xAxis.getValue(b))
       allSeries.push({
         name: 'Pareto Frontier',
         type: 'line',
         smooth: true,
-        data: sorted.map(p => [xAxis.getValue(p), Y_METRIC.getValue(p)]),
+        data: sorted.map(p => [preset.xAxis.getValue(p), preset.yAxis.getValue(p)]),
         lineStyle: { color: '#ef4444', width: 2, type: 'dashed', opacity: 0.8 },
         itemStyle: { color: '#ef4444' },
         symbol: 'none',
@@ -246,7 +411,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
 
     return {
       backgroundColor: '#e8e8e4',
-      grid: { top: 16, right: 16, bottom: 42, left: 60 },
+      grid: { top: 16, right: 16, bottom: 42, left: 70 },
       tooltip: {
         trigger: 'item',
         backgroundColor: 'rgba(255,255,255,0.97)',
@@ -273,6 +438,8 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
             `<span style="color:#888">p99 Latency:</span><span style="font-family:monospace;color:#111">${pt.p99LatencyMs.toFixed(0)} ms</span>` +
             `<span style="color:#888">GPUs:</span><span style="font-family:monospace;color:#111">${pt.gpuCount}\u00d7</span>` +
             `<span style="color:#888">ISL/OSL:</span><span style="font-family:monospace;color:#111">${pt.seqLen}</span>` +
+            `<span style="color:#888">Power/GPU:</span><span style="font-family:monospace;color:#111">${pt.powerPerGpuKw.toFixed(2)} kW</span>` +
+            `<span style="color:#888">TCO/GPU/hr:</span><span style="font-family:monospace;color:#111">$${pt.tcoPerGpuHr.toFixed(2)}</span>` +
             `</div>`
           )
         },
@@ -280,7 +447,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       legend: { show: false },
       xAxis: {
         type: 'value',
-        name: `${xAxis.label} (${xAxis.unit})`,
+        name: `${preset.xAxis.label} (${preset.xAxis.unit})`,
         nameLocation: 'middle',
         nameGap: 26,
         nameTextStyle: { color: '#555', fontSize: 11, fontWeight: 500 },
@@ -290,16 +457,16 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       },
       yAxis: {
         type: 'value',
-        name: `${Y_METRIC.label} (${Y_METRIC.unit})`,
+        name: `${preset.yAxis.label} (${preset.yAxis.unit})`,
         nameLocation: 'middle',
-        nameGap: 48,
+        nameGap: 58,
         nameTextStyle: { color: '#555', fontSize: 11, fontWeight: 500 },
         axisLine: { lineStyle: { color: '#d1d5db' } },
         splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
         axisLabel: {
           color: '#666',
           fontSize: 10,
-          formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v),
+          formatter: preset.yAxis.formatter ?? ((v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)),
         },
       },
       dataZoom: [
@@ -308,7 +475,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       ],
       series: allSeries,
     }
-  }, [seriesMap, frontier, hideNonOptimal, hideLabels, highContrast, hiddenHw, xAxis])
+  }, [seriesMap, frontier, hideNonOptimal, hideLabels, highContrast, hiddenHw, preset])
 
   // ---- Legend items (hardware only) ----
   const legendItems = useMemo(
@@ -327,11 +494,11 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
         <FilterDropdown label="ISL / OSL" value={seqLenFilter} onChange={setSeqLenFilter} options={filterOptions.seqLens} />
         <FilterDropdown label="Framework" value={frameworkFilter} onChange={setFrameworkFilter} options={filterOptions.frameworks} />
         <FilterDropdown
-          label="X-Axis Metric"
-          value={xMetricKey}
-          onChange={setXMetricKey}
-          options={Object.keys(X_METRICS)}
-          optionLabels={Object.fromEntries(Object.entries(X_METRICS).map(([k, v]) => [k, v.label]))}
+          label="Y-Axis Metric"
+          value={chartKey}
+          onChange={setChartKey}
+          options={Object.keys(CHART_PRESETS)}
+          optionLabels={Object.fromEntries(Object.entries(CHART_PRESETS).map(([k, v]) => [k, v.label]))}
           noAllOption
         />
       </div>
@@ -339,7 +506,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       {/* Title + action buttons */}
       <div className="flex items-start justify-between mb-1 flex-shrink-0">
         <div className="min-w-0">
-          <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{chartTitle}</h3>
+          <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{preset.title}</h3>
           <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ml-3">
@@ -359,6 +526,21 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
           </button>
         </div>
       </div>
+
+      {/* Info pills (power or cost, depending on chart preset) */}
+      {infoPills && (
+        <div className="flex items-center gap-2 mb-1.5 flex-shrink-0 flex-wrap">
+          <span className="text-[10px] text-muted-foreground font-medium">{infoPills.label}</span>
+          {infoPills.items.map(({ hw, value }) => (
+            <span
+              key={hw}
+              className="text-[10px] px-2 py-0.5 rounded border border-border bg-secondary/50 text-foreground font-medium"
+            >
+              {hw}: {value}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Chart area + right legend */}
       <div className="flex flex-1 min-h-0 gap-2">
