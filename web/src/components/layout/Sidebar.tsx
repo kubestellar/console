@@ -4,10 +4,9 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // Sidebar items are configured with icon names as strings (from sidebar config)
 // The renderIcon() function resolves these names dynamically via Icons[iconName]
 import * as Icons from 'lucide-react'
-import { Plus, Pencil, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, User } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, User } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
-import { SidebarCustomizer } from './SidebarCustomizer'
 import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
 import { useClusters } from '../../hooks/useMCP'
@@ -22,7 +21,6 @@ export function Sidebar() {
   const { config, toggleCollapsed, reorderItems, updateItem, closeMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { deduplicatedClusters } = useClusters()
-  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const dashboardContext = useDashboardContextOptional()
   const { viewerCount, hasError: viewersError } = useActiveUsers()
   const navigate = useNavigate()
@@ -372,22 +370,9 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Customize button and viewer count */}
-        <div className="mt-4 flex items-center justify-between">
-          <button
-            data-testid="sidebar-customize"
-            onClick={() => setIsCustomizerOpen(true)}
-            className={cn(
-              'flex items-center gap-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors',
-              isCollapsed ? 'justify-center w-full p-3' : 'px-3 py-2 text-xs'
-            )}
-            title={isCollapsed ? 'Customize sidebar' : undefined}
-          >
-            <Pencil className={isCollapsed ? 'w-5 h-5' : 'w-3 h-3'} />
-            {!isCollapsed && 'Customize'}
-          </button>
-          {/* Viewer count - small and inconspicuous */}
-          {!isCollapsed && (
+        {/* Viewer count */}
+        {!isCollapsed && (
+          <div className="mt-4 flex items-center justify-end">
             <div
               className="flex items-center gap-1 px-2 text-muted-foreground/60"
               title={`${viewerCount} active viewer${viewerCount !== 1 ? 's' : ''}`}
@@ -397,15 +382,10 @@ export function Sidebar() {
                 {viewersError ? '!' : viewerCount}
               </span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
 
-      {/* Sidebar Customizer Modal */}
-      <SidebarCustomizer
-        isOpen={isCustomizerOpen}
-        onClose={() => setIsCustomizerOpen(false)}
-      />
     </>
   )
 }

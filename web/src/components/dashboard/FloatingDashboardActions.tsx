@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Layout, RotateCcw, Download, Upload } from 'lucide-react'
+import { Plus, Layout, RotateCcw, Download, Upload, Pencil } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { ResetDialog } from './ResetDialog'
+import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 
 interface FloatingDashboardActionsProps {
   onAddCard: () => void
@@ -37,6 +38,7 @@ export function FloatingDashboardActions({
   const { isMobile } = useMobile()
   const [isOpen, setIsOpen] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
+  const [showCustomizer, setShowCustomizer] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -141,6 +143,14 @@ export function FloatingDashboardActions({
               </button>
             )}
             <button
+              onClick={() => { setIsOpen(false); setShowCustomizer(true) }}
+              className={menuBtnClass}
+              title="Customize sidebar"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Customize
+            </button>
+            <button
               onClick={() => { setIsOpen(false); onOpenTemplates() }}
               data-tour="templates"
               className={menuBtnClass}
@@ -181,6 +191,11 @@ export function FloatingDashboardActions({
         isOpen={showResetDialog}
         onClose={() => setShowResetDialog(false)}
         onReset={handleReset}
+      />
+
+      <SidebarCustomizer
+        isOpen={showCustomizer}
+        onClose={() => setShowCustomizer(false)}
       />
     </>
   )
