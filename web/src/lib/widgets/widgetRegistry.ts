@@ -261,6 +261,17 @@ export const WIDGET_CARDS: Record<string, WidgetCardDefinition> = {
     defaultSize: { width: 250, height: 180 },
     category: 'workload',
   },
+  // llm-d Nightly E2E
+  nightly_e2e_status: {
+    cardType: 'nightly_e2e_status',
+    displayName: 'Nightly E2E Status',
+    description: 'Pass/fail status of llm-d nightly E2E workflows across OCP, GKE, and CKS',
+    apiEndpoints: ['/api/nightly-e2e/runs'],
+    supportsTheme: true,
+    minRefreshInterval: 300000,
+    defaultSize: { width: 400, height: 300 },
+    category: 'monitoring',
+  },
   // Provider health
   provider_health: {
     cardType: 'provider_health',
