@@ -208,6 +208,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
         return {
           name,
           type: 'line',
+          smooth: true,
           symbol: CONFIG_SYMBOLS[cfg] ?? 'circle',
           symbolSize: highContrast ? 10 : 7,
           data: pts.map(p => ({ value: [xAxis.getValue(p), yAxis.getValue(p)], point: p })),
@@ -243,6 +244,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
       allSeries.push({
         name: 'Pareto Frontier',
         type: 'line',
+        smooth: true,
         data: sorted.map(p => [xAxis.getValue(p), yAxis.getValue(p)]),
         lineStyle: { color: '#ef4444', width: 2, type: 'dashed', opacity: 0.8 },
         itemStyle: { color: '#ef4444' },
@@ -253,7 +255,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     }
 
     return {
-      backgroundColor: '#ffffff',
+      backgroundColor: '#f0f0ee',
       grid: { top: 16, right: 16, bottom: 42, left: 60 },
       tooltip: {
         trigger: 'item',
