@@ -595,12 +595,15 @@ export function computeParetoFrontier(points: ParetoPoint[]): ParetoPoint[] {
 export function generateLeaderboardRows(reports: BenchmarkReport[]): LeaderboardRow[] {
   const points = extractParetoPoints(reports)
 
+  // Build uid→report lookup (extractParetoPoints filters nulls, so indices don't match)
+  const reportByUid = new Map(reports.map(r => [r.run.uid, r]))
+
   // Compute composite score: normalize each metric to 0-100, weighted average
   const maxThroughput = Math.max(...points.map(p => p.throughputPerGpu), 1)
   const minTtft = Math.min(...points.map(p => p.ttftP50Ms), 1)
   const minP99 = Math.min(...points.map(p => p.p99LatencyMs), 1)
 
-  const rows: LeaderboardRow[] = points.map((p, i) => {
+  const rows: LeaderboardRow[] = points.map((p) => {
     const throughputScore = (p.throughputPerGpu / maxThroughput) * 100
     const ttftScore = (minTtft / p.ttftP50Ms) * 100
     const p99Score = (minP99 / p.p99LatencyMs) * 100
@@ -631,7 +634,7 @@ export function generateLeaderboardRows(reports: BenchmarkReport[]): Leaderboard
       p99LatencyMs: Math.round(p.p99LatencyMs),
       score: Math.round(score * 10) / 10,
       llmdAdvantage: advantage,
-      report: reports[i],
+      report: reportByUid.get(p.uid) ?? reports[0],
     }
   })
 

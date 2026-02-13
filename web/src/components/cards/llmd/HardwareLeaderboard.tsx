@@ -162,7 +162,7 @@ export function HardwareLeaderboard() {
           <tbody>
             {rows.map(row => (
               <tr
-                key={row.report.run.uid}
+                key={row.rank}
                 className={`border-b border-slate-800/50 transition-colors hover:bg-slate-800/30 ${
                   row.config !== 'standalone' ? 'bg-blue-500/[0.03]' : ''
                 }`}
