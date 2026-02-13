@@ -297,6 +297,91 @@ export function generateWidgetStyles(): string {
     error: '${WIDGET_STYLES.errorColor}',
     info: '${WIDGET_STYLES.infoColor}',
     purple: '${WIDGET_STYLES.purpleColor}',
-  }
+  },
+  dragHandle: {
+    padding: '4px 0',
+    marginBottom: '4px',
+    display: 'flex',
+    justifyContent: 'center',
+    cursor: 'grab',
+    pointerEvents: 'auto',
+  },
+  dragIndicator: {
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: '2px',
+  },
 };`
+}
+
+// Generate draggable widget infrastructure (shared by all widgets)
+export function generateWidgetShell(widgetName: string, consoleUrl: string): string {
+  const storageKey = `ks-widget-pos-${widgetName}`
+  return `import { css, run } from "uebersicht";
+
+const CONSOLE_URL = '${consoleUrl}';
+const STORAGE_KEY = '${storageKey}';
+
+// --- Draggable position persistence ---
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
+let posStart = { x: 0, y: 0 };
+let dragElement = null;
+
+const getStoredPosition = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return { top: 20, left: 20 };
+};
+const savePosition = (pos) => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch (e) {}
+};
+let widgetPosition = getStoredPosition();
+
+const handleDragStart = (e) => {
+  isDragging = true;
+  dragStart = { x: e.clientX, y: e.clientY };
+  posStart = { ...widgetPosition };
+  dragElement = e.target.closest('.widget-container');
+  document.addEventListener('mousemove', handleDragMove);
+  document.addEventListener('mouseup', handleDragEnd);
+  e.preventDefault();
+};
+const handleDragMove = (e) => {
+  if (!isDragging || !dragElement) return;
+  widgetPosition = {
+    top: Math.max(0, posStart.top + (e.clientY - dragStart.y)),
+    left: Math.max(0, posStart.left + (e.clientX - dragStart.x)),
+  };
+  dragElement.style.top = widgetPosition.top + 'px';
+  dragElement.style.left = widgetPosition.left + 'px';
+};
+const handleDragEnd = () => {
+  isDragging = false;
+  dragElement = null;
+  savePosition(widgetPosition);
+  document.removeEventListener('mousemove', handleDragMove);
+  document.removeEventListener('mouseup', handleDragEnd);
+};
+
+const openConsole = (path = '') => { run(\`open "\${CONSOLE_URL}\${path}"\`); };
+
+export const className = css\`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #fff;
+  user-select: none;
+  pointer-events: none;
+  .widget-container { transition: background 0.2s ease, box-shadow 0.2s ease; }
+  .widget-container:hover {
+    background: rgba(17, 24, 39, 0.98) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  }
+  .drag-handle { cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+\`;`
 }
