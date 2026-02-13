@@ -148,6 +148,7 @@ const LLMdBenchmarks = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdBenchm
 const LLMdAIInsights = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdAIInsights })))
 const LLMdConfigurator = lazy(() => _llmdBundle.then(m => ({ default: m.LLMdConfigurator })))
 // LLM-d benchmark dashboard cards (share the same barrel bundle)
+const NightlyE2EStatus = lazy(() => _llmdBundle.then(m => ({ default: m.NightlyE2EStatus })))
 const BenchmarkHero = lazy(() => _llmdBundle.then(m => ({ default: m.BenchmarkHero })))
 const ParetoFrontier = lazy(() => _llmdBundle.then(m => ({ default: m.ParetoFrontier })))
 const HardwareLeaderboard = lazy(() => _llmdBundle.then(m => ({ default: m.HardwareLeaderboard })))
@@ -383,6 +384,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   llmd_configurator: LLMdConfigurator,
 
   // LLM-d benchmark dashboard cards
+  nightly_e2e_status: NightlyE2EStatus,
   benchmark_hero: BenchmarkHero,
   pareto_frontier: ParetoFrontier,
   hardware_leaderboard: HardwareLeaderboard,
@@ -635,6 +637,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   llmd_ai_insights: () => import('./llmd'),
   llmd_configurator: () => import('./llmd'),
   // LLM-d benchmark dashboard cards — all share the llmd barrel bundle
+  nightly_e2e_status: () => import('./llmd'),
   benchmark_hero: () => import('./llmd'),
   pareto_frontier: () => import('./llmd'),
   hardware_leaderboard: () => import('./llmd'),
@@ -751,6 +754,8 @@ export const LIVE_DATA_CARDS = new Set([
   'kagenti_agent_discovery',
   'kagenti_security',
   'kagenti_topology',
+  // Nightly E2E status card — fetches GitHub Actions workflow runs
+  'nightly_e2e_status',
 ])
 
 /**
@@ -818,6 +823,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   llmd_configurator: 4,   // Configurator showcase
 
   // LLM-d benchmark dashboard cards (all full-width)
+  nightly_e2e_status: 12,
   benchmark_hero: 12,
   pareto_frontier: 12,
   hardware_leaderboard: 12,
