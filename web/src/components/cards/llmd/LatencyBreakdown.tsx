@@ -73,7 +73,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 
 export function LatencyBreakdown() {
   const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
-  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend', isLiveDataAvailable: !isFailed })
   const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
   useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
