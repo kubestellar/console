@@ -9,7 +9,8 @@ export interface NightlyWorkflowConfig {
   repo: string
   workflowFile: string
   guide: string
-  platform: 'OCP' | 'GKE'
+  acronym: string
+  platform: 'OCP' | 'GKE' | 'CKS'
 }
 
 export interface NightlyRun {
@@ -24,7 +25,8 @@ export interface NightlyRun {
 
 export interface NightlyGuideStatus {
   guide: string
-  platform: 'OCP' | 'GKE'
+  acronym: string
+  platform: 'OCP' | 'GKE' | 'CKS'
   repo: string
   workflowFile: string
   runs: NightlyRun[]
@@ -34,20 +36,30 @@ export interface NightlyGuideStatus {
 }
 
 export const NIGHTLY_WORKFLOWS: NightlyWorkflowConfig[] = [
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling.yaml', guide: 'Inference Scheduling', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation.yaml', guide: 'PD Disaggregation', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache.yaml', guide: 'Precise Prefix Cache', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-simulated-accelerators.yaml', guide: 'Simulated Accelerators', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache.yaml', guide: 'Tiered Prefix Cache', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws.yaml', guide: 'Wide EP + LWS', platform: 'OCP' },
-  { repo: 'llm-d/llm-d-workload-variant-autoscaler', workflowFile: 'nightly-e2e-openshift.yaml', guide: 'WVA', platform: 'OCP' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', platform: 'GKE' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', platform: 'GKE' },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', platform: 'GKE' },
+  // OCP
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache.yaml', guide: 'Precise Prefix Cache', acronym: 'PPC', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-simulated-accelerators.yaml', guide: 'Simulated Accelerators', acronym: 'SA', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache.yaml', guide: 'Tiered Prefix Cache', acronym: 'TPC', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'OCP' },
+  { repo: 'llm-d/llm-d-workload-variant-autoscaler', workflowFile: 'nightly-e2e-openshift.yaml', guide: 'WVA', acronym: 'WVA', platform: 'OCP' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'OCP' },
+  // GKE
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'GKE' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'GKE' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'GKE' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE' },
+  // CKS (same tests as GKE — workflows not yet created)
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-cks.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'CKS' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-cks.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'CKS' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-cks.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'CKS' },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-benchmarking-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS' },
 ]
 
 // Seeded patterns per guide for deterministic demo data
 const DEMO_PATTERNS: Record<string, ('success' | 'failure' | 'in_progress')[]> = {
+  // OCP
   'Inference Scheduling-OCP': ['success', 'success', 'failure', 'success', 'success', 'success', 'success'],
   'PD Disaggregation-OCP': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
   'Precise Prefix Cache-OCP': ['success', 'failure', 'success', 'success', 'success', 'failure', 'success'],
@@ -55,9 +67,13 @@ const DEMO_PATTERNS: Record<string, ('success' | 'failure' | 'in_progress')[]> =
   'Tiered Prefix Cache-OCP': ['success', 'success', 'success', 'failure', 'success', 'success', 'success'],
   'Wide EP + LWS-OCP': ['success', 'success', 'success', 'success', 'success', 'success', 'in_progress'],
   'WVA-OCP': ['success', 'failure', 'success', 'success', 'failure', 'success', 'success'],
+  'Benchmarking-OCP': ['failure', 'failure', 'success', 'failure', 'success', 'failure', 'success'],
+  // GKE
   'Inference Scheduling-GKE': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
   'PD Disaggregation-GKE': ['failure', 'success', 'success', 'success', 'success', 'success', 'success'],
   'Wide EP + LWS-GKE': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
+  'Benchmarking-GKE': ['in_progress', 'success', 'success', 'failure', 'success', 'success', 'success'],
+  // CKS — no runs yet, empty arrays
 }
 
 function computeTrend(runs: NightlyRun[]): 'up' | 'down' | 'steady' {
@@ -103,6 +119,7 @@ export function generateDemoNightlyData(): NightlyGuideStatus[] {
 
     return {
       guide: wf.guide,
+      acronym: wf.acronym,
       platform: wf.platform,
       repo: wf.repo,
       workflowFile: wf.workflowFile,

@@ -93,6 +93,7 @@ import { namespaceOverviewConfig } from './namespace-overview'
 import { namespaceQuotasConfig } from './namespace-quotas'
 import { namespaceRbacConfig } from './namespace-rbac'
 import { namespaceStatusConfig } from './namespace-status'
+import { nightlyE2eStatusConfig } from './nightly-e2e-status'
 import { networkOverviewConfig } from './network-overview'
 import { networkPolicyStatusConfig } from './network-policy-status'
 import { networkUtilsConfig } from './network-utils'
@@ -239,6 +240,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   namespace_quotas: namespaceQuotasConfig,
   namespace_rbac: namespaceRbacConfig,
   namespace_status: namespaceStatusConfig,
+  nightly_e2e_status: nightlyE2eStatusConfig,
   network_overview: networkOverviewConfig,
   network_policy_status: networkPolicyStatusConfig,
   network_utils: networkUtilsConfig,

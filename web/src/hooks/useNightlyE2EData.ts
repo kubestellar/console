@@ -108,6 +108,7 @@ export function useNightlyE2EData() {
         const runs = result.status === 'fulfilled' ? result.value.runs : []
         return {
           guide: wf.guide,
+          acronym: wf.acronym,
           platform: wf.platform,
           repo: wf.repo,
           workflowFile: wf.workflowFile,

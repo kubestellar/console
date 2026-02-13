@@ -15,11 +15,12 @@ import { useReportCardDataState } from '../CardDataContext'
 import { useNightlyE2EData } from '../../../hooks/useNightlyE2EData'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 
-const PLATFORM_ORDER = ['OCP', 'GKE'] as const
+const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
 const PLATFORM_COLORS: Record<string, string> = {
   OCP: '#ef4444',  // red
   GKE: '#3b82f6',  // blue
+  CKS: '#a855f7',  // purple
 }
 
 function formatTimeAgo(iso: string): string {
@@ -105,7 +106,8 @@ function GuideRow({ guide, delay }: { guide: NightlyGuideStatus; delay: number }
       className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-800/40 transition-colors group"
     >
       <StatusIcon size={14} className={`shrink-0 ${iconColor}`} />
-      <span className="text-xs text-slate-200 w-40 truncate shrink-0" title={guide.guide}>
+      <span className="text-xs text-slate-200 w-48 truncate shrink-0" title={guide.guide}>
+        <span className="font-mono font-semibold text-slate-400 mr-1.5">{guide.acronym}</span>
         {guide.guide}
       </span>
       <div className="flex items-center gap-1.5 shrink-0">
