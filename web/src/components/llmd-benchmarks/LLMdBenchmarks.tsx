@@ -15,7 +15,6 @@ export function LLMdBenchmarks() {
       statsType="clusters"
       isLoading={false}
       isRefreshing={false}
-      isDemoData
     />
   )
 }
