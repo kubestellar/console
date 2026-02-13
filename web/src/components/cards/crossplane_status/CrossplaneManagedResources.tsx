@@ -294,7 +294,7 @@ export function CrossplaneManagedResources() {
           const externalName = resource.externalName
           return (
             <div
-              key={resource.name}
+              key={`${resource.namespace}/${resource.name}`}
               className="group flex items-center justify-between p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all hover:bg-secondary/50 hover:border-border/50"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
