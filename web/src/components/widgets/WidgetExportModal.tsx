@@ -447,6 +447,12 @@ function WidgetPreview({ config }: { config: WidgetConfig | null }) {
 
   if (config.type === 'card' && config.cardType) {
     const card = WIDGET_CARDS[config.cardType]
+
+    // Custom preview for nightly E2E status
+    if (config.cardType === 'nightly_e2e_status') {
+      return <NightlyE2EPreview style={previewStyle} />
+    }
+
     return (
       <div style={{ ...previewStyle, width: card?.defaultSize.width, height: card?.defaultSize.height }}>
         <div className="text-sm font-medium mb-2">{card?.displayName}</div>
@@ -504,6 +510,75 @@ function WidgetPreview({ config }: { config: WidgetConfig | null }) {
   }
 
   return null
+}
+
+// Nightly E2E preview with sample status dots
+function NightlyE2EPreview({ style }: { style: React.CSSProperties }) {
+  const platforms = [
+    {
+      name: 'OCP',
+      color: '#f97316',
+      guides: [
+        { acronym: 'IS', dots: ['g','g','r','g','g','g','g'] },
+        { acronym: 'PD', dots: ['g','g','g','g','g','g','g'] },
+        { acronym: 'PPC', dots: ['g','r','g','g','g','r','g'] },
+        { acronym: 'SA', dots: ['g','g','g','g','g','g','g'] },
+        { acronym: 'TPC', dots: ['g','g','g','r','g','g','g'] },
+        { acronym: 'WEP', dots: ['g','g','g','g','g','g','y'] },
+        { acronym: 'WVA', dots: ['g','r','g','g','r','g','g'] },
+        { acronym: 'BM', dots: ['r','r','g','r','g','r','g'] },
+      ],
+    },
+    {
+      name: 'GKE',
+      color: '#3b82f6',
+      guides: [
+        { acronym: 'IS', dots: ['g','g','g','g','g','g','g'] },
+        { acronym: 'PD', dots: ['r','g','g','g','g','g','g'] },
+        { acronym: 'WEP', dots: ['g','g','g','g','g','g','g'] },
+        { acronym: 'BM', dots: ['y','g','g','r','g','g','g'] },
+      ],
+    },
+    {
+      name: 'CKS',
+      color: '#a855f7',
+      guides: [
+        { acronym: 'IS', dots: [] as string[] },
+        { acronym: 'PD', dots: [] as string[] },
+        { acronym: 'WEP', dots: [] as string[] },
+        { acronym: 'BM', dots: [] as string[] },
+      ],
+    },
+  ]
+  const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', y: '#eab308' }
+
+  return (
+    <div style={{ ...style, width: 380, fontSize: '10px', padding: '10px 12px' }}>
+      <div style={{ fontWeight: 600, fontSize: '12px', marginBottom: '6px' }}>Nightly E2E Status</div>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
+        <div><span style={{ fontSize: '16px', fontWeight: 700, color: '#a855f7' }}>87%</span><div style={{ color: '#9ca3af' }}>Pass Rate</div></div>
+        <div><span style={{ fontSize: '16px', fontWeight: 700 }}>16</span><div style={{ color: '#9ca3af' }}>Guides</div></div>
+        <div><span style={{ fontSize: '16px', fontWeight: 700, color: '#ef4444' }}>3</span><div style={{ color: '#9ca3af' }}>Failing</div></div>
+      </div>
+      {platforms.map((p) => (
+        <div key={p.name} style={{ marginBottom: '4px' }}>
+          <div style={{ color: p.color, fontWeight: 600, fontSize: '9px', marginBottom: '2px' }}>{p.name}</div>
+          {p.guides.map((g) => (
+            <div key={`${p.name}-${g.acronym}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '1px' }}>
+              <span style={{ width: '24px', fontWeight: 600, color: '#94a3b8' }}>{g.acronym}</span>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                {g.dots.length > 0 ? g.dots.map((d, i) => (
+                  <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor[d], display: 'inline-block' }} />
+                )) : (
+                  <span style={{ color: '#4b5563', fontSize: '8px' }}>no runs</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default WidgetExportModal

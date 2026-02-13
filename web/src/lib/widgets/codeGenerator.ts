@@ -88,7 +88,7 @@ function generateCardRenderFunction(cardType: string): string {
   switch (cardType) {
     case 'cluster_health':
       return `
-export const render = ({ state }) => {
+export const render = (state) => {
   if (state.loading) {
     return <div style={styles.card}><span style={{color: styles.colors.info}}>Loading...</span></div>;
   }
@@ -122,7 +122,7 @@ export const render = ({ state }) => {
 
     case 'pod_issues':
       return `
-export const render = ({ state }) => {
+export const render = (state) => {
   if (state.loading) {
     return <div style={styles.card}><span style={{color: styles.colors.info}}>Loading...</span></div>;
   }
@@ -171,9 +171,77 @@ export const render = ({ state }) => {
   );
 };`
 
+    case 'nightly_e2e_status':
+      return `
+export const render = (state) => {
+  if (state.loading) {
+    return <div style={styles.card}><span style={{color: styles.colors.info}}>Loading...</span></div>;
+  }
+  if (state.error) {
+    return <div style={styles.card}><span style={{color: styles.colors.error}}>Error: {state.error}</span></div>;
+  }
+
+  const guides = state.data?.guides || [];
+  const platforms = ['OCP', 'GKE', 'CKS'];
+  const platformColors = { OCP: '#f97316', GKE: '#3b82f6', CKS: '#a855f7' };
+  const conclusionColors = { success: '#22c55e', failure: '#ef4444', cancelled: '#6b7280', skipped: '#6b7280' };
+  const totalGuides = guides.length;
+  const passing = guides.filter(g => g.latestConclusion === 'success').length;
+  const failing = guides.filter(g => g.latestConclusion === 'failure').length;
+  const passRate = totalGuides > 0 ? Math.round((passing / totalGuides) * 100) : 0;
+
+  return (
+    <div style={{...styles.card, padding: '12px'}}>
+      <div style={styles.cardTitle}>
+        <span style={{...styles.statusDot, backgroundColor: failing > 0 ? '#ef4444' : '#22c55e'}} />
+        Nightly E2E Status
+      </div>
+      <div style={{display: 'flex', gap: '16px', marginBottom: '10px'}}>
+        <div>
+          <div style={{fontSize: '20px', fontWeight: 700, color: '#a855f7'}}>{passRate}%</div>
+          <div style={{fontSize: '10px', color: '#9ca3af'}}>Pass Rate</div>
+        </div>
+        <div>
+          <div style={{fontSize: '20px', fontWeight: 700}}>{totalGuides}</div>
+          <div style={{fontSize: '10px', color: '#9ca3af'}}>Guides</div>
+        </div>
+        <div>
+          <div style={{fontSize: '20px', fontWeight: 700, color: failing > 0 ? '#ef4444' : '#22c55e'}}>{failing}</div>
+          <div style={{fontSize: '10px', color: '#9ca3af'}}>Failing</div>
+        </div>
+      </div>
+      {platforms.map(platform => {
+        const platGuides = guides.filter(g => g.platform === platform);
+        if (platGuides.length === 0) return null;
+        return (
+          <div key={platform} style={{marginBottom: '6px'}}>
+            <div style={{color: platformColors[platform], fontWeight: 600, fontSize: '10px', marginBottom: '2px'}}>{platform}</div>
+            {platGuides.map(g => (
+              <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px'}}>
+                <span style={{width: '28px', fontSize: '10px', fontWeight: 600, color: '#94a3b8'}}>{g.acronym}</span>
+                <span style={{fontSize: '10px', color: '#cbd5e1', width: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{g.guide}</span>
+                <div style={{display: 'flex', gap: '2px'}}>
+                  {(g.runs || []).slice(0, 7).map((run, i) => (
+                    <span key={i} style={{
+                      width: 7, height: 7, borderRadius: '50%', display: 'inline-block',
+                      backgroundColor: run.status === 'in_progress' ? '#eab308' : (conclusionColors[run.conclusion] || '#6b7280'),
+                    }} />
+                  ))}
+                  {(!g.runs || g.runs.length === 0) && <span style={{color: '#4b5563', fontSize: '9px'}}>no runs</span>}
+                </div>
+                <span style={{fontSize: '9px', color: '#9ca3af', marginLeft: 'auto'}}>{g.passRate}%</span>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+};`
+
     case 'gpu_overview':
       return `
-export const render = ({ state }) => {
+export const render = (state) => {
   if (state.loading) {
     return <div style={styles.card}><span style={{color: styles.colors.info}}>Loading...</span></div>;
   }
@@ -212,7 +280,7 @@ export const render = ({ state }) => {
 
     default:
       return `
-export const render = ({ state }) => {
+export const render = (state) => {
   if (state.loading) {
     return <div style={styles.card}><span style={{color: styles.colors.info}}>Loading...</span></div>;
   }
@@ -297,7 +365,7 @@ const StatBlock = ({ value, label, color }) => (
   </div>
 );
 
-export const render = ({ state }) => {
+export const render = (state) => {
   if (state.loading) {
     return <div style={styles.row}><span style={{color: styles.colors.info}}>Loading...</span></div>;
   }
@@ -419,7 +487,7 @@ ${template.cards.map((cardType) => generateMiniCardComponent(cardType)).join('\n
 
 ${template.stats?.map((statId) => generateMiniStatComponent(statId)).join('\n\n') || ''}
 
-export const render = ({ state }) => {
+export const render = (state) => {
   if (state.loading) {
     return <div style={styles.card}><span style={{color: styles.colors.info}}>Loading...</span></div>;
   }
