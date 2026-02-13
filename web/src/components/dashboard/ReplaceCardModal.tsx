@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { LayoutDashboard, Server, Activity, AlertTriangle, GitBranch, Shield, Box, Gauge, Sparkles, Loader2, RefreshCw, ToggleLeft } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Sparkles, Loader2, RefreshCw, ToggleLeft, Box } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals'
+import { CARD_CONFIGS } from '../../config/cards'
 
 interface Card {
   id: string
@@ -16,17 +17,6 @@ interface ReplaceCardModalProps {
   onReplace: (oldCardId: string, newCardType: string, newTitle?: string, newConfig?: Record<string, unknown>) => void
 }
 
-const CARD_TYPES = [
-  { type: 'cluster_health', name: 'Cluster Health', icon: Server, description: 'Overview of cluster health status' },
-  { type: 'event_stream', name: 'Event Stream', icon: Activity, description: 'Live Kubernetes events' },
-  { type: 'pod_issues', name: 'Pod Issues', icon: AlertTriangle, description: 'Pods with problems' },
-  { type: 'app_status', name: 'Workload Status', icon: Box, description: 'Workload deployment status' },
-  { type: 'resource_usage', name: 'Resource Usage', icon: Gauge, description: 'CPU & memory utilization' },
-  { type: 'cluster_metrics', name: 'Cluster Metrics', icon: LayoutDashboard, description: 'Time-series cluster data' },
-  { type: 'deployment_status', name: 'Deployment Status', icon: GitBranch, description: 'Deployment rollout progress' },
-  { type: 'security_issues', name: 'Security Issues', icon: Shield, description: 'Security misconfigurations' },
-]
-
 // Example prompts for the AI input
 const EXAMPLE_PROMPTS = [
   "Show me CPU usage across all clusters",
@@ -40,6 +30,7 @@ const EXAMPLE_PROMPTS = [
 export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCardModalProps) {
   const [activeTab, setActiveTab] = useState<'select' | 'ai'>('select')
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [nlPrompt, setNlPrompt] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<{
@@ -48,6 +39,32 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
     config: Record<string, unknown>
     explanation: string
   } | null>(null)
+
+  // Build card type list from CARD_CONFIGS, excluding current card
+  const cardTypes = useMemo(() => {
+    return Object.entries(CARD_CONFIGS)
+      .filter(([type]) => type !== card?.card_type)
+      .map(([type, config]) => ({
+        type,
+        name: config.title,
+        description: config.description ?? '',
+        category: config.category ?? 'general',
+        iconColor: config.iconColor,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [card?.card_type])
+
+  // Filter by search query
+  const filteredCards = useMemo(() => {
+    if (!searchQuery.trim()) return cardTypes
+    const q = searchQuery.toLowerCase()
+    return cardTypes.filter(
+      c => c.name.toLowerCase().includes(q) ||
+           c.description.toLowerCase().includes(q) ||
+           c.category.toLowerCase().includes(q) ||
+           c.type.toLowerCase().includes(q)
+    )
+  }, [cardTypes, searchQuery])
 
   if (!card) return null
 
@@ -58,7 +75,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
 
   const handleSelectReplace = () => {
     if (!selectedType) return
-    const cardDef = CARD_TYPES.find((c) => c.type === selectedType)
+    const cardDef = cardTypes.find((c) => c.type === selectedType)
     onReplace(card.id, selectedType, cardDef?.name)
     setSelectedType(null)
   }
@@ -166,10 +183,16 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
 
       <BaseModal.Content className="max-h-[50vh]">
           {activeTab === 'select' && (
-            <div className="grid grid-cols-2 gap-3">
-              {CARD_TYPES.filter((c) => c.type !== card.card_type).map((cardType) => {
-                const Icon = cardType.icon
-                return (
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search cards..."
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+              />
+              <div className="grid grid-cols-2 gap-3 max-h-[40vh] overflow-y-auto">
+                {filteredCards.map((cardType) => (
                   <button
                     key={cardType.type}
                     onClick={() => setSelectedType(cardType.type)}
@@ -181,16 +204,22 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                     )}
                   >
                     <div className="flex items-center gap-3 mb-2">
-                      <Icon className={cn(
-                        'w-5 h-5',
-                        selectedType === cardType.type ? 'text-purple-400' : 'text-muted-foreground'
+                      <Box className={cn(
+                        'w-5 h-5 shrink-0',
+                        selectedType === cardType.type ? 'text-purple-400' : (cardType.iconColor || 'text-muted-foreground')
                       )} />
-                      <span className="font-medium text-foreground">{cardType.name}</span>
+                      <span className="font-medium text-foreground text-sm truncate">{cardType.name}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">{cardType.description}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{cardType.description}</p>
+                    <span className="inline-block mt-1 text-[10px] text-slate-500 bg-slate-800/50 px-1.5 py-0.5 rounded">{cardType.category}</span>
                   </button>
-                )
-              })}
+                ))}
+                {filteredCards.length === 0 && (
+                  <div className="col-span-2 text-center py-8 text-muted-foreground text-sm">
+                    No cards match "{searchQuery}"
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -256,7 +285,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">Type:</span>
-                      <p className="text-foreground">{CARD_TYPES.find(c => c.type === aiSuggestion.type)?.name}</p>
+                      <p className="text-foreground">{CARD_CONFIGS[aiSuggestion.type]?.title ?? aiSuggestion.type}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">{aiSuggestion.explanation}</p>
                   </div>
