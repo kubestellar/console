@@ -761,7 +761,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
+    const timeoutId = setTimeout(() => controller.abort(), 1500)
     const response = await fetch(`${LOCAL_AGENT_URL}/clusters`, {
       signal: controller.signal,
     })

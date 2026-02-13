@@ -210,6 +210,7 @@ export function Layout({ children }: LayoutProps) {
 
   // Track navigation for behavior analysis
   useNavigationHistory()
+  const location = useLocation()
 
   // Persist and restore last route and scroll position
   useLastRoute()
@@ -362,7 +363,7 @@ export function Layout({ children }: LayoutProps) {
           !isMobile && isMissionSidebarOpen && isMissionSidebarMinimized && !isMissionFullScreen && 'mr-12'
         )}>
           <NavigationProgress />
-          <Suspense fallback={<ContentLoadingSkeleton />}>
+          <Suspense key={location.pathname} fallback={<ContentLoadingSkeleton />}>
             {children}
           </Suspense>
         </main>

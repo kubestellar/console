@@ -11,8 +11,8 @@ import { useCardCollapse } from '../../lib/cards'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
-import { isInClusterMode } from '../../hooks/useBackendHealth'
+// useLocalAgent removed — cards render immediately regardless of agent state
+// isInClusterMode removed — cards render immediately without offline skeleton
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { DEMO_EXEMPT_CARDS } from './cardRegistry'
 import { CardDataReportContext, type CardDataState } from './CardDataContext'
@@ -967,15 +967,11 @@ export function CardWrapper({
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null)
   const { snoozeSwap } = useSnoozedCards()
   const { isDemoMode: globalDemoMode } = useDemoMode()
-  const { status: agentStatus } = useLocalAgent()
   const isModeSwitching = useIsModeSwitching()
   const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
   const isDemoMode = globalDemoMode && !isDemoExempt
 
-  // Only force skeleton when agent is confirmed disconnected
-  // Don't force skeleton during 'connecting' - let cards show cached data
-  // This prevents flicker when navigating between pages
-  const isAgentOffline = agentStatus === 'disconnected'
+  // Agent offline detection removed — cards render immediately regardless of agent state
   const menuContainerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -994,7 +990,6 @@ export function CardWrapper({
   // Static/demo cards that never report will stop showing as loading after 150ms
   // NOTE: isRefreshing is NOT included — background refreshes should be invisible to avoid flicker
   const effectiveIsLoading = childDataState?.isLoading || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut)
-  const effectiveIsRefreshing = childDataState?.isRefreshing || false
   // hasData logic:
   // - If card explicitly reports hasData, use it
   // - If card hasn't reported AND quick timeout passed, assume has data (static/demo card)
@@ -1025,17 +1020,13 @@ export function CardWrapper({
   // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
   // This fixes the race condition where demo data briefly shows before skeleton
   // Cards with effectiveIsDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
-  const forceSkeletonForOffline = !globalDemoMode && isAgentOffline && !isInClusterMode() && !isDemoExempt && !effectiveIsDemoData && !isDemoMode
+  const forceSkeletonForOffline = false // Cards render immediately — handle their own empty/offline state
   const forceSkeletonForModeSwitching = isModeSwitching && !isDemoExempt
 
   // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
   const effectiveSkeletonType = skeletonType || 'list'
-  // In demo mode, never show skeleton — demo data is synchronous so the card body
-  // will render as soon as the React.lazy() chunk loads. Showing a skeleton during
-  // chunk download adds perceived latency with no benefit.
-  // Mode switching forces skeleton to show for smooth transitions.
-  const demoSuppressesSkeleton = effectiveIsDemoData || isDemoMode
-  const wantsToShowSkeleton = !demoSuppressesSkeleton && ((effectiveIsLoading && !effectiveHasData && !effectiveIsRefreshing) || forceSkeletonForOffline) || forceSkeletonForModeSwitching
+  // Cards render immediately — skeleton only used during demo↔live mode switching
+  const wantsToShowSkeleton = forceSkeletonForModeSwitching
   const shouldShowSkeleton = (wantsToShowSkeleton && skeletonDelayPassed) || forceSkeletonForModeSwitching
 
   // Mark initial load as complete when data is ready or various timeouts pass

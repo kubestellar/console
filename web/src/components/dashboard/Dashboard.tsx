@@ -60,7 +60,7 @@ interface CachedDashboard {
   timestamp: number
 }
 let dashboardCache: CachedDashboard | null = null
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+// CACHE_TTL removed — dashboard always does background refresh
 
 // Storage key and default cards for the main dashboard
 const DASHBOARD_STORAGE_KEY = 'kubestellar-main-dashboard-cards'
@@ -72,7 +72,7 @@ const DEFAULT_DASHBOARD_CARDS: Card[] = getDefaultCardsForDashboard('main')
 export function Dashboard() {
   // Initialize from cache if available (progressive disclosure - no skeletons on navigation)
   const [dashboard, setDashboard] = useState<DashboardData | null>(() => dashboardCache?.dashboard || null)
-  const [isLoading, setIsLoading] = useState(() => !dashboardCache) // Only show loading if no cache
+  const [isLoading, setIsLoading] = useState(false) // Cards are pre-populated from localStorage/defaults — never block
   const location = useLocation()
   const navigate = useNavigate()
   const [isReplaceCardOpen, setIsReplaceCardOpen] = useState(false)
@@ -408,13 +408,9 @@ export function Dashboard() {
   }
 
   // Load dashboard on mount and when navigating back to the page
+  // Always background refresh — localCards are pre-populated from localStorage/defaults
   useEffect(() => {
-    // If we have cached data, do a background refresh (no loading state)
-    if (dashboardCache && Date.now() - dashboardCache.timestamp < CACHE_TTL) {
-      loadDashboard(true)
-    } else {
-      loadDashboard(false)
-    }
+    loadDashboard(true)
   }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep cache and localStorage in sync when cards are modified locally
