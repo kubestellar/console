@@ -1,7 +1,7 @@
 {
   "config": {
-    "configFile": "/private/tmp/ks-instant-cards/web/e2e/perf/perf.config.ts",
-    "rootDir": "/private/tmp/ks-instant-cards/web/e2e/perf",
+    "configFile": "/private/tmp/kubestellar-console/web/e2e/perf/perf.config.ts",
+    "rootDir": "/private/tmp/kubestellar-console/web/e2e/perf",
     "forbidOnly": false,
     "fullyParallel": false,
     "globalSetup": null,
@@ -16,7 +16,7 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/private/tmp/ks-instant-cards/web/e2e/test-results/perf",
+        "outputDir": "/private/tmp/kubestellar-console/web/e2e/test-results/perf",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -24,7 +24,7 @@
         },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/private/tmp/ks-instant-cards/web/e2e/perf",
+        "testDir": "/private/tmp/kubestellar-console/web/e2e/perf",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -88,12 +88,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 7034,
+                  "duration": 6710,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:05:38.605Z",
+                  "startTime": "2026-02-13T07:05:55.671Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -122,16 +122,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1829,
+                  "duration": 1530,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Dashboard (demo): cards=9 first=1109ms avg=1109ms api_reqs=0\n"
+                      "text": "  Dashboard (demo): cards=9 first=836ms avg=836ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:05:46.102Z",
+                  "startTime": "2026-02-13T07:06:02.931Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -160,31 +160,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 30936,
+                  "duration": 1517,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  TIMEOUT DEBUG [cluster_health/default-1]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [resource_usage/default-2]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [event_stream/default-5]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [deployment_status/default-6]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [events_timeline/default-7]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  Dashboard (live): cards=16 first=939ms avg=1053ms api_reqs=24\n"
+                      "text": "  Dashboard (live): cards=9 first=826ms avg=960ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:05:47.943Z",
+                  "startTime": "2026-02-13T07:06:04.466Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -213,28 +198,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 31115,
+                  "duration": 1521,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  TIMEOUT DEBUG [cluster_health/default-1]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [resource_usage/default-2]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [pod_issues/default-3]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  TIMEOUT DEBUG [deployment_status/default-6]: {\n  \"found\": false\n}\n"
-                    },
-                    {
-                      "text": "  Dashboard (live+cache): cards=16 first=1075ms avg=1156ms api_reqs=23\n"
+                      "text": "  Dashboard (live+cache): cards=9 first=852ms avg=974ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:18.888Z",
+                  "startTime": "2026-02-13T07:06:05.988Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -263,16 +236,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1446,
+                  "duration": 1433,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Clusters (demo): cards=8 first=747ms avg=747ms api_reqs=0\n"
+                      "text": "  Clusters (demo): cards=8 first=799ms avg=799ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:50.012Z",
+                  "startTime": "2026-02-13T07:06:07.514Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -301,16 +274,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1493,
+                  "duration": 1509,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Clusters (live): cards=8 first=849ms avg=926ms api_reqs=17\n"
+                      "text": "  Clusters (live): cards=8 first=864ms avg=978ms api_reqs=17\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:51.464Z",
+                  "startTime": "2026-02-13T07:06:08.952Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -339,16 +312,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1588,
+                  "duration": 1427,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Clusters (live+cache): cards=8 first=920ms avg=963ms api_reqs=17\n"
+                      "text": "  Clusters (live+cache): cards=8 first=798ms avg=798ms api_reqs=17\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:52.963Z",
+                  "startTime": "2026-02-13T07:06:10.465Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -377,16 +350,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1391,
+                  "duration": 1349,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compute (demo): cards=5 first=728ms avg=728ms api_reqs=0\n"
+                      "text": "  Compute (demo): cards=5 first=724ms avg=724ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:54.556Z",
+                  "startTime": "2026-02-13T07:06:11.897Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -415,16 +388,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1448,
+                  "duration": 1401,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compute (live): cards=5 first=778ms avg=976ms api_reqs=21\n"
+                      "text": "  Compute (live): cards=5 first=708ms avg=955ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:55.952Z",
+                  "startTime": "2026-02-13T07:06:13.250Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -453,16 +426,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1422,
+                  "duration": 1434,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compute (live+cache): cards=5 first=758ms avg=965ms api_reqs=21\n"
+                      "text": "  Compute (live+cache): cards=5 first=781ms avg=948ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:57.407Z",
+                  "startTime": "2026-02-13T07:06:14.657Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -491,16 +464,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1406,
+                  "duration": 1407,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Security (demo): cards=2 first=786ms avg=786ms api_reqs=0\n"
+                      "text": "  Security (demo): cards=2 first=769ms avg=769ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:06:58.838Z",
+                  "startTime": "2026-02-13T07:06:16.097Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -529,16 +502,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1319,
+                  "duration": 1463,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Security (live): cards=2 first=665ms avg=665ms api_reqs=21\n"
+                      "text": "  Security (live): cards=2 first=814ms avg=814ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:00.249Z",
+                  "startTime": "2026-02-13T07:06:17.509Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -567,16 +540,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1395,
+                  "duration": 1439,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Security (live+cache): cards=2 first=766ms avg=766ms api_reqs=22\n"
+                      "text": "  Security (live+cache): cards=2 first=753ms avg=753ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:01.572Z",
+                  "startTime": "2026-02-13T07:06:18.978Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -605,16 +578,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1364,
+                  "duration": 1390,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  GitOps (demo): cards=4 first=720ms avg=720ms api_reqs=0\n"
+                      "text": "  GitOps (demo): cards=4 first=779ms avg=779ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:02.973Z",
+                  "startTime": "2026-02-13T07:06:20.421Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -647,12 +620,12 @@
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  GitOps (live): cards=4 first=754ms avg=870ms api_reqs=22\n"
+                      "text": "  GitOps (live): cards=4 first=787ms avg=901ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:04.341Z",
+                  "startTime": "2026-02-13T07:06:21.817Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -681,16 +654,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1706,
+                  "duration": 1411,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  GitOps (live+cache): cards=4 first=1009ms avg=1096ms api_reqs=22\n"
+                      "text": "  GitOps (live+cache): cards=4 first=757ms avg=897ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:05.788Z",
+                  "startTime": "2026-02-13T07:06:23.264Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -719,16 +692,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1516,
+                  "duration": 1409,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Pods (demo): cards=6 first=860ms avg=860ms api_reqs=0\n"
+                      "text": "  Pods (demo): cards=6 first=733ms avg=733ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:07.499Z",
+                  "startTime": "2026-02-13T07:06:24.679Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -757,16 +730,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1514,
+                  "duration": 1428,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Pods (live): cards=6 first=854ms avg=949ms api_reqs=24\n"
+                      "text": "  Pods (live): cards=6 first=772ms avg=977ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:09.019Z",
+                  "startTime": "2026-02-13T07:06:26.094Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -795,16 +768,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1437,
+                  "duration": 1452,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Pods (live+cache): cards=6 first=754ms avg=905ms api_reqs=24\n"
+                      "text": "  Pods (live+cache): cards=6 first=795ms avg=1019ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:10.538Z",
+                  "startTime": "2026-02-13T07:06:27.526Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -833,16 +806,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1356,
+                  "duration": 1342,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deployments (demo): cards=4 first=730ms avg=730ms api_reqs=0\n"
+                      "text": "  Deployments (demo): cards=4 first=715ms avg=715ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:11.981Z",
+                  "startTime": "2026-02-13T07:06:28.982Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -871,16 +844,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1345,
+                  "duration": 1414,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deployments (live): cards=4 first=676ms avg=790ms api_reqs=21\n"
+                      "text": "  Deployments (live): cards=4 first=779ms avg=906ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:13.341Z",
+                  "startTime": "2026-02-13T07:06:30.329Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -909,16 +882,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1337,
+                  "duration": 1445,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deployments (live+cache): cards=4 first=667ms avg=746ms api_reqs=21\n"
+                      "text": "  Deployments (live+cache): cards=4 first=792ms avg=872ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:14.691Z",
+                  "startTime": "2026-02-13T07:06:31.747Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -947,16 +920,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1386,
+                  "duration": 1330,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Services (demo): cards=5 first=753ms avg=753ms api_reqs=0\n"
+                      "text": "  Services (demo): cards=5 first=697ms avg=697ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:16.032Z",
+                  "startTime": "2026-02-13T07:06:33.197Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -985,16 +958,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1492,
+                  "duration": 1437,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Services (live): cards=5 first=798ms avg=798ms api_reqs=22\n"
+                      "text": "  Services (live): cards=5 first=721ms avg=744ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:17.423Z",
+                  "startTime": "2026-02-13T07:06:34.531Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1023,16 +996,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1436,
+                  "duration": 1423,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Services (live+cache): cards=5 first=760ms avg=782ms api_reqs=21\n"
+                      "text": "  Services (live+cache): cards=5 first=755ms avg=779ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:18.919Z",
+                  "startTime": "2026-02-13T07:06:35.973Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1061,16 +1034,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1462,
+                  "duration": 1447,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Events (demo): cards=4 first=806ms avg=806ms api_reqs=0\n"
+                      "text": "  Events (demo): cards=4 first=830ms avg=830ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:20.360Z",
+                  "startTime": "2026-02-13T07:06:37.400Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1099,16 +1072,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1645,
+                  "duration": 1691,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Events (live): cards=4 first=905ms avg=905ms api_reqs=22\n"
+                      "text": "  Events (live): cards=4 first=964ms avg=964ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:21.827Z",
+                  "startTime": "2026-02-13T07:06:38.852Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1137,16 +1110,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1728,
+                  "duration": 1647,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Events (live+cache): cards=4 first=1008ms avg=1008ms api_reqs=22\n"
+                      "text": "  Events (live+cache): cards=4 first=935ms avg=935ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:23.479Z",
+                  "startTime": "2026-02-13T07:06:40.548Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1175,16 +1148,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1377,
+                  "duration": 1286,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Storage (demo): cards=2 first=738ms avg=738ms api_reqs=0\n"
+                      "text": "  Storage (demo): cards=2 first=672ms avg=672ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:25.214Z",
+                  "startTime": "2026-02-13T07:06:42.199Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1213,16 +1186,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1459,
+                  "duration": 1375,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Storage (live): cards=2 first=655ms avg=655ms api_reqs=21\n"
+                      "text": "  Storage (live): cards=2 first=736ms avg=736ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:26.596Z",
+                  "startTime": "2026-02-13T07:06:43.489Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1251,16 +1224,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1291,
+                  "duration": 1360,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Storage (live+cache): cards=2 first=650ms avg=650ms api_reqs=21\n"
+                      "text": "  Storage (live+cache): cards=2 first=738ms avg=738ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:28.059Z",
+                  "startTime": "2026-02-13T07:06:44.869Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1289,16 +1262,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1383,
+                  "duration": 1298,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Network (demo): cards=2 first=748ms avg=748ms api_reqs=0\n"
+                      "text": "  Network (demo): cards=2 first=681ms avg=681ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:29.356Z",
+                  "startTime": "2026-02-13T07:06:46.235Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1331,12 +1304,12 @@
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Network (live): cards=2 first=776ms avg=776ms api_reqs=22\n"
+                      "text": "  Network (live): cards=2 first=785ms avg=886ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:30.744Z",
+                  "startTime": "2026-02-13T07:06:47.537Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1365,16 +1338,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1276,
+                  "duration": 1370,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Network (live+cache): cards=2 first=622ms avg=622ms api_reqs=22\n"
+                      "text": "  Network (live+cache): cards=2 first=720ms avg=771ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:32.171Z",
+                  "startTime": "2026-02-13T07:06:48.963Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1403,16 +1376,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1384,
+                  "duration": 1325,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Nodes (demo): cards=4 first=745ms avg=745ms api_reqs=0\n"
+                      "text": "  Nodes (demo): cards=4 first=705ms avg=705ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:33.452Z",
+                  "startTime": "2026-02-13T07:06:50.338Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1441,16 +1414,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1281,
+                  "duration": 1399,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Nodes (live): cards=4 first=635ms avg=848ms api_reqs=21\n"
+                      "text": "  Nodes (live): cards=4 first=755ms avg=989ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:34.840Z",
+                  "startTime": "2026-02-13T07:06:51.668Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1479,16 +1452,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1374,
+                  "duration": 1403,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Nodes (live+cache): cards=4 first=716ms avg=878ms api_reqs=21\n"
+                      "text": "  Nodes (live+cache): cards=4 first=731ms avg=1002ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:36.126Z",
+                  "startTime": "2026-02-13T07:06:53.071Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1517,16 +1490,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2926,
+                  "duration": 1297,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Workloads (demo): cards=2 first=886ms avg=886ms api_reqs=0\n"
+                      "text": "  Workloads (demo): cards=2 first=681ms avg=681ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:37.504Z",
+                  "startTime": "2026-02-13T07:06:54.479Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1555,16 +1528,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1636,
+                  "duration": 1393,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Workloads (live): cards=2 first=664ms avg=765ms api_reqs=21\n"
+                      "text": "  Workloads (live): cards=2 first=935ms avg=991ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:40.437Z",
+                  "startTime": "2026-02-13T07:06:55.780Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1593,16 +1566,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1418,
+                  "duration": 1347,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Workloads (live+cache): cards=2 first=767ms avg=827ms api_reqs=21\n"
+                      "text": "  Workloads (live+cache): cards=2 first=805ms avg=960ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:42.078Z",
+                  "startTime": "2026-02-13T07:06:57.177Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1631,11 +1604,11 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 8482,
+                  "duration": 8613,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770962863555}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllDemo0%13demo-userDemo ModeShowing sample data from all cloud providersWant your own local KubeStellar Console?Get ConsoleDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see th\"}\n"
+                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770966418597}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllDemo0%13demo-userDemo ModeShowing sample data from all cloud providersWant your own local KubeStellar Console?Get ConsoleDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see th\"}\n"
                     },
                     {
                       "text": "  GPU (demo): cards=0 first=-1ms avg=-1ms api_reqs=0\n"
@@ -1643,7 +1616,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:43.501Z",
+                  "startTime": "2026-02-13T07:06:58.529Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1672,11 +1645,11 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 8399,
+                  "duration": 8467,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770962872836}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0NaNGPU ReservationsSchedule and manage GPU resources \"}\n"
+                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770966428004}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0NaNGPU ReservationsSchedule and manage GPU resources \"}\n"
                     },
                     {
                       "text": "  GPU (live): cards=0 first=-1ms avg=-1ms api_reqs=17\n"
@@ -1684,7 +1657,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:07:51.987Z",
+                  "startTime": "2026-02-13T07:07:07.146Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1713,11 +1686,11 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 8479,
+                  "duration": 8554,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770962881267}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0NaNGPU ReservationsSchedule and manage GPU resources \"}\n"
+                      "text": "  NO CARDS on GPU: {\"url\":\"/gpu-reservations\",\"cardTypeCount\":0,\"hasSidebar\":true,\"hasMain\":true,\"h1\":\"GPU Reservations\",\"dialogCount\":0,\"hasTourPrompt\":false,\"backendStatus\":\"{\\\"available\\\":true,\\\"timestamp\\\":1770966436613}\",\"bodyText\":\"\\n    KubeStellar ConsoleKAllAI0%2perftestDashboardMy ClustersDeployAI/MLAI AgentsCI/CDAlertsArcadeComplianceComputeCostData ComplianceDeploymentsEventsGitOpsGPU ReservationsHelmllm-d BenchmarksLogsNetworkNodesOperatorsPodsSecuritySecurity PostureServicesStorageWorkloadsMarketplaceCard HistoryNamespacesUser ManagementSettingsSnoozed ItemsNo snoozed itemsSnooze cards or suggestions to see them hereAdd CardCluster StatusHealthy0Unhealthy1Offline0NaNGPU ReservationsSchedule and manage GPU resources \"}\n"
                     },
                     {
                       "text": "  GPU (live+cache): cards=0 first=-1ms avg=-1ms api_reqs=17\n"
@@ -1725,7 +1698,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:00.392Z",
+                  "startTime": "2026-02-13T07:07:15.618Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1754,16 +1727,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1448,
+                  "duration": 1348,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Alerts (demo): cards=5 first=798ms avg=798ms api_reqs=0\n"
+                      "text": "  Alerts (demo): cards=5 first=724ms avg=724ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:08.876Z",
+                  "startTime": "2026-02-13T07:07:24.176Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1792,16 +1765,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1337,
+                  "duration": 1414,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Alerts (live): cards=5 first=676ms avg=676ms api_reqs=22\n"
+                      "text": "  Alerts (live): cards=5 first=759ms avg=759ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:10.328Z",
+                  "startTime": "2026-02-13T07:07:25.528Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1830,16 +1803,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1445,
+                  "duration": 1425,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Alerts (live+cache): cards=5 first=773ms avg=773ms api_reqs=22\n"
+                      "text": "  Alerts (live+cache): cards=5 first=766ms avg=766ms api_reqs=22\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:11.670Z",
+                  "startTime": "2026-02-13T07:07:26.948Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1868,16 +1841,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1265,
+                  "duration": 1437,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Helm (demo): cards=4 first=643ms avg=643ms api_reqs=0\n"
+                      "text": "  Helm (demo): cards=4 first=807ms avg=807ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:13.124Z",
+                  "startTime": "2026-02-13T07:07:28.380Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1906,16 +1879,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1269,
+                  "duration": 1393,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Helm (live): cards=4 first=642ms avg=797ms api_reqs=21\n"
+                      "text": "  Helm (live): cards=4 first=733ms avg=888ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:14.395Z",
+                  "startTime": "2026-02-13T07:07:29.822Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1944,16 +1917,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1288,
+                  "duration": 1403,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Helm (live+cache): cards=4 first=651ms avg=808ms api_reqs=21\n"
+                      "text": "  Helm (live+cache): cards=4 first=761ms avg=913ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:15.668Z",
+                  "startTime": "2026-02-13T07:07:31.219Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -1982,16 +1955,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1363,
+                  "duration": 1322,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Operators (demo): cards=2 first=744ms avg=744ms api_reqs=0\n"
+                      "text": "  Operators (demo): cards=2 first=709ms avg=709ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:16.961Z",
+                  "startTime": "2026-02-13T07:07:32.627Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2020,16 +1993,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1249,
+                  "duration": 1350,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Operators (live): cards=2 first=918ms avg=918ms api_reqs=21\n"
+                      "text": "  Operators (live): cards=2 first=1034ms avg=1034ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:18.328Z",
+                  "startTime": "2026-02-13T07:07:33.953Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2058,16 +2031,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1288,
+                  "duration": 1372,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Operators (live+cache): cards=2 first=965ms avg=965ms api_reqs=21\n"
+                      "text": "  Operators (live+cache): cards=2 first=1033ms avg=1033ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:19.582Z",
+                  "startTime": "2026-02-13T07:07:35.308Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2096,16 +2069,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1341,
+                  "duration": 1323,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compliance (demo): cards=6 first=731ms avg=731ms api_reqs=0\n"
+                      "text": "  Compliance (demo): cards=6 first=708ms avg=708ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:20.874Z",
+                  "startTime": "2026-02-13T07:07:36.685Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2134,16 +2107,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1428,
+                  "duration": 1419,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compliance (live): cards=6 first=748ms avg=785ms api_reqs=21\n"
+                      "text": "  Compliance (live): cards=6 first=763ms avg=814ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:22.220Z",
+                  "startTime": "2026-02-13T07:07:38.013Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2172,16 +2145,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1462,
+                  "duration": 1396,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Compliance (live+cache): cards=6 first=801ms avg=837ms api_reqs=21\n"
+                      "text": "  Compliance (live+cache): cards=6 first=744ms avg=797ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:23.653Z",
+                  "startTime": "2026-02-13T07:07:39.437Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2210,16 +2183,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1383,
+                  "duration": 1323,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Cost (demo): cards=5 first=753ms avg=753ms api_reqs=0\n"
+                      "text": "  Cost (demo): cards=5 first=697ms avg=697ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:25.120Z",
+                  "startTime": "2026-02-13T07:07:40.837Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2248,16 +2221,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1325,
+                  "duration": 1418,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Cost (live): cards=5 first=669ms avg=797ms api_reqs=21\n"
+                      "text": "  Cost (live): cards=5 first=716ms avg=848ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:26.507Z",
+                  "startTime": "2026-02-13T07:07:42.165Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2286,16 +2259,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1402,
+                  "duration": 1437,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Cost (live+cache): cards=5 first=743ms avg=830ms api_reqs=21\n"
+                      "text": "  Cost (live+cache): cards=5 first=744ms avg=873ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:27.837Z",
+                  "startTime": "2026-02-13T07:07:43.588Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2324,16 +2297,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1625,
+                  "duration": 1722,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI/ML (demo): cards=14 first=916ms avg=916ms api_reqs=0\n"
+                      "text": "  AI/ML (demo): cards=14 first=974ms avg=974ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:29.243Z",
+                  "startTime": "2026-02-13T07:07:45.030Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2362,16 +2335,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1750,
+                  "duration": 2067,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI/ML (live): cards=14 first=950ms avg=966ms api_reqs=21\n"
+                      "text": "  AI/ML (live): cards=14 first=1276ms avg=1276ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:30.873Z",
+                  "startTime": "2026-02-13T07:07:46.756Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2400,16 +2373,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1697,
+                  "duration": 1990,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI/ML (live+cache): cards=14 first=956ms avg=972ms api_reqs=21\n"
+                      "text": "  AI/ML (live+cache): cards=14 first=1262ms avg=1262ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:32.628Z",
+                  "startTime": "2026-02-13T07:07:48.829Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2438,16 +2411,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1360,
+                  "duration": 1367,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  CI/CD (demo): cards=6 first=747ms avg=747ms api_reqs=0\n"
+                      "text": "  CI/CD (demo): cards=6 first=713ms avg=713ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:34.329Z",
+                  "startTime": "2026-02-13T07:07:50.824Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2476,16 +2449,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1693,
+                  "duration": 1427,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  CI/CD (live): cards=6 first=726ms avg=916ms api_reqs=21\n"
+                      "text": "  CI/CD (live): cards=6 first=788ms avg=788ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:35.695Z",
+                  "startTime": "2026-02-13T07:07:52.196Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2514,16 +2487,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2788,
+                  "duration": 1396,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  CI/CD (live+cache): cards=6 first=878ms avg=1123ms api_reqs=21\n"
+                      "text": "  CI/CD (live+cache): cards=6 first=746ms avg=746ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:37.393Z",
+                  "startTime": "2026-02-13T07:07:53.627Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2552,16 +2525,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1546,
+                  "duration": 1322,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Logs (demo): cards=3 first=890ms avg=890ms api_reqs=0\n"
+                      "text": "  Logs (demo): cards=3 first=708ms avg=708ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:40.189Z",
+                  "startTime": "2026-02-13T07:07:55.028Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2590,16 +2563,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1289,
+                  "duration": 1340,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Logs (live): cards=3 first=745ms avg=780ms api_reqs=24\n"
+                      "text": "  Logs (live): cards=3 first=820ms avg=855ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:41.741Z",
+                  "startTime": "2026-02-13T07:07:56.354Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2628,16 +2601,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1313,
+                  "duration": 1449,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Logs (live+cache): cards=3 first=765ms avg=801ms api_reqs=23\n"
+                      "text": "  Logs (live+cache): cards=3 first=803ms avg=837ms api_reqs=23\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:43.035Z",
+                  "startTime": "2026-02-13T07:07:57.698Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2666,16 +2639,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1536,
+                  "duration": 1610,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deploy (demo): cards=17 first=888ms avg=888ms api_reqs=0\n"
+                      "text": "  Deploy (demo): cards=17 first=946ms avg=946ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:44.352Z",
+                  "startTime": "2026-02-13T07:07:59.153Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2704,16 +2677,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1607,
+                  "duration": 1542,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deploy (live): cards=17 first=852ms avg=922ms api_reqs=23\n"
+                      "text": "  Deploy (live): cards=17 first=877ms avg=986ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:45.893Z",
+                  "startTime": "2026-02-13T07:08:00.768Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2742,16 +2715,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1663,
+                  "duration": 1553,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Deploy (live+cache): cards=17 first=936ms avg=1023ms api_reqs=23\n"
+                      "text": "  Deploy (live+cache): cards=17 first=872ms avg=981ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:47.505Z",
+                  "startTime": "2026-02-13T07:08:02.314Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2780,16 +2753,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1417,
+                  "duration": 1379,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI Agents (demo): cards=7 first=783ms avg=783ms api_reqs=0\n"
+                      "text": "  AI Agents (demo): cards=7 first=739ms avg=739ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:49.174Z",
+                  "startTime": "2026-02-13T07:08:03.873Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2818,16 +2791,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1400,
+                  "duration": 1504,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI Agents (live): cards=7 first=735ms avg=735ms api_reqs=21\n"
+                      "text": "  AI Agents (live): cards=7 first=871ms avg=871ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:50.596Z",
+                  "startTime": "2026-02-13T07:08:05.256Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2856,16 +2829,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1367,
+                  "duration": 1541,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  AI Agents (live+cache): cards=7 first=716ms avg=716ms api_reqs=21\n"
+                      "text": "  AI Agents (live+cache): cards=7 first=878ms avg=878ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:52.001Z",
+                  "startTime": "2026-02-13T07:08:06.764Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2894,16 +2867,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1435,
+                  "duration": 1447,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Data Compliance (demo): cards=4 first=817ms avg=817ms api_reqs=0\n"
+                      "text": "  Data Compliance (demo): cards=4 first=810ms avg=810ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:53.373Z",
+                  "startTime": "2026-02-13T07:08:08.313Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2932,16 +2905,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1331,
+                  "duration": 1376,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Data Compliance (live): cards=4 first=650ms avg=650ms api_reqs=21\n"
+                      "text": "  Data Compliance (live): cards=4 first=727ms avg=727ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:54.814Z",
+                  "startTime": "2026-02-13T07:08:09.765Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -2970,16 +2943,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1412,
+                  "duration": 1339,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Data Compliance (live+cache): cards=4 first=758ms avg=758ms api_reqs=21\n"
+                      "text": "  Data Compliance (live+cache): cards=4 first=693ms avg=693ms api_reqs=21\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:56.150Z",
+                  "startTime": "2026-02-13T07:08:11.146Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3008,16 +2981,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1330,
+                  "duration": 1445,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Arcade (demo): cards=20 first=693ms avg=785ms api_reqs=0\n"
+                      "text": "  Arcade (demo): cards=20 first=821ms avg=821ms api_reqs=0\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:57.568Z",
+                  "startTime": "2026-02-13T07:08:12.490Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3046,16 +3019,16 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1472,
+                  "duration": 1463,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Arcade (live): cards=20 first=825ms avg=825ms api_reqs=16\n"
+                      "text": "  Arcade (live): cards=20 first=829ms avg=829ms api_reqs=16\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:08:58.907Z",
+                  "startTime": "2026-02-13T07:08:13.940Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3084,19 +3057,19 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1511,
+                  "duration": 1518,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "  Arcade (live+cache): cards=20 first=849ms avg=849ms api_reqs=16\n"
+                      "text": "  Arcade (live+cache): cards=20 first=873ms avg=873ms api_reqs=16\n"
                     },
                     {
-                      "text": "\n=== Performance Report Summary ===\n\nDashboard              Mode   Cards  First(ms)  Last(ms)   AvgCard(ms)  API Reqs\n--------------------------------------------------------------------------------\nDashboard              demo   9      1109       1109       1109         0       \nDashboard              live   16     939        1309       1053         24      \nDashboard              live+cache 16     1075       1213       1156         23      \nClusters               demo   8      747        747        747          0       \nClusters               live   8      849        1053       926          17      \nClusters               live+cache 8      920        1035       963          17      \nCompute                demo   5      728        728        728          0       \nCompute                live   5      778        1105       976          21      \nCompute                live+cache 5      758        1095       965          21      \nSecurity               demo   2      786        786        786          0       \nSecurity               live   2      665        665        665          21      \nSecurity               live+cache 2      766        766        766          22      \nGitOps                 demo   4      720        720        720          0       \nGitOps                 live   4      754        987        870          22      \nGitOps                 live+cache 4      1009       1125       1096         22      \nPods                   demo   6      860        860        860          0       \nPods                   live   6      854        1081       949          24      \nPods                   live+cache 6      754        981        905          24      \nDeployments            demo   4      730        730        730          0       \nDeployments            live   4      676        1005       790          21      \nDeployments            live+cache 4      667        882        746          21      \nServices               demo   5      753        753        753          0       \nServices               live   5      798        798        798          22      \nServices               live+cache 5      760        872        782          21      \nEvents                 demo   4      806        806        806          0       \nEvents                 live   4      905        905        905          22      \nEvents                 live+cache 4      1008       1008       1008         22      \nStorage                demo   2      738        738        738          0       \nStorage                live   2      655        655        655          21      \nStorage                live+cache 2      650        650        650          21      \nNetwork                demo   2      748        748        748          0       \nNetwork                live   2      776        776        776          22      \nNetwork                live+cache 2      622        622        622          22      \nNodes                  demo   4      745        745        745          0       \nNodes                  live   4      635        952        848          21      \nNodes                  live+cache 4      716        932        878          21      \nWorkloads              demo   2      886        886        886          0       \nWorkloads              live   2      664        866        765          21      \nWorkloads              live+cache 2      767        886        827          21      \nGPU                    demo   0      -1         -1         -1           0       \nGPU                    live   0      -1         -1         -1           17      \nGPU                    live+cache 0      -1         -1         -1           17      \nAlerts                 demo   5      798        798        798          0       \nAlerts                 live   5      676        676        676          22      \nAlerts                 live+cache 5      773        773        773          22      \nHelm                   demo   4      643        643        643          0       \nHelm                   live   4      642        951        797          21      \nHelm                   live+cache 4      651        964        808          21      \nOperators              demo   2      744        744        744          0       \nOperators              live   2      918        918        918          21      \nOperators              live+cache 2      965        965        965          21      \nCompliance             demo   6      731        731        731          0       \nCompliance             live   6      748        967        785          21      \nCompliance             live+cache 6      801        1019       837          21      \nCost                   demo   5      753        753        753          0       \nCost                   live   5      669        990        797          21      \nCost                   live+cache 5      743        960        830          21      \nAI/ML                  demo   14     916        916        916          0       \nAI/ML                  live   14     950        1170       966          21      \nAI/ML                  live+cache 14     956        1174       972          21      \nCI/CD                  demo   6      747        747        747          0       \nCI/CD                  live   6      726        1562       916          21      \nCI/CD                  live+cache 6      878        2345       1123         21      \nLogs                   demo   3      890        890        890          0       \nLogs                   live   3      745        849        780          24      \nLogs                   live+cache 3      765        874        801          23      \nDeploy                 demo   17     888        888        888          0       \nDeploy                 live   17     852        1001       922          23      \nDeploy                 live+cache 17     936        1204       1023         23      \nAI Agents              demo   7      783        783        783          0       \nAI Agents              live   7      735        735        735          21      \nAI Agents              live+cache 7      716        716        716          21      \nData Compliance        demo   4      817        817        817          0       \nData Compliance        live   4      650        650        650          21      \nData Compliance        live+cache 4      758        758        758          21      \nArcade                 demo   20     693        908        785          0       \nArcade                 live   20     825        825        825          16      \nArcade                 live+cache 20     849        849        849          16      \n\nDemo avg card load: 817ms (150 cards)\nLive avg card load: 864ms (152 cards)\nLive+cache avg card load: 913ms (153 cards)\n\n"
+                      "text": "\n=== Performance Report Summary ===\n\nDashboard              Mode   Cards  First(ms)  Last(ms)   AvgCard(ms)  API Reqs\n--------------------------------------------------------------------------------\nDashboard              demo   9      836        836        836          0       \nDashboard              live   9      826        1188       960          23      \nDashboard              live+cache 9      852        1181       974          23      \nClusters               demo   8      799        799        799          0       \nClusters               live   8      864        1169       978          17      \nClusters               live+cache 8      798        798        798          17      \nCompute                demo   5      724        724        724          0       \nCompute                live   5      708        1119       955          21      \nCompute                live+cache 5      781        1093       948          21      \nSecurity               demo   2      769        769        769          0       \nSecurity               live   2      814        814        814          21      \nSecurity               live+cache 2      753        753        753          21      \nGitOps                 demo   4      779        779        779          0       \nGitOps                 live   4      787        1013       901          22      \nGitOps                 live+cache 4      757        1080       897          22      \nPods                   demo   6      733        733        733          0       \nPods                   live   6      772        1109       977          22      \nPods                   live+cache 6      795        1207       1019         22      \nDeployments            demo   4      715        715        715          0       \nDeployments            live   4      779        1184       906          21      \nDeployments            live+cache 4      792        1111       872          21      \nServices               demo   5      697        697        697          0       \nServices               live   5      721        838        744          21      \nServices               live+cache 5      755        873        779          21      \nEvents                 demo   4      830        830        830          0       \nEvents                 live   4      964        964        964          22      \nEvents                 live+cache 4      935        935        935          22      \nStorage                demo   2      672        672        672          0       \nStorage                live   2      736        736        736          21      \nStorage                live+cache 2      738        738        738          21      \nNetwork                demo   2      681        681        681          0       \nNetwork                live   2      785        987        886          21      \nNetwork                live+cache 2      720        821        771          21      \nNodes                  demo   4      705        705        705          0       \nNodes                  live   4      755        1067       989          21      \nNodes                  live+cache 4      731        1163       1002         21      \nWorkloads              demo   2      681        681        681          0       \nWorkloads              live   2      935        1047       991          21      \nWorkloads              live+cache 2      805        1115       960          21      \nGPU                    demo   0      -1         -1         -1           0       \nGPU                    live   0      -1         -1         -1           17      \nGPU                    live+cache 0      -1         -1         -1           17      \nAlerts                 demo   5      724        724        724          0       \nAlerts                 live   5      759        759        759          22      \nAlerts                 live+cache 5      766        766        766          22      \nHelm                   demo   4      807        807        807          0       \nHelm                   live   4      733        1043       888          21      \nHelm                   live+cache 4      761        1065       913          21      \nOperators              demo   2      709        709        709          0       \nOperators              live   2      1034       1034       1034         21      \nOperators              live+cache 2      1033       1033       1033         21      \nCompliance             demo   6      708        708        708          0       \nCompliance             live   6      763        1068       814          21      \nCompliance             live+cache 6      744        1062       797          21      \nCost                   demo   5      697        697        697          0       \nCost                   live   5      716        1047       848          21      \nCost                   live+cache 5      744        1067       873          21      \nAI/ML                  demo   14     974        974        974          0       \nAI/ML                  live   14     1276       1276       1276         21      \nAI/ML                  live+cache 14     1262       1262       1262         21      \nCI/CD                  demo   6      713        713        713          0       \nCI/CD                  live   6      788        788        788          21      \nCI/CD                  live+cache 6      746        746        746          21      \nLogs                   demo   3      708        708        708          0       \nLogs                   live   3      820        925        855          23      \nLogs                   live+cache 3      803        904        837          23      \nDeploy                 demo   17     946        946        946          0       \nDeploy                 live   17     877        1191       986          21      \nDeploy                 live+cache 17     872        1189       981          21      \nAI Agents              demo   7      739        739        739          0       \nAI Agents              live   7      871        871        871          21      \nAI Agents              live+cache 7      878        878        878          21      \nData Compliance        demo   4      810        810        810          0       \nData Compliance        live   4      727        727        727          21      \nData Compliance        live+cache 4      693        693        693          21      \nArcade                 demo   20     821        821        821          0       \nArcade                 live   20     829        829        829          16      \nArcade                 live+cache 20     873        873        873          16      \n\nDemo avg card load: 801ms (150 cards)\nLive avg card load: 925ms (150 cards)\nLive+cache avg card load: 917ms (150 cards)\n\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-02-13T06:09:00.383Z",
+                  "startTime": "2026-02-13T07:08:15.409Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -3114,8 +3087,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-02-13T06:05:37.942Z",
-    "duration": 204385.19900000002,
+    "startTime": "2026-02-13T07:05:55.074Z",
+    "duration": 142154.516,
     "expected": 79,
     "skipped": 0,
     "unexpected": 0,

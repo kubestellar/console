@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, useContext, ComponentType, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Maximize2, MoreVertical, Clock, Settings, Replace, Trash2, MessageCircle, RefreshCw, MoveHorizontal, ChevronRight, ChevronDown, Info, Download, Link2,
@@ -1405,9 +1405,12 @@ export function CardWrapper({
                 )}
                 {/* ALWAYS render children so they can report their data state via useCardLoadingState.
                     Hide visually when skeleton is showing, but keep mounted so useLayoutEffect runs.
-                    This prevents the deadlock where CardWrapper waits for hasData but children never mount. */}
+                    This prevents the deadlock where CardWrapper waits for hasData but children never mount.
+                    Suspense catches lazy() chunk loading so it doesn't bubble up to Layout and blank the whole page. */}
                 <div className={shouldShowSkeleton ? 'hidden' : 'contents'}>
-                  {children}
+                  <Suspense fallback={<CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />}>
+                    {children}
+                  </Suspense>
                 </div>
               </>
             ) : (

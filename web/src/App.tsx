@@ -21,42 +21,44 @@ import { prefetchCardData } from './lib/prefetchCardData'
 import { prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 
-// Lazy load all page components for better code splitting
+// Eagerly import all sidebar-navigable pages — they must render instantly, never show blank skeleton.
+// These are thin wrappers (~50-100 lines) around shared DashboardPage, so bundle impact is minimal.
+import { Dashboard } from './components/dashboard/Dashboard'
+import { CustomDashboard } from './components/dashboard/CustomDashboard'
+import { Clusters } from './components/clusters/Clusters'
+import { Events } from './components/events/Events'
+import { Workloads } from './components/workloads/Workloads'
+import { Storage } from './components/storage/Storage'
+import { Compute } from './components/compute/Compute'
+import { Network } from './components/network/Network'
+import { Security } from './components/security/Security'
+import { GitOps } from './components/gitops/GitOps'
+import { Alerts } from './components/alerts/Alerts'
+import { Cost } from './components/cost/Cost'
+import { Compliance } from './components/compliance/Compliance'
+import { DataCompliance } from './components/data-compliance/DataCompliance'
+import { GPUReservations } from './components/gpu/GPUReservations'
+import { Nodes } from './components/nodes/Nodes'
+import { Deployments } from './components/deployments/Deployments'
+import { Services } from './components/services/Services'
+import { Operators } from './components/operators/Operators'
+import { HelmReleases } from './components/helm/HelmReleases'
+import { Logs } from './components/logs/Logs'
+import { Pods } from './components/pods/Pods'
+import { Deploy } from './components/deploy/Deploy'
+import { AIML } from './components/aiml/AIML'
+import { AIAgents } from './components/aiagents/AIAgents'
+import { LLMdBenchmarks } from './components/llmd-benchmarks/LLMdBenchmarks'
+import { CICD } from './components/cicd/CICD'
+import { NamespaceManager } from './components/namespaces/NamespaceManager'
+// Lazy load auth, settings, and rarely-visited pages
 const Login = lazy(() => import('./components/auth/Login').then(m => ({ default: m.Login })))
 const AuthCallback = lazy(() => import('./components/auth/AuthCallback').then(m => ({ default: m.AuthCallback })))
-const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(m => ({ default: m.Dashboard })))
-const CustomDashboard = lazy(() => import('./components/dashboard/CustomDashboard').then(m => ({ default: m.CustomDashboard })))
 const Settings = lazy(() => import('./components/settings/Settings').then(m => ({ default: m.Settings })))
-const Clusters = lazy(() => import('./components/clusters/Clusters').then(m => ({ default: m.Clusters })))
-const Events = lazy(() => import('./components/events/Events').then(m => ({ default: m.Events })))
-const Workloads = lazy(() => import('./components/workloads/Workloads').then(m => ({ default: m.Workloads })))
-const Storage = lazy(() => import('./components/storage/Storage').then(m => ({ default: m.Storage })))
-const Compute = lazy(() => import('./components/compute/Compute').then(m => ({ default: m.Compute })))
 const ClusterComparisonPage = lazy(() => import('./components/compute/ClusterComparisonPage').then(m => ({ default: m.ClusterComparisonPage })))
-const Network = lazy(() => import('./components/network/Network').then(m => ({ default: m.Network })))
-const Security = lazy(() => import('./components/security/Security').then(m => ({ default: m.Security })))
-const GitOps = lazy(() => import('./components/gitops/GitOps').then(m => ({ default: m.GitOps })))
-const Alerts = lazy(() => import('./components/alerts/Alerts').then(m => ({ default: m.Alerts })))
-const Cost = lazy(() => import('./components/cost/Cost').then(m => ({ default: m.Cost })))
-const Compliance = lazy(() => import('./components/compliance/Compliance').then(m => ({ default: m.Compliance })))
-const DataCompliance = lazy(() => import('./components/data-compliance/DataCompliance').then(m => ({ default: m.DataCompliance })))
-const GPUReservations = lazy(() => import('./components/gpu/GPUReservations').then(m => ({ default: m.GPUReservations })))
-const Nodes = lazy(() => import('./components/nodes/Nodes').then(m => ({ default: m.Nodes })))
-const Deployments = lazy(() => import('./components/deployments/Deployments').then(m => ({ default: m.Deployments })))
-const Services = lazy(() => import('./components/services/Services').then(m => ({ default: m.Services })))
-const Operators = lazy(() => import('./components/operators/Operators').then(m => ({ default: m.Operators })))
-const HelmReleases = lazy(() => import('./components/helm/HelmReleases').then(m => ({ default: m.HelmReleases })))
-const Logs = lazy(() => import('./components/logs/Logs').then(m => ({ default: m.Logs })))
-const Pods = lazy(() => import('./components/pods/Pods').then(m => ({ default: m.Pods })))
 const CardHistory = lazy(() => import('./components/history/CardHistory').then(m => ({ default: m.CardHistory })))
 const UserManagementPage = lazy(() => import('./pages/UserManagement').then(m => ({ default: m.UserManagementPage })))
-const NamespaceManager = lazy(() => import('./components/namespaces/NamespaceManager').then(m => ({ default: m.NamespaceManager })))
 const Arcade = lazy(() => import('./components/arcade/Arcade').then(m => ({ default: m.Arcade })))
-const Deploy = lazy(() => import('./components/deploy/Deploy').then(m => ({ default: m.Deploy })))
-const AIML = lazy(() => import('./components/aiml/AIML').then(m => ({ default: m.AIML })))
-const AIAgents = lazy(() => import('./components/aiagents/AIAgents').then(m => ({ default: m.AIAgents })))
-const LLMdBenchmarks = lazy(() => import('./components/llmd-benchmarks/LLMdBenchmarks').then(m => ({ default: m.LLMdBenchmarks })))
-const CICD = lazy(() => import('./components/cicd/CICD').then(m => ({ default: m.CICD })))
 const Marketplace = lazy(() => import('./components/marketplace/Marketplace').then(m => ({ default: m.Marketplace })))
 const MiniDashboard = lazy(() => import('./components/widget/MiniDashboard').then(m => ({ default: m.MiniDashboard })))
 const UnifiedCardTest = lazy(() => import('./pages/UnifiedCardTest').then(m => ({ default: m.UnifiedCardTest })))
