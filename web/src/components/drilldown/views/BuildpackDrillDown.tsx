@@ -19,6 +19,45 @@ interface Props {
 
 type TabType = 'overview' | 'yaml' | 'builds' | 'logs' | 'ai'
 
+type KpackConditionStatus = 'True' | 'False' | 'Unknown'
+
+interface KpackCondition {
+  type: string
+  status: KpackConditionStatus
+  reason?: string
+  message?: string
+  lastTransitionTime?: string
+}
+
+interface KpackImageStatus {
+  metadata?: {
+    name?: string
+    namespace?: string
+    creationTimestamp?: string
+  }
+
+  spec?: {
+    builder?: {
+      image?: string
+    }
+  }
+
+  status?: {
+    latestImage?: string
+    conditions?: KpackCondition[]
+  }
+}
+
+interface KpackBuild {
+  metadata: {
+    name: string
+    creationTimestamp: string
+  }
+  status?: {
+    conditions?: KpackCondition[]
+  }
+}
+
 // Status styling helper
 const getStatusStyle = (
   status: BuildpackStatus) => {
@@ -35,6 +74,21 @@ const getStatusStyle = (
   }
 }
 
+const mapConditionToBuildpackStatus = (
+  condition?: KpackCondition
+): BuildpackStatus => {
+  if (!condition) return 'unknown'
+
+  switch (condition.status) {
+    case 'True':
+      return 'succeeded'
+    case 'False':
+      return 'failed'
+    case 'Unknown':
+    default:
+      return 'building'
+  }
+}
 
 export function BuildpackDrillDown({ data }: Props) {
   const cluster = data.cluster as string
@@ -49,9 +103,9 @@ export function BuildpackDrillDown({ data }: Props) {
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
-  const [imageInfo, setImageInfo] = useState<any>(null)
+  const [imageInfo, setImageInfo] = useState<KpackImageStatus | null>(null)
   const [imageYAML, setImageYAML] = useState<string | null>(null)
-  const [builds, setBuilds] = useState<any[]>([])
+  const [builds, setBuilds] = useState<KpackBuild[]>([])
   const [logs, setLogs] = useState<string | null>(null)
 
   const [loading, setLoading] = useState(false)
@@ -325,7 +379,7 @@ Check:
   // Extract useful info from imageInfo
   const latestImage = imageInfo?.status?.latestImage || 'N/A'
   const conditions = imageInfo?.status?.conditions || []
-  const readyCondition = conditions.find((c: any) => c.type === 'Ready')
+  const readyCondition = conditions.find((c: KpackCondition) => c.type === 'Ready')
   const builderImage = imageInfo?.spec?.builder?.image || builder
 
   return (
@@ -446,9 +500,12 @@ Check:
                   </div>
                   <div className="p-4 rounded-lg border border-border bg-card/50">
                     <div className="text-2xl font-bold text-foreground">
-                      {builds.filter(b => 
-                        b.status?.conditions?.find((c: any) => c.type === 'Succeeded')?.status === 'True'
-                      ).length}
+                      {builds.filter(b => {
+                        const condition = b.status?.conditions?.find(
+                          (c: KpackCondition) => c.type === 'Succeeded'
+                        )
+                        return condition?.status === 'True'
+                      }).length}
                     </div>
                     <div className="text-xs text-muted-foreground">Successful</div>
                   </div>
@@ -487,7 +544,7 @@ Check:
                   <div className="p-4 rounded-lg border border-border bg-card/50">
                     <h4 className="text-sm font-medium text-foreground mb-3">Conditions</h4>
                     <div className="space-y-2">
-                      {conditions.map((condition: any, i: number) => (
+                      {conditions.map((condition: KpackCondition, i: number) => (
                         <div
                           key={i}
                           className="flex items-center justify-between p-2 rounded bg-card/50"
@@ -559,8 +616,9 @@ Check:
                     return timeB - timeA
                   })
                   .map((build, idx) => {
-                    const buildStatus = build.status?.conditions?.find((c: any) => c.type === 'Succeeded')
-                    const statusStyle = getStatusStyle(buildStatus?.status || 'Unknown')
+                    const buildStatus = build.status?.conditions?.find((c: KpackCondition) => c.type === 'Succeeded')
+                    const mappedStatus = mapConditionToBuildpackStatus(buildStatus)
+                    const statusStyle = getStatusStyle(mappedStatus)
                     return (
                       <div
                         key={build.metadata.name}
@@ -581,7 +639,11 @@ Check:
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={cn('px-2 py-0.5 rounded text-xs', statusStyle.bg, statusStyle.text)}>
-                            {buildStatus?.status === 'True' ? 'Success' : buildStatus?.status === 'False' ? 'Failed' : 'Pending'}
+                            {mappedStatus === 'succeeded'
+                            ? 'Success'
+                            : mappedStatus === 'failed'
+                            ? 'Failed'
+                            : 'Building'}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {new Date(build.metadata.creationTimestamp).toLocaleDateString()}

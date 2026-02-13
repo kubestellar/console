@@ -74,7 +74,7 @@ const getViewIcon = (type: string) => {
     case 'operator': return <Settings className="w-4 h-4 text-purple-400" />
     case 'policy': return <Shield className="w-4 h-4 text-blue-400" />
     case 'kustomization': return <Layers className="w-4 h-4 text-indigo-400" />
-    case 'buildpacks': return <Package className="w-4 h-4 text-indigo-400" />
+    case 'buildpack': return <Package className="w-4 h-4 text-indigo-400" />
     case 'crd': return <Package className="w-4 h-4 text-purple-400" />
     case 'drift': return <GitBranch className="w-4 h-4 text-orange-400" />
     // Multi-cluster summary views

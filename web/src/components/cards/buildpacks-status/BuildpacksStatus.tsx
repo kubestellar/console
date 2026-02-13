@@ -58,6 +58,13 @@ const STATUS_STYLES = {
   },
 }
 
+const statusOrder: Record<string, number> = {
+  failed: 0,
+  building: 1,
+  unknown: 2,
+  succeeded: 3,
+}
+
 export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
   const { isLoading: clustersLoading } = useClusters()
 
@@ -105,13 +112,6 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
     () => Array.from(new Set(allBuilds.map(b => b.namespace))).sort(),
     [allBuilds]
   )
-
-  const statusOrder: Record<string, number> = {
-    failed: 0,
-    building: 1,
-    unknown: 2,
-    succeeded: 3,
-  }
 
   const {
     items: builds,
