@@ -7,7 +7,8 @@
  */
 import { useState, useMemo } from 'react'
 import { Trophy, ChevronUp, ChevronDown, ArrowUpDown } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
   generateLeaderboardRows,
@@ -37,16 +38,18 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 }
 
 export function HardwareLeaderboard() {
-  useReportCardDataState({ isDemoData: true, isFailed: false, consecutiveFailures: 0, hasData: true })
+  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
+  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [modelFilter, setModelFilter] = useState<string>('all')
 
   const allRows = useMemo(() => {
-    const reports = generateBenchmarkReports()
-    return generateLeaderboardRows(reports)
-  }, [])
+    return generateLeaderboardRows(effectiveReports)
+  }, [effectiveReports])
 
   const models = useMemo(() => [...new Set(allRows.map(r => r.model))], [allRows])
 

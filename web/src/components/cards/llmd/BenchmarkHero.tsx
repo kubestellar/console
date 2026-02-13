@@ -8,7 +8,8 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Zap, Clock, Activity, Cpu, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
   getHardwareShort,
@@ -81,10 +82,13 @@ function HeroMetric({
 }
 
 export function BenchmarkHero() {
-  useReportCardDataState({ isDemoData: true, isFailed: false, consecutiveFailures: 0, hasData: true })
+  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
+  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const { latest, prev, engine, gpuMetrics } = useMemo(() => {
-    const reports = generateBenchmarkReports()
+    const reports = effectiveReports
     // Pick the best llm-d disaggregated result as "latest"
     const llmdReports = reports.filter(r =>
       r.scenario.stack.some(c => c.standardized.role === 'prefill')
@@ -106,7 +110,7 @@ export function BenchmarkHero() {
 
     const gpuM = best.results.observability?.metrics ?? []
     return { latest: best, prev: baseline, engine: eng, gpuMetrics: gpuM }
-  }, [])
+  }, [effectiveReports])
 
   const agg = latest.results.request_performance.aggregate
   const prevAgg = prev?.results.request_performance.aggregate

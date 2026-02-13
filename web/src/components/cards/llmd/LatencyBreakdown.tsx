@@ -6,7 +6,8 @@
  */
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
   getHardwareShort,
@@ -71,19 +72,21 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 }
 
 export function LatencyBreakdown() {
-  useReportCardDataState({ isDemoData: true, isFailed: false, consecutiveFailures: 0, hasData: true })
+  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
+  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [tab, setTab] = useState<MetricTab>('ttft')
   const [modelFilter, setModelFilter] = useState<string>('all')
 
   const { reports, models } = useMemo(() => {
-    const all = generateBenchmarkReports()
-    const mdls = [...new Set(all.map(r => {
+    const mdls = [...new Set(effectiveReports.map(r => {
       const e = r.scenario.stack.find(c => c.standardized.kind === 'inference_engine')
       return getModelShort(e?.standardized.model?.name ?? '')
     }))]
-    return { reports: all, models: mdls }
-  }, [])
+    return { reports: effectiveReports, models: mdls }
+  }, [effectiveReports])
 
   const data: BarEntry[] = useMemo(() => {
     let filtered = reports

@@ -11,7 +11,8 @@ import {
   ReferenceLine, ZAxis,
 } from 'recharts'
 import { Filter } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
   extractParetoPoints,
@@ -117,19 +118,21 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 }
 
 export function ParetoFrontier() {
-  useReportCardDataState({ isDemoData: true, isFailed: false, consecutiveFailures: 0, hasData: true })
+  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
+  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [hwFilter, setHwFilter] = useState<Set<string>>(new Set())
   const [modelFilter, setModelFilter] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
 
   const { allPoints, models, hardwareList } = useMemo(() => {
-    const reports = generateBenchmarkReports()
-    const pts = extractParetoPoints(reports)
+    const pts = extractParetoPoints(effectiveReports)
     const mdls = [...new Set(pts.map(p => getModelShort(p.model)))]
     const hws = [...new Set(pts.map(p => getHardwareShort(p.hardware)))]
     return { allPoints: pts, models: mdls, hardwareList: hws }
-  }, [])
+  }, [effectiveReports])
 
   const filtered = useMemo(() => {
     let pts = allPoints
