@@ -29,6 +29,7 @@ import {
   BellRing,
   File,
   FolderTree,
+  Package,
 } from 'lucide-react'
 import type { ResourceKind, ResourceContext } from '../types/modal.types'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -61,6 +62,7 @@ const RESOURCE_ICONS: Record<ResourceKind, typeof Box> = {
   NetworkPolicy: Network,
   Event: Zap,
   HelmRelease: Ship,
+  BuildpackImage: Package,
   ArgoApplication: GitBranch,
   Operator: Settings,
   CRD: Puzzle,
