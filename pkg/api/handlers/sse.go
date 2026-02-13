@@ -280,3 +280,55 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 		return issues, nil
 	})
 }
+
+// GetNodesStream streams node info per cluster via SSE.
+func (h *MCPHandlers) GetNodesStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "nodes", getDemoNodes())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "nodes",
+		clusterTimeout: 15 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetNodes(ctx, cluster)
+	})
+}
+
+// GetGPUNodesStream streams GPU node info per cluster via SSE.
+func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "nodes", getDemoGPUNodes())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "nodes",
+		clusterTimeout: 30 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetGPUNodes(ctx, cluster)
+	})
+}
+
+// GetWarningEventsStream streams warning events per cluster via SSE.
+func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return streamDemoSSE(c, "events", getDemoWarningEvents())
+	}
+	if h.k8sClient == nil {
+		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+	}
+
+	namespace := c.Query("namespace")
+	return streamClusters(c, h, sseClusterStreamConfig{
+		demoKey:        "events",
+		clusterTimeout: 15 * time.Second,
+	}, func(ctx context.Context, cluster string) (interface{}, error) {
+		return h.k8sClient.GetWarningEvents(ctx, cluster, namespace, 50)
+	})
+}

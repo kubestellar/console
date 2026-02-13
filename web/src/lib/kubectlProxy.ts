@@ -53,7 +53,7 @@ class KubectlProxy {
   // Request queue to prevent overwhelming the WebSocket
   private requestQueue: QueuedRequest[] = []
   private activeRequests = 0
-  private readonly maxConcurrentRequests = 2 // Limit concurrent requests to local agent
+  private readonly maxConcurrentRequests = 4 // Limit concurrent requests to local agent
 
   /**
    * Ensure WebSocket is connected

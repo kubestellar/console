@@ -492,6 +492,9 @@ func (s *Server) setupRoutes() {
 	api.Get("/mcp/events/stream", mcpHandlers.GetEventsStream)
 	api.Get("/mcp/services/stream", mcpHandlers.GetServicesStream)
 	api.Get("/mcp/security-issues/stream", mcpHandlers.CheckSecurityIssuesStream)
+	api.Get("/mcp/nodes/stream", mcpHandlers.GetNodesStream)
+	api.Get("/mcp/gpu-nodes/stream", mcpHandlers.GetGPUNodesStream)
+	api.Get("/mcp/events/warnings/stream", mcpHandlers.GetWarningEventsStream)
 
 	// GitOps routes (drift detection and sync)
 	// SECURITY: All GitOps routes require authentication in both dev and production modes
