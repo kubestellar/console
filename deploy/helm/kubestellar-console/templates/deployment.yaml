@@ -119,6 +119,10 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.jwt.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.jwt.existingSecretKey | default "jwt-secret" }}
+            {{- if .Values.enabledDashboards }}
+            - name: ENABLED_DASHBOARDS
+              value: {{ .Values.enabledDashboards | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

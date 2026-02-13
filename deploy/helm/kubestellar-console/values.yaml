@@ -129,6 +129,14 @@ kubestellar:
   opsPath: /usr/local/bin/kubestellar-ops
   deployPath: /usr/local/bin/kubestellar-deploy
 
+# Sidebar dashboard filter (comma-separated dashboard IDs, empty = show all)
+# Available IDs: dashboard, clusters, deploy, ai-ml, ai-agents, ci-cd, alerts,
+#   arcade, compliance, compute, cost, data-compliance, deployments, events,
+#   gitops, gpu-reservations, helm, llm-d-benchmarks, logs, network, nodes,
+#   operators, pods, security, security-posture, services, storage, workloads
+# Example: "gpu-reservations,llm-d-benchmarks"
+enabledDashboards: ""
+
 nodeSelector: {}
 
 tolerations: []

@@ -95,6 +95,39 @@ const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v9'
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']
 
+// Server-side dashboard filter (fetched from /health endpoint)
+let enabledDashboardIds: Set<string> | null = null // null = show all
+let enabledDashboardsFetched = false
+
+function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
+  if (!enabledDashboardIds) return config
+  return {
+    ...config,
+    primaryNav: config.primaryNav.filter(
+      item => item.isCustom || enabledDashboardIds!.has(item.id)
+    ),
+  }
+}
+
+async function fetchEnabledDashboards(): Promise<void> {
+  if (enabledDashboardsFetched) return
+  enabledDashboardsFetched = true
+  try {
+    const resp = await fetch('/health')
+    const data = await resp.json()
+    if (data.enabled_dashboards && Array.isArray(data.enabled_dashboards) && data.enabled_dashboards.length > 0) {
+      enabledDashboardIds = new Set(data.enabled_dashboards as string[])
+      if (sharedConfig) {
+        sharedConfig = applyDashboardFilter(sharedConfig)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedConfig))
+        notifyListeners()
+      }
+    }
+  } catch {
+    // Ignore — show all dashboards if health check fails
+  }
+}
+
 // Migrate config to ensure all default routes exist
 function migrateConfig(stored: SidebarConfig): SidebarConfig {
   // First, remove deprecated routes
@@ -172,6 +205,11 @@ function initSharedConfig(): SidebarConfig {
     sharedConfig = DEFAULT_CONFIG
   }
 
+  // Apply server-side dashboard filter if already fetched
+  if (enabledDashboardIds) {
+    sharedConfig = applyDashboardFilter(sharedConfig)
+  }
+
   return sharedConfig
 }
 
@@ -186,6 +224,11 @@ export function useSidebarConfig() {
   // Initialize on first use
   if (!sharedConfig) {
     initSharedConfig()
+  }
+
+  // Fetch server-side dashboard filter (once, async)
+  if (!enabledDashboardsFetched) {
+    fetchEnabledDashboards()
   }
 
   // Subscribe to shared state changes
@@ -317,7 +360,7 @@ export function useSidebarConfig() {
   }, [])
 
   const resetToDefault = useCallback(() => {
-    setConfig(DEFAULT_CONFIG)
+    setConfig(applyDashboardFilter(DEFAULT_CONFIG))
   }, [])
 
   const generateFromBehavior = useCallback((frequentlyUsedPaths: string[]) => {

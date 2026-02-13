@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -58,6 +59,8 @@ type Config struct {
 	// Benchmark data configuration (Google Drive)
 	BenchmarkGoogleDriveAPIKey string // API key for fetching benchmark data from Google Drive
 	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
+	// Sidebar configuration
+	EnabledDashboards string // Comma-separated list of dashboard IDs to show in sidebar (empty = all)
 }
 
 // Server represents the API server
@@ -299,12 +302,25 @@ func (s *Server) setupRoutes() {
 			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
 		}
 		inCluster := s.k8sClient != nil && s.k8sClient.IsInCluster()
-		return c.JSON(fiber.Map{
+		resp := fiber.Map{
 			"status":           "ok",
 			"version":          Version,
 			"oauth_configured": s.config.GitHubClientID != "",
 			"in_cluster":       inCluster,
-		})
+		}
+		if s.config.EnabledDashboards != "" {
+			dashboards := strings.Split(s.config.EnabledDashboards, ",")
+			trimmed := make([]string, 0, len(dashboards))
+			for _, d := range dashboards {
+				if t := strings.TrimSpace(d); t != "" {
+					trimmed = append(trimmed, t)
+				}
+			}
+			if len(trimmed) > 0 {
+				resp["enabled_dashboards"] = trimmed
+			}
+		}
+		return c.JSON(resp)
 	})
 
 	// Auth routes (public)
@@ -752,6 +768,8 @@ func LoadConfigFromEnv() Config {
 		// Benchmark data from Google Drive
 		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
+		// Sidebar dashboard filter
+		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
 	}
 }
 
