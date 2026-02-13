@@ -309,7 +309,7 @@ const (
 	benchmarkFileSuffix = ".yaml"
 
 	// Rate limiting for Google Drive API to avoid triggering anti-bot protection
-	driveRequestDelay   = 300 * time.Millisecond
+	driveRequestDelay   = 100 * time.Millisecond
 	driveMaxRetries     = 3
 	driveRetryBaseDelay = 2 * time.Second
 	driveUserAgent      = "KubeStellarConsole/1.0"
@@ -422,8 +422,9 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 }
 
 // StreamReports streams benchmark reports via SSE as they are fetched from Google Drive.
-// Each SSE event contains a batch of reports from one run folder so cards render progressively.
-// Events: "batch" (reports array), "done" (final summary), "error".
+// Sends individual reports as they are parsed for fast first paint.
+// Sends keepalive heartbeats every 5s so the connection doesn't drop during long fetches.
+// Events: "batch" (reports array), "progress" (status update), "done" (final summary), "error".
 func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 	if isDemoMode(c) {
 		return c.JSON(fiber.Map{"reports": []interface{}{}, "source": "demo"})
@@ -455,6 +456,27 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		var allReports []BenchmarkReport
 		totalSent := 0
 
+		// Send immediate progress event so the client knows we're connected
+		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"connecting\",\"total\":0}\n\n")
+		w.Flush()
+
+		// Start keepalive ticker — send comment heartbeats every 5s
+		keepaliveDone := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					fmt.Fprintf(w, ": keepalive\n\n")
+					w.Flush()
+				case <-keepaliveDone:
+					return
+				}
+			}
+		}()
+		defer close(keepaliveDone)
+
 		topLevel, err := h.listDriveFolder(h.folderID)
 		if err != nil {
 			fmt.Fprintf(w, "event: error\ndata: {\"error\":%q}\n\n", err.Error())
@@ -462,10 +484,18 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			return
 		}
 
+		// Filter to folders only
+		var experiments []driveFile
 		for _, item := range topLevel {
-			if item.MimeType != driveFolderMIME {
-				continue
+			if item.MimeType == driveFolderMIME {
+				experiments = append(experiments, item)
 			}
+		}
+
+		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"fetching\",\"experiments\":%d,\"total\":0}\n\n", len(experiments))
+		w.Flush()
+
+		for _, item := range experiments {
 			runFolders, err := h.listDriveFolder(item.ID)
 			if err != nil {
 				log.Printf("[benchmarks] Error listing experiment %q: %v", item.Name, err)
@@ -475,21 +505,21 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 				if runItem.MimeType != driveFolderMIME {
 					continue
 				}
-				reports, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
+				// Fetch per-file and stream each report individually for fast first paint
+				reports, err := h.fetchRunFolderStreaming(runItem.ID, item.Name, runItem.Name, func(report BenchmarkReport) {
+					allReports = append(allReports, report)
+					totalSent++
+					batch, _ := json.Marshal([]BenchmarkReport{report})
+					fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
+					w.Flush()
+				})
 				if err != nil {
 					log.Printf("[benchmarks] Error in %q/%q: %v", item.Name, runItem.Name, err)
 					continue
 				}
-				if len(reports) == 0 {
-					continue
+				if len(reports) > 0 {
+					log.Printf("[benchmarks] Streamed %d from %q/%q (total: %d)", len(reports), item.Name, runItem.Name, totalSent)
 				}
-				allReports = append(allReports, reports...)
-				totalSent += len(reports)
-
-				batch, _ := json.Marshal(reports)
-				fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
-				w.Flush()
-				log.Printf("[benchmarks] Streamed %d from %q/%q (total: %d)", len(reports), item.Name, runItem.Name, totalSent)
 			}
 		}
 
@@ -500,6 +530,69 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 	})
 
 	return nil
+}
+
+// fetchRunFolderStreaming is like fetchRunFolder but calls onReport for each individual report
+// as it's parsed, enabling per-file SSE streaming.
+func (h *BenchmarkHandlers) fetchRunFolderStreaming(folderID, experimentName, runName string, onReport func(BenchmarkReport)) ([]BenchmarkReport, error) {
+	items, err := h.listDriveFolder(folderID)
+	if err != nil {
+		return nil, err
+	}
+
+	var reports []BenchmarkReport
+	var subfolders []driveFile
+	for _, f := range items {
+		if f.MimeType == driveFolderMIME {
+			subfolders = append(subfolders, f)
+			continue
+		}
+		if strings.HasPrefix(f.Name, benchmarkFilePrefix) && strings.HasSuffix(f.Name, benchmarkFileSuffix) {
+			report, err := h.downloadAndParseReport(f, experimentName, runName)
+			if err != nil {
+				continue
+			}
+			reports = append(reports, report)
+			onReport(report)
+		}
+	}
+	if len(reports) > 0 {
+		return reports, nil
+	}
+
+	// No direct files — recurse into "results" subfolder
+	for _, sub := range subfolders {
+		if !strings.EqualFold(sub.Name, "results") {
+			continue
+		}
+		resultFolders, err := h.listDriveFolder(sub.ID)
+		if err != nil {
+			continue
+		}
+		for _, rf := range resultFolders {
+			if rf.MimeType != driveFolderMIME {
+				continue
+			}
+			files, err := h.listDriveFolder(rf.ID)
+			if err != nil {
+				continue
+			}
+			for _, f := range files {
+				if f.MimeType == driveFolderMIME {
+					continue
+				}
+				if strings.HasPrefix(f.Name, benchmarkFilePrefix) && strings.HasSuffix(f.Name, benchmarkFileSuffix) {
+					report, err := h.downloadAndParseReport(f, experimentName, runName)
+					if err != nil {
+						continue
+					}
+					reports = append(reports, report)
+					onReport(report)
+				}
+			}
+		}
+	}
+	return reports, nil
 }
 
 // fetchAllReports is the non-streaming version for the standard endpoint.
