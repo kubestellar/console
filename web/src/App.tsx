@@ -18,7 +18,7 @@ import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { prefetchCardData } from './lib/prefetchCardData'
-import { prefetchDemoCardChunks } from './components/cards/cardRegistry'
+import { prefetchCardChunks, prefetchDemoCardChunks } from './components/cards/cardRegistry'
 import { isDemoMode } from './lib/demoMode'
 
 // Lazy load all page components for better code splitting
@@ -122,7 +122,7 @@ if (typeof window !== 'undefined') {
     loadBatch()
   }
 
-  // In demo mode, fire immediately. Otherwise defer 1.5s to let
+  // In demo mode, fire immediately. Otherwise defer 500ms to let
   // the first page render, then start caching all chunks so
   // subsequent navigations are instant.
   if (isDemoMode()) {
@@ -207,16 +207,25 @@ function SettingsSyncInit() {
   return null
 }
 
-// Prefetches core Kubernetes data immediately after login so dashboard
-// cards render instantly. Card component chunks are deferred to avoid
-// overwhelming Vite's module transform pipeline on cold start.
+// Default main dashboard card types — prefetched immediately so the first
+// page renders without waiting for Dashboard.tsx to mount and trigger prefetch.
+const DEFAULT_MAIN_CARD_TYPES = [
+  'console_ai_offline_detection', 'hardware_health', 'cluster_health',
+  'resource_usage', 'pod_issues', 'cluster_metrics', 'event_stream',
+  'deployment_status', 'events_timeline',
+]
+
+// Prefetches core Kubernetes data and card chunks immediately after login
+// so dashboard cards render instantly instead of showing skeletons.
 function DataPrefetchInit() {
   const { isAuthenticated } = useAuth()
   useEffect(() => {
     if (!isAuthenticated) return
     prefetchCardData()
-    // Defer card chunk prefetch — in demo mode fire immediately,
-    // otherwise wait 15s so the first page can fully load first.
+    // Prefetch default dashboard card chunks immediately — don't wait for
+    // Dashboard.tsx to lazy-load and mount before starting chunk downloads.
+    prefetchCardChunks(DEFAULT_MAIN_CARD_TYPES)
+    // Demo-only card chunks are lower priority — defer 15s in live mode.
     if (isDemoMode()) {
       prefetchDemoCardChunks()
     } else {

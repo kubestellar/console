@@ -1,28 +1,5 @@
-import { lazy, Suspense, createElement, ComponentType } from 'react'
+import { lazy, ComponentType } from 'react'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
-import { useReportCardDataState } from './CardDataContext'
-import { isDemoMode } from '../../lib/demoMode'
-
-/**
- * Suspense fallback that reports loading state to CardWrapper while chunks load.
- *
- * In demo mode: reports hasData=true so CardWrapper skips the skeleton entirely.
- * Demo data is synchronous — the only delay is chunk download, and showing a
- * skeleton for that is unnecessary and adds 550ms+ of perceived latency.
- *
- * In live mode: reports isLoading=true so CardWrapper shows a proper skeleton
- * while waiting for the chunk (and subsequent API data).
- */
-function CardSuspenseFallback() {
-  const demo = isDemoMode()
-  useReportCardDataState({
-    hasData: demo,
-    isFailed: false,
-    consecutiveFailures: 0,
-    isLoading: !demo,
-  })
-  return null
-}
 
 // Lazy load all card components for better code splitting
 const ClusterHealth = lazy(() => import('./ClusterHealth').then(m => ({ default: m.ClusterHealth })))
@@ -199,19 +176,10 @@ export type CardComponentProps = { config?: Record<string, unknown> }
 // Card component type
 export type CardComponent = ComponentType<CardComponentProps>
 
-/**
- * Wrap a lazy card component with its own Suspense boundary.
- * This prevents one slow-loading card from blanking out the entire page —
- * only the individual card shows nothing while its chunk loads.
- */
-function withSuspense(LazyComponent: ComponentType<CardComponentProps>): CardComponent {
-  function SuspenseWrapped(props: CardComponentProps) {
-    return createElement(Suspense, { fallback: createElement(CardSuspenseFallback) }, createElement(LazyComponent, props))
-  }
-  // Access displayName property that may exist on lazy component
-  SuspenseWrapped.displayName = `Suspense(${(LazyComponent as ComponentType<CardComponentProps> & { displayName?: string }).displayName || 'Card'})`
-  return SuspenseWrapped
-}
+// No per-card Suspense wrapper — CardWrapper.tsx already wraps children in
+// <Suspense fallback={<CardSkeleton/>}> which shows a visible skeleton while
+// lazy chunks load. A second inner Suspense with a null fallback was hiding
+// that skeleton, causing blank card bodies during initial page load.
 
 /**
  * Central registry of all card components.
@@ -441,10 +409,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   rbac_summary: NamespaceRBAC,
 }
 
-// Wrap every card with its own Suspense boundary
-export const CARD_COMPONENTS: Record<string, CardComponent> = Object.fromEntries(
-  Object.entries(RAW_CARD_COMPONENTS).map(([key, Component]) => [key, withSuspense(Component)])
-)
+// Export cards directly — CardWrapper.tsx provides the Suspense boundary with a visible skeleton
+export const CARD_COMPONENTS: Record<string, CardComponent> = RAW_CARD_COMPONENTS
 
 /**
  * Cards that ALWAYS use demo/mock data (no live data source exists).
@@ -643,6 +609,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   // GitHub & misc
   github_activity: () => import('./GitHubActivity'),
   hardware_health: () => import('./HardwareHealthCard'),
+  console_ai_offline_detection: () => import('./console-missions/ConsoleOfflineDetectionCard'),
   provider_health: () => import('./ProviderHealth'),
   // MCS & Gateway
   service_exports: () => import('./ServiceExports'),

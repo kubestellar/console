@@ -126,6 +126,7 @@ manualChunks: (id) => {
         './src/components/marketplace/Marketplace.tsx',
         './src/components/llmd-benchmarks/LLMdBenchmarks.tsx',
         './src/components/settings/Settings.tsx',
+        './src/components/namespaces/NamespaceManager.tsx',
         // Card registries and bundles
         './src/components/cards/cardRegistry.ts',
         './src/components/cards/deploy-bundle.ts',

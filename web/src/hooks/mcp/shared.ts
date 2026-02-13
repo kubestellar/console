@@ -1271,12 +1271,16 @@ export async function fullFetchClusters() {
     updateClusterCache({ isLoading: true, isRefreshing: true })
   }
 
-  // Helper to ensure minimum visible duration for refresh animation
+  // Helper to ensure minimum visible duration for refresh animation.
+  // On initial load (no cached data), skip the delay — show data ASAP.
+  // On refresh (cached data visible), enforce minimum so indicator is readable.
   const finishWithMinDuration = async (updates: Partial<typeof clusterCache>) => {
-    const elapsed = Date.now() - startTime
-    const minDuration = MIN_REFRESH_INDICATOR_MS
-    if (elapsed < minDuration) {
-      await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+    if (hasCachedData) {
+      const elapsed = Date.now() - startTime
+      const minDuration = MIN_REFRESH_INDICATOR_MS
+      if (elapsed < minDuration) {
+        await new Promise(resolve => setTimeout(resolve, minDuration - elapsed))
+      }
     }
     fetchInProgress = false
     updateClusterCache(updates)
