@@ -77,6 +77,8 @@ export function useCachedBenchmarkReports() {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
         let buffer = ''
+        let eventType = ''
+        let dataLines: string[] = []
 
         while (true) {
           const { done, value } = await reader.read()
@@ -87,9 +89,6 @@ export function useCachedBenchmarkReports() {
           // Parse SSE events
           const lines = buffer.split('\n')
           buffer = lines.pop() ?? ''
-
-          let eventType = ''
-          let dataLines: string[] = []
 
           for (const line of lines) {
             if (line.startsWith('event: ')) {

@@ -307,6 +307,12 @@ const (
 	defaultCacheTTL     = 1 * time.Hour
 	benchmarkFilePrefix = "benchmark_report"
 	benchmarkFileSuffix = ".yaml"
+
+	// Rate limiting for Google Drive API to avoid triggering anti-bot protection
+	driveRequestDelay   = 300 * time.Millisecond
+	driveMaxRetries     = 3
+	driveRetryBaseDelay = 2 * time.Second
+	driveUserAgent      = "KubeStellarConsole/1.0"
 )
 
 // BenchmarkHandlers provides endpoints for llm-d benchmark data from Google Drive.
@@ -315,6 +321,8 @@ type BenchmarkHandlers struct {
 	folderID string
 	cache    *benchmarkCache
 	client   *http.Client
+	lastReq  time.Time
+	reqMu    sync.Mutex
 }
 
 // NewBenchmarkHandlers creates a new benchmark data handler.
@@ -327,6 +335,54 @@ func NewBenchmarkHandlers(apiKey, folderID string) *BenchmarkHandlers {
 		},
 		client: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// throttle ensures a minimum delay between Google Drive API requests
+// to avoid triggering anti-bot protection.
+func (h *BenchmarkHandlers) throttle() {
+	h.reqMu.Lock()
+	defer h.reqMu.Unlock()
+	elapsed := time.Since(h.lastReq)
+	if elapsed < driveRequestDelay {
+		time.Sleep(driveRequestDelay - elapsed)
+	}
+	h.lastReq = time.Now()
+}
+
+// driveGet performs a throttled HTTP GET with the proper User-Agent header.
+func (h *BenchmarkHandlers) driveGet(url string) (*http.Response, error) {
+	h.throttle()
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", driveUserAgent)
+	return h.client.Do(req)
+}
+
+// driveGetWithRetry performs an HTTP GET with throttling and retry on 403 errors.
+func (h *BenchmarkHandlers) driveGetWithRetry(url string) (*http.Response, error) {
+	var lastErr error
+	for attempt := 0; attempt <= driveMaxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := driveRetryBaseDelay * time.Duration(1<<(attempt-1))
+			log.Printf("[benchmarks] Retrying after %v (attempt %d/%d)", backoff, attempt, driveMaxRetries)
+			time.Sleep(backoff)
+		}
+		resp, err := h.driveGet(url)
+		if err != nil {
+			lastErr = fmt.Errorf("HTTP error: %w", err)
+			continue
+		}
+		if resp.StatusCode == 403 || resp.StatusCode == 429 {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			lastErr = fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
+			continue
+		}
+		return resp, nil
+	}
+	return nil, lastErr
 }
 
 // GetReports returns benchmark reports adapted from Google Drive v0.1 data to v0.2 format.
@@ -572,9 +628,9 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 	url := fmt.Sprintf("%s?q='%s'+in+parents&key=%s&fields=files(id,name,mimeType)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true",
 		driveAPIBase, folderID, h.apiKey)
 
-	resp, err := h.client.Get(url)
+	resp, err := h.driveGetWithRetry(url)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP error: %w", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
@@ -592,10 +648,12 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 }
 
 // downloadDriveFile downloads file content from Google Drive.
+// Uses webContentLink (drive.google.com/uc?id=...&export=download) which is more
+// resilient to Google's anti-bot protection than the API's alt=media endpoint.
 func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
-	url := fmt.Sprintf("%s/%s?alt=media&key=%s&supportsAllDrives=true", driveAPIBase, fileID, h.apiKey)
+	downloadURL := fmt.Sprintf("https://drive.google.com/uc?id=%s&export=download", fileID)
 
-	resp, err := h.client.Get(url)
+	resp, err := h.driveGet(downloadURL)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP error: %w", err)
 	}
@@ -603,7 +661,7 @@ func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("Drive download returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	return io.ReadAll(resp.Body)
