@@ -11,3 +11,12 @@ export { PDDisaggregation } from './PDDisaggregation'
 export { LLMdBenchmarks } from './LLMdBenchmarks'
 export { LLMdAIInsights } from './LLMdAIInsights'
 export { LLMdConfigurator } from './LLMdConfigurator'
+
+// Benchmark dashboard cards
+export { BenchmarkHero } from './BenchmarkHero'
+export { ParetoFrontier } from './ParetoFrontier'
+export { HardwareLeaderboard } from './HardwareLeaderboard'
+export { LatencyBreakdown } from './LatencyBreakdown'
+export { ThroughputComparison } from './ThroughputComparison'
+export { PerformanceTimeline } from './PerformanceTimeline'
+export { ResourceUtilization } from './ResourceUtilization'
