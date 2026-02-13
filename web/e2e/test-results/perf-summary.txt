@@ -1,0 +1,33 @@
+
+=== Performance Report Summary ===
+
+Dashboard              Mode   Cards  First(ms)  Last(ms)   AvgCard(ms)  API Reqs
+--------------------------------------------------------------------------------
+Dashboard              demo   9      832        832        832          0       
+Clusters               demo   8      1106       1106       1106         0       
+Compute                demo   5      833        833        833          0       
+Security               demo   2      835        835        835          0       
+GitOps                 demo   4      809        809        809          0       
+Pods                   demo   6      1010       1010       1010         0       
+Deployments            demo   4      945        945        945          0       
+Services               demo   5      924        924        924          0       
+Events                 demo   4      1014       1014       1014         0       
+Storage                demo   2      707        707        707          0       
+Network                demo   2      892        892        892          0       
+Nodes                  demo   4      1178       1178       1178         0       
+Workloads              demo   2      1433       1433       1433         0       
+GPU                    demo   0      -1         -1         -1           0       
+Alerts                 demo   5      886        886        886          0       
+Helm                   demo   4      965        965        965          0       
+Operators              demo   2      712        712        712          0       
+Compliance             demo   6      810        810        810          0       
+Cost                   demo   5      774        774        774          0       
+AI/ML                  demo   14     1160       1160       1160         0       
+CI/CD                  demo   6      765        765        765          0       
+Logs                   demo   3      824        824        824          0       
+Deploy                 demo   17     900        900        900          0       
+AI Agents              demo   7      1263       1263       1263         0       
+Data Compliance        demo   4      733        733        733          0       
+Arcade                 demo   20     1029       1029       1029         0       
+
+Demo avg card load: 961ms (150 cards)

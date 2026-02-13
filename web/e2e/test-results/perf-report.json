@@ -1,0 +1,1816 @@
+{
+  "timestamp": "2026-02-12T04:37:08.158Z",
+  "dashboards": [
+    {
+      "dashboardId": "main",
+      "dashboardName": "Dashboard",
+      "route": "/",
+      "mode": "demo",
+      "navigationStartMs": 1770871031973,
+      "firstCardVisibleMs": 832,
+      "lastCardVisibleMs": 832,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "console_ai_offline_detection",
+          "cardId": "default-offline",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "default-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-6",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-7",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 832,
+          "timeToFirstContent": 832,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "clusters",
+      "dashboardName": "Clusters",
+      "route": "/clusters",
+      "mode": "demo",
+      "navigationStartMs": 1770871033435,
+      "firstCardVisibleMs": 1106,
+      "lastCardVisibleMs": 1106,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "console_ai_offline_detection",
+          "cardId": "default-console_ai_offline_detection-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware_health-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-cluster_health-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_groups",
+          "cardId": "default-cluster_groups-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-cluster_metrics-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_comparison",
+          "cardId": "default-cluster_comparison-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "provider_health",
+          "cardId": "default-provider_health-6",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_locations",
+          "cardId": "default-cluster_locations-7",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1106,
+          "timeToFirstContent": 1106,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "compute",
+      "dashboardName": "Compute",
+      "route": "/compute",
+      "mode": "demo",
+      "navigationStartMs": 1770871035177,
+      "firstCardVisibleMs": 833,
+      "lastCardVisibleMs": 833,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "cluster_health",
+          "cardId": "default-cluster_health-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 833,
+          "timeToFirstContent": 833,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 833,
+          "timeToFirstContent": 833,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 833,
+          "timeToFirstContent": 833,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_metrics",
+          "cardId": "default-cluster_metrics-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 833,
+          "timeToFirstContent": 833,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-pod_issues-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 833,
+          "timeToFirstContent": 833,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "security",
+      "dashboardName": "Security",
+      "route": "/security",
+      "mode": "demo",
+      "navigationStartMs": 1770871036636,
+      "firstCardVisibleMs": 835,
+      "lastCardVisibleMs": 835,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "security_issues",
+          "cardId": "default-security_issues-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 835,
+          "timeToFirstContent": 835,
+          "timedOut": false
+        },
+        {
+          "cardType": "active_alerts",
+          "cardId": "default-active_alerts-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 835,
+          "timeToFirstContent": 835,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "gitops",
+      "dashboardName": "GitOps",
+      "route": "/gitops",
+      "mode": "demo",
+      "navigationStartMs": 1770871038104,
+      "firstCardVisibleMs": 809,
+      "lastCardVisibleMs": 809,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 809,
+          "timeToFirstContent": 809,
+          "timedOut": false
+        },
+        {
+          "cardType": "gitops_drift",
+          "cardId": "default-gitops_drift-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 809,
+          "timeToFirstContent": 809,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 809,
+          "timeToFirstContent": 809,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 809,
+          "timeToFirstContent": 809,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "pods",
+      "dashboardName": "Pods",
+      "route": "/pods",
+      "mode": "demo",
+      "navigationStartMs": 1770871039564,
+      "firstCardVisibleMs": 1010,
+      "lastCardVisibleMs": 1010,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "pod_issues",
+          "cardId": "default-pod_issues-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1010,
+          "timeToFirstContent": 1010,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_health_trend",
+          "cardId": "default-pod_health_trend-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1010,
+          "timeToFirstContent": 1010,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1010,
+          "timeToFirstContent": 1010,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1010,
+          "timeToFirstContent": 1010,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1010,
+          "timeToFirstContent": 1010,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_overview",
+          "cardId": "default-namespace_overview-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1010,
+          "timeToFirstContent": 1010,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "deployments",
+      "dashboardName": "Deployments",
+      "route": "/deployments",
+      "mode": "demo",
+      "navigationStartMs": 1770871041212,
+      "firstCardVisibleMs": 945,
+      "lastCardVisibleMs": 945,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 945,
+          "timeToFirstContent": 945,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 945,
+          "timeToFirstContent": 945,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_progress",
+          "cardId": "default-deployment_progress-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 945,
+          "timeToFirstContent": 945,
+          "timedOut": false
+        },
+        {
+          "cardType": "workload_deployment",
+          "cardId": "default-workload_deployment-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 945,
+          "timeToFirstContent": 945,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "services",
+      "dashboardName": "Services",
+      "route": "/services",
+      "mode": "demo",
+      "navigationStartMs": 1770871042796,
+      "firstCardVisibleMs": 924,
+      "lastCardVisibleMs": 924,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "service_status",
+          "cardId": "default-service_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 924,
+          "timeToFirstContent": 924,
+          "timedOut": false
+        },
+        {
+          "cardType": "gateway_status",
+          "cardId": "default-gateway_status-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 924,
+          "timeToFirstContent": 924,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_exports",
+          "cardId": "default-service_exports-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 924,
+          "timeToFirstContent": 924,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_imports",
+          "cardId": "default-service_imports-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 924,
+          "timeToFirstContent": 924,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_topology",
+          "cardId": "default-service_topology-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 924,
+          "timeToFirstContent": 924,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "events",
+      "dashboardName": "Events",
+      "route": "/events",
+      "mode": "demo",
+      "navigationStartMs": 1770871044354,
+      "firstCardVisibleMs": 1014,
+      "lastCardVisibleMs": 1014,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1014,
+          "timeToFirstContent": 1014,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1014,
+          "timeToFirstContent": 1014,
+          "timedOut": false
+        },
+        {
+          "cardType": "recent_events",
+          "cardId": "default-recent_events-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1014,
+          "timeToFirstContent": 1014,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1014,
+          "timeToFirstContent": 1014,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "storage",
+      "dashboardName": "Storage",
+      "route": "/storage",
+      "mode": "demo",
+      "navigationStartMs": 1770871045997,
+      "firstCardVisibleMs": 707,
+      "lastCardVisibleMs": 707,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "storage_overview",
+          "cardId": "default-storage_overview-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 707,
+          "timeToFirstContent": 707,
+          "timedOut": false
+        },
+        {
+          "cardType": "pvc_status",
+          "cardId": "default-pvc_status-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 707,
+          "timeToFirstContent": 707,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "network",
+      "dashboardName": "Network",
+      "route": "/network",
+      "mode": "demo",
+      "navigationStartMs": 1770871047327,
+      "firstCardVisibleMs": 892,
+      "lastCardVisibleMs": 892,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "network_overview",
+          "cardId": "default-network_overview-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 892,
+          "timeToFirstContent": 892,
+          "timedOut": false
+        },
+        {
+          "cardType": "service_status",
+          "cardId": "default-service_status-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 892,
+          "timeToFirstContent": 892,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "nodes",
+      "dashboardName": "Nodes",
+      "route": "/nodes",
+      "mode": "demo",
+      "navigationStartMs": 1770871048865,
+      "firstCardVisibleMs": 1178,
+      "lastCardVisibleMs": 1178,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "resource_usage",
+          "cardId": "default-resource_usage-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1178,
+          "timeToFirstContent": 1178,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_capacity",
+          "cardId": "default-resource_capacity-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1178,
+          "timeToFirstContent": 1178,
+          "timedOut": false
+        },
+        {
+          "cardType": "top_pods",
+          "cardId": "default-top_pods-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1178,
+          "timeToFirstContent": 1178,
+          "timedOut": false
+        },
+        {
+          "cardType": "upgrade_status",
+          "cardId": "default-upgrade_status-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1178,
+          "timeToFirstContent": 1178,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "workloads",
+      "dashboardName": "Workloads",
+      "route": "/workloads",
+      "mode": "demo",
+      "navigationStartMs": 1770871050706,
+      "firstCardVisibleMs": 1433,
+      "lastCardVisibleMs": 1433,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1433,
+          "timeToFirstContent": 1433,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1433,
+          "timeToFirstContent": 1433,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "gpu",
+      "dashboardName": "GPU",
+      "route": "/gpu-reservations",
+      "mode": "demo",
+      "navigationStartMs": 1770871052802,
+      "firstCardVisibleMs": -1,
+      "lastCardVisibleMs": -1,
+      "totalApiRequests": 0,
+      "cards": []
+    },
+    {
+      "dashboardId": "alerts",
+      "dashboardName": "Alerts",
+      "route": "/alerts",
+      "mode": "demo",
+      "navigationStartMs": 1770871061715,
+      "firstCardVisibleMs": 886,
+      "lastCardVisibleMs": 886,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "active_alerts",
+          "cardId": "default-active_alerts-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        },
+        {
+          "cardType": "alert_rules",
+          "cardId": "default-alert_rules-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        },
+        {
+          "cardType": "falco_alerts",
+          "cardId": "default-falco_alerts-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        },
+        {
+          "cardType": "warning_events",
+          "cardId": "default-warning_events-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        },
+        {
+          "cardType": "event_summary",
+          "cardId": "default-event_summary-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 886,
+          "timeToFirstContent": 886,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "helm",
+      "dashboardName": "Helm",
+      "route": "/helm",
+      "mode": "demo",
+      "navigationStartMs": 1770871063225,
+      "firstCardVisibleMs": 965,
+      "lastCardVisibleMs": 965,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 965,
+          "timeToFirstContent": 965,
+          "timedOut": false
+        },
+        {
+          "cardType": "chart_versions",
+          "cardId": "default-chart_versions-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 965,
+          "timeToFirstContent": 965,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_history",
+          "cardId": "default-helm_history-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 965,
+          "timeToFirstContent": 965,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_values_diff",
+          "cardId": "default-helm_values_diff-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 965,
+          "timeToFirstContent": 965,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "operators",
+      "dashboardName": "Operators",
+      "route": "/operators",
+      "mode": "demo",
+      "navigationStartMs": 1770871064816,
+      "firstCardVisibleMs": 712,
+      "lastCardVisibleMs": 712,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "operator_status",
+          "cardId": "default-operator_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 712,
+          "timeToFirstContent": 712,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 712,
+          "timeToFirstContent": 712,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "compliance",
+      "dashboardName": "Compliance",
+      "route": "/compliance",
+      "mode": "demo",
+      "navigationStartMs": 1770871066160,
+      "firstCardVisibleMs": 810,
+      "lastCardVisibleMs": 810,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "compliance_score",
+          "cardId": "default-compliance_score-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 810,
+          "timeToFirstContent": 810,
+          "timedOut": false
+        },
+        {
+          "cardType": "policy_violations",
+          "cardId": "default-policy_violations-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 810,
+          "timeToFirstContent": 810,
+          "timedOut": false
+        },
+        {
+          "cardType": "opa_policies",
+          "cardId": "default-opa_policies-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 810,
+          "timeToFirstContent": 810,
+          "timedOut": false
+        },
+        {
+          "cardType": "kyverno_policies",
+          "cardId": "default-kyverno_policies-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 810,
+          "timeToFirstContent": 810,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubescape_scan",
+          "cardId": "default-kubescape_scan-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 810,
+          "timeToFirstContent": 810,
+          "timedOut": false
+        },
+        {
+          "cardType": "trivy_scan",
+          "cardId": "default-trivy_scan-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 810,
+          "timeToFirstContent": 810,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "cost",
+      "dashboardName": "Cost",
+      "route": "/cost",
+      "mode": "demo",
+      "navigationStartMs": 1770871067593,
+      "firstCardVisibleMs": 774,
+      "lastCardVisibleMs": 774,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "cluster_costs",
+          "cardId": "default-cluster_costs-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 774,
+          "timeToFirstContent": 774,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubecost_overview",
+          "cardId": "default-kubecost_overview-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 774,
+          "timeToFirstContent": 774,
+          "timedOut": false
+        },
+        {
+          "cardType": "opencost_overview",
+          "cardId": "default-opencost_overview-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 774,
+          "timeToFirstContent": 774,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_capacity",
+          "cardId": "default-resource_capacity-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 774,
+          "timeToFirstContent": 774,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_trend",
+          "cardId": "default-resource_trend-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 774,
+          "timeToFirstContent": 774,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ai-ml",
+      "dashboardName": "AI/ML",
+      "route": "/ai-ml",
+      "mode": "demo",
+      "navigationStartMs": 1770871069008,
+      "firstCardVisibleMs": 1160,
+      "lastCardVisibleMs": 1160,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "llmd_flow",
+          "cardId": "default-llmd_flow-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "kvcache_monitor",
+          "cardId": "default-kvcache_monitor-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "epp_routing",
+          "cardId": "default-epp_routing-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "pd_disaggregation",
+          "cardId": "default-pd_disaggregation-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_benchmarks",
+          "cardId": "default-llmd_benchmarks-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_ai_insights",
+          "cardId": "default-llmd_ai_insights-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_configurator",
+          "cardId": "default-llmd_configurator-6",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "llm_models",
+          "cardId": "default-llm_models-7",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "llm_inference",
+          "cardId": "default-llm_inference-8",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "llmd_stack_monitor",
+          "cardId": "default-llmd_stack_monitor-9",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "ml_jobs",
+          "cardId": "default-ml_jobs-10",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "ml_notebooks",
+          "cardId": "default-ml_notebooks-11",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "gpu_overview",
+          "cardId": "default-gpu_overview-12",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        },
+        {
+          "cardType": "hardware_health",
+          "cardId": "default-hardware_health-13",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1160,
+          "timeToFirstContent": 1160,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ci-cd",
+      "dashboardName": "CI/CD",
+      "route": "/ci-cd",
+      "mode": "demo",
+      "navigationStartMs": 1770871070915,
+      "firstCardVisibleMs": 765,
+      "lastCardVisibleMs": 765,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "prow_status",
+          "cardId": "default-prow_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_jobs",
+          "cardId": "default-prow_jobs-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_ci_monitor",
+          "cardId": "default-prow_ci_monitor-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        },
+        {
+          "cardType": "prow_history",
+          "cardId": "default-prow_history-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        },
+        {
+          "cardType": "github_ci_monitor",
+          "cardId": "default-github_ci_monitor-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        },
+        {
+          "cardType": "github_activity",
+          "cardId": "default-github_activity-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 765,
+          "timeToFirstContent": 765,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "logs",
+      "dashboardName": "Logs",
+      "route": "/logs",
+      "mode": "demo",
+      "navigationStartMs": 1770871072312,
+      "firstCardVisibleMs": 824,
+      "lastCardVisibleMs": 824,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "event_stream",
+          "cardId": "default-event_stream-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 824,
+          "timeToFirstContent": 824,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_events",
+          "cardId": "default-namespace_events-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 824,
+          "timeToFirstContent": 824,
+          "timedOut": false
+        },
+        {
+          "cardType": "events_timeline",
+          "cardId": "default-events_timeline-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 824,
+          "timeToFirstContent": 824,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "deploy",
+      "dashboardName": "Deploy",
+      "route": "/deploy",
+      "mode": "demo",
+      "navigationStartMs": 1770871073771,
+      "firstCardVisibleMs": 900,
+      "lastCardVisibleMs": 900,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "workload_deployment",
+          "cardId": "default-workload_deployment-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "cluster_groups",
+          "cardId": "default-cluster_groups-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_missions",
+          "cardId": "default-deployment_missions-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "resource_marshall",
+          "cardId": "default-resource_marshall-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_status",
+          "cardId": "default-deployment_status-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_progress",
+          "cardId": "default-deployment_progress-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "deployment_issues",
+          "cardId": "default-deployment_issues-6",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "gitops_drift",
+          "cardId": "default-gitops_drift-7",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_applications",
+          "cardId": "default-argocd_applications-8",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_sync_status",
+          "cardId": "default-argocd_sync_status-9",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "argocd_health",
+          "cardId": "default-argocd_health-10",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_release_status",
+          "cardId": "default-helm_release_status-11",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "helm_history",
+          "cardId": "default-helm_history-12",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "chart_versions",
+          "cardId": "default-chart_versions-13",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "kustomization_status",
+          "cardId": "default-kustomization_status-14",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "overlay_comparison",
+          "cardId": "default-overlay_comparison-15",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        },
+        {
+          "cardType": "upgrade_status",
+          "cardId": "default-upgrade_status-16",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 900,
+          "timeToFirstContent": 900,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "ai-agents",
+      "dashboardName": "AI Agents",
+      "route": "/ai-agents",
+      "mode": "demo",
+      "navigationStartMs": 1770871075331,
+      "firstCardVisibleMs": 1263,
+      "lastCardVisibleMs": 1263,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "kagenti_status",
+          "cardId": "default-kagenti_status-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_agent_fleet",
+          "cardId": "default-kagenti_agent_fleet-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_build_pipeline",
+          "cardId": "default-kagenti_build_pipeline-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_tool_registry",
+          "cardId": "default-kagenti_tool_registry-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_agent_discovery",
+          "cardId": "default-kagenti_agent_discovery-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_security",
+          "cardId": "default-kagenti_security-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        },
+        {
+          "cardType": "kagenti_topology",
+          "cardId": "default-kagenti_topology-6",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1263,
+          "timeToFirstContent": 1263,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "data-compliance",
+      "dashboardName": "Data Compliance",
+      "route": "/data-compliance",
+      "mode": "demo",
+      "navigationStartMs": 1770871077228,
+      "firstCardVisibleMs": 733,
+      "lastCardVisibleMs": 733,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "vault_secrets",
+          "cardId": "default-vault_secrets-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 733,
+          "timeToFirstContent": 733,
+          "timedOut": false
+        },
+        {
+          "cardType": "external_secrets",
+          "cardId": "default-external_secrets-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 733,
+          "timeToFirstContent": 733,
+          "timedOut": false
+        },
+        {
+          "cardType": "cert_manager",
+          "cardId": "default-cert_manager-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 733,
+          "timeToFirstContent": 733,
+          "timedOut": false
+        },
+        {
+          "cardType": "namespace_rbac",
+          "cardId": "default-namespace_rbac-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 733,
+          "timeToFirstContent": 733,
+          "timedOut": false
+        }
+      ]
+    },
+    {
+      "dashboardId": "arcade",
+      "dashboardName": "Arcade",
+      "route": "/arcade",
+      "mode": "demo",
+      "navigationStartMs": 1770871078588,
+      "firstCardVisibleMs": 1029,
+      "lastCardVisibleMs": 1029,
+      "totalApiRequests": 0,
+      "cards": [
+        {
+          "cardType": "checkers",
+          "cardId": "default-checkers-0",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_chess",
+          "cardId": "default-kube_chess-1",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "sudoku_game",
+          "cardId": "default-sudoku_game-2",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "container_tetris",
+          "cardId": "default-container_tetris-3",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "node_invaders",
+          "cardId": "default-node_invaders-4",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_man",
+          "cardId": "default-kube_man-5",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_kong",
+          "cardId": "default-kube_kong-6",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_crosser",
+          "cardId": "default-pod_crosser-7",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_pitfall",
+          "cardId": "default-pod_pitfall-8",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_brothers",
+          "cardId": "default-pod_brothers-9",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_galaga",
+          "cardId": "default-kube_galaga-10",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_pong",
+          "cardId": "default-kube_pong-11",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_snake",
+          "cardId": "default-kube_snake-12",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_kart",
+          "cardId": "default-kube_kart-13",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "game_2048",
+          "cardId": "default-game_2048-14",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "pod_sweeper",
+          "cardId": "default-pod_sweeper-15",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "match_game",
+          "cardId": "default-match_game-16",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kubedle",
+          "cardId": "default-kubedle-17",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "solitaire",
+          "cardId": "default-solitaire-18",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        },
+        {
+          "cardType": "kube_craft",
+          "cardId": "default-kube_craft-19",
+          "isDemoDataCard": true,
+          "apiTimeToFirstByte": null,
+          "apiTotalTime": null,
+          "skeletonDuration": 1029,
+          "timeToFirstContent": 1029,
+          "timedOut": false
+        }
+      ]
+    }
+  ]
+}
