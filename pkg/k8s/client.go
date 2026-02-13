@@ -521,7 +521,9 @@ func (m *MultiClusterClient) LoadConfig() error {
 	return nil
 }
 
-// StartWatching starts watching the kubeconfig file for changes
+// StartWatching starts watching the kubeconfig file for changes.
+// Uses fsnotify for instant detection plus a polling fallback every 5s
+// to catch changes that fsnotify misses (common on macOS after atomic writes).
 func (m *MultiClusterClient) StartWatching() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -548,10 +550,55 @@ func (m *MultiClusterClient) StartWatching() error {
 	return nil
 }
 
+// reloadAndNotify reloads the kubeconfig and notifies listeners.
+// After a successful reload, it re-adds the file to the watcher to handle
+// inode changes from atomic writes (old inode watch becomes stale).
+func (m *MultiClusterClient) reloadAndNotify() {
+	log.Printf("Kubeconfig changed, reloading...")
+	if err := m.LoadConfig(); err != nil {
+		log.Printf("Error reloading kubeconfig: %v", err)
+		return
+	}
+	log.Printf("Kubeconfig reloaded successfully")
+
+	// Re-add file watch — after atomic writes (rm+create or rename-over),
+	// the old inode-level watch is dead. This re-establishes it on the new inode.
+	if m.watcher != nil {
+		_ = m.watcher.Remove(m.kubeconfig)
+		if err := m.watcher.Add(m.kubeconfig); err != nil {
+			log.Printf("Warning: could not re-watch kubeconfig file: %v", err)
+		}
+	}
+
+	// Notify listeners
+	m.mu.RLock()
+	callback := m.onReload
+	m.mu.RUnlock()
+	if callback != nil {
+		callback()
+	}
+}
+
 func (m *MultiClusterClient) watchLoop() {
 	// Debounce timer to avoid reloading multiple times for rapid changes
 	var debounceTimer *time.Timer
 	debounceDelay := 500 * time.Millisecond
+
+	// Polling fallback: check file mtime every 5s to catch changes fsnotify misses.
+	// macOS kqueue can silently lose watches after atomic file replacements.
+	pollTicker := time.NewTicker(5 * time.Second)
+	defer pollTicker.Stop()
+	var lastModTime time.Time
+	if info, err := os.Stat(m.kubeconfig); err == nil {
+		lastModTime = info.ModTime()
+	}
+
+	triggerReload := func() {
+		if debounceTimer != nil {
+			debounceTimer.Stop()
+		}
+		debounceTimer = time.AfterFunc(debounceDelay, m.reloadAndNotify)
+	}
 
 	for {
 		select {
@@ -567,25 +614,11 @@ func (m *MultiClusterClient) watchLoop() {
 			// Check if this event is for our kubeconfig file
 			if event.Name == m.kubeconfig || filepath.Base(event.Name) == filepath.Base(m.kubeconfig) {
 				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
-					// Debounce: reset timer on each event
-					if debounceTimer != nil {
-						debounceTimer.Stop()
+					// Update lastModTime so the poller doesn't double-trigger
+					if info, err := os.Stat(m.kubeconfig); err == nil {
+						lastModTime = info.ModTime()
 					}
-					debounceTimer = time.AfterFunc(debounceDelay, func() {
-						log.Printf("Kubeconfig changed, reloading...")
-						if err := m.LoadConfig(); err != nil {
-							log.Printf("Error reloading kubeconfig: %v", err)
-						} else {
-							log.Printf("Kubeconfig reloaded successfully")
-							// Notify listeners
-							m.mu.RLock()
-							callback := m.onReload
-							m.mu.RUnlock()
-							if callback != nil {
-								callback()
-							}
-						}
-					})
+					triggerReload()
 				}
 			}
 		case err, ok := <-m.watcher.Errors:
@@ -593,6 +626,17 @@ func (m *MultiClusterClient) watchLoop() {
 				return
 			}
 			log.Printf("Kubeconfig watcher error: %v", err)
+		case <-pollTicker.C:
+			// Polling fallback: detect changes that fsnotify missed
+			info, err := os.Stat(m.kubeconfig)
+			if err != nil {
+				continue
+			}
+			if info.ModTime() != lastModTime {
+				lastModTime = info.ModTime()
+				log.Printf("Kubeconfig change detected by poll (fsnotify missed)")
+				triggerReload()
+			}
 		}
 	}
 }
