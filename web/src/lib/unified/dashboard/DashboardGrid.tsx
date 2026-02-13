@@ -191,28 +191,32 @@ function DashboardCardWrapper({
   // Calculate grid column span
   const colSpan = `col-span-${Math.min(12, Math.max(3, placement.position.w))}`
 
-  // Calculate height (each row unit = 100px approximately)
-  const minHeight = `min-h-[${placement.position.h * 100}px]`
+  // Calculate height (each row unit = 100px) — use inline style because
+  // Tailwind JIT can't detect dynamically constructed arbitrary classes.
+  const minHeightPx = placement.position.h * 100
 
   // Get card config - support both cardType (new) and card_type (legacy localStorage)
   const cardTypeKey = placement.cardType || (placement as { card_type?: string }).card_type
   const cardConfig = cardTypeKey ? getCardConfig(cardTypeKey) : undefined
 
-  // Style for drag transform
-  const style = isDraggable
-    ? {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-      }
-    : undefined
+  // Style for drag transform + min-height
+  const style: React.CSSProperties = {
+    minHeight: `${minHeightPx}px`,
+    ...(isDraggable
+      ? {
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.5 : 1,
+        }
+      : {}),
+  }
 
   if (!cardConfig) {
     return (
       <div
         ref={setNodeRef}
         style={style}
-        className={`${colSpan} ${minHeight} glass rounded-lg p-4 flex items-center justify-center text-gray-500`}
+        className={`${colSpan} glass rounded-lg p-4 flex items-center justify-center text-gray-500`}
       >
         Unknown card type: {cardTypeKey || 'undefined'}
       </div>
@@ -223,7 +227,7 @@ function DashboardCardWrapper({
     <div
       ref={setNodeRef}
       style={style}
-      className={`${colSpan} ${minHeight} ${isOverlay ? 'shadow-2xl' : ''}`}
+      className={`${colSpan} ${isOverlay ? 'shadow-2xl' : ''}`}
       {...(isDraggable ? attributes : {})}
     >
       <div className="relative h-full group">
