@@ -55,6 +55,9 @@ type Config struct {
 	GitHubWebhookSecret  string // Secret for validating GitHub webhooks
 	FeedbackRepoOwner    string // GitHub org/owner (e.g., "kubestellar")
 	FeedbackRepoName     string // GitHub repo name (e.g., "console")
+	// Benchmark data configuration (Google Drive)
+	BenchmarkGoogleDriveAPIKey string // API key for fetching benchmark data from Google Drive
+	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
 }
 
 // Server represents the API server
@@ -566,6 +569,10 @@ func (s *Server) setupRoutes() {
 	api.Post("/notifications/:id/read", feedback.MarkNotificationRead)
 	api.Post("/notifications/read-all", feedback.MarkAllNotificationsRead)
 
+	// Benchmark data routes (llm-d benchmark results from Google Drive)
+	benchmarkHandlers := handlers.NewBenchmarkHandlers(s.config.BenchmarkGoogleDriveAPIKey, s.config.BenchmarkFolderID)
+	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
+
 	// GPU reservation routes
 	gpuHandler := handlers.NewGPUHandler(s.store)
 	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
@@ -734,6 +741,9 @@ func LoadConfigFromEnv() Config {
 		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
 		// Skip onboarding questionnaire for new users
 		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
+		// Benchmark data from Google Drive
+		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
+		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
 	}
 }
 

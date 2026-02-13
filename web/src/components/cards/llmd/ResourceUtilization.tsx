@@ -7,7 +7,8 @@
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { Cpu, Zap, HardDrive } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
   getHardwareShort,
@@ -74,11 +75,14 @@ function MiniBar({ label, items, dataKey, unit, icon: Icon, color }: {
 }
 
 export function ResourceUtilization() {
-  useReportCardDataState({ isDemoData: true, isFailed: false, consecutiveFailures: 0, hasData: true })
+  const { data: liveReports, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
+  const effectiveReports = useMemo(() => shouldUseDemoData ? generateBenchmarkReports() : (liveReports ?? []), [shouldUseDemoData, liveReports])
+  useReportCardDataState({ isDemoData: shouldUseDemoData, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
 
   const [view, setView] = useState<ViewMode>('overview')
   const entries = useMemo(() => {
-    const reports = generateBenchmarkReports()
+    const reports = effectiveReports
 
     const items: GpuEntry[] = []
     const seen = new Set<string>()
@@ -111,7 +115,7 @@ export function ResourceUtilization() {
     }
 
     return items
-  }, [])
+  }, [effectiveReports])
 
   return (
     <div className="p-4 h-full flex flex-col">
