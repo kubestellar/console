@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -265,9 +266,51 @@ type driveFileList struct {
 }
 
 type driveFile struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	MimeType string `json:"mimeType"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	MimeType    string `json:"mimeType"`
+	CreatedTime string `json:"createdTime"`
+}
+
+// parseSinceDuration parses a shorthand duration like "30d", "7d", "90d".
+// Returns 0 if the value is "0" or empty (meaning no filter).
+func parseSinceDuration(s string) time.Duration {
+	s = strings.TrimSpace(s)
+	if s == "" || s == "0" {
+		return 0
+	}
+	if strings.HasSuffix(s, "d") {
+		days, err := strconv.Atoi(strings.TrimSuffix(s, "d"))
+		if err == nil && days > 0 {
+			return time.Duration(days) * 24 * time.Hour
+		}
+	}
+	return 0
+}
+
+// parseDriveTime parses an RFC3339 timestamp from the Google Drive API.
+func parseDriveTime(s string) (time.Time, bool) {
+	if s == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+// isAfterCutoff returns true if the file should be included (created after cutoff).
+// If cutoff is zero or the file has no created time, always includes it.
+func isAfterCutoff(f driveFile, cutoff time.Time) bool {
+	if cutoff.IsZero() {
+		return true
+	}
+	created, ok := parseDriveTime(f.CreatedTime)
+	if !ok {
+		return true // no timestamp — include by default
+	}
+	return !created.Before(cutoff)
 }
 
 // ---------------------------------------------------------------------------
@@ -277,23 +320,25 @@ type driveFile struct {
 type benchmarkCache struct {
 	mu        sync.RWMutex
 	reports   []BenchmarkReport
+	since     string
 	fetchedAt time.Time
 	ttl       time.Duration
 }
 
-func (c *benchmarkCache) get() ([]BenchmarkReport, bool) {
+func (c *benchmarkCache) get(since string) ([]BenchmarkReport, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if c.reports == nil || time.Since(c.fetchedAt) > c.ttl {
+	if c.reports == nil || time.Since(c.fetchedAt) > c.ttl || c.since != since {
 		return nil, false
 	}
 	return c.reports, true
 }
 
-func (c *benchmarkCache) set(reports []BenchmarkReport) {
+func (c *benchmarkCache) set(reports []BenchmarkReport, since string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.reports = reports
+	c.since = since
 	c.fetchedAt = time.Now()
 }
 
@@ -398,13 +443,21 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 		})
 	}
 
+	since := c.Query("since", "30d")
+
 	// Try cache first
-	if reports, ok := h.cache.get(); ok {
+	if reports, ok := h.cache.get(since); ok {
 		return c.JSON(fiber.Map{"reports": reports, "source": "cache"})
 	}
 
+	// Compute cutoff time from since parameter
+	var cutoff time.Time
+	if d := parseSinceDuration(since); d > 0 {
+		cutoff = time.Now().Add(-d)
+	}
+
 	// Fetch from Google Drive
-	reports, err := h.fetchAllReports()
+	reports, err := h.fetchAllReports(cutoff)
 	if err != nil {
 		log.Printf("[benchmarks] Google Drive fetch error: %v", err)
 		h.cache.mu.RLock()
@@ -416,8 +469,8 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("failed to fetch benchmark data: %v", err)})
 	}
 
-	h.cache.set(reports)
-	log.Printf("[benchmarks] Fetched %d reports from Google Drive", len(reports))
+	h.cache.set(reports, since)
+	log.Printf("[benchmarks] Fetched %d reports from Google Drive (since=%s)", len(reports), since)
 	return c.JSON(fiber.Map{"reports": reports, "source": "live"})
 }
 
@@ -436,8 +489,10 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		})
 	}
 
+	since := c.Query("since", "30d")
+
 	// If cache is fresh, send it all at once
-	if reports, ok := h.cache.get(); ok {
+	if reports, ok := h.cache.get(since); ok {
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
 		c.Set("Connection", "keep-alive")
@@ -445,6 +500,12 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		fmt.Fprintf(c, "event: batch\ndata: %s\n\n", batch)
 		fmt.Fprintf(c, "event: done\ndata: {\"total\":%d,\"source\":\"cache\"}\n\n", len(reports))
 		return nil
+	}
+
+	// Compute cutoff time from since parameter
+	var cutoff time.Time
+	if d := parseSinceDuration(since); d > 0 {
+		cutoff = time.Now().Add(-d)
 	}
 
 	// Stream from Google Drive
@@ -455,6 +516,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		var allReports []BenchmarkReport
 		totalSent := 0
+		skippedFolders := 0
 
 		// Accumulate reports into a pending batch and flush every batchSize reports.
 		const batchSize = 8
@@ -499,15 +561,23 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			return
 		}
 
-		// Filter to folders only
+		// Filter to folders only, skip folders older than cutoff
 		var experiments []driveFile
 		for _, item := range topLevel {
-			if item.MimeType == driveFolderMIME {
-				experiments = append(experiments, item)
+			if item.MimeType != driveFolderMIME {
+				continue
 			}
+			if !isAfterCutoff(item, cutoff) {
+				skippedFolders++
+				continue
+			}
+			experiments = append(experiments, item)
 		}
 
-		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"fetching\",\"experiments\":%d,\"total\":0}\n\n", len(experiments))
+		if skippedFolders > 0 {
+			log.Printf("[benchmarks] Skipped %d experiment folders older than %s", skippedFolders, since)
+		}
+		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"fetching\",\"experiments\":%d,\"total\":0,\"skipped\":%d}\n\n", len(experiments), skippedFolders)
 		w.Flush()
 
 		for _, item := range experiments {
@@ -518,6 +588,11 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			}
 			for _, runItem := range runFolders {
 				if runItem.MimeType != driveFolderMIME {
+					continue
+				}
+				// Skip run folders older than cutoff
+				if !isAfterCutoff(runItem, cutoff) {
+					skippedFolders++
 					continue
 				}
 				reports, err := h.fetchRunFolderStreaming(runItem.ID, item.Name, runItem.Name, func(report BenchmarkReport) {
@@ -545,8 +620,8 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		// Flush any final remaining reports
 		flushBatch()
 
-		h.cache.set(allReports)
-		log.Printf("[benchmarks] Stream complete: %d total reports", totalSent)
+		h.cache.set(allReports, since)
+		log.Printf("[benchmarks] Stream complete: %d total reports, %d folders skipped (since=%s)", totalSent, skippedFolders, since)
 		fmt.Fprintf(w, "event: done\ndata: {\"total\":%d,\"source\":\"live\"}\n\n", totalSent)
 		w.Flush()
 	})
@@ -618,7 +693,8 @@ func (h *BenchmarkHandlers) fetchRunFolderStreaming(folderID, experimentName, ru
 }
 
 // fetchAllReports is the non-streaming version for the standard endpoint.
-func (h *BenchmarkHandlers) fetchAllReports() ([]BenchmarkReport, error) {
+// cutoff filters out folders older than the given time; zero means no filter.
+func (h *BenchmarkHandlers) fetchAllReports(cutoff time.Time) ([]BenchmarkReport, error) {
 	topLevel, err := h.listDriveFolder(h.folderID)
 	if err != nil {
 		return nil, fmt.Errorf("listing top-level folder: %w", err)
@@ -629,6 +705,9 @@ func (h *BenchmarkHandlers) fetchAllReports() ([]BenchmarkReport, error) {
 		if item.MimeType != driveFolderMIME {
 			continue
 		}
+		if !isAfterCutoff(item, cutoff) {
+			continue
+		}
 		runFolders, err := h.listDriveFolder(item.ID)
 		if err != nil {
 			log.Printf("[benchmarks] Error listing experiment %q: %v", item.Name, err)
@@ -636,6 +715,9 @@ func (h *BenchmarkHandlers) fetchAllReports() ([]BenchmarkReport, error) {
 		}
 		for _, runItem := range runFolders {
 			if runItem.MimeType != driveFolderMIME {
+				continue
+			}
+			if !isAfterCutoff(runItem, cutoff) {
 				continue
 			}
 			reports, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
@@ -735,12 +817,12 @@ func (h *BenchmarkHandlers) downloadAndParseReport(f driveFile, experimentName, 
 		log.Printf("[benchmarks] Error parsing %q: %v", f.Name, err)
 		return BenchmarkReport{}, err
 	}
-	return adaptV1ToV2(raw, experimentName, runName), nil
+	return adaptV1ToV2(raw, experimentName, runName, f.CreatedTime), nil
 }
 
 // listDriveFolder lists files in a Google Drive folder.
 func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error) {
-	url := fmt.Sprintf("%s?q='%s'+in+parents&key=%s&fields=files(id,name,mimeType)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true",
+	url := fmt.Sprintf("%s?q='%s'+in+parents&key=%s&fields=files(id,name,mimeType,createdTime)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true",
 		driveAPIBase, folderID, h.apiKey)
 
 	resp, err := h.driveGetWithRetry(url)
@@ -786,7 +868,7 @@ func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
 // v0.1 → v0.2 adapter
 // ---------------------------------------------------------------------------
 
-func adaptV1ToV2(raw rawV1Report, experimentName, runName string) BenchmarkReport {
+func adaptV1ToV2(raw rawV1Report, experimentName, runName, fileCreatedTime string) BenchmarkReport {
 	var report BenchmarkReport
 	report.Version = "0.2"
 
@@ -796,8 +878,15 @@ func adaptV1ToV2(raw rawV1Report, experimentName, runName string) BenchmarkRepor
 	report.Run.User = "benchmark-ci"
 	durationSec := raw.Metrics.Time.Duration
 	report.Run.Time.Duration = fmt.Sprintf("PT%.0fS", durationSec)
-	report.Run.Time.Start = time.Now().Add(-time.Duration(durationSec) * time.Second).Format(time.RFC3339)
-	report.Run.Time.End = time.Now().Format(time.RFC3339)
+
+	// Use real file creation time from Google Drive if available
+	if created, ok := parseDriveTime(fileCreatedTime); ok {
+		report.Run.Time.End = created.Format(time.RFC3339)
+		report.Run.Time.Start = created.Add(-time.Duration(durationSec) * time.Second).Format(time.RFC3339)
+	} else {
+		report.Run.Time.Start = time.Now().Add(-time.Duration(durationSec) * time.Second).Format(time.RFC3339)
+		report.Run.Time.End = time.Now().Format(time.RFC3339)
+	}
 
 	// Stack — build from host accelerator + model + engine info
 	report.Scenario.Stack = buildStackComponents(raw)

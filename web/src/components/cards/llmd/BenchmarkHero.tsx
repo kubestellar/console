@@ -5,17 +5,25 @@
  * TPOT, request latency), delta indicators vs previous run, and a bottom
  * strip with total requests, failure rate, GPU util, and power draw.
  */
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Zap, Clock, Activity, Cpu, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
+import { Zap, Clock, Activity, Cpu, TrendingUp, TrendingDown, ArrowRight, CalendarDays } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
-import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
+import { useCachedBenchmarkReports, resetBenchmarkStream } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
   getHardwareShort,
   getModelShort,
   CONFIG_COLORS,
 } from '../../../lib/llmd/benchmarkMockData'
+
+const TIME_RANGE_OPTIONS = [
+  { value: '30d', label: '30 days' },
+  { value: '60d', label: '60 days' },
+  { value: '90d', label: '90 days' },
+  { value: '120d', label: '120 days' },
+  { value: '0', label: 'All time' },
+]
 
 function fmtNum(n: number, decimals = 0): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -82,9 +90,29 @@ function HeroMetric({
 }
 
 export function BenchmarkHero() {
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, currentSince } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
   useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
+
+  const [customDays, setCustomDays] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
+
+  const handleTimeRangeChange = useCallback((value: string) => {
+    if (value === 'custom') {
+      setShowCustom(true)
+      return
+    }
+    setShowCustom(false)
+    resetBenchmarkStream(value)
+  }, [])
+
+  const handleCustomSubmit = useCallback(() => {
+    const days = parseInt(customDays, 10)
+    if (days > 0) {
+      setShowCustom(false)
+      resetBenchmarkStream(`${days}d`)
+    }
+  }, [customDays])
 
   const { latest, prev, engine, gpuMetrics } = useMemo(() => {
     const reports = effectiveReports
@@ -147,7 +175,7 @@ export function BenchmarkHero() {
 
   return (
     <div className="p-5 h-full flex flex-col gap-4">
-      {/* Top row: Run info */}
+      {/* Top row: Run info + time range filter */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <motion.div
@@ -174,6 +202,41 @@ export function BenchmarkHero() {
               {latest.run.time.duration.replace('PT', '').replace('S', 's')}
             </div>
           </div>
+        </div>
+        {/* Time range filter */}
+        <div className="flex items-center gap-2">
+          <CalendarDays size={13} className="text-slate-500" />
+          <select
+            value={TIME_RANGE_OPTIONS.some(o => o.value === currentSince) ? currentSince : 'custom'}
+            onChange={e => handleTimeRangeChange(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white appearance-none cursor-pointer hover:border-slate-600 transition-colors"
+          >
+            {TIME_RANGE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+            <option value="custom">Custom...</option>
+          </select>
+          {showCustom && (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={1}
+                max={365}
+                placeholder="days"
+                value={customDays}
+                onChange={e => setCustomDays(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCustomSubmit()}
+                className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-white w-16"
+                autoFocus
+              />
+              <button
+                onClick={handleCustomSubmit}
+                className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30 transition-colors"
+              >
+                Go
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

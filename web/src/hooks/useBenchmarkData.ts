@@ -7,6 +7,9 @@
  *
  * The SSE connection is a module-level singleton so that multiple card
  * components sharing this hook don't open duplicate connections.
+ *
+ * Supports a `since` parameter (e.g. "30d") to limit data to recent reports.
+ * Changing the time range via `resetStream()` clears state and reconnects.
  */
 import { useSyncExternalStore } from 'react'
 import { useCache } from '../lib/cache'
@@ -32,6 +35,7 @@ interface StreamState {
   isDone: boolean
   status: string
   error: string | null
+  since: string
 }
 
 let streamState: StreamState = {
@@ -40,10 +44,12 @@ let streamState: StreamState = {
   isDone: false,
   status: '',
   error: null,
+  since: '30d',
 }
 
-let subscribers = new Set<() => void>()
+const subscribers = new Set<() => void>()
 let started = false
+let abortController: AbortController | null = null
 
 function notifySubscribers() {
   for (const cb of subscribers) cb()
@@ -58,21 +64,48 @@ function subscribe(cb: () => void) {
   // Start the stream on first subscriber
   if (!started) {
     started = true
-    startGlobalStream()
+    startGlobalStream(streamState.since)
   }
   return () => {
     subscribers.delete(cb)
   }
 }
 
-function startGlobalStream() {
-  streamState = { ...streamState, isStreaming: true, status: 'connecting' }
+/** Reset the stream with a new time range. Clears all data and reconnects. */
+export function resetBenchmarkStream(since: string) {
+  // Abort existing stream
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
+  streamState = {
+    reports: [],
+    isStreaming: false,
+    isDone: false,
+    status: '',
+    error: null,
+    since,
+  }
+  notifySubscribers()
+  started = true
+  startGlobalStream(since)
+}
+
+/** Get the current `since` value the stream is using. */
+export function getBenchmarkStreamSince(): string {
+  return streamState.since
+}
+
+function startGlobalStream(since: string) {
+  streamState = { ...streamState, isStreaming: true, status: 'connecting', since }
   notifySubscribers()
 
   const token = localStorage.getItem('token')
+  abortController = new AbortController()
 
-  fetch('/api/benchmarks/reports/stream', {
+  fetch(`/api/benchmarks/reports/stream?since=${encodeURIComponent(since)}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
+    signal: abortController.signal,
   })
     .then(async (res) => {
       if (!res.ok || !res.body) {
@@ -171,7 +204,7 @@ export function useCachedBenchmarkReports() {
         return stream.reports
       }
       // Fallback: try non-streaming endpoint (returns cache quickly)
-      const res = await fetch('/api/benchmarks/reports', {
+      const res = await fetch(`/api/benchmarks/reports?since=${encodeURIComponent(stream.since)}`, {
         headers: authHeaders(),
       })
       if (res.status === 503) throw new Error('BENCHMARK_UNAVAILABLE')
@@ -195,5 +228,6 @@ export function useCachedBenchmarkReports() {
     isStreaming: stream.isStreaming,
     streamProgress: stream.reports.length,
     streamStatus: stream.status,
+    currentSince: stream.since,
   }
 }

@@ -4,12 +4,10 @@
  * X-axis: output throughput per GPU, Y-axis: TTFT p50 (inverted).
  * Points colored by hardware, shaped by config. Pareto-optimal curve overlaid.
  * Filters for hardware, model, framework.
+ * Built with ECharts for zoom/pan, interactive legend, and better dense-data handling.
  */
 import { useState, useMemo, useCallback } from 'react'
-import {
-  ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine, ZAxis,
-} from 'recharts'
+import ReactECharts from 'echarts-for-react'
 import { Filter } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -18,103 +16,21 @@ import {
   extractParetoPoints,
   computeParetoFrontier,
   HARDWARE_COLORS,
-  CONFIG_COLORS,
   getHardwareShort,
   getModelShort,
   type ParetoPoint,
 } from '../../../lib/llmd/benchmarkMockData'
 
-interface ScatterDot {
-  cx?: number
-  cy?: number
-  payload?: ParetoPoint
-}
-
-const CONFIG_SHAPES: Record<string, string> = {
+const CONFIG_SYMBOLS: Record<string, string> = {
   standalone: 'circle',
   scheduling: 'diamond',
-  disaggregated: 'star',
+  disaggregated: 'triangle',
 }
 
-function CustomDot({ cx: rawCx, cy: rawCy, payload }: ScatterDot) {
-  if (!payload) return null
-  const cx = rawCx ?? 0
-  const cy = rawCy ?? 0
-  const hw = getHardwareShort(payload.hardware)
-  const color = HARDWARE_COLORS[hw] ?? '#6b7280'
-  const shape = CONFIG_SHAPES[payload.config] ?? 'circle'
-  const r = 6
-
-  if (shape === 'diamond') {
-    return (
-      <g>
-        <polygon
-          points={`${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`}
-          fill={color}
-          fillOpacity={0.8}
-          stroke={color}
-          strokeWidth={1.5}
-          style={{ filter: `drop-shadow(0 0 3px ${color})` }}
-        />
-      </g>
-    )
-  }
-  if (shape === 'star') {
-    const pts: string[] = []
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 72 - 90) * Math.PI / 180
-      pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`)
-      const innerAngle = ((i * 72 + 36) - 90) * Math.PI / 180
-      pts.push(`${cx + r * 0.5 * Math.cos(innerAngle)},${cy + r * 0.5 * Math.sin(innerAngle)}`)
-    }
-    return (
-      <polygon
-        points={pts.join(' ')}
-        fill={color}
-        fillOpacity={0.8}
-        stroke={color}
-        strokeWidth={1}
-        style={{ filter: `drop-shadow(0 0 3px ${color})` }}
-      />
-    )
-  }
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={r}
-      fill={color}
-      fillOpacity={0.7}
-      stroke={color}
-      strokeWidth={1.5}
-      style={{ filter: `drop-shadow(0 0 3px ${color})` }}
-    />
-  )
-}
-
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ParetoPoint }> }) {
-  if (!active || !payload?.[0]) return null
-  const p = payload[0].payload
-  const hw = getHardwareShort(p.hardware)
-  const model = getModelShort(p.model)
-  return (
-    <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl text-xs">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="font-semibold text-white">{model}</span>
-        <span className="text-slate-400">{hw}</span>
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-          style={{ background: `${CONFIG_COLORS[p.config]}20`, color: CONFIG_COLORS[p.config] }}>
-          {p.config}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-300">
-        <span>Throughput/GPU:</span><span className="font-mono text-white">{p.throughputPerGpu.toFixed(0)} tok/s</span>
-        <span>TTFT p50:</span><span className="font-mono text-white">{p.ttftP50Ms.toFixed(1)} ms</span>
-        <span>TPOT p50:</span><span className="font-mono text-white">{p.tpotP50Ms.toFixed(2)} ms</span>
-        <span>p99 Latency:</span><span className="font-mono text-white">{p.p99LatencyMs.toFixed(0)} ms</span>
-      </div>
-    </div>
-  )
+const CONFIG_DISPLAY: Record<string, string> = {
+  circle: '\u25CF',
+  diamond: '\u25C6',
+  triangle: '\u25B2',
 }
 
 export function ParetoFrontier() {
@@ -154,6 +70,127 @@ export function ParetoFrontier() {
       return next
     })
   }, [])
+
+  // Build ECharts option
+  const option = useMemo(() => {
+    // Group data by hardware × config for distinct series
+    const seriesMap = new Map<string, { hw: string; config: string; points: ParetoPoint[] }>()
+    for (const pt of filtered) {
+      const hw = getHardwareShort(pt.hardware)
+      const key = `${hw} · ${pt.config}`
+      if (!seriesMap.has(key)) seriesMap.set(key, { hw, config: pt.config, points: [] })
+      seriesMap.get(key)!.points.push(pt)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scatterSeries: any[] = [...seriesMap.entries()].map(([name, { hw, config, points }]) => ({
+      name,
+      type: 'scatter',
+      symbol: CONFIG_SYMBOLS[config] ?? 'circle',
+      symbolSize: 8,
+      data: points.map(p => ({
+        value: [p.throughputPerGpu, p.ttftP50Ms],
+        point: p,
+      })),
+      itemStyle: {
+        color: HARDWARE_COLORS[hw] ?? '#6b7280',
+        borderColor: 'rgba(15, 23, 42, 0.6)',
+        borderWidth: 0.5,
+      },
+      emphasis: {
+        itemStyle: {
+          borderColor: '#fff',
+          borderWidth: 2,
+          shadowBlur: 12,
+          shadowColor: HARDWARE_COLORS[hw] ?? '#6b7280',
+        },
+        scale: 1.8,
+      },
+      z: 2,
+    }))
+
+    // Pareto frontier as dashed line overlay
+    if (frontier.length > 1) {
+      scatterSeries.push({
+        name: 'Pareto Frontier',
+        type: 'line',
+        data: frontier.map(p => [p.throughputPerGpu, p.ttftP50Ms]),
+        lineStyle: {
+          color: '#f59e0b',
+          width: 2,
+          type: 'dashed',
+          opacity: 0.7,
+        },
+        itemStyle: { color: '#f59e0b' },
+        symbol: 'none',
+        z: 10,
+        silent: true,
+      })
+    }
+
+    return {
+      backgroundColor: 'transparent',
+      grid: {
+        top: 15,
+        right: 20,
+        bottom: 55,
+        left: 65,
+      },
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        borderColor: '#334155',
+        borderWidth: 1,
+        padding: [8, 12],
+        textStyle: { color: '#e2e8f0', fontSize: 11 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        formatter: (params: any) => {
+          const pt = params.data?.point as ParetoPoint | undefined
+          if (!pt) return ''
+          const hw = getHardwareShort(pt.hardware)
+          const model = getModelShort(pt.model)
+          const hwColor = HARDWARE_COLORS[hw] ?? '#6b7280'
+          return `<div style="font-weight:600;margin-bottom:6px">${model} <span style="color:#94a3b8">${hw}</span>` +
+            `<span style="background:${hwColor}20;color:${hwColor};padding:1px 6px;border-radius:4px;font-size:10px;margin-left:6px">${pt.config}</span></div>` +
+            `<div style="display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:11px">` +
+            `<span style="color:#94a3b8">Throughput/GPU:</span><span style="font-family:monospace">${pt.throughputPerGpu.toFixed(0)} tok/s</span>` +
+            `<span style="color:#94a3b8">TTFT p50:</span><span style="font-family:monospace">${pt.ttftP50Ms.toFixed(1)} ms</span>` +
+            `<span style="color:#94a3b8">TPOT p50:</span><span style="font-family:monospace">${pt.tpotP50Ms.toFixed(2)} ms</span>` +
+            `<span style="color:#94a3b8">p99 Latency:</span><span style="font-family:monospace">${pt.p99LatencyMs.toFixed(0)} ms</span>` +
+            `</div>`
+        },
+      },
+      legend: {
+        show: false,
+      },
+      xAxis: {
+        type: 'value',
+        name: 'Output Throughput (tok/s/GPU)',
+        nameLocation: 'middle',
+        nameGap: 28,
+        nameTextStyle: { color: '#71717a', fontSize: 10 },
+        axisLine: { lineStyle: { color: '#334155' } },
+        splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
+        axisLabel: { color: '#71717a', fontSize: 10 },
+      },
+      yAxis: {
+        type: 'value',
+        name: 'TTFT p50 (ms) — lower is better',
+        nameLocation: 'middle',
+        nameGap: 50,
+        nameTextStyle: { color: '#71717a', fontSize: 10 },
+        inverse: true,
+        axisLine: { lineStyle: { color: '#334155' } },
+        splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
+        axisLabel: { color: '#71717a', fontSize: 10 },
+      },
+      dataZoom: [
+        { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+        { type: 'inside', yAxisIndex: 0, filterMode: 'weakFilter' },
+      ],
+      series: scatterSeries,
+    }
+  }, [filtered, frontier])
 
   return (
     <div className="p-4 h-full flex flex-col">
@@ -210,54 +247,13 @@ export function ParetoFrontier() {
       )}
 
       {/* Chart */}
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
-            <XAxis
-              type="number"
-              dataKey="throughputPerGpu"
-              name="Throughput/GPU"
-              stroke="#71717a"
-              fontSize={10}
-              label={{ value: 'Output Throughput (tok/s/GPU)', position: 'insideBottom', offset: -15, fill: '#71717a', fontSize: 10 }}
-            />
-            <YAxis
-              type="number"
-              dataKey="ttftP50Ms"
-              name="TTFT p50"
-              stroke="#71717a"
-              fontSize={10}
-              reversed
-              label={{ value: 'TTFT p50 (ms) — lower is better', angle: -90, position: 'insideLeft', offset: 5, fill: '#71717a', fontSize: 10 }}
-            />
-            <ZAxis range={[60, 60]} />
-            <Tooltip content={<CustomTooltip />} />
-
-            {/* Pareto frontier line */}
-            {frontier.length > 1 && frontier.map((pt, i) => {
-              if (i === 0) return null
-              const prev = frontier[i - 1]
-              return (
-                <ReferenceLine
-                  key={`pf-${i}`}
-                  segment={[
-                    { x: prev.throughputPerGpu, y: prev.ttftP50Ms },
-                    { x: pt.throughputPerGpu, y: pt.ttftP50Ms },
-                  ]}
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeDasharray="6 3"
-                  strokeOpacity={0.6}
-                />
-              )
-            })}
-
-            <Scatter
-              data={filtered}
-              shape={(props: ScatterDot) => <CustomDot {...props} />}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
+      <div className="flex-1 min-h-0" style={{ minHeight: 300 }}>
+        <ReactECharts
+          option={option}
+          style={{ height: '100%', width: '100%' }}
+          opts={{ renderer: 'canvas' }}
+          lazyUpdate
+        />
       </div>
 
       {/* Legend */}
@@ -272,15 +268,17 @@ export function ParetoFrontier() {
         </div>
         <div className="w-px h-3 bg-slate-700" />
         <div className="flex items-center gap-3">
-          {Object.entries(CONFIG_SHAPES).map(([cfg, shape]) => (
+          {Object.entries(CONFIG_SYMBOLS).map(([cfg, shape]) => (
             <div key={cfg} className="flex items-center gap-1">
               <span className="text-slate-400">
-                {shape === 'circle' ? '\u25CF' : shape === 'diamond' ? '\u25C6' : '\u2605'}
+                {CONFIG_DISPLAY[shape] ?? '\u25CF'}
               </span>
               <span className="text-slate-400">{cfg}</span>
             </div>
           ))}
         </div>
+        <div className="w-px h-3 bg-slate-700" />
+        <span className="text-slate-500 italic">scroll to zoom</span>
       </div>
     </div>
   )

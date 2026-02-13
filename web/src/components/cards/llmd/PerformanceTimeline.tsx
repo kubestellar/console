@@ -172,7 +172,7 @@ export function PerformanceTimeline() {
       </div>
 
       {/* Heatmap */}
-      <div className="flex-1 min-h-0 flex items-center justify-center">
+      <div className="flex-1 min-h-0 flex items-center justify-center" style={{ minHeight: 250 }}>
         {cells.length > 0 ? (
           <div className="relative">
             {/* Y-axis label */}

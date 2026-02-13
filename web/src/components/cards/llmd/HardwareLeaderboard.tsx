@@ -83,8 +83,7 @@ export function HardwareLeaderboard() {
       const bv = b[sortKey] ?? -Infinity
       return sortDir === 'desc' ? (bv as number) - (av as number) : (av as number) - (bv as number)
     })
-    filtered.forEach((r, i) => { r.rank = i + 1 })
-    return filtered
+    return filtered.map((r, i) => ({ ...r, rank: i + 1 }))
   }, [allRows, sortKey, sortDir, modelFilter, searchQuery])
 
   const {
@@ -96,7 +95,7 @@ export function HardwareLeaderboard() {
     goToPage,
     setPerPage,
     needsPagination,
-  } = usePagination(sortedRows, DEFAULT_PAGE_SIZE)
+  } = usePagination(sortedRows, DEFAULT_PAGE_SIZE, false)
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
@@ -163,7 +162,7 @@ export function HardwareLeaderboard() {
           <tbody>
             {rows.map(row => (
               <tr
-                key={`${row.hardware}-${row.model}-${row.config}`}
+                key={row.report.run.uid}
                 className={`border-b border-slate-800/50 transition-colors hover:bg-slate-800/30 ${
                   row.config !== 'standalone' ? 'bg-blue-500/[0.03]' : ''
                 }`}

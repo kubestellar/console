@@ -235,7 +235,7 @@ export function LLMdBenchmarks() {
           )}
 
           {/* Stack comparison chart */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
             {stackComparison.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stackComparison} layout="vertical">
@@ -362,7 +362,7 @@ export function LLMdBenchmarks() {
           )}
 
           {/* Chart area */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
             {viewMode === 'comparison' && (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={comparisonData} layout="vertical">
