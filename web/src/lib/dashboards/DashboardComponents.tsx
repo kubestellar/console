@@ -63,7 +63,9 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
     transition,
     // Only apply multi-column span on desktop; mobile uses single column
     gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
-    gridRow: isMobile ? undefined : `span ${cardHeight}`,
+    // Use minHeight instead of gridRow span — CSS Grid auto rows have no
+    // fixed height so `span N` doesn't actually size the element.
+    minHeight: isMobile ? undefined : `${cardHeight * 100}px`,
     opacity: isDragging ? 0.5 : 1,
   }
 
