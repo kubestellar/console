@@ -186,7 +186,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       defaultDirection: 'asc',
       comparators: OPENSHIFT_USER_COMPARATORS,
     },
-    defaultLimit: 5,
+    defaultLimit: 10,
   })
 
   // ---------- useCardData for Service Accounts tab ----------
@@ -212,7 +212,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       defaultDirection: 'asc',
       comparators: SA_COMPARATORS,
     },
-    defaultLimit: 5,
+    defaultLimit: 10,
   })
 
   // ---------- useCardData for Console Users tab ----------
@@ -237,7 +237,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       defaultDirection: 'asc',
       comparators: consoleUserComparators,
     },
-    defaultLimit: 5,
+    defaultLimit: 10,
   })
 
   // Active tab's filter/sorting references for the controls row

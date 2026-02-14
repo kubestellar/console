@@ -4,10 +4,10 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 // Sidebar items are configured with icon names as strings (from sidebar config)
 // The renderIcon() function resolves these names dynamically via Icons[iconName]
 import * as Icons from 'lucide-react'
-import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, User } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, WifiOff, GripVertical, X, User } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SnoozedCards } from './SnoozedCards'
-import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
+import { useSidebarConfig, SidebarItem, PROTECTED_SIDEBAR_IDS } from '../../hooks/useSidebarConfig'
 import { useMobile } from '../../hooks/useMobile'
 import { useClusters } from '../../hooks/useMCP'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
@@ -18,7 +18,7 @@ import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { ROUTES } from '../../config/routes'
 
 export function Sidebar() {
-  const { config, toggleCollapsed, reorderItems, updateItem, closeMobileSidebar } = useSidebarConfig()
+  const { config, toggleCollapsed, reorderItems, updateItem, removeItem, closeMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { deduplicatedClusters } = useClusters()
   const dashboardContext = useDashboardContextOptional()
@@ -215,9 +215,8 @@ export function Sidebar() {
           <div className={cn(
             'flex items-center gap-3 rounded-lg text-sm font-medium',
             'bg-purple-500/20 text-purple-400',
-            isCollapsed ? 'justify-center p-3' : 'px-3 py-2 pl-2'
+            isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
           )}>
-            {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
             {!isCollapsed && (
               <input
@@ -233,6 +232,7 @@ export function Sidebar() {
                 className="flex-1 bg-transparent border-b border-purple-500 outline-none text-foreground text-sm min-w-0"
               />
             )}
+            {!isCollapsed && <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />}
           </div>
         ) : (
           // Normal navigation mode
@@ -244,19 +244,30 @@ export function Sidebar() {
               isActive
                 ? 'bg-purple-500/20 text-purple-400'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50',
-              isCollapsed ? 'justify-center p-3' : 'px-3 py-2',
-              !isCollapsed && 'pl-2'
+              isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
             )}
             title={isCollapsed ? item.name : (item.isCustom && item.href.startsWith('/custom-dashboard/') ? 'Double-click to rename' : undefined)}
           >
-            {!isCollapsed && (
-              <GripVertical
-                className="w-3.5 h-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-            )}
             {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
-            {!isCollapsed && item.name}
+            {!isCollapsed && <span className="flex-1 truncate">{item.name}</span>}
+            {!isCollapsed && (
+              <span className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1">
+                {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
+                  <span
+                    role="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id) }}
+                    className="p-0.5 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
+                    title="Remove from sidebar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </span>
+                )}
+                <GripVertical
+                  className="w-4 h-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing"
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              </span>
+            )}
           </NavLink>
         )}
       </div>

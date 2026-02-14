@@ -96,16 +96,33 @@ const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v9'
 const DEPRECATED_ROUTES = ['/apps']
 
 // Server-side dashboard filter (fetched from /health endpoint)
-let enabledDashboardIds: Set<string> | null = null // null = show all
+// Stored as array (not Set) to preserve ordering from the env var
+let enabledDashboardIds: string[] | null = null // null = show all
 let enabledDashboardsFetched = false
+
+// IDs that cannot be removed by the user
+export const PROTECTED_SIDEBAR_IDS = ['dashboard', 'clusters', 'deploy']
 
 function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
   if (!enabledDashboardIds) return config
+  const enabledSet = new Set(enabledDashboardIds)
+  const filtered = config.primaryNav.filter(
+    item => item.isCustom || enabledSet.has(item.id)
+  )
+  // Sort filtered items to match the order specified in ENABLED_DASHBOARDS
+  filtered.sort((a, b) => {
+    if (a.isCustom && b.isCustom) return a.order - b.order
+    if (a.isCustom) return 1 // custom items go after enabled ones
+    if (b.isCustom) return -1
+    const idxA = enabledDashboardIds!.indexOf(a.id)
+    const idxB = enabledDashboardIds!.indexOf(b.id)
+    return idxA - idxB
+  })
+  // Re-assign order numbers after sorting
+  const reordered = filtered.map((item, idx) => ({ ...item, order: idx }))
   return {
     ...config,
-    primaryNav: config.primaryNav.filter(
-      item => item.isCustom || enabledDashboardIds!.has(item.id)
-    ),
+    primaryNav: reordered,
   }
 }
 
@@ -116,7 +133,7 @@ async function fetchEnabledDashboards(): Promise<void> {
     const resp = await fetch('/health')
     const data = await resp.json()
     if (data.enabled_dashboards && Array.isArray(data.enabled_dashboards) && data.enabled_dashboards.length > 0) {
-      enabledDashboardIds = new Set(data.enabled_dashboards as string[])
+      enabledDashboardIds = data.enabled_dashboards as string[]
       if (sharedConfig) {
         sharedConfig = applyDashboardFilter(sharedConfig)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedConfig))

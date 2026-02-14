@@ -187,6 +187,7 @@ jobs:
             --set googleDrive.existingSecret=kc-kubestellar-console \
             --set route.enabled=true \
             --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
+            --set enabledDashboards="dashboard,gpu-reservations,llm-d-benchmarks,ai-ml,arcade" \
             --wait \
             --timeout 5m
 
