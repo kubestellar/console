@@ -206,9 +206,11 @@ export const render = ({ output }) => {${parseBlock}
   const platformColors = { OCP: '#f97316', GKE: '#3b82f6', CKS: '#a855f7' };
   const conclusionColors = { success: '#22c55e', failure: '#ef4444', cancelled: '#6b7280', skipped: '#6b7280' };
   const totalGuides = guides.length;
-  const passing = guides.filter(g => g.latestConclusion === 'success').length;
   const failing = guides.filter(g => g.latestConclusion === 'failure').length;
-  const passRate = totalGuides > 0 ? Math.round((passing / totalGuides) * 100) : 0;
+  const allRuns = guides.flatMap(g => g.runs || []);
+  const completedRuns = allRuns.filter(r => r.status === 'completed');
+  const passedRuns = completedRuns.filter(r => r.conclusion === 'success');
+  const passRate = completedRuns.length > 0 ? Math.round((passedRuns.length / completedRuns.length) * 100) : 0;
 ${wrapOpen}
         <div style={styles.cardTitle}>
           <span style={{...styles.statusDot, backgroundColor: failing > 0 ? '#ef4444' : '#22c55e'}} />
