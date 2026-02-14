@@ -95,7 +95,8 @@ manualChunks: (id) => {
       // Pre-transform route and card modules on server start so navigation
       // doesn't pay the cold module-transform penalty.
       clientFiles: [
-        // Route components
+        // Route components (most-used routes first)
+        './src/components/cluster-admin/ClusterAdmin.tsx',
         './src/components/dashboard/Dashboard.tsx',
         './src/components/dashboard/CustomDashboard.tsx',
         './src/components/clusters/Clusters.tsx',
