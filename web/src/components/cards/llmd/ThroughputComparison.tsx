@@ -51,13 +51,13 @@ function CustomTooltip({ active, payload, label }: {
 }
 
 export function ThroughputComparison() {
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
     [isDemoFallback, liveReports]
   )
   useReportCardDataState({
-    isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading,
+    isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
     hasData: effectiveReports.length > 0,
   })
 

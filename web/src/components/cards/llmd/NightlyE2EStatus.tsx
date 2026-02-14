@@ -134,13 +134,14 @@ function GuideRow({ guide, delay }: { guide: NightlyGuideStatus; delay: number }
 }
 
 export function NightlyE2EStatus() {
-  const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useNightlyE2EData()
+  const { guides, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useNightlyE2EData()
 
   useReportCardDataState({
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures,
     isLoading,
+    isRefreshing,
     hasData: guides.length > 0,
   })
 

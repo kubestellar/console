@@ -231,7 +231,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
   const chartRef = useRef<ReactECharts>(null)
 
   // ---- Data ----
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => (isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])),
     [isDemoFallback, liveReports],
@@ -241,6 +241,7 @@ export function ParetoFrontier({ config }: ParetoFrontierProps) {
     isFailed,
     consecutiveFailures,
     isLoading,
+    isRefreshing,
     hasData: effectiveReports.length > 0,
   })
 

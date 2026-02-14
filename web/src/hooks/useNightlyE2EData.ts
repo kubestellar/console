@@ -93,8 +93,9 @@ export function useNightlyE2EData() {
   const { guides, isDemo } = cacheResult.data
   return {
     guides,
-    isDemoFallback: isDemo,
+    isDemoFallback: isDemo && !cacheResult.isLoading,
     isLoading: cacheResult.isLoading,
+    isRefreshing: cacheResult.isRefreshing,
     isFailed: cacheResult.isFailed,
     consecutiveFailures: cacheResult.consecutiveFailures,
     refetch: cacheResult.refetch,

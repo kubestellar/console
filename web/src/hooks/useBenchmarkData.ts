@@ -218,7 +218,7 @@ export function useCachedBenchmarkReports() {
   // Use streamed data if we have any, otherwise fall back to cache/demo
   const hasStreamedData = stream.reports.length > 0
   const effectiveData = hasStreamedData ? stream.reports : cacheResult.data
-  const effectiveIsDemoFallback = hasStreamedData ? false : cacheResult.isDemoFallback
+  const effectiveIsDemoFallback = hasStreamedData ? false : (cacheResult.isDemoFallback && !cacheResult.isLoading)
 
   return {
     ...cacheResult,

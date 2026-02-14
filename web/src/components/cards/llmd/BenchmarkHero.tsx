@@ -90,9 +90,9 @@ function HeroMetric({
 }
 
 export function BenchmarkHero() {
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, currentSince } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(() => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []), [isDemoFallback, liveReports])
-  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, hasData: effectiveReports.length > 0 })
+  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
 
   const [customDays, setCustomDays] = useState('')
   const [showCustom, setShowCustom] = useState(false)
